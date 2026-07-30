@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, ZoneDest, ZoneRef};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 use super::super::etb_tap;
 
@@ -20,7 +20,10 @@ fn bounce_land(name: &'static str, a: Color, b: Color) -> CardDefinition {
         card_types: vec![CardType::Land],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![a, b]) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![a, b]),
+            },
             ..Default::default()
         }],
         triggered_abilities: vec![
@@ -34,15 +37,21 @@ fn bounce_land(name: &'static str, a: Color, b: Color) -> CardDefinition {
     }
 }
 
-pub fn dimir_aqueduct() -> CardDefinition { bounce_land("Dimir Aqueduct", Color::Blue, Color::Black) }
+pub fn dimir_aqueduct() -> CardDefinition {
+    bounce_land("Dimir Aqueduct", Color::Blue, Color::Black)
+}
 pub fn golgari_rot_farm() -> CardDefinition {
     bounce_land("Golgari Rot Farm", Color::Black, Color::Green)
 }
 pub fn selesnya_sanctuary() -> CardDefinition {
     bounce_land("Selesnya Sanctuary", Color::Green, Color::White)
 }
-pub fn boros_garrison() -> CardDefinition { bounce_land("Boros Garrison", Color::Red, Color::White) }
-pub fn gruul_turf() -> CardDefinition { bounce_land("Gruul Turf", Color::Red, Color::Green) }
+pub fn boros_garrison() -> CardDefinition {
+    bounce_land("Boros Garrison", Color::Red, Color::White)
+}
+pub fn gruul_turf() -> CardDefinition {
+    bounce_land("Gruul Turf", Color::Red, Color::Green)
+}
 pub fn izzet_boilerworks() -> CardDefinition {
     bounce_land("Izzet Boilerworks", Color::Blue, Color::Red)
 }
@@ -57,13 +66,19 @@ pub fn benevolent_ancestor() -> CardDefinition {
         name: "Benevolent Ancestor",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 0,
         toughness: 4,
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::PreventNextDamage { target: target_any(), amount: Value::ONE },
+            effect: Effect::PreventNextDamage {
+                target: target_any(),
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -128,7 +143,9 @@ pub fn dogpile() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_any(),
-            amount: Value::count(Selector::EachPermanent(R::IsAttacking.and(R::ControlledByYou))),
+            amount: Value::count(Selector::EachPermanent(
+                R::IsAttacking.and(R::ControlledByYou),
+            )),
         },
         ..Default::default()
     }
@@ -141,7 +158,10 @@ pub fn dimir_cutpurse() -> CardDefinition {
         name: "Dimir Cutpurse",
         cost: cost(&[generic(1), u(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
@@ -152,7 +172,10 @@ pub fn dimir_cutpurse() -> CardDefinition {
                     amount: Value::ONE,
                     random: false,
                 },
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
         }],
         ..Default::default()
@@ -170,8 +193,15 @@ pub fn clinging_darkness() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { power: -4, toughness: -1, ..Default::default() }),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: -4,
+            toughness: -1,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -219,7 +249,10 @@ pub fn caregiver() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::PreventNextDamage { target: target_any(), amount: Value::ONE },
+            effect: Effect::PreventNextDamage {
+                target: target_any(),
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -233,7 +266,10 @@ pub fn cerulean_sphinx() -> CardDefinition {
         name: "Cerulean Sphinx",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
@@ -260,7 +296,10 @@ pub fn drooling_groodion() -> CardDefinition {
         name: "Drooling Groodion",
         cost: cost(&[generic(3), b(), b(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
@@ -274,7 +313,10 @@ pub fn drooling_groodion() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                 },
                 Effect::PumpPT {
-                    what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature,
+                    },
                     power: Value::Const(-2),
                     toughness: Value::Const(-2),
                     duration: Duration::EndOfTurn,
@@ -300,7 +342,10 @@ pub fn dryads_caress() -> CardDefinition {
                 amount: Value::count(Selector::EachPermanent(R::Creature)),
             },
             Effect::If {
-                cond: Predicate::ManaSpentOfColorAtLeast { color: Color::White, at_least: 1 },
+                cond: Predicate::ManaSpentOfColorAtLeast {
+                    color: Color::White,
+                    at_least: 1,
+                },
                 then: Box::new(Effect::Untap {
                     what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                     up_to: None,
@@ -346,7 +391,10 @@ pub fn conclaves_blessing() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Convoke],
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             scale: Some(EquipScale {
                 filter: R::Creature.and(R::ControlledByYou),
@@ -366,7 +414,10 @@ pub fn autochthon_wurm() -> CardDefinition {
         name: "Autochthon Wurm",
         cost: cost(&[generic(10), g(), g(), g(), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
         power: 9,
         toughness: 14,
         keywords: vec![Keyword::Convoke, Keyword::Trample],
@@ -381,7 +432,10 @@ pub fn cackling_imp() -> CardDefinition {
         name: "Cackling Imp",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Imp], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],

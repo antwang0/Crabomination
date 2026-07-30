@@ -4,18 +4,20 @@
 //! Tests in `recent_b/recent289`.
 
 use crate::card::{
-    ArtifactSubtype, CardDefinition, CardType, CreatureType, Keyword,
-    SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility, Value,
+    ArtifactSubtype, CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R,
+    StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, StaticEffect,
 };
 use crate::game::effects::treasure_token;
-use crate::mana::{cost, g, generic, r, w, Color};
+use crate::mana::{Color, cost, g, generic, r, w};
 
 fn vehicle() -> Subtypes {
-    Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() }
+    Subtypes {
+        artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+        ..Default::default()
+    }
 }
 
 /// Luxurious Locomotive — {5} Artifact — Vehicle 6/5. Crew 1. When it attacks,
@@ -61,7 +63,10 @@ pub fn mobile_homestead() -> CardDefinition {
         keywords: vec![Keyword::Crew(2)],
         static_abilities: vec![StaticAbility {
             description: "This Vehicle has haste as long as you control a Mount.",
-            effect: StaticEffect::SelfHasKeywordIf { keyword: Keyword::Haste, condition: controls_mount },
+            effect: StaticEffect::SelfHasKeywordIf {
+                keyword: Keyword::Haste,
+                condition: controls_mount,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -90,8 +95,14 @@ pub fn wylie_duke_atiin_hero() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::GainLife { who: Selector::You, amount: Value::ONE },
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
         }],
         ..Default::default()
@@ -103,7 +114,10 @@ fn ox_token() -> TokenDefinition {
         name: "Ox".to_string(),
         colors: vec![Color::White],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ox], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ox],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         ..Default::default()

@@ -18,7 +18,10 @@ pub fn rowdy_research() -> CardDefinition {
         cost: cost(&[generic(6), u()]),
         card_types: vec![CardType::Instant],
         affinity_filter: Some(R::AttackedThisTurn),
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -62,7 +65,10 @@ pub fn redrock_sentinel() -> CardDefinition {
         name: "Redrock Sentinel",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Defender],
@@ -71,7 +77,10 @@ pub fn redrock_sentinel() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             sac_other_filter: Some((R::Land, 1)),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,

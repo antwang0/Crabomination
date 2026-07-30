@@ -7,7 +7,7 @@
 
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    MayPlayDuration, Predicate, Selector, SelectionRequirement, Subtypes, TriggeredAbility, Value,
+    MayPlayDuration, Predicate, SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
     Zone,
 };
 use crate::effect::shortcut::{on_attack, target_filtered};
@@ -174,10 +174,9 @@ pub fn ardent_dustspeaker() -> CardDefinition {
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
             }),
             then: Box::new(Effect::MayDo {
-                description:
-                    "Put an instant or sorcery from your graveyard on the bottom of your \
+                description: "Put an instant or sorcery from your graveyard on the bottom of your \
                      library to exile the top two cards (play them this turn)"
-                        .into(),
+                    .into(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::Move {
                         what: Selector::one_of(Selector::CardsInZone {

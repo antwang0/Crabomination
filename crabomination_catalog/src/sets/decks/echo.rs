@@ -25,7 +25,10 @@ fn echo_creature(
         name,
         cost: cost(mana),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power: pt.0,
         toughness: pt.1,
         keywords,
@@ -42,7 +45,9 @@ pub fn avalanche_riders() -> CardDefinition {
         vec![CreatureType::Human, CreatureType::Nomad],
         (2, 2),
         vec![Keyword::Haste],
-        Some(Effect::Destroy { what: target_filtered(R::Land) }),
+        Some(Effect::Destroy {
+            what: target_filtered(R::Land),
+        }),
     )
 }
 
@@ -54,7 +59,9 @@ pub fn keldon_vandals() -> CardDefinition {
         vec![CreatureType::Human, CreatureType::Rogue],
         (4, 1),
         vec![],
-        Some(Effect::Destroy { what: target_filtered(R::Artifact) }),
+        Some(Effect::Destroy {
+            what: target_filtered(R::Artifact),
+        }),
     )
 }
 

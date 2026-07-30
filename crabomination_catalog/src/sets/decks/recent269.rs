@@ -17,12 +17,17 @@ pub fn gilded_scuttler() -> CardDefinition {
         name: "Gilded Scuttler",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Crab], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Crab],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Unblockable],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+            Effect::Tap {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            },
             Effect::AddCounter {
                 what: Selector::Target(0),
                 kind: CounterType::Stun,
@@ -41,7 +46,11 @@ pub fn go_forth() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::Search { who: PlayerRef::You, filter: R::IsBasicLand, to: ZoneDest::Hand(PlayerRef::You) },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
             Effect::PumpPT {
                 what: target_filtered(R::Creature),
                 power: Value::Const(2),
@@ -123,7 +132,10 @@ pub fn phantasmal_shieldback() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             },
         ],
         ..Default::default()

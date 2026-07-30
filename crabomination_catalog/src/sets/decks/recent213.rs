@@ -5,12 +5,12 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword,
-    LoyaltyAbility, Selector, SelectionRequirement as R, Subtypes, Supertype, TokenDefinition,
+    LoyaltyAbility, SelectionRequirement as R, Selector, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, EventKind, EventScope, EventSpec, PlayerRef, Predicate, ZoneDest};
-use crate::mana::{b, cost, g, generic, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, w, x};
 
 /// Heroes' Bane — {3}{G}{G} 0/0 Hydra. Enters with four +1/+1 counters.
 /// {2}{G}{G}: Put X +1/+1 counters on it, where X is its power.
@@ -19,7 +19,10 @@ pub fn heroes_bane() -> CardDefinition {
         name: "Heroes' Bane",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Hydra], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hydra],
+            ..Default::default()
+        },
         power: 0,
         toughness: 0,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
@@ -44,7 +47,10 @@ pub fn wildwood_scourge() -> CardDefinition {
         name: "Wildwood Scourge",
         cost: cost(&[x(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Hydra], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hydra],
+            ..Default::default()
+        },
         power: 0,
         toughness: 0,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
@@ -113,7 +119,10 @@ pub fn demolition_field() -> CardDefinition {
                     Effect::Search {
                         who: PlayerRef::You,
                         filter: R::IsBasicLand,
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                 ]),
                 ..Default::default()
@@ -135,7 +144,9 @@ pub fn goblin_firebomb() -> CardDefinition {
             tap_cost: true,
             sac_cost: true,
             mana_cost: cost(&[generic(7)]),
-            effect: Effect::Destroy { what: target_filtered(R::Permanent) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Permanent),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -153,7 +164,10 @@ pub fn ajani_caller_of_the_pride() -> CardDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {

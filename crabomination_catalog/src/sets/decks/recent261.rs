@@ -21,7 +21,10 @@ pub fn buried_in_the_garden() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
             what: target_filtered(R::Nonland.and(R::ControlledByOpponent)),
             return_to: ExileReturnZone::Battlefield,

@@ -10,7 +10,7 @@ use crate::effect::shortcut::etb;
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, Value,
 };
-use crate::mana::{cost, b, g, generic, r};
+use crate::mana::{b, cost, g, generic, r};
 
 /// Stocking the Pantry — {G} Enchantment. Whenever you put one or more +1/+1
 /// counters on a creature you control, put a supply counter on this. {2}, remove
@@ -25,7 +25,10 @@ pub fn stocking_the_pantry() -> CardDefinition {
                 EventKind::CounterAdded(CounterType::PlusOnePlusOne),
                 EventScope::YourControl,
             )
-            .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature }),
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature,
+            }),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::Supply,
@@ -35,7 +38,10 @@ pub fn stocking_the_pantry() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             remove_counter_cost: Some((CounterType::Supply, 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -56,7 +62,10 @@ pub fn war_squeak() -> CardDefinition {
         },
         effect: Effect::Attach {
             what: Selector::This,
-            to: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature,
+            },
         },
         equipped_bonus: Some(EquipBonus {
             power: 1,
@@ -65,7 +74,10 @@ pub fn war_squeak() -> CardDefinition {
             ..Default::default()
         }),
         triggered_abilities: vec![etb(Effect::GrantKeyword {
-            what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByOpponent) },
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature.and(R::ControlledByOpponent),
+            },
             keyword: Keyword::CantBlock,
             duration: Duration::EndOfTurn,
         })],
@@ -81,7 +93,10 @@ pub fn tangle_tumbler() -> CardDefinition {
         name: "Tangle Tumbler",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Vigilance],
@@ -90,7 +105,10 @@ pub fn tangle_tumbler() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 tap_cost: true,
                 effect: Effect::AddCounter {
-                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature,
+                    },
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
                 },
@@ -98,7 +116,10 @@ pub fn tangle_tumbler() -> CardDefinition {
             },
             ActivatedAbility {
                 tap_n_filter: Some((R::IsToken.and(R::ControlledByYou), 2)),
-                effect: Effect::AnimateAsCreature { what: Selector::This, duration: Duration::EndOfTurn },
+                effect: Effect::AnimateAsCreature {
+                    what: Selector::This,
+                    duration: Duration::EndOfTurn,
+                },
                 ..Default::default()
             },
         ],
@@ -127,7 +148,10 @@ pub fn bonecache_overseer() -> CardDefinition {
                 who: PlayerRef::You,
                 at_least: Value::Const(3),
             }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()

@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, heroic, target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 
 fn creature(
     name: &'static str,
@@ -22,7 +22,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: ct, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: ct,
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         keywords: kw,
@@ -31,7 +34,13 @@ fn creature(
 }
 
 fn spell(name: &'static str, mana: ManaCost, kind: CardType, effect: Effect) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![kind], effect, ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![kind],
+        effect,
+        ..Default::default()
+    }
 }
 
 /// "Inspired — Whenever this creature becomes untapped, …" (CR 702.108).
@@ -86,7 +95,12 @@ pub fn elite_skirmisher() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![heroic(Effect::MayDo {
             description: "Tap target creature".into(),
-            body: Box::new(Effect::Tap { what: Selector::TargetFiltered { slot: 1, filter: R::Creature } }),
+            body: Box::new(Effect::Tap {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
+            }),
         })],
         ..creature(
             "Elite Skirmisher",
@@ -113,7 +127,14 @@ pub fn cyclops_of_one_eyed_pass() -> CardDefinition {
 
 /// Great Hart — {3}{W} 2/4 vanilla.
 pub fn great_hart() -> CardDefinition {
-    creature("Great Hart", cost(&[generic(3), w()]), 2, 4, vec![CreatureType::Elk], vec![])
+    creature(
+        "Great Hart",
+        cost(&[generic(3), w()]),
+        2,
+        4,
+        vec![CreatureType::Elk],
+        vec![],
+    )
 }
 
 /// Deepwater Hypnotist — {1}{U} 2/1. Inspired: an opposing creature gets -3/-0.
@@ -182,9 +203,19 @@ pub fn forsaken_drifters() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+            effect: Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
         }],
-        ..creature("Forsaken Drifters", cost(&[generic(3), b()]), 4, 2, vec![CreatureType::Zombie], vec![])
+        ..creature(
+            "Forsaken Drifters",
+            cost(&[generic(3), b()]),
+            4,
+            2,
+            vec![CreatureType::Zombie],
+            vec![],
+        )
     }
 }
 
@@ -236,9 +267,18 @@ pub fn marshmist_titan() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "This spell costs {X} less to cast, where X is your devotion to black.",
-            effect: StaticEffect::SelfCostReducedByDevotion { colors: vec![Color::Black] },
+            effect: StaticEffect::SelfCostReducedByDevotion {
+                colors: vec![Color::Black],
+            },
         }],
-        ..creature("Marshmist Titan", cost(&[generic(6), b()]), 4, 5, vec![CreatureType::Giant], vec![])
+        ..creature(
+            "Marshmist Titan",
+            cost(&[generic(6), b()]),
+            4,
+            5,
+            vec![CreatureType::Giant],
+            vec![],
+        )
     }
 }
 
@@ -253,7 +293,14 @@ pub fn nyxborn_eidolon() -> CardDefinition {
             toughness: 1,
             ..Default::default()
         }),
-        ..creature("Nyxborn Eidolon", cost(&[generic(1), b()]), 2, 1, vec![CreatureType::Spirit], vec![])
+        ..creature(
+            "Nyxborn Eidolon",
+            cost(&[generic(1), b()]),
+            2,
+            1,
+            vec![CreatureType::Spirit],
+            vec![],
+        )
     }
 }
 
@@ -265,7 +312,9 @@ pub fn asphyxiate() -> CardDefinition {
         "Asphyxiate",
         cost(&[generic(1), b(), b()]),
         CardType::Sorcery,
-        Effect::Destroy { what: target_filtered(R::Creature.and(R::Untapped)) },
+        Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::Untapped)),
+        },
     )
 }
 
@@ -275,7 +324,9 @@ pub fn excoriate() -> CardDefinition {
         "Excoriate",
         cost(&[generic(3), w()]),
         CardType::Sorcery,
-        Effect::Exile { what: target_filtered(R::Creature.and(R::Tapped)) },
+        Effect::Exile {
+            what: target_filtered(R::Creature.and(R::Tapped)),
+        },
     )
 }
 
@@ -286,8 +337,14 @@ pub fn bolt_of_keranos() -> CardDefinition {
         cost(&[generic(1), r(), r()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
-            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(3),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         ]),
     )
 }
@@ -310,7 +367,9 @@ pub fn eye_gouge() -> CardDefinition {
                     what: Selector::Target(0),
                     filter: R::HasCreatureType(CreatureType::Cyclops),
                 },
-                then: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                then: Box::new(Effect::Destroy {
+                    what: Selector::Target(0),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -326,7 +385,10 @@ pub fn fall_of_the_hammer() -> CardDefinition {
         CardType::Instant,
         Effect::DealDamageEqualToPower {
             source: target_filtered(R::Creature.and(R::ControlledByYou)),
-            target: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+            target: Selector::TargetFiltered {
+                slot: 1,
+                filter: R::Creature,
+            },
         },
     )
 }
@@ -404,7 +466,10 @@ pub fn crypsis() -> CardDefinition {
                 keyword: Keyword::ProtectionFromCreatures,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
         ]),
     )
 }
@@ -415,7 +480,10 @@ pub fn hold_at_bay() -> CardDefinition {
         "Hold at Bay",
         cost(&[generic(1), w()]),
         CardType::Instant,
-        Effect::PreventNextDamage { target: target_any(), amount: Value::Const(7) },
+        Effect::PreventNextDamage {
+            target: target_any(),
+            amount: Value::Const(7),
+        },
     )
 }
 
@@ -426,9 +494,10 @@ pub fn nullify() -> CardDefinition {
         cost(&[u(), u()]),
         CardType::Instant,
         Effect::CounterSpell {
-            what: target_filtered(R::IsSpellOnStack.and(
-                R::Creature.or(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
-            )),
+            what: target_filtered(
+                R::IsSpellOnStack
+                    .and(R::Creature.or(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura))),
+            ),
         },
     )
 }
@@ -444,7 +513,9 @@ pub fn glimpse_the_sun_god() -> CardDefinition {
                 max_targets: 8,
                 min_targets: 1,
                 filter: R::Creature,
-                effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                effect: Box::new(Effect::Tap {
+                    what: Selector::Target(0),
+                }),
             }),
         },
     )
@@ -469,10 +540,19 @@ fn granting_aura(
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { activated_abilities: vec![ability], ..Default::default() }),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ability],
+            ..Default::default()
+        }),
         triggered_abilities: if etb_draw {
-            vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })]
+            vec![etb(Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            })]
         } else {
             vec![]
         },
@@ -541,7 +621,10 @@ pub fn epharas_radiance() -> CardDefinition {
         ActivatedAbility {
             mana_cost: cost(&[generic(1), w()]),
             tap_cost: true,
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             ..Default::default()
         },
         false,
@@ -595,7 +678,10 @@ pub fn epiphany_storm() -> CardDefinition {
             mana_cost: cost(&[r()]),
             tap_cost: true,
             discard_cost: Some((R::Any, 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         },
         false,
@@ -626,12 +712,18 @@ pub fn grisly_transformation() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::Intimidate],
             ..Default::default()
         }),
-        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
         ..Default::default()
     }
 }
@@ -646,7 +738,10 @@ pub fn fearsome_temper() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 2,

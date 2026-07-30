@@ -4,12 +4,14 @@
 //! (Argivian Cavalier). Tests in `tests/recent_b/recent283.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Keyword, Predicate,
-    StaticAbility, StaticEffect, Subtypes, TokenDefinition,
+    CardDefinition, CardType, CounterType, CreatureType, Keyword, Predicate, StaticAbility,
+    StaticEffect, Subtypes, TokenDefinition,
 };
 use crate::effect::shortcut::{enlist, etb, on_dies};
-use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility, Value};
-use crate::mana::{b, cost, generic, u, w, Color};
+use crate::effect::{
+    Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility, Value,
+};
+use crate::mana::{Color, b, cost, generic, u, w};
 
 /// Aven Heartstabber — {U}{B} 1/1 Bird Assassin. Flying. Gets +2/+2 and has
 /// deathtouch while there are 5+ mana values among cards in your graveyard.
@@ -39,8 +41,14 @@ pub fn aven_heartstabber() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![on_dies(Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]))],
         ..Default::default()
     }
@@ -83,7 +91,10 @@ pub fn jolly_gerbils() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::GiftGiven, EventScope::YourControl),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }

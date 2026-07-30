@@ -3,13 +3,12 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, Predicate, SelectionRequirement, StaticAbility, Subtypes, Supertype,
-    TriggeredAbility,
+    Keyword, Predicate, SelectionRequirement, StaticAbility, Subtypes, Supertype, TriggeredAbility,
 };
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, u, Color, SpendRestriction};
+use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u};
 
 fn lord(t: CreatureType) -> StaticAbility {
     StaticAbility {
@@ -42,7 +41,10 @@ pub fn silvergill_douser() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature,
+                },
                 power: Value::Times(
                     Box::new(Value::count(Selector::EachPermanent(
                         SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
@@ -117,7 +119,9 @@ pub fn tidebinder_mage() -> CardDefinition {
                             ),
                     },
                 },
-                Effect::SkipNextUntap { what: Selector::Target(0) },
+                Effect::SkipNextUntap {
+                    what: Selector::Target(0),
+                },
             ]),
         }],
         ..Default::default()
@@ -188,7 +192,9 @@ pub fn loaming_shaman() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::Target(0) },
+            effect: Effect::ShuffleGraveyardIntoLibrary {
+                who: PlayerRef::Target(0),
+            },
         }],
         ..Default::default()
     }
@@ -217,12 +223,18 @@ pub fn defense_of_the_heart() -> CardDefinition {
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Creature,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Creature,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ]),
         }],
@@ -412,14 +424,19 @@ pub fn rhonas_the_indomitable() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::God], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::God],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![
             Keyword::Deathtouch,
             Keyword::Indestructible,
             Keyword::CantAttackOrBlockUnlessYouControlCount {
-                filter: Box::new(SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4))),
+                filter: Box::new(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+                ),
                 min: 1,
                 attack_only: false,
                 block_only: false,
@@ -500,7 +517,10 @@ pub fn trash_for_treasure() -> CardDefinition {
                 slot: 0,
                 filter: SelectionRequirement::Artifact.and(SelectionRequirement::InYourGraveyard),
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -543,7 +563,10 @@ pub fn jhoiras_familiar() -> CardDefinition {
         name: "Jhoira's Familiar",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -551,7 +574,9 @@ pub fn jhoiras_familiar() -> CardDefinition {
             description: "Historic spells you cast cost {1} less to cast.",
             effect: StaticEffect::CostReduction {
                 filter: SelectionRequirement::Artifact
-                    .or(SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary))
+                    .or(SelectionRequirement::HasSupertype(
+                        crate::card::Supertype::Legendary,
+                    ))
                     .or(SelectionRequirement::HasEnchantmentSubtype(
                         crate::card::EnchantmentSubtype::Saga,
                     )),

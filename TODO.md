@@ -23,33 +23,40 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
-## Noticed this run (modern_decks — Mirrodin closure)
+## Noticed this run (modern_decks — Mirrodin block closure)
 
-- **Fifth Dawn (5DN) is the next block gap:** `scripts/set_gaps.py 5dn` was at
-  120 before this run's first batch (`decks::recent322`, 24 cards). The
-  remaining rares mostly want one primitive each — the Bringer cycle
-  (five-colour alternative cost), Door to Nothingness, Fist of Suns, Sunburst
-  breadth, Salvaging Station, Vedalken Orrery.
+The whole Mirrodin block (MRD / DST / 5DN) now reports zero `set_gaps.py`
+gaps. Follow-ups that came out of it:
 
-- **Remaining Mirrodin (MRD) gaps — 4 cards, one primitive each.**
-  `scripts/set_gaps.py mrd` is the live list (70 → 4 this run).
-  - **Scythe of the Wretched** — attempted and reverted. A `CreatureDied`
-    trigger printed on the Equipment never produced a battlefield return: the
-    trigger doesn't reach the resolver (or `Selector::TriggerSource` can't be
-    re-homed from the graveyard) when the source is a noncreature artifact.
-    Diagnose the dispatch path before retrying. It also wants
-    `Selector::AttachmentGranting` (see the Rakdos Riteknife note below) so
-    the re-attach can name the Equipment from a granted trigger.
-  - **Shared Fate** — needs a *draw replacement* ("if a player would draw,
-    they exile the top card of an opponent's library instead") plus a
-    play-from-that-exile grant. The engine has `ExileTopAndGrantMayPlay` for
-    the second half; the first half has no hook.
-  - **Spellweaver Helix** — imprint *two* targets from a single graveyard,
-    then a cast-trigger that copies "the other" one and offers a free cast.
-    Needs a two-card imprint link plus an "other exiled-with card" selector.
-  - **Liar's Pendulum** — name a card, then an *opponent* guesses whether it's
-    in your hand. Needs a per-seat guess decision (`Decision::Guess`), which
-    would also serve Master of Predicaments.
+- **Static-granted triggers still can't be re-homed from the graveyard.**
+  `statics_granted_dying_triggers` closes the "when this dies" case (Endless
+  Whispers) by walking the death LKI snapshot, but the *dispatcher's* general
+  path still evaluates grant filters against `Target::Permanent`. Any other
+  leaves-the-battlefield grant (exile, bounce) will hit the same wall.
+- **`Selector::AttachmentGranting` is still missing.** Scythe of the Wretched
+  ships as a trigger printed on the Equipment (`ReturnVictimAndAttachSelf`
+  reads `attached_to` directly); a granted trigger that needs to name "the
+  Equipment that granted me this" — Rakdos Riteknife — has no selector.
+- **Liar's Pendulum's guess is a bot policy stub.** The named card auto-picks
+  the first card in hand and the guesser answers through the generic
+  `OptionalTrigger` decision. A real `Decision::Guess` (also wanted by Master
+  of Predicaments) would let a UI seat bluff.
+- **Shared Fate's exile is one-sided in multiplayer.** `draw_one` exiles off
+  the first opponent with a non-empty library rather than letting the drawing
+  player choose which opponent.
+- **Spellweaver Helix imprints without targeting.** `ImprintFromGraveyard`
+  picks the graveyard with the most matches and takes the first N; the printed
+  "two *target* sorcery cards" is a resolution-time auto-pick.
+- **Endless Whispers hands the corpse to the first opponent.** The printed
+  "choose target opponent" isn't a real target slot (the delayed trigger's one
+  target slot already carries the captured card).
+- **`Effect::ApplyToTargets` slots don't auto-fill for triggers.** An ETB
+  trigger whose body is `ApplyToTargets { max_targets: 2 }` only ever gets
+  slot 0 filled — `auto_extra_distinct_slot_targets` bails on it because
+  `distinct_target_count` is `Some`. Worth splitting the divide-effect check
+  from the independent-slot check.
+- **Next set gaps:** Kamigawa block is the biggest remaining chunk —
+  `set_gaps.py chk` 77, `bok` 112, `sok` 131.
 - **`run_effect`'s stack frame is load-bearing.** `Effect::SearchUpToN`
   recurses once per pick (Grozoth chains 20), so any fat new `run_effect` arm
   can overflow a test thread's stack. New non-trivial arms now go in

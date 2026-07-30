@@ -51,7 +51,10 @@ pub fn grozoth() -> CardDefinition {
         name: "Grozoth",
         cost: cost(&[generic(6), u(), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Leviathan], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Leviathan],
+            ..Default::default()
+        },
         power: 9,
         toughness: 9,
         keywords: vec![Keyword::Defender],
@@ -67,7 +70,10 @@ pub fn grozoth() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[generic(4)]),
-                effect: Effect::LoseKeywordThisTurn { what: Selector::This, keyword: Keyword::Defender },
+                effect: Effect::LoseKeywordThisTurn {
+                    what: Selector::This,
+                    keyword: Keyword::Defender,
+                },
                 ..Default::default()
             },
             transmute(cost(&[generic(1), u(), u()]), 9),

@@ -42,7 +42,9 @@ pub fn space_beleren() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -5,
                 effect: Effect::ChooseSector {
-                    body: Box::new(Effect::Destroy { what: Selector::CreaturesInChosenSector }),
+                    body: Box::new(Effect::Destroy {
+                        what: Selector::CreaturesInChosenSector,
+                    }),
                 },
                 ..Default::default()
             },

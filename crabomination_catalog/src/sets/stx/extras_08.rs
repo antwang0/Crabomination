@@ -10,12 +10,15 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -272,8 +275,10 @@ pub fn lorehold_battlemage() -> CardDefinition {
                     amount: Value::Const(2),
                 },
             ]),
-                    self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -344,13 +349,13 @@ pub fn witherbloom_plaguemage() -> CardDefinition {
                     amount: Value::Const(2),
                 },
             ]),
-                    self_counter_cost_reduction: None,
-                    sac_other_filter: Some((
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
-                        1,
-                    )),
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                1,
+            )),
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -583,8 +588,10 @@ pub fn witherbloom_botanist() -> CardDefinition {
                     amount: Value::Const(3),
                 },
             ]),
-                    self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -690,8 +697,10 @@ pub fn quandrix_schematist() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
-                    self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -1007,8 +1016,10 @@ pub fn quandrix_calligrapher() -> CardDefinition {
                     kind: CounterType::PlusOnePlusOne,
                 },
             },
-                    self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
@@ -1092,8 +1103,10 @@ pub fn lorehold_treasure_smith() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                 },
             ]),
-                    self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -1206,8 +1219,10 @@ pub fn quandrix_geologist() -> CardDefinition {
                         amount: Value::Const(1),
                     },
                 ]),
-                            self_counter_cost_reduction: None, sac_other_filter: None,
-                            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -1914,10 +1929,7 @@ pub fn witherbloom_wickering() -> CardDefinition {
                 filter: SelectionRequirement::Creature,
             },
             Effect::If {
-                cond: Predicate::ValueAtLeast(
-                    Value::SacrificedToughness,
-                    Value::Const(3),
-                ),
+                cond: Predicate::ValueAtLeast(Value::SacrificedToughness, Value::Const(3)),
                 then: Box::new(Effect::PumpPT {
                     what: target_filtered(SelectionRequirement::Creature),
                     power: Value::Const(-4),
@@ -2148,8 +2160,7 @@ pub fn witherbloom_decay() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
                 ),
             },
             Effect::GainLife {
@@ -2180,8 +2191,7 @@ pub fn lorehold_reverberation() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
                 amount: Value::Const(3),
             },
@@ -2530,8 +2540,10 @@ pub fn witherbloom_brewer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()

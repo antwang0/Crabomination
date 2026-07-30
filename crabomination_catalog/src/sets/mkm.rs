@@ -1,15 +1,15 @@
 //! Murders at Karlov Manor (MKM) — 2024. Detective set introducing the
 //! Suspect (CR 701.60) and Collect Evidence (CR 701.59) keyword actions.
 
+use crate::card::{ActivatedAbility, TokenDefinition};
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
     SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::card::{ActivatedAbility, TokenDefinition};
 use crate::effect::shortcut::{draw, etb, lose_life, on_attack, target_filtered};
 use crate::effect::{Effect, PlayerRef, Predicate};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
 use crate::game::effects::clue_token;
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Repeat Offender — {1}{B} 2/1 Human Assassin. "{2}{B}: If this creature is
 /// suspected, put a +1/+1 counter on it. Otherwise, suspect it."
@@ -33,7 +33,9 @@ pub fn repeat_offender() -> CardDefinition {
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
                 }),
-                else_: Box::new(Effect::Suspect { what: Selector::This }),
+                else_: Box::new(Effect::Suspect {
+                    what: Selector::This,
+                }),
             },
             ..Default::default()
         }],
@@ -57,7 +59,10 @@ pub fn reasonable_doubt() -> CardDefinition {
                 extra_generic: None,
             },
             Effect::Suspect {
-                what: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature,
+                },
             },
         ]),
         ..Default::default()
@@ -111,7 +116,9 @@ pub fn barbed_servitor() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Indestructible],
         triggered_abilities: vec![
-            etb(Effect::Suspect { what: Selector::This }),
+            etb(Effect::Suspect {
+                what: Selector::This,
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::Seq(vec![draw(1), lose_life(1, Selector::You)]),
@@ -139,7 +146,11 @@ pub fn deduce() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             draw(1),
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: clue_token() },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: clue_token(),
+            },
         ]),
         ..Default::default()
     }
@@ -178,7 +189,10 @@ pub fn izoni_center_of_the_web() -> CardDefinition {
         keywords: vec![Keyword::Menace, Keyword::Reach],
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black, Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
         ..Default::default()
     };
     let collect = || Effect::CollectEvidence {
@@ -217,7 +231,10 @@ fn detective_token() -> TokenDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White, Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Detective], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Detective],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -276,7 +293,9 @@ pub fn person_of_interest() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Suspect { what: Selector::This },
+            Effect::Suspect {
+                what: Selector::This,
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -352,7 +371,10 @@ pub fn slimy_dualleech() -> CardDefinition {
         name: "Slimy Dualleech",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Leech], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Leech],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {

@@ -3,15 +3,15 @@
 //! primitives. Tests in `crabomination/src/tests/recent139.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Keyword, MayPlayDuration,
-    Predicate, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
+    CardDefinition, CardType, CounterType, CreatureType, Keyword, MayPlayDuration, Predicate,
+    SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{deal, etb, on_attack, target, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, ZoneDest, ZoneRef,
 };
 use crate::game::effects::treasure_token;
-use crate::mana::{b, cost, generic, r, u, x, Color};
+use crate::mana::{Color, b, cost, generic, r, u, x};
 
 use super::woe_roles::wicked_role;
 
@@ -23,7 +23,10 @@ fn rat_token() -> crate::card::TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         keywords: vec![Keyword::CantBlock],
         ..Default::default()
     }
@@ -49,7 +52,10 @@ pub fn misleading_motes() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
             what: target_filtered(R::Creature),
-            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::OwnerChoice },
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOfMoved,
+                pos: LibraryPosition::OwnerChoice,
+            },
         },
         ..Default::default()
     }
@@ -65,13 +71,18 @@ pub fn taken_by_nightmares() -> CardDefinition {
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Exile { what: target_filtered(R::Creature) },
+            Effect::Exile {
+                what: target_filtered(R::Creature),
+            },
             Effect::If {
                 cond: Predicate::SelectorCountAtLeast {
                     sel: Selector::EachPermanent(R::Enchantment.and(R::ControlledByYou)),
                     n: Value::ONE,
                 },
-                then: Box::new(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+                then: Box::new(Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -123,7 +134,9 @@ pub fn shatter_the_oath() -> CardDefinition {
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Creature.or(R::Enchantment)) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.or(R::Enchantment)),
+            },
             Effect::CreateTokenAttachedTo {
                 target: Selector::take(
                     Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
@@ -150,14 +163,25 @@ pub fn lord_skitters_blessing() -> CardDefinition {
                 definition: wicked_role(),
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Draw), EventScope::ActivePlayer)
-                    .with_filter(Predicate::SelectorCountAtLeast {
-                        sel: Selector::EachPermanent(R::Creature.and(R::IsEnchanted).and(R::ControlledByYou)),
-                        n: Value::ONE,
-                    }),
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::Draw),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        R::Creature.and(R::IsEnchanted).and(R::ControlledByYou),
+                    ),
+                    n: Value::ONE,
+                }),
                 effect: Effect::Seq(vec![
-                    Effect::LoseLife { who: Selector::You, amount: Value::ONE },
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 ]),
             },
         ],
@@ -176,8 +200,15 @@ pub fn flick_a_coin() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             deal(1, target()),
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: treasure_token() },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: treasure_token(),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -211,9 +242,16 @@ pub fn frantic_firebolt() -> CardDefinition {
 pub fn ogre_chitterlord() -> CardDefinition {
     let body = || {
         Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: rat_token() },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: rat_token(),
+            },
             Effect::If {
-                cond: Predicate::SelectorCountAtLeast { sel: your_rats(), n: Value::Const(5) },
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: your_rats(),
+                    n: Value::Const(5),
+                },
                 then: Box::new(Effect::PumpPT {
                     what: your_rats(),
                     power: Value::Const(2),
@@ -256,9 +294,16 @@ pub fn redcap_gutter_dweller() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![
-            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: rat_token() }),
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: rat_token(),
+            }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::ActivePlayer),
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                    EventScope::ActivePlayer,
+                ),
                 effect: Effect::MaySacrifice {
                     description: "sacrifice another creature".into(),
                     filter: R::Creature.and(R::OtherThanSource),
@@ -273,7 +318,8 @@ pub fn redcap_gutter_dweller() -> CardDefinition {
                             who: PlayerRef::You,
                             count: Value::ONE,
                             duration: MayPlayDuration::EndOfThisTurn,
-                            pay_any_color: false, pay_own_cost: false,
+                            pay_any_color: false,
+                            pay_own_cost: false,
                             uncast_penalty: None,
                         },
                     ])),

@@ -2,7 +2,9 @@
 //! instants/sorceries, not just creature triggers). Tests in
 //! `crabomination/src/tests/recent11.rs`.
 
-use crate::card::{CardDefinition, CardType, SelectionRequirement, Selector, SpellSubtype, Subtypes, Value};
+use crate::card::{
+    CardDefinition, CardType, SelectionRequirement, Selector, SpellSubtype, Subtypes, Value,
+};
 use crate::effect::{Effect, PlayerRef};
 use crate::mana::{b, cost, g, generic};
 
@@ -12,7 +14,10 @@ pub fn earthbending_lesson() -> CardDefinition {
         name: "Earthbending Lesson",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::Earthbend { n: Value::Const(4) },
         ..Default::default()
     }
@@ -26,7 +31,10 @@ pub fn dai_li_indoctrination() -> CardDefinition {
         name: "Dai Li Indoctrination",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::ChooseMode(vec![
             Effect::DiscardChosen {
                 from: Selector::Player(PlayerRef::EachOpponent),

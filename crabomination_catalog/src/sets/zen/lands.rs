@@ -1,7 +1,5 @@
 use crate::card::{CardDefinition, CardType, LandType, SelectionRequirement};
-use crate::effect::{
-    ActivatedAbility, Effect, PlayerRef, Selector, Value, ZoneDest,
-};
+use crate::effect::{ActivatedAbility, Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::ManaCost;
 
 /// Build a fetch land activated ability: {T}, pay 1 life, sacrifice this:
@@ -9,8 +7,8 @@ use crate::mana::ManaCost;
 /// battlefield (untapped — Oracle text for Onslaught/Zendikar fetches says
 /// "put it onto the battlefield", which means untapped).
 fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
-    let filter = SelectionRequirement::HasLandType(type_a)
-        .or(SelectionRequirement::HasLandType(type_b));
+    let filter =
+        SelectionRequirement::HasLandType(type_a).or(SelectionRequirement::HasLandType(type_b));
     ActivatedAbility {
         energy_cost: 0,
         discard_cost: None,
@@ -18,7 +16,10 @@ fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
         mana_cost: ManaCost::default(),
         effect: Effect::Seq(vec![
             // Pay 1 life
-            Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             // Sacrifice this land
             Effect::Move {
                 what: Selector::This,
@@ -29,27 +30,29 @@ fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
             Effect::Search {
                 who: PlayerRef::You,
                 filter,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         ]),
         once_per_turn: false,
         sorcery_speed: false,
         sac_cost: false,
         condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+        life_cost: 0,
+        from_graveyard: false,
+        exile_self_cost: false,
+        exile_other_filter: None,
+        self_counter_cost_reduction: None,
+        sac_other_filter: None,
+        tap_other_filter: None,
+        from_hand: false,
         ..Default::default()
     }
 }
 
-fn fetch_land(
-    name: &'static str,
-    type_a: LandType,
-    type_b: LandType,
-) -> CardDefinition {
+fn fetch_land(name: &'static str, type_a: LandType, type_b: LandType) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
@@ -111,12 +114,21 @@ pub fn prismatic_vista() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::LoseLife { who: Selector::You, amount: Value::ONE },
-                Effect::Move { what: Selector::This, to: ZoneDest::Graveyard },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Graveyard,
+                },
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::IsBasicLand,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ]),
             ..Default::default()

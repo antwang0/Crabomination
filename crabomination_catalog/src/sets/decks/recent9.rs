@@ -4,12 +4,13 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, Supertype, TriggeredAbility, Value,
+    EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, Supertype, TriggeredAbility,
+    Value,
 };
 use crate::effect::shortcut::{dies_gain_life, etb, on_attack, on_dies, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 use crabomination_base::tokens::food_token;
 
 /// Trigger filter: another creature you control of `ty` entering.
@@ -46,7 +47,11 @@ pub fn haru_hidden_talent() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Peasant, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Peasant,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 1,
@@ -67,7 +72,11 @@ pub fn avatar_enthusiasts() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Peasant, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Peasant,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -93,7 +102,10 @@ pub fn invasion_reinforcements() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ally], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ally],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -101,7 +113,11 @@ pub fn invasion_reinforcements() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Warrior,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 1,
@@ -127,7 +143,11 @@ pub fn aang_airbending_master() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Avatar, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Avatar,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 4,
@@ -157,9 +177,15 @@ pub fn sinister_gnarlbark() -> CardDefinition {
         power: 0,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 Effect::Blight { n: Value::ONE },
             ]),
         }],
@@ -205,7 +231,10 @@ pub fn sourbread_auntie() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black, Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -222,7 +251,11 @@ pub fn sourbread_auntie() -> CardDefinition {
             description: "Blight 2 to create two Goblins?".into(),
             body: Box::new(Effect::Seq(vec![
                 Effect::Blight { n: Value::Const(2) },
-                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: goblin },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: goblin,
+                },
             ])),
         })],
         ..Default::default()
@@ -235,7 +268,10 @@ pub fn shadow_urchin() -> CardDefinition {
         name: "Shadow Urchin",
         cost: cost(&[generic(2), hybrid(Color::Black, Color::Red)]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ouphe], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ouphe],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         triggered_abilities: vec![on_attack(Effect::Blight { n: Value::ONE })],
@@ -312,7 +348,11 @@ pub fn master_pakku() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Advisor, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Advisor,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 1,
@@ -330,7 +370,10 @@ pub fn unlucky_cabbage_merchant() -> CardDefinition {
         name: "Unlucky Cabbage Merchant",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::CreateToken {

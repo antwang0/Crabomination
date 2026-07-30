@@ -1,17 +1,15 @@
 //! MH2 Food/Eggs + artifact-combo batch: Cookbook, Asmor, Urza, Tezzeret,
 //! Second Sunrise. Tests in `tests/recent107.rs`.
 
+use crate::card::AlternativeCost;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EquipBonus, EquipScale, EventKind,
     EventScope, EventSpec, Keyword, LoyaltyAbility, PlaneswalkerSubtype, SelectionRequirement,
     Selector, StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered, unearth};
-use crate::card::AlternativeCost;
-use crate::effect::{
-    Duration, Effect, ManaPayload, PlayerRef, Predicate, StaticEffect, ZoneDest,
-};
-use crate::mana::{b, cost, generic, hybrid, r, u, w, Color};
+use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, StaticEffect, ZoneDest};
+use crate::mana::{Color, b, cost, generic, hybrid, r, u, w};
 
 /// Cranial Ram — {B}{R} Living weapon Equipment. +X/+1, X = your artifacts.
 /// Equip {2}.
@@ -51,7 +49,10 @@ pub fn cranial_ram() -> CardDefinition {
                     ..Default::default()
                 },
             },
-            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+            Effect::Attach {
+                what: Selector::This,
+                to: Selector::LastCreatedToken,
+            },
         ]))],
         ..Default::default()
     }
@@ -108,7 +109,9 @@ pub fn asmoranomardicadaistinaculdacar() -> CardDefinition {
         toughness: 3,
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[hybrid(Color::Black, Color::Red)]),
-            condition: Some(Predicate::DiscardedThisTurn { who: PlayerRef::You }),
+            condition: Some(Predicate::DiscardedThisTurn {
+                who: PlayerRef::You,
+            }),
             ..Default::default()
         }),
         triggered_abilities: vec![etb(Effect::Search {
@@ -151,8 +154,9 @@ pub fn retract() -> CardDefinition {
 /// and may loot.
 pub fn jeskai_ascendancy() -> CardDefinition {
     let noncreature_cast = || {
-        EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-            .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature))
+        EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
+        )
     };
     CardDefinition {
         name: "Jeskai Ascendancy",
@@ -185,8 +189,15 @@ pub fn jeskai_ascendancy() -> CardDefinition {
                 effect: Effect::MayDo {
                     description: "Draw a card, then discard a card?".into(),
                     body: Box::new(Effect::Seq(vec![
-                        Effect::Draw { who: Selector::You, amount: Value::ONE },
-                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::ONE,
+                        },
+                        Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::ONE,
+                            random: false,
+                        },
                     ])),
                 },
             },
@@ -198,8 +209,9 @@ pub fn jeskai_ascendancy() -> CardDefinition {
 /// Fatestitcher — {3}{U} 1/2. {T}: tap or untap another target permanent.
 /// Unearth {U}.
 pub fn fatestitcher() -> CardDefinition {
-    let another_permanent =
-        || target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::OtherThanSource));
+    let another_permanent = || {
+        target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::OtherThanSource))
+    };
     CardDefinition {
         name: "Fatestitcher",
         cost: cost(&[generic(3), u()]),
@@ -214,8 +226,13 @@ pub fn fatestitcher() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::ChooseMode(vec![
-                    Effect::Tap { what: another_permanent() },
-                    Effect::Untap { what: another_permanent(), up_to: None },
+                    Effect::Tap {
+                        what: another_permanent(),
+                    },
+                    Effect::Untap {
+                        what: another_permanent(),
+                        up_to: None,
+                    },
                 ]),
                 ..Default::default()
             },
@@ -231,7 +248,10 @@ pub fn urza_lord_high_artificer() -> CardDefinition {
     let construct = TokenDefinition {
         name: "Construct".into(),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         static_abilities: vec![StaticAbility {
             description: "This creature gets +1/+1 for each artifact you control.",
             effect: StaticEffect::PumpSelfByControlledPermanents {
@@ -270,12 +290,15 @@ pub fn urza_lord_high_artificer() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(5)]),
                 effect: Effect::Seq(vec![
-                    Effect::ShuffleLibrary { who: PlayerRef::You },
+                    Effect::ShuffleLibrary {
+                        who: PlayerRef::You,
+                    },
                     Effect::ExileTopAndGrantMayPlay {
                         who: PlayerRef::You,
                         count: Value::ONE,
                         duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                        pay_any_color: false, pay_own_cost: false,
+                        pay_any_color: false,
+                        pay_own_cost: false,
                         uncast_penalty: None,
                     },
                 ]),

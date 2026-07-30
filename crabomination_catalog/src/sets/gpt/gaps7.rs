@@ -17,7 +17,10 @@ pub fn yore_tiller_nephilim() -> CardDefinition {
         name: "Yore-Tiller Nephilim",
         cost: cost(&[w(), u(), b(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nephilim], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nephilim],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![on_attack(Effect::Seq(vec![
@@ -26,9 +29,14 @@ pub fn yore_tiller_nephilim() -> CardDefinition {
                     slot: 0,
                     filter: R::Creature.and(R::InYourGraveyard),
                 },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
-            Effect::JoinCombatAttacking { what: Selector::LastMoved },
+            Effect::JoinCombatAttacking {
+                what: Selector::LastMoved,
+            },
         ]))],
         ..Default::default()
     }
@@ -42,7 +50,10 @@ pub fn witch_maw_nephilim() -> CardDefinition {
         name: "Witch-Maw Nephilim",
         cost: cost(&[g(), w(), u(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nephilim], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nephilim],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![
@@ -58,7 +69,10 @@ pub fn witch_maw_nephilim() -> CardDefinition {
                 },
             },
             on_attack(Effect::If {
-                cond: Predicate::EntityMatches { what: Selector::This, filter: R::PowerAtLeast(10) },
+                cond: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::PowerAtLeast(10),
+                },
                 then: Box::new(Effect::GrantKeyword {
                     what: Selector::This,
                     keyword: Keyword::Trample,
@@ -79,7 +93,10 @@ pub fn bioplasm() -> CardDefinition {
         name: "Bioplasm",
         cost: cost(&[crate::mana::generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![on_attack(Effect::ExileTopSelfPumpIfCreature)],
@@ -120,7 +137,9 @@ pub fn orzhov_pontiff() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: modal.clone(),
             },
-            on_dies(Effect::HauntCreature { body: Box::new(modal) }),
+            on_dies(Effect::HauntCreature {
+                body: Box::new(modal),
+            }),
         ],
         ..Default::default()
     }

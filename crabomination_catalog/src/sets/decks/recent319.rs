@@ -3,10 +3,9 @@
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
-    CreatureType,
-    EnchantmentSubtype, EquipBonus, EquipScale, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, Selector, SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition,
-    TriggeredAbility, Value,
+    CreatureType, EnchantmentSubtype, EquipBonus, EquipScale, EventKind, EventScope, EventSpec,
+    Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes,
+    TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{blocks, etb, on_dies, target_filtered};
 use crate::effect::{
@@ -14,10 +13,15 @@ use crate::effect::{
     StaticEffect, ZoneDest,
 };
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
 }
 
 fn creature(
@@ -32,7 +36,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -92,7 +99,11 @@ fn spell(name: &'static str, mana: ManaCost, sorcery: bool, effect: Effect) -> C
     CardDefinition {
         name,
         cost: mana,
-        card_types: vec![if sorcery { CardType::Sorcery } else { CardType::Instant }],
+        card_types: vec![if sorcery {
+            CardType::Sorcery
+        } else {
+            CardType::Instant
+        }],
         effect,
         ..Default::default()
     }
@@ -148,19 +159,34 @@ fn clockwork(
 
 /// Tower of Eons — {8}, {T}: You gain 10 life.
 pub fn tower_of_eons() -> CardDefinition {
-    tower("Tower of Eons", Effect::GainLife { who: Selector::You, amount: Value::Const(10) })
+    tower(
+        "Tower of Eons",
+        Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(10),
+        },
+    )
 }
 
 /// Tower of Fortunes — {8}, {T}: Draw four cards.
 pub fn tower_of_fortunes() -> CardDefinition {
-    tower("Tower of Fortunes", Effect::Draw { who: Selector::You, amount: Value::Const(4) })
+    tower(
+        "Tower of Fortunes",
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(4),
+        },
+    )
 }
 
 /// Tower of Murmurs — {8}, {T}: Target player mills eight cards.
 pub fn tower_of_murmurs() -> CardDefinition {
     tower(
         "Tower of Murmurs",
-        Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(8) },
+        Effect::Mill {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::Const(8),
+        },
     )
 }
 
@@ -168,7 +194,13 @@ pub fn tower_of_murmurs() -> CardDefinition {
 
 /// Clockwork Beetle — {1} 0/0 with two +1/+1 counters.
 pub fn clockwork_beetle() -> CardDefinition {
-    clockwork("Clockwork Beetle", cost(&[generic(1)]), 2, vec![CreatureType::Insect], vec![])
+    clockwork(
+        "Clockwork Beetle",
+        cost(&[generic(1)]),
+        2,
+        vec![CreatureType::Insect],
+        vec![],
+    )
 }
 
 /// Clockwork Condor — {4} 0/0 flier with three +1/+1 counters.
@@ -294,8 +326,12 @@ pub fn dead_iron_sledge() -> CardDefinition {
     let mutual_kill = |kind: EventKind| TriggeredAbility {
         event: EventSpec::new(kind, EventScope::SelfSource),
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: Selector::This },
-            Effect::Destroy { what: Selector::CreaturesInCombatWith(Box::new(Selector::This)) },
+            Effect::Destroy {
+                what: Selector::This,
+            },
+            Effect::Destroy {
+                what: Selector::CreaturesInCombatWith(Box::new(Selector::This)),
+            },
         ]),
     };
     CardDefinition {
@@ -335,7 +371,9 @@ pub fn disarm() -> CardDefinition {
         "Disarm",
         cost(&[u()]),
         false,
-        Effect::Unattach { what: Selector::AttachedToMe(Box::new(target_filtered(R::Creature))) },
+        Effect::Unattach {
+            what: Selector::AttachedToMe(Box::new(target_filtered(R::Creature))),
+        },
     )
 }
 
@@ -364,7 +402,10 @@ pub fn assert_authority() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Affinity for artifacts.",
-            effect: StaticEffect::SelfCostReducedPerPermanentMatching { filter: R::Artifact, per: 1 },
+            effect: StaticEffect::SelfCostReducedPerPermanentMatching {
+                filter: R::Artifact,
+                per: 1,
+            },
         }],
         ..spell(
             "Assert Authority",
@@ -435,13 +476,18 @@ pub fn betrayal_of_flesh() -> CardDefinition {
             cost(&[generic(5), b()]),
             false,
             Effect::ChooseMode(vec![
-                Effect::Destroy { what: target_filtered(R::Creature) },
+                Effect::Destroy {
+                    what: target_filtered(R::Creature),
+                },
                 Effect::Move {
                     what: Selector::TargetFiltered {
                         slot: 0,
                         filter: R::Creature.and(R::InYourGraveyard),
                     },
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ]),
         )
@@ -457,7 +503,9 @@ pub fn temporal_cascade() -> CardDefinition {
             cost(&[generic(5), u(), u()]),
             true,
             Effect::ChooseMode(vec![
-                Effect::ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef::EachPlayer },
+                Effect::ShuffleHandAndGraveyardIntoLibrary {
+                    who: PlayerRef::EachPlayer,
+                },
                 Effect::Draw {
                     who: Selector::Player(PlayerRef::EachPlayer),
                     amount: Value::Const(7),
@@ -473,8 +521,12 @@ pub fn temporal_cascade() -> CardDefinition {
 pub fn vermiculos() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
-                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact }),
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact,
+                },
+            ),
             effect: Effect::PumpPT {
                 what: Selector::This,
                 power: Value::Const(4),
@@ -482,7 +534,14 @@ pub fn vermiculos() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        ..creature("Vermiculos", cost(&[generic(4), b()]), 1, 1, vec![CreatureType::Horror], vec![])
+        ..creature(
+            "Vermiculos",
+            cost(&[generic(4), b()]),
+            1,
+            1,
+            vec![CreatureType::Horror],
+            vec![],
+        )
     }
 }
 
@@ -619,7 +678,14 @@ pub fn groffskithur() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
         })],
-        ..creature("Groffskithur", cost(&[generic(5), g()]), 3, 3, vec![CreatureType::Beast], vec![])
+        ..creature(
+            "Groffskithur",
+            cost(&[generic(5), g()]),
+            3,
+            3,
+            vec![CreatureType::Beast],
+            vec![],
+        )
     }
 }
 
@@ -632,9 +698,9 @@ pub fn reiver_demon() -> CardDefinition {
                 .with_filter(Predicate::CastFromHand),
             effect: Effect::DestroyNoRegen {
                 what: Selector::EachPermanent(
-                    R::Creature.and(R::Not(Box::new(R::Artifact))).and(R::Not(Box::new(
-                        R::HasColor(Color::Black),
-                    ))),
+                    R::Creature
+                        .and(R::Not(Box::new(R::Artifact)))
+                        .and(R::Not(Box::new(R::HasColor(Color::Black)))),
                 ),
             },
         }],
@@ -667,7 +733,10 @@ pub fn nim_devourer() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::Sacrifice {
                     who: Selector::You,
@@ -677,7 +746,14 @@ pub fn nim_devourer() -> CardDefinition {
             ]),
             ..Default::default()
         }],
-        ..creature("Nim Devourer", cost(&[generic(3), b(), b()]), 4, 1, vec![CreatureType::Zombie], vec![])
+        ..creature(
+            "Nim Devourer",
+            cost(&[generic(3), b(), b()]),
+            4,
+            1,
+            vec![CreatureType::Zombie],
+            vec![],
+        )
     }
 }
 
@@ -689,7 +765,11 @@ pub fn domineer() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains {
             what: Selector::AttachedTo(Box::new(Selector::This)),
         })],
-        ..aura("Domineer", cost(&[generic(1), u(), u()]), R::Creature.and(R::Artifact))
+        ..aura(
+            "Domineer",
+            cost(&[generic(1), u(), u()]),
+            R::Creature.and(R::Artifact),
+        )
     }
 }
 
@@ -722,7 +802,10 @@ pub fn sun_droplet() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::AnyPlayer,
+                ),
                 effect: Effect::MayDo {
                     description: "Remove a charge counter from Sun Droplet to gain 1 life?".into(),
                     body: Box::new(Effect::Seq(vec![
@@ -731,7 +814,10 @@ pub fn sun_droplet() -> CardDefinition {
                             kind: CounterType::Charge,
                             amount: Value::ONE,
                         },
-                        Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                        Effect::GainLife {
+                            who: Selector::You,
+                            amount: Value::ONE,
+                        },
                     ])),
                 },
             },
@@ -856,8 +942,11 @@ pub fn jinxed_choker() -> CardDefinition {
                 ]),
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-                    .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::SelfSource,
+                )
+                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
                 effect: Effect::DealDamage {
                     to: Selector::You,
                     amount: Value::CountersOn {
@@ -893,7 +982,10 @@ pub fn lightning_coils() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
-                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken }),
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::NotToken,
+                    }),
                 effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::Charge,
@@ -901,11 +993,17 @@ pub fn lightning_coils() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-                    .with_filter(Predicate::All(vec![
-                        Predicate::IsTurnOf(PlayerRef::You),
-                        Predicate::SourceHasCountersAtLeast { counter: CounterType::Charge, n: 5 },
-                    ])),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::SelfSource,
+                )
+                .with_filter(Predicate::All(vec![
+                    Predicate::IsTurnOf(PlayerRef::You),
+                    Predicate::SourceHasCountersAtLeast {
+                        counter: CounterType::Charge,
+                        n: 5,
+                    },
+                ])),
                 effect: Effect::Seq(vec![
                     Effect::CreateToken {
                         who: PlayerRef::You,
@@ -927,7 +1025,9 @@ pub fn lightning_coils() -> CardDefinition {
                             ..Default::default()
                         },
                     },
-                    Effect::RemoveAllCounters { what: Selector::This },
+                    Effect::RemoveAllCounters {
+                        what: Selector::This,
+                    },
                     Effect::ExileLastCreatedTokensAtNextEndStep,
                 ]),
             },
@@ -940,8 +1040,11 @@ pub fn lightning_coils() -> CardDefinition {
 pub fn culling_scales() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::SelfSource,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::Destroy {
                 what: Selector::TargetFiltered {
                     slot: 0,
@@ -957,8 +1060,11 @@ pub fn culling_scales() -> CardDefinition {
 pub fn loxodon_peacekeeper() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::SelfSource,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::GainControl {
                 what: Selector::This,
                 to: Some(PlayerRef::LowestLife),

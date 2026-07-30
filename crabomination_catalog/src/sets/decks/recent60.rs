@@ -11,7 +11,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{cost, g, generic, w, Color};
+use crate::mana::{Color, cost, g, generic, w};
 
 /// Jolrael, Mwonvuli Recluse — {1}{G} 1/2 Legendary Human Druid. Whenever you
 /// draw your second card each turn, create a 2/2 green Cat. {4}{G}{G}: Until end
@@ -23,7 +23,10 @@ pub fn jolrael_mwonvuli_recluse() -> CardDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -39,9 +42,16 @@ pub fn jolrael_mwonvuli_recluse() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::You, n: 2 })
+                .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
+                    who: PlayerRef::You,
+                    n: 2,
+                })
                 .once_per_turn(),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: cat },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: cat,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4), g(), g()]),
@@ -64,7 +74,10 @@ pub fn loyal_warhound() -> CardDefinition {
         name: "Loyal Warhound",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Vigilance],
@@ -73,7 +86,10 @@ pub fn loyal_warhound() -> CardDefinition {
             then: Box::new(Effect::Search {
                 who: PlayerRef::You,
                 filter: R::HasLandType(LandType::Plains).and(R::HasSupertype(Supertype::Basic)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             }),
             else_: Box::new(Effect::Noop),
         })],
@@ -113,7 +129,10 @@ pub fn custodi_soulbinders() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -131,14 +150,20 @@ pub fn custodi_soulbinders() -> CardDefinition {
         enters_with_counters: Some((
             CounterType::PlusOnePlusOne,
             Value::Diff(
-                Box::new(Value::CountOf(Box::new(Selector::EachPermanent(R::Creature)))),
+                Box::new(Value::CountOf(Box::new(Selector::EachPermanent(
+                    R::Creature,
+                )))),
                 Box::new(Value::Const(1)),
             ),
         )),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), w()]),
             remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: spirit },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: spirit,
+            },
             ..Default::default()
         }],
         ..Default::default()

@@ -10,7 +10,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition,
+    EventScope, EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition,
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
@@ -18,7 +18,7 @@ use crate::effect::shortcut::{
     target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{Color, cost, g, generic, hybrid, u, x, ManaCost};
+use crate::mana::{Color, ManaCost, cost, g, generic, hybrid, u, x};
 
 // ── Quandrix Apprentice ─────────────────────────────────────────────────────
 
@@ -72,7 +72,11 @@ pub fn quandrix_apprentice() -> CardDefinition {
 pub fn quandrix_pledgemage() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pledgemage",
-        cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[
+            generic(1),
+            hybrid(Color::Green, Color::Blue),
+            hybrid(Color::Green, Color::Blue),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
@@ -103,7 +107,9 @@ pub fn quandrix_pledgemage() -> CardDefinition {
 /// the printed {3} escape cost.
 pub fn decisive_denial() -> CardDefinition {
     use crate::mana::{ManaCost, generic as gen_pip};
-    let three = ManaCost { symbols: vec![gen_pip(3)] };
+    let three = ManaCost {
+        symbols: vec![gen_pip(3)],
+    };
     CardDefinition {
         name: "Decisive Denial",
         cost: cost(&[g(), u()]),
@@ -172,8 +178,7 @@ pub fn quandrix_command() -> CardDefinition {
                 // owner's hand.
                 Effect::Move {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                     ),
                     to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
@@ -226,13 +231,17 @@ pub fn fractal_summoning() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
     CardDefinition {
         name: "Fractal Summoning",
-        cost: cost(&[x(), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[
+            x(),
+            hybrid(Color::Green, Color::Blue),
+            hybrid(Color::Green, Color::Blue),
+        ]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
@@ -433,7 +442,6 @@ pub fn quandrix_ecologist() -> CardDefinition {
     }
 }
 
-
 // ── Quandrix Symmetrist (batch 17) ──────────────────────────────────────────
 
 /// Quandrix Symmetrist — {2}{G}{U}, 3/3 Elf Druid.
@@ -458,8 +466,14 @@ pub fn quandrix_symmetrist() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
         }],
         ..Default::default()
@@ -516,8 +530,9 @@ pub fn fractal_reinforcement() -> CardDefinition {
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
-            selector: Selector::EachPermanent(SelectionRequirement::Creature
-                .and(SelectionRequirement::ControlledByYou)),
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
             body: Box::new(Effect::AddCounter {
                 what: Selector::TriggerSource,
                 kind: CounterType::PlusOnePlusOne,
@@ -552,9 +567,11 @@ pub fn quandrix_tutelary() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: target_filtered(SelectionRequirement::Creature
-                .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
-                .and(SelectionRequirement::ControlledByYou)),
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
@@ -671,7 +688,8 @@ pub fn dragonsguard_elite() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![magecraft(Effect::AddCounter {
@@ -713,8 +731,9 @@ pub fn quandrix_crystallizer() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(2), g(), u()]),
             effect: Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou)),
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
@@ -726,8 +745,10 @@ pub fn quandrix_crystallizer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -754,8 +775,9 @@ pub fn quandrix_multibinding() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou)),
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
             },
@@ -1317,7 +1339,10 @@ pub fn quandrix_mistweaver() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -1347,7 +1372,10 @@ pub fn fractal_harvest() -> CardDefinition {
                 CounterType::PlusOnePlusOne,
                 3,
             ),
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -1378,7 +1406,10 @@ pub fn quandrix_sage() -> CardDefinition {
                 who: PlayerRef::You,
                 amount: Value::Const(1),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -1402,13 +1433,15 @@ pub fn quandrix_counterbalance() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -1573,8 +1606,7 @@ pub fn quandrix_polymath() -> CardDefinition {
                 },
                 Effect::AddCounter {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
@@ -1663,8 +1695,7 @@ pub fn fractal_sovereign() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::count(Selector::EachPermanent(
@@ -1692,8 +1723,7 @@ pub fn quandrix_pairweaver() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
@@ -1988,14 +2018,15 @@ pub fn quandrix_aether_adept() -> CardDefinition {
             effect: Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
             },
-                    self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
     }
 }
-
 
 // ── Push (modern_decks) batch 24++: 1 more Quandrix card ───────────────────
 
@@ -3284,8 +3315,7 @@ pub fn quandrix_counterbearer() -> CardDefinition {
             )
             .with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::OtherThanSource),
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
             }),
             effect: Effect::PumpPT {
                 what: Selector::This,
@@ -3642,8 +3672,14 @@ pub fn quandrix_amplifier() -> CardDefinition {
         power: 3,
         toughness: 4,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -3715,8 +3751,14 @@ pub fn quandrix_geometer_v2() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![
             crate::effect::shortcut::etb(Effect::Seq(vec![
-                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ])),
             magecraft(Effect::AddCounter {
                 what: target_filtered(
@@ -3790,7 +3832,6 @@ pub fn quandrix_equation_v2() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 /// Quandrix Synthsage — {2}{G}{U}, 3/3 Elf Wizard.
 /// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
@@ -4868,8 +4909,7 @@ pub fn quandrix_amplify() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
@@ -4940,8 +4980,7 @@ pub fn fractal_overgrowth() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             body: Box::new(Effect::AddCounter {
                 what: Selector::TriggerSource,
@@ -5642,7 +5681,8 @@ pub fn quandrix_skywinder() -> CardDefinition {
                 SelectionRequirement::HasCreatureType(CreatureType::Fractal)
                     .and(SelectionRequirement::ControlledByYou),
             ),
-            1, 1,
+            1,
+            1,
         )],
         ..Default::default()
     }
@@ -6067,8 +6107,10 @@ pub fn quandrix_mistwarden() -> CardDefinition {
             from_graveyard: false,
             condition: None,
             once_per_turn: false,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             effect: Effect::Scry {
                 who: PlayerRef::You,
                 amount: Value::Const(1),
@@ -6252,8 +6294,7 @@ pub fn quandrix_sumstride() -> CardDefinition {
                 what: Selector::LastCreatedTokens,
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::CountOf(Box::new(Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ))),
             },
         ]),
@@ -6944,7 +6985,13 @@ pub fn fractal_inkfall_b131() -> CardDefinition {
         name: "Fractal Inkfall (b131)",
         cost: cost(&[generic(3), g(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: create_token_with_counter(PlayerRef::You, 1, fractal_token(), CounterType::PlusOnePlusOne, 4),
+        effect: create_token_with_counter(
+            PlayerRef::You,
+            1,
+            fractal_token(),
+            CounterType::PlusOnePlusOne,
+            4,
+        ),
         ..Default::default()
     }
 }
@@ -7025,7 +7072,11 @@ pub fn fractal_burst_b132() -> CardDefinition {
         cost: cost(&[generic(2), g(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: create_token_with_counter(
-            PlayerRef::You, 1, fractal_token(), CounterType::PlusOnePlusOne, 3,
+            PlayerRef::You,
+            1,
+            fractal_token(),
+            CounterType::PlusOnePlusOne,
+            3,
         ),
         ..Default::default()
     }
@@ -7438,7 +7489,13 @@ pub fn quandrix_lifestream_b136() -> CardDefinition {
         cost: cost(&[generic(2), g(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            create_token_with_counter(PlayerRef::You, 1, fractal_token(), CounterType::PlusOnePlusOne, 3),
+            create_token_with_counter(
+                PlayerRef::You,
+                1,
+                fractal_token(),
+                CounterType::PlusOnePlusOne,
+                3,
+            ),
             Effect::GainLife {
                 who: Selector::You,
                 amount: Value::Const(2),
@@ -7506,8 +7563,7 @@ pub fn quandrix_fractalcraft_b141() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
@@ -7927,8 +7983,7 @@ pub fn quandrix_sumcaster_b146() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::CountOf(Box::new(Selector::EachPermanent(
@@ -7977,11 +8032,7 @@ pub fn fractal_caller_b146() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![etb_mint_token_with_counters(
-            fractal_token(),
-            1,
-            2,
-        )],
+        triggered_abilities: vec![etb_mint_token_with_counters(fractal_token(), 1, 2)],
         ..Default::default()
     }
 }
@@ -8147,8 +8198,15 @@ pub fn quandrix_calculator_b147() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
             Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -8960,8 +9018,14 @@ pub fn quandrix_symmetrist_ii_b155() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             // Mode 0: scry 2 + draw 1.
             Effect::Seq(vec![
-                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
             // Mode 1: two +1/+1 counters on target creature.
             Effect::AddCounter {
@@ -9169,7 +9233,10 @@ pub fn quandrix_mathwarden_b155() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![magecraft(Effect::MayDo {
             description: "Draw a card?".into(),
-            body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            body: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
         })],
         ..Default::default()
     }
@@ -9385,11 +9452,13 @@ pub fn quandrix_echo_b158() -> CardDefinition {
         cost: cost(&[generic(1), g(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
@@ -9536,7 +9605,10 @@ pub fn fractal_recursion_b158() -> CardDefinition {
                 }),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -9657,8 +9729,14 @@ pub fn quandrix_doublecast_b160() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -9691,8 +9769,14 @@ pub fn quandrix_tideforge_b160() -> CardDefinition {
         cost: cost(&[generic(3), g(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -9744,8 +9828,14 @@ pub fn quandrix_pondkeeper_b161() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -9770,8 +9860,7 @@ pub fn quandrix_bricelegate_b161() -> CardDefinition {
                 what: Selector::LastCreatedToken,
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::count(Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 )),
             },
         ]),
@@ -9794,8 +9883,7 @@ pub fn quandrix_spellblossom_b161() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::EachPermanent(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
@@ -9892,8 +9980,14 @@ pub fn quandrix_tidemorph_b162() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -9932,7 +10026,10 @@ pub fn quandrix_wavelet_b162() -> CardDefinition {
         name: "Quandrix Wavelet (b162)",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        effect: Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }
@@ -10049,7 +10146,9 @@ pub fn fractal_summoner_b164() -> CardDefinition {
         power: 3,
         toughness: 4,
         triggered_abilities: vec![etb_mint_token_with_counters(
-            crate::catalog::fractal_token(), 1, 2,
+            crate::catalog::fractal_token(),
+            1,
+            2,
         )],
         ..Default::default()
     }
@@ -10141,12 +10240,11 @@ pub fn quandrix_tidebinder_b165() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::PowerAtMost(2)),
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
             ),
-            to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOf(
-                Box::new(Selector::Target(0)),
-            )),
+            to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOf(Box::new(
+                Selector::Target(0),
+            ))),
         },
         ..Default::default()
     }
@@ -10414,8 +10512,7 @@ pub fn quandrix_pluralizer_b167() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
@@ -10492,8 +10589,7 @@ pub fn quandrix_pluralize_b169() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::AddCounter {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
@@ -10538,8 +10634,7 @@ pub fn quandrix_tideforge_b169_v2() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
@@ -10598,8 +10693,7 @@ pub fn quandrix_bigwave_b169() -> CardDefinition {
             },
             Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
@@ -10629,10 +10723,7 @@ pub fn quandrix_echocrasher_b171() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::SelfSource,
-            ),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -10689,7 +10780,11 @@ pub fn quandrix_fractalmancer_b171() -> CardDefinition {
         cost: cost(&[generic(2), g(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Druid, CreatureType::Wizard],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Druid,
+                CreatureType::Wizard,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -10820,11 +10915,7 @@ pub fn quandrix_fractalspinner_b174() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        triggered_abilities: vec![etb_mint_token_with_counters(
-            fractal_token(),
-            1,
-            2,
-        )],
+        triggered_abilities: vec![etb_mint_token_with_counters(fractal_token(), 1, 2)],
         ..Default::default()
     }
 }
@@ -11011,7 +11102,7 @@ pub fn quandrix_sumtotal_b191() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -11030,7 +11121,10 @@ pub fn quandrix_sumtotal_b191() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(4),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -11307,7 +11401,7 @@ pub fn quandrix_fractal_tutor_b187() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -11457,8 +11551,7 @@ pub fn quandrix_counterspinner_b180() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::CounterSpell {
             what: target_filtered(
-                SelectionRequirement::IsSpellOnStack
-                    .and(SelectionRequirement::ManaValueAtMost(2)),
+                SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::ManaValueAtMost(2)),
             ),
         },
         ..Default::default()
@@ -11705,7 +11798,10 @@ pub fn quandrix_cantrip_ii_b194() -> CardDefinition {
         name: "Quandrix Cantrip II (b194)",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }
@@ -11830,7 +11926,10 @@ pub fn quandrix_reefranger_b195() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -12080,7 +12179,13 @@ pub fn quandrix_stargazer_b198() -> CardDefinition {
         name: "Quandrix Stargazer (b198)",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }, draw(1)]),
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            draw(1),
+        ]),
         ..Default::default()
     }
 }
@@ -12110,7 +12215,10 @@ pub fn quandrix_cipher_b198() -> CardDefinition {
         name: "Quandrix Cipher (b198)",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        effect: Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }
@@ -12179,7 +12287,10 @@ pub fn quandrix_pulse_b199() -> CardDefinition {
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             Effect::AddCounter {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -12357,7 +12468,10 @@ pub fn quandrix_cantrip_b202() -> CardDefinition {
         name: "Quandrix Cantrip (b202)",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }
@@ -12384,7 +12498,7 @@ pub fn quandrix_grizzler_b202() -> CardDefinition {
 /// Put X +1/+1 counters on target creature where X is the number of
 /// creatures you control.
 pub fn quandrix_sumtotal_b202() -> CardDefinition {
-    use crate::effect::shortcut::{each_your_creature, count};
+    use crate::effect::shortcut::{count, each_your_creature};
     CardDefinition {
         name: "Quandrix Sumtotal (b202)",
         cost: cost(&[generic(3), g(), u()]),
@@ -12424,7 +12538,9 @@ pub fn quandrix_skydiver_b202() -> CardDefinition {
 /// floated mana when affordable).
 pub fn quandrix_sparkbender_b202() -> CardDefinition {
     use crate::mana::generic as gen_pip;
-    let one = ManaCost { symbols: vec![gen_pip(1)] };
+    let one = ManaCost {
+        symbols: vec![gen_pip(1)],
+    };
     CardDefinition {
         name: "Quandrix Sparkbender (b202)",
         cost: cost(&[generic(1), g()]),
@@ -12533,7 +12649,10 @@ pub fn quandrix_streampath_b202() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Creature),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -12591,7 +12710,8 @@ pub fn quandrix_apprentice_ii_b203() -> CardDefinition {
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
-            1, 1,
+            1,
+            1,
         )],
         ..Default::default()
     }

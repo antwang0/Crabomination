@@ -7,7 +7,7 @@ use crate::card::{
     Supertype,
 };
 use crate::effect::Selector;
-use crate::mana::{cost, generic, Color};
+use crate::mana::{Color, cost, generic};
 
 /// Coat of Arms — {5} Artifact. Each creature gets +1/+1 for each other creature
 /// on the battlefield that shares a creature type with it.
@@ -18,7 +18,10 @@ pub fn coat_of_arms() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         static_abilities: vec![StaticAbility {
             description: "Each creature gets +1/+1 for each other creature that shares a type with it.",
-            effect: StaticEffect::PumpPerSharedType { power: 1, toughness: 1 },
+            effect: StaticEffect::PumpPerSharedType {
+                power: 1,
+                toughness: 1,
+            },
         }],
         ..Default::default()
     }
@@ -31,7 +34,10 @@ pub fn akromas_memorial() -> CardDefinition {
     let team = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
     let grant = |kw: Keyword| StaticAbility {
         description: "Creatures you control gain a keyword.",
-        effect: StaticEffect::GrantKeyword { applies_to: team(), keyword: kw },
+        effect: StaticEffect::GrantKeyword {
+            applies_to: team(),
+            keyword: kw,
+        },
     };
     CardDefinition {
         name: "Akroma's Memorial",

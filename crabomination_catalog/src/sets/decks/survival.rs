@@ -6,13 +6,13 @@
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
-    Keyword, Predicate, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility,
-    Value,
+    Keyword, Predicate, SelectionRequirement, Selector, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, RevealMissDest, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, w};
 
 /// A 1/1 white Glimmer enchantment creature — Glimmer Seeker's payoff token.
 fn glimmer_token() -> TokenDefinition {
@@ -61,7 +61,10 @@ fn survivor(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         triggered_abilities: vec![survival(effect)],
@@ -102,7 +105,10 @@ pub fn cautious_survivor() -> CardDefinition {
         vec![CreatureType::Elf, CreatureType::Survivor],
         4,
         4,
-        Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
     )
 }
 
@@ -114,7 +120,9 @@ pub fn defiant_survivor() -> CardDefinition {
         vec![CreatureType::Human, CreatureType::Survivor],
         3,
         2,
-        Effect::ManifestDread { who: PlayerRef::You },
+        Effect::ManifestDread {
+            who: PlayerRef::You,
+        },
     )
 }
 
@@ -193,7 +201,10 @@ pub fn glimmer_seeker() -> CardDefinition {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Glimmer),
             }),
-            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            then: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
             else_: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -210,7 +221,11 @@ pub fn house_cartographer() -> CardDefinition {
     survivor(
         "House Cartographer",
         cost(&[generic(1), g()]),
-        vec![CreatureType::Human, CreatureType::Scout, CreatureType::Survivor],
+        vec![
+            CreatureType::Human,
+            CreatureType::Scout,
+            CreatureType::Survivor,
+        ],
         2,
         2,
         Effect::RevealUntilFind {

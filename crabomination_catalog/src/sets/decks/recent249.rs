@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, investigate};
 use crate::effect::{Effect, PlayerRef, Predicate, Selector, Value};
-use crate::mana::{b, cost, generic, g, u};
+use crate::mana::{b, cost, g, generic, u};
 
 /// Clandestine Meddler — {2}{B} Creature — Vampire Rogue 3/2. ETB suspect up to
 /// one other target creature you control. Whenever one or more suspected
@@ -40,7 +40,10 @@ pub fn clandestine_meddler() -> CardDefinition {
                         filter: R::IsSuspected,
                     },
                 ),
-                effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+                effect: Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::ONE,
+                },
             },
         ],
         ..Default::default()
@@ -67,7 +70,10 @@ pub fn forensic_gadgeteer() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact },
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact,
+                },
             ),
             effect: investigate(1),
         }],

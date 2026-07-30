@@ -10,7 +10,10 @@ pub fn preordain() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
             draw(1),
         ]),
         ..Default::default()

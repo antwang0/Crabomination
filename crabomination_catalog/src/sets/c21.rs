@@ -3,16 +3,14 @@
 //! original printings. Most ride existing engine primitives.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, LandType,
-    Predicate, SelectionRequirement, Selector, Subtypes, Supertype, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, LandType, Predicate,
+    SelectionRequirement, Selector, Subtypes, Supertype, Value,
 };
 use crate::effect::shortcut::{etb, etb_gain_life, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, w, Color};
+use crate::mana::{Color, b, cost, g, generic, w};
 
-use super::{
-    dual_land_with, etb_tap_then_scry_one, tap_add, tap_add_colorless,
-};
+use super::{dual_land_with, etb_tap_then_scry_one, tap_add, tap_add_colorless};
 
 // ══════════════════════════════════════════════════════════════════════════
 // Lands
@@ -22,32 +20,52 @@ use super::{
 
 pub fn temple_of_epiphany() -> CardDefinition {
     dual_land_with(
-        "Temple of Epiphany", LandType::Island, LandType::Mountain,
-        Color::Blue, Color::Red, vec![etb_tap_then_scry_one()],
+        "Temple of Epiphany",
+        LandType::Island,
+        LandType::Mountain,
+        Color::Blue,
+        Color::Red,
+        vec![etb_tap_then_scry_one()],
     )
 }
 pub fn temple_of_malady() -> CardDefinition {
     dual_land_with(
-        "Temple of Malady", LandType::Swamp, LandType::Forest,
-        Color::Black, Color::Green, vec![etb_tap_then_scry_one()],
+        "Temple of Malady",
+        LandType::Swamp,
+        LandType::Forest,
+        Color::Black,
+        Color::Green,
+        vec![etb_tap_then_scry_one()],
     )
 }
 pub fn temple_of_mystery() -> CardDefinition {
     dual_land_with(
-        "Temple of Mystery", LandType::Forest, LandType::Island,
-        Color::Green, Color::Blue, vec![etb_tap_then_scry_one()],
+        "Temple of Mystery",
+        LandType::Forest,
+        LandType::Island,
+        Color::Green,
+        Color::Blue,
+        vec![etb_tap_then_scry_one()],
     )
 }
 pub fn temple_of_silence() -> CardDefinition {
     dual_land_with(
-        "Temple of Silence", LandType::Plains, LandType::Swamp,
-        Color::White, Color::Black, vec![etb_tap_then_scry_one()],
+        "Temple of Silence",
+        LandType::Plains,
+        LandType::Swamp,
+        Color::White,
+        Color::Black,
+        vec![etb_tap_then_scry_one()],
     )
 }
 pub fn temple_of_triumph() -> CardDefinition {
     dual_land_with(
-        "Temple of Triumph", LandType::Mountain, LandType::Plains,
-        Color::Red, Color::White, vec![etb_tap_then_scry_one()],
+        "Temple of Triumph",
+        LandType::Mountain,
+        LandType::Plains,
+        Color::Red,
+        Color::White,
+        vec![etb_tap_then_scry_one()],
     )
 }
 
@@ -118,7 +136,10 @@ pub fn high_market() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
         ],
@@ -197,7 +218,10 @@ fn fetch_two_basics() -> Effect {
     let search = || Effect::Search {
         who: PlayerRef::You,
         filter: SelectionRequirement::IsBasicLand,
-        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        to: ZoneDest::Battlefield {
+            controller: PlayerRef::You,
+            tapped: true,
+        },
     };
     Effect::Seq(vec![search(), search()])
 }
@@ -208,7 +232,10 @@ fn cycling_land(name: &'static str, color: Color, land_type: LandType) -> CardDe
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![land_type], ..Default::default() },
+        subtypes: Subtypes {
+            land_types: vec![land_type],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         triggered_abilities: vec![super::etb_tap()],
         activated_abilities: vec![tap_add(color)],
@@ -243,12 +270,18 @@ pub fn zetalpa_primal_dawn() -> CardDefinition {
         cost: cost(&[generic(6), w(), w()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 4,
         toughness: 8,
         keywords: vec![
-            Keyword::Flying, Keyword::DoubleStrike, Keyword::Vigilance,
-            Keyword::Trample, Keyword::Indestructible,
+            Keyword::Flying,
+            Keyword::DoubleStrike,
+            Keyword::Vigilance,
+            Keyword::Trample,
+            Keyword::Indestructible,
         ],
         ..Default::default()
     }
@@ -290,7 +323,10 @@ pub fn sanctum_gargoyle() -> CardDefinition {
         name: "Sanctum Gargoyle",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Gargoyle], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gargoyle],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -324,12 +360,17 @@ pub fn boros_locket() -> CardDefinition {
             tap_add(Color::White),
             ActivatedAbility {
                 mana_cost: cost(&[
-                    hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White),
-                    hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White),
+                    hybrid(Color::Red, Color::White),
+                    hybrid(Color::Red, Color::White),
+                    hybrid(Color::Red, Color::White),
+                    hybrid(Color::Red, Color::White),
                 ]),
                 tap_cost: true,
                 sac_cost: true,
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
                 ..Default::default()
             },
         ],
@@ -372,8 +413,7 @@ pub fn gaze_of_granite() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy {
             what: Selector::EachPermanent(
-                SelectionRequirement::Nonland
-                    .and(SelectionRequirement::ManaValueAtMostXFromCost),
+                SelectionRequirement::Nonland.and(SelectionRequirement::ManaValueAtMostXFromCost),
             ),
         },
         ..Default::default()
@@ -386,7 +426,11 @@ pub fn biomass_mutation() -> CardDefinition {
     use crate::mana::{hybrid, x};
     CardDefinition {
         name: "Biomass Mutation",
-        cost: cost(&[x(), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[
+            x(),
+            hybrid(Color::Green, Color::Blue),
+            hybrid(Color::Green, Color::Blue),
+        ]),
         card_types: vec![CardType::Instant],
         effect: Effect::SetBasePT {
             what: Selector::EachPermanent(
@@ -477,7 +521,10 @@ pub fn phyrexias_core() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 tap_cost: true,
                 sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
         ],
@@ -496,7 +543,9 @@ pub fn brasss_bounty() -> CardDefinition {
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::CountMatching {
-                sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+                sel: Box::new(Selector::EachPermanent(
+                    SelectionRequirement::ControlledByYou,
+                )),
                 filter: SelectionRequirement::Land,
             },
             definition: crabomination_base::tokens::treasure_token(),
@@ -525,7 +574,10 @@ pub fn oblation() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
                 ),
-                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Shuffled },
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: LibraryPosition::Shuffled,
+                },
             },
         ]),
         ..Default::default()

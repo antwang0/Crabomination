@@ -10,11 +10,14 @@ use crate::card::{
 };
 use crate::effect::{ActivatedAbility, ManaPayload, PlayerRef};
 use crate::game::types::TurnStep;
-use crate::mana::{cost, g, generic, w, x, ManaCost};
+use crate::mana::{ManaCost, cost, g, generic, w, x};
 
 /// Charge-counter mana value: the count of charge counters on the source.
 fn charge_count() -> Value {
-    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge }
+    Value::CountersOn {
+        what: Box::new(Selector::This),
+        kind: CounterType::Charge,
+    }
 }
 
 /// `{T}, Sacrifice this: Destroy each nonland permanent with mana value equal to
@@ -22,9 +25,15 @@ fn charge_count() -> Value {
 fn charge_bomb_detonate(extra_mana: u32) -> ActivatedAbility {
     ActivatedAbility {
         tap_cost: true,
-        mana_cost: if extra_mana == 0 { ManaCost::default() } else { cost(&[generic(extra_mana)]) },
+        mana_cost: if extra_mana == 0 {
+            ManaCost::default()
+        } else {
+            cost(&[generic(extra_mana)])
+        },
         sac_cost: true,
-        effect: Effect::DestroyEachNonlandWithManaValue { value: charge_count() },
+        effect: Effect::DestroyEachNonlandWithManaValue {
+            value: charge_count(),
+        },
         ..Default::default()
     }
 }
@@ -77,12 +86,17 @@ pub fn sphere_of_the_suns() -> CardDefinition {
         enters_with_counters: Some((CounterType::Charge, Value::Const(3))),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap { what: Selector::This },
+            effect: Effect::Tap {
+                what: Selector::This,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             remove_counter_cost: Some((CounterType::Charge, 1)),
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -97,7 +111,10 @@ pub fn mox_tantalite() -> CardDefinition {
         keywords: vec![Keyword::Suspend(3, ManaCost::default())],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -120,7 +137,10 @@ pub fn gaddock_teeg() -> CardDefinition {
         toughness: 2,
         static_abilities: vec![StaticAbility {
             description: "Noncreature spells with mana value 4 or greater can't be cast. Noncreature spells with {X} in their mana costs can't be cast.",
-            effect: StaticEffect::NoncreatureSpellsCantBeCastIf { min_mana_value: 4, or_has_x: true },
+            effect: StaticEffect::NoncreatureSpellsCantBeCastIf {
+                min_mana_value: 4,
+                or_has_x: true,
+            },
         }],
         ..Default::default()
     }
@@ -138,11 +158,16 @@ pub fn the_tabernacle_at_pendrell_vale() -> CardDefinition {
             effect: StaticEffect::GrantTriggeredAbility {
                 filter: R::Creature,
                 ability: Box::new(TriggeredAbility {
-                    event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                    event: EventSpec::new(
+                        EventKind::StepBegins(TurnStep::Upkeep),
+                        EventScope::YourControl,
+                    ),
                     effect: Effect::UnlessPlayerPays {
                         who: PlayerRef::You,
                         cost: WardCost::generic(1),
-                        then: Box::new(Effect::Destroy { what: Selector::This }),
+                        then: Box::new(Effect::Destroy {
+                            what: Selector::This,
+                        }),
                     },
                 }),
             },

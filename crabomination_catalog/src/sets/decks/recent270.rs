@@ -7,9 +7,7 @@ use crate::card::{
     TriggeredAbility,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{
-    DelayedTriggerKind, Duration, Effect, PlayerRef, Selector, Value, ZoneDest,
-};
+use crate::effect::{DelayedTriggerKind, Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::effects::treasure_token;
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r};
@@ -28,7 +26,10 @@ pub fn black_market_tycoon() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::DealDamage {
                 to: Selector::Player(PlayerRef::You),
                 amount: Value::Times(
@@ -76,7 +77,10 @@ pub fn balduvian_atrocity() -> CardDefinition {
                     what: target_filtered(
                         R::Creature.and(R::InGraveyard).and(R::ManaValueAtMost(3)),
                     ),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::GrantKeyword {
                     what: Selector::Target(0),
@@ -85,7 +89,9 @@ pub fn balduvian_atrocity() -> CardDefinition {
                 },
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::NextEndStep,
-                    body: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),
+                    body: Box::new(Effect::SacrificePermanent {
+                        what: Selector::Target(0),
+                    }),
                 },
             ])),
             else_: Box::new(Effect::Noop),

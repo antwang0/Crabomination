@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef};
-use crate::mana::{b, cost, generic, u, Color};
+use crate::mana::{Color, b, cost, generic, u};
 
 /// 1/1 blue Faerie token with flying.
 fn faerie_token() -> TokenDefinition {
@@ -18,7 +18,10 @@ fn faerie_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     }
@@ -32,8 +35,14 @@ pub fn faebloom_trick() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: faerie_token() },
-            Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: faerie_token(),
+            },
+            Effect::Tap {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            },
         ]),
         ..Default::default()
     }
@@ -62,15 +71,23 @@ pub fn popular_egotist() -> CardDefinition {
                     keyword: Keyword::Indestructible,
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Tap { what: Selector::This },
+                Effect::Tap {
+                    what: Selector::This,
+                },
             ]),
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl),
             effect: Effect::Seq(vec![
-                Effect::LoseLife { who: target_filtered(R::OpponentPlayer), amount: Value::ONE },
-                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                Effect::LoseLife {
+                    who: target_filtered(R::OpponentPlayer),
+                    amount: Value::ONE,
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
         }],
         ..Default::default()
@@ -91,8 +108,14 @@ pub fn overwhelmed_apprentice() -> CardDefinition {
         power: 1,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Mill { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]))],
         ..Default::default()
     }
@@ -105,13 +128,20 @@ pub fn fear_of_impostors() -> CardDefinition {
         name: "Fear of Impostors",
         cost: cost(&[generic(1), u(), u()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
-            Effect::ManifestDread { who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))) },
+            Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack),
+            },
+            Effect::ManifestDread {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+            },
         ]))],
         ..Default::default()
     }
@@ -134,7 +164,9 @@ pub fn cursed_windbreaker() -> CardDefinition {
             ..Default::default()
         }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::ManifestDread { who: PlayerRef::You },
+            Effect::ManifestDread {
+                who: PlayerRef::You,
+            },
             // The manifest is the (only) face-down creature you control; attach
             // to it. `LastMoved` is unreliable here — ManifestDread's second
             // card goes to the graveyard after the manifest.

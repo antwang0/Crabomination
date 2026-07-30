@@ -13,20 +13,26 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EventKind, EventScope, EventSpec, ExileReturnZone, Keyword, Predicate, SelectionRequirement,
     Selector, SpellSubtype, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
-    Waterbend, WardCost,
+    WardCost, Waterbend,
 };
 use crate::effect::shortcut::{draw, etb, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, u, w, Color, ManaCost, ManaSymbol};
 use crate::game::TurnStep;
+use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, u, w};
 
 /// Helper: a mandatory "waterbend {N}" additional cost.
 fn wb(n: i32) -> Option<Waterbend> {
-    Some(Waterbend { amount: Value::Const(n), optional: false })
+    Some(Waterbend {
+        amount: Value::Const(n),
+        optional: false,
+    })
 }
 /// Helper: an optional "you may waterbend {N}" additional cost.
 fn wb_opt(n: i32) -> Option<Waterbend> {
-    Some(Waterbend { amount: Value::Const(n), optional: true })
+    Some(Waterbend {
+        amount: Value::Const(n),
+        optional: true,
+    })
 }
 
 // ── Additional-cast-cost waterbend ──────────────────────────────────────────
@@ -38,7 +44,10 @@ pub fn benevolent_river_spirit() -> CardDefinition {
         name: "Benevolent River Spirit",
         cost: cost(&[u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 4,
         toughness: 5,
         waterbend: wb(5),
@@ -58,7 +67,10 @@ pub fn water_whip() -> CardDefinition {
         name: "Water Whip",
         cost: cost(&[u(), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         waterbend: wb(5),
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
@@ -83,7 +95,10 @@ pub fn waterbending_lesson() -> CardDefinition {
         name: "Waterbending Lesson",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         waterbend: wb_opt(2),
         effect: Effect::Seq(vec![
             draw(3),
@@ -114,7 +129,9 @@ pub fn spirit_water_revival() -> CardDefinition {
         effect: Effect::If {
             cond: Predicate::SpellWasWaterbend,
             then: Box::new(Effect::Seq(vec![
-                Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+                Effect::ShuffleGraveyardIntoLibrary {
+                    who: PlayerRef::You,
+                },
                 draw(7),
                 Effect::SetNoMaxHandSize { who: Selector::You },
             ])),
@@ -132,13 +149,21 @@ pub fn waterbenders_restoration() -> CardDefinition {
         name: "Waterbender's Restoration",
         cost: cost(&[u(), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
-        waterbend: Some(Waterbend { amount: Value::XFromCost, optional: false }),
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        waterbend: Some(Waterbend {
+            amount: Value::XFromCost,
+            optional: false,
+        }),
         effect: Effect::ApplyToTargets {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             max_targets: u8::MAX,
             min_targets: 0,
-            effect: Box::new(Effect::ExileReturnNextEndStep { what: Selector::Target(0) }),
+            effect: Box::new(Effect::ExileReturnNextEndStep {
+                what: Selector::Target(0),
+            }),
         },
         ..Default::default()
     }
@@ -152,7 +177,10 @@ pub fn ruinous_waterbending() -> CardDefinition {
         name: "Ruinous Waterbending",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         waterbend: wb_opt(4),
         effect: Effect::PumpPT {
             what: Selector::EachPermanent(SelectionRequirement::Creature),
@@ -174,7 +202,11 @@ pub fn flexible_waterbender() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Warrior,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -202,7 +234,10 @@ pub fn giant_koi() -> CardDefinition {
         name: "Giant Koi",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Fish], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fish],
+            ..Default::default()
+        },
         power: 5,
         toughness: 7,
         keywords: vec![Keyword::Landcycling(
@@ -231,7 +266,11 @@ pub fn geyser_leaper() -> CardDefinition {
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Warrior,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 4,
@@ -242,7 +281,11 @@ pub fn geyser_leaper() -> CardDefinition {
             waterbend: true,
             effect: Effect::Seq(vec![
                 draw(1),
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
             ]),
             ..Default::default()
         }],
@@ -258,7 +301,11 @@ pub fn ruthless_waterbender() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Soldier,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 1,
@@ -319,13 +366,20 @@ pub fn katara_bending_prodigy() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Warrior,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
                 cond: Predicate::EntityMatches {
                     what: Selector::This,
@@ -358,7 +412,11 @@ pub fn north_pole_patrol() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Soldier,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -378,7 +436,8 @@ pub fn north_pole_patrol() -> CardDefinition {
                 waterbend: true,
                 effect: Effect::Tap {
                     what: target_filtered(
-                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
                     ),
                 },
                 ..Default::default()
@@ -409,7 +468,9 @@ pub fn yue_the_moon_spirit() -> CardDefinition {
             mana_cost: ManaCost::new(vec![ManaSymbol::Generic(5)]),
             waterbend: true,
             effect: Effect::CastFromHandWithoutPaying {
-                filter: Some(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature))),
+                filter: Some(SelectionRequirement::Not(Box::new(
+                    SelectionRequirement::Creature,
+                ))),
             },
             ..Default::default()
         }],
@@ -428,7 +489,11 @@ pub fn katara_water_tribes_hope() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Warrior,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -441,7 +506,10 @@ pub fn katara_water_tribes_hope() -> CardDefinition {
                 toughness: 1,
                 card_types: vec![CardType::Creature],
                 colors: vec![Color::White],
-                subtypes: Subtypes { creature_types: vec![CreatureType::Ally], ..Default::default() },
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Ally],
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             count: Value::ONE,
@@ -477,7 +545,11 @@ pub fn water_tribe_rallier() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Soldier,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -527,7 +599,10 @@ pub fn aangs_iceberg() -> CardDefinition {
             mana_cost: ManaCost::new(vec![ManaSymbol::Generic(3)]),
             waterbend: true,
             sac_cost: true,
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -544,7 +619,10 @@ pub fn waterbender_ascension() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            ),
             effect: Effect::Seq(vec![
                 Effect::AddCounter {
                     what: Selector::This,
@@ -553,7 +631,10 @@ pub fn waterbender_ascension() -> CardDefinition {
                 },
                 Effect::If {
                     cond: Predicate::ValueAtLeast(
-                        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Quest },
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Quest,
+                        },
                         Value::Const(4),
                     ),
                     then: Box::new(draw(1)),
@@ -584,7 +665,10 @@ pub fn the_unagi_of_kyoshi_island() -> CardDefinition {
         cost: cost(&[generic(3), u(), u()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Serpent],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flash, Keyword::Ward(WardCost::generic(4))],
@@ -619,8 +703,13 @@ pub fn watery_grasp() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
         },
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
-            effect: Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::Tap {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: ManaCost::new(vec![ManaSymbol::Generic(5)]),
@@ -628,7 +717,9 @@ pub fn watery_grasp() -> CardDefinition {
             effect: Effect::Move {
                 what: Selector::AttachedTo(Box::new(Selector::This)),
                 to: ZoneDest::Library {
-                    who: PlayerRef::OwnerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
+                    who: PlayerRef::OwnerOf(Box::new(Selector::AttachedTo(Box::new(
+                        Selector::This,
+                    )))),
                     pos: LibraryPosition::Shuffled,
                 },
             },
@@ -646,13 +737,18 @@ pub fn crashing_wave() -> CardDefinition {
         name: "Crashing Wave",
         cost: cost(&[u(), u()]),
         card_types: vec![CardType::Sorcery],
-        waterbend: Some(Waterbend { amount: Value::XFromCost, optional: false }),
+        waterbend: Some(Waterbend {
+            amount: Value::XFromCost,
+            optional: false,
+        }),
         effect: Effect::Seq(vec![
             Effect::ApplyToTargets {
                 filter: SelectionRequirement::Creature,
                 max_targets: u8::MAX,
                 min_targets: 0,
-                effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                effect: Box::new(Effect::Tap {
+                    what: Selector::Target(0),
+                }),
             },
             Effect::DistributeCounters {
                 total: Value::Const(3),

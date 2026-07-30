@@ -13,7 +13,7 @@ use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition, ManaPayload, PlayerRef,
     ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, Color};
+use crate::mana::{Color, b, cost, g, generic, r};
 
 /// Resurrected Cultist — {2}{B} 4/1. Delirium: {2}{B}{B}, sorcery-speed, return
 /// this from your graveyard to the battlefield with a finality counter.
@@ -32,11 +32,16 @@ pub fn resurrected_cultist() -> CardDefinition {
             mana_cost: cost(&[generic(2), b(), b()]),
             from_graveyard: true,
             sorcery_speed: true,
-            condition: Some(Predicate::DeliriumActive { who: PlayerRef::You }),
+            condition: Some(Predicate::DeliriumActive {
+                who: PlayerRef::You,
+            }),
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::AddCounter {
                     what: Selector::This,
@@ -119,7 +124,8 @@ pub fn gila_courser() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::ONE,
             duration: MayPlayDuration::EndOfControllersNextTurn,
-            pay_any_color: false, pay_own_cost: false,
+            pay_any_color: false,
+            pay_own_cost: false,
             uncast_penalty: None,
         })],
         ..Default::default()
@@ -134,10 +140,19 @@ pub fn grab_the_prize() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::ONE,
+                random: false,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::If {
-                cond: Predicate::DiscardedNonlandThisEffect { who: PlayerRef::You },
+                cond: Predicate::DiscardedNonlandThisEffect {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::DealDamage {
                     to: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::Const(2),
@@ -169,9 +184,9 @@ pub fn malevolent_chandelier() -> CardDefinition {
             effect: Effect::Move {
                 what: target_filtered(R::InGraveyard),
                 to: ZoneDest::Library {
-                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                pos: LibraryPosition::Bottom,
-            },
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: LibraryPosition::Bottom,
+                },
             },
             ..Default::default()
         }],
@@ -183,25 +198,30 @@ pub fn malevolent_chandelier() -> CardDefinition {
 /// when you gain or lose life on your turn, Bats you control get +1/+0 and gain
 /// deathtouch until end of turn.
 pub fn moonstone_harbinger() -> CardDefinition {
-    let payoff = || Effect::Seq(vec![
-        Effect::PumpPT {
-            what: Selector::EachPermanent(
-                R::HasCreatureType(CreatureType::Bat).and(R::ControlledByYou),
-            ),
-            power: Value::ONE,
-            toughness: Value::Const(0),
-            duration: Duration::EndOfTurn,
-        },
-        Effect::GrantKeyword {
-            what: Selector::EachPermanent(
-                R::HasCreatureType(CreatureType::Bat).and(R::ControlledByYou),
-            ),
-            keyword: Keyword::Deathtouch,
-            duration: Duration::EndOfTurn,
-        },
-    ]);
+    let payoff = || {
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Bat).and(R::ControlledByYou),
+                ),
+                power: Value::ONE,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Bat).and(R::ControlledByYou),
+                ),
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+        ])
+    };
     let on_life = |kind| TriggeredAbility {
-        event: EventSpec { once_per_turn: true, ..EventSpec::new(kind, EventScope::YourControl) },
+        event: EventSpec {
+            once_per_turn: true,
+            ..EventSpec::new(kind, EventScope::YourControl)
+        },
         effect: payoff(),
     };
     CardDefinition {

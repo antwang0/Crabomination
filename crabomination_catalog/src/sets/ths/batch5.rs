@@ -10,7 +10,7 @@ use crate::effect::shortcut::{etb, heroic, monstrosity, on_becomes_monstrous, ta
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 
 fn creature(
     name: &'static str,
@@ -24,7 +24,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: ct, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: ct,
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         keywords: kw,
@@ -37,7 +40,10 @@ fn creature(
 fn reanimate_slot0() -> Effect {
     Effect::Move {
         what: Selector::Target(0),
-        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        to: ZoneDest::Battlefield {
+            controller: PlayerRef::You,
+            tapped: false,
+        },
     }
 }
 
@@ -49,7 +55,10 @@ fn legend(
     ct: Vec<CreatureType>,
     kw: Vec<Keyword>,
 ) -> CardDefinition {
-    CardDefinition { supertypes: vec![Supertype::Legendary], ..creature(name, mana, p, t, ct, kw) }
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        ..creature(name, mana, p, t, ct, kw)
+    }
 }
 
 /// Artisan of Forms — {1}{U} 1/1 Human Wizard. Heroic: you may have it become
@@ -65,17 +74,23 @@ pub fn artisan_of_forms() -> CardDefinition {
                 keep_own_triggered: true,
             }),
         })],
-        ..creature("Artisan of Forms", cost(&[generic(1), u()]), 1, 1, vec![
-            CreatureType::Human,
-            CreatureType::Wizard,
-        ], vec![])
+        ..creature(
+            "Artisan of Forms",
+            cost(&[generic(1), u()]),
+            1,
+            1,
+            vec![CreatureType::Human, CreatureType::Wizard],
+            vec![],
+        )
     }
 }
 
 /// Ashen Rider — {4}{W}{W}{B}{B} 5/5 Archon with flying. Enters or dies: exile
 /// target permanent.
 pub fn ashen_rider() -> CardDefinition {
-    let exile = || Effect::Exile { what: target_filtered(R::Permanent) };
+    let exile = || Effect::Exile {
+        what: target_filtered(R::Permanent),
+    };
     CardDefinition {
         triggered_abilities: vec![
             etb(exile()),
@@ -147,7 +162,9 @@ pub fn curse_of_the_swine() -> CardDefinition {
                             ..Default::default()
                         },
                     },
-                    Effect::Exile { what: Selector::Target(0) },
+                    Effect::Exile {
+                        what: Selector::Target(0),
+                    },
                 ])),
             }),
         },
@@ -200,7 +217,10 @@ pub fn gift_of_immortality() -> CardDefinition {
             enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
             effect: Effect::Seq(vec![
@@ -243,7 +263,10 @@ pub fn polis_crusher() -> CardDefinition {
             4,
             4,
             vec![CreatureType::Cyclops],
-            vec![Keyword::Trample, Keyword::ProtectionFromCardType(CardType::Enchantment)],
+            vec![
+                Keyword::Trample,
+                Keyword::ProtectionFromCardType(CardType::Enchantment),
+            ],
         )
     }
 }
@@ -256,7 +279,9 @@ pub fn polukranos_world_eater() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[x(), x(), g()]),
-            effect: Effect::Monstrosity { n: Value::XFromCost },
+            effect: Effect::Monstrosity {
+                n: Value::XFromCost,
+            },
             sorcery_speed: true,
             ..Default::default()
         }],
@@ -292,7 +317,9 @@ pub fn prophet_of_kruphix() -> CardDefinition {
             },
             StaticAbility {
                 description: "You may cast creature spells as though they had flash.",
-                effect: StaticEffect::ControllerSpellsHaveFlash { filter: R::Creature },
+                effect: StaticEffect::ControllerSpellsHaveFlash {
+                    filter: R::Creature,
+                },
             },
         ],
         ..creature(
@@ -406,7 +433,9 @@ pub fn triad_of_fates() -> CardDefinition {
                 mana_cost: cost(&[w()]),
                 tap_cost: true,
                 effect: Effect::Seq(vec![
-                    Effect::Exile { what: target_filtered(fated()) },
+                    Effect::Exile {
+                        what: target_filtered(fated()),
+                    },
                     Effect::Move {
                         what: Selector::Target(0),
                         to: ZoneDest::Battlefield {
@@ -421,11 +450,13 @@ pub fn triad_of_fates() -> CardDefinition {
                 mana_cost: cost(&[b()]),
                 tap_cost: true,
                 effect: Effect::Seq(vec![
-                    Effect::Exile { what: target_filtered(fated()) },
+                    Effect::Exile {
+                        what: target_filtered(fated()),
+                    },
                     Effect::Draw {
-                        who: Selector::Player(PlayerRef::ControllerOf(Box::new(
-                            Selector::Target(0),
-                        ))),
+                        who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(
+                            0,
+                        )))),
                         amount: Value::Const(2),
                     },
                 ]),
@@ -463,7 +494,10 @@ pub fn triton_tactics() -> CardDefinition {
                         toughness: Value::Const(3),
                         duration: Duration::EndOfTurn,
                     },
-                    Effect::Untap { what: Selector::Target(0), up_to: None },
+                    Effect::Untap {
+                        what: Selector::Target(0),
+                        up_to: None,
+                    },
                 ])),
             },
             Effect::DelayUntil {

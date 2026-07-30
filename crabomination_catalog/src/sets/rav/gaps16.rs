@@ -5,7 +5,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, SelectionRequirement as R, Value,
 };
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector};
-use crate::mana::{b, cost, g, generic, hybrid, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid};
 
 /// Svogthos, the Restless Tomb — Land. {T}: Add {C}. {3}{B}{G}: Until end of
 /// turn, this land becomes a Plant Zombie creature whose power and toughness
@@ -28,7 +28,10 @@ pub fn svogthos_the_restless_tomb() -> CardDefinition {
                 mana_cost: cost(&[generic(3), b(), g()]),
                 effect: Effect::BecomeCreature {
                     what: Selector::This,
-                    power: Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature },
+                    power: Value::CardsInGraveyardMatching {
+                        who: PlayerRef::You,
+                        filter: R::Creature,
+                    },
                     toughness: Value::CardsInGraveyardMatching {
                         who: PlayerRef::You,
                         filter: R::Creature,
@@ -49,11 +52,17 @@ pub fn svogthos_the_restless_tomb() -> CardDefinition {
 pub fn shadow_of_doubt() -> CardDefinition {
     CardDefinition {
         name: "Shadow of Doubt",
-        cost: cost(&[hybrid(Color::Blue, Color::Black), hybrid(Color::Blue, Color::Black)]),
+        cost: cost(&[
+            hybrid(Color::Blue, Color::Black),
+            hybrid(Color::Blue, Color::Black),
+        ]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PreventSearchesThisTurn,
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }

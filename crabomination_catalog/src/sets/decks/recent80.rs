@@ -11,7 +11,7 @@ use crate::card::{
 use crate::effect::shortcut::{drain, etb, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, x, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, x};
 
 /// Bonehoard — {4} Artifact — Equipment. Living weapon. Equipped creature gets
 /// +X/+X, where X is the number of creature cards in all graveyards. Equip {2}.
@@ -20,7 +20,10 @@ pub fn bonehoard() -> CardDefinition {
         name: "Phyrexian Germ".into(),
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -40,13 +43,21 @@ pub fn bonehoard() -> CardDefinition {
                 count_self_counters: None,
                 count_graveyard: None,
                 count_all_graveyards: Some(R::Creature),
-                count_host_colors: false, ..Default::default()
+                count_host_colors: false,
+                ..Default::default()
             }),
             ..Default::default()
         }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: germ },
-            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: germ,
+            },
+            Effect::Attach {
+                what: Selector::This,
+                to: Selector::LastCreatedToken,
+            },
         ]))],
         ..Default::default()
     }
@@ -59,7 +70,10 @@ pub fn necropolis_fiend() -> CardDefinition {
         name: "Necropolis Fiend",
         cost: cost(&[generic(7), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
         power: 4,
         toughness: 5,
         keywords: vec![Keyword::Delve, Keyword::Flying],
@@ -86,7 +100,10 @@ pub fn blaze() -> CardDefinition {
         name: "Blaze",
         cost: cost(&[x(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage { to: target_any(), amount: Value::XFromCost },
+        effect: Effect::DealDamage {
+            to: target_any(),
+            amount: Value::XFromCost,
+        },
         ..Default::default()
     }
 }
@@ -132,7 +149,10 @@ pub fn warthog() -> CardDefinition {
         name: "Warthog",
         cost: cost(&[generic(1), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Landwalk(LandType::Swamp)],
@@ -147,13 +167,18 @@ pub fn ghost_ship() -> CardDefinition {
         name: "Ghost Ship",
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[u(), u(), u()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -190,12 +215,15 @@ pub fn sea_monster() -> CardDefinition {
         name: "Sea Monster",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Serpent],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
-        keywords: vec![Keyword::CanAttackOnlyIfDefenderControls(Box::new(R::HasLandType(
-            LandType::Island,
-        )))],
+        keywords: vec![Keyword::CanAttackOnlyIfDefenderControls(Box::new(
+            R::HasLandType(LandType::Island),
+        ))],
         ..Default::default()
     }
 }
@@ -209,7 +237,11 @@ pub fn caustic_bronco() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Snake, CreatureType::Horse, CreatureType::Mount],
+            creature_types: vec![
+                CreatureType::Snake,
+                CreatureType::Horse,
+                CreatureType::Mount,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -217,8 +249,14 @@ pub fn caustic_bronco() -> CardDefinition {
         keywords: vec![Keyword::Saddle(3)],
         triggered_abilities: vec![on_attack(Effect::If {
             cond: Predicate::SourceSaddled,
-            then: Box::new(Effect::RevealTopToHandLoseMv { who: PlayerRef::EachOpponent, you_gain: false }),
-            else_: Box::new(Effect::RevealTopToHandLoseMv { who: PlayerRef::You, you_gain: false }),
+            then: Box::new(Effect::RevealTopToHandLoseMv {
+                who: PlayerRef::EachOpponent,
+                you_gain: false,
+            }),
+            else_: Box::new(Effect::RevealTopToHandLoseMv {
+                who: PlayerRef::You,
+                you_gain: false,
+            }),
         })],
         ..Default::default()
     }
@@ -232,13 +270,19 @@ pub fn goblin_recruiter() -> CardDefinition {
         name: "Goblin Recruiter",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::SearchUpToN {
             who: PlayerRef::You,
             filter: R::HasCreatureType(CreatureType::Goblin),
-            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            to: ZoneDest::Library {
+                who: PlayerRef::You,
+                pos: LibraryPosition::Top,
+            },
             count: Value::Const(10),
         })],
         ..Default::default()
@@ -254,19 +298,30 @@ pub fn sea_serpent() -> CardDefinition {
         name: "Sea Serpent",
         cost: cost(&[generic(5), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Serpent],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
-        keywords: vec![Keyword::CanAttackOnlyIfDefenderControls(Box::new(R::HasLandType(
-            LandType::Island,
-        )))],
+        keywords: vec![Keyword::CanAttackOnlyIfDefenderControls(Box::new(
+            R::HasLandType(LandType::Island),
+        ))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::If {
-                cond: Predicate::Not(Box::new(Predicate::SelectorExists(Selector::EachPermanent(
-                    R::HasLandType(LandType::Island).and(R::ControlledByYou),
-                )))),
-                then: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Graveyard }),
+                cond: Predicate::Not(Box::new(Predicate::SelectorExists(
+                    Selector::EachPermanent(
+                        R::HasLandType(LandType::Island).and(R::ControlledByYou),
+                    ),
+                ))),
+                then: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Graveyard,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],

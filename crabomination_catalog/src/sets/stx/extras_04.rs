@@ -10,12 +10,15 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -111,8 +114,10 @@ pub fn sneaky_snacker() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -144,10 +149,7 @@ pub fn soulknife_spy() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::SelfSource,
-            ),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::MayPay {
                 description: "Pay {U} to draw a card.".into(),
                 mana_cost: cost(&[u()]),
@@ -203,7 +205,7 @@ pub fn daring_diversion() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
-                retaliate_to_source: false,
+            retaliate_to_source: false,
             total: Value::Const(4),
             filter: SelectionRequirement::Creature,
             max_targets: 2,
@@ -528,8 +530,10 @@ pub fn ember_anvil() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -564,8 +568,7 @@ pub fn witherbloom_strangler() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::PumpPT {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
                 power: Value::Const(-2),
                 toughness: Value::Const(-2),
@@ -846,7 +849,11 @@ pub fn diviners_wand() -> CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 2,
             toughness: 1,
-            keywords: vec![Keyword::Flying], scale: None, triggered_abilities: vec![], ..Default::default() }),
+            keywords: vec![Keyword::Flying],
+            scale: None,
+            triggered_abilities: vec![],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -972,8 +979,10 @@ pub fn lorehold_excavator() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -1673,8 +1682,10 @@ pub fn conjurers_bauble() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             ]),
-                    self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()

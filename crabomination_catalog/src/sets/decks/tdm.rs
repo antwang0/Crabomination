@@ -33,12 +33,12 @@ use crate::card::{
 use crate::effect::shortcut::{
     cast_is_instant_or_sorcery, drain, etb, mobilize, on_you_attack, target_any, target_filtered,
 };
-use crate::game::TurnStep;
 use crate::effect::{
     AttackingTokenCleanup, Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition,
     ManaPayload, PlayerRef, Predicate, Selector, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, x, Color};
+use crate::game::TurnStep;
+use crate::mana::{Color, b, cost, g, generic, mono_hybrid, r, u, w, x};
 
 /// Alesha's Legacy — {1}{B} Instant. Target creature you control gains
 /// deathtouch and indestructible until end of turn.
@@ -83,7 +83,10 @@ pub fn fire_rim_form() -> CardDefinition {
             what: Selector::This,
             to: target_filtered(R::Creature),
         },
-        equipped_bonus: Some(crate::card::EquipBonus { power: 2, ..Default::default() }),
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::GrantKeyword {
             what: Selector::AttachedTo(Box::new(Selector::This)),
             keyword: Keyword::FirstStrike,
@@ -176,7 +179,10 @@ pub fn armament_dragon() -> CardDefinition {
         name: "Armament Dragon",
         cost: cost(&[generic(3), w(), b(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -202,7 +208,10 @@ pub fn fresh_start() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Flash],
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(crate::card::EquipBonus {
             power: -5,
             remove_abilities: true,
@@ -229,7 +238,10 @@ pub fn lie_in_wait() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
         ]),
@@ -274,7 +286,10 @@ pub fn wingspan_stride() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 1,
             toughness: 1,
@@ -283,7 +298,10 @@ pub fn wingspan_stride() -> CardDefinition {
         }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), u()]),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -300,7 +318,10 @@ pub fn riverwalk_technique() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::Move {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Nonland },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Nonland,
+                },
                 to: ZoneDest::Library {
                     who: PlayerRef::OwnerOfMoved,
                     pos: LibraryPosition::OwnerChoice,
@@ -378,7 +399,10 @@ pub fn ringing_strike_mastery() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         triggered_abilities: vec![etb(Effect::Tap {
             what: Selector::AttachedTo(Box::new(Selector::This)),
         })],
@@ -395,7 +419,10 @@ pub fn ringing_strike_mastery() -> CardDefinition {
                     applies_to: Selector::AttachedTo(Box::new(Selector::This)),
                     ability: ActivatedAbility {
                         mana_cost: cost(&[generic(5)]),
-                        effect: Effect::Untap { what: Selector::This, up_to: None },
+                        effect: Effect::Untap {
+                            what: Selector::This,
+                            up_to: None,
+                        },
                         ..Default::default()
                     },
                     condition: None,
@@ -424,7 +451,10 @@ pub fn krumar_initiate() -> CardDefinition {
             tap_cost: true,
             x_life_cost: true,
             sorcery_speed: true,
-            effect: Effect::Endure { target: Selector::This, n: Value::XFromCost },
+            effect: Effect::Endure {
+                target: Selector::This,
+                n: Value::XFromCost,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -443,7 +473,10 @@ pub fn zurgos_vanguard() -> CardDefinition {
             ..Default::default()
         },
         toughness: 3,
-        dynamic_pt: Some(DynamicPt::CreaturesControlledPower { base_p: 0, base_t: 3 }),
+        dynamic_pt: Some(DynamicPt::CreaturesControlledPower {
+            base_p: 0,
+            base_t: 3,
+        }),
         triggered_abilities: vec![mobilize(1)],
         ..Default::default()
     }
@@ -497,7 +530,9 @@ pub fn dragons_prey() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
         cost_increase_if_targets: Some((R::HasCreatureType(CreatureType::Dragon), 2)),
-        effect: Effect::Destroy { what: target_filtered(R::Creature) },
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature),
+        },
         ..Default::default()
     }
 }
@@ -509,7 +544,10 @@ fn white_monk_prowess_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Monk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Monk],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Prowess],
         ..Default::default()
     }
@@ -559,7 +597,10 @@ fn warrior_haste_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Warrior], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Warrior],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Haste],
         ..Default::default()
     }
@@ -573,7 +614,9 @@ pub fn salt_road_skirmish() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Creature) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
@@ -595,7 +638,10 @@ pub fn corroding_dragonstorm() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Seq(vec![
                 drain(2),
-                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
             ])),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
@@ -625,7 +671,10 @@ pub fn essence_anchor() -> CardDefinition {
                 EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                 EventScope::YourControl,
             ),
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -674,7 +723,10 @@ pub fn stormbeacon_blade() -> CardDefinition {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::If {
-                    cond: Predicate::AttackedWithCountAtLeast { who: PlayerRef::You, at_least: 3 },
+                    cond: Predicate::AttackedWithCountAtLeast {
+                        who: PlayerRef::You,
+                        at_least: 3,
+                    },
                     then: Box::new(Effect::Draw {
                         who: Selector::Player(PlayerRef::You),
                         amount: Value::Const(1),
@@ -697,15 +749,24 @@ pub fn jeskai_shrinekeeper() -> CardDefinition {
         name: "Jeskai Shrinekeeper",
         cost: cost(&[generic(2), u(), r(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
         }],
         ..Default::default()
@@ -724,7 +785,10 @@ pub fn encroaching_dragonstorm() -> CardDefinition {
             etb(Effect::SearchUpToN {
                 who: PlayerRef::You,
                 filter: R::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
                 count: Value::Const(2),
             }),
             TriggeredAbility {
@@ -733,7 +797,10 @@ pub fn encroaching_dragonstorm() -> CardDefinition {
                         what: Selector::TriggerSource,
                         filter: R::HasCreatureType(CreatureType::Dragon),
                     }),
-                effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
             },
         ],
         ..Default::default()
@@ -749,7 +816,10 @@ pub fn kheru_goldkeeper() -> CardDefinition {
         name: "Kheru Goldkeeper",
         cost: cost(&[generic(1), b(), g(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -762,8 +832,8 @@ pub fn kheru_goldkeeper() -> CardDefinition {
                 per_subject_cap: None,
                 actor_is_opponent: false,
                 exclude_attacker_taps: false,
-                },
-                effect: Effect::CreateToken {
+            },
+            effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 definition: crate::game::effects::treasure_token(),
@@ -806,7 +876,10 @@ pub fn dragonclaw_strike() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
                 power: Value::PowerOf(Box::new(Selector::Target(0))),
                 toughness: Value::ToughnessOf(Box::new(Selector::Target(0))),
                 duration: Duration::EndOfTurn,
@@ -833,7 +906,10 @@ pub fn clarion_conqueror() -> CardDefinition {
         name: "Clarion Conqueror",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -860,7 +936,10 @@ pub fn ambling_stormshell() -> CardDefinition {
         name: "Ambling Stormshell",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Turtle], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Turtle],
+            ..Default::default()
+        },
         power: 5,
         toughness: 9,
         keywords: vec![Keyword::Ward(WardCost::generic(2))],
@@ -873,7 +952,10 @@ pub fn ambling_stormshell() -> CardDefinition {
                         kind: CounterType::Stun,
                         amount: Value::Const(3),
                     },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(3),
+                    },
                 ]),
             },
             TriggeredAbility {
@@ -883,7 +965,10 @@ pub fn ambling_stormshell() -> CardDefinition {
                         filter: R::HasCreatureType(CreatureType::Turtle),
                     },
                 ),
-                effect: Effect::Untap { what: Selector::This, up_to: None },
+                effect: Effect::Untap {
+                    what: Selector::This,
+                    up_to: None,
+                },
             },
         ],
         ..Default::default()
@@ -910,7 +995,8 @@ pub fn furious_forebear() -> CardDefinition {
                     filter: R::Creature.and(R::ControlledByYou),
                 }),
             effect: Effect::MayPay {
-                description: "Pay {1}{W}: return Furious Forebear from your graveyard to hand".into(),
+                description: "Pay {1}{W}: return Furious Forebear from your graveyard to hand"
+                    .into(),
                 mana_cost: cost(&[generic(1), w()]),
                 body: Box::new(Effect::Move {
                     what: Selector::This,
@@ -939,7 +1025,10 @@ pub fn bewilder() -> CardDefinition {
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -1037,7 +1126,9 @@ pub fn riverwheel_sweep() -> CardDefinition {
         ]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Tap { what: target_filtered(R::Creature) },
+            Effect::Tap {
+                what: target_filtered(R::Creature),
+            },
             Effect::AddCounter {
                 what: Selector::Target(0),
                 kind: CounterType::Stun,
@@ -1088,8 +1179,17 @@ pub fn dragonbroods_relic() -> CardDefinition {
         power: 4,
         toughness: 4,
         card_types: vec![CardType::Creature],
-        colors: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        colors: vec![
+            Color::White,
+            Color::Blue,
+            Color::Black,
+            Color::Red,
+            Color::Green,
+        ],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: target_any(),
@@ -1145,7 +1245,9 @@ pub fn traveling_botanist() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
-            effect: Effect::LookTopLandToHandElseBin { who: PlayerRef::You },
+            effect: Effect::LookTopLandToHandElseBin {
+                who: PlayerRef::You,
+            },
         }],
         ..Default::default()
     }
@@ -1162,7 +1264,12 @@ fn your_creatures() -> Selector {
 /// Mardu: at your end step, if a creature died under your control this turn,
 /// each opponent sacrifices a creature.
 pub fn barrensteppe_siege() -> CardDefinition {
-    let end_step = || EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer);
+    let end_step = || {
+        EventSpec::new(
+            EventKind::StepBegins(TurnStep::End),
+            EventScope::ActivePlayer,
+        )
+    };
     CardDefinition {
         name: "Barrensteppe Siege",
         cost: cost(&[generic(2), w(), b()]),
@@ -1223,7 +1330,10 @@ pub fn frostcliff_siege() -> CardDefinition {
                         EventScope::YourControl,
                     )
                     .once_per_turn(),
-                    effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    effect: Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 }],
                 ..Default::default()
             },
@@ -1312,7 +1422,10 @@ pub fn hollowmurk_siege() -> CardDefinition {
                             filter: R::Creature,
                         })
                         .once_per_turn(),
-                    effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    effect: Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 }],
                 ..Default::default()
             },
@@ -1341,8 +1454,7 @@ pub fn hollowmurk_siege() -> CardDefinition {
 /// to hand. {1}{W}{B}{G}, {T}, Sac: create an X/X white Spirit, X = greatest
 /// toughness among creatures you control (sorcery speed).
 pub fn abzan_monument() -> CardDefinition {
-    let greatest_toughness =
-        || Value::ToughnessOf(Box::new(Selector::GreatestToughnessYouControl));
+    let greatest_toughness = || Value::ToughnessOf(Box::new(Selector::GreatestToughnessYouControl));
     CardDefinition {
         name: "Abzan Monument",
         cost: cost(&[generic(2)]),
@@ -1499,12 +1611,16 @@ pub fn anafenza_unyielding_lineage() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash, Keyword::FirstStrike],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::NotToken,
-                }),
-            effect: Effect::Endure { target: Selector::This, n: Value::Const(2) },
+                },
+            ),
+            effect: Effect::Endure {
+                target: Selector::This,
+                n: Value::Const(2),
+            },
         }],
         ..Default::default()
     }
@@ -1594,7 +1710,11 @@ pub fn eshki_dragonclaw() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Ward(WardCost::generic(1))],
+        keywords: vec![
+            Keyword::Vigilance,
+            Keyword::Trample,
+            Keyword::Ward(WardCost::generic(1)),
+        ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::BeginCombat),
@@ -1612,7 +1732,10 @@ pub fn eshki_dragonclaw() -> CardDefinition {
                     },
                 ]),
                 then: Box::new(Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                     Effect::AddCounter {
                         what: Selector::This,
                         kind: CounterType::PlusOnePlusOne,
@@ -1642,7 +1765,10 @@ pub fn narset_jeskai_waymaster() -> CardDefinition {
         power: 3,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::MayDo {
                 description: "Discard your hand to draw cards equal to spells cast this turn?"
                     .into(),
@@ -1748,7 +1874,9 @@ pub fn kishla_village() -> CardDefinition {
                     n: Value::ONE,
                 },
                 then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap { what: Selector::This }),
+                else_: Box::new(Effect::Tap {
+                    what: Selector::This,
+                }),
             },
         }],
         activated_abilities: vec![
@@ -1763,7 +1891,10 @@ pub fn kishla_village() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(3), g()]),
-                effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                effect: Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
                 ..Default::default()
             },
         ],
@@ -1802,7 +1933,9 @@ pub fn death_begets_life() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::count(Selector::EachPermanent(matching())),
             },
-            Effect::Destroy { what: Selector::EachPermanent(matching()) },
+            Effect::Destroy {
+                what: Selector::EachPermanent(matching()),
+            },
         ]),
         ..Default::default()
     }
@@ -1845,7 +1978,10 @@ pub fn herd_heirloom() -> CardDefinition {
                                 EventKind::DealsCombatDamageToPlayer,
                                 EventScope::SelfSource,
                             ),
-                            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                            effect: Effect::Draw {
+                                who: Selector::You,
+                                amount: Value::ONE,
+                            },
                         }),
                         duration: Duration::EndOfTurn,
                     },
@@ -1874,7 +2010,10 @@ pub fn yathan_roadwatcher() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SourceWasCast,
             then: Box::new(Effect::Seq(vec![
-                Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+                Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::Const(4),
+                },
                 Effect::Reflexive {
                     body: Box::new(Effect::Move {
                         what: target_filtered(
@@ -1912,7 +2051,9 @@ pub fn great_arashin_city() -> CardDefinition {
                     n: Value::ONE,
                 },
                 then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap { what: Selector::This }),
+                else_: Box::new(Effect::Tap {
+                    what: Selector::This,
+                }),
             },
         }],
         activated_abilities: vec![
@@ -1952,7 +2093,10 @@ pub fn natures_rhythm() -> CardDefinition {
         effect: Effect::Search {
             who: PlayerRef::You,
             filter: R::Creature.and(R::ManaValueAtMostXFromCost),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -1967,7 +2111,10 @@ pub fn smile_at_death() -> CardDefinition {
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
                 min_targets: 0,
@@ -1975,7 +2122,10 @@ pub fn smile_at_death() -> CardDefinition {
                 effect: Box::new(Effect::Seq(vec![
                     Effect::Move {
                         what: Selector::Target(0),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                     Effect::AddCounter {
                         what: Selector::Target(0),
@@ -1999,10 +2149,17 @@ pub fn roar_of_endless_song() -> CardDefinition {
         toughness: 5,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
         ..Default::default()
     };
-    let make_elephant = Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: elephant };
+    let make_elephant = Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: elephant,
+    };
     CardDefinition {
         name: "Roar of Endless Song",
         cost: cost(&[generic(2), g(), u(), r()]),
@@ -2041,7 +2198,10 @@ pub fn zurgo_thunders_decree() -> CardDefinition {
         cost: cost(&[r(), w(), b()]),
         supertypes: vec![crate::card::Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Orc, CreatureType::Warrior], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Warrior],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         triggered_abilities: vec![mobilize(2)],
@@ -2057,7 +2217,10 @@ pub fn rot_curse_rakshasa() -> CardDefinition {
         name: "Rot-Curse Rakshasa",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Trample, Keyword::Decayed],
@@ -2128,7 +2291,10 @@ pub fn the_sibsig_ceremony() -> CardDefinition {
         supertypes: vec![crate::card::Supertype::Legendary],
         static_abilities: vec![StaticAbility {
             description: "Creature spells you cast cost {2} less to cast.",
-            effect: StaticEffect::CostReduction { filter: R::Creature, amount: 2 },
+            effect: StaticEffect::CostReduction {
+                filter: R::Creature,
+                amount: 2,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
@@ -2140,7 +2306,9 @@ pub fn the_sibsig_ceremony() -> CardDefinition {
                     Predicate::TriggerSourceEnteredByCast,
                 ])),
             effect: Effect::Seq(vec![
-                Effect::Destroy { what: Selector::TriggerSource },
+                Effect::Destroy {
+                    what: Selector::TriggerSource,
+                },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
@@ -2197,7 +2365,10 @@ pub fn maelstrom_of_the_spirit_dragon() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -2237,7 +2408,10 @@ pub fn united_battlefront() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookTopPutMatchingOntoBattlefield {
             count: Value::Const(7),
-            filter: R::PermanentCard.and(R::Noncreature).and(R::Nonland).and(R::ManaValueAtMost(3)),
+            filter: R::PermanentCard
+                .and(R::Noncreature)
+                .and(R::Nonland)
+                .and(R::ManaValueAtMost(3)),
             then: None,
             max: Some(2),
             tapped: false,
@@ -2254,7 +2428,10 @@ pub fn flamehold_grappler() -> CardDefinition {
         name: "Flamehold Grappler",
         cost: cost(&[u(), r(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Monk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
@@ -2304,9 +2481,7 @@ pub fn cathartic_parting() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(
-                    R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent),
-                ),
+                what: target_filtered(R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent)),
                 to: ZoneDest::Library {
                     who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                     pos: LibraryPosition::Shuffled,

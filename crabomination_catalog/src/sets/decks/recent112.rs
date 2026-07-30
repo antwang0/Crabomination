@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::cast_is_noncreature;
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, Value};
-use crate::mana::{b, cost, g, generic, hybrid, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, u, w};
 
 /// Pili-Pala — {2} 1/1 flying Scarecrow. {2}, {Q}: Add one mana of any
 /// color (CR 107.17).
@@ -60,7 +60,10 @@ pub fn salvage_titan() -> CardDefinition {
         name: "Salvage Titan",
         cost: cost(&[generic(4), b(), b()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 6,
         toughness: 4,
         alternative_cost: Some(AlternativeCost {
@@ -165,7 +168,10 @@ pub fn blistercoil_weird() -> CardDefinition {
         name: "Blistercoil Weird",
         cost: cost(&[hybrid(Color::Blue, Color::Red)]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Weird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Weird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![crate::effect::shortcut::magecraft(Effect::Seq(vec![
@@ -175,7 +181,10 @@ pub fn blistercoil_weird() -> CardDefinition {
                 toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::This, up_to: None },
+            Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
         ]))],
         ..Default::default()
     }
@@ -208,8 +217,15 @@ pub fn sage_of_the_falls() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Draw a card, then discard a card?".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
                 ])),
             },
         }],

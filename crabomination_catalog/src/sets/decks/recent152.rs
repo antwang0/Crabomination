@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, generic, r, u, w};
 
 /// Rowan's Grim Search — {2}{B} Instant. Bargain. If bargained, dig the top four
 /// (keep up to two; modeled as Surveil 4). You draw two and lose 2 life.
@@ -22,11 +22,20 @@ pub fn rowans_grim_search() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::If {
                 cond: Predicate::SpellWasBargained,
-                then: Box::new(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(4) }),
+                then: Box::new(Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(4),
+                }),
                 else_: Box::new(Effect::Noop),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -43,7 +52,10 @@ pub fn rite_of_the_moth() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(R::Creature.and(R::InGraveyard)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::AddCounter {
                 what: Selector::Target(0),
@@ -63,12 +75,18 @@ pub fn hazels_nocturne() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::ReturnGraveyardCardsToHand { filter: R::Creature, max: Value::Const(2) },
+            Effect::ReturnGraveyardCardsToHand {
+                filter: R::Creature,
+                max: Value::Const(2),
+            },
             Effect::LoseLife {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(2),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -82,7 +100,10 @@ fn mercenary_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mercenary], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mercenary],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sorcery_speed: true,
@@ -122,7 +143,10 @@ pub fn otterball_antics() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue, Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Otter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Prowess],
         ..Default::default()
     };
@@ -132,7 +156,11 @@ pub fn otterball_antics() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(3), u()]))],
         effect: Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: otter },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: otter,
+            },
             Effect::If {
                 cond: Predicate::Not(Box::new(Predicate::CastFromHand)),
                 then: Box::new(Effect::AddCounter {

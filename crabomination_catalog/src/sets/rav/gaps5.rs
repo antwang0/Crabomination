@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value};
-use crate::mana::{cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, cost, g, generic, r, u, w};
 
 /// Boros Fury-Shield — {2}{W} Instant. Prevent all combat damage target
 /// attacking or blocking creature would deal this turn. If {R} was spent to
@@ -23,7 +23,10 @@ pub fn boros_fury_shield() -> CardDefinition {
                 target: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
             },
             Effect::If {
-                cond: Predicate::ManaSpentOfColorAtLeast { color: Color::Red, at_least: 1 },
+                cond: Predicate::ManaSpentOfColorAtLeast {
+                    color: Color::Red,
+                    at_least: 1,
+                },
                 then: Box::new(Effect::DealDamage {
                     to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                     amount: Value::PowerOf(Box::new(Selector::Target(0))),
@@ -61,7 +64,10 @@ pub fn greater_mossdog() -> CardDefinition {
         name: "Greater Mossdog",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Plant, CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Dog],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Dredge(3)],
@@ -95,7 +101,9 @@ pub fn hour_of_reckoning() -> CardDefinition {
         keywords: vec![Keyword::Convoke],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(R::IsToken)))),
-            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
         },
         ..Default::default()
     }
@@ -107,7 +115,10 @@ pub fn guardian_of_vitu_ghazi() -> CardDefinition {
         name: "Guardian of Vitu-Ghazi",
         cost: cost(&[generic(6), g(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 4,
         toughness: 7,
         keywords: vec![Keyword::Convoke, Keyword::Vigilance],

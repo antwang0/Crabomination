@@ -3534,6 +3534,24 @@ pub enum Effect {
     /// Cabal Therapy: choose a nonland card name; target player discards
     /// every card with that name from their hand.
     NameCardTargetDiscardsMatching,
+    /// Liar's Pendulum: name a card, then target opponent guesses whether a
+    /// card with that name is in your hand. Reveal and draw when they guess
+    /// wrong. The guess rides a `Decision::OptionalTrigger` asked of the
+    /// opponent.
+    LiarsPendulum,
+    /// Scythe of the Wretched: a creature the Equipment's host damaged this
+    /// turn died — return that card to the battlefield under the Equipment
+    /// controller's control and attach the Equipment to it. The check reads
+    /// the death LKI snapshot's `damaged_by_this_turn`.
+    ReturnVictimAndAttachSelf,
+    /// Imprint — exile up to `count` cards matching `filter` from a **single**
+    /// graveyard (the controller picks the graveyard, then the cards), linked
+    /// to the source via `exiled_with`. Spellweaver Helix.
+    ImprintFromGraveyard { filter: SelectionRequirement, count: Value },
+    /// Spellweaver Helix: a card with the same name as one of the two cards
+    /// exiled with this artifact was just cast — copy the *other* one and
+    /// cast the copy without paying its mana cost.
+    SpellweaverCopy,
     /// Slaughter Games: choose a nonland card name, then exile every card with
     /// that name from target opponent's graveyard, hand, and library; that
     /// player then shuffles.

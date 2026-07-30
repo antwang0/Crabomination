@@ -20,7 +20,10 @@ pub fn possessed_goat() -> CardDefinition {
         name: "Possessed Goat",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goat],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -80,7 +83,9 @@ pub fn hired_claw() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
             once_per_turn: true,
-            condition: Some(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent }),
+            condition: Some(Predicate::PlayerLostLifeThisTurn {
+                who: PlayerRef::EachOpponent,
+            }),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -107,7 +112,10 @@ pub fn mistbreath_elder() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: target_filtered(

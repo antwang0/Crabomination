@@ -71,7 +71,11 @@ pub fn spider_islanders() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider, CreatureType::Horror, CreatureType::Citizen],
+            creature_types: vec![
+                CreatureType::Spider,
+                CreatureType::Horror,
+                CreatureType::Citizen,
+            ],
             ..Default::default()
         },
         power: 4,
@@ -95,7 +99,10 @@ pub fn prison_break() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::AddCounter {
                 what: Selector::LastMoved,

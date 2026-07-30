@@ -8,7 +8,7 @@ use crate::card::{
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{etb, on_dies, target_filtered, unleash};
 use crate::effect::{Duration, PlayerRef, Selector};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Bellows Lizard — {R} 1/1 Lizard with firebreathing ({1}{R}: +1/+0).
 pub fn bellows_lizard() -> CardDefinition {
@@ -16,7 +16,10 @@ pub fn bellows_lizard() -> CardDefinition {
         name: "Bellows Lizard",
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -39,7 +42,10 @@ pub fn concordia_pegasus() -> CardDefinition {
         name: "Concordia Pegasus",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Pegasus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pegasus],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -53,7 +59,10 @@ pub fn catacomb_slug() -> CardDefinition {
         name: "Catacomb Slug",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Slug], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Slug],
+            ..Default::default()
+        },
         power: 2,
         toughness: 6,
         ..Default::default()
@@ -66,7 +75,10 @@ pub fn brushstrider() -> CardDefinition {
         name: "Brushstrider",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Vigilance],
@@ -80,7 +92,10 @@ pub fn daggerdrome_imp() -> CardDefinition {
         name: "Daggerdrome Imp",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Imp], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
@@ -114,12 +129,17 @@ pub fn batterhorn() -> CardDefinition {
         name: "Batterhorn",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Destroy target artifact".into(),
-            body: Box::new(Effect::Destroy { what: target_filtered(R::Artifact) }),
+            body: Box::new(Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            }),
         })],
         ..Default::default()
     }
@@ -132,7 +152,10 @@ pub fn crosstown_courier() -> CardDefinition {
         name: "Crosstown Courier",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vedalken], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
@@ -153,7 +176,10 @@ pub fn aquus_steed() -> CardDefinition {
         name: "Aquus Steed",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
@@ -179,7 +205,10 @@ fn centaur_token() -> TokenDefinition {
         toughness: 3,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Centaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -218,13 +247,20 @@ pub fn drainpipe_vermin() -> CardDefinition {
         name: "Drainpipe Vermin",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![on_dies(Effect::MayPay {
             description: "Pay {B}: target player discards a card".into(),
             mana_cost: cost(&[b()]),
-            body: Box::new(Effect::Discard { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE, random: false }),
+            body: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::ONE,
+                random: false,
+            }),
             else_: None,
         })],
         ..Default::default()
@@ -237,7 +273,10 @@ pub fn dead_reveler() -> CardDefinition {
         name: "Dead Reveler",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Unleash],
@@ -253,7 +292,10 @@ pub fn doorkeeper() -> CardDefinition {
         name: "Doorkeeper",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Homunculus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Homunculus],
+            ..Default::default()
+        },
         power: 0,
         toughness: 4,
         keywords: vec![Keyword::Defender],
@@ -263,7 +305,9 @@ pub fn doorkeeper() -> CardDefinition {
             effect: Effect::Mill {
                 who: Selector::Player(PlayerRef::Target(0)),
                 amount: Value::count(Selector::EachPermanent(
-                    R::Creature.and(R::ControlledByYou).and(R::HasKeyword(Keyword::Defender)),
+                    R::Creature
+                        .and(R::ControlledByYou)
+                        .and(R::HasKeyword(Keyword::Defender)),
                 )),
             },
             ..Default::default()

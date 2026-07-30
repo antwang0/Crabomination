@@ -2,9 +2,9 @@
 //! `tests/recent47.rs`.
 
 use crate::card::{
-    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CreatureType, DynamicPt, Effect,
-    Keyword, Predicate, SelectionRequirement as R, Selector, Subtypes, Supertype, TokenDefinition,
-    Value,
+    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CreatureType, DynamicPt,
+    Effect, Keyword, Predicate, SelectionRequirement as R, Selector, Subtypes, Supertype,
+    TokenDefinition, Value,
 };
 use crate::effect::shortcut::{exploit, target_filtered};
 use crate::effect::{PlayerRef, ZoneDest};
@@ -32,7 +32,10 @@ pub fn multani_yavimayas_avatar() -> CardDefinition {
             from_graveyard: true,
             mana_cost: cost(&[generic(1), g()]),
             bounce_other_filter: Some((R::Land.and(R::ControlledByYou), 2)),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -54,7 +57,9 @@ pub fn nullmage_shepherd() -> CardDefinition {
         toughness: 4,
         activated_abilities: vec![ActivatedAbility {
             tap_n_filter: Some((R::Creature.and(R::ControlledByYou), 4)),
-            effect: Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Artifact.or(R::Enchantment)),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -84,7 +89,10 @@ pub fn magus_of_the_wheel() -> CardDefinition {
                     amount: Value::Const(100),
                     random: false,
                 },
-                Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(7) },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::Const(7),
+                },
             ]),
             ..Default::default()
         }],
@@ -99,8 +107,14 @@ pub fn bankrupt_in_blood() -> CardDefinition {
         name: "Bankrupt in Blood",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent { filter: R::Creature, count: 2 }],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature,
+            count: 2,
+        }],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -145,7 +159,10 @@ pub fn nighthawk_scavenger() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink],
-        dynamic_pt: Some(DynamicPt::CardTypesInOpponentsGraveyards { base_p: 1, base_t: 3 }),
+        dynamic_pt: Some(DynamicPt::CardTypesInOpponentsGraveyards {
+            base_p: 1,
+            base_t: 3,
+        }),
         ..Default::default()
     }
 }
@@ -161,7 +178,10 @@ pub fn speaker_of_the_heavens() -> CardDefinition {
         card_types: vec![CardType::Creature],
         keywords: vec![Keyword::Flying],
         colors: vec![crate::mana::Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -178,7 +198,10 @@ pub fn speaker_of_the_heavens() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sorcery_speed: true,
-            condition: Some(Predicate::PlayerLifeAtLeastAboveStarting { who: PlayerRef::You, delta: 7 }),
+            condition: Some(Predicate::PlayerLifeAtLeastAboveStarting {
+                who: PlayerRef::You,
+                delta: 7,
+            }),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),

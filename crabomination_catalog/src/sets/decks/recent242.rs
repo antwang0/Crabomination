@@ -4,19 +4,20 @@
 //! `tests/recent_b/recent242.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CaseData, CreatureType, CounterType, EnchantmentSubtype, EventKind,
+    CardDefinition, CardType, CaseData, CounterType, CreatureType, EnchantmentSubtype, EventKind,
     EventScope, EventSpec, Keyword, SelectionRequirement as R, Subtypes, TriggeredAbility, Zone,
 };
 use crate::effect::shortcut::{etb, investigate, target_filtered};
-use crate::effect::{
-    Duration, Effect, PlayerRef, Predicate, Selector, Value, ZoneDest,
-};
+use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, r, u, w};
 
 /// Convenience: the enchantment-subtype block marking a card a Case.
 fn case_subtypes() -> Subtypes {
-    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Case], ..Default::default() }
+    Subtypes {
+        enchantment_subtypes: vec![EnchantmentSubtype::Case],
+        ..Default::default()
+    }
 }
 
 /// "You control `n` or more permanents matching `req`."
@@ -113,7 +114,10 @@ pub fn case_of_the_crimson_pulse() -> CardDefinition {
                 amount: Value::HandSizeOf(PlayerRef::You),
                 random: false,
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ])
     };
     CardDefinition {
@@ -122,8 +126,15 @@ pub fn case_of_the_crimson_pulse() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         subtypes: case_subtypes(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::ONE,
+                random: false,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]))],
         case: Some(Box::new(CaseData {
             to_solve: Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::You), Value::Const(0)),
@@ -197,7 +208,10 @@ pub fn case_of_the_uneaten_feast() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Creature,
                 }),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         case: Some(Box::new(CaseData {
             to_solve: Predicate::LifeGainedThisTurnAtLeast {
@@ -245,8 +259,7 @@ pub fn case_of_the_locked_hothouse() -> CardDefinition {
                     effect: StaticEffect::TopOfLibraryRevealed,
                 },
                 StaticAbility {
-                    description:
-                        "You may play lands and cast creature and enchantment spells from the top of your library.",
+                    description: "You may play lands and cast creature and enchantment spells from the top of your library.",
                     effect: StaticEffect::PlayFromLibraryTop {
                         filter: R::Land.or(R::Creature).or(R::Enchantment),
                     },

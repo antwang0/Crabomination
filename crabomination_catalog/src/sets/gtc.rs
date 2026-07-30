@@ -4,18 +4,24 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect,
-    EnchantmentSubtype, Keyword, SelectionRequirement as R, StaticAbility, StaticEffect,
-    Subtypes, TokenDefinition, Value,
+    EnchantmentSubtype, Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
+    TokenDefinition, Value,
 };
 use crate::effect::shortcut::{on_dies, target_filtered};
 use crate::effect::{Duration, LibraryPosition, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, x};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 fn aura() -> Subtypes {
-    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() }
+    Subtypes {
+        enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+        ..Default::default()
+    }
 }
 
 // ── Vanilla / French-vanilla beaters ────────────────────────────────────────
@@ -107,7 +113,11 @@ pub fn ember_beast() -> CardDefinition {
 fn grant_self_keyword_eot(mana: crate::mana::ManaCost, kw: Keyword) -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: mana,
-        effect: Effect::GrantKeyword { what: Selector::This, keyword: kw, duration: Duration::EndOfTurn },
+        effect: Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: kw,
+            duration: Duration::EndOfTurn,
+        },
         ..Default::default()
     }
 }
@@ -176,7 +186,10 @@ pub fn zarichi_tiger() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), w()]),
             tap_cost: true,
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -194,7 +207,9 @@ pub fn dutiful_thrull() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -261,7 +276,10 @@ pub fn shattering_blow() -> CardDefinition {
         name: "Shattering Blow",
         cost: cost(&[generic(1), hybrid(Color::Red, Color::White)]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Move { what: target_filtered(R::Artifact), to: ZoneDest::Exile },
+        effect: Effect::Move {
+            what: target_filtered(R::Artifact),
+            to: ZoneDest::Exile,
+        },
         ..Default::default()
     }
 }
@@ -272,7 +290,9 @@ pub fn smite() -> CardDefinition {
         name: "Smite",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy { what: target_filtered(R::Creature.and(R::IsBlocked)) },
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::IsBlocked)),
+        },
         ..Default::default()
     }
 }
@@ -300,7 +320,10 @@ pub fn scatter_arc() -> CardDefinition {
             Effect::CounterSpell {
                 what: target_filtered(R::IsSpellOnStack.and(R::Creature.negate())),
             },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -318,7 +341,9 @@ pub fn psychic_strike() -> CardDefinition {
                 who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                 amount: Value::Const(2),
             },
-            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+            Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack),
+            },
         ]),
         ..Default::default()
     }
@@ -353,7 +378,10 @@ pub fn burst_of_strength() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
         ]),
         ..Default::default()
     }
@@ -372,7 +400,10 @@ pub fn purge_the_profane() -> CardDefinition {
                 amount: Value::Const(2),
                 random: false,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -413,7 +444,10 @@ pub fn totally_lost() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
             what: target_filtered(R::Permanent.and(R::Land.negate())),
-            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOfMoved,
+                pos: LibraryPosition::Top,
+            },
         },
         ..Default::default()
     }
@@ -427,8 +461,14 @@ pub fn urban_evolution() -> CardDefinition {
         cost: cost(&[generic(3), g(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-            Effect::GrantExtraLandPlay { who: PlayerRef::You, count: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::GrantExtraLandPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -449,7 +489,11 @@ pub fn tower_defense() -> CardDefinition {
                 toughness: Value::Const(5),
                 duration: Duration::EndOfTurn,
             },
-            Effect::GrantKeyword { what: team, keyword: Keyword::Reach, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword {
+                what: team,
+                keyword: Keyword::Reach,
+                duration: Duration::EndOfTurn,
+            },
         ]),
         ..Default::default()
     }
@@ -457,15 +501,28 @@ pub fn tower_defense() -> CardDefinition {
 
 // ── Auras ────────────────────────────────────────────────────────────────────
 
-fn buff_aura(name: &'static str, mana: crate::mana::ManaCost, pt: (i32, i32), kws: Vec<Keyword>) -> CardDefinition {
+fn buff_aura(
+    name: &'static str,
+    mana: crate::mana::ManaCost,
+    pt: (i32, i32),
+    kws: Vec<Keyword>,
+) -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
         name,
         cost: mana,
         card_types: vec![CardType::Enchantment],
         subtypes: aura(),
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { power: pt.0, toughness: pt.1, keywords: kws, ..Default::default() }),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: pt.0,
+            toughness: pt.1,
+            keywords: kws,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -473,12 +530,22 @@ fn buff_aura(name: &'static str, mana: crate::mana::ManaCost, pt: (i32, i32), kw
 /// Primal Visitation — {3}{R}{G} Aura. Enchanted creature gets +3/+3 and has
 /// haste.
 pub fn primal_visitation() -> CardDefinition {
-    buff_aura("Primal Visitation", cost(&[generic(3), r(), g()]), (3, 3), vec![Keyword::Haste])
+    buff_aura(
+        "Primal Visitation",
+        cost(&[generic(3), r(), g()]),
+        (3, 3),
+        vec![Keyword::Haste],
+    )
 }
 
 /// Madcap Skills — {1}{R} Aura. Enchanted creature gets +3/+0 and has menace.
 pub fn madcap_skills() -> CardDefinition {
-    buff_aura("Madcap Skills", cost(&[generic(1), r()]), (3, 0), vec![Keyword::Menace])
+    buff_aura(
+        "Madcap Skills",
+        cost(&[generic(1), r()]),
+        (3, 0),
+        vec![Keyword::Menace],
+    )
 }
 
 /// Guildscorn Ward — {W} Aura. Enchanted creature has protection from
@@ -490,7 +557,10 @@ pub fn guildscorn_ward() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Enchantment],
         subtypes: aura(),
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::ProtectionFromMulticolored],
             ..Default::default()
@@ -507,14 +577,19 @@ pub fn debtors_pulpit() -> CardDefinition {
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Enchantment],
         subtypes: aura(),
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         static_abilities: vec![StaticAbility {
             description: "Enchanted land has \"{T}: Tap target creature.\"",
             effect: StaticEffect::GrantActivatedAbility {
                 applies_to: Selector::AttachedTo(Box::new(Selector::This)),
                 ability: ActivatedAbility {
                     tap_cost: true,
-                    effect: Effect::Tap { what: target_filtered(R::Creature) },
+                    effect: Effect::Tap {
+                        what: target_filtered(R::Creature),
+                    },
                     ..Default::default()
                 },
                 condition: None,
@@ -557,7 +632,9 @@ pub fn smog_elemental() -> CardDefinition {
             description: "Creatures with flying your opponents control get -1/-1.",
             effect: StaticEffect::PumpPT {
                 applies_to: Selector::EachPermanent(
-                    R::Creature.and(R::ControlledByOpponent).and(R::HasKeyword(Keyword::Flying)),
+                    R::Creature
+                        .and(R::ControlledByOpponent)
+                        .and(R::HasKeyword(Keyword::Flying)),
                 ),
                 power: -1,
                 toughness: -1,

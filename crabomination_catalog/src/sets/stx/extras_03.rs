@@ -10,12 +10,15 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb, etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -226,8 +229,7 @@ pub fn tempest_caller() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
                 body: Box::new(Effect::Tap {
                     what: Selector::TriggerSource,
@@ -656,10 +658,7 @@ pub fn sage_of_the_beyond() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::SelfSource,
-            ),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             // The damaged player is stored as `Target(0)` on the
             // trigger (see `fire_combat_damage_to_player_triggers` in
             // `game/combat.rs:625` which pushes the trigger with
@@ -699,17 +698,18 @@ pub fn frostpyre_arcanist() -> CardDefinition {
         toughness: 5,
         triggered_abilities: vec![{
             let mut t = magecraft(Effect::MayDo {
-            description: "Return target instant or sorcery card from your graveyard to your hand.".into(),
-            body: Box::new(Effect::Move {
-                what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                description:
+                    "Return target instant or sorcery card from your graveyard to your hand.".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
                 }),
-                to: ZoneDest::Hand(PlayerRef::You),
-            }),
-        });
+            });
             t.event = t.event.once_per_turn();
             t
         }],
@@ -775,7 +775,7 @@ pub fn quandrix_quickener() -> CardDefinition {
                 count: Value::Const(3),
                 rest_to_graveyard: false,
                 pick_filter: None,
-            
+
                 take: None,
                 to_battlefield: false,
                 gain_life_if_pick: None,
@@ -921,8 +921,10 @@ pub fn waker_of_waves() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: true,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -1219,8 +1221,7 @@ pub fn curriculum_crab() -> CardDefinition {
                 description: "Put a +1/+1 counter on each creature you control.".into(),
                 body: Box::new(Effect::ForEach {
                     selector: Selector::EachPermanent(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     body: Box::new(Effect::AddCounter {
                         what: Selector::TriggerSource,
@@ -1251,7 +1252,7 @@ pub fn pyrotechnics() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
-                retaliate_to_source: false,
+            retaliate_to_source: false,
             total: Value::Const(4),
             filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             max_targets: 4,
@@ -1380,8 +1381,10 @@ pub fn witchs_cauldron() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -1461,8 +1464,10 @@ pub fn tome_of_the_guildpact() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -1684,9 +1689,7 @@ pub fn pillage() -> CardDefinition {
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Artifact.or(SelectionRequirement::Land),
-            ),
+            what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Land)),
         },
         ..Default::default()
     }
@@ -1770,7 +1773,10 @@ pub fn battle_mammoth() -> CardDefinition {
                 EventKind::BecameTarget,
                 EventScope::YourPermanentTargetedByOpponent,
             ),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -1854,8 +1860,7 @@ pub fn soul_shatter() -> CardDefinition {
             body: Box::new(Effect::SacrificeGreatestMV {
                 who: Selector::Player(PlayerRef::Triggerer),
                 count: Value::Const(1),
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker),
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                 by_power: false,
             }),
         },
@@ -2001,8 +2006,10 @@ pub fn sungrass_egg() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -2046,7 +2053,7 @@ pub fn mascot_summoning() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
-            
+
                 static_abilities: vec![],
                 ..Default::default()
             },
@@ -2134,10 +2141,7 @@ pub fn library_larcenist() -> CardDefinition {
         power: 1,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::SelfSource,
-            ),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Mill {
                 who: Selector::Player(PlayerRef::DefendingPlayer),
                 amount: Value::Const(2),

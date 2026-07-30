@@ -5,15 +5,14 @@
 //! `crabomination/src/tests/recent127.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,
-    DynamicPt, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
-    SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
-    Value, WardCost,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EventKind,
+    EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, Selector,
+    StaticAbility, StaticEffect, Subtypes, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{drain, etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
 use crate::game::effects::treasure_token;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// A Desert dual land: enters tapped, ETB pings an opponent for 1, taps for
 /// either of its two colors (the OTJ "painland Desert" cycle).
@@ -21,12 +20,17 @@ fn desert_painland(name: &'static str, a: Color, b: Color) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Desert], ..Default::default() },
+        subtypes: Subtypes {
+            land_types: vec![LandType::Desert],
+            ..Default::default()
+        },
         activated_abilities: vec![crate::sets::tap_add(a), crate::sets::tap_add(b)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Tap { what: Selector::This },
+                Effect::Tap {
+                    what: Selector::This,
+                },
                 Effect::DealDamage {
                     to: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::Const(1),
@@ -92,7 +96,9 @@ pub fn daring_thunder_thief() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         static_abilities: vec![StaticAbility {
             description: "This creature enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         ..Default::default()
     }
@@ -112,7 +118,8 @@ pub fn deepmuck_desperado() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
+                .once_per_turn(),
             effect: Effect::Mill {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(3),
@@ -136,7 +143,8 @@ pub fn blood_hustler() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
+                .once_per_turn(),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -159,13 +167,18 @@ pub fn blacksnag_buzzard() -> CardDefinition {
         name: "Blacksnag Buzzard",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
         plot_cost: Some(cost(&[generic(1), b()])),
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE },
+            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                at_least: Value::ONE,
+            },
             then: Box::new(Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -183,7 +196,10 @@ pub fn blacksnag_buzzard() -> CardDefinition {
 pub fn cactusfolk_sureshot() -> CardDefinition {
     use crate::game::types::TurnStep;
     let others_pw4 = Selector::EachPermanent(
-        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource).and(R::PowerAtLeast(4)),
+        R::Creature
+            .and(R::ControlledByYou)
+            .and(R::OtherThanSource)
+            .and(R::PowerAtLeast(4)),
     );
     CardDefinition {
         name: "Cactusfolk Sureshot",
@@ -195,9 +211,15 @@ pub fn cactusfolk_sureshot() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Reach, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        keywords: vec![
+            Keyword::Reach,
+            Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))),
+        ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::Seq(vec![
                 Effect::GrantKeyword {
                     what: others_pw4.clone(),
@@ -263,10 +285,18 @@ pub fn duelist_of_the_mind() -> CardDefinition {
         dynamic_pt: Some(DynamicPt::CardsDrawnThisTurnPower { base_t: 3 }),
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
+                .once_per_turn(),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
             ]),
         }],
         ..Default::default()
@@ -327,7 +357,10 @@ pub fn skulduggery() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                },
                 power: Value::Const(-1),
                 toughness: Value::Const(-1),
                 duration: Duration::EndOfTurn,
@@ -377,7 +410,10 @@ pub fn colossal_rattlewurm() -> CardDefinition {
         name: "Colossal Rattlewurm",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
         power: 6,
         toughness: 5,
         keywords: vec![Keyword::Trample],
@@ -400,7 +436,10 @@ pub fn colossal_rattlewurm() -> CardDefinition {
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: R::HasLandType(LandType::Desert),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
             ..Default::default()
         }],
@@ -419,10 +458,16 @@ pub fn badlands_revival() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(R::Creature.and(R::InYourGraveyard)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::Move {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Permanent.and(R::InYourGraveyard) },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Permanent.and(R::InYourGraveyard),
+                },
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         ]),
@@ -444,11 +489,17 @@ pub fn betrayal_at_the_vault() -> CardDefinition {
                 amount: Value::ZERO,
             },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 amount: power_of_0.clone(),
             },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 2, filter: R::Creature },
+                to: Selector::TargetFiltered {
+                    slot: 2,
+                    filter: R::Creature,
+                },
                 amount: power_of_0,
             },
         ]),
@@ -464,7 +515,10 @@ pub fn dust_animus() -> CardDefinition {
         name: "Dust Animus",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -494,7 +548,8 @@ pub fn bandits_haul() -> CardDefinition {
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
+                .once_per_turn(),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::Charge,
@@ -507,7 +562,10 @@ pub fn bandits_haul() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
                 remove_counter_cost: Some((CounterType::Charge, 2)),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
         ],
@@ -535,7 +593,10 @@ pub fn claim_jumper() -> CardDefinition {
             then: Box::new(Effect::Search {
                 who: PlayerRef::You,
                 filter: R::HasLandType(LandType::Plains),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             }),
             else_: Box::new(Effect::Noop),
         })],

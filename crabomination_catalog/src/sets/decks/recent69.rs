@@ -17,7 +17,10 @@ pub fn frost_giant() -> CardDefinition {
         name: "Frost Giant",
         cost: cost(&[generic(3), r(), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Rampage(2)],
@@ -31,7 +34,10 @@ pub fn highland_game() -> CardDefinition {
         name: "Highland Game",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elk],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![dies_gain_life(2)],
@@ -45,7 +51,10 @@ pub fn rushwood_dryad() -> CardDefinition {
         name: "Rushwood Dryad",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dryad], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dryad],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Landwalk(LandType::Forest)],
@@ -65,7 +74,10 @@ pub fn ainok_tracker() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::FirstStrike, Keyword::Morph(cost(&[generic(4), r()]))],
+        keywords: vec![
+            Keyword::FirstStrike,
+            Keyword::Morph(cost(&[generic(4), r()])),
+        ],
         ..Default::default()
     }
 }
@@ -76,7 +88,10 @@ pub fn charging_slateback() -> CardDefinition {
         name: "Charging Slateback",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::CantBlock, Keyword::Morph(cost(&[generic(4), r()]))],
@@ -99,7 +114,9 @@ pub fn auriok_transfixer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
             tap_cost: true,
-            effect: Effect::Tap { what: target_filtered(R::Artifact) },
+            effect: Effect::Tap {
+                what: target_filtered(R::Artifact),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -113,7 +130,10 @@ pub fn snapping_creeper() -> CardDefinition {
         name: "Snapping Creeper",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
@@ -135,11 +155,18 @@ pub fn nyxborn_rollicker() -> CardDefinition {
         name: "Nyxborn Rollicker",
         cost: cost(&[r()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Satyr], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Satyr],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         bestow: Some(cost(&[generic(1), r()])),
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

@@ -4,19 +4,22 @@
 //! card is shuffled into its owner's library. The creature lives on the parent
 //! [`CardDefinition`]; the Omen half lives in `omen`. Tracked in `DECK_FEATURES.md`.
 
+use crate::card::LandType;
 use crate::card::{
     ActivatedAbility, Adventure, CardDefinition, CardType, CounterType, CreatureType, Effect,
     EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement, StaticAbility,
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
-use crate::card::LandType;
 use crate::effect::shortcut::{etb, etb_gain_life, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 /// Dragon subtype shorthand for the Omen creature faces.
 fn dragon() -> Subtypes {
-    Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() }
+    Subtypes {
+        creature_types: vec![CreatureType::Dragon],
+        ..Default::default()
+    }
 }
 
 /// Marang River Regent — {4}{U}{U} Dragon 6/7, Flying. ETB returns up to two
@@ -36,8 +39,7 @@ pub fn marang_river_regent() -> CardDefinition {
             effect: Effect::ApplyToTargets {
                 max_targets: 2,
                 min_targets: 0,
-                filter: SelectionRequirement::Nonland
-                    .and(SelectionRequirement::OtherThanSource),
+                filter: SelectionRequirement::Nonland.and(SelectionRequirement::OtherThanSource),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
                     to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
@@ -49,8 +51,15 @@ pub fn marang_river_regent() -> CardDefinition {
             cost: cost(&[generic(3), u()]),
             card_types: vec![CardType::Instant],
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
             ]),
         })),
         ..Default::default()
@@ -77,7 +86,10 @@ pub fn bloomvine_regent() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Dragon),
                 }),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
         }],
         omen: Some(Box::new(Adventure {
             name: "Claim Territory",
@@ -87,7 +99,10 @@ pub fn bloomvine_regent() -> CardDefinition {
                 Effect::SearchUpToN {
                     who: PlayerRef::You,
                     filter: basic_forest.clone(),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                     count: Value::Const(1),
                 },
                 Effect::SearchUpToN {
@@ -119,9 +134,8 @@ pub fn scavenger_regent() -> CardDefinition {
             card_types: vec![CardType::Sorcery],
             effect: Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(
-                        SelectionRequirement::HasCreatureType(CreatureType::Dragon).negate(),
-                    ),
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Dragon).negate()),
                 ),
                 body: Box::new(Effect::PumpPT {
                     what: Selector::TriggerSource,
@@ -155,9 +169,14 @@ pub fn dirgur_island_dragon() -> CardDefinition {
                     max_targets: 1,
                     min_targets: 0,
                     filter: SelectionRequirement::Creature,
-                    effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                    effect: Box::new(Effect::Tap {
+                        what: Selector::Target(0),
+                    }),
                 },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
         })),
         ..Default::default()
@@ -177,7 +196,10 @@ pub fn twinmaw_stormbrood() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(5),
+            },
         }],
         omen: Some(Box::new(Adventure {
             name: "Charring Bite",
@@ -213,7 +235,9 @@ pub fn disruptive_stormbrood() -> CardDefinition {
                 max_targets: 1,
                 min_targets: 0,
                 filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
-                effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                effect: Box::new(Effect::Destroy {
+                    what: Selector::Target(0),
+                }),
             },
         }],
         omen: Some(Box::new(Adventure {
@@ -238,7 +262,10 @@ pub fn omenpath_to_naya() -> CardDefinition {
     CardDefinition {
         name: "Omenpath to Naya",
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Omenpath], ..Default::default() },
+        subtypes: Subtypes {
+            land_types: vec![LandType::Omenpath],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Vanishing(4)],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -258,7 +285,8 @@ pub fn omenpath_to_naya() -> CardDefinition {
 /// Sagu Wildling — {4}{G} Dragon 3/3, Flying. ETB gain 3 life. Omen — Roost Seek
 /// {G}: search your library for a basic land, put it into your hand, shuffle.
 pub fn sagu_wildling() -> CardDefinition {
-    let basic = SelectionRequirement::Land.and(SelectionRequirement::HasSupertype(Supertype::Basic));
+    let basic =
+        SelectionRequirement::Land.and(SelectionRequirement::HasSupertype(Supertype::Basic));
     CardDefinition {
         name: "Sagu Wildling",
         cost: cost(&[generic(4), g()]),
@@ -355,7 +383,10 @@ pub fn feral_deathgorger() -> CardDefinition {
             min_targets: 0,
             // "From a single graveyard" isn't enforced — any graveyard cards.
             filter: SelectionRequirement::InGraveyard,
-            effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Exile,
+            }),
         })],
         omen: Some(Box::new(Adventure {
             name: "Dusk Sight",
@@ -372,7 +403,10 @@ pub fn feral_deathgorger() -> CardDefinition {
                         amount: Value::Const(1),
                     }),
                 },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
         })),
         ..Default::default()
@@ -395,7 +429,9 @@ pub fn purging_stormbrood() -> CardDefinition {
             max_targets: 1,
             min_targets: 0,
             filter: SelectionRequirement::Creature,
-            effect: Box::new(Effect::RemoveAllCounters { what: Selector::Target(0) }),
+            effect: Box::new(Effect::RemoveAllCounters {
+                what: Selector::Target(0),
+            }),
         })],
         omen: Some(Box::new(Adventure {
             name: "Absorb Essence",
@@ -456,7 +492,9 @@ pub fn runescale_stormbrood() -> CardDefinition {
             cost: cost(&[generic(1), u()]),
             card_types: vec![CardType::Instant],
             effect: Effect::CounterSpell {
-                what: target_filtered(SelectionRequirement::Any.and(SelectionRequirement::ManaValueAtMost(2))),
+                what: target_filtered(
+                    SelectionRequirement::Any.and(SelectionRequirement::ManaValueAtMost(2)),
+                ),
             },
         })),
         ..Default::default()
@@ -532,8 +570,15 @@ pub fn stormshriek_feral() -> CardDefinition {
             cost: cost(&[generic(1), r()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::Seq(vec![
-                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
-                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ]),
         })),
         ..Default::default()
@@ -607,7 +652,10 @@ pub fn pearl_lake_warden() -> CardDefinition {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Land,
                 count: Value::Const(1),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         })),
         ..Default::default()

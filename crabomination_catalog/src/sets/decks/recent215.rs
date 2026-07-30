@@ -13,7 +13,7 @@ use crate::effect::{
     ZoneDest,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Mild-Mannered Librarian — {G} 1/1 Human. {3}{G}: becomes a Werewolf, gets two
 /// +1/+1 counters, and you draw a card. Activate only once.
@@ -22,7 +22,10 @@ pub fn mild_mannered_librarian() -> CardDefinition {
         name: "Mild-Mannered Librarian",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -39,7 +42,10 @@ pub fn mild_mannered_librarian() -> CardDefinition {
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(2),
                 },
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
             ..Default::default()
         }],
@@ -51,15 +57,21 @@ pub fn mild_mannered_librarian() -> CardDefinition {
 /// add a page counter: Draw. At 4+ page counters, exile it and gain 4 life.
 /// (The state trigger is modeled inline: each activation re-checks the count.)
 pub fn mazemind_tome() -> CardDefinition {
-    let cash_out = || {
-        Effect::If {
-            cond: Predicate::SourceHasCountersAtLeast { counter: CounterType::Page, n: 4 },
-            then: Box::new(Effect::Seq(vec![
-                Effect::Exile { what: Selector::This },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
-            ])),
-            else_: Box::new(Effect::Noop),
-        }
+    let cash_out = || Effect::If {
+        cond: Predicate::SourceHasCountersAtLeast {
+            counter: CounterType::Page,
+            n: 4,
+        },
+        then: Box::new(Effect::Seq(vec![
+            Effect::Exile {
+                what: Selector::This,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+        ])),
+        else_: Box::new(Effect::Noop),
     };
     let add_page = || Effect::AddCounter {
         what: Selector::This,
@@ -79,7 +91,10 @@ pub fn mazemind_tome() -> CardDefinition {
                 tap_cost: true,
                 effect: Effect::Seq(vec![
                     add_page(),
-                    Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                    Effect::Scry {
+                        who: PlayerRef::You,
+                        amount: Value::ONE,
+                    },
                     cash_out(),
                 ]),
                 ..Default::default()
@@ -89,7 +104,10 @@ pub fn mazemind_tome() -> CardDefinition {
                 tap_cost: true,
                 effect: Effect::Seq(vec![
                     add_page(),
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                     cash_out(),
                 ]),
                 ..Default::default()
@@ -108,7 +126,10 @@ pub fn extravagant_replication() -> CardDefinition {
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -153,7 +174,10 @@ pub fn lathril_blade_of_the_elves() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            tap_n_filter: Some((R::HasCreatureType(CreatureType::Elf).and(R::ControlledByYou), 10)),
+            tap_n_filter: Some((
+                R::HasCreatureType(CreatureType::Elf).and(R::ControlledByYou),
+                10,
+            )),
             effect: Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 to: Selector::You,
@@ -185,7 +209,10 @@ pub fn ayli_eternal_pilgrim() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(1)]),
                 sac_other_filter: Some((R::Creature, 1)),
-                effect: Effect::GainLife { who: Selector::You, amount: Value::SacrificedToughness },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::SacrificedToughness,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -195,7 +222,9 @@ pub fn ayli_eternal_pilgrim() -> CardDefinition {
                     who: PlayerRef::You,
                     delta: 10,
                 }),
-                effect: Effect::Exile { what: target_filtered(R::Nonland.and(R::Permanent)) },
+                effect: Effect::Exile {
+                    what: target_filtered(R::Nonland.and(R::Permanent)),
+                },
                 ..Default::default()
             },
         ],
@@ -263,13 +292,23 @@ pub fn alesha_who_laughs_at_fate() -> CardDefinition {
                 amount: Value::ONE,
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                    .with_filter(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::PlayerAttackedThisTurn {
+                    who: PlayerRef::You,
+                }),
                 effect: Effect::Move {
                     what: target_filtered(
-                        R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMostSourcePower),
+                        R::Creature
+                            .and(R::InYourGraveyard)
+                            .and(R::ManaValueAtMostSourcePower),
                     ),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             },
         ],
@@ -299,7 +338,10 @@ pub fn garna_bloodfist_of_keld() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::AttackedThisTurn,
                 },
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::DealDamage {
                     to: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::ONE,

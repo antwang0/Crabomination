@@ -7,15 +7,22 @@ use crate::card::{
 };
 use crate::effect::shortcut::{bloodthirst, etb, on_dies, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Giant Solifuge — {2}{R/G}{R/G} 4/1 Insect with trample, haste, shroud.
 pub fn giant_solifuge() -> CardDefinition {
     CardDefinition {
         name: "Giant Solifuge",
-        cost: cost(&[generic(2), crate::mana::hybrid(Color::Red, Color::Green), crate::mana::hybrid(Color::Red, Color::Green)]),
+        cost: cost(&[
+            generic(2),
+            crate::mana::hybrid(Color::Red, Color::Green),
+            crate::mana::hybrid(Color::Red, Color::Green),
+        ]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 4,
         toughness: 1,
         keywords: vec![Keyword::Trample, Keyword::Haste, Keyword::Shroud],
@@ -85,15 +92,25 @@ pub fn drowned_rusalka() -> CardDefinition {
         name: "Drowned Rusalka",
         cost: cost(&[u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[u()]),
             sac_other_filter: Some((R::Creature, 1)),
             effect: Effect::Seq(vec![
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
             ..Default::default()
         }],
@@ -188,12 +205,17 @@ pub fn exhumer_thrull() -> CardDefinition {
         name: "Exhumer Thrull",
         cost: cost(&[generic(5), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thrull], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thrull],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![
             etb(recur()),
-            on_dies(Effect::HauntCreature { body: Box::new(recur()) }),
+            on_dies(Effect::HauntCreature {
+                body: Box::new(recur()),
+            }),
         ],
         ..Default::default()
     }
@@ -207,9 +229,15 @@ pub fn benediction_of_moons() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::PlayerCount },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::PlayerCount,
+            },
             Effect::HauntCreature {
-                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::PlayerCount }),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::PlayerCount,
+                }),
             },
         ]),
         ..Default::default()
@@ -259,12 +287,16 @@ pub fn burning_tree_bloodscale() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), r()]),
-                effect: Effect::CantBlockSourceThisTurn { target: target_filtered(R::Creature) },
+                effect: Effect::CantBlockSourceThisTurn {
+                    target: target_filtered(R::Creature),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), g()]),
-                effect: Effect::MustBlockSource { what: target_filtered(R::Creature) },
+                effect: Effect::MustBlockSource {
+                    what: target_filtered(R::Creature),
+                },
                 ..Default::default()
             },
         ],
@@ -313,7 +345,10 @@ pub fn leyline_of_lifeforce() -> CardDefinition {
             description: "Creature spells can't be countered.",
             effect: StaticEffect::CreatureSpellsCantBeCountered,
         }],
-        opening_hand: Some(OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
+        opening_hand: Some(OpeningHandEffect::StartInPlay {
+            tapped: false,
+            extra: Effect::Noop,
+        }),
         ..Default::default()
     }
 }

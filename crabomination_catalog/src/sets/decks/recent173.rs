@@ -18,10 +18,16 @@ fn boosted_pilot_token() -> TokenDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Pilot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pilot],
+            ..Default::default()
+        },
         static_abilities: vec![StaticAbility {
             description: "This token saddles Mounts and crews Vehicles as though its power were 2 greater.",
-            effect: StaticEffect::CrewSaddlePowerBonus { applies_to: Selector::This, amount: 2 },
+            effect: StaticEffect::CrewSaddlePowerBonus {
+                applies_to: Selector::This,
+                amount: 2,
+            },
         }],
         ..Default::default()
     }
@@ -42,7 +48,8 @@ pub fn roadside_assistance() -> CardDefinition {
             what: Selector::This,
             to: Selector::TargetFiltered {
                 slot: 0,
-                filter: R::Creature.or(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Vehicle)),
+                filter: R::Creature
+                    .or(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Vehicle)),
             },
         },
         equipped_bonus: Some(EquipBonus {
@@ -75,7 +82,10 @@ pub fn cloudspire_coordinator() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::CreateToken {
@@ -100,15 +110,11 @@ pub fn trade_the_helm() -> CardDefinition {
         effect: Effect::ExchangeControl {
             a: Selector::TargetFiltered {
                 slot: 0,
-                filter: R::Creature
-                    .or(R::Artifact)
-                    .and(R::ControlledByYou),
+                filter: R::Creature.or(R::Artifact).and(R::ControlledByYou),
             },
             b: Selector::TargetFiltered {
                 slot: 1,
-                filter: R::Creature
-                    .or(R::Artifact)
-                    .and(R::ControlledByOpponent),
+                filter: R::Creature.or(R::Artifact).and(R::ControlledByOpponent),
             },
         },
         ..Default::default()
@@ -124,8 +130,14 @@ pub fn voyage_home() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         affinity_filter: Some(R::Artifact),
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
         ]),
         ..Default::default()
     }

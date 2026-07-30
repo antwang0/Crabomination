@@ -10,7 +10,7 @@ use crate::effect::{
     Value, ZoneDest,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, u, w, ManaCost};
+use crate::mana::{ManaCost, b, cost, g, generic, u, w};
 
 fn spree_mode(c: ManaCost, effect: Effect) -> SpreeMode {
     SpreeMode { cost: c, effect }
@@ -22,7 +22,10 @@ pub fn prized_griffin() -> CardDefinition {
         name: "Prized Griffin",
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -38,14 +41,25 @@ pub fn abhorrent_oculus() -> CardDefinition {
         name: "Abhorrent Oculus",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Eye], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eye],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        additional_cast_cost: vec![AdditionalCastCost::ExileFromGraveyard { filter: R::Any, count: 6 }],
+        additional_cast_cost: vec![AdditionalCastCost::ExileFromGraveyard {
+            filter: R::Any,
+            count: 6,
+        }],
         triggered_abilities: vec![crate::card::TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::OpponentControl),
-            effect: Effect::ManifestDread { who: PlayerRef::You },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::OpponentControl,
+            ),
+            effect: Effect::ManifestDread {
+                who: PlayerRef::You,
+            },
         }],
         ..Default::default()
     }
@@ -63,7 +77,11 @@ pub fn lively_dirge() -> CardDefinition {
             modes: vec![
                 spree_mode(
                     cost(&[generic(1)]),
-                    Effect::Search { who: PlayerRef::You, filter: R::Any, to: ZoneDest::Graveyard },
+                    Effect::Search {
+                        who: PlayerRef::You,
+                        filter: R::Any,
+                        to: ZoneDest::Graveyard,
+                    },
                 ),
                 spree_mode(
                     cost(&[generic(2)]),
@@ -140,13 +158,21 @@ pub fn prairie_dog() -> CardDefinition {
         name: "Prairie Dog",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Squirrel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![crate::card::TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::NoSpellCastFromHandThisTurn { who: PlayerRef::You }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::NoSpellCastFromHandThisTurn {
+                who: PlayerRef::You,
+            }),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -155,7 +181,9 @@ pub fn prairie_dog() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4), w()]),
-            effect: Effect::GrantExtraPlusOneCountersThisTurn { who: PlayerRef::You },
+            effect: Effect::GrantExtraPlusOneCountersThisTurn {
+                who: PlayerRef::You,
+            },
             ..Default::default()
         }],
         ..Default::default()

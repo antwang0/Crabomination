@@ -48,7 +48,10 @@ pub fn hell_to_pay() -> CardDefinition {
         cost: cost(&[x(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::XFromCost },
+            Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::XFromCost,
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ExcessDamageDealtThisResolution,

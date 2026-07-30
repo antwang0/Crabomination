@@ -9,8 +9,10 @@ use crate::card::{
     TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{each_your_creature, etb, on_attack, on_dies, target_filtered};
-use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
+use crate::effect::{
+    Duration, Effect, LibraryPosition, PlayerRef, Selector, StaticEffect, ZoneDest,
+};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, x};
 
 /// Aunt May — {W} 0/2 Human Citizen. Whenever another creature you control
 /// enters, you gain 1 life; if it's a Spider, put a +1/+1 counter on it.
@@ -19,7 +21,10 @@ pub fn aunt_may() -> CardDefinition {
         name: "Aunt May",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Citizen], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
         power: 0,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
@@ -29,7 +34,10 @@ pub fn aunt_may() -> CardDefinition {
                     filter: R::Creature.and(R::OtherThanSource),
                 }),
             effect: Effect::Seq(vec![
-                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 Effect::If {
                     cond: Predicate::EntityMatches {
                         what: Selector::TriggerSource,
@@ -55,12 +63,18 @@ pub fn city_pigeon() -> CardDefinition {
         name: "City Pigeon",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -75,12 +89,21 @@ pub fn city_pigeon() -> CardDefinition {
 pub fn gallant_citizen() -> CardDefinition {
     CardDefinition {
         name: "Gallant Citizen",
-        cost: cost(&[hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White)]),
+        cost: cost(&[
+            hybrid(Color::Green, Color::White),
+            hybrid(Color::Green, Color::White),
+        ]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Citizen], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
         ..Default::default()
     }
 }
@@ -93,7 +116,11 @@ pub fn common_crook() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Villain],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Rogue,
+                CreatureType::Villain,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -114,7 +141,10 @@ pub fn kravens_cats() -> CardDefinition {
         name: "Kraven's Cats",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat, CreatureType::Villain], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Villain],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -139,7 +169,10 @@ pub fn lurking_lizards() -> CardDefinition {
         name: "Lurking Lizards",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard, CreatureType::Villain], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Villain],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Trample],
@@ -164,7 +197,10 @@ pub fn angry_rabble() -> CardDefinition {
         name: "Angry Rabble",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Citizen], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Trample],
@@ -198,7 +234,11 @@ pub fn merciless_enforcers() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Mercenary, CreatureType::Villain],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Mercenary,
+                CreatureType::Villain,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -223,11 +263,17 @@ pub fn mysterios_phantasm() -> CardDefinition {
         name: "Mysterio's Phantasm",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Illusion, CreatureType::Villain], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Illusion, CreatureType::Villain],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        triggered_abilities: vec![on_attack(Effect::Mill { who: Selector::You, amount: Value::Const(1) })],
+        triggered_abilities: vec![on_attack(Effect::Mill {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
         ..Default::default()
     }
 }
@@ -273,7 +319,10 @@ pub fn thwip() -> CardDefinition {
                     what: Selector::Target(0),
                     filter: R::HasCreatureType(CreatureType::Spider),
                 },
-                then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                then: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -306,8 +355,15 @@ pub fn romantic_rendezvous() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -320,8 +376,14 @@ pub fn pumpkin_bombardment() -> CardDefinition {
         name: "Pumpkin Bombardment",
         cost: cost(&[hybrid(Color::Black, Color::Red)]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1, filter: None }],
-        effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(3) },
+        additional_cast_cost: vec![AdditionalCastCost::Discard {
+            count: 1,
+            filter: None,
+        }],
+        effect: Effect::DealDamage {
+            to: target_filtered(R::Creature),
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -334,7 +396,11 @@ pub fn spider_bot() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider, CreatureType::Robot, CreatureType::Scout],
+            creature_types: vec![
+                CreatureType::Spider,
+                CreatureType::Robot,
+                CreatureType::Scout,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -343,7 +409,10 @@ pub fn spider_bot() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::SearchUpToN {
             who: PlayerRef::You,
             filter: R::IsBasicLand,
-            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            to: ZoneDest::Library {
+                who: PlayerRef::You,
+                pos: LibraryPosition::Top,
+            },
             count: Value::Const(1),
         })],
         ..Default::default()
@@ -359,7 +428,10 @@ pub fn morlun_devourer_of_spiders() -> CardDefinition {
         cost: cost(&[x(), b(), b()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire, CreatureType::Villain], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Villain],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
@@ -381,12 +453,18 @@ pub fn selfless_police_captain() -> CardDefinition {
         name: "Selfless Police Captain",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Detective], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Detective],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
             effect: Effect::AddCounter {
                 what: target_filtered(R::Creature.and(R::ControlledByYou)),
                 kind: CounterType::PlusOnePlusOne,
@@ -405,14 +483,25 @@ pub fn mob_lookout() -> CardDefinition {
         cost: cost(&[generic(1), hybrid(Color::Blue, Color::Black)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Villain],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Rogue,
+                CreatureType::Villain,
+            ],
             ..Default::default()
         },
         power: 0,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
             Effect::AddCounter {
                 what: target_filtered(R::Creature.and(R::ControlledByYou)),
                 kind: CounterType::PlusOnePlusOne,
@@ -431,7 +520,10 @@ pub fn radioactive_spider() -> CardDefinition {
         name: "Radioactive Spider",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Reach, Keyword::Deathtouch],
@@ -441,7 +533,8 @@ pub fn radioactive_spider() -> CardDefinition {
             sorcery_speed: true,
             effect: Effect::SearchUpToN {
                 who: PlayerRef::You,
-                filter: R::HasCreatureType(CreatureType::Spider).and(R::HasCreatureType(CreatureType::Hero)),
+                filter: R::HasCreatureType(CreatureType::Spider)
+                    .and(R::HasCreatureType(CreatureType::Hero)),
                 to: ZoneDest::Hand(PlayerRef::You),
                 count: Value::Const(1),
             },
@@ -458,7 +551,10 @@ pub fn spider_suit() -> CardDefinition {
         name: "Spider-Suit",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(EquipBonus {
             power: 2,
@@ -478,9 +574,16 @@ pub fn doc_ocks_tentacles() -> CardDefinition {
         name: "Doc Ock's Tentacles",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(5)]))],
-        equipped_bonus: Some(EquipBonus { power: 4, toughness: 4, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 4,
+            toughness: 4,
+            ..Default::default()
+        }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
@@ -489,7 +592,10 @@ pub fn doc_ocks_tentacles() -> CardDefinition {
                 }),
             effect: Effect::MayDo {
                 description: "Attach Doc Ock's Tentacles to it".into(),
-                body: Box::new(Effect::Attach { what: Selector::This, to: Selector::TriggerSource }),
+                body: Box::new(Effect::Attach {
+                    what: Selector::This,
+                    to: Selector::TriggerSource,
+                }),
             },
         }],
         ..Default::default()
@@ -504,7 +610,10 @@ pub fn mary_jane_watson() -> CardDefinition {
         cost: cost(&[generic(1), hybrid(Color::Green, Color::White)]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Performer], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Performer],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
@@ -514,7 +623,10 @@ pub fn mary_jane_watson() -> CardDefinition {
                     filter: R::HasCreatureType(CreatureType::Spider),
                 })
                 .once_per_turn(),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -530,7 +642,11 @@ pub fn spider_girl_legacy_hero() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            creature_types: vec![
+                CreatureType::Spider,
+                CreatureType::Human,
+                CreatureType::Hero,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -543,7 +659,10 @@ pub fn spider_girl_legacy_hero() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -600,7 +719,10 @@ pub fn vibrant_cityscape() -> CardDefinition {
             effect: Effect::SearchUpToN {
                 who: PlayerRef::You,
                 filter: R::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
                 count: Value::Const(1),
             },
             ..Default::default()
@@ -616,7 +738,10 @@ pub fn flying_octobot() -> CardDefinition {
         name: "Flying Octobot",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot, CreatureType::Villain], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot, CreatureType::Villain],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -646,7 +771,11 @@ pub fn hobgoblin_mantled_marauder() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goblin, CreatureType::Human, CreatureType::Villain],
+            creature_types: vec![
+                CreatureType::Goblin,
+                CreatureType::Human,
+                CreatureType::Villain,
+            ],
             ..Default::default()
         },
         power: 1,
@@ -670,10 +799,17 @@ pub fn hobgoblin_mantled_marauder() -> CardDefinition {
 pub fn skyward_spider() -> CardDefinition {
     CardDefinition {
         name: "Skyward Spider",
-        cost: cost(&[hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]),
+        cost: cost(&[
+            hybrid(Color::White, Color::Blue),
+            hybrid(Color::White, Color::Blue),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            creature_types: vec![
+                CreatureType::Spider,
+                CreatureType::Human,
+                CreatureType::Hero,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -683,7 +819,10 @@ pub fn skyward_spider() -> CardDefinition {
             description: "Skyward Spider has flying as long as it's modified.",
             effect: StaticEffect::SelfHasKeywordWhilePredicate {
                 keyword: Keyword::Flying,
-                condition: Predicate::EntityMatches { what: Selector::This, filter: R::IsModified },
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::IsModified,
+                },
             },
         }],
         ..Default::default()
@@ -711,11 +850,14 @@ pub fn costume_closet() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::Creature.and(R::IsModified),
-                }),
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature.and(R::IsModified),
+            }),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -733,7 +875,10 @@ pub fn eerie_gravestone() -> CardDefinition {
         name: "Eerie Gravestone",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
             sac_cost: true,
@@ -769,7 +914,9 @@ pub fn spectacular_tactics() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                 },
             ]),
-            Effect::Destroy { what: target_filtered(R::Creature.and(R::PowerAtLeast(4))) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::PowerAtLeast(4))),
+            },
         ]),
         ..Default::default()
     }
@@ -785,7 +932,11 @@ pub fn spectacular_spider_man() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            creature_types: vec![
+                CreatureType::Spider,
+                CreatureType::Human,
+                CreatureType::Hero,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -838,9 +989,14 @@ pub fn scout_the_city() -> CardDefinition {
                     filter: R::Permanent,
                     take: Value::Const(1),
                 },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
             ]),
-            Effect::Destroy { what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))),
+            },
         ]),
         ..Default::default()
     }
@@ -869,7 +1025,10 @@ pub fn news_helicopter() -> CardDefinition {
         name: "News Helicopter",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -891,7 +1050,11 @@ pub fn spider_byte_web_warden() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider, CreatureType::Avatar, CreatureType::Hero],
+            creature_types: vec![
+                CreatureType::Spider,
+                CreatureType::Avatar,
+                CreatureType::Hero,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -902,7 +1065,9 @@ pub fn spider_byte_web_warden() -> CardDefinition {
             filter: R::Permanent.and(R::Nonland),
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
-                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(
+                    0,
+                )))),
             }),
         })],
         ..Default::default()
@@ -932,7 +1097,10 @@ pub fn taxi_driver() -> CardDefinition {
         name: "Taxi Driver",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Pilot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pilot],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -956,11 +1124,16 @@ pub fn web_warriors() -> CardDefinition {
         name: "Web-Warriors",
         cost: cost(&[generic(4), hybrid(Color::Green, Color::White)]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spider, CreatureType::Hero], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider, CreatureType::Hero],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::AddCounter {
-            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+            what: Selector::EachPermanent(
+                R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+            ),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
@@ -976,7 +1149,10 @@ pub fn starling_aerial_ally() -> CardDefinition {
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Hero], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Hero],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -999,7 +1175,11 @@ pub fn ezekiel_sims_spider_totem() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Advisor],
+            creature_types: vec![
+                CreatureType::Spider,
+                CreatureType::Human,
+                CreatureType::Advisor,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -1011,7 +1191,9 @@ pub fn ezekiel_sims_spider_totem() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::PumpPT {
-                what: target_filtered(R::HasCreatureType(CreatureType::Spider).and(R::ControlledByYou)),
+                what: target_filtered(
+                    R::HasCreatureType(CreatureType::Spider).and(R::ControlledByYou),
+                ),
                 power: Value::Const(2),
                 toughness: Value::Const(2),
                 duration: Duration::EndOfTurn,
@@ -1030,20 +1212,28 @@ pub fn agent_venom() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Symbiote, CreatureType::Soldier, CreatureType::Hero],
+            creature_types: vec![
+                CreatureType::Symbiote,
+                CreatureType::Soldier,
+                CreatureType::Hero,
+            ],
             ..Default::default()
         },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flash, Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::NotToken,
-                }),
+                },
+            ),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 crate::effect::shortcut::lose_life(1, Selector::You),
             ]),
         }],

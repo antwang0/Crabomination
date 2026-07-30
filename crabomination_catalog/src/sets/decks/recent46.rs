@@ -11,7 +11,10 @@ use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic};
 
 fn etb(effect: Effect) -> TriggeredAbility {
-    TriggeredAbility { event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource), effect }
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect,
+    }
 }
 
 /// Return target card from your graveyard to your hand (never the source — once
@@ -31,7 +34,10 @@ pub fn greenwarden_of_murasa() -> CardDefinition {
         name: "Greenwarden of Murasa",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         triggered_abilities: vec![
@@ -40,9 +46,14 @@ pub fn greenwarden_of_murasa() -> CardDefinition {
                 body: Box::new(return_gy_card()),
             }),
             on_dies(Effect::MayDo {
-                description: "Exile this; if you do, return target card from your graveyard to your hand.".into(),
+                description:
+                    "Exile this; if you do, return target card from your graveyard to your hand."
+                        .into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Move { what: Selector::This, to: ZoneDest::Exile },
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Exile,
+                    },
                     return_gy_card(),
                 ])),
             }),
@@ -59,7 +70,11 @@ pub fn nantuko_vigilante() -> CardDefinition {
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Insect, CreatureType::Druid, CreatureType::Mutant],
+            creature_types: vec![
+                CreatureType::Insect,
+                CreatureType::Druid,
+                CreatureType::Mutant,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -67,7 +82,9 @@ pub fn nantuko_vigilante() -> CardDefinition {
         keywords: vec![Keyword::Morph(cost(&[generic(1), g()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
-            effect: Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Artifact.or(R::Enchantment)),
+            },
         }],
         ..Default::default()
     }
@@ -81,7 +98,10 @@ pub fn bramble_sovereign() -> CardDefinition {
         name: "Bramble Sovereign",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dryad], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dryad],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
@@ -129,7 +149,10 @@ pub fn masked_admirers() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![
-            etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            etb(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::FromYourGraveyard)
                     .with_filter(Predicate::EntityMatches {
@@ -159,7 +182,10 @@ pub fn verdurous_gearhulk() -> CardDefinition {
         name: "Verdurous Gearhulk",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample],
@@ -182,7 +208,10 @@ pub fn pathbreaker_ibex() -> CardDefinition {
         name: "Pathbreaker Ibex",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goat],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![on_attack(Effect::Seq(vec![
@@ -212,7 +241,10 @@ pub fn ghalta_primal_hunger() -> CardDefinition {
         cost: cost(&[generic(10), g(), g()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 12,
         toughness: 12,
         keywords: vec![Keyword::Trample],
@@ -233,17 +265,29 @@ pub fn lifecrafters_bestiary() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-                effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature,
+                    },
                 ),
                 effect: Effect::MayPay {
                     description: "Pay {G} to draw a card.".into(),
                     mana_cost: cost(&[g()]),
-                    body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
                     else_: None,
                 },
             },

@@ -22,7 +22,10 @@ pub fn converter_beast() -> CardDefinition {
         },
         power: 0,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::Incubate { who: PlayerRef::You, amount: Value::Const(5) })],
+        triggered_abilities: vec![etb(Effect::Incubate {
+            who: PlayerRef::You,
+            amount: Value::Const(5),
+        })],
         ..Default::default()
     }
 }
@@ -44,14 +47,19 @@ pub fn carrion_locust() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::If {
-                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::Creature },
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: R::Creature,
+                },
                 then: Box::new(Effect::LoseLife {
                     who: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                     amount: Value::ONE,
                 }),
                 else_: Box::new(Effect::Noop),
             },
-            Effect::Exile { what: target_filtered(R::InOpponentGraveyard) },
+            Effect::Exile {
+                what: target_filtered(R::InOpponentGraveyard),
+            },
         ]))],
         ..Default::default()
     }
@@ -64,7 +72,10 @@ pub fn coastal_bulwark() -> CardDefinition {
         name: "Coastal Bulwark",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Defender],
@@ -85,7 +96,10 @@ pub fn coastal_bulwark() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()

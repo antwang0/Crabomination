@@ -2,17 +2,16 @@
 //! that each wanted one primitive. Tests in `classic_sets/jou`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, ConditionalEquipBonus,
-    CounterType, CreatureType, EnchantmentSubtype, EquipBonus, Keyword, PlaneswalkerSubtype,
-    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
-    TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, ConditionalEquipBonus, CounterType, CreatureType,
+    EnchantmentSubtype, EquipBonus, Keyword, PlaneswalkerSubtype, SelectionRequirement as R,
+    StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, heroic, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, ExtraManaKind, LoyaltyAbility, PlayerRef,
     Selector, ZoneDest, ZoneRef,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(
     name: &'static str,
@@ -26,7 +25,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: ct, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: ct,
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         keywords: kw,
@@ -52,12 +54,7 @@ fn bestow_creature(
 }
 
 /// A plain Aura with a resolution-time attach and a static bonus.
-fn aura(
-    name: &'static str,
-    mana: ManaCost,
-    enchant: R,
-    bonus: EquipBonus,
-) -> CardDefinition {
+fn aura(name: &'static str, mana: ManaCost, enchant: R, bonus: EquipBonus) -> CardDefinition {
     CardDefinition {
         name,
         cost: mana,
@@ -66,7 +63,10 @@ fn aura(
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(enchant) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(enchant),
+        },
         equipped_bonus: Some(bonus),
         ..Default::default()
     }
@@ -204,15 +204,14 @@ fn sac_on_damage_aura(name: &'static str, mana: ManaCost, kill: R) -> CardDefini
             power: 1,
             toughness: 1,
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::DealsCombatDamageToPlayer,
-                    EventScope::SelfSource,
-                ),
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::MayDo {
                     description: format!("Sacrifice {name} to destroy a permanent?"),
                     body: Box::new(Effect::Seq(vec![
                         Effect::SacrificeSource,
-                        Effect::Destroy { what: target_filtered(kill) },
+                        Effect::Destroy {
+                            what: target_filtered(kill),
+                        },
                     ])),
                 },
             }],
@@ -268,7 +267,9 @@ pub fn deserters_quarters() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(6)]),
             tap_cost: true,
-            effect: Effect::TapAndUntapLock { what: target_filtered(R::Creature) },
+            effect: Effect::TapAndUntapLock {
+                what: target_filtered(R::Creature),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -526,7 +527,9 @@ pub fn sage_of_hours() -> CardDefinition {
                         5,
                     ),
                 },
-                Effect::RemoveAllCounters { what: Selector::This },
+                Effect::RemoveAllCounters {
+                    what: Selector::This,
+                },
             ]),
             ..Default::default()
         }],
@@ -546,11 +549,11 @@ pub fn sage_of_hours() -> CardDefinition {
 pub fn scourge_of_fleets() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::Move {
-            what: Selector::EachPermanent(
-                R::Creature.and(R::ControlledByOpponent).and(R::ToughnessAtMostYourCount(
-                    Box::new(R::HasLandType(crate::card::LandType::Island).and(R::ControlledByYou)),
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent).and(
+                R::ToughnessAtMostYourCount(Box::new(
+                    R::HasLandType(crate::card::LandType::Island).and(R::ControlledByYou),
                 )),
-            ),
+            )),
             to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         })],
         ..creature(
@@ -571,7 +574,10 @@ pub fn stormchaser_chimera() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), u(), r()]),
             effect: Effect::Seq(vec![
-                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
                 Effect::PumpPT {
                     what: Selector::This,
                     power: Value::ManaValueOf(Box::new(Selector::TopOfLibrary {
@@ -641,7 +647,10 @@ pub fn ajani_mentor_of_heroes() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -8,
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(100) },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(100),
+                },
                 ..Default::default()
             },
         ],

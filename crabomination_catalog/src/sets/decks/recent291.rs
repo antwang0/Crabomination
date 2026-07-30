@@ -7,15 +7,15 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    EquipBonus, Keyword, SelectionRequirement as R,
-    Selector, Subtypes, TokenDefinition, Value, Zone,
+    EquipBonus, Keyword, SelectionRequirement as R, Selector, Subtypes, TokenDefinition, Value,
+    Zone,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, TriggeredAbility,
     ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 /// A vanilla 1/1 green Saproling token.
 fn saproling_token() -> TokenDefinition {
@@ -57,7 +57,10 @@ fn hasty_goblin_token() -> TokenDefinition {
 pub fn selesnya_guildmage() -> CardDefinition {
     CardDefinition {
         name: "Selesnya Guildmage",
-        cost: cost(&[hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White)]),
+        cost: cost(&[
+            hybrid(Color::Green, Color::White),
+            hybrid(Color::Green, Color::White),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -95,7 +98,10 @@ pub fn selesnya_guildmage() -> CardDefinition {
 pub fn dimir_guildmage() -> CardDefinition {
     CardDefinition {
         name: "Dimir Guildmage",
-        cost: cost(&[hybrid(Color::Blue, Color::Black), hybrid(Color::Blue, Color::Black)]),
+        cost: cost(&[
+            hybrid(Color::Blue, Color::Black),
+            hybrid(Color::Blue, Color::Black),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -107,7 +113,10 @@ pub fn dimir_guildmage() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(3), u()]),
                 sorcery_speed: true,
-                effect: Effect::Draw { who: Selector::Target(0), amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::Target(0),
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -130,7 +139,10 @@ pub fn dimir_guildmage() -> CardDefinition {
 pub fn boros_guildmage() -> CardDefinition {
     CardDefinition {
         name: "Boros Guildmage",
-        cost: cost(&[hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White)]),
+        cost: cost(&[
+            hybrid(Color::Red, Color::White),
+            hybrid(Color::Red, Color::White),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -167,7 +179,10 @@ pub fn boros_guildmage() -> CardDefinition {
 pub fn gruul_guildmage() -> CardDefinition {
     CardDefinition {
         name: "Gruul Guildmage",
-        cost: cost(&[hybrid(Color::Red, Color::Green), hybrid(Color::Red, Color::Green)]),
+        cost: cost(&[
+            hybrid(Color::Red, Color::Green),
+            hybrid(Color::Red, Color::Green),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Shaman],
@@ -205,7 +220,10 @@ pub fn gruul_guildmage() -> CardDefinition {
 pub fn orzhov_guildmage() -> CardDefinition {
     CardDefinition {
         name: "Orzhov Guildmage",
-        cost: cost(&[hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
+        cost: cost(&[
+            hybrid(Color::White, Color::Black),
+            hybrid(Color::White, Color::Black),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -241,7 +259,10 @@ pub fn orzhov_guildmage() -> CardDefinition {
 pub fn rakdos_guildmage() -> CardDefinition {
     CardDefinition {
         name: "Rakdos Guildmage",
-        cost: cost(&[hybrid(Color::Black, Color::Red), hybrid(Color::Black, Color::Red)]),
+        cost: cost(&[
+            hybrid(Color::Black, Color::Red),
+            hybrid(Color::Black, Color::Red),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie, CreatureType::Shaman],
@@ -283,7 +304,10 @@ pub fn rakdos_guildmage() -> CardDefinition {
 pub fn azorius_guildmage() -> CardDefinition {
     CardDefinition {
         name: "Azorius Guildmage",
-        cost: cost(&[hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]),
+        cost: cost(&[
+            hybrid(Color::White, Color::Blue),
+            hybrid(Color::White, Color::Blue),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
@@ -294,12 +318,16 @@ pub fn azorius_guildmage() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), w()]),
-                effect: Effect::Tap { what: target_filtered(R::Creature) },
+                effect: Effect::Tap {
+                    what: target_filtered(R::Creature),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), u()]),
-                effect: Effect::CounterAbility { what: Selector::Target(0) },
+                effect: Effect::CounterAbility {
+                    what: Selector::Target(0),
+                },
                 ..Default::default()
             },
         ],
@@ -320,7 +348,10 @@ pub fn fists_of_ironwood() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::Trample],
             ..Default::default()
@@ -381,7 +412,10 @@ pub fn golgari_rotwurm() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::LoseLife { who: Selector::Target(0), amount: Value::ONE },
+            effect: Effect::LoseLife {
+                who: Selector::Target(0),
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -394,7 +428,9 @@ pub fn wrecking_ball() -> CardDefinition {
         name: "Wrecking Ball",
         cost: cost(&[generic(2), b(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy { what: target_filtered(R::Creature.or(R::Land)) },
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature.or(R::Land)),
+        },
         ..Default::default()
     }
 }
@@ -448,7 +484,6 @@ pub fn recollect() -> CardDefinition {
     }
 }
 
-
 /// Mortipede — {3}{B} 4/1 Insect. {2}{G}: All creatures able to block this
 /// creature this turn do so (a one-turn Lure on itself).
 pub fn mortipede() -> CardDefinition {
@@ -499,10 +534,16 @@ pub fn vigor_mortis() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(R::Creature.and(R::InYourGraveyard)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::If {
-                cond: Predicate::ManaSpentOfColorAtLeast { color: Color::Green, at_least: 1 },
+                cond: Predicate::ManaSpentOfColorAtLeast {
+                    color: Color::Green,
+                    at_least: 1,
+                },
                 then: Box::new(Effect::AddCounter {
                     what: Selector::LastMoved,
                     kind: CounterType::PlusOnePlusOne,
@@ -529,7 +570,9 @@ pub fn aura_mutation() -> CardDefinition {
                 count: Value::ManaValueOf(Box::new(Selector::Target(0))),
                 definition: saproling_token(),
             },
-            Effect::Destroy { what: target_filtered(R::Enchantment) },
+            Effect::Destroy {
+                what: target_filtered(R::Enchantment),
+            },
         ]),
         ..Default::default()
     }
@@ -541,7 +584,10 @@ pub fn aura_mutation() -> CardDefinition {
 pub fn golgari_guildmage() -> CardDefinition {
     CardDefinition {
         name: "Golgari Guildmage",
-        cost: cost(&[hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]),
+        cost: cost(&[
+            hybrid(Color::Black, Color::Green),
+            hybrid(Color::Black, Color::Green),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Shaman],
@@ -580,7 +626,10 @@ pub fn golgari_guildmage() -> CardDefinition {
 pub fn simic_guildmage() -> CardDefinition {
     CardDefinition {
         name: "Simic Guildmage",
-        cost: cost(&[hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[
+            hybrid(Color::Green, Color::Blue),
+            hybrid(Color::Green, Color::Blue),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -592,8 +641,14 @@ pub fn simic_guildmage() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(1), g()]),
                 effect: Effect::MoveCounter {
-                    from: Selector::TargetFiltered { slot: 0, filter: R::Creature },
-                    to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                    from: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature,
+                    },
+                    to: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature,
+                    },
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
                 },
@@ -606,7 +661,10 @@ pub fn simic_guildmage() -> CardDefinition {
                         slot: 0,
                         filter: R::HasEnchantmentSubtype(EnchantmentSubtype::Aura),
                     },
-                    to: Selector::TargetFiltered { slot: 1, filter: R::Permanent },
+                    to: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Permanent,
+                    },
                 },
                 ..Default::default()
             },
@@ -627,12 +685,16 @@ pub fn necromantic_thirst() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::MayDo {
-                    description: "Return a creature card from your graveyard to your hand".to_string(),
+                    description: "Return a creature card from your graveyard to your hand"
+                        .to_string(),
                     body: Box::new(Effect::Move {
                         what: Selector::one_of(Selector::CardsInZone {
                             zone: Zone::Graveyard,

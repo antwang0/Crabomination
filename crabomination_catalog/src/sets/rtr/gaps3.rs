@@ -9,7 +9,7 @@ use crate::card::{
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{etb, on_attack, target_filtered, unleash};
 use crate::effect::{Duration, PlayerRef, Selector, StaticEffect};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 /// Risen Sanctuary — {5}{G}{W} 8/8 Elemental with vigilance.
 pub fn risen_sanctuary() -> CardDefinition {
@@ -17,7 +17,10 @@ pub fn risen_sanctuary() -> CardDefinition {
         name: "Risen Sanctuary",
         cost: cost(&[generic(5), g(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 8,
         toughness: 8,
         keywords: vec![Keyword::Vigilance],
@@ -29,7 +32,10 @@ pub fn risen_sanctuary() -> CardDefinition {
 pub fn rakdos_shred_freak() -> CardDefinition {
     CardDefinition {
         name: "Rakdos Shred-Freak",
-        cost: cost(&[hybrid(Color::Black, Color::Red), hybrid(Color::Black, Color::Red)]),
+        cost: cost(&[
+            hybrid(Color::Black, Color::Red),
+            hybrid(Color::Black, Color::Red),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Berserker],
@@ -52,13 +58,15 @@ pub fn golgari_longlegs() -> CardDefinition {
             hybrid(Color::Black, Color::Green),
         ]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         ..Default::default()
     }
 }
-
 
 /// Grim Roustabout — {1}{B} 1/1 Skeleton Warrior with unleash. {1}{B}:
 /// regenerate this.
@@ -77,21 +85,28 @@ pub fn grim_roustabout() -> CardDefinition {
         triggered_abilities: vec![unleash()],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
     }
 }
 
-
 /// Frostburn Weird — {U/R}{U/R} 1/4 Weird. {U/R}: +1/-1 until end of turn.
 pub fn frostburn_weird() -> CardDefinition {
     CardDefinition {
         name: "Frostburn Weird",
-        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+        cost: cost(&[
+            hybrid(Color::Blue, Color::Red),
+            hybrid(Color::Blue, Color::Red),
+        ]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Weird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Weird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 4,
         activated_abilities: vec![ActivatedAbility {
@@ -132,7 +147,9 @@ pub fn rakdos_ringleader() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -146,7 +163,10 @@ pub fn soulsworn_spirit() -> CardDefinition {
         name: "Soulsworn Spirit",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Unblockable],
@@ -164,7 +184,10 @@ pub fn skymark_roc() -> CardDefinition {
         name: "Skymark Roc",
         cost: cost(&[generic(2), w(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -172,7 +195,9 @@ pub fn skymark_roc() -> CardDefinition {
             description: "Return an opponent's toughness-2-or-less creature to hand".into(),
             body: Box::new(Effect::Move {
                 what: target_filtered(
-                    R::Creature.and(R::ControlledByOpponent).and(R::ToughnessAtMost(2)),
+                    R::Creature
+                        .and(R::ControlledByOpponent)
+                        .and(R::ToughnessAtMost(2)),
                 ),
                 to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             }),
@@ -217,7 +242,10 @@ pub fn slum_reaper() -> CardDefinition {
         name: "Slum Reaper",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
         power: 4,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Sacrifice {
@@ -236,7 +264,10 @@ pub fn chaos_imps() -> CardDefinition {
         name: "Chaos Imps",
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Imp], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
         power: 6,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Unleash],

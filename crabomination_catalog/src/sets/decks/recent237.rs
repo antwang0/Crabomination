@@ -2,15 +2,15 @@
 //! anthem creature. Tests in `tests/recent237.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EnchantmentSubtype, Keyword, RoomDoor,
-    RoomDoors, SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
+    CardDefinition, CardType, CreatureType, EnchantmentSubtype, Keyword, RoomDoor, RoomDoors,
+    SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector,
     StaticEffect, Value,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn on_unlock(effect: Effect) -> crate::card::TriggeredAbility {
     crate::card::TriggeredAbility {
@@ -43,7 +43,9 @@ pub fn ticket_booth_tunnel_of_hate() -> CardDefinition {
         RoomDoor {
             name: "Ticket Booth".into(),
             cost: cost(&[generic(2), r()]),
-            triggered_abilities: vec![on_unlock(Effect::ManifestDread { who: PlayerRef::You })],
+            triggered_abilities: vec![on_unlock(Effect::ManifestDread {
+                who: PlayerRef::You,
+            })],
             ..Default::default()
         },
         RoomDoor {
@@ -83,9 +85,7 @@ pub fn restricted_office_lecture_hall() -> CardDefinition {
             static_abilities: vec![StaticAbility {
                 description: "Other permanents you control have hexproof.",
                 effect: StaticEffect::GrantKeyword {
-                    applies_to: Selector::EachPermanent(
-                        R::ControlledByYou.and(R::OtherThanSource),
-                    ),
+                    applies_to: Selector::EachPermanent(R::ControlledByYou.and(R::OtherThanSource)),
                     keyword: Keyword::Hexproof,
                 },
             }],
@@ -124,7 +124,10 @@ fn insect_token() -> TokenDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black, Color::Green],
         keywords: vec![Keyword::Flying],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -153,7 +156,9 @@ pub fn the_swarmweaver() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Delirium — Insects and Spiders you control get +1/+1 and have deathtouch.",
             effect: StaticEffect::PumpTeamIf {
-                condition: Predicate::DeliriumActive { who: PlayerRef::You },
+                condition: Predicate::DeliriumActive {
+                    who: PlayerRef::You,
+                },
                 applies_to: Selector::EachPermanent(
                     R::ControlledByYou.and(
                         R::HasCreatureType(CreatureType::Insect)

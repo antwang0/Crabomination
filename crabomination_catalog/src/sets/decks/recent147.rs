@@ -9,11 +9,9 @@ use crate::card::{
     Selector, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, StaticEffect,
-};
+use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, StaticEffect};
 use crate::game::effects::{food_token, treasure_token};
-use crate::mana::{b, cost, g, generic, u, Color};
+use crate::mana::{Color, b, cost, g, generic, u};
 
 use super::woe_roles::wicked_role;
 
@@ -25,7 +23,10 @@ fn knight_vigilance_token() -> TokenDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Knight],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Vigilance],
         ..Default::default()
     }
@@ -47,11 +48,20 @@ pub fn the_witchs_vanity() -> CardDefinition {
                 1,
                 Effect::Destroy {
                     what: target_filtered(
-                        R::Creature.and(R::ControlledByOpponent).and(R::ManaValueAtMost(2)),
+                        R::Creature
+                            .and(R::ControlledByOpponent)
+                            .and(R::ManaValueAtMost(2)),
                     ),
                 },
             ),
-            (2, Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: food_token() }),
+            (
+                2,
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: food_token(),
+                },
+            ),
             (
                 3,
                 Effect::CreateTokenAttachedTo {
@@ -110,7 +120,10 @@ pub fn gingerbread_cabin() -> CardDefinition {
     CardDefinition {
         name: "Gingerbread Cabin",
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Forest], ..Default::default() },
+        subtypes: Subtypes {
+            land_types: vec![LandType::Forest],
+            ..Default::default()
+        },
         static_abilities: vec![StaticAbility {
             description: "Enters tapped unless you control three or more other Forests.",
             effect: StaticEffect::EntersTappedUnless {
@@ -126,7 +139,10 @@ pub fn gingerbread_cabin() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::EntityMatches { what: Selector::This, filter: R::Untapped },
+            cond: Predicate::EntityMatches {
+                what: Selector::This,
+                filter: R::Untapped,
+            },
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -173,11 +189,12 @@ pub fn elvish_vanguard() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::HasCreatureType(CreatureType::Elf).and(R::OtherThanSource),
-                }),
+                },
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -195,11 +212,17 @@ pub fn gnawing_vermin() -> CardDefinition {
         name: "Gnawing Vermin",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![
-            etb(Effect::Mill { who: target_filtered(R::Player), amount: Value::Const(2) }),
+            etb(Effect::Mill {
+                who: target_filtered(R::Player),
+                amount: Value::Const(2),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
                 effect: Effect::PumpPT {
@@ -245,7 +268,9 @@ pub fn neutralizing_blast() -> CardDefinition {
         name: "Neutralizing Blast",
         cost: cost(&[generic(1), u()]),
         card_types: vec![Instant],
-        effect: Effect::CounterSpell { what: target_filtered(R::Multicolored) },
+        effect: Effect::CounterSpell {
+            what: target_filtered(R::Multicolored),
+        },
         ..Default::default()
     }
 }

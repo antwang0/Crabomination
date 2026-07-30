@@ -18,7 +18,10 @@ pub fn elven_farsight() -> CardDefinition {
         cost: cost(&[crate::mana::g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(3),
+            },
             Effect::RevealTopAndDrawIf {
                 who: PlayerRef::You,
                 reveal_filter: R::Creature,
@@ -51,8 +54,14 @@ pub fn eagle_of_deliverance() -> CardDefinition {
                 amount: Value::ONE,
             },
             Effect::If {
-                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::PowerAtMost(2) },
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: R::PowerAtMost(2),
+                },
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]))],
@@ -77,8 +86,13 @@ pub fn horses_of_the_bruinen() -> CardDefinition {
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                 }),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
-            Effect::RingTempts { who: PlayerRef::You },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
+            Effect::RingTempts {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }

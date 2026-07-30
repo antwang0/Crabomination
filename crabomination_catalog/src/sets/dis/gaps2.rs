@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{on_dies, target_any, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 /// Protean Hulk — {5}{G}{G} 6/6 Beast. When it dies, search your library for
 /// any number of creature cards with total mana value 6 or less, put them onto
@@ -20,7 +20,10 @@ pub fn protean_hulk() -> CardDefinition {
         name: "Protean Hulk",
         cost: cost(&[generic(5), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
         triggered_abilities: vec![on_dies(Effect::SearchLibraryCreaturesUpToTotalManaValue {
@@ -64,12 +67,18 @@ pub fn lyzolda_the_blood_witch() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::If {
                     cond: Predicate::SacrificedWasColor(Color::Red),
-                    then: Box::new(Effect::DealDamage { to: target_any(), amount: Value::Const(2) }),
+                    then: Box::new(Effect::DealDamage {
+                        to: target_any(),
+                        amount: Value::Const(2),
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
                 Effect::If {
                     cond: Predicate::SacrificedWasColor(Color::Black),
-                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    then: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             ]),
@@ -121,10 +130,11 @@ pub fn crime_punishment() -> CardDefinition {
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
-            what: target_filtered(
-                R::InOpponentGraveyard.and(R::Creature.or(R::Enchantment)),
-            ),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            what: target_filtered(R::InOpponentGraveyard.and(R::Creature.or(R::Enchantment))),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         split: Some(Box::new(SplitCard {
             right: SplitHalf {
@@ -201,7 +211,10 @@ pub fn rise_fall() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
             Effect::Move {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(1)))),
             },
         ]),

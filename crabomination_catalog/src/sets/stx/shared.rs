@@ -15,7 +15,7 @@ use crate::card::{
     Subtypes, TokenDefinition, Value,
 };
 use crate::effect::PlayerRef;
-use crate::mana::{b, cost, g, generic, hybrid, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid};
 
 /// Strixhaven Pest token: 1/1 black-and-green creature with
 /// "When this creature dies, you gain 1 life." Shared by Pest
@@ -64,7 +64,11 @@ pub fn inkling_summoning() -> CardDefinition {
     let inkling = stx_inkling_token();
     CardDefinition {
         name: "Inkling Summoning",
-        cost: cost(&[generic(2), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
+        cost: cost(&[
+            generic(2),
+            hybrid(Color::White, Color::Black),
+            hybrid(Color::White, Color::Black),
+        ]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],
@@ -137,13 +141,17 @@ pub fn spirit_summoning() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
     CardDefinition {
         name: "Spirit Summoning",
-        cost: cost(&[generic(1), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White)]),
+        cost: cost(&[
+            generic(1),
+            hybrid(Color::Red, Color::White),
+            hybrid(Color::Red, Color::White),
+        ]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],

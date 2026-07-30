@@ -48,7 +48,9 @@ pub fn ghor_clan_rampager() -> CardDefinition {
             discard_self_cost: true,
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
-                    what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking)),
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+                    ),
                     power: Value::Const(4),
                     toughness: Value::Const(4),
                     duration: Duration::EndOfTurn,

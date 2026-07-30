@@ -49,7 +49,10 @@ pub fn pollen_shield_hare() -> CardDefinition {
         name: "Pollen-Shield Hare",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rabbit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rabbit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         static_abilities: vec![StaticAbility {
@@ -130,10 +133,12 @@ pub fn frolicking_familiar() -> CardDefinition {
 /// lifelink; ETB up to one creature gets -X/-X, X = life you gained this turn.
 /// Adventure {B} Instant: create a Food.
 pub fn gumdrop_poisoner() -> CardDefinition {
-    let minus_x = || Value::Times(
-        Box::new(Value::LifeGainedThisTurn(PlayerRef::You)),
-        Box::new(Value::Const(-1)),
-    );
+    let minus_x = || {
+        Value::Times(
+            Box::new(Value::LifeGainedThisTurn(PlayerRef::You)),
+            Box::new(Value::Const(-1)),
+        )
+    };
     CardDefinition {
         name: "Gumdrop Poisoner",
         cost: cost(&[generic(2), b()]),
@@ -183,7 +188,9 @@ pub fn vantress_transmuter() -> CardDefinition {
             cost: cost(&[generic(1), u()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::Seq(vec![
-                Effect::Tap { what: target_filtered(R::Creature) },
+                Effect::Tap {
+                    what: target_filtered(R::Creature),
+                },
                 Effect::CreateTokenAttachedTo {
                     target: Selector::Target(0),
                     definition: cursed_role(),
@@ -244,7 +251,9 @@ pub fn stormkeld_vanguard() -> CardDefinition {
             name: "Bear Down",
             cost: cost(&[generic(1), g()]),
             card_types: vec![CardType::Sorcery],
-            effect: Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Artifact.or(R::Enchantment)),
+            },
         })),
         ..Default::default()
     }

@@ -4,8 +4,8 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Selector,
-    SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
+    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
+    SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{embalm, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, StaticAbility, StaticEffect};
@@ -49,7 +49,10 @@ pub fn wall_of_glare() -> CardDefinition {
         name: "Wall of Glare",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 0,
         toughness: 5,
         keywords: vec![Keyword::Defender, Keyword::CanBlockAnyNumber],
@@ -64,14 +67,20 @@ pub fn avatar_of_hope() -> CardDefinition {
         name: "Avatar of Hope",
         cost: cost(&[generic(6), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar],
+            ..Default::default()
+        },
         power: 4,
         toughness: 9,
         keywords: vec![Keyword::Flying, Keyword::CanBlockAnyNumber],
         static_abilities: vec![StaticAbility {
             effect: StaticEffect::SelfCostReducedIfPredicate {
                 amount: 6,
-                condition: Predicate::PlayerLifeAtMost { who: PlayerRef::You, life: 3 },
+                condition: Predicate::PlayerLifeAtMost {
+                    who: PlayerRef::You,
+                    life: 3,
+                },
             },
             description: "If you have 3 or less life, this spell costs {6} less to cast.",
         }],
@@ -92,7 +101,10 @@ pub fn ironfist_crusher() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        keywords: vec![Keyword::CanBlockAnyNumber, Keyword::Morph(cost(&[generic(3), w()]))],
+        keywords: vec![
+            Keyword::CanBlockAnyNumber,
+            Keyword::Morph(cost(&[generic(3), w()])),
+        ],
         ..Default::default()
     }
 }
@@ -130,7 +142,11 @@ pub fn foriysian_interceptor() -> CardDefinition {
         },
         power: 0,
         toughness: 5,
-        keywords: vec![Keyword::Flash, Keyword::Defender, Keyword::CanBlockAdditional(1)],
+        keywords: vec![
+            Keyword::Flash,
+            Keyword::Defender,
+            Keyword::CanBlockAdditional(1),
+        ],
         ..Default::default()
     }
 }
@@ -160,7 +176,10 @@ pub fn spike_tailed_ceratops() -> CardDefinition {
         name: "Spike-Tailed Ceratops",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::CanBlockAdditional(1)],
@@ -175,7 +194,10 @@ pub fn two_headed_giant_of_foriys() -> CardDefinition {
         name: "Two-Headed Giant of Foriys",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample, Keyword::CanBlockAdditional(1)],
@@ -190,7 +212,10 @@ pub fn ghastbark_twins() -> CardDefinition {
         name: "Ghastbark Twins",
         cost: cost(&[generic(5), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            ..Default::default()
+        },
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Trample, Keyword::CanBlockAdditional(1)],
@@ -205,7 +230,10 @@ pub fn night_market_guard() -> CardDefinition {
         name: "Night Market Guard",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::CanBlockAdditional(1)],
@@ -220,10 +248,17 @@ pub fn two_headed_dragon() -> CardDefinition {
         name: "Two-Headed Dragon",
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Flying, Keyword::Menace, Keyword::CanBlockAdditional(1)],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Menace,
+            Keyword::CanBlockAdditional(1),
+        ],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
             effect: Effect::PumpPT {
@@ -256,9 +291,6 @@ pub fn trueheart_duelist() -> CardDefinition {
         ..Default::default()
     }
 }
-
-
-
 
 /// Kemba's Legion — {5}{W}{W} 4/6 Cat Soldier with vigilance that can block an
 /// additional creature each combat for each Equipment attached to it.
@@ -298,12 +330,16 @@ pub fn entourage_of_trest() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::BecomeMonarch { who: PlayerRef::You },
+            effect: Effect::BecomeMonarch {
+                who: PlayerRef::You,
+            },
         }],
         static_abilities: vec![StaticAbility {
             effect: StaticEffect::SelfHasKeywordWhilePredicate {
                 keyword: Keyword::CanBlockAdditional(1),
-                condition: Predicate::IsMonarch { who: PlayerRef::You },
+                condition: Predicate::IsMonarch {
+                    who: PlayerRef::You,
+                },
             },
             description: "This creature can block an additional creature each combat as \
                           long as you're the monarch.",
@@ -336,7 +372,6 @@ pub fn anurid_swarmsnapper() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 /// Mounted Archers — {3}{W} 2/3 Human Soldier Archer with reach. {W}: can block
 /// an additional creature this turn.
@@ -407,7 +442,10 @@ pub fn act_of_heroism() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+            Effect::Untap {
+                what: target_filtered(R::Creature),
+                up_to: None,
+            },
             Effect::PumpPT {
                 what: Selector::Target(0),
                 power: Value::Const(2),
@@ -447,7 +485,6 @@ pub fn give_no_ground() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 /// Blaze of Glory — {W} Instant, castable only during combat before blockers
 /// are declared. Target creature defending player controls can block any number
@@ -562,7 +599,10 @@ pub fn entangler() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::CanBlockAnyNumber],
             ..Default::default()
@@ -582,7 +622,10 @@ pub fn ionas_blessing() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 2,

@@ -4,8 +4,8 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EventKind,
-    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility,
-    Value,
+    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Subtypes,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{attacks_while_saddled, etb, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
@@ -31,10 +31,20 @@ pub fn starting_column() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 sac_cost: true,
-                condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+                condition: Some(Predicate::SpeedAtLeast {
+                    who: PlayerRef::You,
+                    speed: 4,
+                }),
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                        random: false,
+                    },
                 ]),
                 ..Default::default()
             },
@@ -72,7 +82,10 @@ pub fn haunted_hellride() -> CardDefinition {
                     keyword: Keyword::Deathtouch,
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Untap { what: Selector::Target(0), up_to: None },
+                Effect::Untap {
+                    what: Selector::Target(0),
+                    up_to: None,
+                },
             ]),
         }],
         ..Default::default()
@@ -123,10 +136,17 @@ pub fn thundering_broodwagon() -> CardDefinition {
         },
         power: 6,
         toughness: 5,
-        keywords: vec![Keyword::Menace, Keyword::Reach, Keyword::Crew(3), Keyword::Cycling(cost(&[generic(2)]))],
+        keywords: vec![
+            Keyword::Menace,
+            Keyword::Reach,
+            Keyword::Crew(3),
+            Keyword::Cycling(cost(&[generic(2)])),
+        ],
         triggered_abilities: vec![etb(Effect::Destroy {
             what: target_filtered(
-                R::Nonland.and(R::ControlledByOpponent).and(R::ManaValueAtMost(4)),
+                R::Nonland
+                    .and(R::ControlledByOpponent)
+                    .and(R::ManaValueAtMost(4)),
             ),
         })],
         ..Default::default()
@@ -143,7 +163,10 @@ pub fn tune_up() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
             what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }

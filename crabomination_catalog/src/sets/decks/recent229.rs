@@ -3,16 +3,17 @@
 //! `Effect::OptionalTargets` wrapper (Primal Might, Boom Box). Tests in
 //! `tests/recent229.rs`.
 
+use crate::card::CardDefinition;
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardType, CounterType, CreatureType, EquipBonus, Keyword,
     SelectionRequirement as R, Subtypes, TokenDefinition,
 };
-use crate::card::CardDefinition;
 use crate::effect::shortcut::{etb, investigate, mint_treasures};
 use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility, Value,
+    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility,
+    Value,
 };
-use crate::mana::{b, cost, g, generic, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, u, w};
 
 /// Primal Might — {X}{G} Sorcery. Target creature you control gets +X/+X until
 /// end of turn. Then it fights up to one target creature you don't control.
@@ -39,7 +40,10 @@ pub fn primal_might() -> CardDefinition {
                     toughness: Value::XFromCost,
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Fight { attacker: mine, defender: theirs },
+                Effect::Fight {
+                    attacker: mine,
+                    defender: theirs,
+                },
             ])),
         },
         ..Default::default()
@@ -49,9 +53,18 @@ pub fn primal_might() -> CardDefinition {
 /// Boom Box — {2} Artifact. {6}, {T}, Sacrifice this artifact: Destroy up to
 /// one target artifact, up to one target creature, and up to one target land.
 pub fn boom_box() -> CardDefinition {
-    let art = Selector::TargetFiltered { slot: 0, filter: R::Artifact };
-    let cre = Selector::TargetFiltered { slot: 1, filter: R::Creature };
-    let land = Selector::TargetFiltered { slot: 2, filter: R::Land };
+    let art = Selector::TargetFiltered {
+        slot: 0,
+        filter: R::Artifact,
+    };
+    let cre = Selector::TargetFiltered {
+        slot: 1,
+        filter: R::Creature,
+    };
+    let land = Selector::TargetFiltered {
+        slot: 2,
+        filter: R::Land,
+    };
     CardDefinition {
         name: "Boom Box",
         cost: cost(&[generic(2)]),
@@ -78,15 +91,23 @@ pub fn boom_box() -> CardDefinition {
 /// Prizefight — {1}{G} Instant. Target creature you control fights target
 /// creature you don't control. Create a Treasure token.
 pub fn prizefight() -> CardDefinition {
-    let mine = Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) };
-    let theirs =
-        Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) };
+    let mine = Selector::TargetFiltered {
+        slot: 0,
+        filter: R::Creature.and(R::ControlledByYou),
+    };
+    let theirs = Selector::TargetFiltered {
+        slot: 1,
+        filter: R::Creature.and(R::ControlledByOpponent),
+    };
     CardDefinition {
         name: "Prizefight",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Fight { attacker: mine, defender: theirs },
+            Effect::Fight {
+                attacker: mine,
+                defender: theirs,
+            },
             mint_treasures(1),
         ]),
         ..Default::default()
@@ -107,7 +128,9 @@ pub fn out_cold() -> CardDefinition {
                 min_targets: 0,
                 filter: R::Creature,
                 effect: Box::new(Effect::Seq(vec![
-                    Effect::Tap { what: Selector::Target(0) },
+                    Effect::Tap {
+                        what: Selector::Target(0),
+                    },
                     Effect::AddCounter {
                         what: Selector::Target(0),
                         kind: CounterType::Stun,
@@ -129,7 +152,10 @@ pub fn harvester_of_misery() -> CardDefinition {
         name: "Harvester of Misery",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Menace],
@@ -144,7 +170,10 @@ pub fn harvester_of_misery() -> CardDefinition {
             from_hand: true,
             discard_self_cost: true,
             effect: Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature,
+                },
                 power: Value::Const(-2),
                 toughness: Value::Const(-2),
                 duration: Duration::EndOfTurn,
@@ -162,7 +191,10 @@ fn dog_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -181,12 +213,19 @@ pub fn krovod_haunch() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
-        equipped_bonus: Some(EquipBonus { power: 2, toughness: 0, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 0,
+            ..Default::default()
+        }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {

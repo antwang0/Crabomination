@@ -1936,6 +1936,12 @@ pub enum StaticEffect {
     /// instead" (Possessed Portal). Global draw replacement consulted in
     /// `draw_one`.
     PlayersSkipDraws,
+    /// Shared Fate — "If a player would draw a card, that player exiles the
+    /// top card of one of their opponents' libraries face down instead. Each
+    /// player may look at and play the cards they exiled this way." The draw
+    /// replacement rides `draw_one`; the play permission rides the exile
+    /// zone's `may_play_by`.
+    SharedFate,
     /// CR 506.2 — "No more than N creatures can attack each combat" (Silent
     /// Arbiter). Global; enforced in `declare_attackers` against the whole
     /// declared batch.

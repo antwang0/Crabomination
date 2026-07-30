@@ -5,18 +5,26 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect,
-    EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword,
-    SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
+    StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, evolve, target_any, target_filtered};
-use crate::effect::{Duration, ExtraManaKind, PlayerRef, Predicate, Selector, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::effect::{
+    Duration, ExtraManaKind, PlayerRef, Predicate, Selector, StaticEffect, ZoneDest,
+};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 fn aura() -> Subtypes {
-    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() }
+    Subtypes {
+        enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+        ..Default::default()
+    }
 }
 fn creatures_you_control() -> Value {
     Value::CountMatching {
@@ -204,7 +212,9 @@ pub fn zameck_guildmage() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[g(), u()]),
-                effect: Effect::GrantExtraPlusOneCountersThisTurn { who: PlayerRef::You },
+                effect: Effect::GrantExtraPlusOneCountersThisTurn {
+                    who: PlayerRef::You,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -214,7 +224,10 @@ pub fn zameck_guildmage() -> CardDefinition {
                     1,
                     R::Creature.and(R::ControlledByYou),
                 )),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
         ],
@@ -538,7 +551,9 @@ pub fn rust_scarab() -> CardDefinition {
 /// Merciless Eviction — {4}{W}{B} Sorcery. Choose one — exile all artifacts /
 /// creatures / enchantments / planeswalkers.
 pub fn merciless_eviction() -> CardDefinition {
-    let exile_all = |req: R| Effect::Exile { what: Selector::EachPermanent(req) };
+    let exile_all = |req: R| Effect::Exile {
+        what: Selector::EachPermanent(req),
+    };
     CardDefinition {
         name: "Merciless Eviction",
         cost: cost(&[generic(4), w(), b()]),
@@ -563,7 +578,10 @@ pub fn verdant_haven() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Enchantment],
         subtypes: aura(),
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         triggered_abilities: vec![etb(Effect::GainLife {
             who: Selector::You,
             amount: Value::Const(2),
@@ -589,7 +607,10 @@ pub fn skygames() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Enchantment],
         subtypes: aura(),
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         static_abilities: vec![StaticAbility {
             description: "Enchanted land has \"{T}: Target creature gains flying EOT (sorcery speed).\"",
             effect: StaticEffect::GrantActivatedAbility {

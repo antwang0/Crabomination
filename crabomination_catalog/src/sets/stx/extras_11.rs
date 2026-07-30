@@ -10,12 +10,15 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -893,10 +896,7 @@ pub fn lorehold_battlecaster_b104() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![
-            etb(mint_lorehold_spirits(1)),
-            magecraft_self_pump(1, 0),
-        ],
+        triggered_abilities: vec![etb(mint_lorehold_spirits(1)), magecraft_self_pump(1, 0)],
         ..Default::default()
     }
 }
@@ -1433,7 +1433,10 @@ pub fn witherbloom_harvester_b119() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             mana_cost: cost(&[generic(1), b()]),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             sorcery_speed: true,
             sac_other_filter: Some((
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),

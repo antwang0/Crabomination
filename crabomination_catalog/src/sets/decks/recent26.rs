@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::{Duration, PlayerRef};
 use crate::game::effects::treasure_token;
-use crate::mana::{cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, cost, g, generic, r, u, w};
 
 /// "Whenever this creature attacks while saddled, [effect]."
 fn attack_while_saddled(effect: Effect) -> TriggeredAbility {
@@ -26,7 +26,10 @@ pub fn jibbirik_omnivore() -> CardDefinition {
         name: "Jibbirik Omnivore",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         ..Default::default()
@@ -40,7 +43,10 @@ pub fn caelorna_coral_tyrant() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Octopus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Octopus],
+            ..Default::default()
+        },
         power: 0,
         toughness: 8,
         ..Default::default()
@@ -85,7 +91,10 @@ pub fn brightfield_mustang() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Saddle(1)],
         triggered_abilities: vec![attack_while_saddled(Effect::Seq(vec![
-            Effect::Untap { what: Selector::This, up_to: None },
+            Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
             Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -209,7 +218,9 @@ pub fn piranha_fly() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         static_abilities: vec![crate::card::StaticAbility {
             description: "This creature enters tapped.",
-            effect: crate::card::StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: crate::card::StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         ..Default::default()
     }
@@ -232,7 +243,10 @@ pub fn ripchain_razorkin() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), r()]),
             sac_other_filter: Some((crate::card::SelectionRequirement::Land, 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -280,7 +294,10 @@ pub fn fear_of_exposure() -> CardDefinition {
         name: "Fear of Exposure",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Trample],

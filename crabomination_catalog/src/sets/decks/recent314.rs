@@ -3,23 +3,32 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, Selector,
-    SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility, Value, Zone,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R,
+    Selector, StaticAbility, Subtypes, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Effect, PlayerRef, RevealMissDest, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, generic, r, u, w, Color, ManaCost};
 use crate::game::TurnStep;
+use crate::mana::{Color, ManaCost, b, cost, generic, r, u, w};
 
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
 }
 
 fn spell(name: &'static str, mana: ManaCost, sorcery: bool, effect: Effect) -> CardDefinition {
     CardDefinition {
         name,
         cost: mana,
-        card_types: vec![if sorcery { CardType::Sorcery } else { CardType::Instant }],
+        card_types: vec![if sorcery {
+            CardType::Sorcery
+        } else {
+            CardType::Instant
+        }],
         effect,
         ..Default::default()
     }
@@ -152,10 +161,7 @@ pub fn spellbinder() -> CardDefinition {
         })],
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::DealsCombatDamageToPlayer,
-                    EventScope::SelfSource,
-                ),
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: cast_free_copy_of_imprint(),
             }],
             triggers_on_equipment: true,
@@ -176,7 +182,10 @@ pub fn thought_dissector() -> CardDefinition {
                 Effect::RevealUntilFind {
                     who: PlayerRef::Target(0),
                     find: R::Artifact,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                     cap: Value::XFromCost,
                     life_per_revealed: 0,
                     miss_dest: RevealMissDest::Graveyard,
@@ -224,8 +233,13 @@ pub fn synod_artificer() -> CardDefinition {
         power: 1,
         toughness: 2,
         activated_abilities: vec![
-            x_artifacts(Effect::Tap { what: Selector::Target(0) }),
-            x_artifacts(Effect::Untap { what: Selector::Target(0), up_to: None }),
+            x_artifacts(Effect::Tap {
+                what: Selector::Target(0),
+            }),
+            x_artifacts(Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            }),
         ],
         ..Default::default()
     }
@@ -241,11 +255,15 @@ pub fn dismantle() -> CardDefinition {
         cost(&[generic(2), r()]),
         true,
         Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Artifact) },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            },
             Effect::AddCountersOfChosenKind {
                 onto: R::Artifact,
                 kinds: vec![CounterType::PlusOnePlusOne, CounterType::Charge],
-                amount: Value::TotalCountersOn { what: Box::new(Selector::Target(0)) },
+                amount: Value::TotalCountersOn {
+                    what: Box::new(Selector::Target(0)),
+                },
             },
         ]),
     )

@@ -34,7 +34,10 @@ pub fn sugar_coat() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
                 sac_cost: true,
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
                 ..Default::default()
             }],
             ..Default::default()

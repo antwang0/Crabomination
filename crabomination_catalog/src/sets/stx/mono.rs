@@ -7,9 +7,8 @@
 //! per-card status table.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition,
-    TriggeredAbility, Value,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
+    Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
@@ -24,8 +23,13 @@ pub fn pop_quiz() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-            Effect::Learn { who: PlayerRef::You },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -44,7 +48,10 @@ pub fn mascot_exhibition() -> CardDefinition {
         keywords,
         card_types: vec![CardType::Creature],
         colors,
-        subtypes: Subtypes { creature_types: vec![ctype], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![ctype],
+            ..Default::default()
+        },
         ..Default::default()
     };
     let mint = |t: TokenDefinition| Effect::CreateToken {
@@ -61,9 +68,30 @@ pub fn mascot_exhibition() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::Seq(vec![
-            mint(token("Inkling", 2, 1, vec![Color::White, Color::Black], CreatureType::Inkling, vec![Keyword::Flying])),
-            mint(token("Spirit", 3, 2, vec![Color::Red, Color::White], CreatureType::Spirit, vec![])),
-            mint(token("Elemental", 4, 4, vec![Color::Blue, Color::Red], CreatureType::Elemental, vec![])),
+            mint(token(
+                "Inkling",
+                2,
+                1,
+                vec![Color::White, Color::Black],
+                CreatureType::Inkling,
+                vec![Keyword::Flying],
+            )),
+            mint(token(
+                "Spirit",
+                3,
+                2,
+                vec![Color::Red, Color::White],
+                CreatureType::Spirit,
+                vec![],
+            )),
+            mint(token(
+                "Elemental",
+                4,
+                4,
+                vec![Color::Blue, Color::Red],
+                CreatureType::Elemental,
+                vec![],
+            )),
         ]),
         ..Default::default()
     }
@@ -89,13 +117,18 @@ pub fn plumb_the_forbidden() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
         additional_cast_cost: vec![AdditionalCastCost::SacrificeAnyNumber {
-            filter: SelectionRequirement::Creature
-                .and(SelectionRequirement::ControlledByYou),
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
         }],
         copies_on_cast_x: true,
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -185,7 +218,7 @@ pub fn body_of_research() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -293,11 +326,10 @@ pub fn test_of_talents() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::CounterSpellExileSameNamed {
             what: target_filtered(
-                SelectionRequirement::IsSpellOnStack
-                    .and(
-                        SelectionRequirement::HasCardType(CardType::Instant)
-                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                    ),
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
             ),
         },
         ..Default::default()
@@ -324,10 +356,12 @@ pub fn test_of_talents() -> CardDefinition {
 /// the bounced creature's controller making the pick.
 pub fn multiple_choice() -> CardDefinition {
     use crate::effect::Predicate;
-    let x_is = |n: i32| Predicate::Any(vec![
-        Predicate::ValueEquals(Value::XFromCost, Value::Const(n)),
-        Predicate::ValueAtLeast(Value::XFromCost, Value::Const(4)),
-    ]);
+    let x_is = |n: i32| {
+        Predicate::Any(vec![
+            Predicate::ValueEquals(Value::XFromCost, Value::Const(n)),
+            Predicate::ValueAtLeast(Value::XFromCost, Value::Const(4)),
+        ])
+    };
     let elemental = TokenDefinition {
         name: "Elemental".to_string(),
         power: 4,
@@ -354,8 +388,14 @@ pub fn multiple_choice() -> CardDefinition {
             Effect::If {
                 cond: x_is(1),
                 then: Box::new(Effect::Seq(vec![
-                    Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Scry {
+                        who: PlayerRef::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                 ])),
                 else_: Box::new(Effect::Noop),
             },
@@ -367,7 +407,9 @@ pub fn multiple_choice() -> CardDefinition {
             Effect::If {
                 cond: x_is(2),
                 then: Box::new(Effect::MayDo {
-                    description: "Have the opponent return a creature they control to its owner's hand?".into(),
+                    description:
+                        "Have the opponent return a creature they control to its owner's hand?"
+                            .into(),
                     body: Box::new(Effect::PlayerReturnsPermanentsToHand {
                         who: PlayerRef::EachOpponent,
                         count: Value::Const(1),
@@ -492,7 +534,9 @@ pub fn professor_of_symbology() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Learn { who: crate::effect::PlayerRef::You },
+            effect: Effect::Learn {
+                who: crate::effect::PlayerRef::You,
+            },
         }],
         ..Default::default()
     }
@@ -576,7 +620,7 @@ pub fn elemental_expressionism() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
-                
+
                     static_abilities: vec![],
                     ..Default::default()
                 },
@@ -631,8 +675,14 @@ pub fn unwilling_ingredient() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
             ..Default::default()
         }],
@@ -650,9 +700,13 @@ pub fn tangletrap() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            deal(5, target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
-            )),
+            deal(
+                5,
+                target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                ),
+            ),
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Artifact),
             },
@@ -714,9 +768,7 @@ pub fn introduction_to_annihilation() -> CardDefinition {
             },
             // "Its controller draws a card."
             Effect::Draw {
-                who: Selector::Player(PlayerRef::ControllerOf(Box::new(
-                    Selector::Target(0),
-                ))),
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                 amount: Value::Const(1),
             },
         ]),
@@ -754,7 +806,6 @@ pub fn environmental_sciences() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Demonstrate cycle (the STX "Technique" sorceries, CR 702.150) ────────────
 // Each fires `shortcut::demonstrate()` — a SpellCast/SelfSource trigger running
@@ -843,14 +894,20 @@ pub fn incarnation_technique() -> CardDefinition {
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(5) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(5),
+            },
             Effect::Move {
                 what: Selector::one_of(Selector::CardsInZone {
                     who: PlayerRef::You,
                     zone: crate::card::Zone::Graveyard,
                     filter: SelectionRequirement::Creature,
                 }),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         ]),
         triggered_abilities: vec![crate::effect::shortcut::demonstrate()],
@@ -868,8 +925,12 @@ pub fn creative_technique() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::ShuffleLibrary { who: PlayerRef::You },
-            Effect::Cascade { max_mv: Value::Const(99) },
+            Effect::ShuffleLibrary {
+                who: PlayerRef::You,
+            },
+            Effect::Cascade {
+                max_mv: Value::Const(99),
+            },
         ]),
         triggered_abilities: vec![crate::effect::shortcut::demonstrate()],
         ..Default::default()

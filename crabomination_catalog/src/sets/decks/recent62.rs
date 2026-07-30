@@ -16,13 +16,20 @@ fn servo() -> TokenDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Servo], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Servo],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
 
 fn make_servo() -> Effect {
-    Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: servo() }
+    Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: servo(),
+    }
 }
 
 /// Servo Schematic — {2} Artifact. When it enters or is put into a graveyard
@@ -37,7 +44,10 @@ pub fn servo_schematic() -> CardDefinition {
             TriggeredAbility {
                 // "Put into a graveyard from the battlefield" — modeled via the
                 // leaves-battlefield event (the artifact-death-cantrip idiom).
-                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
                 effect: make_servo(),
             },
         ],
@@ -70,7 +80,10 @@ pub fn renegade_freighter() -> CardDefinition {
         name: "Renegade Freighter",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Crew(2)],
@@ -97,11 +110,17 @@ pub fn bomat_bazaar_barge() -> CardDefinition {
         name: "Bomat Bazaar Barge",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Crew(3)],
-        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
         ..Default::default()
     }
 }
@@ -139,7 +158,9 @@ pub fn deadeye_harpooner() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::RevoltActive { who: PlayerRef::You },
+            cond: Predicate::RevoltActive {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::Destroy {
                 what: target_filtered(R::Creature.and(R::Tapped).and(R::ControlledByOpponent)),
             }),
@@ -189,7 +210,10 @@ pub fn veteran_motorist() -> CardDefinition {
         power: 3,
         toughness: 1,
         triggered_abilities: vec![
-            etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+            etb(Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::SelfSource),
                 effect: Effect::PumpPT {
@@ -222,7 +246,10 @@ pub fn aether_chaser() -> CardDefinition {
             etb(Effect::AddEnergy(Value::Const(2))),
             on_attack(Effect::MayDo {
                 description: "Pay {E}{E} to create a Servo".into(),
-                body: Box::new(Effect::PayEnergy { amount: 2, then: Box::new(make_servo()) }),
+                body: Box::new(Effect::PayEnergy {
+                    amount: 2,
+                    then: Box::new(make_servo()),
+                }),
             }),
         ],
         ..Default::default()

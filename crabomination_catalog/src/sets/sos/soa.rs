@@ -12,7 +12,7 @@ use crate::effect::{
     CounteredSpellZone, DelayedTriggerKind, Duration, ManaPayload, PlayerRef, Predicate, Selector,
     Value, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, r, w, x};
 
 /// Akroma's Will — {3}{W} Instant. "Choose one. If you control a commander
 /// as you cast this spell, you may choose both instead. / • Creatures you
@@ -23,35 +23,43 @@ use crate::mana::{b, cost, g, generic, r, w, x, Color};
 /// With a commander on your battlefield the "may choose both" upgrade
 /// runs via ChooseN (a decider may still under-pick to one mode).
 pub fn akromas_will() -> CardDefinition {
-    let your_creatures =
-        || Selector::EachPermanent(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou));
-    let modes = move || vec![
-        Effect::GrantKeywords {
-            what: your_creatures(),
-            keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::DoubleStrike],
-            duration: Duration::EndOfTurn,
-        },
-        Effect::GrantKeywords {
-            what: your_creatures(),
-            keywords: vec![
-                Keyword::Lifelink,
-                Keyword::Indestructible,
-                Keyword::Protection(Color::White),
-                Keyword::Protection(Color::Blue),
-                Keyword::Protection(Color::Black),
-                Keyword::Protection(Color::Red),
-                Keyword::Protection(Color::Green),
-            ],
-            duration: Duration::EndOfTurn,
-        },
-    ];
+    let your_creatures = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )
+    };
+    let modes = move || {
+        vec![
+            Effect::GrantKeywords {
+                what: your_creatures(),
+                keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::DoubleStrike],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeywords {
+                what: your_creatures(),
+                keywords: vec![
+                    Keyword::Lifelink,
+                    Keyword::Indestructible,
+                    Keyword::Protection(Color::White),
+                    Keyword::Protection(Color::Blue),
+                    Keyword::Protection(Color::Black),
+                    Keyword::Protection(Color::Red),
+                    Keyword::Protection(Color::Green),
+                ],
+                duration: Duration::EndOfTurn,
+            },
+        ]
+    };
     CardDefinition {
         name: "Akroma's Will",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::If {
             cond: Predicate::YouControlACommander,
-            then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
+            then: Box::new(Effect::ChooseN {
+                picks: vec![0, 1],
+                modes: modes(),
+            }),
             else_: Box::new(Effect::ChooseMode(modes())),
         },
         ..Default::default()
@@ -70,7 +78,10 @@ pub fn reprieve() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 zone: CounteredSpellZone::OwnerHand,
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -96,7 +107,10 @@ pub fn return_to_the_ranks() -> CardDefinition {
             filter: None,
             count: Value::XFromCost,
             up_to: false,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -115,7 +129,10 @@ pub fn winds_of_abandon() -> CardDefinition {
     let compensate = |who: PlayerRef| Effect::Search {
         who: who.clone(),
         filter: SelectionRequirement::IsBasicLand,
-        to: ZoneDest::Battlefield { controller: who, tapped: true },
+        to: ZoneDest::Battlefield {
+            controller: who,
+            tapped: true,
+        },
     };
     CardDefinition {
         name: "Winds of Abandon",
@@ -127,7 +144,9 @@ pub fn winds_of_abandon() -> CardDefinition {
         // the board result is order-independent here.
         effect: Effect::Seq(vec![
             compensate(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
-            Effect::Exile { what: target_filtered(not_yours()) },
+            Effect::Exile {
+                what: target_filtered(not_yours()),
+            },
         ]),
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[generic(4), w(), w()]),
@@ -136,7 +155,10 @@ pub fn winds_of_abandon() -> CardDefinition {
                 selector: Selector::EachPermanent(not_yours()),
                 body: Box::new(Effect::Seq(vec![
                     compensate(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
-                    Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                    Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Exile,
+                    },
                 ])),
             }),
             ..Default::default()
@@ -168,9 +190,7 @@ pub fn culling_the_weak() -> CardDefinition {
 /// creature without flying. If X is 4 or more, destroy all artifacts. If
 /// X is 8 or more, create an 8/8 red Lizard creature token."
 pub fn subterranean_tremors() -> CardDefinition {
-    let x_at_least = |n: i64| {
-        Predicate::ValueAtLeast(Value::XFromCost, Value::Const(n as i32))
-    };
+    let x_at_least = |n: i64| Predicate::ValueAtLeast(Value::XFromCost, Value::Const(n as i32));
     CardDefinition {
         name: "Subterranean Tremors",
         cost: cost(&[x(), r()]),
@@ -277,7 +297,9 @@ pub fn berserk() -> CardDefinition {
                         what: Selector::Target(0),
                         filter: SelectionRequirement::AttackedThisTurn,
                     },
-                    then: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                    then: Box::new(Effect::Destroy {
+                        what: Selector::Target(0),
+                    }),
                     else_: Box::new(Effect::Noop),
                 }),
             },
@@ -297,7 +319,10 @@ pub fn glimpse_of_nature() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::CreaturesYouControlEnteringThisTurn {
-            body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            body: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
         },
         ..Default::default()
     }

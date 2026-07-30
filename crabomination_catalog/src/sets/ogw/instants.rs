@@ -1,5 +1,7 @@
 use crate::card::{CardDefinition, CardType, Keyword, SelectionRequirement};
-use crate::effect::shortcut::{awaken, deal, pump_target, return_target_to_hand, surge, target, target_filtered};
+use crate::effect::shortcut::{
+    awaken, deal, pump_target, return_target_to_hand, surge, target, target_filtered,
+};
 use crate::effect::{Effect, PlayerRef, Value};
 use crate::mana::{ManaCost, b, colorless, cost, g, generic, r, u};
 use crabomination_base::tokens::eldrazi_scion_token;
@@ -13,9 +15,7 @@ pub fn murderous_compulsion() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Madness(ManaCost::new(vec![generic(1), b()]))],
         effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
-            ),
+            what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::Tapped)),
         },
         ..Default::default()
     }
@@ -27,14 +27,22 @@ pub fn roil_spout() -> CardDefinition {
     use crate::effect::{LibraryPosition, ZoneDest};
     let base = Effect::Move {
         what: target_filtered(SelectionRequirement::Creature),
-        to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
+        to: ZoneDest::Library {
+            who: PlayerRef::OwnerOfMoved,
+            pos: LibraryPosition::Top,
+        },
     };
     CardDefinition {
         name: "Roil Spout",
         cost: cost(&[generic(1), crate::mana::w(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: base.clone(),
-        alternative_cost: Some(awaken(4, cost(&[generic(4), crate::mana::w(), u()]), 1, base)),
+        alternative_cost: Some(awaken(
+            4,
+            cost(&[generic(4), crate::mana::w(), u()]),
+            1,
+            base,
+        )),
         ..Default::default()
     }
 }
@@ -42,7 +50,10 @@ pub fn roil_spout() -> CardDefinition {
 /// Coastal Discovery — {3}{U} Sorcery. Draw two cards. Awaken 4—{5}{U}.
 pub fn coastal_discovery() -> CardDefinition {
     use crate::effect::Selector;
-    let base = Effect::Draw { who: Selector::You, amount: Value::Const(2) };
+    let base = Effect::Draw {
+        who: Selector::You,
+        amount: Value::Const(2),
+    };
     CardDefinition {
         name: "Coastal Discovery",
         cost: cost(&[generic(3), u()]),
@@ -61,7 +72,10 @@ pub fn comparative_analysis() -> CardDefinition {
         name: "Comparative Analysis",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Draw { who: Selector::Target(0), amount: Value::Const(2) },
+        effect: Effect::Draw {
+            who: Selector::Target(0),
+            amount: Value::Const(2),
+        },
         alternative_cost: Some(surge(cost(&[generic(2), u()]), false)),
         ..Default::default()
     }
@@ -75,8 +89,14 @@ pub fn shoulder_to_shoulder() -> CardDefinition {
         cost: cost(&[generic(2), crate::mana::w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::SupportCounters { max_targets: 2, filter: SelectionRequirement::Creature },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::SupportCounters {
+                max_targets: 2,
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -86,9 +106,7 @@ pub fn shoulder_to_shoulder() -> CardDefinition {
 /// Awaken 3—{5}{W} (land = target slot 1).
 pub fn sheer_drop() -> CardDefinition {
     let base = Effect::Destroy {
-        what: target_filtered(
-            SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
-        ),
+        what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::Tapped)),
     };
     CardDefinition {
         name: "Sheer Drop",
@@ -159,9 +177,7 @@ pub fn searing_light() -> CardDefinition {
             what: target_filtered(
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::PowerAtMost(2))
-                    .and(
-                        SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
-                    ),
+                    .and(SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking)),
             ),
         },
         ..Default::default()
@@ -182,7 +198,9 @@ pub fn mutants_prey() -> CardDefinition {
                 slot: 0,
                 filter: SelectionRequirement::Creature
                     .and(SelectionRequirement::ControlledByYou)
-                    .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                    .and(SelectionRequirement::WithCounter(
+                        CounterType::PlusOnePlusOne,
+                    )),
             },
             defender: Selector::TargetFiltered {
                 slot: 1,
@@ -203,7 +221,10 @@ pub fn corpse_churn() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             Effect::MayDo {
                 description: "Return a creature card from your graveyard to your hand".into(),
                 body: Box::new(Effect::Move {
@@ -228,9 +249,13 @@ pub fn tears_of_valakut() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::CantBeCountered],
-        effect: deal(5, target_filtered(
-            SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
-        )),
+        effect: deal(
+            5,
+            target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            ),
+        ),
         ..Default::default()
     }
 }
@@ -259,9 +284,12 @@ pub fn warping_wail() -> CardDefinition {
         keywords: vec![Keyword::Devoid],
         effect: Effect::ChooseMode(vec![
             Effect::Exile {
-                what: target_filtered(SelectionRequirement::Creature.and(
-                    SelectionRequirement::PowerAtMost(1).or(SelectionRequirement::ToughnessAtMost(1)),
-                )),
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(
+                        SelectionRequirement::PowerAtMost(1)
+                            .or(SelectionRequirement::ToughnessAtMost(1)),
+                    ),
+                ),
             },
             Effect::CounterSpell {
                 what: target_filtered(
@@ -342,7 +370,9 @@ pub fn scour_from_existence() -> CardDefinition {
         name: "Scour from Existence",
         cost: cost(&[generic(7)]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Exile { what: target_filtered(SelectionRequirement::Permanent) },
+        effect: Effect::Exile {
+            what: target_filtered(SelectionRequirement::Permanent),
+        },
         ..Default::default()
     }
 }
@@ -354,7 +384,9 @@ pub fn oblivion_strike() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Devoid],
-        effect: Effect::Exile { what: target_filtered(SelectionRequirement::Creature) },
+        effect: Effect::Exile {
+            what: target_filtered(SelectionRequirement::Creature),
+        },
         ..Default::default()
     }
 }
@@ -521,8 +553,8 @@ pub fn flaying_tendrils() -> CardDefinition {
 /// Mighty Leap — {1}{W} Instant. Target creature gets +2/+2 and gains flying
 /// until end of turn.
 pub fn mighty_leap() -> CardDefinition {
-    use crate::effect::shortcut::target;
     use crate::effect::Duration;
+    use crate::effect::shortcut::target;
     CardDefinition {
         name: "Mighty Leap",
         cost: cost(&[generic(1), crate::mana::w()]),
@@ -547,7 +579,10 @@ pub fn boulder_salvo() -> CardDefinition {
         name: "Boulder Salvo",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage { to: target(), amount: Value::Const(4) },
+        effect: Effect::DealDamage {
+            to: target(),
+            amount: Value::Const(4),
+        },
         alternative_cost: Some(surge(cost(&[generic(1), r()]), false)),
         ..Default::default()
     }

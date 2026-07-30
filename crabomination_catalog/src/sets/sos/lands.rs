@@ -36,9 +36,12 @@ fn school_land(
         condition: None,
         life_cost: 0,
         from_graveyard: false,
-        exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+        exile_self_cost: false,
+        exile_other_filter: None,
+        self_counter_cost_reduction: None,
+        sac_other_filter: None,
+        tap_other_filter: None,
+        from_hand: false,
         ..Default::default()
     };
     CardDefinition {
@@ -47,7 +50,9 @@ fn school_land(
         activated_abilities: vec![tap_add(color_a), tap_add(color_b), surveil],
         static_abilities: vec![StaticAbility {
             description: "This land enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         ..Default::default()
     }
@@ -126,9 +131,12 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
         condition: None,
         life_cost: 1,
         from_graveyard: false,
-        exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+        exile_self_cost: false,
+        exile_other_filter: None,
+        self_counter_cost_reduction: None,
+        sac_other_filter: None,
+        tap_other_filter: None,
+        from_hand: false,
         ..Default::default()
     };
     // {5}: If this land isn't a creature, it becomes a 2/4 Wizard
@@ -187,8 +195,8 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
 pub fn skycoach_waypoint() -> CardDefinition {
     use super::super::tap_add_colorless;
     use crate::card::{CounterType, SelectionRequirement};
-    use crate::effect::shortcut::target_filtered;
     use crate::effect::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
     // Printed reminder: "(Only creatures with prepare spells can
     // become prepared.)" — restrict target to creatures whose
     // definition carries an inset prepare spell (`prepare_spell`).
@@ -212,8 +220,10 @@ pub fn skycoach_waypoint() -> CardDefinition {
         from_graveyard: false,
         exile_self_cost: false,
         exile_other_filter: None,
-        self_counter_cost_reduction: None, sac_other_filter: None,
-        tap_other_filter: None, from_hand: false,
+        self_counter_cost_reduction: None,
+        sac_other_filter: None,
+        tap_other_filter: None,
+        from_hand: false,
         ..Default::default()
     };
     CardDefinition {
@@ -247,15 +257,15 @@ pub fn skycoach_waypoint() -> CardDefinition {
 pub fn petrified_hamlet() -> CardDefinition {
     use super::super::tap_add_colorless;
     use crate::card::{SelectionRequirement, TriggeredAbility};
-    use crate::effect::{
-        EventKind, EventScope, EventSpec, Selector, StaticAbility, StaticEffect,
-    };
+    use crate::effect::{EventKind, EventScope, EventSpec, Selector, StaticAbility, StaticEffect};
     CardDefinition {
         name: "Petrified Hamlet",
         card_types: vec![CardType::Land],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCard { what: Selector::This },
+            effect: Effect::NameCard {
+                what: Selector::This,
+            },
         }],
         static_abilities: vec![StaticAbility {
             description: "Lands with the chosen name have \"{T}: Add {C}.\"",

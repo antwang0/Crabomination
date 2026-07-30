@@ -6,8 +6,8 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement as R, Selector,
     Subtypes, TokenDefinition, Value,
 };
-use crate::effect::shortcut::target_filtered;
 use crate::effect::PlayerRef;
+use crate::effect::shortcut::target_filtered;
 use crate::mana::{cost, generic, w};
 
 /// Fragmentize — {W} Sorcery. Destroy target artifact or enchantment with mana
@@ -30,7 +30,9 @@ pub fn erase() -> CardDefinition {
         name: "Erase",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Exile { what: target_filtered(R::Enchantment) },
+        effect: Effect::Exile {
+            what: target_filtered(R::Enchantment),
+        },
         ..Default::default()
     }
 }
@@ -41,7 +43,9 @@ pub fn rebuke() -> CardDefinition {
         name: "Rebuke",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy { what: target_filtered(R::Creature.and(R::IsAttacking)) },
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::IsAttacking)),
+        },
         ..Default::default()
     }
 }
@@ -68,7 +72,10 @@ pub fn crib_swap() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         keywords: vec![Keyword::Changeling],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Shapeshifter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -81,7 +88,9 @@ pub fn crib_swap() -> CardDefinition {
                 count: Value::Const(1),
                 definition: shapeshifter,
             },
-            Effect::Exile { what: target_filtered(R::Creature) },
+            Effect::Exile {
+                what: target_filtered(R::Creature),
+            },
         ]),
         ..Default::default()
     }

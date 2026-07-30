@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_attack, spell_mastery_gate, target_filtered};
 use crate::effect::{Duration, PlayerRef};
-use crate::mana::{b, cost, generic, hybrid, w, x, Color};
+use crate::mana::{Color, b, cost, generic, hybrid, w, x};
 
 fn spirit_flyer(colors: Vec<Color>) -> TokenDefinition {
     TokenDefinition {
@@ -18,7 +18,10 @@ fn spirit_flyer(colors: Vec<Color>) -> TokenDefinition {
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors,
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -30,7 +33,10 @@ fn soldier_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -42,18 +48,26 @@ pub fn requiem_angel() -> CardDefinition {
         name: "Requiem Angel",
         cost: cost(&[generic(5), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::HasCreatureType(CreatureType::Spirit).negate().and(R::OtherThanSource),
-                }),
+                    filter: R::HasCreatureType(CreatureType::Spirit)
+                        .negate()
+                        .and(R::OtherThanSource),
+                },
+            ),
             effect: Effect::CreateToken {
-                who: PlayerRef::You, count: Value::ONE, definition: spirit_flyer(vec![Color::White]),
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: spirit_flyer(vec![Color::White]),
             },
         }],
         ..Default::default()
@@ -68,17 +82,24 @@ pub fn angel_of_the_dawn() -> CardDefinition {
         name: "Angel of the Dawn",
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::PumpPT {
-                what: team(), power: Value::Const(1), toughness: Value::Const(1),
+                what: team(),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             },
             Effect::GrantKeyword {
-                what: team(), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn,
+                what: team(),
+                keyword: Keyword::Vigilance,
+                duration: Duration::EndOfTurn,
             },
         ]))],
         ..Default::default()
@@ -92,12 +113,15 @@ pub fn elderfang_disciple() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Cleric], ..Default::default()
+            creature_types: vec![CreatureType::Elf, CreatureType::Cleric],
+            ..Default::default()
         },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1), random: false,
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+            random: false,
         })],
         ..Default::default()
     }
@@ -120,7 +144,9 @@ pub fn martial_coup() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             },
             Effect::CreateToken {
-                who: PlayerRef::You, count: Value::XFromCost, definition: soldier_token(),
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                definition: soldier_token(),
             },
         ]),
         ..Default::default()
@@ -135,9 +161,12 @@ pub fn beckon_apparition() -> CardDefinition {
         cost: cost(&[hybrid(Color::White, Color::Black)]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Exile { what: target_filtered(R::InGraveyard) },
+            Effect::Exile {
+                what: target_filtered(R::InGraveyard),
+            },
             Effect::CreateToken {
-                who: PlayerRef::You, count: Value::ONE,
+                who: PlayerRef::You,
+                count: Value::ONE,
                 definition: spirit_flyer(vec![Color::White, Color::Black]),
             },
         ]),
@@ -156,13 +185,17 @@ pub fn kytheons_tactics() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
-                what: team(), power: Value::Const(2), toughness: Value::Const(1),
+                what: team(),
+                power: Value::Const(2),
+                toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             },
             Effect::If {
                 cond: spell_mastery_gate(),
                 then: Box::new(Effect::GrantKeyword {
-                    what: team(), keyword: Keyword::Vigilance, duration: Duration::EndOfTurn,
+                    what: team(),
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -178,11 +211,18 @@ pub fn rally_the_ranks() -> CardDefinition {
         name: "Rally the Ranks",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        triggered_abilities: vec![etb(Effect::NameCreatureType {
+            what: Selector::This,
+        })],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
-                power: 1, toughness: 1, exclude_source: false, opponents: false, per_counter: None },
+                power: 1,
+                toughness: 1,
+                exclude_source: false,
+                opponents: false,
+                per_counter: None,
+            },
         }],
         ..Default::default()
     }
@@ -198,7 +238,8 @@ pub fn captains_claws() -> CardDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Kor, CreatureType::Ally], ..Default::default()
+            creature_types: vec![CreatureType::Kor, CreatureType::Ally],
+            ..Default::default()
         },
         ..Default::default()
     };
@@ -207,7 +248,8 @@ pub fn captains_claws() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes {
-            artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default()
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
         equipped_bonus: Some(EquipBonus {
@@ -232,15 +274,25 @@ pub fn ancestral_blade() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes {
-            artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default()
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
-                who: PlayerRef::You, count: Value::ONE, definition: soldier_token(),
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: soldier_token(),
             },
-            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+            Effect::Attach {
+                what: Selector::This,
+                to: Selector::LastCreatedToken,
+            },
         ]))],
         ..Default::default()
     }

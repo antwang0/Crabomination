@@ -3,9 +3,7 @@
 //! `tests/recent79.rs`.
 
 use crate::card::SelectionRequirement as R;
-use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, Subtypes,
-};
+use crate::card::{ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, Subtypes};
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, Selector, Value};
 use crate::mana::{b, cost, g, generic, r};
@@ -17,7 +15,10 @@ pub fn carrion_ants() -> CardDefinition {
         name: "Carrion Ants",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 0,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -41,13 +42,18 @@ pub fn elvish_hunter() -> CardDefinition {
         name: "Elvish Hunter",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Archer], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Archer],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
             tap_cost: true,
-            effect: Effect::SkipNextUntap { what: target_filtered(R::Creature) },
+            effect: Effect::SkipNextUntap {
+                what: target_filtered(R::Creature),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -61,7 +67,10 @@ pub fn dwarven_nomad() -> CardDefinition {
         name: "Dwarven Nomad",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf, CreatureType::Nomad], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Nomad],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -83,7 +92,10 @@ pub fn balduvian_war_makers() -> CardDefinition {
         name: "Balduvian War-Makers",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Barbarian], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Barbarian],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Haste, Keyword::Rampage(1)],
@@ -98,15 +110,23 @@ pub fn grave_robbers() -> CardDefinition {
         name: "Grave Robbers",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Rogue], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Exile { what: target_filtered(R::Artifact.and(R::InGraveyard)) },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                Effect::Exile {
+                    what: target_filtered(R::Artifact.and(R::InGraveyard)),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ]),
             ..Default::default()
         }],

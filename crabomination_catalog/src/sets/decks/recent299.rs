@@ -8,7 +8,7 @@ use crate::card::{
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef};
-use crate::mana::{b, cost, g, generic, u, w, ManaCost};
+use crate::mana::{ManaCost, b, cost, g, generic, u, w};
 
 // ── Golgari ─────────────────────────────────────────────────────────────────
 
@@ -66,7 +66,10 @@ pub fn enemy_of_the_guildpact() -> CardDefinition {
         name: "Enemy of the Guildpact",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 4,
         toughness: 2,
         keywords: vec![Keyword::ProtectionFromMulticolored],
@@ -123,7 +126,10 @@ pub fn overrule() -> CardDefinition {
                 exile: false,
                 extra_generic: Some(Value::XFromCost),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::XFromCost,
+            },
         ]),
         ..Default::default()
     }

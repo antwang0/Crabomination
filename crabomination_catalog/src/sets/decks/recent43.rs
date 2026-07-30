@@ -3,17 +3,21 @@
 //! recursion, and devotion-style mana doublers. Tests in `tests/recent43.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, Effect, SelectionRequirement as R, Selector,
-    Value, Zone,
+    CardDefinition, CardType, CounterType, Effect, SelectionRequirement as R, Selector, Value, Zone,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{ActivatedAbility, LibraryPosition, ManaPayload, PlayerRef, Predicate, ZoneDest};
+use crate::effect::{
+    ActivatedAbility, LibraryPosition, ManaPayload, PlayerRef, Predicate, ZoneDest,
+};
 use crate::mana::{Color, cost, generic, u, x};
 
 fn tap_colorless() -> ActivatedAbility {
     ActivatedAbility {
         tap_cost: true,
-        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::Colorless(Value::Const(1)),
+        },
         ..Default::default()
     }
 }
@@ -22,7 +26,10 @@ fn tap_colorless() -> ActivatedAbility {
 /// `{X}{X}, {T}: Put X charge counters.` `{3}, {T}, Sacrifice: Destroy each
 /// nonland permanent with mana value equal to its charge counters.`
 pub fn blast_zone() -> CardDefinition {
-    let charges = Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge };
+    let charges = Value::CountersOn {
+        what: Box::new(Selector::This),
+        kind: CounterType::Charge,
+    };
     CardDefinition {
         name: "Blast Zone",
         card_types: vec![CardType::Land],
@@ -157,7 +164,10 @@ pub fn academy_ruins() -> CardDefinition {
                 mana_cost: cost(&[generic(1), u()]),
                 effect: Effect::Move {
                     what: target_filtered(R::InGraveyard.and(R::Artifact)),
-                    to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                    to: ZoneDest::Library {
+                        who: PlayerRef::You,
+                        pos: LibraryPosition::Top,
+                    },
                 },
                 ..Default::default()
             },
@@ -179,7 +189,11 @@ pub fn petrified_field() -> CardDefinition {
                 sac_cost: true,
                 effect: Effect::Move {
                     what: Selector::take(
-                        Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Land },
+                        Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: R::Land,
+                        },
                         Value::Const(1),
                     ),
                     to: ZoneDest::Hand(PlayerRef::You),
@@ -202,10 +216,13 @@ pub fn serras_sanctum() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::OfColor(Color::White, Value::CountMatching {
-                    sel: Box::new(Selector::EachPermanent(R::ControlledByYou)),
-                    filter: R::Enchantment,
-                }),
+                pool: ManaPayload::OfColor(
+                    Color::White,
+                    Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(R::ControlledByYou)),
+                        filter: R::Enchantment,
+                    },
+                ),
             },
             ..Default::default()
         }],
@@ -224,10 +241,13 @@ pub fn tolarian_academy() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::OfColor(Color::Blue, Value::CountMatching {
-                    sel: Box::new(Selector::EachPermanent(R::ControlledByYou)),
-                    filter: R::Artifact,
-                }),
+                pool: ManaPayload::OfColor(
+                    Color::Blue,
+                    Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(R::ControlledByYou)),
+                        filter: R::Artifact,
+                    },
+                ),
             },
             ..Default::default()
         }],

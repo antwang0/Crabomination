@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::mint_treasures;
 use crate::effect::{PlayerRef, Predicate, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn red_goblin_token() -> TokenDefinition {
     TokenDefinition {
@@ -18,7 +18,10 @@ fn red_goblin_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -33,7 +36,10 @@ pub fn hour_of_promise() -> CardDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         ..Default::default()
     };
     let deserts = Value::CountOf(Box::new(Selector::ControlledBy {
@@ -48,7 +54,10 @@ pub fn hour_of_promise() -> CardDefinition {
             Effect::SearchUpToN {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Land,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
                 count: Value::Const(2),
             },
             Effect::If {
@@ -78,7 +87,10 @@ pub fn pirs_whim() -> CardDefinition {
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Land,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -97,7 +109,10 @@ pub fn wayward_swordtooth() -> CardDefinition {
         name: "Wayward Swordtooth",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::CantAttackOrBlockUnlessCityBlessing],
@@ -108,14 +123,18 @@ pub fn wayward_swordtooth() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Ascend { who: PlayerRef::You },
+                effect: Effect::Ascend {
+                    who: PlayerRef::You,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                     EventScope::ActivePlayer,
                 ),
-                effect: Effect::Ascend { who: PlayerRef::You },
+                effect: Effect::Ascend {
+                    who: PlayerRef::You,
+                },
             },
         ],
         ..Default::default()
@@ -160,7 +179,9 @@ pub fn trackers_instincts() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(2), u()]))],
-        effect: Effect::MillThenToHand { amount: Value::Const(4), filter: SelectionRequirement::Creature,
+        effect: Effect::MillThenToHand {
+            amount: Value::Const(4),
+            filter: SelectionRequirement::Creature,
             otherwise: None,
         },
         ..Default::default()
@@ -195,7 +216,10 @@ pub fn mogg_flunkies() -> CardDefinition {
         name: "Mogg Flunkies",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::CantAttackOrBlockAlone],
@@ -232,7 +256,10 @@ pub fn hunted_witness() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Lifelink],
         ..Default::default()
     };
@@ -240,12 +267,19 @@ pub fn hunted_witness() -> CardDefinition {
         name: "Hunted Witness",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: soldier },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: soldier,
+            },
         }],
         ..Default::default()
     }
@@ -259,19 +293,29 @@ pub fn brindle_shoat() -> CardDefinition {
         toughness: 3,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
         name: "Brindle Shoat",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: boar },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: boar,
+            },
         }],
         ..Default::default()
     }
@@ -291,7 +335,11 @@ pub fn goblin_assault() -> CardDefinition {
                 EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                 EventScope::ActivePlayer,
             ),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: hasty },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: hasty,
+            },
         }],
         static_abilities: vec![StaticAbility {
             description: "Goblin creatures attack each combat if able.",

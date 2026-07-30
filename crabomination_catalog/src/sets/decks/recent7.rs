@@ -3,13 +3,13 @@
 //! functionality test in `crabomination/src/tests/recent7.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EnchantmentSubtype, EquipBonus,
-    EventKind, EventScope, EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, Supertype,
-    TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EnchantmentSubtype,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement, Selector,
+    Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, Predicate, ZoneDest};
-use crate::mana::{b, cost, g, generic, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, u, w};
 
 // ── White ────────────────────────────────────────────────────────────────
 
@@ -40,7 +40,10 @@ pub fn mardu_woe_reaper() -> CardDefinition {
                         what: target_filtered(SelectionRequirement::Creature),
                         to: ZoneDest::Exile,
                     },
-                    Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 ])),
             },
         }],
@@ -57,7 +60,10 @@ pub fn peek() -> CardDefinition {
         name: "Peek",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        },
         ..Default::default()
     }
 }
@@ -131,7 +137,10 @@ pub fn leaf_gilder() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Green, Value::ONE) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(Color::Green, Value::ONE),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -155,12 +164,18 @@ pub fn quirion_elves() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Green, Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Green, Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::ChosenColorOfSource },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::ChosenColorOfSource,
+                },
                 ..Default::default()
             },
         ],
@@ -184,17 +199,26 @@ pub fn skyshroud_elf() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Green, Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Green, Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(1)]),
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Red, Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Red, Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(1)]),
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::White, Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::White, Value::ONE),
+                },
                 ..Default::default()
             },
         ],
@@ -217,7 +241,11 @@ pub fn briar_shield() -> CardDefinition {
             what: Selector::This,
             to: target_filtered(SelectionRequirement::Creature),
         },
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
         // Pump the host first, then sacrifice the Aura — capturing the enchanted
         // creature while the Aura is still attached (sac-as-cost would clear the
         // `AttachedTo` link before the pump resolves).
@@ -275,13 +303,19 @@ pub fn phyrexian_tower() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 tap_cost: true,
                 sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Black, Value::Const(2)) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Black, Value::Const(2)),
+                },
                 ..Default::default()
             },
         ],

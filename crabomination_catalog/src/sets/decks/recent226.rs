@@ -3,8 +3,8 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, StaticAbility,
-    Subtypes, TriggeredAbility,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
+    StaticAbility, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{battalion, each_opponent, investigate, on_other_dies};
 use crate::effect::{Duration, Effect, Selector, StaticEffect, Value, ZoneRef};
@@ -17,13 +17,19 @@ pub fn doorkeeper_thrull() -> CardDefinition {
         name: "Doorkeeper Thrull",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thrull], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thrull],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "Artifacts and creatures entering don't cause abilities to trigger.",
-            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: false, also_artifacts: true },
+            effect: StaticEffect::SuppressCreatureEtbTriggers {
+                also_dies: false,
+                also_artifacts: true,
+            },
         }],
         ..Default::default()
     }
@@ -37,7 +43,10 @@ pub fn sanctuary_wall() -> CardDefinition {
         name: "Sanctuary Wall",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 0,
         toughness: 4,
         keywords: vec![Keyword::Defender],
@@ -45,9 +54,22 @@ pub fn sanctuary_wall() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(2), w()]),
             effect: Effect::Seq(vec![
-                Effect::Tap { what: Selector::TargetFiltered { slot: 0, filter: R::Creature } },
-                Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::Const(1) },
-                Effect::AddCounter { what: Selector::This, kind: CounterType::Stun, amount: Value::Const(1) },
+                Effect::Tap {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature,
+                    },
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::Const(1),
+                },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Stun,
+                    amount: Value::Const(1),
+                },
             ]),
             ..Default::default()
         }],
@@ -67,16 +89,25 @@ pub fn all_out_assault() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Creatures you control get +1/+1.",
-                effect: StaticEffect::PumpPT { applies_to: team.clone(), power: 1, toughness: 1 },
+                effect: StaticEffect::PumpPT {
+                    applies_to: team.clone(),
+                    power: 1,
+                    toughness: 1,
+                },
             },
             StaticAbility {
                 description: "Creatures you control have deathtouch.",
-                effect: StaticEffect::GrantKeyword { applies_to: team, keyword: Keyword::Deathtouch },
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: team,
+                    keyword: Keyword::Deathtouch,
+                },
             },
         ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::AdditionalCombatPhaseAfterMain { count: Value::Const(1) },
+            effect: Effect::AdditionalCombatPhaseAfterMain {
+                count: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -108,7 +139,10 @@ pub fn homicide_investigator() -> CardDefinition {
 pub fn lead_pipe() -> CardDefinition {
     let dies = TriggeredAbility {
         event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-        effect: Effect::LoseLife { who: each_opponent(), amount: Value::Const(1) },
+        effect: Effect::LoseLife {
+            who: each_opponent(),
+            amount: Value::Const(1),
+        },
     };
     CardDefinition {
         name: "Lead Pipe",
@@ -128,7 +162,10 @@ pub fn lead_pipe() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             sac_cost: true,
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -143,7 +180,10 @@ pub fn karlov_watchdog() -> CardDefinition {
         name: "Karlov Watchdog",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
@@ -171,7 +211,10 @@ pub fn no_witnesses() -> CardDefinition {
         effect: Effect::Seq(vec![
             investigate(1),
             Effect::Destroy {
-                what: Selector::EachMatching { zone: ZoneRef::Battlefield, filter: R::Creature },
+                what: Selector::EachMatching {
+                    zone: ZoneRef::Battlefield,
+                    filter: R::Creature,
+                },
             },
         ]),
         ..Default::default()

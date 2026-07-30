@@ -26,8 +26,13 @@ pub fn coerced_to_kill() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains { what: enchanted() })],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains {
+            what: enchanted(),
+        })],
         equipped_bonus: Some(EquipBonus {
             set_base_pt: Some((1, 1)),
             keywords: vec![Keyword::Deathtouch],
@@ -51,9 +56,15 @@ pub fn airtight_alibi() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Flash],
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Untap { what: enchanted(), up_to: None },
+            Effect::Untap {
+                what: enchanted(),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: enchanted(),
                 keyword: Keyword::Hexproof,
@@ -61,7 +72,11 @@ pub fn airtight_alibi() -> CardDefinition {
             },
             Effect::ClearSuspected { what: enchanted() },
         ]))],
-        equipped_bonus: Some(EquipBonus { power: 2, toughness: 2, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

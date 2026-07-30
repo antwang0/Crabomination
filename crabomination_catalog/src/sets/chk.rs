@@ -12,11 +12,17 @@ use crate::effect::{Duration, Effect, PlayerRef, StaticEffect};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
 fn spirit(types: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: types, ..Default::default() }
+    Subtypes {
+        creature_types: types,
+        ..Default::default()
+    }
 }
 
 fn arcane() -> Subtypes {
-    Subtypes { spell_subtypes: vec![SpellSubtype::Arcane], ..Default::default() }
+    Subtypes {
+        spell_subtypes: vec![SpellSubtype::Arcane],
+        ..Default::default()
+    }
 }
 
 /// Glacial Ray — {1}{R} Instant — Arcane. Deals 2 damage to any target.
@@ -27,7 +33,10 @@ pub fn glacial_ray() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
-        keywords: vec![Keyword::Splice(cost(&[generic(1), r()]), SpellSubtype::Arcane)],
+        keywords: vec![Keyword::Splice(
+            cost(&[generic(1), r()]),
+            SpellSubtype::Arcane,
+        )],
         effect: Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Any),
             amount: Value::Const(2),
@@ -43,7 +52,10 @@ pub fn reach_through_mists() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
-        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        },
         ..Default::default()
     }
 }
@@ -172,7 +184,10 @@ pub fn patron_of_the_akki() -> CardDefinition {
         subtypes: spirit(vec![CreatureType::Spirit]),
         power: 5,
         toughness: 5,
-        alternative_cost: Some(offering(cost(&[generic(4), r(), r()]), CreatureType::Goblin)),
+        alternative_cost: Some(offering(
+            cost(&[generic(4), r(), r()]),
+            CreatureType::Goblin,
+        )),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -201,7 +216,10 @@ pub fn patron_of_the_moon() -> CardDefinition {
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        alternative_cost: Some(offering(cost(&[generic(5), u(), u()]), CreatureType::Moonfolk)),
+        alternative_cost: Some(offering(
+            cost(&[generic(5), u(), u()]),
+            CreatureType::Moonfolk,
+        )),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             effect: Effect::PutFromHandOntoBattlefield {
@@ -235,11 +253,9 @@ pub fn patron_of_the_orochi() -> CardDefinition {
             once_per_turn: true,
             effect: Effect::Untap {
                 what: Selector::EachPermanent(
-                    SelectionRequirement::HasLandType(LandType::Forest).or(
-                        SelectionRequirement::Creature.and(SelectionRequirement::HasColor(
-                            crate::mana::Color::Green,
-                        )),
-                    ),
+                    SelectionRequirement::HasLandType(LandType::Forest)
+                        .or(SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasColor(crate::mana::Color::Green))),
                 ),
                 up_to: None,
             },
@@ -260,7 +276,10 @@ fn deceiver_abilities(then: Effect) -> Vec<ActivatedAbility> {
     vec![
         ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
-            effect: Effect::LookAtTop { who: PlayerRef::You, amount: Value::Const(1) },
+            effect: Effect::LookAtTop {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         },
         ActivatedAbility {
@@ -287,8 +306,17 @@ pub fn brutal_deceiver() -> CardDefinition {
         power: 2,
         toughness: 2,
         activated_abilities: deceiver_abilities(Effect::Seq(vec![
-            Effect::PumpPT { what: Selector::This, power: Value::Const(1), toughness: Value::Const(0), duration: Duration::EndOfTurn },
-            Effect::GrantKeyword { what: Selector::This, keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
         ])),
         ..Default::default()
     }
@@ -324,8 +352,17 @@ pub fn feral_deceiver() -> CardDefinition {
         power: 3,
         toughness: 2,
         activated_abilities: deceiver_abilities(Effect::Seq(vec![
-            Effect::PumpPT { what: Selector::This, power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn },
-            Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
         ])),
         ..Default::default()
     }
@@ -342,8 +379,17 @@ pub fn callous_deceiver() -> CardDefinition {
         power: 1,
         toughness: 3,
         activated_abilities: deceiver_abilities(Effect::Seq(vec![
-            Effect::PumpPT { what: Selector::This, power: Value::Const(1), toughness: Value::Const(0), duration: Duration::EndOfTurn },
-            Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
         ])),
         ..Default::default()
     }
@@ -360,8 +406,16 @@ pub fn harsh_deceiver() -> CardDefinition {
         power: 1,
         toughness: 4,
         activated_abilities: deceiver_abilities(Effect::Seq(vec![
-            Effect::Untap { what: Selector::This, up_to: None },
-            Effect::PumpPT { what: Selector::This, power: Value::Const(1), toughness: Value::Const(1), duration: Duration::EndOfTurn },
+            Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
         ])),
         ..Default::default()
     }
@@ -403,7 +457,9 @@ pub fn kodama_of_the_center_tree() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: spirit(vec![CreatureType::Spirit]),
-        dynamic_pt: Some(DynamicPt::CreaturesOfTypeControlled { creature_type: CreatureType::Spirit }),
+        dynamic_pt: Some(DynamicPt::CreaturesOfTypeControlled {
+            creature_type: CreatureType::Spirit,
+        }),
         // Soulshift X — return a Spirit from your graveyard whose mana value is
         // at most the number of Spirits you control (X, read at resolution).
         triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::MayDo {
@@ -696,13 +752,17 @@ pub fn teller_of_tales() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::ChooseMode(vec![
-            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
-            Effect::Untap {
-                what: target_filtered(SelectionRequirement::Creature),
-                up_to: None,
-            },
-        ]))],
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::ChooseMode(
+            vec![
+                Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
+                Effect::Untap {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    up_to: None,
+                },
+            ],
+        ))],
         ..Default::default()
     }
 }
@@ -735,7 +795,9 @@ pub fn numai_outcast() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
             life_cost: 5,
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -749,10 +811,10 @@ pub fn befoul() -> CardDefinition {
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy {
-            what: target_filtered(SelectionRequirement::Land.or(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::HasColor(crate::mana::Color::Black).negate()),
-            )),
+            what: target_filtered(
+                SelectionRequirement::Land.or(SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasColor(crate::mana::Color::Black).negate())),
+            ),
         },
         ..Default::default()
     }
@@ -784,7 +846,9 @@ pub fn yamabushis_flame() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+            Effect::ExileIfWouldDieThisTurn {
+                what: Selector::Target(0),
+            },
             deal(3, target()),
         ]),
         ..Default::default()
@@ -886,14 +950,16 @@ pub fn soilshaper() -> CardDefinition {
         subtypes: spirit(vec![CreatureType::Spirit]),
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::BecomeCreature {
-            what: target_filtered(SelectionRequirement::Land),
-            power: Value::Const(3),
-            toughness: Value::Const(3),
-            creature_types: vec![],
-            keywords: vec![],
-            duration: Duration::EndOfTurn,
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(
+            Effect::BecomeCreature {
+                what: target_filtered(SelectionRequirement::Land),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                creature_types: vec![],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+        )],
         ..Default::default()
     }
 }
@@ -1129,7 +1195,10 @@ pub fn hideous_laughter() -> CardDefinition {
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
-        keywords: vec![Keyword::Splice(cost(&[generic(3), b(), b()]), SpellSubtype::Arcane)],
+        keywords: vec![Keyword::Splice(
+            cost(&[generic(3), b(), b()]),
+            SpellSubtype::Arcane,
+        )],
         effect: Effect::PumpPT {
             what: Selector::EachPermanent(SelectionRequirement::Creature),
             power: Value::Const(-2),
@@ -1187,10 +1256,17 @@ pub fn vigilance_aura() -> CardDefinition {
 /// next turn" trigger (the Orochi/Matsu snake-tribe ability).
 fn snake_tap_lock() -> TriggeredAbility {
     TriggeredAbility {
-        event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+        event: EventSpec::new(
+            EventKind::DealsCombatDamageToCreature,
+            EventScope::SelfSource,
+        ),
         effect: Effect::Seq(vec![
-            Effect::Tap { what: Selector::Target(0) },
-            Effect::SkipNextUntap { what: Selector::Target(0) },
+            Effect::Tap {
+                what: Selector::Target(0),
+            },
+            Effect::SkipNextUntap {
+                what: Selector::Target(0),
+            },
         ]),
     }
 }
@@ -1202,7 +1278,11 @@ pub fn orochi_ranger() -> CardDefinition {
         name: "Orochi Ranger",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Warrior, CreatureType::Ranger]),
+        subtypes: spirit(vec![
+            CreatureType::Snake,
+            CreatureType::Warrior,
+            CreatureType::Ranger,
+        ]),
         power: 2,
         toughness: 1,
         triggered_abilities: vec![snake_tap_lock()],
@@ -1223,7 +1303,9 @@ pub fn kashi_tribe_reaver() -> CardDefinition {
         triggered_abilities: vec![snake_tap_lock()],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -1260,7 +1342,11 @@ pub fn matsu_tribe_sniper() -> CardDefinition {
         name: "Matsu-Tribe Sniper",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: spirit(vec![CreatureType::Snake, CreatureType::Warrior, CreatureType::Archer]),
+        subtypes: spirit(vec![
+            CreatureType::Snake,
+            CreatureType::Warrior,
+            CreatureType::Archer,
+        ]),
         power: 1,
         toughness: 1,
         triggered_abilities: vec![snake_tap_lock()],
@@ -1269,12 +1355,17 @@ pub fn matsu_tribe_sniper() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
                     ),
                     amount: Value::Const(1),
                 },
-                Effect::Tap { what: Selector::Target(0) },
-                Effect::SkipNextUntap { what: Selector::Target(0) },
+                Effect::Tap {
+                    what: Selector::Target(0),
+                },
+                Effect::SkipNextUntap {
+                    what: Selector::Target(0),
+                },
             ]),
             ..Default::default()
         }],
@@ -1323,7 +1414,11 @@ pub fn konda_lord_of_eiganjo() -> CardDefinition {
         subtypes: spirit(vec![CreatureType::Human, CreatureType::Samurai]),
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Vigilance, Keyword::Indestructible, Keyword::Bushido(5)],
+        keywords: vec![
+            Keyword::Vigilance,
+            Keyword::Indestructible,
+            Keyword::Bushido(5),
+        ],
         ..Default::default()
     }
 }
@@ -1363,12 +1458,14 @@ pub fn jugan_the_rising_star() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::DistributeCounters {
-            total: Value::Const(5),
-            counter: CounterType::PlusOnePlusOne,
-            filter: SelectionRequirement::Creature,
-            max_targets: 5,
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(
+            Effect::DistributeCounters {
+                total: Value::Const(5),
+                counter: CounterType::PlusOnePlusOne,
+                filter: SelectionRequirement::Creature,
+                max_targets: 5,
+            },
+        )],
         ..Default::default()
     }
 }
@@ -1451,8 +1548,15 @@ pub fn soratami_cloudskater() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             bounce_other_filter: Some((SelectionRequirement::Land, 1)),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
             ]),
             ..Default::default()
         }],
@@ -1564,20 +1668,28 @@ pub fn kami_of_the_crescent_moon() -> CardDefinition {
 fn shrines_you_control() -> Value {
     use crate::card::EnchantmentSubtype;
     Value::CountMatching {
-        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+        sel: Box::new(Selector::EachPermanent(
+            SelectionRequirement::ControlledByYou,
+        )),
         filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Shrine),
     }
 }
 
 fn shrine() -> Subtypes {
     use crate::card::EnchantmentSubtype;
-    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Shrine], ..Default::default() }
+    Subtypes {
+        enchantment_subtypes: vec![EnchantmentSubtype::Shrine],
+        ..Default::default()
+    }
 }
 
 fn honden_upkeep(effect: Effect) -> TriggeredAbility {
     use crate::game::TurnStep;
     TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::Upkeep),
+            EventScope::YourControl,
+        ),
         effect,
     }
 }
@@ -1725,14 +1837,20 @@ pub fn seshiro_the_anointed() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::HasCreatureType(CreatureType::Snake),
-                }),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Snake),
+            }),
             effect: Effect::MayDo {
                 description: "Draw a card".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
         ..Default::default()
@@ -1766,12 +1884,17 @@ pub fn sosuke_son_of_seshiro() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::HasCreatureType(CreatureType::Warrior),
-                }),
-            effect: Effect::Destroy { what: Selector::Target(0) },
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToCreature,
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Warrior),
+            }),
+            effect: Effect::Destroy {
+                what: Selector::Target(0),
+            },
         }],
         ..Default::default()
     }
@@ -1923,7 +2046,9 @@ pub fn yosei_the_morning_star() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Seq(vec![
-            Effect::SkipPlayerUntapStep { player: PlayerRef::Target(0) },
+            Effect::SkipPlayerUntapStep {
+                player: PlayerRef::Target(0),
+            },
             Effect::Tap {
                 what: Sel::ControlledBy {
                     who: PlayerRef::Target(0),
@@ -1951,7 +2076,9 @@ pub fn mothrider_patrol() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(3), w()]),
-            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            effect: Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -1962,7 +2089,9 @@ pub fn mothrider_patrol() -> CardDefinition {
 /// until end of turn, where X is the number of lands you control.
 pub fn strength_of_cedars() -> CardDefinition {
     let lands = Value::CountMatching {
-        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+        sel: Box::new(Selector::EachPermanent(
+            SelectionRequirement::ControlledByYou,
+        )),
         filter: SelectionRequirement::Land,
     };
     CardDefinition {
@@ -2003,7 +2132,11 @@ pub fn sokenzan_spellblade() -> CardDefinition {
         name: "Sokenzan Spellblade",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: spirit(vec![CreatureType::Ogre, CreatureType::Samurai, CreatureType::Shaman]),
+        subtypes: spirit(vec![
+            CreatureType::Ogre,
+            CreatureType::Samurai,
+            CreatureType::Shaman,
+        ]),
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Bushido(1)],
@@ -2029,7 +2162,10 @@ pub fn wear_away() -> CardDefinition {
         cost: cost(&[g(), g()]),
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
-        keywords: vec![Keyword::Splice(cost(&[generic(3), g()]), SpellSubtype::Arcane)],
+        keywords: vec![Keyword::Splice(
+            cost(&[generic(3), g()]),
+            SpellSubtype::Arcane,
+        )],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
@@ -2048,7 +2184,10 @@ pub fn soulless_revival() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
-        keywords: vec![Keyword::Splice(cost(&[generic(1), b()]), SpellSubtype::Arcane)],
+        keywords: vec![Keyword::Splice(
+            cost(&[generic(1), b()]),
+            SpellSubtype::Arcane,
+        )],
         effect: Effect::Move {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
@@ -2110,7 +2249,11 @@ pub fn akki_underminer() -> CardDefinition {
         name: "Akki Underminer",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: spirit(vec![CreatureType::Goblin, CreatureType::Rogue, CreatureType::Shaman]),
+        subtypes: spirit(vec![
+            CreatureType::Goblin,
+            CreatureType::Rogue,
+            CreatureType::Shaman,
+        ]),
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
@@ -2209,7 +2352,10 @@ pub fn blind_with_anger() -> CardDefinition {
                 to: Some(PlayerRef::You),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
@@ -2234,7 +2380,10 @@ pub fn veterans_reflexes() -> CardDefinition {
                 toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
         ]),
         ..Default::default()
     }
@@ -2467,12 +2616,15 @@ pub fn horobi_deaths_wail() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::AnyPlayer)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Creature,
-                }),
-            effect: Effect::Destroy { what: Selector::TriggerSource },
+                },
+            ),
+            effect: Effect::Destroy {
+                what: Selector::TriggerSource,
+            },
         }],
         ..Default::default()
     }
@@ -2488,9 +2640,8 @@ pub fn time_of_need() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Search {
             who: PlayerRef::You,
-            filter: SelectionRequirement::Creature.and(SelectionRequirement::HasSupertype(
-                Supertype::Legendary,
-            )),
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
             to: ZoneDest::Hand(PlayerRef::You),
         },
         ..Default::default()
@@ -2509,7 +2660,10 @@ pub fn yukora_the_prisoner() -> CardDefinition {
         power: 5,
         toughness: 5,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
             effect: Effect::SacrificeAllMatching {
                 who: Selector::You,
                 filter: SelectionRequirement::Creature
@@ -2539,7 +2693,10 @@ pub fn he_who_hungers() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             sorcery_speed: true,
-            sac_other_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Spirit), 1)),
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Spirit),
+                1,
+            )),
             effect: Effect::DiscardChosen {
                 from: Selector::Player(PlayerRef::Target(0)),
                 count: Value::ONE,
@@ -2592,59 +2749,79 @@ fn zubera(name: &'static str, color_pip: crate::mana::ManaSymbol, dies: Effect) 
 /// Ember-Fist Zubera — {1}{R} Zubera Spirit 1/2. When it dies, it deals damage
 /// to any target equal to the number of Zubera that died this turn.
 pub fn ember_fist_zubera() -> CardDefinition {
-    zubera("Ember-Fist Zubera", r(), Effect::DealDamage {
-        to: crate::effect::shortcut::target(),
-        amount: Value::ZuberasDiedThisTurnTotal,
-    })
+    zubera(
+        "Ember-Fist Zubera",
+        r(),
+        Effect::DealDamage {
+            to: crate::effect::shortcut::target(),
+            amount: Value::ZuberasDiedThisTurnTotal,
+        },
+    )
 }
 
 /// Floating-Dream Zubera — {1}{U} Zubera Spirit 1/2. When it dies, draw a card
 /// for each Zubera that died this turn.
 pub fn floating_dream_zubera() -> CardDefinition {
-    zubera("Floating-Dream Zubera", u(), Effect::Draw {
-        who: Selector::You,
-        amount: Value::ZuberasDiedThisTurnTotal,
-    })
+    zubera(
+        "Floating-Dream Zubera",
+        u(),
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::ZuberasDiedThisTurnTotal,
+        },
+    )
 }
 
 /// Ashen-Skin Zubera — {1}{B} Zubera Spirit 1/2. When it dies, target opponent
 /// discards a card for each Zubera that died this turn.
 pub fn ashen_skin_zubera() -> CardDefinition {
-    zubera("Ashen-Skin Zubera", b(), Effect::Discard {
-        who: Selector::Player(PlayerRef::Target(0)),
-        amount: Value::ZuberasDiedThisTurnTotal,
-        random: false,
-    })
+    zubera(
+        "Ashen-Skin Zubera",
+        b(),
+        Effect::Discard {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::ZuberasDiedThisTurnTotal,
+            random: false,
+        },
+    )
 }
 
 /// Dripping-Tongue Zubera — {1}{G} Zubera Spirit 1/2. When it dies, create a
 /// 1/1 colorless Spirit token for each Zubera that died this turn.
 pub fn dripping_tongue_zubera() -> CardDefinition {
     use crate::card::TokenDefinition;
-    zubera("Dripping-Tongue Zubera", g(), Effect::CreateToken {
-        who: PlayerRef::You,
-        count: Value::ZuberasDiedThisTurnTotal,
-        definition: TokenDefinition {
-            name: "Spirit".into(),
-            power: 1,
-            toughness: 1,
-            card_types: vec![CardType::Creature],
-            subtypes: spirit(vec![CreatureType::Spirit]),
-            ..Default::default()
+    zubera(
+        "Dripping-Tongue Zubera",
+        g(),
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ZuberasDiedThisTurnTotal,
+            definition: TokenDefinition {
+                name: "Spirit".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                subtypes: spirit(vec![CreatureType::Spirit]),
+                ..Default::default()
+            },
         },
-    })
+    )
 }
 
 /// Silent-Chant Zubera — {1}{W} Zubera Spirit 1/2. When it dies, you gain 2
 /// life for each Zubera that died this turn.
 pub fn silent_chant_zubera() -> CardDefinition {
-    zubera("Silent-Chant Zubera", w(), Effect::GainLife {
-        who: Selector::You,
-        amount: Value::Times(
-            Box::new(Value::ZuberasDiedThisTurnTotal),
-            Box::new(Value::Const(2)),
-        ),
-    })
+    zubera(
+        "Silent-Chant Zubera",
+        w(),
+        Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Times(
+                Box::new(Value::ZuberasDiedThisTurnTotal),
+                Box::new(Value::Const(2)),
+            ),
+        },
+    )
 }
 
 /// Orochi Leafcaller — {G} Snake Shaman 1/1. {G}: Add one mana of any color.
@@ -2721,7 +2898,11 @@ pub fn hanabi_blast() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             crate::effect::shortcut::deal(2, crate::effect::shortcut::target()),
-            Effect::Discard { who: Selector::You, amount: Value::ONE, random: true },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::ONE,
+                random: true,
+            },
             Effect::ReturnResolvingSpellToHand,
         ]),
         ..Default::default()
@@ -2754,7 +2935,10 @@ pub fn counsel_of_the_soratami() -> CardDefinition {
         name: "Counsel of the Soratami",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }
@@ -2784,11 +2968,12 @@ pub fn lifegift() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Land,
-                }),
+                },
+            ),
             effect: Effect::MayDo {
                 description: "Gain 1 life".into(),
                 body: Box::new(gain_life(1)),
@@ -2806,7 +2991,10 @@ pub fn dampen_thought() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
-        keywords: vec![Keyword::Splice(cost(&[generic(1), u()]), SpellSubtype::Arcane)],
+        keywords: vec![Keyword::Splice(
+            cost(&[generic(1), u()]),
+            SpellSubtype::Arcane,
+        )],
         effect: Effect::Mill {
             who: Selector::Player(PlayerRef::Target(0)),
             amount: Value::Const(4),
@@ -2824,7 +3012,10 @@ pub fn consuming_vortex() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
-        keywords: vec![Keyword::Splice(cost(&[generic(3), u()]), SpellSubtype::Arcane)],
+        keywords: vec![Keyword::Splice(
+            cost(&[generic(3), u()]),
+            SpellSubtype::Arcane,
+        )],
         effect: Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
@@ -2843,8 +3034,13 @@ pub fn psychic_puppetry() -> CardDefinition {
         subtypes: arcane(),
         keywords: vec![Keyword::Splice(cost(&[u()]), SpellSubtype::Arcane)],
         effect: Effect::ChooseMode(vec![
-            Effect::Tap { what: target_filtered(SelectionRequirement::Permanent) },
-            Effect::Untap { what: target_filtered(SelectionRequirement::Permanent), up_to: None },
+            Effect::Tap {
+                what: target_filtered(SelectionRequirement::Permanent),
+            },
+            Effect::Untap {
+                what: target_filtered(SelectionRequirement::Permanent),
+                up_to: None,
+            },
         ]),
         ..Default::default()
     }
@@ -2897,7 +3093,10 @@ pub fn swallowing_plague() -> CardDefinition {
                 to: target_filtered(SelectionRequirement::Creature),
                 amount: Value::XFromCost,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::XFromCost,
+            },
         ]),
         ..Default::default()
     }
@@ -2916,7 +3115,9 @@ pub fn innocence_kami() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
             tap_cost: true,
-            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            effect: Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
             ..Default::default()
         }],
         triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::Untap {
@@ -2940,7 +3141,9 @@ pub fn villainous_ogre() -> CardDefinition {
         keywords: vec![Keyword::CantBlock],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             condition: Some(crate::effect::Predicate::SelectorCountAtLeast {
                 sel: Selector::ControlledBy {
                     who: PlayerRef::You,
@@ -2989,8 +3192,13 @@ pub fn teardrop_kami() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             effect: Effect::ChooseMode(vec![
-                Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
-                Effect::Untap { what: target_filtered(SelectionRequirement::Creature), up_to: None },
+                Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
+                Effect::Untap {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    up_to: None,
+                },
             ]),
             ..Default::default()
         }],
@@ -3322,7 +3530,11 @@ pub fn rag_dealer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(2), b()]),
-            effect: Effect::ExileUpToNFromGraveyards { count: Value::Const(3), of: None, single: true },
+            effect: Effect::ExileUpToNFromGraveyards {
+                count: Value::Const(3),
+                of: None,
+                single: true,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -3387,7 +3599,9 @@ pub fn terashis_cry() -> CardDefinition {
             max_targets: 3,
             min_targets: 0,
             filter: SelectionRequirement::Creature,
-            effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+            effect: Box::new(Effect::Tap {
+                what: Selector::Target(0),
+            }),
         },
         ..Default::default()
     }
@@ -3468,7 +3682,10 @@ pub fn phantom_wings() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
         equipped_bonus: Some(crate::card::EquipBonus {
             keywords: vec![Keyword::Flying],
             ..Default::default()
@@ -3495,8 +3712,13 @@ pub fn squelch() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::CounterAbility { what: target_filtered(SelectionRequirement::Permanent) },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::CounterAbility {
+                what: target_filtered(SelectionRequirement::Permanent),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -3548,7 +3770,10 @@ pub fn vital_surge() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
-        keywords: vec![Keyword::Splice(cost(&[generic(1), g()]), SpellSubtype::Arcane)],
+        keywords: vec![Keyword::Splice(
+            cost(&[generic(1), g()]),
+            SpellSubtype::Arcane,
+        )],
         effect: gain_life(3),
         ..Default::default()
     }
@@ -3616,11 +3841,20 @@ pub fn serpent_skin() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Flash],
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(SelectionRequirement::Creature) },
-        equipped_bonus: Some(crate::card::EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[g()]),
-            effect: Effect::Regenerate { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            effect: Effect::Regenerate {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -3769,7 +4003,10 @@ pub fn no_dachi() -> CardDefinition {
         name: "No-Dachi",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(EquipBonus {
             power: 2,
@@ -3789,7 +4026,10 @@ pub fn lifted_by_clouds() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
-        keywords: vec![Keyword::Splice(cost(&[generic(1), u()]), SpellSubtype::Arcane)],
+        keywords: vec![Keyword::Splice(
+            cost(&[generic(1), u()]),
+            SpellSubtype::Arcane,
+        )],
         effect: Effect::GrantKeyword {
             what: target_filtered(SelectionRequirement::Creature),
             keyword: Keyword::Flying,
@@ -3823,7 +4063,7 @@ pub fn hail_of_arrows() -> CardDefinition {
         cost: cost(&[crate::mana::x(), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamageDivided {
-                retaliate_to_source: false,
+            retaliate_to_source: false,
             total: Value::XFromCost,
             filter: SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
             max_targets: 8,
@@ -3899,12 +4139,17 @@ fn ki_flip_triggers() -> Vec<TriggeredAbility> {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
             effect: Effect::If {
                 cond: Predicate::ValueAtLeast(
-                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Ki },
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Ki,
+                    },
                     Value::Const(2),
                 ),
                 then: Box::new(Effect::MayDo {
                     description: "Flip this creature".into(),
-                    body: Box::new(Effect::Flip { what: Selector::This }),
+                    body: Box::new(Effect::Flip {
+                        what: Selector::This,
+                    }),
                 }),
                 else_: Box::new(Effect::Noop),
             },
@@ -3928,7 +4173,10 @@ pub fn akki_lavarunner() -> CardDefinition {
         keywords: vec![Keyword::Protection(Color::Red)],
         static_abilities: vec![StaticAbility {
             description: "If a red source would deal damage to a player, it deals that much plus 1.",
-            effect: StaticEffect::AddDamageFromColorToPlayers { color: Color::Red, amount: 1 },
+            effect: StaticEffect::AddDamageFromColorToPlayers {
+                color: Color::Red,
+                amount: 1,
+            },
         }],
         ..Default::default()
     };
@@ -3942,7 +4190,9 @@ pub fn akki_lavarunner() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Flip { what: Selector::This },
+            effect: Effect::Flip {
+                what: Selector::This,
+            },
         }],
         flip_face: Some(Box::new(tok_tok)),
         ..Default::default()
@@ -3991,8 +4241,14 @@ pub fn cunning_bandit() -> CardDefinition {
 pub fn devouring_greed() -> CardDefinition {
     let drain2 = || {
         Effect::Seq(vec![
-            Effect::LoseLife { who: Selector::Target(0), amount: Value::Const(2) },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::LoseLife {
+                who: Selector::Target(0),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ])
     };
     CardDefinition {
@@ -4112,7 +4368,10 @@ pub fn akki_underling() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "While you have 7+ cards in hand, +2/+1 and first strike.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::ValueAtLeast(Value::HandSizeOf(PlayerRef::You), Value::Const(7)),
+                condition: Predicate::ValueAtLeast(
+                    Value::HandSizeOf(PlayerRef::You),
+                    Value::Const(7),
+                ),
                 power: 2,
                 toughness: 1,
                 keywords: vec![Keyword::FirstStrike],
@@ -4200,7 +4459,9 @@ pub fn kuros_taken() -> CardDefinition {
         keywords: vec![Keyword::Bushido(1)],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -4221,12 +4482,17 @@ pub fn painwracker_oni() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Fear],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::If {
-                cond: Predicate::Not(Box::new(Predicate::SelectorExists(Selector::ControlledBy {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::HasCreatureType(CreatureType::Ogre),
-                }))),
+                cond: Predicate::Not(Box::new(Predicate::SelectorExists(
+                    Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Ogre),
+                    },
+                ))),
                 then: Box::new(Effect::Sacrifice {
                     who: Selector::You,
                     count: Value::ONE,
@@ -4244,8 +4510,11 @@ pub fn painwracker_oni() -> CardDefinition {
 /// turn. When that creature dies this turn, flip this creature." Goka:
 /// "{T}: Goka deals 4 damage to target creature that was dealt damage this turn."
 pub fn initiate_of_blood() -> CardDefinition {
-    let damaged_creature =
-        || target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::DealtDamageThisTurn));
+    let damaged_creature = || {
+        target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::DealtDamageThisTurn),
+        )
+    };
     let goka = CardDefinition {
         name: "Goka the Unjust",
         card_types: vec![CardType::Creature],
@@ -4255,7 +4524,10 @@ pub fn initiate_of_blood() -> CardDefinition {
         toughness: 4,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::DealDamage { to: damaged_creature(), amount: Value::Const(4) },
+            effect: Effect::DealDamage {
+                to: damaged_creature(),
+                amount: Value::Const(4),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -4273,10 +4545,15 @@ pub fn initiate_of_blood() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::WhenTargetDiesThisTurn {
                     filter: None,
-                    body: Box::new(Effect::Flip { what: Selector::This }),
+                    body: Box::new(Effect::Flip {
+                        what: Selector::This,
+                    }),
                     slot: 0,
                 },
-                Effect::DealDamage { to: damaged_creature(), amount: Value::Const(1) },
+                Effect::DealDamage {
+                    to: damaged_creature(),
+                    amount: Value::Const(1),
+                },
             ]),
             ..Default::default()
         }],
@@ -4333,13 +4610,19 @@ pub fn orochi_eggwatcher() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(2), g()]),
             effect: Effect::Seq(vec![
-                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: snake },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: snake,
+                },
                 Effect::If {
                     cond: Predicate::ValueAtLeast(
                         Value::CreatureCountControlledBy(PlayerRef::You),
                         Value::Const(10),
                     ),
-                    then: Box::new(Effect::Flip { what: Selector::This }),
+                    then: Box::new(Effect::Flip {
+                        what: Selector::This,
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             ]),
@@ -4421,13 +4704,18 @@ pub fn jushi_apprentice() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(2), u()]),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 Effect::If {
                     cond: Predicate::ValueAtLeast(
                         Value::HandSizeOf(PlayerRef::You),
                         Value::Const(9),
                     ),
-                    then: Box::new(Effect::Flip { what: Selector::This }),
+                    then: Box::new(Effect::Flip {
+                        what: Selector::This,
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             ]),
@@ -4568,7 +4856,10 @@ pub fn kitsune_mystic() -> CardDefinition {
                     slot: 0,
                     filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura),
                 },
-                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Creature },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature,
+                },
             },
             ..Default::default()
         }],
@@ -4588,7 +4879,9 @@ pub fn kitsune_mystic() -> CardDefinition {
                     Value::CountOf(Box::new(Selector::AttachedToMe(Box::new(Selector::This)))),
                     Value::Const(2),
                 ),
-                then: Box::new(Effect::Flip { what: Selector::This }),
+                then: Box::new(Effect::Flip {
+                    what: Selector::This,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -4611,7 +4904,12 @@ fn legendary_land(
         card_types: vec![CardType::Land],
         activated_abilities: vec![
             crate::sets::tap_add(color),
-            ActivatedAbility { mana_cost: cost(&[pip]), tap_cost: true, effect, ..Default::default() },
+            ActivatedAbility {
+                mana_cost: cost(&[pip]),
+                tap_cost: true,
+                effect,
+                ..Default::default()
+            },
         ],
         ..Default::default()
     }
@@ -4744,13 +5042,22 @@ pub fn gutwrencher_oni() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::If {
-                cond: Predicate::Not(Box::new(Predicate::SelectorExists(Selector::ControlledBy {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::HasCreatureType(CreatureType::Ogre),
-                }))),
-                then: Box::new(Effect::Discard { who: Selector::You, amount: Value::ONE, random: false }),
+                cond: Predicate::Not(Box::new(Predicate::SelectorExists(
+                    Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Ogre),
+                    },
+                ))),
+                then: Box::new(Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -4786,14 +5093,16 @@ pub fn jade_idol() -> CardDefinition {
         name: "Jade Idol",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::BecomeCreature {
-            what: Selector::This,
-            power: Value::Const(4),
-            toughness: Value::Const(4),
-            creature_types: vec![CreatureType::Spirit],
-            keywords: vec![],
-            duration: Duration::EndOfTurn,
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(
+            Effect::BecomeCreature {
+                what: Selector::This,
+                power: Value::Const(4),
+                toughness: Value::Const(4),
+                creature_types: vec![CreatureType::Spirit],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+        )],
         ..Default::default()
     }
 }
@@ -4839,7 +5148,9 @@ pub fn nine_ringed_bo() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+                Effect::ExileIfWouldDieThisTurn {
+                    what: Selector::Target(0),
+                },
                 Effect::DealDamage {
                     to: target_filtered(
                         SelectionRequirement::Creature
@@ -4914,7 +5225,10 @@ pub fn kuro_pitlord() -> CardDefinition {
         power: 9,
         toughness: 9,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::MayPay {
                 description: "Pay {B}{B}{B}{B} or sacrifice Kuro?".into(),
                 mana_cost: cost(&[b(), b(), b(), b()]),
@@ -4944,7 +5258,10 @@ pub fn strange_inversion() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
-        keywords: vec![Keyword::Splice(cost(&[generic(1), r()]), SpellSubtype::Arcane)],
+        keywords: vec![Keyword::Splice(
+            cost(&[generic(1), r()]),
+            SpellSubtype::Arcane,
+        )],
         effect: Effect::SwitchPT {
             what: target_filtered(SelectionRequirement::Creature),
             duration: Duration::EndOfTurn,
@@ -4962,8 +5279,15 @@ pub fn sift_through_sands() -> CardDefinition {
         card_types: vec![CardType::Instant],
         subtypes: arcane(),
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::ONE,
+                random: false,
+            },
         ]),
         ..Default::default()
     }
@@ -5006,10 +5330,19 @@ pub fn seizan_perverter_of_truth() -> CardDefinition {
         power: 6,
         toughness: 5,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::AnyPlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
             effect: Effect::Seq(vec![
-                Effect::LoseLife { who: Selector::Player(PlayerRef::ActivePlayer), amount: Value::Const(2) },
-                Effect::Draw { who: Selector::Player(PlayerRef::ActivePlayer), amount: Value::Const(2) },
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::ActivePlayer),
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::ActivePlayer),
+                    amount: Value::Const(2),
+                },
             ]),
         }],
         ..Default::default()
@@ -5079,7 +5412,10 @@ pub fn reito_lantern() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             effect: Effect::Move {
                 what: target_filtered(SelectionRequirement::InGraveyard),
-                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Bottom },
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: LibraryPosition::Bottom,
+                },
             },
             ..Default::default()
         }],
@@ -5241,7 +5577,9 @@ pub fn cleanfall() -> CardDefinition {
         subtypes: arcane(),
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Enchantment),
-            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
         },
         ..Default::default()
     }
@@ -5457,7 +5795,9 @@ pub fn bushi_tenderfoot() -> CardDefinition {
                     filter: SelectionRequirement::DamagedBySourceThisTurn,
                 },
             ),
-            effect: Effect::Flip { what: Selector::This },
+            effect: Effect::Flip {
+                what: Selector::This,
+            },
         }],
         flip_face: Some(Box::new(kenzo)),
         ..Default::default()
@@ -5484,7 +5824,10 @@ pub fn nezumi_graverobber() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             ..Default::default()
         }],
@@ -5500,13 +5843,17 @@ pub fn nezumi_graverobber() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
             effect: Effect::Seq(vec![
-                Effect::Exile { what: target_filtered(SelectionRequirement::InOpponentGraveyard) },
+                Effect::Exile {
+                    what: target_filtered(SelectionRequirement::InOpponentGraveyard),
+                },
                 Effect::If {
                     cond: Predicate::ValueEquals(
                         Value::GraveyardSizeOf(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                         Value::Const(0),
                     ),
-                    then: Box::new(Effect::Flip { what: Selector::This }),
+                    then: Box::new(Effect::Flip {
+                        what: Selector::This,
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             ]),
@@ -5578,7 +5925,9 @@ pub fn budoka_gardener() -> CardDefinition {
                 },
                 Effect::If {
                     cond: Predicate::ValueAtLeast(lands_you_control(), Value::Const(10)),
-                    then: Box::new(Effect::Flip { what: Selector::This }),
+                    then: Box::new(Effect::Flip {
+                        what: Selector::This,
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             ]),
@@ -5592,7 +5941,12 @@ pub fn budoka_gardener() -> CardDefinition {
 /// to the cards in your hand; "{B}, Sacrifice this: All creatures get -X/-X
 /// until end of turn, where X is the number of cards in your hand."
 pub fn kagemaro_first_to_suffer() -> CardDefinition {
-    let neg_hand = || Value::Diff(Box::new(Value::Const(0)), Box::new(Value::HandSizeOf(PlayerRef::You)));
+    let neg_hand = || {
+        Value::Diff(
+            Box::new(Value::Const(0)),
+            Box::new(Value::HandSizeOf(PlayerRef::You)),
+        )
+    };
     CardDefinition {
         name: "Kagemaro, First to Suffer",
         cost: cost(&[generic(3), b(), b()]),
@@ -5655,7 +6009,10 @@ pub fn call_to_glory() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Untap { what: yours(SelectionRequirement::Creature), up_to: None },
+            Effect::Untap {
+                what: yours(SelectionRequirement::Creature),
+                up_to: None,
+            },
             Effect::ForEach {
                 selector: yours(SelectionRequirement::HasCreatureType(CreatureType::Samurai)),
                 body: Box::new(Effect::PumpPT {
@@ -5800,7 +6157,10 @@ pub fn soramaro_first_to_dream() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4)]),
             bounce_other_filter: Some((SelectionRequirement::Land, 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -5865,9 +6225,13 @@ pub fn gale_force() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
-                SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
             ),
-            body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(5) }),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(5),
+            }),
         },
         ..Default::default()
     }

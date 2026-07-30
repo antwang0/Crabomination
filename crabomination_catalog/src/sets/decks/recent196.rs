@@ -29,7 +29,9 @@ pub fn slickshot_vault_buster() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Gets +2/+0 as long as you've committed a crime this turn.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::CommittedCrimeThisTurn { who: PlayerRef::You },
+                condition: Predicate::CommittedCrimeThisTurn {
+                    who: PlayerRef::You,
+                },
                 power: 2,
                 toughness: 0,
                 keywords: vec![],
@@ -83,7 +85,9 @@ pub fn throw_from_the_saddle() -> CardDefinition {
 pub fn shepherd_of_the_clouds() -> CardDefinition {
     let gy_target = || Selector::TargetFiltered {
         slot: 0,
-        filter: R::Permanent.and(R::InYourGraveyard).and(R::ManaValueAtMost(3)),
+        filter: R::Permanent
+            .and(R::InYourGraveyard)
+            .and(R::ManaValueAtMost(3)),
     };
     CardDefinition {
         name: "Shepherd of the Clouds",
@@ -104,7 +108,10 @@ pub fn shepherd_of_the_clouds() -> CardDefinition {
                 )),
                 then: Box::new(Effect::Move {
                     what: gy_target(),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 }),
                 else_: Box::new(Effect::Move {
                     what: gy_target(),

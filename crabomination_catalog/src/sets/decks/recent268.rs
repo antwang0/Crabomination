@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Aether Channeler — {2}{U} 2/1 Human Wizard. ETB, choose one: a 1/1 white
 /// flying Bird, bounce another nonland permanent, or draw a card.
@@ -19,7 +19,10 @@ pub fn aether_channeler() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     };
@@ -34,12 +37,21 @@ pub fn aether_channeler() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::ChooseMode(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: bird },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: bird,
+            },
             Effect::Move {
                 what: target_filtered(R::Nonland.and(R::OtherThanSource)),
-                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(
+                    0,
+                )))),
             },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]))],
         ..Default::default()
     }
@@ -54,7 +66,11 @@ pub fn aggressive_sabotage() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Kicker(cost(&[r()]))],
         effect: Effect::Seq(vec![
-            Effect::Discard { who: target_filtered(R::Player), amount: Value::Const(2), random: false },
+            Effect::Discard {
+                who: target_filtered(R::Player),
+                amount: Value::Const(2),
+                random: false,
+            },
             Effect::If {
                 cond: Predicate::SpellWasKicked,
                 then: Box::new(Effect::DealDamage {
@@ -76,7 +92,11 @@ pub fn argivian_phalanx() -> CardDefinition {
         cost: cost(&[generic(5), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Kor, CreatureType::Soldier],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Kor,
+                CreatureType::Soldier,
+            ],
             ..Default::default()
         },
         power: 4,
@@ -108,10 +128,16 @@ pub fn automatic_librarian() -> CardDefinition {
         name: "Automatic Librarian",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
         ..Default::default()
     }
 }
@@ -234,7 +260,10 @@ pub fn arms_of_hadar() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::PumpPT {
-            what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+            what: Selector::ControlledBy {
+                who: PlayerRef::Target(0),
+                filter: R::Creature,
+            },
             power: Value::Const(-2),
             toughness: Value::Const(-2),
             duration: Duration::EndOfTurn,

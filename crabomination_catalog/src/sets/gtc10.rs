@@ -13,12 +13,20 @@ use crate::effect::{Duration, PlayerRef, Predicate, Selector, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 
 /// "Bloodrush — {cost}, Discard this card: target attacking creature gets
 /// +power/+toughness and gains `extra`." (Local twin of gtc6's helper.)
-fn bloodrush(mana: crate::mana::ManaCost, power: i32, toughness: i32, extra: Vec<Keyword>) -> ActivatedAbility {
+fn bloodrush(
+    mana: crate::mana::ManaCost,
+    power: i32,
+    toughness: i32,
+    extra: Vec<Keyword>,
+) -> ActivatedAbility {
     let mut body = vec![Effect::PumpPT {
         what: target_filtered(R::Creature.and(R::IsAttacking)),
         power: Value::Const(power),
@@ -50,7 +58,12 @@ pub fn wrecking_ogre() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::DoubleStrike],
-        activated_abilities: vec![bloodrush(cost(&[generic(3), r(), r()]), 3, 3, vec![Keyword::DoubleStrike])],
+        activated_abilities: vec![bloodrush(
+            cost(&[generic(3), r(), r()]),
+            3,
+            3,
+            vec![Keyword::DoubleStrike],
+        )],
         ..Default::default()
     }
 }
@@ -84,7 +97,12 @@ pub fn incursion_specialist() -> CardDefinition {
 
 /// Up-to-one-target ETB body, filtered to a single opponent's objects.
 fn primordial_etb(filter: R, effect: Effect) -> TriggeredAbility {
-    etb(Effect::ApplyToTargets { max_targets: 1, min_targets: 0, filter, effect: Box::new(effect) })
+    etb(Effect::ApplyToTargets {
+        max_targets: 1,
+        min_targets: 0,
+        filter,
+        effect: Box::new(effect),
+    })
 }
 
 /// Molten Primordial — {5}{R}{R} 6/4 Avatar. Haste; ETB gain control of up to
@@ -102,9 +120,20 @@ pub fn molten_primordial() -> CardDefinition {
         triggered_abilities: vec![primordial_etb(
             R::Creature.and(R::ControlledByOpponent),
             Effect::Seq(vec![
-                Effect::GainControl { what: Selector::Target(0), to: None, duration: Duration::EndOfTurn },
-                Effect::Untap { what: Selector::Target(0), up_to: None },
-                Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                Effect::GainControl {
+                    what: Selector::Target(0),
+                    to: None,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Untap {
+                    what: Selector::Target(0),
+                    up_to: None,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
             ]),
         )],
         ..Default::default()
@@ -127,7 +156,10 @@ pub fn sepulchral_primordial() -> CardDefinition {
             R::Creature.and(R::InOpponentGraveyard),
             Effect::Move {
                 what: Selector::Target(0),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         )],
         ..Default::default()
@@ -154,7 +186,9 @@ pub fn luminate_primordial() -> CardDefinition {
                     who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                     amount: Value::PowerOf(Box::new(Selector::Target(0))),
                 },
-                Effect::Exile { what: Selector::Target(0) },
+                Effect::Exile {
+                    what: Selector::Target(0),
+                },
             ]),
         )],
         ..Default::default()
@@ -175,12 +209,19 @@ pub fn sylvan_primordial() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Destroy {
-                what: target_filtered(R::Permanent.and(R::Not(Box::new(R::Creature))).and(R::ControlledByOpponent)),
+                what: target_filtered(
+                    R::Permanent
+                        .and(R::Not(Box::new(R::Creature)))
+                        .and(R::ControlledByOpponent),
+                ),
             },
             Effect::Search {
                 who: PlayerRef::You,
                 filter: R::HasLandType(LandType::Forest),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
         ]))],
         ..Default::default()
@@ -206,7 +247,10 @@ pub fn treasury_thrull() -> CardDefinition {
                     what: target_filtered(
                         R::InYourGraveyard.and(R::Artifact.or(R::Creature).or(R::Enchantment)),
                     ),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             },
         ],
@@ -236,13 +280,18 @@ pub fn hellkite_tyrant() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
                 effect: Effect::If {
                     cond: Predicate::SelectorCountAtLeast {
                         sel: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
                         n: Value::Const(20),
                     },
-                    then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                    then: Box::new(Effect::WinGame {
+                        who: PlayerRef::You,
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             },

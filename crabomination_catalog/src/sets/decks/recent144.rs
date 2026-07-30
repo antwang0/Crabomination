@@ -39,7 +39,9 @@ pub fn icewrought_sentry() -> CardDefinition {
             on_attack(Effect::MayPay {
                 description: "pay {1}{U} to tap an opponent's creature".into(),
                 mana_cost: cost(&[generic(1), u()]),
-                body: Box::new(Effect::Tap { what: an_enemy_creature() }),
+                body: Box::new(Effect::Tap {
+                    what: an_enemy_creature(),
+                }),
                 else_: None,
             }),
             TriggeredAbility {
@@ -79,7 +81,9 @@ pub fn galvanic_giant() -> CardDefinition {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(Predicate::CastSpellMatches(R::ManaValueAtLeast(5))),
             effect: Effect::Seq(vec![
-                Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+                Effect::Tap {
+                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                },
                 Effect::AddCounter {
                     what: Selector::Target(0),
                     kind: CounterType::Stun,
@@ -92,8 +96,15 @@ pub fn galvanic_giant() -> CardDefinition {
             cost: cost(&[generic(5), u(), u()]),
             card_types: vec![CardType::Instant],
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(4) },
-                Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(4),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                    random: false,
+                },
             ]),
         })),
         ..Default::default()
@@ -108,7 +119,10 @@ pub fn aquatic_alchemist() -> CardDefinition {
         name: "Aquatic Alchemist",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
@@ -132,7 +146,10 @@ pub fn aquatic_alchemist() -> CardDefinition {
                         .or(R::HasCardType(CardType::Sorcery))
                         .and(R::InGraveyard),
                 ),
-                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: LibraryPosition::Top,
+                },
             },
         })),
         ..Default::default()
@@ -146,7 +163,10 @@ pub fn threadbind_clique() -> CardDefinition {
         name: "Threadbind Clique",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -154,7 +174,9 @@ pub fn threadbind_clique() -> CardDefinition {
             name: "Rip the Seams",
             cost: cost(&[generic(2), w()]),
             card_types: vec![CardType::Instant],
-            effect: Effect::Destroy { what: target_filtered(R::Creature.and(R::Tapped)) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::Tapped)),
+            },
         })),
         ..Default::default()
     }
@@ -173,7 +195,11 @@ pub fn twining_twins() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Vigilance,
+            Keyword::Ward(WardCost::Mana(cost(&[generic(1)]))),
+        ],
         adventure: Some(Box::new(Adventure {
             name: "Swift Spiral",
             cost: cost(&[generic(1), w()]),

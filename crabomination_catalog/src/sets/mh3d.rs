@@ -8,8 +8,10 @@ use crate::card::{
     Predicate, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{emerge, etb, on_cast, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest, ZoneRef};
-use crate::mana::{b, colorless, cost, g, generic, r, u, w, Color};
+use crate::effect::{
+    Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest, ZoneRef,
+};
+use crate::mana::{Color, b, colorless, cost, g, generic, r, u, w};
 
 /// Back for the MH3 mono-U modal DFC: "As this land enters, you may pay 3 life.
 /// If you don't, it enters tapped. {T}: Add {U}."
@@ -20,8 +22,13 @@ fn u_pain_land(name: &'static str) -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ChooseMode(vec![
-                Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
-                Effect::Tap { what: Selector::This },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+                Effect::Tap {
+                    what: Selector::This,
+                },
             ]),
         }],
         activated_abilities: vec![super::tap_add(Color::Blue)],
@@ -52,7 +59,9 @@ pub fn ugins_binding() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Exile Ugin's Binding from your graveyard to bounce all?".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Exile { what: Selector::This },
+                    Effect::Exile {
+                        what: Selector::This,
+                    },
                     Effect::Move {
                         what: Selector::EachMatching {
                             zone: ZoneRef::Battlefield,
@@ -77,7 +86,9 @@ pub fn abstruse_appropriation() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Devoid],
         effect: Effect::Seq(vec![
-            Effect::Exile { what: target_filtered(R::Permanent.and(R::Nonland)) },
+            Effect::Exile {
+                what: target_filtered(R::Permanent.and(R::Nonland)),
+            },
             Effect::GrantMayPlay {
                 what: Selector::Target(0),
                 duration: MayPlayDuration::WhileExiled,
@@ -108,7 +119,9 @@ pub fn expel_the_unworthy() -> CardDefinition {
             },
             Effect::If {
                 cond: Predicate::SpellWasKicked,
-                then: Box::new(Effect::Exile { what: target_filtered(R::Creature) }),
+                then: Box::new(Effect::Exile {
+                    what: target_filtered(R::Creature),
+                }),
                 else_: Box::new(Effect::Exile {
                     what: target_filtered(R::Creature.and(R::ManaValueAtMost(3))),
                 }),
@@ -138,7 +151,9 @@ pub fn twisted_riddlekeeper() -> CardDefinition {
             min_targets: 0,
             filter: R::Permanent,
             effect: Box::new(Effect::Seq(vec![
-                Effect::Tap { what: Selector::Target(0) },
+                Effect::Tap {
+                    what: Selector::Target(0),
+                },
                 Effect::AddCounter {
                     what: Selector::Target(0),
                     kind: CounterType::Stun,
@@ -159,14 +174,24 @@ pub fn depth_defiler() -> CardDefinition {
         to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
     };
     let draw_discard = Effect::Seq(vec![
-        Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-        Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        Effect::Discard {
+            who: Selector::You,
+            amount: Value::Const(1),
+            random: false,
+        },
     ]);
     CardDefinition {
         name: "Depth Defiler",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
         power: 3,
         toughness: 5,
         keywords: vec![Keyword::Devoid, Keyword::Kicker(cost(&[colorless(1)]))],
@@ -193,7 +218,10 @@ pub fn dog_umbra() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::UmbraArmor],
         effect: Effect::Attach {
             what: Selector::This,
-            to: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature,
+            },
         },
         ..Default::default()
     }
@@ -207,7 +235,10 @@ pub fn thief_of_existence() -> CardDefinition {
         name: "Thief of Existence",
         cost: cost(&[generic(1), colorless(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Devoid],
@@ -220,7 +251,9 @@ pub fn thief_of_existence() -> CardDefinition {
                 .and(R::ControlledByOpponent)
                 .and(R::ManaValueAtMost(4)),
             effect: Box::new(Effect::Seq(vec![
-                Effect::Exile { what: Selector::Target(0) },
+                Effect::Exile {
+                    what: Selector::Target(0),
+                },
                 Effect::GrantTriggeredAbility {
                     what: Selector::This,
                     trigger: Box::new(TriggeredAbility {
@@ -264,7 +297,9 @@ pub fn emperor_of_bones() -> CardDefinition {
                 max_targets: 1,
                 min_targets: 0,
                 filter: R::InGraveyard,
-                effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
+                effect: Box::new(Effect::Exile {
+                    what: Selector::Target(0),
+                }),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -290,7 +325,10 @@ pub fn amphibian_downpour() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Storm],
         effect: Effect::Attach {
             what: Selector::This,
-            to: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature,
+            },
         },
         equipped_bonus: Some(EquipBonus {
             set_base_pt: Some((1, 1)),
@@ -329,7 +367,10 @@ pub fn herigast_erupting_nullkite() -> CardDefinition {
                         filter: R::Any,
                     },
                 },
-                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
             ])),
         })],
         ..Default::default()
@@ -353,11 +394,12 @@ pub fn ondu_knotmaster() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::IsModified,
-                }),
+                },
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -387,7 +429,10 @@ pub fn hydroelectric_specimen() -> CardDefinition {
         name: "Hydroelectric Specimen",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Weird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Weird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Flash],
@@ -395,9 +440,11 @@ pub fn hydroelectric_specimen() -> CardDefinition {
             description: "Change the target of an instant or sorcery to Hydroelectric Specimen?"
                 .into(),
             body: Box::new(Effect::RedirectSpellTargetToSelf {
-                what: target_filtered(R::IsSpellOnStack.and(
-                    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
-                )),
+                what: target_filtered(
+                    R::IsSpellOnStack.and(
+                        R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    ),
+                ),
             }),
         })],
         back_face: Some(Box::new(u_pain_land("Hydroelectric Laboratory"))),
@@ -428,7 +475,9 @@ pub fn eladamri_korvecdal() -> CardDefinition {
             },
             StaticAbility {
                 description: "You may cast creature spells from the top of your library.",
-                effect: StaticEffect::PlayFromLibraryTop { filter: R::Creature },
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: R::Creature,
+                },
             },
         ],
         ..Default::default()
@@ -459,12 +508,17 @@ pub fn party_thrasher() -> CardDefinition {
                 description: "Discard a card to dig two?".into(),
                 mana_cost: cost(&[]),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
                     Effect::ExileTopAndGrantMayPlay {
                         who: PlayerRef::You,
                         count: Value::Const(2),
                         duration: MayPlayDuration::EndOfThisTurn,
-                        pay_any_color: true, pay_own_cost: false,
+                        pay_any_color: true,
+                        pay_own_cost: false,
                         uncast_penalty: None,
                     },
                 ])),
@@ -484,7 +538,9 @@ fn dual_tapland(name: &'static str, a: Color, b: Color) -> CardDefinition {
         card_types: vec![CardType::Land],
         static_abilities: vec![StaticAbility {
             description: "This land enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -505,12 +561,23 @@ pub fn suppression_ray() -> CardDefinition {
     use crate::mana::hybrid;
     CardDefinition {
         name: "Suppression Ray",
-        cost: cost(&[generic(3), hybrid(Color::White, Color::Blue), hybrid(Color::White, Color::Blue)]),
+        cost: cost(&[
+            generic(3),
+            hybrid(Color::White, Color::Blue),
+            hybrid(Color::White, Color::Blue),
+        ]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Tap {
-            what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+            what: Selector::ControlledBy {
+                who: PlayerRef::Target(0),
+                filter: R::Creature,
+            },
         },
-        back_face: Some(Box::new(dual_tapland("Orderly Plaza", Color::White, Color::Blue))),
+        back_face: Some(Box::new(dual_tapland(
+            "Orderly Plaza",
+            Color::White,
+            Color::Blue,
+        ))),
         ..Default::default()
     }
 }
@@ -534,10 +601,15 @@ pub fn bloodsoaked_insight() -> CardDefinition {
             who: PlayerRef::Target(0),
             count: Value::Const(3),
             duration: MayPlayDuration::EndOfControllersNextTurn,
-            pay_any_color: true, pay_own_cost: false,
+            pay_any_color: true,
+            pay_own_cost: false,
             uncast_penalty: None,
         },
-        back_face: Some(Box::new(dual_tapland("Sanguine Morass", Color::Black, Color::Red))),
+        back_face: Some(Box::new(dual_tapland(
+            "Sanguine Morass",
+            Color::Black,
+            Color::Red,
+        ))),
         ..Default::default()
     }
 }
@@ -557,8 +629,12 @@ pub fn collective_resistance() -> CardDefinition {
                 otherwise: Box::new(Effect::Noop),
             }),
             modes: vec![
-                Effect::Destroy { what: target_filtered(R::Artifact) },
-                Effect::Destroy { what: target_filtered(R::Enchantment) },
+                Effect::Destroy {
+                    what: target_filtered(R::Artifact),
+                },
+                Effect::Destroy {
+                    what: target_filtered(R::Enchantment),
+                },
                 Effect::Seq(vec![
                     Effect::GrantKeyword {
                         what: target_filtered(R::Creature),
@@ -613,7 +689,10 @@ pub fn genku_future_shaper() -> CardDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Fox], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fox],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Vigilance],
         ..Default::default()
     };
@@ -623,7 +702,10 @@ pub fn genku_future_shaper() -> CardDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Moonfolk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Moonfolk],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     };
@@ -633,11 +715,18 @@ pub fn genku_future_shaper() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Lifelink],
         ..Default::default()
     };
-    let mk = |def| Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: def };
+    let mk = |def| Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::ONE,
+        definition: def,
+    };
     CardDefinition {
         name: "Genku, Future Shaper",
         cost: cost(&[generic(2), w(), u()]),
@@ -650,11 +739,14 @@ pub fn genku_future_shaper() -> CardDefinition {
         power: 2,
         toughness: 5,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::NotToken,
-                }),
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::AnotherOfYours,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::NotToken,
+            }),
             effect: Effect::ChooseMode(vec![mk(fox), mk(moonfolk), mk(rat)]),
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -685,11 +777,17 @@ pub fn charitable_levy() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Noncreature spells cost {1} more to cast.",
-            effect: StaticEffect::AdditionalCostAfterFirstSpell { filter: R::Noncreature, amount: 1 },
+            effect: StaticEffect::AdditionalCostAfterFirstSpell {
+                filter: R::Noncreature,
+                amount: 1,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Noncreature },
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Noncreature,
+                },
             ),
             effect: Effect::Seq(vec![
                 Effect::AddCounter {
@@ -698,15 +796,24 @@ pub fn charitable_levy() -> CardDefinition {
                     amount: Value::ONE,
                 },
                 Effect::If {
-                    cond: Predicate::SourceHasCountersAtLeast { counter: CounterType::Growth, n: 3 },
+                    cond: Predicate::SourceHasCountersAtLeast {
+                        counter: CounterType::Growth,
+                        n: 3,
+                    },
                     // Draw + fetch before the sacrifice so the source leaving
                     // play doesn't cut the rest of the sequence short.
                     then: Box::new(Effect::Seq(vec![
-                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::ONE,
+                        },
                         Effect::Search {
                             who: PlayerRef::You,
                             filter: R::HasLandType(LandType::Plains),
-                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::You,
+                                tapped: true,
+                            },
                         },
                         Effect::SacrificeSource,
                     ])),

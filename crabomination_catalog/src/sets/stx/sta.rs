@@ -6,11 +6,11 @@
 
 use crate::card::{
     AdditionalCastCost, AlternativeCost, CardDefinition, CardType, Effect, Keyword, Predicate,
-    Selector, SelectionRequirement, Value, Zone,
+    SelectionRequirement, Selector, Value, Zone,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, RevealMissDest, ZoneDest, ZoneRef};
-use crate::mana::{b, cost, g, generic, r, u, x, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, x};
 
 // ── Infuriate ────────────────────────────────────────────────────────────────
 
@@ -74,7 +74,10 @@ pub fn abundant_harvest() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseN {
             picks: vec![0],
-            modes: vec![dig(SelectionRequirement::Land), dig(SelectionRequirement::Nonland)],
+            modes: vec![
+                dig(SelectionRequirement::Land),
+                dig(SelectionRequirement::Nonland),
+            ],
         },
         ..Default::default()
     }
@@ -90,11 +93,20 @@ pub fn urzas_rage() -> CardDefinition {
         name: "Urza's Rage",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
-        keywords: vec![Keyword::CantBeCountered, Keyword::Kicker(cost(&[generic(8), r()]))],
+        keywords: vec![
+            Keyword::CantBeCountered,
+            Keyword::Kicker(cost(&[generic(8), r()])),
+        ],
         effect: Effect::If {
             cond: Predicate::SpellWasKicked,
-            then: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(10) }),
-            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) }),
+            then: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(10),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(3),
+            }),
         },
         ..Default::default()
     }
@@ -111,13 +123,18 @@ pub fn natural_order() -> CardDefinition {
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Sorcery],
         additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
-            filter: SelectionRequirement::Creature.and(SelectionRequirement::HasColor(Color::Green)),
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::HasColor(Color::Green)),
             count: 1,
         }],
         effect: Effect::Search {
             who: PlayerRef::You,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            filter: SelectionRequirement::Creature.and(SelectionRequirement::HasColor(Color::Green)),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::HasColor(Color::Green)),
         },
         ..Default::default()
     }
@@ -132,7 +149,9 @@ pub fn tainted_pact() -> CardDefinition {
         name: "Tainted Pact",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ExileUntilDuplicateName { who: PlayerRef::You },
+        effect: Effect::ExileUntilDuplicateName {
+            who: PlayerRef::You,
+        },
         ..Default::default()
     }
 }
@@ -176,7 +195,10 @@ pub fn mizzixs_mastery() -> CardDefinition {
                     filter: is_filter.clone(),
                 },
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                    Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Exile,
+                    },
                     free_cast(Selector::TriggerSource),
                 ])),
             }),

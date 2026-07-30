@@ -11,7 +11,7 @@ use crate::effect::shortcut::{
     etb, etb_draw, on_attack, on_attack_drain, on_attack_gain_life, on_dies, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, generic, g, hybrid, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, u, w};
 
 /// A 1/1 colorless Hero token (FIN).
 fn hero_token() -> TokenDefinition {
@@ -20,7 +20,10 @@ fn hero_token() -> TokenDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Hero], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hero],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -33,7 +36,10 @@ fn rabbit_token() -> TokenDefinition {
         toughness: 1,
         colors: vec![Color::White],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rabbit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rabbit],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -50,7 +56,10 @@ fn creature(
         name,
         cost: cst,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -61,8 +70,11 @@ fn creature(
 /// Brightblade Stoat — {1}{W} 2/2 Weasel Soldier, first strike + lifelink.
 pub fn brightblade_stoat() -> CardDefinition {
     creature(
-        "Brightblade Stoat", cost(&[generic(1), w()]),
-        vec![CreatureType::Weasel, CreatureType::Soldier], 2, 2,
+        "Brightblade Stoat",
+        cost(&[generic(1), w()]),
+        vec![CreatureType::Weasel, CreatureType::Soldier],
+        2,
+        2,
         vec![Keyword::FirstStrike, Keyword::Lifelink],
     )
 }
@@ -70,8 +82,11 @@ pub fn brightblade_stoat() -> CardDefinition {
 /// Shrike Force — {2}{W} 1/3 Bird Knight, flying + double strike + vigilance.
 pub fn shrike_force() -> CardDefinition {
     creature(
-        "Shrike Force", cost(&[generic(2), w()]),
-        vec![CreatureType::Bird, CreatureType::Knight], 1, 3,
+        "Shrike Force",
+        cost(&[generic(2), w()]),
+        vec![CreatureType::Bird, CreatureType::Knight],
+        1,
+        3,
         vec![Keyword::Flying, Keyword::DoubleStrike, Keyword::Vigilance],
     )
 }
@@ -82,8 +97,14 @@ pub fn pond_prophet() -> CardDefinition {
         triggered_abilities: vec![etb_draw(1)],
         ..creature(
             "Pond Prophet",
-            cost(&[hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
-            vec![CreatureType::Frog, CreatureType::Advisor], 1, 1, vec![],
+            cost(&[
+                hybrid(Color::Green, Color::Blue),
+                hybrid(Color::Green, Color::Blue),
+            ]),
+            vec![CreatureType::Frog, CreatureType::Advisor],
+            1,
+            1,
+            vec![],
         )
     }
 }
@@ -97,8 +118,12 @@ pub fn hecteyes() -> CardDefinition {
             random: false,
         })],
         ..creature(
-            "Hecteyes", cost(&[generic(1), crate::mana::b()]),
-            vec![CreatureType::Ooze, CreatureType::Horror], 1, 1, vec![],
+            "Hecteyes",
+            cost(&[generic(1), crate::mana::b()]),
+            vec![CreatureType::Ooze, CreatureType::Horror],
+            1,
+            1,
+            vec![],
         )
     }
 }
@@ -109,8 +134,15 @@ pub fn moonrise_cleric() -> CardDefinition {
         triggered_abilities: vec![on_attack_gain_life(1)],
         ..creature(
             "Moonrise Cleric",
-            cost(&[generic(1), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
-            vec![CreatureType::Bat, CreatureType::Cleric], 2, 3, vec![Keyword::Flying],
+            cost(&[
+                generic(1),
+                hybrid(Color::White, Color::Black),
+                hybrid(Color::White, Color::Black),
+            ]),
+            vec![CreatureType::Bat, CreatureType::Cleric],
+            2,
+            3,
+            vec![Keyword::Flying],
         )
     }
 }
@@ -121,8 +153,12 @@ pub fn agate_blade_assassin() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![on_attack_drain(1)],
         ..creature(
-            "Agate-Blade Assassin", cost(&[generic(1), crate::mana::b()]),
-            vec![CreatureType::Lizard, CreatureType::Assassin], 1, 3, vec![],
+            "Agate-Blade Assassin",
+            cost(&[generic(1), crate::mana::b()]),
+            vec![CreatureType::Lizard, CreatureType::Assassin],
+            1,
+            3,
+            vec![],
         )
     }
 }
@@ -144,7 +180,14 @@ pub fn gigantoad() -> CardDefinition {
                 keywords: vec![],
             },
         }],
-        ..creature("Gigantoad", cost(&[generic(3), g()]), vec![CreatureType::Frog], 4, 4, vec![])
+        ..creature(
+            "Gigantoad",
+            cost(&[generic(3), g()]),
+            vec![CreatureType::Frog],
+            4,
+            4,
+            vec![],
+        )
     }
 }
 
@@ -166,7 +209,14 @@ pub fn loporrit_scout() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        ..creature("Loporrit Scout", cost(&[generic(2), g()]), vec![CreatureType::Rabbit, CreatureType::Scout], 3, 2, vec![])
+        ..creature(
+            "Loporrit Scout",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Rabbit, CreatureType::Scout],
+            3,
+            2,
+            vec![],
+        )
     }
 }
 
@@ -181,8 +231,15 @@ pub fn head_of_the_homestead() -> CardDefinition {
         })],
         ..creature(
             "Head of the Homestead",
-            cost(&[generic(3), hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White)]),
-            vec![CreatureType::Rabbit, CreatureType::Citizen], 3, 2, vec![],
+            cost(&[
+                generic(3),
+                hybrid(Color::Green, Color::White),
+                hybrid(Color::Green, Color::White),
+            ]),
+            vec![CreatureType::Rabbit, CreatureType::Citizen],
+            3,
+            2,
+            vec![],
         )
     }
 }
@@ -196,7 +253,14 @@ pub fn dragoons_wyvern() -> CardDefinition {
             count: Value::Const(1),
             definition: hero_token(),
         })],
-        ..creature("Dragoon's Wyvern", cost(&[generic(2), u()]), vec![CreatureType::Drake], 2, 1, vec![Keyword::Flying])
+        ..creature(
+            "Dragoon's Wyvern",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Drake],
+            2,
+            1,
+            vec![Keyword::Flying],
+        )
     }
 }
 
@@ -209,7 +273,14 @@ pub fn dwarven_castle_guard() -> CardDefinition {
             count: Value::Const(1),
             definition: hero_token(),
         })],
-        ..creature("Dwarven Castle Guard", cost(&[generic(1), w()]), vec![CreatureType::Dwarf, CreatureType::Soldier], 2, 1, vec![])
+        ..creature(
+            "Dwarven Castle Guard",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Dwarf, CreatureType::Soldier],
+            2,
+            1,
+            vec![],
+        )
     }
 }
 
@@ -220,13 +291,22 @@ pub fn coeurl() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(1), w()]),
             effect: Effect::Tap {
-                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::Not(
-                    Box::new(SelectionRequirement::HasCardType(CardType::Enchantment)),
-                ))),
+                what: target_filtered(SelectionRequirement::Creature.and(
+                    SelectionRequirement::Not(Box::new(SelectionRequirement::HasCardType(
+                        CardType::Enchantment,
+                    ))),
+                )),
             },
             ..Default::default()
         }],
-        ..creature("Coeurl", cost(&[generic(1), w()]), vec![CreatureType::Cat, CreatureType::Beast], 2, 2, vec![])
+        ..creature(
+            "Coeurl",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Cat, CreatureType::Beast],
+            2,
+            2,
+            vec![],
+        )
     }
 }
 
@@ -240,12 +320,18 @@ pub fn ahriman() -> CardDefinition {
                 SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
                 1,
             )),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..creature(
-            "Ahriman", cost(&[generic(2), b()]),
-            vec![CreatureType::Eye, CreatureType::Horror], 2, 2,
+            "Ahriman",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Eye, CreatureType::Horror],
+            2,
+            2,
             vec![Keyword::Flying, Keyword::Deathtouch],
         )
     }
@@ -269,7 +355,14 @@ pub fn gaelicat() -> CardDefinition {
                 keywords: vec![],
             },
         }],
-        ..creature("Gaelicat", cost(&[generic(2), w()]), vec![CreatureType::Cat], 1, 3, vec![Keyword::Flying, Keyword::Vigilance])
+        ..creature(
+            "Gaelicat",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Cat],
+            1,
+            3,
+            vec![Keyword::Flying, Keyword::Vigilance],
+        )
     }
 }
 
@@ -292,7 +385,14 @@ pub fn scorpion_sentinel() -> CardDefinition {
                 keywords: vec![],
             },
         }],
-        ..creature("Scorpion Sentinel", cost(&[generic(1), u()]), vec![CreatureType::Robot, CreatureType::Scorpion], 1, 4, vec![])
+        ..creature(
+            "Scorpion Sentinel",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Robot, CreatureType::Scorpion],
+            1,
+            4,
+            vec![],
+        )
     }
 }
 
@@ -304,7 +404,14 @@ pub fn thistledown_players() -> CardDefinition {
             what: target_filtered(SelectionRequirement::Nonland),
             up_to: None,
         })],
-        ..creature("Thistledown Players", cost(&[generic(2), w()]), vec![CreatureType::Mouse, CreatureType::Bard], 3, 3, vec![])
+        ..creature(
+            "Thistledown Players",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Mouse, CreatureType::Bard],
+            3,
+            3,
+            vec![],
+        )
     }
 }
 
@@ -324,7 +431,14 @@ pub fn warren_elder() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..creature("Warren Elder", cost(&[generic(1), w()]), vec![CreatureType::Rabbit, CreatureType::Cleric], 2, 2, vec![])
+        ..creature(
+            "Warren Elder",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Rabbit, CreatureType::Cleric],
+            2,
+            2,
+            vec![],
+        )
     }
 }
 
@@ -338,15 +452,32 @@ pub fn jumbo_cactuar() -> CardDefinition {
             toughness: Value::Const(0),
             duration: Duration::EndOfTurn,
         })],
-        ..creature("Jumbo Cactuar", cost(&[generic(5), g(), g()]), vec![CreatureType::Plant], 1, 7, vec![])
+        ..creature(
+            "Jumbo Cactuar",
+            cost(&[generic(5), g(), g()]),
+            vec![CreatureType::Plant],
+            1,
+            7,
+            vec![],
+        )
     }
 }
 
 /// Outlaw Medic — {1}{W} 1/3 Human Rogue, lifelink. When it dies, draw a card.
 pub fn outlaw_medic() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_dies(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
-        ..creature("Outlaw Medic", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Rogue], 1, 3, vec![Keyword::Lifelink])
+        triggered_abilities: vec![on_dies(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        ..creature(
+            "Outlaw Medic",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Human, CreatureType::Rogue],
+            1,
+            3,
+            vec![Keyword::Lifelink],
+        )
     }
 }
 
@@ -363,7 +494,14 @@ pub fn sterling_supplier() -> CardDefinition {
             kind: crate::card::CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        ..creature("Sterling Supplier", cost(&[generic(4), w()]), vec![CreatureType::Bird, CreatureType::Soldier], 3, 4, vec![Keyword::Flying])
+        ..creature(
+            "Sterling Supplier",
+            cost(&[generic(4), w()]),
+            vec![CreatureType::Bird, CreatureType::Soldier],
+            3,
+            4,
+            vec![Keyword::Flying],
+        )
     }
 }
 
@@ -377,7 +515,14 @@ pub fn shrieking_drake() -> CardDefinition {
             ),
             to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         })],
-        ..creature("Shrieking Drake", cost(&[u()]), vec![CreatureType::Drake], 1, 1, vec![Keyword::Flying])
+        ..creature(
+            "Shrieking Drake",
+            cost(&[u()]),
+            vec![CreatureType::Drake],
+            1,
+            1,
+            vec![Keyword::Flying],
+        )
     }
 }
 
@@ -386,13 +531,26 @@ pub fn shrieking_drake() -> CardDefinition {
 pub fn oasis_gardener() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
-        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
             ..Default::default()
         }],
-        ..creature("Oasis Gardener", cost(&[generic(3)]), vec![CreatureType::Scarecrow], 2, 2, vec![])
+        ..creature(
+            "Oasis Gardener",
+            cost(&[generic(3)]),
+            vec![CreatureType::Scarecrow],
+            2,
+            2,
+            vec![],
+        )
     }
 }
 
@@ -403,10 +561,24 @@ pub fn discerning_peddler() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "discard a card, then draw a card".into(),
             body: Box::new(Effect::Seq(vec![
-                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ])),
         })],
-        ..creature("Discerning Peddler", cost(&[generic(1), crate::mana::r()]), vec![CreatureType::Human, CreatureType::Rogue], 2, 2, vec![])
+        ..creature(
+            "Discerning Peddler",
+            cost(&[generic(1), crate::mana::r()]),
+            vec![CreatureType::Human, CreatureType::Rogue],
+            2,
+            2,
+            vec![],
+        )
     }
 }

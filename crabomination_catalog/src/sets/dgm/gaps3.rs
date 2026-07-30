@@ -10,7 +10,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// A 1/1 red-and-white Soldier with haste (Blaze Commando's token).
 fn boros_soldier() -> TokenDefinition {
@@ -53,7 +53,10 @@ pub fn blaze_commando() -> CardDefinition {
 }
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 
 /// Showstopper — {1}{B}{R} Instant. Until end of turn, creatures you control
@@ -72,7 +75,10 @@ pub fn showstopper() -> CardDefinition {
         cost: cost(&[generic(1), b(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::GrantTriggeredAbility {
-            what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+            what: Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: R::Creature,
+            },
             trigger: Box::new(death),
             duration: Duration::EndOfTurn,
         },
@@ -104,9 +110,14 @@ pub fn teysa_envoy_of_ghosts() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::ProtectionFromCreatures],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::ControllerDealtCombatDamage, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::ControllerDealtCombatDamage,
+                EventScope::SelfSource,
+            ),
             effect: Effect::Seq(vec![
-                Effect::Destroy { what: Selector::TriggerSource },
+                Effect::Destroy {
+                    what: Selector::TriggerSource,
+                },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
@@ -156,7 +167,10 @@ pub fn breaking_entering() -> CardDefinition {
                 effect: Effect::Seq(vec![
                     Effect::Move {
                         what: target_filtered(R::Creature.and(R::InGraveyard)),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                     Effect::GrantKeyword {
                         what: Selector::Target(0),
@@ -257,9 +271,17 @@ pub fn ral_zarek() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
-                    Effect::Tap { what: Selector::TargetFiltered { slot: 0, filter: R::Permanent } },
+                    Effect::Tap {
+                        what: Selector::TargetFiltered {
+                            slot: 0,
+                            filter: R::Permanent,
+                        },
+                    },
                     Effect::Untap {
-                        what: Selector::TargetFiltered { slot: 1, filter: R::Permanent },
+                        what: Selector::TargetFiltered {
+                            slot: 1,
+                            filter: R::Permanent,
+                        },
                         up_to: None,
                     },
                 ]),
@@ -267,7 +289,10 @@ pub fn ral_zarek() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -2,
-                effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+                effect: Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::Const(3),
+                },
                 ..Default::default()
             },
             LoyaltyAbility {
@@ -296,7 +321,10 @@ pub fn deadbridge_chant() -> CardDefinition {
         cost: cost(&[generic(4), b(), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
-            etb(Effect::Mill { who: Selector::Player(PlayerRef::You), amount: Value::Const(10) }),
+            etb(Effect::Mill {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(10),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(TurnStep::Upkeep),
@@ -332,7 +360,9 @@ pub fn council_of_the_absolute() -> CardDefinition {
                 effect: StaticEffect::NamedSpellCostReduction { amount: 2 },
             },
         ],
-        triggered_abilities: vec![etb(Effect::NameCard { what: Selector::This })],
+        triggered_abilities: vec![etb(Effect::NameCard {
+            what: Selector::This,
+        })],
         ..Default::default()
     }
 }

@@ -9,7 +9,7 @@ use crate::card::{
     MayPlayDuration, SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, Color};
+use crate::mana::{Color, b, cost, g, generic, r};
 
 /// A 2/1 green Varmint token.
 fn varmint_token() -> TokenDefinition {
@@ -17,7 +17,10 @@ fn varmint_token() -> TokenDefinition {
         name: "Varmint".to_string(),
         colors: vec![Color::Green],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Varmint], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Varmint],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         ..Default::default()
@@ -34,7 +37,10 @@ pub fn map_the_frontier() -> CardDefinition {
         effect: Effect::SearchUpToN {
             who: PlayerRef::You,
             filter: R::IsBasicLand.or(R::HasLandType(LandType::Desert)),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: true,
+            },
             count: Value::Const(2),
         },
         ..Default::default()
@@ -55,7 +61,10 @@ pub fn neutralize_the_guards() -> CardDefinition {
                 toughness: Value::Const(-1),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -71,7 +80,10 @@ pub fn rise_of_the_varmints() -> CardDefinition {
         plot_cost: Some(cost(&[generic(2), g()])),
         effect: Effect::CreateToken {
             who: PlayerRef::You,
-            count: Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature },
+            count: Value::CardsInGraveyardMatching {
+                who: PlayerRef::You,
+                filter: R::Creature,
+            },
             definition: varmint_token(),
         },
         ..Default::default()

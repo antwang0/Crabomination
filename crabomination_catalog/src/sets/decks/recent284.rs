@@ -8,7 +8,9 @@ use crate::card::{
     Predicate, SelectionRequirement as R, Subtypes,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility, Value};
+use crate::effect::{
+    Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility, Value,
+};
 use crate::mana::{cost, g, generic, u};
 
 /// Scrapshooter — {1}{G}{G} 4/4 Raccoon Archer. Reach. Gift a card. When it
@@ -28,12 +30,18 @@ pub fn scrapshooter() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         // Creatures don't resolve a `gifted_effect`; the gift enables the
         // promise UI and the payload is folded into the gift-gated ETB.
-        gift: Some(Box::new(Gift { label: "a card", gifted_effect: Effect::Noop })),
+        gift: Some(Box::new(Gift {
+            label: "a card",
+            gifted_effect: Effect::Noop,
+        })),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
                 .with_filter(Predicate::SourceGiftPromised),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::ONE,
+                },
                 Effect::Destroy {
                     what: target_filtered(
                         (R::Artifact.or(R::Enchantment)).and(R::ControlledByOpponent),
@@ -58,8 +66,14 @@ pub fn kitnap() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        gift: Some(Box::new(Gift { label: "a card", gifted_effect: Effect::Noop })),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        gift: Some(Box::new(Gift {
+            label: "a card",
+            gifted_effect: Effect::Noop,
+        })),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::GainControlWhileSourceRemains { what: enchanted() },
             Effect::Tap { what: enchanted() },

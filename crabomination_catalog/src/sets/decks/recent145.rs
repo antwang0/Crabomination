@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::on_attack;
 use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, ZoneRef};
-use crate::mana::{cost, generic, r, u, w, Color};
+use crate::mana::{Color, cost, generic, r, u, w};
 
 /// 4/4 white-and-blue Elemental token (Hylda's first mode).
 fn elemental_token() -> crate::card::TokenDefinition {
@@ -18,7 +18,10 @@ fn elemental_token() -> crate::card::TokenDefinition {
         toughness: 4,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White, Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -62,8 +65,14 @@ pub fn hylda_of_the_icy_crown() -> CardDefinition {
                         amount: Value::ONE,
                     },
                     Effect::Seq(vec![
-                        Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::Scry {
+                            who: PlayerRef::You,
+                            amount: Value::Const(2),
+                        },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::ONE,
+                        },
                     ]),
                 ])),
                 else_: None,
@@ -89,7 +98,9 @@ pub fn ash_party_crasher() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![on_attack(Effect::If {
-            cond: Predicate::CelebrationActive { who: PlayerRef::You },
+            cond: Predicate::CelebrationActive {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,

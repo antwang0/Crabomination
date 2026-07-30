@@ -20,8 +20,12 @@ pub fn split_up() -> CardDefinition {
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseMode(vec![
-            Effect::Destroy { what: Selector::EachPermanent(R::Creature.and(R::Tapped)) },
-            Effect::Destroy { what: Selector::EachPermanent(R::Creature.and(R::Untapped)) },
+            Effect::Destroy {
+                what: Selector::EachPermanent(R::Creature.and(R::Tapped)),
+            },
+            Effect::Destroy {
+                what: Selector::EachPermanent(R::Creature.and(R::Untapped)),
+            },
         ]),
         ..Default::default()
     }
@@ -43,7 +47,9 @@ pub fn strongbox_raider() -> CardDefinition {
         power: 5,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
+            cond: Predicate::PlayerAttackedThisTurn {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(2),
@@ -74,8 +80,13 @@ pub fn fireglass_mentor() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::PostCombatMain), EventScope::YourControl)
-                .with_filter(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::PostCombatMain),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::PlayerLostLifeThisTurn {
+                who: PlayerRef::EachOpponent,
+            }),
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(2),

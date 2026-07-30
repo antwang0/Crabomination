@@ -8,15 +8,18 @@ use crate::card::{
     EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
     StaticAbility, Subtypes, Supertype, TriggeredAbility,
 };
-use crate::effect::{
-    Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
-};
 use crate::effect::ManaPayload;
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color, ManaCost, ManaSymbol, SpendRestriction};
+use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
+use crate::mana::{
+    Color, ManaCost, ManaSymbol, SpendRestriction, b, cost, g, generic, hybrid, r, u, w,
+};
 use crate::sets::tap_add;
 
 fn target_creature() -> Selector {
-    Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature }
+    Selector::TargetFiltered {
+        slot: 0,
+        filter: SelectionRequirement::Creature,
+    }
 }
 
 /// Darksteel Garrison — {2} Artifact — Fortification. Fortified land has
@@ -109,7 +112,10 @@ pub fn wheel_of_fate() -> CardDefinition {
                 amount: Value::Const(100),
                 random: false,
             },
-            Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(7) },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(7),
+            },
         ]),
         ..Default::default()
     }
@@ -139,7 +145,10 @@ pub fn hypergenesis() -> CardDefinition {
                     )),
                 ),
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::OwnerOfMoved,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -194,7 +203,9 @@ pub fn wanderwine_hub() -> CardDefinition {
             effect: Effect::IfRevealFromHand {
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Merfolk),
                 then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap { what: Selector::This }),
+                else_: Box::new(Effect::Tap {
+                    what: Selector::This,
+                }),
             },
         }],
         ..Default::default()
@@ -213,7 +224,10 @@ pub fn shriekhorn() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             remove_counter_cost: Some((CounterType::Charge, 1)),
-            effect: Effect::Mill { who: Selector::Target(0), amount: Value::Const(2) },
+            effect: Effect::Mill {
+                who: Selector::Target(0),
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -235,7 +249,11 @@ pub fn emrakul_the_promised_end() -> CardDefinition {
         },
         power: 13,
         toughness: 13,
-        keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::ProtectionFromInstants],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Trample,
+            Keyword::ProtectionFromInstants,
+        ],
         static_abilities: vec![StaticAbility {
             description: "This spell costs {1} less to cast for each card type among cards in your graveyard.",
             effect: StaticEffect::SelfCostReducedPerCardTypeInGraveyard,
@@ -252,7 +270,10 @@ pub fn worldspine_wurm() -> CardDefinition {
         name: "Worldspine Wurm",
         cost: cost(&[generic(8), g(), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
         power: 15,
         toughness: 15,
         keywords: vec![Keyword::Trample],
@@ -268,25 +289,26 @@ pub fn worldspine_wurm() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(3),
-                definition: TokenDefinition {
-                    name: "Wurm".into(),
-                    power: 5,
-                    toughness: 5,
-                    colors: vec![Color::Green],
-                    card_types: vec![CardType::Creature],
-                    keywords: vec![Keyword::Trample],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Wurm],
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    definition: TokenDefinition {
+                        name: "Wurm".into(),
+                        power: 5,
+                        toughness: 5,
+                        colors: vec![Color::Green],
+                        card_types: vec![CardType::Creature],
+                        keywords: vec![Keyword::Trample],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Wurm],
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
                 },
             },
-        }],
+        ],
         ..Default::default()
     }
 }
@@ -341,7 +363,10 @@ pub fn proclamation_of_rebirth() -> CardDefinition {
                 }),
                 count: Box::new(Value::Const(3)),
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         activated_abilities: vec![crate::effect::shortcut::forecast(
             cost(&[generic(5), w()]),
@@ -354,7 +379,10 @@ pub fn proclamation_of_rebirth() -> CardDefinition {
                     }),
                     count: Box::new(Value::Const(1)),
                 },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         )],
         ..Default::default()
@@ -383,7 +411,9 @@ pub fn prismatic_omen() -> CardDefinition {
 /// Norin the Wary — {R} 2/1 Legendary Human Warrior. Any spell cast or
 /// creature attacking exiles him until the next end step.
 pub fn norin_the_wary() -> CardDefinition {
-    let dodge = Effect::ExileReturnNextEndStep { what: Selector::This };
+    let dodge = Effect::ExileReturnNextEndStep {
+        what: Selector::This,
+    };
     CardDefinition {
         name: "Norin the Wary",
         cost: cost(&[r()]),
@@ -418,8 +448,8 @@ pub fn genesis_chamber() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
-                .with_filter(Predicate::All(vec![
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::All(vec![
                     Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::Creature.and(SelectionRequirement::Not(
@@ -430,7 +460,8 @@ pub fn genesis_chamber() -> CardDefinition {
                         what: Selector::This,
                         filter: SelectionRequirement::Untapped,
                     },
-                ])),
+                ]),
+            ),
             effect: Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                 count: Value::Const(1),
@@ -557,14 +588,18 @@ pub fn slippery_scoundrel() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Ascend { who: PlayerRef::You },
+                effect: Effect::Ascend {
+                    who: PlayerRef::You,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
                     EventScope::ActivePlayer,
                 ),
-                effect: Effect::Ascend { who: PlayerRef::You },
+                effect: Effect::Ascend {
+                    who: PlayerRef::You,
+                },
             },
         ],
         static_abilities: vec![
@@ -572,14 +607,18 @@ pub fn slippery_scoundrel() -> CardDefinition {
                 description: "Hexproof and can't be blocked while you have the city's blessing.",
                 effect: StaticEffect::SelfHasKeywordIf {
                     keyword: Keyword::Hexproof,
-                    condition: Predicate::HasCityBlessing { who: PlayerRef::You },
+                    condition: Predicate::HasCityBlessing {
+                        who: PlayerRef::You,
+                    },
                 },
             },
             StaticAbility {
                 description: "",
                 effect: StaticEffect::SelfHasKeywordIf {
                     keyword: Keyword::Unblockable,
-                    condition: Predicate::HasCityBlessing { who: PlayerRef::You },
+                    condition: Predicate::HasCityBlessing {
+                        who: PlayerRef::You,
+                    },
                 },
             },
         ],
@@ -594,7 +633,10 @@ pub fn tempest_djinn() -> CardDefinition {
         name: "Tempest Djinn",
         cost: cost(&[u(), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Djinn], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn],
+            ..Default::default()
+        },
         power: 0,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -623,7 +665,10 @@ pub fn undercity_informer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            effect: Effect::MillUntilLands { who: Selector::Target(0), lands: Value::Const(1) },
+            effect: Effect::MillUntilLands {
+                who: Selector::Target(0),
+                lands: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -638,7 +683,10 @@ pub fn runeflare_trap() -> CardDefinition {
         name: "Runeflare Trap",
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes { spell_subtypes: vec![crate::card::SpellSubtype::Trap], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Trap],
+            ..Default::default()
+        },
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[r()]),
             condition: Some(Predicate::PlayerDrewAtLeastThisTurn {
@@ -664,9 +712,13 @@ pub fn molten_psyche() -> CardDefinition {
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::ShuffleHandsDrawSame { who: PlayerRef::EachPlayer },
+            Effect::ShuffleHandsDrawSame {
+                who: PlayerRef::EachPlayer,
+            },
             Effect::If {
-                cond: Predicate::MetalcraftActive { who: PlayerRef::You },
+                cond: Predicate::MetalcraftActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::DealDamage {
                     to: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::CardsDrawnThisTurn(PlayerRef::EachOpponent),
@@ -691,7 +743,10 @@ pub fn fevered_visions() -> CardDefinition {
                 EventScope::AnyPlayer,
             ),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::Player(PlayerRef::ActivePlayer), amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::ActivePlayer),
+                    amount: Value::Const(1),
+                },
                 Effect::If {
                     cond: Predicate::All(vec![
                         Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
@@ -719,7 +774,10 @@ pub fn master_of_the_feast() -> CardDefinition {
         name: "Master of the Feast",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
@@ -778,10 +836,15 @@ pub fn tolaria_west() -> CardDefinition {
     CardDefinition {
         name: "Tolaria West",
         card_types: vec![CardType::Land],
-        activated_abilities: vec![tap_add(Color::Blue), transmute(cost(&[generic(1), u(), u()]), 0)],
+        activated_abilities: vec![
+            tap_add(Color::Blue),
+            transmute(cost(&[generic(1), u(), u()]), 0),
+        ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap { what: Selector::This },
+            effect: Effect::Tap {
+                what: Selector::This,
+            },
         }],
         ..Default::default()
     }
@@ -808,7 +871,9 @@ pub fn boseiju_who_shelters_all() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap { what: Selector::This },
+            effect: Effect::Tap {
+                what: Selector::This,
+            },
         }],
         ..Default::default()
     }

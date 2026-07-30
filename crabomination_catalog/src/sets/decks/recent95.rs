@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{deal, etb, mint_treasures, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect};
-use crate::mana::{cost, generic, r, u, w, Color, SpendRestriction};
+use crate::mana::{Color, SpendRestriction, cost, generic, r, u, w};
 
 /// A 2/2 white Samurai token with vigilance (Imperial Oath, Experimental
 /// Synthesizer).
@@ -21,7 +21,10 @@ fn samurai_token() -> TokenDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Samurai], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Samurai],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Vigilance],
         ..Default::default()
     }
@@ -51,7 +54,10 @@ pub fn automated_artificer() -> CardDefinition {
         name: "Automated Artificer",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Artificer], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Artificer],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
@@ -83,7 +89,9 @@ pub fn network_disruptor() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::Tap { what: target_filtered(R::Permanent) })],
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: target_filtered(R::Permanent),
+        })],
         ..Default::default()
     }
 }
@@ -104,7 +112,10 @@ pub fn enthusiastic_mechanaut() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "Artifact spells you cast cost {1} less to cast.",
-            effect: StaticEffect::CostReduction { filter: R::Artifact, amount: 1 },
+            effect: StaticEffect::CostReduction {
+                filter: R::Artifact,
+                amount: 1,
+            },
         }],
         ..Default::default()
     }
@@ -118,8 +129,15 @@ pub fn imperial_oath() -> CardDefinition {
         cost: cost(&[generic(5), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(3), definition: samurai_token() },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                definition: samurai_token(),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(3),
+            },
         ]),
         ..Default::default()
     }
@@ -168,7 +186,10 @@ pub fn moonfolk_puzzlemaker() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -242,9 +263,7 @@ pub fn selfless_samurai() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             effect: Effect::GrantKeyword {
-                what: target_filtered(
-                    R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
-                ),
+                what: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
                 keyword: Keyword::Indestructible,
                 duration: Duration::EndOfTurn,
             },

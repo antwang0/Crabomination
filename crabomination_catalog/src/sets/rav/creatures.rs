@@ -1,7 +1,7 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
-    Subtypes, TriggeredAbility, Value,
+    EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
+    StaticEffect, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::mana::{cost, g, generic, r, w};
@@ -29,7 +29,10 @@ pub fn courier_hawk() -> CardDefinition {
         name: "Courier Hawk",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
@@ -53,7 +56,9 @@ pub fn barbarian_riftcutter() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
             sac_cost: true,
-            effect: Effect::Destroy { what: target_filtered(R::Land) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Land),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -75,7 +80,10 @@ pub fn dromad_purebred() -> CardDefinition {
         toughness: 5,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -105,13 +113,19 @@ pub fn gate_hound() -> CardDefinition {
         name: "Gate Hound",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         static_abilities: vec![StaticAbility {
             description: "Creatures you control have vigilance as long as this creature is enchanted.",
             effect: StaticEffect::PumpTeamIf {
-                condition: Predicate::EntityMatches { what: Selector::This, filter: R::IsEnchanted },
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::IsEnchanted,
+                },
                 applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                 power: 0,
                 toughness: 0,

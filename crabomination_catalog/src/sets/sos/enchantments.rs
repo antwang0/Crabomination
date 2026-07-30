@@ -141,7 +141,6 @@ pub fn comforting_counsel() -> CardDefinition {
     }
 }
 
-
 /// Primary Research — {4}{W} Enchantment.
 /// "When this enchantment enters, return target nonland permanent card
 /// with mana value 3 or less from your graveyard to the battlefield. /

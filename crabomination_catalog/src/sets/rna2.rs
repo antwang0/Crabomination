@@ -7,10 +7,13 @@ use crate::card::{
     Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, StaticEffect};
-use crate::mana::{b, cost, r, u, w, x, Color, generic};
+use crate::mana::{Color, b, cost, generic, r, u, w, x};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 
 fn token(
@@ -76,7 +79,10 @@ pub fn dovin_grand_arbiter() -> CardDefinition {
                             vec![Keyword::Flying],
                         ),
                     },
-                    Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 ]),
                 ..Default::default()
             },
@@ -146,7 +152,9 @@ pub fn gideon_champion_of_justice() -> CardDefinition {
                         keywords: vec![Keyword::Indestructible],
                         duration: Duration::EndOfTurn,
                     },
-                    Effect::PreventAllDamageThisTurn { target: Selector::This },
+                    Effect::PreventAllDamageThisTurn {
+                        target: Selector::This,
+                    },
                 ]),
                 ..Default::default()
             },
@@ -189,8 +197,14 @@ pub fn teysa_karlov() -> CardDefinition {
                 description: "If a creature dying causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
                 effect: StaticEffect::DoubleControllerDeathTriggers,
             },
-            token_anthem(Keyword::Vigilance, "Creature tokens you control have vigilance."),
-            token_anthem(Keyword::Lifelink, "Creature tokens you control have lifelink."),
+            token_anthem(
+                Keyword::Vigilance,
+                "Creature tokens you control have vigilance.",
+            ),
+            token_anthem(
+                Keyword::Lifelink,
+                "Creature tokens you control have lifelink.",
+            ),
         ],
         ..Default::default()
     }
@@ -239,7 +253,9 @@ pub fn lavinia_azorius_renegade() -> CardDefinition {
             event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(
                 Predicate::ValueAtMost(Value::CastSpellManaSpent, Value::Const(0)),
             ),
-            effect: Effect::CounterSpell { what: Selector::TriggerSource },
+            effect: Effect::CounterSpell {
+                what: Selector::TriggerSource,
+            },
         }],
         ..Default::default()
     }
@@ -259,7 +275,9 @@ pub fn mirror_march() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Creature.and(R::NotToken),
                 }),
-            effect: Effect::FlipUntilLossThenTokenCopies { what: Selector::TriggerSource },
+            effect: Effect::FlipUntilLossThenTokenCopies {
+                what: Selector::TriggerSource,
+            },
         }],
         ..Default::default()
     }
@@ -353,10 +371,16 @@ pub fn captive_audience() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         enters_under_opponent_control: true,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::ChooseUnchosenMode {
                 modes: vec![
-                    Effect::SetLifeTotal { who: Selector::You, amount: Value::Const(4) },
+                    Effect::SetLifeTotal {
+                        who: Selector::You,
+                        amount: Value::Const(4),
+                    },
                     Effect::Discard {
                         who: Selector::You,
                         amount: Value::HandSizeOf(PlayerRef::You),

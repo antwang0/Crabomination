@@ -91,7 +91,13 @@ pub fn the_birth_of_meletis() -> CardDefinition {
                 },
             ),
             (2, mint_token(wall, 1)),
-            (3, Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+            (
+                3,
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+            ),
         ],
         ..Default::default()
     }
@@ -140,8 +146,7 @@ fn plus_one_greatest() -> Effect {
 /// creature or planeswalker card from a graveyard onto the battlefield under
 /// your control.
 pub fn the_eldest_reborn() -> CardDefinition {
-    let creature_or_pw =
-        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker);
+    let creature_or_pw = SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker);
     CardDefinition {
         name: "The Eldest Reborn",
         cost: cost(&[generic(4), b()]),
@@ -219,7 +224,9 @@ pub fn welcome_to_sweettooth() -> CardDefinition {
                     ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::CountMatching {
-                        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+                        sel: Box::new(Selector::EachPermanent(
+                            SelectionRequirement::ControlledByYou,
+                        )),
                         filter: SelectionRequirement::HasArtifactSubtype(
                             crate::card::ArtifactSubtype::Food,
                         ),
@@ -245,7 +252,9 @@ pub fn phyrexian_scriptures() -> CardDefinition {
             (
                 1,
                 Effect::MayDo {
-                    description: "Put a +1/+1 counter on up to one target creature; it becomes an artifact".into(),
+                    description:
+                        "Put a +1/+1 counter on up to one target creature; it becomes an artifact"
+                            .into(),
                     body: Box::new(Effect::Seq(vec![
                         Effect::AddCounter {
                             what: target_filtered(SelectionRequirement::Creature),
@@ -264,14 +273,16 @@ pub fn phyrexian_scriptures() -> CardDefinition {
                 2,
                 Effect::Destroy {
                     what: Selector::EachPermanent(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::Artifact.negate()),
+                        SelectionRequirement::Creature.and(SelectionRequirement::Artifact.negate()),
                     ),
                 },
             ),
             (
                 3,
-                Effect::ExileAllGraveyards { filter: None, opponents_only: true },
+                Effect::ExileAllGraveyards {
+                    filter: None,
+                    opponents_only: true,
+                },
             ),
         ],
         ..Default::default()

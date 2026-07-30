@@ -16,13 +16,18 @@ pub fn glacial_dragonhunt() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Harmonize(cost(&[generic(4), u(), r()]))],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             Effect::MayDiscard {
                 description: "Discard a card?".into(),
                 count: Value::Const(1),
                 // Reflexive damage only when the discarded card was a nonland.
                 then: Box::new(Effect::If {
-                    cond: Predicate::DiscardedNonlandThisEffect { who: PlayerRef::You },
+                    cond: Predicate::DiscardedNonlandThisEffect {
+                        who: PlayerRef::You,
+                    },
                     then: Box::new(Effect::Reflexive {
                         body: Box::new(Effect::DealDamage {
                             to: target_filtered(R::Creature),

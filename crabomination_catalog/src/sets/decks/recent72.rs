@@ -22,7 +22,10 @@ pub fn yavimaya_enchantress() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Druid],
             ..Default::default()
         },
-        dynamic_pt: Some(DynamicPt::EnchantmentsInPlay { base_p: 2, base_t: 2 }),
+        dynamic_pt: Some(DynamicPt::EnchantmentsInPlay {
+            base_p: 2,
+            base_t: 2,
+        }),
         ..Default::default()
     }
 }
@@ -30,13 +33,15 @@ pub fn yavimaya_enchantress() -> CardDefinition {
 /// Zombie Master — {1}{B}{B} 2/3 Zombie. Other Zombies have swampwalk and
 /// "{B}: Regenerate this permanent."
 pub fn zombie_master() -> CardDefinition {
-    let other_zombies =
-        R::HasCreatureType(CreatureType::Zombie).and(R::OtherThanSource);
+    let other_zombies = R::HasCreatureType(CreatureType::Zombie).and(R::OtherThanSource);
     CardDefinition {
         name: "Zombie Master",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         static_abilities: vec![
@@ -53,7 +58,9 @@ pub fn zombie_master() -> CardDefinition {
                     applies_to: Selector::EachPermanent(other_zombies),
                     ability: ActivatedAbility {
                         mana_cost: cost(&[b()]),
-                        effect: Effect::Regenerate { what: Selector::This },
+                        effect: Effect::Regenerate {
+                            what: Selector::This,
+                        },
                         ..Default::default()
                     },
                     condition: None,
@@ -70,12 +77,17 @@ pub fn cudgel_troll() -> CardDefinition {
         name: "Cudgel Troll",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Troll], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Troll],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[g()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -88,12 +100,17 @@ pub fn uthden_troll() -> CardDefinition {
         name: "Uthden Troll",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Troll], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Troll],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -107,7 +124,11 @@ pub fn longbow_archer() -> CardDefinition {
         cost: cost(&[w(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Archer],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Soldier,
+                CreatureType::Archer,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -140,7 +161,10 @@ pub fn anaba_bodyguard() -> CardDefinition {
         name: "Anaba Bodyguard",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Minotaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
@@ -154,7 +178,10 @@ pub fn deadly_insect() -> CardDefinition {
         name: "Deadly Insect",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 6,
         toughness: 1,
         keywords: vec![Keyword::Shroud],
@@ -169,7 +196,10 @@ pub fn radjan_spirit() -> CardDefinition {
         name: "Radjan Spirit",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -190,7 +220,10 @@ pub fn giant_octopus() -> CardDefinition {
         name: "Giant Octopus",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Octopus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Octopus],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         ..Default::default()
@@ -203,7 +236,10 @@ pub fn balduvian_bears() -> CardDefinition {
         name: "Balduvian Bears",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bear],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         ..Default::default()
@@ -216,7 +252,10 @@ pub fn willow_elf() -> CardDefinition {
         name: "Willow Elf",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         ..Default::default()

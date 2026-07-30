@@ -3,13 +3,13 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, LandType, Predicate, Selector, SelectionRequirement as R, StaticAbility,
+    EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, Selector, StaticAbility,
     Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(
     name: &'static str,
@@ -23,7 +23,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -49,7 +52,11 @@ fn spell(name: &'static str, mana: ManaCost, sorcery: bool, effect: Effect) -> C
     CardDefinition {
         name,
         cost: mana,
-        card_types: vec![if sorcery { CardType::Sorcery } else { CardType::Instant }],
+        card_types: vec![if sorcery {
+            CardType::Sorcery
+        } else {
+            CardType::Instant
+        }],
         effect,
         ..Default::default()
     }
@@ -58,15 +65,20 @@ fn spell(name: &'static str, mana: ManaCost, sorcery: bool, effect: Effect) -> C
 /// "At the beginning of your upkeep, [effect]."
 fn your_upkeep(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::Upkeep),
+            EventScope::SelfSource,
+        )
+        .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
         effect,
     }
 }
 
 /// A cheap artifact card in your graveyard — the Auriok/Leonin recursion filter.
 fn small_artifact_in_graveyard() -> R {
-    R::InYourGraveyard.and(R::Artifact).and(R::ManaValueAtMost(1))
+    R::InYourGraveyard
+        .and(R::Artifact)
+        .and(R::ManaValueAtMost(1))
 }
 
 // ── Creatures ──
@@ -214,7 +226,14 @@ pub fn relentless_rats() -> CardDefinition {
                 per_toughness: 1,
             },
         }],
-        ..creature("Relentless Rats", cost(&[generic(1), b(), b()]), 2, 2, vec![CreatureType::Rat], vec![])
+        ..creature(
+            "Relentless Rats",
+            cost(&[generic(1), b(), b()]),
+            2,
+            2,
+            vec![CreatureType::Rat],
+            vec![],
+        )
     }
 }
 
@@ -234,7 +253,11 @@ pub fn vulshok_sorcerer() -> CardDefinition {
             cost(&[generic(1), r(), r()]),
             1,
             1,
-            vec![CreatureType::Human, CreatureType::Shaman, CreatureType::Sorcerer],
+            vec![
+                CreatureType::Human,
+                CreatureType::Shaman,
+                CreatureType::Sorcerer,
+            ],
             vec![Keyword::Haste],
         )
     }
@@ -257,7 +280,11 @@ pub fn viridian_scout() -> CardDefinition {
             cost(&[generic(3), g()]),
             1,
             2,
-            vec![CreatureType::Elf, CreatureType::Warrior, CreatureType::Scout],
+            vec![
+                CreatureType::Elf,
+                CreatureType::Warrior,
+                CreatureType::Scout,
+            ],
             vec![],
         )
     }
@@ -299,7 +326,9 @@ pub fn tel_jilad_lifebreather() -> CardDefinition {
             mana_cost: cost(&[g()]),
             tap_cost: true,
             sac_other_filter: Some((R::HasLandType(LandType::Forest), 1)),
-            effect: Effect::Regenerate { what: target_filtered(R::Creature) },
+            effect: Effect::Regenerate {
+                what: target_filtered(R::Creature),
+            },
             ..Default::default()
         }],
         ..creature(
@@ -326,7 +355,14 @@ pub fn krark_clan_ogre() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..creature("Krark-Clan Ogre", cost(&[generic(3), r(), r()]), 3, 3, vec![CreatureType::Ogre], vec![])
+        ..creature(
+            "Krark-Clan Ogre",
+            cost(&[generic(3), r(), r()]),
+            3,
+            3,
+            vec![CreatureType::Ogre],
+            vec![],
+        )
     }
 }
 
@@ -336,7 +372,9 @@ pub fn krark_clan_engineers() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
             sac_other_filter: Some((R::Artifact, 2)),
-            effect: Effect::Destroy { what: target_filtered(R::Artifact) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            },
             ..Default::default()
         }],
         ..creature(
@@ -354,7 +392,10 @@ pub fn krark_clan_engineers() -> CardDefinition {
 pub fn leonin_squire() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::Move {
-            what: Selector::TargetFiltered { slot: 0, filter: small_artifact_in_graveyard() },
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: small_artifact_in_graveyard(),
+            },
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         ..creature(
@@ -374,7 +415,10 @@ pub fn auriok_salvagers() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), w()]),
             effect: Effect::Move {
-                what: Selector::TargetFiltered { slot: 0, filter: small_artifact_in_graveyard() },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: small_artifact_in_graveyard(),
+                },
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             ..Default::default()
@@ -424,7 +468,10 @@ pub fn moriok_rigger() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentDied, EventScope::AnyPlayer).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact },
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact,
+                },
             ),
             effect: Effect::MayDo {
                 description: "Put a +1/+1 counter on Moriok Rigger?".into(),
@@ -518,17 +565,28 @@ pub fn tangle_asp() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
                 effect: Effect::AtNextEndStep {
-                    body: Box::new(Effect::Destroy { what: Selector::BlockedAttacker }),
+                    body: Box::new(Effect::Destroy {
+                        what: Selector::BlockedAttacker,
+                    }),
                 },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
                 effect: Effect::AtNextEndStep {
-                    body: Box::new(Effect::Destroy { what: Selector::BlockingCreatures }),
+                    body: Box::new(Effect::Destroy {
+                        what: Selector::BlockingCreatures,
+                    }),
                 },
             },
         ],
-        ..creature("Tangle Asp", cost(&[generic(1), g()]), 1, 2, vec![CreatureType::Snake], vec![])
+        ..creature(
+            "Tangle Asp",
+            cost(&[generic(1), g()]),
+            1,
+            2,
+            vec![CreatureType::Snake],
+            vec![],
+        )
     }
 }
 
@@ -594,20 +652,18 @@ pub fn mephidross_vampire() -> CardDefinition {
 pub fn raksha_golden_cub() -> CardDefinition {
     CardDefinition {
         supertypes: vec![crate::card::Supertype::Legendary],
-        static_abilities: vec![
-            StaticAbility {
-                description: "While equipped, Cats you control get +2/+2",
-                effect: StaticEffect::AnthemForFilterIf {
-                    filter: R::Creature
-                        .and(R::ControlledByYou)
-                        .and(R::HasCreatureType(CreatureType::Cat)),
-                    power: 2,
-                    toughness: 2,
-                    keywords: vec![Keyword::DoubleStrike],
-                    condition: Predicate::SourceIsEquipped,
-                },
+        static_abilities: vec![StaticAbility {
+            description: "While equipped, Cats you control get +2/+2",
+            effect: StaticEffect::AnthemForFilterIf {
+                filter: R::Creature
+                    .and(R::ControlledByYou)
+                    .and(R::HasCreatureType(CreatureType::Cat)),
+                power: 2,
+                toughness: 2,
+                keywords: vec![Keyword::DoubleStrike],
+                condition: Predicate::SourceIsEquipped,
             },
-        ],
+        }],
         ..creature(
             "Raksha Golden Cub",
             cost(&[generic(5), w(), w()]),
@@ -711,10 +767,20 @@ pub fn myr_quadropod() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
-            effect: Effect::SwitchPT { what: Selector::This, duration: Duration::EndOfTurn },
+            effect: Effect::SwitchPT {
+                what: Selector::This,
+                duration: Duration::EndOfTurn,
+            },
             ..Default::default()
         }],
-        ..artifact_creature("Myr Quadropod", cost(&[generic(4)]), 1, 4, vec![CreatureType::Myr], vec![])
+        ..artifact_creature(
+            "Myr Quadropod",
+            cost(&[generic(4)]),
+            1,
+            4,
+            vec![CreatureType::Myr],
+            vec![],
+        )
     }
 }
 
@@ -731,7 +797,14 @@ pub fn myr_servitor() -> CardDefinition {
                 tapped: false,
             },
         })],
-        ..artifact_creature("Myr Servitor", cost(&[generic(1)]), 1, 1, vec![CreatureType::Myr], vec![])
+        ..artifact_creature(
+            "Myr Servitor",
+            cost(&[generic(1)]),
+            1,
+            1,
+            vec![CreatureType::Myr],
+            vec![],
+        )
     }
 }
 
@@ -740,18 +813,33 @@ pub fn battered_golem() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Doesn't untap during your untap step",
-            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::This,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact },
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact,
+                },
             ),
             effect: Effect::MayDo {
                 description: "Untap Battered Golem?".into(),
-                body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                body: Box::new(Effect::Untap {
+                    what: Selector::This,
+                    up_to: None,
+                }),
             },
         }],
-        ..artifact_creature("Battered Golem", cost(&[generic(3)]), 3, 2, vec![CreatureType::Golem], vec![])
+        ..artifact_creature(
+            "Battered Golem",
+            cost(&[generic(3)]),
+            3,
+            2,
+            vec![CreatureType::Golem],
+            vec![],
+        )
     }
 }
 
@@ -848,7 +936,14 @@ pub fn lunar_avenger() -> CardDefinition {
             ]),
             ..Default::default()
         }],
-        ..artifact_creature("Lunar Avenger", cost(&[generic(7)]), 2, 2, vec![CreatureType::Golem], vec![])
+        ..artifact_creature(
+            "Lunar Avenger",
+            cost(&[generic(7)]),
+            2,
+            2,
+            vec![CreatureType::Golem],
+            vec![],
+        )
     }
 }
 
@@ -858,7 +953,9 @@ pub fn spinal_parasite() -> CardDefinition {
         keywords: vec![Keyword::Sunburst],
         activated_abilities: vec![ActivatedAbility {
             remove_counter_cost: Some((CounterType::PlusOnePlusOne, 2)),
-            effect: Effect::RemoveAnyCounter { what: target_filtered(R::Permanent) },
+            effect: Effect::RemoveAnyCounter {
+                what: target_filtered(R::Permanent),
+            },
             ..Default::default()
         }],
         ..artifact_creature(
@@ -881,7 +978,9 @@ pub fn suncrusher() -> CardDefinition {
                 mana_cost: cost(&[generic(4)]),
                 tap_cost: true,
                 remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
-                effect: Effect::Destroy { what: target_filtered(R::Creature) },
+                effect: Effect::Destroy {
+                    what: target_filtered(R::Creature),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -894,7 +993,14 @@ pub fn suncrusher() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        ..artifact_creature("Suncrusher", cost(&[generic(9)]), 3, 3, vec![CreatureType::Construct], vec![])
+        ..artifact_creature(
+            "Suncrusher",
+            cost(&[generic(9)]),
+            3,
+            3,
+            vec![CreatureType::Construct],
+            vec![],
+        )
     }
 }
 
@@ -913,7 +1019,10 @@ pub fn stand_firm() -> CardDefinition {
                 toughness: Value::ONE,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]),
     )
 }
@@ -931,7 +1040,10 @@ pub fn lose_hope() -> CardDefinition {
                 toughness: Value::Const(-1),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]),
     )
 }
@@ -943,8 +1055,13 @@ pub fn tel_jilad_justice() -> CardDefinition {
         cost(&[generic(1), g()]),
         false,
         Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Artifact) },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]),
     )
 }
@@ -977,7 +1094,9 @@ pub fn vanquish() -> CardDefinition {
         "Vanquish",
         cost(&[generic(2), w()]),
         false,
-        Effect::Destroy { what: target_filtered(R::Creature.and(R::IsBlocking)) },
+        Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::IsBlocking)),
+        },
     )
 }
 
@@ -1020,9 +1139,7 @@ pub fn granulate() -> CardDefinition {
         cost(&[generic(2), r(), r()]),
         true,
         Effect::Destroy {
-            what: Selector::EachPermanent(
-                R::Artifact.and(R::Nonland).and(R::ManaValueAtMost(4)),
-            ),
+            what: Selector::EachPermanent(R::Artifact.and(R::Nonland).and(R::ManaValueAtMost(4))),
         },
     )
 }
@@ -1038,7 +1155,10 @@ pub fn roar_of_reclamation() -> CardDefinition {
                 zone: crate::effect::ZoneRef::Graveyard(PlayerRef::EachPlayer),
                 filter: R::Artifact,
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::OwnerOfMoved,
+                tapped: false,
+            },
         },
     )
 }
@@ -1053,7 +1173,10 @@ pub fn acquire() -> CardDefinition {
             who: PlayerRef::Target(0),
             picker: PlayerRef::You,
             filter: R::Artifact,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
     )
 }
@@ -1083,8 +1206,12 @@ pub fn rain_of_rust() -> CardDefinition {
             cost(&[generic(3), r(), r()]),
             false,
             Effect::ChooseMode(vec![
-                Effect::Destroy { what: target_filtered(R::Artifact) },
-                Effect::Destroy { what: target_filtered(R::Land) },
+                Effect::Destroy {
+                    what: target_filtered(R::Artifact),
+                },
+                Effect::Destroy {
+                    what: target_filtered(R::Land),
+                },
             ]),
         )
     }
@@ -1103,7 +1230,10 @@ pub fn vicious_betrayal() -> CardDefinition {
             Effect::PumpPT {
                 what: target_filtered(R::Creature),
                 power: Value::Times(Box::new(Value::Const(2)), Box::new(Value::SacrificedCount)),
-                toughness: Value::Times(Box::new(Value::Const(2)), Box::new(Value::SacrificedCount)),
+                toughness: Value::Times(
+                    Box::new(Value::Const(2)),
+                    Box::new(Value::SacrificedCount),
+                ),
                 duration: Duration::EndOfTurn,
             },
         )
@@ -1117,9 +1247,7 @@ pub fn retaliate() -> CardDefinition {
         cost(&[generic(2), w(), w()]),
         false,
         Effect::Destroy {
-            what: Selector::EachPermanent(
-                R::Creature.and(R::DealtDamageToControllerThisTurn),
-            ),
+            what: Selector::EachPermanent(R::Creature.and(R::DealtDamageToControllerThisTurn)),
         },
     )
 }

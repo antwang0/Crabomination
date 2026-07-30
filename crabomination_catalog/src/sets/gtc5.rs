@@ -7,10 +7,13 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, ZoneDest, ZoneRef};
-use crate::mana::{b, cost, generic, g, hybrid, u, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, u, w, x};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 
 /// Immortal Servitude — {X}{W/B}{W/B}{W/B} Sorcery. Return each creature card
@@ -26,7 +29,10 @@ pub fn immortal_servitude() -> CardDefinition {
                 zone: ZoneRef::Graveyard(PlayerRef::You),
                 filter: R::Creature.and(R::ManaValueExactlyXFromCost),
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -43,15 +49,22 @@ pub fn biovisionary() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::End), EventScope::AnyPlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::AnyPlayer,
+            ),
             effect: Effect::If {
                 cond: Predicate::SelectorCountAtLeast {
                     sel: Selector::EachPermanent(
-                        R::Creature.and(R::ControlledByYou).and(R::HasName("Biovisionary".into())),
+                        R::Creature
+                            .and(R::ControlledByYou)
+                            .and(R::HasName("Biovisionary".into())),
                     ),
                     n: Value::Const(4),
                 },
-                then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                then: Box::new(Effect::WinGame {
+                    who: PlayerRef::You,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],

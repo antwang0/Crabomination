@@ -2,12 +2,10 @@
 //! Abyssal Persecutor, Worship) and the CR 113.11 "can't have or gain"
 //! Theros Archetype cycle. Tests in `tests/recent109.rs`.
 
-use crate::card::{
-    CardDefinition, CardType, CreatureType, Keyword, StaticAbility, Subtypes,
-};
+use crate::card::{CardDefinition, CardType, CreatureType, Keyword, StaticAbility, Subtypes};
 use crate::effect::shortcut::{each_opponent_creature, each_your_creature};
 use crate::effect::{Effect, StaticEffect};
-use crate::mana::{b, cost, g, generic, r, u, w, ManaSymbol};
+use crate::mana::{ManaSymbol, b, cost, g, generic, r, u, w};
 
 /// Angel's Grace — {W} Instant. Split second. You can't lose the game this
 /// turn and your opponents can't win; damage that would drop you below 1
@@ -30,7 +28,10 @@ pub fn platinum_angel() -> CardDefinition {
         name: "Platinum Angel",
         cost: cost(&[generic(7)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -49,7 +50,10 @@ pub fn abyssal_persecutor() -> CardDefinition {
         name: "Abyssal Persecutor",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Trample],
@@ -70,7 +74,9 @@ pub fn worship() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "If you control a creature, damage that would reduce your life total to less than 1 reduces it to 1 instead.",
-            effect: StaticEffect::DamageWontReduceControllerLifeBelowOne { requires_creature: true },
+            effect: StaticEffect::DamageWontReduceControllerLifeBelowOne {
+                requires_creature: true,
+            },
         }],
         ..Default::default()
     }
@@ -92,7 +98,10 @@ fn archetype(
         name,
         cost: cost(mana),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power: pt.0,
         toughness: pt.1,
         static_abilities: vec![

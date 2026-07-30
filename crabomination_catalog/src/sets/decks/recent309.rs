@@ -3,9 +3,9 @@
 //! `recent_b/recent_309_310`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind,
-    EventScope, EventSpec, Keyword, Selector, SelectionRequirement as R, Subtypes, Supertype,
-    TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement as R, Selector, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{
@@ -13,7 +13,7 @@ use crate::effect::{
     StaticAbility, StaticEffect, ZoneDest,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// A legendary creature body with no default abilities.
 fn legend(
@@ -29,7 +29,10 @@ fn legend(
         cost: mana,
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -144,14 +147,20 @@ pub fn make_your_own_luck() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::MoveChosen {
-                from: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(3) },
+                from: Selector::TopOfLibrary {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                },
                 filter: Some(R::Not(Box::new(R::Land))),
                 count: Value::ONE,
                 up_to: true,
                 to: ZoneDest::ExilePlotted,
             },
             Effect::Move {
-                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(3) },
+                what: Selector::TopOfLibrary {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                },
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         ]),
@@ -193,8 +202,13 @@ pub fn step_between_worlds() -> CardDefinition {
         plot_cost: Some(cost(&[generic(4), u(), u()])),
         exile_on_resolve: true,
         effect: Effect::Seq(vec![
-            Effect::ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef::EachPlayer },
-            Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(7) },
+            Effect::ShuffleHandAndGraveyardIntoLibrary {
+                who: PlayerRef::EachPlayer,
+            },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(7),
+            },
         ]),
         ..Default::default()
     }
@@ -215,9 +229,7 @@ pub fn annie_joins_up() -> CardDefinition {
             "Annie Joins Up",
             cost(&[generic(1), r(), g(), w()]),
             Effect::DealDamage {
-                to: target_filtered(
-                    R::Creature.or(R::Planeswalker).and(R::ControlledByOpponent),
-                ),
+                to: target_filtered(R::Creature.or(R::Planeswalker).and(R::ControlledByOpponent)),
                 amount: Value::Const(5),
             },
             legend_enters(Effect::Noop),
@@ -235,8 +247,13 @@ pub fn rakdos_joins_up() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::Seq(vec![
                     Effect::Move {
-                        what: target_filtered(R::Creature.and(R::PermanentCard).and(R::InYourGraveyard)),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        what: target_filtered(
+                            R::Creature.and(R::PermanentCard).and(R::InYourGraveyard),
+                        ),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                     Effect::AddCounter {
                         what: Selector::LastMoved,
@@ -275,10 +292,20 @@ pub fn tinybones_joins_up() -> CardDefinition {
     joins_up(
         "Tinybones Joins Up",
         cost(&[b()]),
-        Effect::Discard { who: target_filtered(R::Player), amount: Value::ONE, random: false },
+        Effect::Discard {
+            who: target_filtered(R::Player),
+            amount: Value::ONE,
+            random: false,
+        },
         legend_enters(Effect::Seq(vec![
-            Effect::Mill { who: target_filtered(R::Player), amount: Value::ONE },
-            Effect::LoseLife { who: Selector::Target(0), amount: Value::ONE },
+            Effect::Mill {
+                who: target_filtered(R::Player),
+                amount: Value::ONE,
+            },
+            Effect::LoseLife {
+                who: Selector::Target(0),
+                amount: Value::ONE,
+            },
         ])),
     )
 }
@@ -296,12 +323,18 @@ pub fn vraska_joins_up() -> CardDefinition {
             amount: Value::ONE,
         },
         TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::HasSupertype(Supertype::Legendary),
-                }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasSupertype(Supertype::Legendary),
+            }),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         },
     )
 }
@@ -322,8 +355,9 @@ pub fn archmages_newt() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::GrantFlashbackThisTurn {
                 what: target_filtered(
-                    R::InYourGraveyard
-                        .and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                    R::InYourGraveyard.and(
+                        R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    ),
                 ),
             },
         }],
@@ -360,7 +394,10 @@ pub fn akul_the_unrepentant() -> CardDefinition {
                         },
                         Value::ONE,
                     ),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 }),
             },
             ..Default::default()
@@ -370,7 +407,11 @@ pub fn akul_the_unrepentant() -> CardDefinition {
             cost(&[b(), b(), r(), r()]),
             5,
             5,
-            vec![CreatureType::Scorpion, CreatureType::Dragon, CreatureType::Rogue],
+            vec![
+                CreatureType::Scorpion,
+                CreatureType::Dragon,
+                CreatureType::Rogue,
+            ],
             vec![Keyword::Flying, Keyword::Trample],
         )
     }
@@ -382,7 +423,9 @@ pub fn obeka_splitter_of_seconds() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::AdditionalUpkeepStep { count: Value::TriggerEventAmount },
+            effect: Effect::AdditionalUpkeepStep {
+                count: Value::TriggerEventAmount,
+            },
         }],
         ..legend(
             "Obeka, Splitter of Seconds",
@@ -402,14 +445,15 @@ pub fn geralf_the_fleshwright() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                    .with_filter(Predicate::All(vec![
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::All(vec![
                         Predicate::IsTurnOf(PlayerRef::You),
                         Predicate::SpellsCastThisTurnAtLeast {
                             who: PlayerRef::You,
                             at_least: Value::Const(2),
                         },
-                    ])),
+                    ]),
+                ),
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
@@ -537,12 +581,8 @@ pub fn bonny_pall_clearcutter() -> CardDefinition {
                             ..Default::default()
                         },
                         dynamic_pt: Some((
-                            Value::count(Selector::EachPermanent(
-                                R::Land.and(R::ControlledByYou),
-                            )),
-                            Value::count(Selector::EachPermanent(
-                                R::Land.and(R::ControlledByYou),
-                            )),
+                            Value::count(Selector::EachPermanent(R::Land.and(R::ControlledByYou))),
+                            Value::count(Selector::EachPermanent(R::Land.and(R::ControlledByYou))),
                         )),
                         ..Default::default()
                     },
@@ -551,7 +591,10 @@ pub fn bonny_pall_clearcutter() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                     Effect::MayDo {
                         description: "put a land card from your hand onto the battlefield".into(),
                         body: Box::new(Effect::Move {
@@ -597,14 +640,21 @@ pub fn satoru_the_infiltrator() -> CardDefinition {
                     },
                     Predicate::Not(Box::new(Predicate::TriggerSourceEnteredByCast)),
                 ])),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..legend(
             "Satoru, the Infiltrator",
             cost(&[u(), b()]),
             2,
             3,
-            vec![CreatureType::Human, CreatureType::Ninja, CreatureType::Rogue],
+            vec![
+                CreatureType::Human,
+                CreatureType::Ninja,
+                CreatureType::Rogue,
+            ],
             vec![Keyword::Menace],
         )
     }
@@ -624,7 +674,9 @@ pub fn arid_archway() -> CardDefinition {
         },
         static_abilities: vec![StaticAbility {
             description: "This land enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -641,7 +693,10 @@ pub fn arid_archway() -> CardDefinition {
                         what: Selector::LastMoved,
                         filter: R::HasLandType(crate::card::LandType::Desert),
                     },
-                    then: Box::new(Effect::Surveil { who: PlayerRef::You, amount: Value::ONE }),
+                    then: Box::new(Effect::Surveil {
+                        who: PlayerRef::You,
+                        amount: Value::ONE,
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             ]),
@@ -676,7 +731,9 @@ pub fn stop_cold() -> CardDefinition {
         },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            effect: Effect::Tap {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
         }],
         equipped_bonus: Some(crate::card::EquipBonus {
             remove_abilities: true,
@@ -706,8 +763,13 @@ pub fn one_last_job() -> CardDefinition {
                 mode(
                     cost(&[generic(2)]),
                     Effect::Move {
-                        what: target_filtered(R::Creature.and(R::PermanentCard).and(R::InYourGraveyard)),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        what: target_filtered(
+                            R::Creature.and(R::PermanentCard).and(R::InYourGraveyard),
+                        ),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                 ),
                 mode(
@@ -715,27 +777,29 @@ pub fn one_last_job() -> CardDefinition {
                     Effect::Move {
                         what: target_filtered(
                             R::InYourGraveyard.and(
-                                R::HasCreatureType(CreatureType::Mount)
-                                    .or(R::HasArtifactSubtype(
-                                        crate::card::ArtifactSubtype::Vehicle,
-                                    )),
+                                R::HasCreatureType(CreatureType::Mount).or(R::HasArtifactSubtype(
+                                    crate::card::ArtifactSubtype::Vehicle,
+                                )),
                             ),
                         ),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                 ),
                 mode(
                     cost(&[generic(1)]),
                     Effect::Move {
-                        what: target_filtered(
-                            R::InYourGraveyard.and(
-                                R::HasEnchantmentSubtype(crate::card::EnchantmentSubtype::Aura)
-                                    .or(R::HasArtifactSubtype(
-                                        crate::card::ArtifactSubtype::Equipment,
-                                    )),
+                        what: target_filtered(R::InYourGraveyard.and(
+                            R::HasEnchantmentSubtype(crate::card::EnchantmentSubtype::Aura).or(
+                                R::HasArtifactSubtype(crate::card::ArtifactSubtype::Equipment),
                             ),
-                        ),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        )),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                 ),
             ],
@@ -747,7 +811,10 @@ pub fn one_last_job() -> CardDefinition {
 /// Shifting Grift — {U}{U} Sorcery with Spree: exchange control of two
 /// creatures, two artifacts, and/or two enchantments.
 pub fn shifting_grift() -> CardDefinition {
-    let swap = |filter: R| Effect::ExchangeControlChoosing { filter, with: Selector::Target(0) };
+    let swap = |filter: R| Effect::ExchangeControlChoosing {
+        filter,
+        with: Selector::Target(0),
+    };
     CardDefinition {
         name: "Shifting Grift",
         cost: cost(&[u(), u()]),
@@ -824,13 +891,18 @@ pub fn laughing_jasper_flint() -> CardDefinition {
             description: "Creatures you control but don't own are Mercenaries in addition to their other types.",
             effect: StaticEffect::AddCreatureTypeToMatching {
                 applies_to: Selector::EachPermanent(
-                    R::Creature.and(R::ControlledByYou).and(R::Not(Box::new(R::OwnedByYou))),
+                    R::Creature
+                        .and(R::ControlledByYou)
+                        .and(R::Not(Box::new(R::OwnedByYou))),
                 ),
                 creature_type: CreatureType::Mercenary,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::EachOpponent,
                 count: Value::count(Selector::EachPermanent(R::IsOutlaw.and(R::ControlledByYou))),
@@ -925,7 +997,10 @@ pub fn kambal_profiteering_mayor() -> CardDefinition {
                         who: Selector::Player(PlayerRef::EachOpponent),
                         amount: Value::ONE,
                     },
-                    Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 ]),
             },
         ],
@@ -951,9 +1026,14 @@ pub fn annie_flash_the_veteran() -> CardDefinition {
                     .with_filter(Predicate::TriggerSourceEnteredByCast),
                 effect: Effect::Move {
                     what: target_filtered(
-                        R::PermanentCard.and(R::InYourGraveyard).and(R::ManaValueAtMost(3)),
+                        R::PermanentCard
+                            .and(R::InYourGraveyard)
+                            .and(R::ManaValueAtMost(3)),
                     ),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
             },
             TriggeredAbility {
@@ -1000,7 +1080,9 @@ pub fn fblthp_lost_on_the_range() -> CardDefinition {
             1,
             1,
             vec![CreatureType::Homunculus],
-            vec![Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)])))],
+            vec![Keyword::Ward(crate::card::WardCost::Mana(cost(&[
+                generic(2),
+            ])))],
         )
     }
 }
@@ -1034,7 +1116,9 @@ pub fn rakdos_the_muscle() -> CardDefinition {
                     keyword: Keyword::Indestructible,
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Tap { what: Selector::This },
+                Effect::Tap {
+                    what: Selector::This,
+                },
             ]),
             ..Default::default()
         }],
@@ -1067,7 +1151,9 @@ pub fn lazav_familiar_stranger() -> CardDefinition {
                     description: "exile a creature card from a graveyard and copy it".into(),
                     body: Box::new(Effect::Seq(vec![
                         Effect::Move {
-                            what: target_filtered(R::Creature.and(R::PermanentCard).and(R::InGraveyard)),
+                            what: target_filtered(
+                                R::Creature.and(R::PermanentCard).and(R::InGraveyard),
+                            ),
                             to: ZoneDest::Exile,
                         },
                         Effect::BecomeCopyOf {
@@ -1112,8 +1198,15 @@ pub fn jace_reawakened() -> CardDefinition {
             crate::card::LoyaltyAbility {
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
-                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                        random: false,
+                    },
                 ]),
                 ..Default::default()
             },
@@ -1185,9 +1278,14 @@ pub fn oko_the_ringleader() -> CardDefinition {
             crate::card::LoyaltyAbility {
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
                     Effect::If {
-                        cond: Predicate::CommittedCrimeThisTurn { who: PlayerRef::You },
+                        cond: Predicate::CommittedCrimeThisTurn {
+                            who: PlayerRef::You,
+                        },
                         then: Box::new(Effect::Discard {
                             who: Selector::You,
                             amount: Value::ONE,
@@ -1262,7 +1360,10 @@ pub fn kaervek_the_punisher() -> CardDefinition {
                     exile_after: true,
                     copy: true,
                 },
-                Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ]),
         }],
         ..legend(
@@ -1286,7 +1387,9 @@ pub fn tinybones_the_pickpocket() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::CastWithoutPayingImmediate {
                 what: target_filtered(
-                    R::PermanentCard.and(R::Not(Box::new(R::Land))).and(R::InGraveyard),
+                    R::PermanentCard
+                        .and(R::Not(Box::new(R::Land)))
+                        .and(R::InGraveyard),
                 ),
                 source_zone: crate::card::Zone::Graveyard,
                 exile_after: false,
@@ -1320,10 +1423,7 @@ pub fn the_key_to_the_vault() -> CardDefinition {
         keywords: vec![Keyword::Equip(cost(&[generic(2), u()]))],
         equipped_bonus: Some(crate::card::EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::DealsCombatDamageToPlayer,
-                    EventScope::SelfSource,
-                ),
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::LookTopExileOneMayPlay {
                     count: Value::TriggerEventAmount,
                     who: PlayerRef::You,

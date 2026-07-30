@@ -6,11 +6,9 @@ use crate::card::{
     EnchantmentSubtype, EquipBonus, Keyword, SelectionRequirement as R, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{
-    etb, heroic, monstrosity, on_becomes_monstrous, target_filtered,
-};
+use crate::effect::shortcut::{etb, heroic, monstrosity, on_becomes_monstrous, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 
 fn creature(
     name: &'static str,
@@ -24,7 +22,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: ct, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: ct,
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         keywords: kw,
@@ -33,7 +34,13 @@ fn creature(
 }
 
 fn spell(name: &'static str, mana: ManaCost, kind: CardType, effect: Effect) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![kind], effect, ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![kind],
+        effect,
+        ..Default::default()
+    }
 }
 
 /// A plain "enchant creature" Aura.
@@ -46,7 +53,10 @@ fn aura(name: &'static str, mana: ManaCost, bonus: EquipBonus) -> CardDefinition
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(bonus),
         ..Default::default()
     }
@@ -156,7 +166,14 @@ pub fn golden_hind() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..creature("Golden Hind", cost(&[generic(1), g()]), 2, 1, vec![CreatureType::Elk], vec![])
+        ..creature(
+            "Golden Hind",
+            cost(&[generic(1), g()]),
+            2,
+            1,
+            vec![CreatureType::Elk],
+            vec![],
+        )
     }
 }
 
@@ -166,10 +183,19 @@ pub fn akroan_mastiff() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
             tap_cost: true,
-            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            effect: Effect::Tap {
+                what: target_filtered(R::Creature),
+            },
             ..Default::default()
         }],
-        ..creature("Akroan Mastiff", cost(&[generic(3), w()]), 2, 2, vec![CreatureType::Dog], vec![])
+        ..creature(
+            "Akroan Mastiff",
+            cost(&[generic(3), w()]),
+            2,
+            2,
+            vec![CreatureType::Dog],
+            vec![],
+        )
     }
 }
 
@@ -310,7 +336,11 @@ pub fn pheres_band_warchief() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Other Centaur creatures you control get +1/+1.",
-                effect: StaticEffect::PumpPT { applies_to: others(), power: 1, toughness: 1 },
+                effect: StaticEffect::PumpPT {
+                    applies_to: others(),
+                    power: 1,
+                    toughness: 1,
+                },
             },
             StaticAbility {
                 description: "Other Centaur creatures you control have vigilance.",
@@ -397,7 +427,9 @@ pub fn hydra_broodmaster() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[x(), x(), g()]),
-            effect: Effect::Monstrosity { n: Value::XFromCost },
+            effect: Effect::Monstrosity {
+                n: Value::XFromCost,
+            },
             ..Default::default()
         }],
         triggered_abilities: vec![on_becomes_monstrous(Effect::CreateToken {
@@ -439,7 +471,9 @@ pub fn king_macar_the_gold_cursed() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Exile target creature for a Gold token".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Exile { what: target_filtered(R::Creature) },
+                    Effect::Exile {
+                        what: target_filtered(R::Creature),
+                    },
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
@@ -468,7 +502,9 @@ pub fn countermand() -> CardDefinition {
         cost(&[generic(2), u(), u()]),
         CardType::Instant,
         Effect::Seq(vec![
-            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+            Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack),
+            },
             Effect::Mill {
                 who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                 amount: Value::Const(4),
@@ -483,7 +519,9 @@ pub fn desecration_plague() -> CardDefinition {
         "Desecration Plague",
         cost(&[generic(3), g()]),
         CardType::Sorcery,
-        Effect::Destroy { what: target_filtered(R::Enchantment.or(R::Land)) },
+        Effect::Destroy {
+            what: target_filtered(R::Enchantment.or(R::Land)),
+        },
     )
 }
 
@@ -568,11 +606,17 @@ pub fn nightmarish_end() -> CardDefinition {
             what: target_filtered(R::Creature),
             power: Value::Times(
                 Box::new(Value::Const(-1)),
-                Box::new(Value::CardsInHandMatching { who: PlayerRef::You, filter: R::Any }),
+                Box::new(Value::CardsInHandMatching {
+                    who: PlayerRef::You,
+                    filter: R::Any,
+                }),
             ),
             toughness: Value::Times(
                 Box::new(Value::Const(-1)),
-                Box::new(Value::CardsInHandMatching { who: PlayerRef::You, filter: R::Any }),
+                Box::new(Value::CardsInHandMatching {
+                    who: PlayerRef::You,
+                    filter: R::Any,
+                }),
             ),
             duration: Duration::EndOfTurn,
         },
@@ -587,7 +631,10 @@ pub fn interpret_the_signs() -> CardDefinition {
         cost(&[generic(5), u()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(3),
+            },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::ManaValueOf(Box::new(Selector::TopOfLibrary {
@@ -633,7 +680,10 @@ pub fn pin_to_the_earth() -> CardDefinition {
     aura(
         "Pin to the Earth",
         cost(&[generic(1), u()]),
-        EquipBonus { power: -6, ..Default::default() },
+        EquipBonus {
+            power: -6,
+            ..Default::default()
+        },
     )
 }
 
@@ -650,7 +700,11 @@ pub fn lightning_diadem() -> CardDefinition {
         ..aura(
             "Lightning Diadem",
             cost(&[generic(5), r()]),
-            EquipBonus { power: 2, toughness: 2, ..Default::default() },
+            EquipBonus {
+                power: 2,
+                toughness: 2,
+                ..Default::default()
+            },
         )
     }
 }
@@ -728,7 +782,10 @@ pub fn hall_of_triumph() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen color get +1/+1.",
-            effect: StaticEffect::AnthemForChosenColor { power: 1, toughness: 1 },
+            effect: StaticEffect::AnthemForChosenColor {
+                power: 1,
+                toughness: 1,
+            },
         }],
         ..Default::default()
     }
@@ -740,7 +797,10 @@ pub fn font_of_fortunes() -> CardDefinition {
         "Font of Fortunes",
         cost(&[generic(1), u()]),
         cost(&[generic(1), u()]),
-        Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
     )
 }
 
@@ -782,6 +842,9 @@ pub fn font_of_vigor() -> CardDefinition {
         "Font of Vigor",
         cost(&[generic(1), w()]),
         cost(&[generic(2), w()]),
-        Effect::GainLife { who: Selector::You, amount: Value::Const(7) },
+        Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(7),
+        },
     )
 }

@@ -16,7 +16,10 @@ pub fn scion_of_the_wild() -> CardDefinition {
         name: "Scion of the Wild",
         cost: cost(&[generic(1), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar],
+            ..Default::default()
+        },
         dynamic_pt: Some(DynamicPt::CreaturesControlled { base: 0 }),
         ..Default::default()
     }
@@ -29,14 +32,20 @@ pub fn grazing_gladehart() -> CardDefinition {
         name: "Grazing Gladehart",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Antelope], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Antelope],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
             effect: Effect::MayDo {
                 description: "Gain 2 life".into(),
-                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                }),
             },
         }],
         ..Default::default()
@@ -50,7 +59,10 @@ pub fn snapping_sailback() -> CardDefinition {
         name: "Snapping Sailback",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flash],
@@ -73,7 +85,10 @@ pub fn baloth_woodcrasher() -> CardDefinition {
         name: "Baloth Woodcrasher",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
@@ -102,10 +117,16 @@ pub fn kavu_climber() -> CardDefinition {
         name: "Kavu Climber",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Kavu], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
         ..Default::default()
     }
 }
@@ -145,7 +166,10 @@ pub fn wildsize() -> CardDefinition {
                 keyword: Keyword::Trample,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -160,7 +184,9 @@ pub fn broken_bond() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         // The land-put is inherently optional ("you may") — no MayDo wrapper.
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact.or(R::Enchantment)),
+            },
             Effect::PutFromHandOntoBattlefield {
                 who: PlayerRef::You,
                 filter: R::Land,

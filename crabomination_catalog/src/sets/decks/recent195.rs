@@ -6,8 +6,8 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
     Keyword, Predicate, SelectionRequirement as R, Subtypes, Supertype,
 };
-use crate::effect::shortcut::{flurry, investigate, target_filtered};
 use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+use crate::effect::shortcut::{flurry, investigate, target_filtered};
 use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{cost, g, generic, r, u, w};
 
@@ -43,7 +43,10 @@ pub fn reach_for_the_sky() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Flash],
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: 3,
             toughness: 2,
@@ -51,8 +54,14 @@ pub fn reach_for_the_sky() -> CardDefinition {
             ..Default::default()
         }),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -75,7 +84,10 @@ pub fn tomb_trawler() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Move {
                 what: target_filtered(R::InYourGraveyard),
-                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Bottom },
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: LibraryPosition::Bottom,
+                },
             },
             ..Default::default()
         }],

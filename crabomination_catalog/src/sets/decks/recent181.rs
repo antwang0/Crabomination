@@ -145,7 +145,9 @@ pub fn dreamdew_entrancer() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Tap { what: target_filtered(R::Creature) },
+            Effect::Tap {
+                what: target_filtered(R::Creature),
+            },
             Effect::AddCounter {
                 what: Selector::Target(0),
                 kind: CounterType::Stun,
@@ -156,7 +158,10 @@ pub fn dreamdew_entrancer() -> CardDefinition {
                     what: Selector::Target(0),
                     filter: R::ControlledByYou,
                 },
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]))],

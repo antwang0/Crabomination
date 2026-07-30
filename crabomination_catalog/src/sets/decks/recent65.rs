@@ -3,15 +3,18 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
-    Subtypes, TokenDefinition, TriggeredAbility, Value,
+    EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
+    StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{exalted, target_filtered};
 use crate::effect::PlayerRef;
-use crate::mana::{b, cost, generic, hybrid, Color};
+use crate::effect::shortcut::{exalted, target_filtered};
+use crate::mana::{Color, b, cost, generic, hybrid};
 
 fn low_life() -> Predicate {
-    Predicate::PlayerLifeAtMost { who: PlayerRef::EachOpponent, life: 10 }
+    Predicate::PlayerLifeAtMost {
+        who: PlayerRef::EachOpponent,
+        life: 10,
+    }
 }
 
 /// Ruthless Cullblade — {1}{B} 2/1 Vampire Warrior. +2/+1 as long as an opponent
@@ -98,7 +101,10 @@ pub fn nip_gwyllion() -> CardDefinition {
         name: "Nip Gwyllion",
         cost: cost(&[hybrid(Color::White, Color::Black)]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Hag], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hag],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
@@ -112,7 +118,10 @@ pub fn barony_vampire() -> CardDefinition {
         name: "Barony Vampire",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         ..Default::default()
@@ -128,7 +137,10 @@ pub fn nested_shambler() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Squirrel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel],
+            ..Default::default()
+        },
         tapped: true,
         ..Default::default()
     };
@@ -136,7 +148,10 @@ pub fn nested_shambler() -> CardDefinition {
         name: "Nested Shambler",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
@@ -158,13 +173,18 @@ pub fn duty_bound_dead() -> CardDefinition {
         name: "Duty-Bound Dead",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Skeleton], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton],
+            ..Default::default()
+        },
         power: 0,
         toughness: 2,
         triggered_abilities: vec![exalted()],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), b()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()

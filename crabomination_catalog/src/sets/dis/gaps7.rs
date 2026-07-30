@@ -11,7 +11,10 @@ pub fn bronze_bombshell() -> CardDefinition {
         name: "Bronze Bombshell",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 4,
         toughness: 1,
         sacrifice_and_burn_when_stolen: Some(7),

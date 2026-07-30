@@ -7,10 +7,10 @@ use crate::card::{
     EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector, Subtypes, TokenDefinition,
     TriggeredAbility, Value,
 };
-use crate::game::TurnStep;
 use crate::effect::shortcut::{on_attack, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, r, w, Color};
+use crate::game::TurnStep;
+use crate::mana::{Color, cost, generic, r, w};
 
 fn soldier_token() -> TokenDefinition {
     TokenDefinition {
@@ -19,7 +19,10 @@ fn soldier_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red, Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Haste],
         ..Default::default()
     }
@@ -39,7 +42,9 @@ pub fn wojek_siren() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::PumpPT {
-            what: Selector::RadianceGroup { subject: Box::new(target_filtered(R::Creature)) },
+            what: Selector::RadianceGroup {
+                subject: Box::new(target_filtered(R::Creature)),
+            },
             power: Value::ONE,
             toughness: Value::ONE,
             duration: Duration::EndOfTurn,
@@ -163,12 +168,18 @@ pub fn necromancers_assistant() -> CardDefinition {
         name: "Necromancer's Assistant",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            effect: Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
         }],
         ..Default::default()
     }
@@ -189,10 +200,16 @@ pub fn mark_of_eviction() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
                 // Return the creature first (This is still on the battlefield,
                 // so `AttachedToMe` resolves) then bounce this Aura itself.
                 effect: Effect::Seq(vec![

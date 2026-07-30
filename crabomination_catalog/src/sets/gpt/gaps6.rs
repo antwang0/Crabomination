@@ -57,8 +57,9 @@ pub fn goblin_flectomancer() -> CardDefinition {
             sac_cost: true,
             effect: Effect::ChooseNewTargetsForSpell {
                 what: target_filtered(
-                    R::IsSpellOnStack
-                        .and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                    R::IsSpellOnStack.and(
+                        R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    ),
                 ),
             },
             ..Default::default()
@@ -78,7 +79,10 @@ pub fn conjurers_ban() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::NameOpponentCastLock,
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }

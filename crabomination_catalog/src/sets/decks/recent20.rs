@@ -22,7 +22,10 @@ fn mercenary_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mercenary], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mercenary],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sorcery_speed: true,
@@ -73,7 +76,10 @@ pub fn battle_cry_goblin() -> CardDefinition {
         name: "Battle Cry Goblin",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -95,7 +101,10 @@ pub fn battle_cry_goblin() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
-                Predicate::AttackedWithTotalPowerAtLeast { who: PlayerRef::You, at_least: 6 },
+                Predicate::AttackedWithTotalPowerAtLeast {
+                    who: PlayerRef::You,
+                    at_least: 6,
+                },
             ),
             effect: Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
@@ -148,15 +157,23 @@ pub fn gisa_the_hellraiser() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Skeletons and Zombies you control get +1/+1.",
-                effect: StaticEffect::PumpPT { applies_to: undead(), power: 1, toughness: 1 },
+                effect: StaticEffect::PumpPT {
+                    applies_to: undead(),
+                    power: 1,
+                    toughness: 1,
+                },
             },
             StaticAbility {
                 description: "Skeletons and Zombies you control have menace.",
-                effect: StaticEffect::GrantKeyword { applies_to: undead(), keyword: Keyword::Menace },
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: undead(),
+                    keyword: Keyword::Menace,
+                },
             },
         ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
+                .once_per_turn(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
@@ -184,7 +201,8 @@ pub fn magda_the_hoardmaster() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
+                .once_per_turn(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -284,7 +302,10 @@ pub fn forsaken_miner() -> CardDefinition {
                 mana_cost: cost(&[b()]),
                 body: Box::new(Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 }),
                 else_: None,
             },
@@ -310,7 +331,9 @@ pub fn nimble_brigand() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Can't be blocked if you've committed a crime this turn.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::CommittedCrimeThisTurn { who: PlayerRef::You },
+                condition: Predicate::CommittedCrimeThisTurn {
+                    who: PlayerRef::You,
+                },
                 power: 0,
                 toughness: 0,
                 keywords: vec![Keyword::Unblockable],
@@ -318,7 +341,10 @@ pub fn nimble_brigand() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -369,12 +395,11 @@ pub fn rakish_crew() -> CardDefinition {
                 definition: mercenary_token(),
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
-                    Predicate::EntityMatches {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::IsOutlaw,
-                    },
-                ),
+                    }),
                 effect: Effect::Seq(vec![
                     Effect::LoseLife {
                         who: Selector::Player(PlayerRef::EachOpponent),
@@ -429,7 +454,9 @@ pub fn rictus_robber() -> CardDefinition {
         toughness: 3,
         plot_cost: Some(cost(&[generic(2), b()])),
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(1) },
+            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                at_least: Value::Const(1),
+            },
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -455,7 +482,10 @@ pub fn highway_robbery() -> CardDefinition {
                 amount: Value::Const(1),
                 random: false,
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -467,7 +497,10 @@ pub fn djinn_of_fools_fall() -> CardDefinition {
         name: "Djinn of Fool's Fall",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Djinn], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -493,8 +526,14 @@ pub fn holy_cow() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(2) },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(2),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -572,7 +611,10 @@ pub fn razzle_dazzler() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(2) },
+                Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                },
             ),
             effect: Effect::Seq(vec![
                 Effect::AddCounter {
@@ -605,7 +647,10 @@ pub fn slick_sequence() -> CardDefinition {
                     who: PlayerRef::You,
                     at_least: Value::Const(1),
                 },
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -756,7 +801,10 @@ pub fn stoic_sphinx() -> CardDefinition {
         name: "Stoic Sphinx",
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
         power: 5,
         toughness: 3,
         keywords: vec![Keyword::Flash, Keyword::Flying],

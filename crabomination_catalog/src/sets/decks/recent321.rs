@@ -3,16 +3,21 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, LandType, Predicate, Selector, SelectionRequirement as R, StaticAbility,
-    Subtypes, TriggeredAbility, Value,
+    EventSpec, LandType, Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, generic, r, u, ManaCost};
+use crate::mana::{ManaCost, b, cost, generic, r, u};
 
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
 }
 
 /// Extraplanar Lens — imprints a land; every land sharing its name pays double.
@@ -26,11 +31,12 @@ pub fn extraplanar_lens() -> CardDefinition {
                 }),
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::TappedForMana, EventScope::AnyPlayer)
-                    .with_filter(Predicate::EntityMatches {
+                event: EventSpec::new(EventKind::TappedForMana, EventScope::AnyPlayer).with_filter(
+                    Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::Land.and(R::SameNameAsExiledWithSource),
-                    }),
+                    },
+                ),
                 effect: Effect::AddMana {
                     who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
                     pool: ManaPayload::AnyTypeTriggerSourceProduces,
@@ -53,8 +59,7 @@ pub fn quicksilver_fountain() -> CardDefinition {
                 effect: Effect::AddCounter {
                     what: Selector::TargetFiltered {
                         slot: 0,
-                        filter: R::Land
-                            .and(R::Not(Box::new(R::HasLandType(LandType::Island)))),
+                        filter: R::Land.and(R::Not(Box::new(R::HasLandType(LandType::Island)))),
                     },
                     kind: CounterType::Flood,
                     amount: Value::ONE,
@@ -90,7 +95,10 @@ pub fn quicksilver_fountain() -> CardDefinition {
 pub fn timesifter() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
             effect: Effect::ExileTopGreatestManaValueTakesExtraTurn,
         }],
         ..artifact("Timesifter", cost(&[generic(5)]))
@@ -147,7 +155,9 @@ pub fn mindslaver() -> CardDefinition {
             mana_cost: cost(&[generic(4)]),
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::ControlPlayerNextTurn { who: PlayerRef::Target(0) },
+            effect: Effect::ControlPlayerNextTurn {
+                who: PlayerRef::Target(0),
+            },
             ..Default::default()
         }],
         ..artifact("Mindslaver", cost(&[generic(6)]))
@@ -162,12 +172,15 @@ pub fn confusion_in_the_ranks() -> CardDefinition {
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Artifact.or(R::Creature).or(R::Enchantment),
-                }),
-            effect: Effect::ExchangeControlWithSharedType { what: Selector::TriggerSource },
+                },
+            ),
+            effect: Effect::ExchangeControlWithSharedType {
+                what: Selector::TriggerSource,
+            },
         }],
         ..Default::default()
     }
@@ -180,7 +193,9 @@ pub fn grim_reminder() -> CardDefinition {
         name: "Grim Reminder",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::SearchRevealPunishSameNameCasters { amount: Value::Const(6) },
+        effect: Effect::SearchRevealPunishSameNameCasters {
+            amount: Value::Const(6),
+        },
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b(), b()]),
             from_graveyard: true,

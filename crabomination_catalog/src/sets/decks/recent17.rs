@@ -17,7 +17,10 @@ pub fn burglar_rat() -> CardDefinition {
         name: "Burglar Rat",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Discard {
@@ -66,7 +69,10 @@ pub fn corsair_captain() -> CardDefinition {
 /// Crow of Dark Tidings — {2}{B} Zombie Bird 2/1 with flying. When it enters or
 /// dies, mill two cards.
 pub fn crow_of_dark_tidings() -> CardDefinition {
-    let mill = || Effect::Mill { who: Selector::You, amount: Value::Const(2) };
+    let mill = || Effect::Mill {
+        who: Selector::You,
+        amount: Value::Const(2),
+    };
     CardDefinition {
         name: "Crow of Dark Tidings",
         cost: cost(&[generic(2), b()]),
@@ -106,7 +112,10 @@ pub fn angel_of_finality() -> CardDefinition {
         name: "Angel of Finality",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -142,7 +151,10 @@ pub fn affectionate_indrik() -> CardDefinition {
         name: "Affectionate Indrik",
         cost: cost(&[generic(5), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::Fight {
@@ -179,9 +191,10 @@ pub fn broken_wings() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Destroy {
             what: target_filtered(
-                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment).or(
-                    SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
-                ),
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .or(SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying))),
             ),
         },
         ..Default::default()
@@ -195,7 +208,10 @@ pub fn ambush_wolf() -> CardDefinition {
         name: "Ambush Wolf",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wolf],
+            ..Default::default()
+        },
         power: 4,
         toughness: 2,
         keywords: vec![Keyword::Flash],
@@ -241,7 +257,10 @@ pub fn angel_of_vitality() -> CardDefinition {
         name: "Angel of Vitality",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -256,7 +275,10 @@ pub fn angel_of_vitality() -> CardDefinition {
             StaticAbility {
                 description: "Gets +2/+2 as long as you have 25 or more life.",
                 effect: StaticEffect::PumpSelfIf {
-                    condition: Predicate::PlayerLifeAtLeast { who: PlayerRef::You, life: 25 },
+                    condition: Predicate::PlayerLifeAtLeast {
+                        who: PlayerRef::You,
+                        life: 25,
+                    },
                     power: 2,
                     toughness: 2,
                     keywords: vec![],
@@ -294,7 +316,10 @@ pub fn archway_angel() -> CardDefinition {
         name: "Archway Angel",
         cost: cost(&[generic(5), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -327,7 +352,10 @@ pub fn cemetery_recruitment() -> CardDefinition {
                     what: Selector::Target(0),
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie),
                 },
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::Noop),
             },
             Effect::Move {
@@ -355,7 +383,9 @@ pub fn seasoned_hallowblade() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             discard_cost: Some((SelectionRequirement::Any, 1)),
             effect: Effect::Seq(vec![
-                Effect::Tap { what: Selector::This },
+                Effect::Tap {
+                    what: Selector::This,
+                },
                 Effect::GrantKeyword {
                     what: Selector::This,
                     keyword: Keyword::Indestructible,
@@ -376,7 +406,10 @@ pub fn dryad_greenseeker() -> CardDefinition {
         name: "Dryad Greenseeker",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dryad], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dryad],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
@@ -399,7 +432,10 @@ pub fn aggressive_mammoth() -> CardDefinition {
         name: "Aggressive Mammoth",
         cost: cost(&[generic(3), g(), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
         power: 8,
         toughness: 8,
         keywords: vec![Keyword::Trample],
@@ -476,7 +512,10 @@ pub fn canopy_crawler() -> CardDefinition {
         name: "Canopy Crawler",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         enters_with_counters: amplify(1, CreatureType::Beast),
@@ -490,7 +529,10 @@ pub fn feral_throwback() -> CardDefinition {
         name: "Feral Throwback",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Trample],
@@ -507,7 +549,10 @@ pub fn kilnmouth_dragon() -> CardDefinition {
         name: "Kilnmouth Dragon",
         cost: cost(&[generic(5), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
@@ -552,7 +597,10 @@ pub fn scrabbling_claws() -> CardDefinition {
                         what: target_filtered(SelectionRequirement::Any),
                         to: ZoneDest::Exile,
                     },
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 ]),
                 ..Default::default()
             },

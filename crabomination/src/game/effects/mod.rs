@@ -14034,6 +14034,175 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LiarsPendulum => {
+                // Name a card, the targeted opponent guesses whether it's in
+                // your hand, and a wrong guess draws you a card. The naming
+                // auto-picks the hand's first card name (a bluff is a bot
+                // policy question, not a rules one).
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(opp) = self.resolve_player(&crate::effect::PlayerRef::Target(0), ctx)
+                else {
+                    return Ok(());
+                };
+                let named = self.players[ctx.controller]
+                    .hand
+                    .first()
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_else(|| "Island".to_string());
+                if let Some(src) = ctx.source
+                    && let Some(c) = self.battlefield_find_mut(src)
+                {
+                    c.named_card = Some(named.clone());
+                }
+                let guess_yes = matches!(
+                    self.decider.decide(&Decision::OptionalTrigger {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        description: format!("Is a card named {named} in their hand?"),
+                    }),
+                    DecisionAnswer::Bool(true)
+                );
+                let truth = self.players[ctx.controller]
+                    .hand
+                    .iter()
+                    .any(|c| c.definition.name == named);
+                if guess_yes != truth {
+                    if !self.hands_revealed_to.contains(&(opp, ctx.controller)) {
+                        self.hands_revealed_to.push((opp, ctx.controller));
+                    }
+                    self.draw_one(ctx.controller, events);
+                }
+                Ok(())
+            }
+
+            Effect::ReturnVictimAndAttachSelf => {
+                // Scythe of the Wretched — the dying creature must have been
+                // damaged this turn by the Equipment's host.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(host) = self.battlefield_find(src).and_then(|c| c.attached_to) else {
+                    return Ok(());
+                };
+                let Some(EntityRef::Permanent(victim) | EntityRef::Card(victim)) =
+                    ctx.trigger_source
+                else {
+                    return Ok(());
+                };
+                // The death snapshot is dropped once the dispatch batch ends,
+                // so fall back to the card now sitting in a graveyard.
+                let damaged = self
+                    .died_card_snapshots
+                    .get(&victim)
+                    .map(|snap| snap.damaged_by_this_turn.contains(&host))
+                    .or_else(|| {
+                        self.players
+                            .iter()
+                            .find_map(|pl| pl.graveyard.iter().find(|c| c.id == victim))
+                            .map(|c| c.damaged_by_this_turn.contains(&host))
+                    })
+                    .unwrap_or(false);
+                if !damaged {
+                    return Ok(());
+                }
+                let dest = ZoneDest::Battlefield {
+                    controller: crate::effect::PlayerRef::Seat(ctx.controller),
+                    tapped: false,
+                };
+                self.move_card_to(victim, &dest, ctx, events);
+                if self.battlefield_find(victim).is_some()
+                    && let Some(c) = self.battlefield_find_mut(src)
+                {
+                    c.attached_to = Some(victim);
+                }
+                Ok(())
+            }
+
+            Effect::ImprintFromGraveyard { filter, count } => {
+                // Pick the graveyard with the most matches, then exile up to
+                // `count` of them linked to the source.
+                let want = self.evaluate_value(count, ctx).max(0) as usize;
+                if want == 0 {
+                    return Ok(());
+                }
+                let best = (0..self.players.len()).max_by_key(|p| {
+                    self.players[*p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                        .count()
+                });
+                let Some(seat) = best else { return Ok(()) };
+                let picks: Vec<CardId> = self.players[seat]
+                    .graveyard
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                    .take(want)
+                    .map(|c| c.id)
+                    .collect();
+                for id in picks {
+                    let Some(mut card) = Self::take_card(&mut self.players[seat].graveyard, id)
+                    else {
+                        continue;
+                    };
+                    card.exiled_with = ctx.source;
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: id });
+                }
+                Ok(())
+            }
+
+            Effect::SpellweaverCopy => {
+                // Spellweaver Helix — the cast card shares a name with one of
+                // the two imprints; copy the other and cast it for free.
+                let Some(src) = ctx.source else { return Ok(()) };
+                // "Whenever a player casts a CARD": read the *triggering*
+                // object and skip copies (CR 707.12), so the free copy this
+                // makes can't chain the Helix into itself.
+                let Some(EntityRef::Permanent(cast_id) | EntityRef::Card(cast_id)) =
+                    ctx.trigger_source
+                else {
+                    return Ok(());
+                };
+                let Some(cast) = self.find_card_anywhere(cast_id) else { return Ok(()) };
+                if cast.is_token {
+                    return Ok(());
+                }
+                let cast_name = cast.definition.name.to_string();
+                let imprints: Vec<(CardId, String)> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if imprints.len() != 2 || !imprints.iter().any(|(_, n)| *n == cast_name) {
+                    return Ok(());
+                }
+                let Some((other, _)) = imprints.iter().find(|(_, n)| *n != cast_name) else {
+                    return Ok(());
+                };
+                let Some(template) = self.exile.iter().find(|c| c.id == *other).cloned() else {
+                    return Ok(());
+                };
+                let mut copy = template;
+                copy.id = self.next_id();
+                copy.owner = ctx.controller;
+                copy.controller = ctx.controller;
+                copy.is_token = true;
+                copy.exiled_with = None;
+                let copy_id = copy.id;
+                self.exile.push(copy);
+                self.run_effect(
+                    &Effect::CastWithoutPayingImmediate {
+                        what: Selector::Target(0),
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                    },
+                    &EffectContext { targets: vec![Target::Permanent(copy_id)], ..ctx.clone() },
+                    events,
+                )?;
+                self.exile.retain(|c| c.id != copy_id);
+                Ok(())
+            }
+
             Effect::NameCardTargetDiscardsMatching => {
                 use crate::decision::Decision;
                 let who = self

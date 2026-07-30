@@ -16,7 +16,10 @@ use crate::mana::{b, cost, g, generic, r, u, w};
 fn nightmare(power: i32, toughness: i32) -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare],
+            ..Default::default()
+        },
         power,
         toughness,
         ..Default::default()
@@ -40,7 +43,10 @@ pub fn fear_of_failed_tests() -> CardDefinition {
         cost: cost(&[generic(4), u()]),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::TriggerEventAmount,
+            },
         }],
         ..nightmare(2, 7)
     }
@@ -70,7 +76,6 @@ pub fn fear_of_being_hunted() -> CardDefinition {
     }
 }
 
-
 /// Fear of Immobility — {4}{W} 4/4 Nightmare. ETB: tap target creature; if an
 /// opponent controls it, stun it. (The "up to one" optionality is approximated
 /// to a required target.)
@@ -79,7 +84,9 @@ pub fn fear_of_immobility() -> CardDefinition {
         name: "Fear of Immobility",
         cost: cost(&[generic(4), w()]),
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
             Effect::If {
                 cond: Predicate::EntityMatches {
                     what: Selector::Target(0),
@@ -106,7 +113,10 @@ pub fn flesh_burrower() -> CardDefinition {
         name: "Flesh Burrower",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
@@ -156,7 +166,10 @@ pub fn infernal_phantom() -> CardDefinition {
         name: "Infernal Phantom",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         triggered_abilities: {
@@ -205,7 +218,6 @@ pub fn lionheart_glimmer() -> CardDefinition {
     }
 }
 
-
 /// Irreverent Gremlin — {1}{R} 2/2 Gremlin. Menace; once each turn when another
 /// creature you control with power 2 or less enters, you may discard then draw.
 pub fn irreverent_gremlin() -> CardDefinition {
@@ -213,7 +225,10 @@ pub fn irreverent_gremlin() -> CardDefinition {
         name: "Irreverent Gremlin",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Gremlin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gremlin],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Menace],
@@ -229,8 +244,15 @@ pub fn irreverent_gremlin() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Discard a card, then draw a card".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                 ])),
             },
         }],
@@ -245,7 +267,10 @@ pub fn anthropede() -> CardDefinition {
         name: "Anthropede",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Reach],
@@ -272,14 +297,19 @@ pub fn living_phone() -> CardDefinition {
         name: "Living Phone",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Toy], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Toy],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![on_dies(Effect::LookPickToHand {
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,
-            pick_filter: Some(SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2))),
+            pick_filter: Some(
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
+            ),
             take: None,
             to_battlefield: false,
             gain_life_if_pick: None,
@@ -300,7 +330,9 @@ pub fn demonic_counsel() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::If {
-            cond: Predicate::DeliriumActive { who: PlayerRef::You },
+            cond: Predicate::DeliriumActive {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Any,

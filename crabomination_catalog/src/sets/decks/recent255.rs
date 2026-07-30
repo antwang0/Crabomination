@@ -8,13 +8,14 @@ use crate::card::{
     TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::cast_is_instant_or_sorcery;
-use crate::effect::{
-    Effect, PlayerRef, Predicate, Selector, StaticEffect, Value, ZoneDest,
-};
+use crate::effect::{Effect, PlayerRef, Predicate, Selector, StaticEffect, Value, ZoneDest};
 use crate::mana::{b, cost, generic, u, w};
 
 fn case_subtypes() -> Subtypes {
-    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Case], ..Default::default() }
+    Subtypes {
+        enchantment_subtypes: vec![EnchantmentSubtype::Case],
+        ..Default::default()
+    }
 }
 
 fn is_instant_or_sorcery() -> R {
@@ -32,7 +33,10 @@ pub fn case_of_the_ransacked_lab() -> CardDefinition {
         subtypes: case_subtypes(),
         static_abilities: vec![StaticAbility {
             description: "Instant and sorcery spells you cast cost {1} less to cast.",
-            effect: StaticEffect::CostReduction { filter: is_instant_or_sorcery(), amount: 1 },
+            effect: StaticEffect::CostReduction {
+                filter: is_instant_or_sorcery(),
+                amount: 1,
+            },
         }],
         case: Some(Box::new(crate::card::CaseData {
             to_solve: Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
@@ -42,7 +46,10 @@ pub fn case_of_the_ransacked_lab() -> CardDefinition {
             solved_triggered: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                     .with_filter(cast_is_instant_or_sorcery()),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             }],
             ..Default::default()
         })),
@@ -76,7 +83,9 @@ pub fn case_of_the_stashed_skeleton() -> CardDefinition {
                     ..Default::default()
                 },
             },
-            Effect::Suspect { what: Selector::LastCreatedToken },
+            Effect::Suspect {
+                what: Selector::LastCreatedToken,
+            },
         ]))],
         case: Some(Box::new(crate::card::CaseData {
             to_solve: Predicate::Not(Box::new(Predicate::SelectorCountAtLeast {
@@ -109,10 +118,12 @@ pub fn case_of_the_stashed_skeleton() -> CardDefinition {
 /// control 3+ Detectives. Solved: your token creations also mint a Clue.
 pub fn case_of_the_pilfered_proof() -> CardDefinition {
     let counter_on_detective = |kind: EventKind| TriggeredAbility {
-        event: EventSpec::new(kind, EventScope::YourControl).with_filter(Predicate::EntityMatches {
-            what: Selector::TriggerSource,
-            filter: R::HasCreatureType(CreatureType::Detective),
-        }),
+        event: EventSpec::new(kind, EventScope::YourControl).with_filter(
+            Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasCreatureType(CreatureType::Detective),
+            },
+        ),
         effect: Effect::AddCounter {
             what: Selector::TriggerSource,
             kind: CounterType::PlusOnePlusOne,

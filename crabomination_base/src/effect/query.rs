@@ -807,7 +807,12 @@ impl Effect {
             | Effect::DoubleUnspentMana
             | Effect::RevealImprintDeployCreature
             | Effect::ReversalOfFortune
-            | Effect::EachPlayerSacrificesUnlessDiscards => false,
+            | Effect::EachPlayerSacrificesUnlessDiscards
+            | Effect::ReturnVictimAndAttachSelf
+            | Effect::ImprintFromGraveyard { .. }
+            | Effect::SpellweaverCopy => false,
+            // Liar's Pendulum targets an opponent.
+            Effect::LiarsPendulum => true,
             // Targets slot 0 (a creature) but reads it straight off ctx.
             Effect::PreventNextDamageByTargetMintMites => true,
             Effect::GainControl { what, .. }

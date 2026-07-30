@@ -17,7 +17,10 @@ pub fn moroii() -> CardDefinition {
         name: "Moroii",
         cost: cost(&[generic(2), u(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -26,7 +29,10 @@ pub fn moroii() -> CardDefinition {
                 EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                 EventScope::YourControl,
             ),
-            effect: Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            effect: Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -39,7 +45,10 @@ pub fn keening_banshee() -> CardDefinition {
         name: "Keening Banshee",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -60,16 +69,25 @@ pub fn primordial_sage() -> CardDefinition {
         name: "Primordial Sage",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 4,
         toughness: 5,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                },
             ),
             effect: Effect::MayDo {
                 description: "Draw a card".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
         ..Default::default()
@@ -83,7 +101,10 @@ pub fn junktroller() -> CardDefinition {
         name: "Junktroller",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 0,
         toughness: 6,
         keywords: vec![Keyword::Defender],
@@ -91,7 +112,10 @@ pub fn junktroller() -> CardDefinition {
             tap_cost: true,
             effect: Effect::Move {
                 what: target_filtered(R::InGraveyard),
-                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Bottom },
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: LibraryPosition::Bottom,
+                },
             },
             ..Default::default()
         }],
@@ -141,7 +165,10 @@ pub fn lore_broker() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::ONE,
+                },
                 Effect::Discard {
                     who: Selector::Player(PlayerRef::EachPlayer),
                     amount: Value::ONE,
@@ -168,7 +195,10 @@ pub fn stoneshaker_shaman() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::End), EventScope::AnyPlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::AnyPlayer,
+            ),
             effect: Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::ActivePlayer),
                 count: Value::ONE,

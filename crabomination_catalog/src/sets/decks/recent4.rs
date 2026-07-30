@@ -9,8 +9,10 @@ use crate::card::{
     Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{DelayedTriggerKind, Duration, LibraryPosition, PlayerRef, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, u, w, x, Color};
+use crate::effect::{
+    DelayedTriggerKind, Duration, LibraryPosition, PlayerRef, StaticEffect, ZoneDest,
+};
+use crate::mana::{Color, b, cost, g, generic, u, w, x};
 
 /// Ritual of Soot — {2}{B}{B} Sorcery. Destroy all creatures with mana value
 /// 3 or less.
@@ -44,7 +46,10 @@ pub fn recurring_nightmare() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             ..Default::default()
         }],
@@ -82,17 +87,25 @@ pub fn footsteps_of_the_goryo() -> CardDefinition {
         name: "Footsteps of the Goryo",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Arcane], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Arcane],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::DelayUntil {
                 kind: DelayedTriggerKind::NextEndStep,
-                body: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),
+                body: Box::new(Effect::SacrificePermanent {
+                    what: Selector::Target(0),
+                }),
             },
         ]),
         ..Default::default()
@@ -123,7 +136,10 @@ pub fn apprentice_necromancer() -> CardDefinition {
                     what: target_filtered(
                         SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
                     ),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::GrantKeyword {
                     what: Selector::Target(0),
@@ -132,7 +148,9 @@ pub fn apprentice_necromancer() -> CardDefinition {
                 },
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::NextEndStep,
-                    body: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),
+                    body: Box::new(Effect::SacrificePermanent {
+                        what: Selector::Target(0),
+                    }),
                 },
             ]),
             ..Default::default()
@@ -202,7 +220,9 @@ pub fn bontus_last_reckoning() -> CardDefinition {
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: Selector::EachPermanent(SelectionRequirement::Creature) },
+            Effect::Destroy {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+            },
             Effect::LandsDontUntapNextUntapStep { who: Selector::You },
         ]),
         ..Default::default()
@@ -222,7 +242,10 @@ pub fn syphon_mind() -> CardDefinition {
                 amount: Value::ONE,
                 random: false,
             },
-            Effect::Draw { who: Selector::You, amount: Value::CardsDiscardedThisEffect },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::CardsDiscardedThisEffect,
+            },
         ]),
         ..Default::default()
     }
@@ -260,7 +283,10 @@ pub fn ondu_giant() -> CardDefinition {
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
         }],
         ..Default::default()
@@ -283,7 +309,10 @@ pub fn roiling_regrowth() -> CardDefinition {
             Effect::SearchUpToN {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
                 count: Value::Const(2),
             },
         ]),
@@ -354,9 +383,14 @@ pub fn chart_a_course() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::If {
-                cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
+                cond: Predicate::PlayerAttackedThisTurn {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::Noop),
                 else_: Box::new(Effect::Discard {
                     who: Selector::You,
@@ -379,7 +413,10 @@ pub fn sylvan_tutor() -> CardDefinition {
         effect: Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::Creature,
-            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            to: ZoneDest::Library {
+                who: PlayerRef::You,
+                pos: LibraryPosition::Top,
+            },
         },
         ..Default::default()
     }
@@ -421,7 +458,10 @@ pub fn altars_reap() -> CardDefinition {
                 count: Value::ONE,
                 filter: SelectionRequirement::Creature,
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -462,26 +502,32 @@ pub fn harvester_of_souls() -> CardDefinition {
         name: "Harvester of Souls",
         cost: cost(&[generic(4), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::OtherThanSource
                         .and(SelectionRequirement::NotToken),
-                }),
+                },
+            ),
             effect: Effect::MayDo {
                 description: "Draw a card?".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
         ..Default::default()
     }
 }
-
 
 /// Snap — {1}{U} Instant. Return target creature to its owner's hand. Untap up
 /// to two lands.
@@ -571,8 +617,15 @@ pub fn thirst_for_knowledge() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(2),
+                random: false,
+            },
         ]),
         ..Default::default()
     }
@@ -585,7 +638,10 @@ pub fn kavu_predator() -> CardDefinition {
         name: "Kavu Predator",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Kavu], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Trample],
@@ -674,7 +730,9 @@ pub fn star_of_extinction() -> CardDefinition {
         cost: cost(&[generic(5), crate::mana::r(), crate::mana::r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(SelectionRequirement::Land) },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Land),
+            },
             Effect::DealDamage {
                 to: Selector::EachPermanent(
                     SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
@@ -813,7 +871,10 @@ pub fn mudbutton_torchrunner() -> CardDefinition {
         name: "Mudbutton Torchrunner",
         cost: cost(&[generic(1), crate::mana::r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
@@ -857,7 +918,11 @@ pub fn llanowar_mentor() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[g()]),
             discard_cost: Some((SelectionRequirement::Any, 1)),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: elf },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: elf,
+            },
             ..Default::default()
         }],
         ..Default::default()

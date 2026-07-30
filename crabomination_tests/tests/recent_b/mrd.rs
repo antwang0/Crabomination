@@ -2,6 +2,7 @@
 
 use crabomination::card::{CardType, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::game::effects::EntityRef;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -2079,4 +2080,96 @@ fn grim_reminder_punishes_the_matching_caster() {
     .expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 14, "6 for the Bolt they cast");
+}
+
+// ── The last four Mirrodin rares (`decks::recent324`) ──
+
+/// Liar's Pendulum draws when the opponent guesses wrong.
+#[test]
+fn liars_pendulum_draws_on_a_wrong_guess() {
+    let mut g = main_phase();
+    let pendulum = g.add_card_to_battlefield(0, catalog::liars_pendulum());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    // The auto decider answers "no" to the guess; the named card IS in hand.
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pendulum, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "wrong guess draws");
+}
+
+/// Scythe of the Wretched reanimates what the equipped creature killed and
+/// moves itself onto the corpse.
+#[test]
+fn scythe_of_the_wretched_reclaims_its_victim() {
+    let mut g = main_phase();
+    let scythe = g.add_card_to_battlefield(0, catalog::scythe_of_the_wretched());
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::Equip { equipment: scythe, target: host }).expect("equip");
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(victim), 4, Some(host), &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    let mut sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&std::mem::take(&mut sba));
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(victim).map(|c| c.controller), Some(0), "stolen back");
+    assert_eq!(g.battlefield_find(scythe).unwrap().attached_to, Some(victim));
+}
+
+/// Shared Fate turns a draw into an exile off an opponent's library.
+#[test]
+fn shared_fate_exiles_instead_of_drawing() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::shared_fate());
+    let theirs = g.add_card_to_library(1, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+    let mut evs = Vec::new();
+    assert!(g.draw_one(0, &mut evs));
+    assert_eq!(g.players[0].hand.len(), hand_before, "no card drawn");
+    let exiled = g.exile.iter().find(|c| c.id == theirs).expect("their card exiled");
+    assert!(exiled.face_down);
+    assert_eq!(exiled.may_play_until.as_ref().map(|m| m.player), Some(0));
+}
+
+/// Spellweaver Helix copies the twin of whatever imprint gets cast.
+#[test]
+fn spellweaver_helix_copies_the_other_imprint() {
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::lava_axe());
+    g.add_card_to_graveyard(0, catalog::divination());
+    let helix = g.add_card_to_hand(0, catalog::spellweaver_helix());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: helix, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(helix)).count(), 2, "imprinted two");
+    // Casting a Lava Axe copies the Divination.
+    let fresh = g.add_card_to_hand(0, catalog::lava_axe());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: fresh, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast the axe");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 15, "the axe resolved");
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before - 1 + 2,
+        "the copied Divination drew two"
+    );
 }

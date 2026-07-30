@@ -64,8 +64,14 @@ pub fn painland(name: &'static str, color_a: Color, color_b: Color) -> CardDefin
     let colored = |color: Color| ActivatedAbility {
         tap_cost: true,
         effect: Effect::Seq(vec![
-            Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![color]) },
-            Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![color]),
+            },
+            Effect::DealDamage {
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     };
@@ -109,7 +115,10 @@ pub fn horizon_land(name: &'static str, color_a: Color, color_b: Color) -> CardD
                 tap_cost: true,
                 sac_cost: true,
                 mana_cost: crate::mana::cost(&[crate::mana::generic(1)]),
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
         ],
@@ -158,7 +167,9 @@ pub fn verge_land(
 pub fn etb_tap() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Tap { what: Selector::This },
+        effect: Effect::Tap {
+            what: Selector::This,
+        },
     }
 }
 
@@ -167,8 +178,13 @@ pub fn etb_tap_then_surveil_one() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
         effect: Effect::Seq(vec![
-            Effect::Tap { what: Selector::This },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Tap {
+                what: Selector::This,
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
     }
 }
@@ -179,8 +195,13 @@ pub fn etb_tap_then_scry_one() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
         effect: Effect::Seq(vec![
-            Effect::Tap { what: Selector::This },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Tap {
+                what: Selector::This,
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
     }
 }
@@ -191,8 +212,13 @@ pub fn etb_tap_then_gain_one() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
         effect: Effect::Seq(vec![
-            Effect::Tap { what: Selector::This },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::Tap {
+                what: Selector::This,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
     }
 }
@@ -206,12 +232,13 @@ pub fn fastland_etb_conditional_tap() -> TriggeredAbility {
         effect: Effect::If {
             cond: Predicate::SelectorCountAtLeast {
                 sel: Selector::EachPermanent(
-                    SelectionRequirement::Land
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
                 ),
                 n: Value::Const(4),
             },
-            then: Box::new(Effect::Tap { what: Selector::This }),
+            then: Box::new(Effect::Tap {
+                what: Selector::This,
+            }),
             else_: Box::new(Effect::Noop),
         },
     }
@@ -234,7 +261,9 @@ pub fn shockland_pay_two_or_tap() -> TriggeredAbility {
                 amount: Value::Const(2),
             },
             // Mode 1: enter tapped.
-            Effect::Tap { what: Selector::This },
+            Effect::Tap {
+                what: Selector::This,
+            },
         ]),
     }
 }
@@ -274,21 +303,19 @@ pub fn tri_land(name: &'static str, a: Color, b: Color, c: Color) -> CardDefinit
     }
 }
 
-pub mod all_factories;
 pub mod akh;
 pub mod all;
+pub mod all_factories;
 pub mod ap;
 pub mod arn;
 pub mod bng;
 pub mod bng2;
 pub mod bng3;
-pub mod curses;
-pub mod jou;
-pub mod jou2;
-pub mod jou3;
 pub mod bro;
 pub mod c21;
 pub mod chk;
+pub mod curses;
+pub mod decks;
 pub mod dgm;
 pub mod dis;
 pub mod eoe;
@@ -296,14 +323,6 @@ pub mod fem;
 pub mod fin;
 pub mod gpt;
 pub mod gtc;
-pub mod gtc2;
-pub mod gtc3;
-pub mod gtc4;
-pub mod gtc5;
-pub mod gtc6;
-pub mod gtc7;
-pub mod gtc8;
-pub mod gtc9;
 pub mod gtc10;
 pub mod gtc11;
 pub mod gtc12;
@@ -312,8 +331,19 @@ pub mod gtc14;
 pub mod gtc15;
 pub mod gtc16;
 pub mod gtc17;
+pub mod gtc2;
+pub mod gtc3;
+pub mod gtc4;
+pub mod gtc5;
+pub mod gtc6;
+pub mod gtc7;
+pub mod gtc8;
+pub mod gtc9;
 pub mod ice;
 pub mod inv;
+pub mod jou;
+pub mod jou2;
+pub mod jou3;
 pub mod khm;
 pub mod kld;
 pub mod ktk;
@@ -327,6 +357,7 @@ pub mod mh3c;
 pub mod mh3d;
 pub mod mh3e;
 pub mod mkm;
+pub mod mod_set;
 pub mod ogw;
 pub mod one;
 pub mod pc2;
@@ -336,13 +367,11 @@ pub mod rna;
 pub mod rna2;
 pub mod rtr;
 pub mod shm;
+pub mod sos;
+pub mod stx;
 pub mod thb;
 pub mod ths;
 pub mod tmp;
 pub mod war;
-pub mod zen;
-pub mod decks;
-pub mod mod_set;
-pub mod sos;
-pub mod stx;
 pub mod xtra;
+pub mod zen;

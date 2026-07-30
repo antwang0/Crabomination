@@ -1,6 +1,6 @@
 use crate::card::{CardDefinition, CardType, SelectionRequirement};
-use crate::effect::shortcut::{deal, gain_life, target, target_filtered};
 use crate::effect::Effect;
+use crate::effect::shortcut::{deal, gain_life, target, target_filtered};
 use crate::mana::{b, cost, g, generic, r, w};
 
 /// Lightning Helix — {R}{W}: deal 3 damage to any target, you gain 3 life

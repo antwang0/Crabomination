@@ -7,7 +7,9 @@ use crate::card::{
     Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{investigate, target_filtered};
-use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, Value, ZoneDest};
+use crate::effect::{
+    Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, Value, ZoneDest,
+};
 use crate::mana::{b, cost, generic};
 
 /// Magnifying Glass — {3} Artifact. {T}: Add {C}. {4}, {T}: Investigate.
@@ -19,7 +21,10 @@ pub fn magnifying_glass() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -47,7 +52,10 @@ pub fn escape_tunnel() -> CardDefinition {
                 effect: Effect::Search {
                     who: PlayerRef::You,
                     filter: R::IsBasicLand,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
                 ..Default::default()
             },
@@ -79,12 +87,17 @@ pub fn scene_of_the_crime() -> CardDefinition {
         },
         static_abilities: vec![StaticAbility {
             description: "This land enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -99,7 +112,10 @@ pub fn scene_of_the_crime() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2)]),
                 sac_cost: true,
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
         ],
@@ -140,7 +156,10 @@ pub fn massacre_girl_known_killer() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::ToughnessAtMost(0),
                 }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }

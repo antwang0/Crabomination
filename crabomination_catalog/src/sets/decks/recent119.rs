@@ -51,7 +51,10 @@ pub fn lightshell_duo() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Prowess],
-        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
         ..Default::default()
     }
 }
@@ -73,7 +76,9 @@ pub fn nightwhorl_hermit() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Threshold — gets +1/+0 and can't be blocked while seven or more cards are in your graveyard.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::ThresholdActive { who: PlayerRef::You },
+                condition: Predicate::ThresholdActive {
+                    who: PlayerRef::You,
+                },
                 power: 1,
                 toughness: 0,
                 keywords: vec![Keyword::Unblockable],

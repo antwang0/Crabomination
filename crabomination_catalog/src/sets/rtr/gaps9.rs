@@ -19,12 +19,18 @@ pub fn shrieking_affliction() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::OpponentControl)
-                .with_filter(Predicate::ValueAtMost(
-                    Value::HandSizeOf(PlayerRef::ActivePlayer),
-                    Value::ONE,
-                )),
-            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::ActivePlayer), amount: Value::Const(3) },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::OpponentControl,
+            )
+            .with_filter(Predicate::ValueAtMost(
+                Value::HandSizeOf(PlayerRef::ActivePlayer),
+                Value::ONE,
+            )),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::Const(3),
+            },
         }],
         ..Default::default()
     }
@@ -38,12 +44,18 @@ pub fn desecration_demon() -> CardDefinition {
         name: "Desecration Demon",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::AnyPlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::AnyPlayer,
+            ),
             effect: Effect::PlayersMayAccept {
                 who: PlayerRef::EachOpponent,
                 description: "Sacrifice a creature to Desecration Demon?".into(),
@@ -53,8 +65,14 @@ pub fn desecration_demon() -> CardDefinition {
                         count: Value::ONE,
                         filter: R::Creature,
                     },
-                    Effect::Tap { what: Selector::This },
-                    Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                    Effect::Tap {
+                        what: Selector::This,
+                    },
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
                 ])),
                 otherwise: Box::new(Effect::Noop),
             },
@@ -92,9 +110,15 @@ pub fn pyroconvergence() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Multicolored },
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Multicolored,
+                },
             ),
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(2),
+            },
         }],
         ..Default::default()
     }

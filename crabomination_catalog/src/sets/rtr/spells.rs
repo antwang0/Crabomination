@@ -13,7 +13,10 @@ pub fn explosive_impact() -> CardDefinition {
         name: "Explosive Impact",
         cost: cost(&[generic(5), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(5) },
+        effect: Effect::DealDamage {
+            to: target_any(),
+            amount: Value::Const(5),
+        },
         ..Default::default()
     }
 }
@@ -26,8 +29,13 @@ pub fn annihilating_fire() -> CardDefinition {
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
-            Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+            Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(3),
+            },
+            Effect::ExileIfWouldDieThisTurn {
+                what: Selector::Target(0),
+            },
         ]),
         ..Default::default()
     }
@@ -76,7 +84,10 @@ pub fn savage_surge() -> CardDefinition {
                 toughness: Value::Const(2),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
         ]),
         ..Default::default()
     }
@@ -122,7 +133,9 @@ pub fn chorus_of_might() -> CardDefinition {
             Effect::PumpPT {
                 what: target_filtered(R::Creature),
                 power: Value::count(Selector::EachPermanent(R::Creature.and(R::ControlledByYou))),
-                toughness: Value::count(Selector::EachPermanent(R::Creature.and(R::ControlledByYou))),
+                toughness: Value::count(Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou),
+                )),
                 duration: Duration::EndOfTurn,
             },
             Effect::GrantKeyword {
@@ -144,12 +157,18 @@ pub fn common_bond() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::AddCounter {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature,
+                },
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
             },
             Effect::AddCounter {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
             },
@@ -166,7 +185,9 @@ pub fn assassins_strike() -> CardDefinition {
         cost: cost(&[generic(4), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Creature) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature),
+            },
             Effect::Discard {
                 who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                 amount: Value::ONE,

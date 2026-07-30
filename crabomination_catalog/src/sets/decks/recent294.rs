@@ -4,13 +4,13 @@
 //! grants, and `ChooseColorForSelf` mana. Tests in `recent_b/recent_294`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,
-    EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Selector,
-    Subtypes, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement as R, Selector, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{draw, etb, graft, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// A 1/1 black Bat token with flying (Skeletal Vampire's brood).
 fn bat_token() -> TokenDefinition {
@@ -20,7 +20,10 @@ fn bat_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bat],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     }
@@ -34,12 +37,18 @@ pub fn simic_ragworm() -> CardDefinition {
         name: "Simic Ragworm",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Worm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Worm],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[u()]),
-            effect: Effect::Untap { what: Selector::This, up_to: None },
+            effect: Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -89,7 +98,10 @@ pub fn silhana_starfletcher() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::ChosenColorOfSource },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::ChosenColorOfSource,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -104,7 +116,10 @@ pub fn plaxmanta() -> CardDefinition {
         name: "Plaxmanta",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flash],
@@ -116,11 +131,15 @@ pub fn plaxmanta() -> CardDefinition {
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
-                    .with_filter(Predicate::Not(Box::new(Predicate::SourceCastWithColorSpent {
-                        color: Color::Green,
-                        at_least: 1,
-                    }))),
-                effect: Effect::SacrificePermanent { what: Selector::This },
+                    .with_filter(Predicate::Not(Box::new(
+                        Predicate::SourceCastWithColorSpent {
+                            color: Color::Green,
+                            at_least: 1,
+                        },
+                    ))),
+                effect: Effect::SacrificePermanent {
+                    what: Selector::This,
+                },
             },
         ],
         ..Default::default()
@@ -133,8 +152,11 @@ pub fn plaxmanta() -> CardDefinition {
 /// create two 1/1 black Bat tokens with flying. {3}{B}{B}, Sacrifice a Bat:
 /// Create two Bats. Sacrifice a Bat: Regenerate this creature.
 pub fn skeletal_vampire() -> CardDefinition {
-    let make_bats =
-        Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: bat_token() };
+    let make_bats = Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(2),
+        definition: bat_token(),
+    };
     CardDefinition {
         name: "Skeletal Vampire",
         cost: cost(&[generic(4), b(), b()]),
@@ -156,7 +178,9 @@ pub fn skeletal_vampire() -> CardDefinition {
             },
             ActivatedAbility {
                 sac_other_filter: Some((R::HasCreatureType(CreatureType::Bat), 1)),
-                effect: Effect::Regenerate { what: Selector::This },
+                effect: Effect::Regenerate {
+                    what: Selector::This,
+                },
                 ..Default::default()
             },
         ],
@@ -171,7 +195,10 @@ pub fn divebomber_griffin() -> CardDefinition {
         name: "Divebomber Griffin",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -194,14 +221,16 @@ pub fn steeple_roc() -> CardDefinition {
         name: "Steeple Roc",
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::FirstStrike],
         ..Default::default()
     }
 }
-
 
 /// Scorched Rusalka — {R} 1/1 Spirit. {R}, Sacrifice a creature: This creature
 /// deals 1 damage to target player or planeswalker.
@@ -210,7 +239,10 @@ pub fn scorched_rusalka() -> CardDefinition {
         name: "Scorched Rusalka",
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -236,7 +268,10 @@ pub fn withstand() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::PreventNextDamage { target: target_any(), amount: Value::Const(3) },
+            Effect::PreventNextDamage {
+                target: target_any(),
+                amount: Value::Const(3),
+            },
             draw(1),
         ]),
         ..Default::default()

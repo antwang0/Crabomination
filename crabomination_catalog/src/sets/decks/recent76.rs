@@ -11,17 +11,34 @@ use crate::card::{
 };
 use crate::effect::shortcut::{deal, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, Value};
-use crate::mana::{b, cost, g, generic, r, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, w};
 
 /// Aura helper: enchant a creature and grant a flat P/T (plus keywords) bonus.
-fn pump_aura(name: &'static str, mana: ManaCost, power: i32, toughness: i32, keywords: Vec<Keyword>) -> CardDefinition {
+fn pump_aura(
+    name: &'static str,
+    mana: ManaCost,
+    power: i32,
+    toughness: i32,
+    keywords: Vec<Keyword>,
+) -> CardDefinition {
     CardDefinition {
         name,
         cost: mana,
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { power, toughness, keywords, ..Default::default() }),
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power,
+            toughness,
+            keywords,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -43,8 +60,14 @@ pub fn blanchwood_armor() -> CardDefinition {
         name: "Blanchwood Armor",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             scale: Some(EquipScale {
                 filter: R::HasLandType(LandType::Forest).and(R::ControlledByYou),
@@ -53,7 +76,8 @@ pub fn blanchwood_armor() -> CardDefinition {
                 count_self_counters: None,
                 count_graveyard: None,
                 count_all_graveyards: None,
-                count_host_colors: false, ..Default::default()
+                count_host_colors: false,
+                ..Default::default()
             }),
             ..Default::default()
         }),
@@ -69,8 +93,14 @@ pub fn firebreathing() -> CardDefinition {
         name: "Firebreathing",
         cost: cost(&[r()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature has \"{R}: This creature gets +1/+0 until end of turn.\"",
             effect: StaticEffect::GrantActivatedAbility {
@@ -98,13 +128,18 @@ pub fn wall_of_brambles() -> CardDefinition {
         name: "Wall of Brambles",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Plant, CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Wall],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[g()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -118,7 +153,10 @@ pub fn ironclaw_orcs() -> CardDefinition {
         name: "Ironclaw Orcs",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Orc], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::CantBlockPowerAtLeast(2)],
@@ -133,7 +171,10 @@ pub fn dwarven_warriors() -> CardDefinition {
         name: "Dwarven Warriors",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf, CreatureType::Warrior], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Warrior],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -156,7 +197,10 @@ pub fn frozen_shade() -> CardDefinition {
         name: "Frozen Shade",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Shade], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shade],
+            ..Default::default()
+        },
         power: 0,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -182,13 +226,20 @@ pub fn whirling_dervish() -> CardDefinition {
         name: "Whirling Dervish",
         cost: cost(&[g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Monk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Protection(Color::Black)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -201,14 +252,21 @@ pub fn femeref_archers() -> CardDefinition {
         name: "Femeref Archers",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Archer], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Archer],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::DealDamage {
                 amount: Value::Const(4),
-                to: target_filtered(R::Creature.and(R::IsAttacking).and(R::HasKeyword(Keyword::Flying))),
+                to: target_filtered(
+                    R::Creature
+                        .and(R::IsAttacking)
+                        .and(R::HasKeyword(Keyword::Flying)),
+                ),
             },
             ..Default::default()
         }],
@@ -222,12 +280,18 @@ pub fn fyndhorn_elder() -> CardDefinition {
         name: "Fyndhorn Elder",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Druid], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Green, Value::Const(2)) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(Color::Green, Value::Const(2)),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -241,7 +305,10 @@ pub fn thicket_basilisk() -> CardDefinition {
         name: "Thicket Basilisk",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Basilisk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Basilisk],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Deathtouch],
@@ -256,7 +323,10 @@ pub fn cockatrice() -> CardDefinition {
         name: "Cockatrice",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cockatrice], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cockatrice],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
@@ -277,12 +347,21 @@ pub fn goblin_elite_infantry() -> CardDefinition {
         name: "Goblin Elite Infantry",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin, CreatureType::Warrior], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![
-            TriggeredAbility { event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource), effect: shrink() },
-            TriggeredAbility { event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource), effect: shrink() },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: shrink(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: shrink(),
+            },
         ],
         ..Default::default()
     }
@@ -294,7 +373,10 @@ pub fn alaborn_grenadier() -> CardDefinition {
         name: "Alaborn Grenadier",
         cost: cost(&[w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
@@ -308,7 +390,10 @@ pub fn skeletal_snake() -> CardDefinition {
         name: "Skeletal Snake",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Snake, CreatureType::Skeleton], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Skeleton],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         ..Default::default()
@@ -324,7 +409,10 @@ pub fn jayemdae_tome() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4)]),
             tap_cost: true,
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -361,7 +449,10 @@ fn spell_color_lifegain(name: &'static str, color: Color) -> CardDefinition {
             effect: Effect::MayPay {
                 description: "Pay {1}: gain 1 life.".to_string(),
                 mana_cost: cost(&[generic(1)]),
-                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: None,
             },
         }],
@@ -401,7 +492,10 @@ pub fn wyluli_wolf() -> CardDefinition {
         name: "Wyluli Wolf",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wolf],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -426,14 +520,21 @@ pub fn davenant_archer() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Archer],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Soldier,
+                CreatureType::Archer,
+            ],
             ..Default::default()
         },
         power: 1,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: deal(1, target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking)))),
+            effect: deal(
+                1,
+                target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+            ),
             ..Default::default()
         }],
         ..Default::default()
@@ -446,11 +547,13 @@ pub fn bird_maiden() -> CardDefinition {
         name: "Bird Maiden",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Bird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
         ..Default::default()
     }
 }
-

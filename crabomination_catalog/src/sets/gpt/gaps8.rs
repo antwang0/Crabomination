@@ -4,8 +4,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    Keyword, MayPlayDuration, SelectionRequirement as R, StaticAbility,
-    Subtypes, Value,
+    Keyword, MayPlayDuration, SelectionRequirement as R, StaticAbility, Subtypes, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
@@ -50,7 +49,10 @@ pub fn beastmasters_magemark() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         static_abilities: vec![StaticAbility {
             description: "Creatures you control that are enchanted get +1/+1.",
             effect: StaticEffect::AnthemForFilter {
@@ -64,10 +66,7 @@ pub fn beastmasters_magemark() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::BecomesBlocked,
-                EventScope::EnchantedBySource,
-            ),
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::EnchantedBySource),
             effect: Effect::PumpPT {
                 what: Selector::AttachedTo(Box::new(Selector::This)),
                 power: Value::BlockersOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
@@ -92,7 +91,10 @@ pub fn necromancers_magemark() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         static_abilities: vec![
             StaticAbility {
                 description: "Creatures you control that are enchanted get +1/+1.",
@@ -116,7 +118,6 @@ pub fn necromancers_magemark() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 /// Nivix, Aerie of the Firemind — Land. {T}: Add {C}. {2}{U}{R}, {T}: exile the
 /// top card of your library; you may cast it until your next turn if it's an
@@ -191,7 +192,10 @@ pub fn living_inferno() -> CardDefinition {
         name: "Living Inferno",
         cost: cost(&[generic(6), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 8,
         toughness: 5,
         activated_abilities: vec![ActivatedAbility {
@@ -308,7 +312,9 @@ pub fn sword_of_the_paruns() -> CardDefinition {
         ],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
-            effect: Effect::TapOrUntap { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            effect: Effect::TapOrUntap {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
             ..Default::default()
         }],
         ..Default::default()

@@ -4,13 +4,13 @@
 //! Tests in `tests/recent208.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword, Predicate, Selector,
-    SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword, Predicate,
+    SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, EventKind, EventScope, EventSpec, PlayerRef};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Highborn Vampire — {3}{B} 4/3 vanilla Vampire Warrior.
 pub fn highborn_vampire() -> CardDefinition {
@@ -51,7 +51,10 @@ pub fn gleaming_barrier() -> CardDefinition {
         name: "Gleaming Barrier",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 0,
         toughness: 4,
         keywords: vec![Keyword::Defender],
@@ -81,8 +84,13 @@ pub fn storm_fleet_spy() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
-            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            cond: Predicate::PlayerAttackedThisTurn {
+                who: PlayerRef::You,
+            },
+            then: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            }),
             else_: Box::new(Effect::Noop),
         })],
         ..Default::default()
@@ -103,7 +111,10 @@ pub fn battle_rattle_shaman() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::MayDo {
                 description: "Target creature gets +2/+0 until end of turn.".into(),
                 body: Box::new(Effect::PumpPT {
@@ -162,10 +173,15 @@ pub fn devout_decree() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Exile {
                 what: target_filtered(
-                    R::Creature.or(R::Planeswalker).and(R::HasColor(Color::Black).or(R::HasColor(Color::Red))),
+                    R::Creature
+                        .or(R::Planeswalker)
+                        .and(R::HasColor(Color::Black).or(R::HasColor(Color::Red))),
                 ),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }

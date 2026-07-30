@@ -7,9 +7,7 @@ use crate::card::{
     SelectionRequirement as R, Selector, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{deal, draw, etb, target_filtered};
-use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef,
-};
+use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef};
 use crate::game::effects::food_token;
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, x};
@@ -31,9 +29,14 @@ pub fn lady_of_laughter() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
-                cond: Predicate::CelebrationActive { who: PlayerRef::You },
+                cond: Predicate::CelebrationActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(draw(1)),
                 else_: Box::new(Effect::Noop),
             },
@@ -58,7 +61,9 @@ pub fn sharae_of_numbing_depths() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![
             etb(Effect::Seq(vec![
-                Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+                Effect::Tap {
+                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                },
                 Effect::AddCounter {
                     what: Selector::Target(0),
                     kind: CounterType::Stun,
@@ -97,7 +102,10 @@ pub fn ingenious_prodigy() -> CardDefinition {
         keywords: vec![Keyword::Skulk],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
                 cond: Predicate::SourceHasCountersAtLeast {
                     counter: CounterType::PlusOnePlusOne,
@@ -144,7 +152,11 @@ pub fn talions_messenger() -> CardDefinition {
             ),
             effect: Effect::Seq(vec![
                 draw(1),
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
                 Effect::AddCounter {
                     what: target_filtered(
                         R::HasCreatureType(CreatureType::Faerie).and(R::ControlledByYou),
@@ -279,7 +291,10 @@ pub fn unruly_catapult() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(crate::effect::shortcut::cast_is_instant_or_sorcery()),
-            effect: Effect::Untap { what: Selector::This, up_to: None },
+            effect: Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
         }],
         ..Default::default()
     }
@@ -293,7 +308,10 @@ pub fn realm_scorcher_hellkite() -> CardDefinition {
         name: "Realm-Scorcher Hellkite",
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 4,
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Bargain],
@@ -323,17 +341,29 @@ pub fn raging_battle_mouse() -> CardDefinition {
         name: "Raging Battle Mouse",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mouse], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         static_abilities: vec![StaticAbility {
             description: "The second spell you cast each turn costs {1} less to cast.",
-            effect: StaticEffect::CostReductionNthSpell { filter: R::Any, nth: 2, amount: 1 },
+            effect: StaticEffect::CostReductionNthSpell {
+                filter: R::Any,
+                nth: 2,
+                amount: 1,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
-                cond: Predicate::CelebrationActive { who: PlayerRef::You },
+                cond: Predicate::CelebrationActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::PumpPT {
                     what: target_filtered(R::Creature.and(R::ControlledByYou)),
                     power: Value::ONE,
@@ -373,9 +403,7 @@ pub fn tough_cookie() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), g()]),
                 effect: Effect::BecomeCreature {
-                    what: target_filtered(
-                        R::Artifact.and(R::Noncreature).and(R::ControlledByYou),
-                    ),
+                    what: target_filtered(R::Artifact.and(R::Noncreature).and(R::ControlledByYou)),
                     power: Value::Const(4),
                     toughness: Value::Const(4),
                     creature_types: vec![],
@@ -388,7 +416,10 @@ pub fn tough_cookie() -> CardDefinition {
                 tap_cost: true,
                 sac_cost: true,
                 mana_cost: cost(&[generic(2)]),
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
                 ..Default::default()
             },
         ],

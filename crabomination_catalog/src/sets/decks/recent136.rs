@@ -3,13 +3,15 @@
 //! `crabomination/src/tests/recent136.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword,
-    SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R,
+    Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, ZoneRef};
+use crate::effect::{
+    Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, ZoneRef,
+};
 use crate::game::effects::food_token;
-use crate::mana::{b, cost, g, generic, u, Color};
+use crate::mana::{Color, b, cost, g, generic, u};
 
 use super::woe_roles::{royal_role, sorcerer_role};
 
@@ -45,7 +47,10 @@ fn rat_token() -> crate::card::TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         keywords: vec![Keyword::CantBlock],
         ..Default::default()
     }
@@ -53,7 +58,10 @@ fn rat_token() -> crate::card::TokenDefinition {
 
 /// Every creature you control (layer-agnostic team selector).
 fn your_creatures() -> Selector {
-    Selector::EachMatching { zone: ZoneRef::Battlefield, filter: R::Creature.and(R::ControlledByYou) }
+    Selector::EachMatching {
+        zone: ZoneRef::Battlefield,
+        filter: R::Creature.and(R::ControlledByYou),
+    }
 }
 
 // ── Blue ──────────────────────────────────────────────────────────────────────
@@ -65,7 +73,10 @@ pub fn merfolk_coralsmith() -> CardDefinition {
         name: "Merfolk Coralsmith",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
@@ -80,7 +91,10 @@ pub fn merfolk_coralsmith() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         }],
         ..Default::default()
     }
@@ -94,7 +108,10 @@ pub fn living_lectern() -> CardDefinition {
         name: "Living Lectern",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 0,
         toughness: 4,
         activated_abilities: vec![ActivatedAbility {
@@ -102,9 +119,14 @@ pub fn living_lectern() -> CardDefinition {
             sac_cost: true,
             sorcery_speed: true,
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 Effect::CreateTokenAttachedTo {
-                    target: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
+                    target: target_filtered(
+                        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                    ),
                     definition: sorcerer_role(),
                 },
             ]),
@@ -132,7 +154,9 @@ pub fn stingblade_assassin() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Destroy {
             what: target_filtered(
-                R::Creature.and(R::ControlledByOpponent).and(R::DealtDamageThisTurn),
+                R::Creature
+                    .and(R::ControlledByOpponent)
+                    .and(R::DealtDamageThisTurn),
             ),
         })],
         ..Default::default()
@@ -154,14 +178,24 @@ pub fn lord_skitters_butcher() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::ChooseMode(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: rat_token() },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: rat_token(),
+            },
             Effect::MaySacrifice {
                 description: "Sacrifice another creature to scry 2 and draw?".into(),
                 filter: R::Creature.and(R::OtherThanSource),
                 count: Value::ONE,
                 then: Box::new(Effect::Seq(vec![
-                    Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Scry {
+                        who: PlayerRef::You,
+                        amount: Value::Const(2),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 ])),
                 else_: None,
             },
@@ -174,7 +208,6 @@ pub fn lord_skitters_butcher() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Green / Artifact ────────────────────────────────────────────────────────────
 
@@ -238,7 +271,10 @@ pub fn scarecrow_guide() -> CardDefinition {
         name: "Scarecrow Guide",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Scarecrow], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Scarecrow],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Reach],

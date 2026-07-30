@@ -10,12 +10,15 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -532,8 +535,10 @@ pub fn strixhaven_sanctum() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -617,8 +622,10 @@ pub fn mystic_slate() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             // {2}, {T}: Draw a card. Sorcery speed.
@@ -639,8 +646,10 @@ pub fn mystic_slate() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -672,7 +681,11 @@ pub fn silverquill_verseweaver() -> CardDefinition {
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric, CreatureType::Wizard],
+            creature_types: vec![
+                CreatureType::Inkling,
+                CreatureType::Cleric,
+                CreatureType::Wizard,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -786,7 +799,8 @@ pub fn bramble_brewer() -> CardDefinition {
                     .and(SelectionRequirement::OtherThanSource),
                 1,
             )),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -934,8 +948,10 @@ pub fn lorehold_cathedral() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -1061,7 +1077,7 @@ pub fn quandrix_geomancer() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -1350,16 +1366,17 @@ pub fn witherbloom_reanimist() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(2)),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
@@ -1563,8 +1580,10 @@ pub fn strixhaven_reservoir() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             ActivatedAbility {
@@ -1584,8 +1603,10 @@ pub fn strixhaven_reservoir() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -1620,11 +1641,12 @@ pub fn lone_rider() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::This,
                     filter: SelectionRequirement::IsAttackingAlone,
-                }),
+                },
+            ),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::This,
@@ -1697,11 +1719,12 @@ pub fn solo_striker() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::This,
                     filter: SelectionRequirement::IsAttackingAlone,
-                }),
+                },
+            ),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::This,
@@ -1756,8 +1779,7 @@ pub fn lorehold_tomb_robber() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::InYourGraveyard),
+                        SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
                     ),
                     extra_creature_types: vec![],
                     extra_card_types: vec![],
@@ -1829,8 +1851,10 @@ pub fn quandrix_loremind() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -1929,7 +1953,6 @@ pub fn witherbloom_hexweaver() -> CardDefinition {
     }
 }
 
-
 // ============================================================================
 // Batch 14 — Cross-college expansion (push modern_decks).
 //
@@ -2022,8 +2045,10 @@ pub fn lorehold_bookburner() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -2148,7 +2173,7 @@ pub fn quandrix_tessellator() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -2187,8 +2212,10 @@ pub fn quandrix_tessellator() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -2228,7 +2255,9 @@ pub fn witherbloom_wanderer() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::MayDo {
-                description: "Pay 2 life: Return target creature card from your graveyard to your hand.".to_string(),
+                description:
+                    "Pay 2 life: Return target creature card from your graveyard to your hand."
+                        .to_string(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::LoseLife {
                         who: Selector::You,
@@ -2330,8 +2359,10 @@ pub fn strixhaven_vault() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -2547,7 +2578,9 @@ pub fn lorehold_stonebrand() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::MayDo {
-                description: "Exile a creature card from a graveyard; create a 2/2 R/W Spirit token".to_string(),
+                description:
+                    "Exile a creature card from a graveyard; create a 2/2 R/W Spirit token"
+                        .to_string(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::Move {
                         what: Selector::one_of(Selector::CardsInZone {

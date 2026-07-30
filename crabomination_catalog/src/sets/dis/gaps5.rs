@@ -1,7 +1,9 @@
 //! Dissension (DIS) gap wave 5. Trial // Error rides the new
 //! `Selector::CreaturesInCombatWith`. Tests in `classic_sets/dis`.
 
-use crate::card::{CardDefinition, CardType, Effect, SelectionRequirement as R, Selector, SplitCard, SplitHalf};
+use crate::card::{
+    CardDefinition, CardType, Effect, SelectionRequirement as R, Selector, SplitCard, SplitHalf,
+};
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, ZoneDest};
 use crate::mana::{b, cost, u, w};
@@ -22,7 +24,9 @@ pub fn trial_error() -> CardDefinition {
             right: SplitHalf {
                 cost: cost(&[u(), b()]),
                 card_types: vec![CardType::Instant],
-                effect: Effect::CounterSpell { what: target_filtered(R::Multicolored) },
+                effect: Effect::CounterSpell {
+                    what: target_filtered(R::Multicolored),
+                },
             },
             fuse: false,
             aftermath: false,

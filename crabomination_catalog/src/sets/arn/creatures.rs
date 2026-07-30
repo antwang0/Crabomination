@@ -19,8 +19,14 @@ pub fn juzam_djinn() -> CardDefinition {
         power: 5,
         toughness: 5,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-            effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }

@@ -4,16 +4,18 @@
 //! Tests in `recent_b/recent287`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Keyword,
-    SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    Keyword, SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility,
+    Value,
 };
-use crate::effect::{
-    Effect, EventKind, EventScope, EventSpec, Predicate, Selector, StaticEffect,
-};
+use crate::effect::{Effect, EventKind, EventScope, EventSpec, Predicate, Selector, StaticEffect};
 use crate::mana::{b, cost, g, generic, u, w};
 
 fn legendary_creature(types: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: types, ..Default::default() }
+    Subtypes {
+        creature_types: types,
+        ..Default::default()
+    }
 }
 
 /// Miriam, Herd Whisperer — {G}{W} Legendary Creature — Human Druid 3/2.
@@ -42,7 +44,10 @@ pub fn miriam_herd_whisperer() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: mount_or_vehicle },
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: mount_or_vehicle,
+                },
             ),
             effect: Effect::AddCounter {
                 what: Selector::TriggerSource,
@@ -83,7 +88,10 @@ pub fn vadmir_new_blood() -> CardDefinition {
                 amount: Value::ONE,
             },
         }],
-        static_abilities: vec![counter_gated(Keyword::Menace), counter_gated(Keyword::Lifelink)],
+        static_abilities: vec![
+            counter_gated(Keyword::Menace),
+            counter_gated(Keyword::Lifelink),
+        ],
         ..Default::default()
     }
 }
@@ -97,7 +105,10 @@ pub fn skyserpent_seeker() -> CardDefinition {
         name: "Skyserpent Seeker",
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
@@ -105,7 +116,10 @@ pub fn skyserpent_seeker() -> CardDefinition {
             mana_cost: cost(&[generic(4)]),
             exhaust: true,
             effect: Effect::Seq(vec![
-                Effect::RevealUntilLandsToBattlefield { count: Value::Const(2), tapped: true },
+                Effect::RevealUntilLandsToBattlefield {
+                    count: Value::Const(2),
+                    tapped: true,
+                },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,

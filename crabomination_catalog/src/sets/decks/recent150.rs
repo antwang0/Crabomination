@@ -24,10 +24,17 @@ pub fn consuming_ashes() -> CardDefinition {
                 filter: R::ManaValueAtMost(3),
             },
             then: Box::new(Effect::Seq(vec![
-                Effect::Exile { what: target_filtered(R::Creature) },
-                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Exile {
+                    what: target_filtered(R::Creature),
+                },
+                Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
             ])),
-            else_: Box::new(Effect::Exile { what: target_filtered(R::Creature) }),
+            else_: Box::new(Effect::Exile {
+                what: target_filtered(R::Creature),
+            }),
         },
         ..Default::default()
     }
@@ -43,7 +50,9 @@ pub fn failed_fording() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(R::Nonland),
-                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(
+                    0,
+                )))),
             },
             Effect::If {
                 cond: Predicate::SelectorCountAtLeast {
@@ -52,7 +61,10 @@ pub fn failed_fording() -> CardDefinition {
                     ),
                     n: Value::ONE,
                 },
-                then: Box::new(Effect::Surveil { who: PlayerRef::You, amount: Value::ONE }),
+                then: Box::new(Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -66,16 +78,28 @@ pub fn harrier_strix() -> CardDefinition {
         name: "Harrier Strix",
         cost: cost(&[u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::Tap { what: target_filtered(R::Permanent) })],
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: target_filtered(R::Permanent),
+        })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), u()]),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
             ]),
             ..Default::default()
         }],
@@ -90,7 +114,10 @@ pub fn irascible_wolverine() -> CardDefinition {
         name: "Irascible Wolverine",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wolverine], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wolverine],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         plot_cost: Some(cost(&[generic(2), r()])),
@@ -98,7 +125,8 @@ pub fn irascible_wolverine() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::ONE,
             duration: MayPlayDuration::EndOfThisTurn,
-            pay_any_color: false, pay_own_cost: false,
+            pay_any_color: false,
+            pay_own_cost: false,
             uncast_penalty: None,
         })],
         ..Default::default()
@@ -117,9 +145,14 @@ pub fn killers_mask() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
-        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::Menace], ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Menace],
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::ManifestDread { who: PlayerRef::You },
+            Effect::ManifestDread {
+                who: PlayerRef::You,
+            },
             Effect::Attach {
                 what: Selector::This,
                 to: Selector::take(

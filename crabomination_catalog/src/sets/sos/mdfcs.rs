@@ -34,14 +34,13 @@
 //! - Vastlands Scavenger // Bind to Life
 //! - …and the rest of the cycle below.
 
+use crate::card::Zone;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
     EventScope, EventSpec, Keyword, SelectionRequirement, Subtypes, TriggeredAbility, WardCost,
 };
-use crate::card::Zone;
 use crate::effect::shortcut::{
-    cards_in_graveyard_at_least, etb, mint_treasures, on_attack,
-    pump_target, target_filtered,
+    cards_in_graveyard_at_least, etb, mint_treasures, on_attack, pump_target, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, Predicate, Selector, Value, ZoneDest};
 use crate::game::types::TurnStep;
@@ -277,7 +276,11 @@ pub fn joined_researchers() -> CardDefinition {
     let mut front = vanilla_front(
         "Joined Researchers",
         cost(&[generic(1), w()]),
-        vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Wizard],
+        vec![
+            CreatureType::Human,
+            CreatureType::Cleric,
+            CreatureType::Wizard,
+        ],
         2,
         2,
         vec![Keyword::FirstStrike],
@@ -286,11 +289,14 @@ pub fn joined_researchers() -> CardDefinition {
     // CR 603.4 — intervening 'if' as `event.filter`: checked at trigger
     // time, and re-checked at resolution by the step-trigger path.
     front.triggered_abilities.push(TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-            .with_filter(Predicate::ValueAtLeast(
-                Value::HandSizeOf(PlayerRef::EachOpponent),
-                Value::Sum(vec![Value::HandSizeOf(PlayerRef::You), Value::Const(1)]),
-            )),
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::End),
+            EventScope::ActivePlayer,
+        )
+        .with_filter(Predicate::ValueAtLeast(
+            Value::HandSizeOf(PlayerRef::EachOpponent),
+            Value::Sum(vec![Value::HandSizeOf(PlayerRef::You), Value::Const(1)]),
+        )),
         effect: becomes_prepared(),
     });
     front
@@ -368,11 +374,12 @@ pub fn spiritcall_enthusiast() -> CardDefinition {
         spell,
     );
     front.triggered_abilities.push(TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-            .with_filter(Predicate::EntityMatches {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+            Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::IsToken,
-            }),
+            },
+        ),
         effect: becomes_prepared(),
     });
     front
@@ -407,7 +414,9 @@ pub fn encouraging_aviator() -> CardDefinition {
         vec![Keyword::Flying],
         spell,
     );
-    front.triggered_abilities.push(on_attack(becomes_prepared()));
+    front
+        .triggered_abilities
+        .push(on_attack(becomes_prepared()));
     front
 }
 
@@ -442,7 +451,11 @@ pub fn harmonized_trio() -> CardDefinition {
     let mut front = vanilla_front(
         "Harmonized Trio",
         cost(&[u()]),
-        vec![CreatureType::Merfolk, CreatureType::Bard, CreatureType::Wizard],
+        vec![
+            CreatureType::Merfolk,
+            CreatureType::Bard,
+            CreatureType::Wizard,
+        ],
         1,
         1,
         vec![],
@@ -524,10 +537,13 @@ pub fn emeritus_of_woe() -> CardDefinition {
     // CR 603.4 — intervening 'if' as `event.filter`: checked at trigger
     // time, and re-checked at resolution by the step-trigger path.
     front.triggered_abilities.push(TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-            .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast {
-                at_least: Value::Const(2),
-            }),
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::End),
+            EventScope::ActivePlayer,
+        )
+        .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast {
+            at_least: Value::Const(2),
+        }),
         effect: becomes_prepared(),
     });
     front
@@ -812,7 +828,9 @@ pub fn leech_collector() -> CardDefinition {
     // caps a multi-event first batch to a single fire.
     front.triggered_abilities.push(TriggeredAbility {
         event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl)
-            .with_filter(Predicate::FirstLifeGainThisTurn { who: PlayerRef::You })
+            .with_filter(Predicate::FirstLifeGainThisTurn {
+                who: PlayerRef::You,
+            })
             .once_per_turn(),
         effect: becomes_prepared(),
     });
@@ -979,7 +997,11 @@ pub fn blazing_firesinger() -> CardDefinition {
         Effect::AddMana {
             who: PlayerRef::You,
             pool: crate::effect::ManaPayload::Colors(vec![
-                Color::Red, Color::Red, Color::Red, Color::Red, Color::Red,
+                Color::Red,
+                Color::Red,
+                Color::Red,
+                Color::Red,
+                Color::Red,
             ]),
         },
     );
@@ -1257,11 +1279,12 @@ pub fn tam_observant_sequencer() -> CardDefinition {
     );
     front.supertypes = vec![crate::card::Supertype::Legendary];
     front.triggered_abilities.push(TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-            .with_filter(Predicate::EntityMatches {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+            Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::Land,
-            }),
+            },
+        ),
         effect: becomes_prepared(),
     });
     front

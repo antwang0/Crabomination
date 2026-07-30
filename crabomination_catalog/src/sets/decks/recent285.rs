@@ -3,11 +3,12 @@
 //! `tests/recent_b/recent285.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Gift, SelectionRequirement as R, Subtypes, TokenDefinition,
+    CardDefinition, CardType, CreatureType, Gift, SelectionRequirement as R, Subtypes,
+    TokenDefinition,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{cost, generic, w, Color};
+use crate::mana::{Color, cost, generic, w};
 
 /// A tapped 1/1 blue Fish — the Bloomburrow blue gift token.
 fn tapped_fish_token() -> TokenDefinition {
@@ -17,7 +18,10 @@ fn tapped_fish_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Fish], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fish],
+            ..Default::default()
+        },
         tapped: true,
         ..Default::default()
     }
@@ -63,15 +67,25 @@ pub fn starfall_invocation() -> CardDefinition {
         name: "Starfall Invocation",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DestroyNoRegen { what: Selector::EachPermanent(R::Creature) },
+        effect: Effect::DestroyNoRegen {
+            what: Selector::EachPermanent(R::Creature),
+        },
         gift: Some(Box::new(Gift {
             label: "a card",
             gifted_effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
-                Effect::DestroyNoRegen { what: Selector::EachPermanent(R::Creature) },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::ONE,
+                },
+                Effect::DestroyNoRegen {
+                    what: Selector::EachPermanent(R::Creature),
+                },
                 Effect::Move {
                     what: target_filtered(R::Creature.and(R::InYourGraveyard)),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ]),
         })),

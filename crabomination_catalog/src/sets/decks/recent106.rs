@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{bolster, target_filtered};
 use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate, StaticEffect, ZoneDest};
-use crate::mana::{cost, g, generic, hybrid, u, w, x, Color};
+use crate::mana::{Color, cost, g, generic, hybrid, u, w, x};
 
 /// Grinding Station — {2} Artifact. {T}, sac an artifact: target player
 /// mills three. Artifact ETB: may untap this.
@@ -27,14 +27,18 @@ pub fn grinding_station() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Artifact,
-                }),
+                },
+            ),
             effect: Effect::MayDo {
                 description: "Untap Grinding Station?".into(),
-                body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                body: Box::new(Effect::Untap {
+                    what: Selector::This,
+                    up_to: None,
+                }),
             },
         }],
         ..Default::default()
@@ -104,7 +108,10 @@ pub fn iona_shield_of_emeria() -> CardDefinition {
         cost: cost(&[generic(6), w(), w(), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Flying],
@@ -127,7 +134,10 @@ pub fn thopter_assembly() -> CardDefinition {
         name: "Thopter Assembly",
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
@@ -144,7 +154,10 @@ pub fn thopter_assembly() -> CardDefinition {
                 ),
             )))),
             effect: Effect::Seq(vec![
-                Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(5),
@@ -163,7 +176,10 @@ fn thopter_token() -> TokenDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -186,7 +202,10 @@ pub fn reshape() -> CardDefinition {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Artifact
                     .and(SelectionRequirement::ManaValueAtMostXFromCost),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         ]),
         ..Default::default()
@@ -207,7 +226,10 @@ pub fn wild_cantor() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::ONE),
+            },
             ..Default::default()
         }],
         ..Default::default()

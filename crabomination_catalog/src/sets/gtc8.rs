@@ -6,13 +6,16 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
     SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{target_filtered};
+use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Predicate, Selector};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 use crate::game::TurnStep;
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 fn your_creatures() -> Selector {
     Selector::EachPermanent(R::Creature.and(R::ControlledByYou))
@@ -131,7 +134,10 @@ pub fn angelic_skirmisher() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::AnyPlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::AnyPlayer,
+            ),
             effect: Effect::ChooseMode(vec![
                 grant(Keyword::FirstStrike),
                 grant(Keyword::Vigilance),

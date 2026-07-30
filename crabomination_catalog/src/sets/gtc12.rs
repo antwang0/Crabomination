@@ -13,7 +13,10 @@ use crate::mana::{cost, g, r, x};
 /// creature with flying; deal X to target creature without flying; deal X to
 /// target player or planeswalker.
 pub fn clan_defiance() -> CardDefinition {
-    let dmg = |filter: R| Effect::DealDamage { to: target_filtered(filter), amount: Value::XFromCost };
+    let dmg = |filter: R| Effect::DealDamage {
+        to: target_filtered(filter),
+        amount: Value::XFromCost,
+    };
     CardDefinition {
         name: "Clan Defiance",
         cost: cost(&[x(), r(), g()]),
@@ -38,14 +41,20 @@ pub fn domri_rade() -> CardDefinition {
     let your_creatures = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
     let anthem = |keyword: Keyword| StaticAbility {
         description: "Creatures you control have granted keywords",
-        effect: StaticEffect::GrantKeyword { applies_to: your_creatures(), keyword },
+        effect: StaticEffect::GrantKeyword {
+            applies_to: your_creatures(),
+            keyword,
+        },
     };
     CardDefinition {
         name: "Domri Rade",
         cost: cost(&[crate::mana::generic(1), r(), g()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
-        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Domri], ..Default::default() },
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Domri],
+            ..Default::default()
+        },
         base_loyalty: 3,
         loyalty_abilities: vec![
             LoyaltyAbility {
@@ -63,8 +72,14 @@ pub fn domri_rade() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -2,
                 effect: Effect::Fight {
-                    attacker: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
-                    defender: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                    attacker: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.and(R::ControlledByYou),
+                    },
+                    defender: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature,
+                    },
                 },
                 ..Default::default()
             },

@@ -15,7 +15,7 @@ use crate::effect::shortcut::{
 };
 use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, mono_hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, mono_hybrid, r, u, w};
 
 /// Ainok Wayfarer — {1}{G} 1/1 Dog Scout. ETB: mill three, you may take a land
 /// among them. (The "+1/+1 counter if you take no land" rider is dropped.)
@@ -54,7 +54,10 @@ pub fn delta_bloodflies() -> CardDefinition {
         name: "Delta Bloodflies",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -102,7 +105,10 @@ pub fn iridescent_tiger() -> CardDefinition {
         name: "Iridescent Tiger",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::AddMana {
@@ -170,7 +176,9 @@ pub fn unrooted_ancestor() -> CardDefinition {
                     keyword: Keyword::Indestructible,
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Tap { what: Selector::This },
+                Effect::Tap {
+                    what: Selector::This,
+                },
             ]),
             ..Default::default()
         }],
@@ -185,7 +193,10 @@ pub fn gurmag_rakshasa() -> CardDefinition {
         name: "Gurmag Rakshasa",
         cost: cost(&[generic(4), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Menace],
@@ -222,12 +233,18 @@ pub fn fleeting_effigy() -> CardDefinition {
         name: "Fleeting Effigy",
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::Move {
                 what: Selector::This,
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
@@ -283,7 +300,13 @@ pub fn overwhelming_surge() -> CardDefinition {
         effect: Effect::ChooseN {
             picks: vec![0, 1],
             modes: vec![
-                deal(3, Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature }),
+                deal(
+                    3,
+                    Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature,
+                    },
+                ),
                 Effect::Destroy {
                     what: Selector::TargetFiltered {
                         slot: 0,
@@ -316,7 +339,11 @@ pub fn focus_the_mind() -> CardDefinition {
         }],
         effect: Effect::Seq(vec![
             draw(3),
-            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::ONE,
+                random: false,
+            },
         ]),
         ..Default::default()
     }
@@ -343,7 +370,10 @@ pub fn sage_of_the_skies() -> CardDefinition {
                     who: PlayerRef::You,
                     at_least: Value::Const(2),
                 },
-                then: Box::new(Effect::CopySpell { what: Selector::This, count: Value::ONE }),
+                then: Box::new(Effect::CopySpell {
+                    what: Selector::This,
+                    count: Value::ONE,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -383,13 +413,19 @@ pub fn embermouth_sentinel() -> CardDefinition {
         name: "Embermouth Sentinel",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Chimera], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Chimera],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::IsBasicLand,
-            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            to: ZoneDest::Library {
+                who: PlayerRef::You,
+                pos: LibraryPosition::Top,
+            },
         })],
         ..Default::default()
     }
@@ -416,10 +452,7 @@ pub fn rainveil_rejuvenator() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::OfColor(
-                    Color::Green,
-                    Value::PowerOf(Box::new(Selector::This)),
-                ),
+                pool: ManaPayload::OfColor(Color::Green, Value::PowerOf(Box::new(Selector::This))),
             },
             ..Default::default()
         }],
@@ -473,11 +506,17 @@ pub fn watcher_of_the_wayside() -> CardDefinition {
         name: "Watcher of the Wayside",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Mill { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
             gain_life(2),
         ]))],
         ..Default::default()
@@ -495,7 +534,10 @@ pub fn temur_tawnyback() -> CardDefinition {
             mono_hybrid(2, Color::Red),
         ]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         triggered_abilities: vec![etb_loot()],
@@ -514,7 +556,10 @@ pub fn teeming_dragonstorm() -> CardDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -522,7 +567,11 @@ pub fn teeming_dragonstorm() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
-            etb(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: soldier }),
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: soldier,
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                     .with_filter(Predicate::EntityMatches {

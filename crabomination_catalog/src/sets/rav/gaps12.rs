@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Effect, Selector};
-use crate::mana::{cost, generic, g};
+use crate::mana::{cost, g, generic};
 
 /// Trophy Hunter — {2}{G} 2/3 Human Archer. {1}{G}: This creature deals 1
 /// damage to target creature with flying. Whenever a creature with flying dealt

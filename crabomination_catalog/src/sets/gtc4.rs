@@ -9,10 +9,13 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, PlayerRef, Predicate, Selector, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 
 /// "Creatures you control matching `req`" as a static-ability scope.
@@ -82,11 +85,17 @@ pub fn hellraiser_goblin() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Creatures you control have haste.",
-                effect: StaticEffect::GrantKeyword { applies_to: all(), keyword: Keyword::Haste },
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: all(),
+                    keyword: Keyword::Haste,
+                },
             },
             StaticAbility {
                 description: "Creatures you control attack each combat if able.",
-                effect: StaticEffect::GrantKeyword { applies_to: all(), keyword: Keyword::MustAttack },
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: all(),
+                    keyword: Keyword::MustAttack,
+                },
             },
         ],
         ..Default::default()
@@ -151,10 +160,14 @@ pub fn court_street_denizen() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasColor(Color::White) },
-            ),
-            effect: Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasColor(Color::White),
+                }),
+            effect: Effect::Tap {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            },
         }],
         ..Default::default()
     }
@@ -171,9 +184,11 @@ pub fn sages_row_denizen() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasColor(Color::Blue) },
-            ),
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasColor(Color::Blue),
+                }),
             effect: Effect::Mill {
                 who: Selector::Player(PlayerRef::Target(0)),
                 amount: Value::Const(2),
@@ -197,7 +212,9 @@ pub fn high_priest_of_penance() -> CardDefinition {
             event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
             effect: Effect::MayDo {
                 description: "Destroy target nonland permanent?".into(),
-                body: Box::new(Effect::Destroy { what: target_filtered(R::Permanent.and(R::Land.negate())) }),
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(R::Permanent.and(R::Land.negate())),
+                }),
             },
         }],
         ..Default::default()
@@ -240,7 +257,10 @@ pub fn dinrova_horror() -> CardDefinition {
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Move { what: target_filtered(R::Permanent), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            Effect::Move {
+                what: target_filtered(R::Permanent),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
             Effect::Discard {
                 who: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                 amount: Value::ONE,
@@ -268,7 +288,9 @@ pub fn grisly_spectacle() -> CardDefinition {
                 who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
-            Effect::Destroy { what: target_filtered(R::Creature.and(R::Artifact.negate())) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::Artifact.negate())),
+            },
         ]),
         ..Default::default()
     }

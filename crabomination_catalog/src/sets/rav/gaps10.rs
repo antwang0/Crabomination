@@ -4,8 +4,8 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EventKind,
-    EventScope, EventSpec, Predicate, SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
-    TriggeredAbility, Value,
+    EventScope, EventSpec, Predicate, SelectionRequirement as R, StaticAbility, Subtypes,
+    Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{target_any, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, StaticEffect};
@@ -22,7 +22,10 @@ pub fn stasis_cell() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature doesn't untap during its controller's untap step.",
             effect: StaticEffect::PreventUntap {
@@ -83,7 +86,10 @@ pub fn savra_queen_of_the_golgari() -> CardDefinition {
                 event: sac_of_color(crate::mana::Color::Green),
                 effect: Effect::MayDo {
                     description: "Gain 2 life?".into(),
-                    body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                    body: Box::new(Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    }),
                 },
             },
         ],
@@ -103,7 +109,10 @@ pub fn searing_meditation() -> CardDefinition {
             effect: Effect::MayPay {
                 description: "Pay {2} to deal 2 damage to any target?".into(),
                 mana_cost: cost(&[generic(2)]),
-                body: Box::new(Effect::DealDamage { amount: Value::Const(2), to: target_any() }),
+                body: Box::new(Effect::DealDamage {
+                    amount: Value::Const(2),
+                    to: target_any(),
+                }),
                 else_: None,
             },
         }],

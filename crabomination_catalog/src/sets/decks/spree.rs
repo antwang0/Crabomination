@@ -29,11 +29,16 @@ pub fn explosive_derailment() -> CardDefinition {
         effect: spree(vec![
             mode(
                 cost(&[generic(2)]),
-                Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) },
+                Effect::DealDamage {
+                    to: target_filtered(R::Creature),
+                    amount: Value::Const(4),
+                },
             ),
             mode(
                 cost(&[generic(2)]),
-                Effect::Destroy { what: target_filtered(R::Artifact) },
+                Effect::Destroy {
+                    what: target_filtered(R::Artifact),
+                },
             ),
         ]),
         ..Default::default()
@@ -53,7 +58,10 @@ pub fn insatiable_avarice() -> CardDefinition {
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: R::Any,
-                    to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                    to: ZoneDest::Library {
+                        who: PlayerRef::You,
+                        pos: LibraryPosition::Top,
+                    },
                 },
             ),
             mode(
@@ -114,8 +122,18 @@ pub fn requisition_raid() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Sorcery],
         effect: spree(vec![
-            mode(cost(&[generic(1)]), Effect::Destroy { what: target_filtered(R::Artifact) }),
-            mode(cost(&[generic(1)]), Effect::Destroy { what: target_filtered(R::Enchantment) }),
+            mode(
+                cost(&[generic(1)]),
+                Effect::Destroy {
+                    what: target_filtered(R::Artifact),
+                },
+            ),
+            mode(
+                cost(&[generic(1)]),
+                Effect::Destroy {
+                    what: target_filtered(R::Enchantment),
+                },
+            ),
             mode(
                 cost(&[generic(1)]),
                 Effect::AddCounter {
@@ -248,7 +266,9 @@ pub fn three_steps_ahead() -> CardDefinition {
         effect: spree(vec![
             mode(
                 cost(&[generic(1), u()]),
-                Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+                Effect::CounterSpell {
+                    what: target_filtered(R::IsSpellOnStack),
+                },
             ),
             mode(
                 cost(&[generic(3)]),
@@ -256,9 +276,7 @@ pub fn three_steps_ahead() -> CardDefinition {
                     extra_keywords: vec![],
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    source: target_filtered(
-                        R::Artifact.or(R::Creature).and(R::ControlledByYou),
-                    ),
+                    source: target_filtered(R::Artifact.or(R::Creature).and(R::ControlledByYou)),
                     extra_creature_types: vec![],
                     extra_card_types: vec![],
                     override_pt: None,
@@ -271,8 +289,15 @@ pub fn three_steps_ahead() -> CardDefinition {
             mode(
                 cost(&[generic(2)]),
                 Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                        random: false,
+                    },
                 ]),
             ),
         ]),
@@ -295,7 +320,10 @@ pub fn dance_of_the_tumbleweeds() -> CardDefinition {
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: R::IsBasicLand.or(R::HasLandType(LandType::Desert)),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ),
             mode(
@@ -351,7 +379,9 @@ pub fn final_showdown() -> CardDefinition {
                 cost(&[generic(3), w(), w()]),
                 Effect::ForEach {
                     selector: Selector::EachPermanent(R::Creature),
-                    body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                    body: Box::new(Effect::Destroy {
+                        what: Selector::TriggerSource,
+                    }),
                 },
             ),
         ]),

@@ -8,8 +8,8 @@ use crate::card::{
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{
-    DelayedTriggerKind, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, StaticEffect,
-    Value,
+    DelayedTriggerKind, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate,
+    StaticEffect, Value,
 };
 use crate::mana::{cost, g, generic, u, w};
 
@@ -68,7 +68,10 @@ pub fn fortune_loyal_steed() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Saddle(1)],
         triggered_abilities: vec![
-            etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+            etb(Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
                     .with_filter(Predicate::SourceSaddled),

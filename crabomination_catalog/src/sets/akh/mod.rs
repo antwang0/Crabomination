@@ -10,9 +10,9 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec,
     ExileReturnZone, Keyword, Predicate, SelectionRequirement, Subtypes, TriggeredAbility,
 };
-use crate::effect::shortcut::{embalm, eternalize, etb, on_attack, target_any, target_filtered};
+use crate::effect::shortcut::{embalm, etb, eternalize, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{cost, b, g, generic, r, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Body helper for a vanilla-ish Embalm/Eternalize creature: stats, creature
 /// types, optional keyword, plus the graveyard-activated token-copy ability.
@@ -29,7 +29,10 @@ fn akh_body(
         name,
         cost: c,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         keywords,
@@ -40,64 +43,120 @@ fn akh_body(
 
 /// Sacred Cat — {W} 1/1 Cat, Lifelink. Embalm {W}.
 pub fn sacred_cat() -> CardDefinition {
-    akh_body("Sacred Cat", cost(&[w()]), vec![CreatureType::Cat], 1, 1,
-        vec![Keyword::Lifelink], embalm(cost(&[w()])))
+    akh_body(
+        "Sacred Cat",
+        cost(&[w()]),
+        vec![CreatureType::Cat],
+        1,
+        1,
+        vec![Keyword::Lifelink],
+        embalm(cost(&[w()])),
+    )
 }
 
 /// Adorned Pouncer — {1}{W} 1/1 Cat, Double strike. Eternalize {3}{W}{W}.
 pub fn adorned_pouncer() -> CardDefinition {
-    akh_body("Adorned Pouncer", cost(&[generic(1), w()]), vec![CreatureType::Cat], 1, 1,
-        vec![Keyword::DoubleStrike], eternalize(cost(&[generic(3), w(), w()])))
+    akh_body(
+        "Adorned Pouncer",
+        cost(&[generic(1), w()]),
+        vec![CreatureType::Cat],
+        1,
+        1,
+        vec![Keyword::DoubleStrike],
+        eternalize(cost(&[generic(3), w(), w()])),
+    )
 }
 
 /// Unwavering Initiate — {2}{W} 3/2 Human Warrior, Vigilance. Embalm {4}{W}.
 pub fn unwavering_initiate() -> CardDefinition {
-    akh_body("Unwavering Initiate", cost(&[generic(2), w()]),
-        vec![CreatureType::Human, CreatureType::Warrior], 3, 2,
-        vec![Keyword::Vigilance], embalm(cost(&[generic(4), w()])))
+    akh_body(
+        "Unwavering Initiate",
+        cost(&[generic(2), w()]),
+        vec![CreatureType::Human, CreatureType::Warrior],
+        3,
+        2,
+        vec![Keyword::Vigilance],
+        embalm(cost(&[generic(4), w()])),
+    )
 }
 
 /// Steadfast Sentinel — {3}{W} 2/3 Human Cleric, Vigilance. Eternalize {4}{W}{W}.
 pub fn steadfast_sentinel() -> CardDefinition {
-    akh_body("Steadfast Sentinel", cost(&[generic(3), w()]),
-        vec![CreatureType::Human, CreatureType::Cleric], 2, 3,
-        vec![Keyword::Vigilance], eternalize(cost(&[generic(4), w(), w()])))
+    akh_body(
+        "Steadfast Sentinel",
+        cost(&[generic(3), w()]),
+        vec![CreatureType::Human, CreatureType::Cleric],
+        2,
+        3,
+        vec![Keyword::Vigilance],
+        eternalize(cost(&[generic(4), w(), w()])),
+    )
 }
 
 /// Aven Initiate — {3}{U} 3/2 Bird Warrior, Flying. Embalm {6}{U}.
 pub fn aven_initiate() -> CardDefinition {
-    akh_body("Aven Initiate", cost(&[generic(3), u()]),
-        vec![CreatureType::Bird, CreatureType::Warrior], 3, 2,
-        vec![Keyword::Flying], embalm(cost(&[generic(6), u()])))
+    akh_body(
+        "Aven Initiate",
+        cost(&[generic(3), u()]),
+        vec![CreatureType::Bird, CreatureType::Warrior],
+        3,
+        2,
+        vec![Keyword::Flying],
+        embalm(cost(&[generic(6), u()])),
+    )
 }
 
 /// Proven Combatant — {U} 1/1 Human Warrior. Eternalize {4}{U}{U}.
 pub fn proven_combatant() -> CardDefinition {
-    akh_body("Proven Combatant", cost(&[u()]),
-        vec![CreatureType::Human, CreatureType::Warrior], 1, 1,
-        vec![], eternalize(cost(&[generic(4), u(), u()])))
+    akh_body(
+        "Proven Combatant",
+        cost(&[u()]),
+        vec![CreatureType::Human, CreatureType::Warrior],
+        1,
+        1,
+        vec![],
+        eternalize(cost(&[generic(4), u(), u()])),
+    )
 }
 
 /// Tah-Crop Skirmisher — {1}{U} 2/1 Snake Warrior. Embalm {3}{U}.
 pub fn tah_crop_skirmisher() -> CardDefinition {
-    akh_body("Tah-Crop Skirmisher", cost(&[generic(1), u()]),
-        vec![CreatureType::Snake, CreatureType::Warrior], 2, 1,
-        vec![], embalm(cost(&[generic(3), u()])))
+    akh_body(
+        "Tah-Crop Skirmisher",
+        cost(&[generic(1), u()]),
+        vec![CreatureType::Snake, CreatureType::Warrior],
+        2,
+        1,
+        vec![],
+        embalm(cost(&[generic(3), u()])),
+    )
 }
 
 /// Honored Hydra — {5}{G} 6/6 Snake Hydra, Trample. Embalm {3}{G}{G}.
 pub fn honored_hydra() -> CardDefinition {
-    akh_body("Honored Hydra", cost(&[generic(5), g()]),
-        vec![CreatureType::Snake, CreatureType::Hydra], 6, 6,
-        vec![Keyword::Trample], embalm(cost(&[generic(3), g(), g()])))
+    akh_body(
+        "Honored Hydra",
+        cost(&[generic(5), g()]),
+        vec![CreatureType::Snake, CreatureType::Hydra],
+        6,
+        6,
+        vec![Keyword::Trample],
+        embalm(cost(&[generic(3), g(), g()])),
+    )
 }
 
 /// Timeless Witness — {2}{G}{G} 2/1 Human Shaman. ETB: return target card from
 /// your graveyard to hand (Eternal Witness). Embalm {3}{G}{G}.
 pub fn timeless_witness() -> CardDefinition {
-    let mut c = akh_body("Timeless Witness", cost(&[generic(2), g(), g()]),
-        vec![CreatureType::Human, CreatureType::Shaman], 2, 1,
-        vec![], embalm(cost(&[generic(3), g(), g()])));
+    let mut c = akh_body(
+        "Timeless Witness",
+        cost(&[generic(2), g(), g()]),
+        vec![CreatureType::Human, CreatureType::Shaman],
+        2,
+        1,
+        vec![],
+        embalm(cost(&[generic(3), g(), g()])),
+    );
     // ETB: return target card from your graveyard to hand (Eternal Witness).
     c.triggered_abilities = vec![etb(Effect::Move {
         what: target_filtered(SelectionRequirement::Player.negate()),
@@ -109,9 +168,15 @@ pub fn timeless_witness() -> CardDefinition {
 /// Sunscourge Champion — {2}{W} 2/3 Human Wizard. ETB: gain life equal to its
 /// power. Eternalize {3}{W}{W}.
 pub fn sunscourge_champion() -> CardDefinition {
-    let mut c = akh_body("Sunscourge Champion", cost(&[generic(2), w()]),
-        vec![CreatureType::Human, CreatureType::Wizard], 2, 3,
-        vec![], eternalize(cost(&[generic(3), w(), w()])));
+    let mut c = akh_body(
+        "Sunscourge Champion",
+        cost(&[generic(2), w()]),
+        vec![CreatureType::Human, CreatureType::Wizard],
+        2,
+        3,
+        vec![],
+        eternalize(cost(&[generic(3), w(), w()])),
+    );
     c.triggered_abilities = vec![etb(Effect::GainLife {
         who: Selector::You,
         amount: Value::PowerOf(Box::new(Selector::This)),
@@ -123,33 +188,54 @@ pub fn sunscourge_champion() -> CardDefinition {
 /// (The combat-damage discard rider collapses — the body + Eternalize is the
 /// gameplay-relevant attribute.)
 pub fn dreamstealer() -> CardDefinition {
-    akh_body("Dreamstealer", cost(&[generic(2), b()]),
-        vec![CreatureType::Human, CreatureType::Wizard], 1, 2,
-        vec![Keyword::Menace], eternalize(cost(&[generic(5), b(), b()])))
+    akh_body(
+        "Dreamstealer",
+        cost(&[generic(2), b()]),
+        vec![CreatureType::Human, CreatureType::Wizard],
+        1,
+        2,
+        vec![Keyword::Menace],
+        eternalize(cost(&[generic(5), b(), b()])),
+    )
 }
 
 /// Oketra's Attendant — {3}{W}{W} 3/3 Bird Soldier, Flying. Cycling {2}.
 /// Embalm {3}{W}{W}.
 pub fn oketras_attendant() -> CardDefinition {
-    akh_body("Oketra's Attendant", cost(&[generic(3), w(), w()]),
-        vec![CreatureType::Bird, CreatureType::Soldier], 3, 3,
+    akh_body(
+        "Oketra's Attendant",
+        cost(&[generic(3), w(), w()]),
+        vec![CreatureType::Bird, CreatureType::Soldier],
+        3,
+        3,
         vec![Keyword::Flying, Keyword::Cycling(cost(&[generic(2)]))],
-        embalm(cost(&[generic(3), w(), w()])))
+        embalm(cost(&[generic(3), w(), w()])),
+    )
 }
 
 /// Anointer Priest — {1}{W} 1/3 Human Cleric. Whenever a creature token you
 /// control enters, gain 1 life. Embalm {3}{W}.
 pub fn anointer_priest() -> CardDefinition {
-    let mut c = akh_body("Anointer Priest", cost(&[generic(1), w()]),
-        vec![CreatureType::Human, CreatureType::Cleric], 1, 3,
-        vec![], embalm(cost(&[generic(3), w()])));
+    let mut c = akh_body(
+        "Anointer Priest",
+        cost(&[generic(1), w()]),
+        vec![CreatureType::Human, CreatureType::Cleric],
+        1,
+        3,
+        vec![],
+        embalm(cost(&[generic(3), w()])),
+    );
     c.triggered_abilities = vec![TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-            .with_filter(Predicate::EntityMatches {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+            Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::Creature.and(SelectionRequirement::IsToken),
-            }),
-        effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            },
+        ),
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(1),
+        },
     }];
     c
 }
@@ -157,9 +243,15 @@ pub fn anointer_priest() -> CardDefinition {
 /// Angel of Sanctions — {3}{W}{W} 3/4 Angel, Flying. ETB: exile target nonland
 /// permanent an opponent controls until this leaves. Embalm {5}{W}.
 pub fn angel_of_sanctions() -> CardDefinition {
-    let mut c = akh_body("Angel of Sanctions", cost(&[generic(3), w(), w()]),
-        vec![CreatureType::Angel], 3, 4,
-        vec![Keyword::Flying], embalm(cost(&[generic(5), w()])));
+    let mut c = akh_body(
+        "Angel of Sanctions",
+        cost(&[generic(3), w(), w()]),
+        vec![CreatureType::Angel],
+        3,
+        4,
+        vec![Keyword::Flying],
+        embalm(cost(&[generic(5), w()])),
+    );
     c.triggered_abilities = vec![etb(Effect::ExileUntilSourceLeaves {
         what: target_filtered(
             SelectionRequirement::Permanent
@@ -177,9 +269,15 @@ pub fn angel_of_sanctions() -> CardDefinition {
 pub fn earthshaker_khenra() -> CardDefinition {
     use crate::effect::Duration;
     use crate::mana::r;
-    let mut c = akh_body("Earthshaker Khenra", cost(&[generic(1), r()]),
-        vec![CreatureType::Jackal, CreatureType::Warrior], 2, 1,
-        vec![Keyword::Haste], eternalize(cost(&[generic(4), r(), r()])));
+    let mut c = akh_body(
+        "Earthshaker Khenra",
+        cost(&[generic(1), r()]),
+        vec![CreatureType::Jackal, CreatureType::Warrior],
+        2,
+        1,
+        vec![Keyword::Haste],
+        eternalize(cost(&[generic(4), r(), r()])),
+    );
     c.triggered_abilities = vec![etb(Effect::GrantKeyword {
         what: target_filtered(
             SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
@@ -196,19 +294,28 @@ pub fn earthshaker_khenra() -> CardDefinition {
 pub fn sinuous_striker() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::Duration;
-    let mut c = akh_body("Sinuous Striker", cost(&[generic(2), u()]),
-        vec![CreatureType::Snake, CreatureType::Warrior], 2, 2,
-        vec![], eternalize(cost(&[generic(3), u(), u()])));
-    c.activated_abilities.insert(0, ActivatedAbility {
-        mana_cost: cost(&[u()]),
-        effect: Effect::PumpPT {
-            what: Selector::This,
-            power: Value::Const(1),
-            toughness: Value::Const(-1),
-            duration: Duration::EndOfTurn,
+    let mut c = akh_body(
+        "Sinuous Striker",
+        cost(&[generic(2), u()]),
+        vec![CreatureType::Snake, CreatureType::Warrior],
+        2,
+        2,
+        vec![],
+        eternalize(cost(&[generic(3), u(), u()])),
+    );
+    c.activated_abilities.insert(
+        0,
+        ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
         },
-        ..Default::default()
-    });
+    );
     c
 }
 
@@ -216,14 +323,27 @@ pub fn sinuous_striker() -> CardDefinition {
 /// its power, then discard two. Eternalize {5}{U}{U} (token is 4/4, so it draws
 /// four).
 pub fn champion_of_wits() -> CardDefinition {
-    let mut c = akh_body("Champion of Wits", cost(&[generic(2), u()]),
-        vec![CreatureType::Snake, CreatureType::Wizard], 2, 1,
-        vec![], eternalize(cost(&[generic(5), u(), u()])));
+    let mut c = akh_body(
+        "Champion of Wits",
+        cost(&[generic(2), u()]),
+        vec![CreatureType::Snake, CreatureType::Wizard],
+        2,
+        1,
+        vec![],
+        eternalize(cost(&[generic(5), u(), u()])),
+    );
     c.triggered_abilities = vec![etb(Effect::MayDo {
         description: "Draw cards equal to power, then discard two".into(),
         body: Box::new(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::PowerOf(Box::new(Selector::This)) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::PowerOf(Box::new(Selector::This)),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(2),
+                random: false,
+            },
         ])),
     })];
     c
@@ -359,7 +479,10 @@ pub fn greater_sandwurm() -> CardDefinition {
         name: "Greater Sandwurm",
         cost: cost(&[generic(5), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
         power: 7,
         toughness: 7,
         keywords: vec![
@@ -376,7 +499,10 @@ pub fn pouncing_cheetah() -> CardDefinition {
         name: "Pouncing Cheetah",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flash],
@@ -455,7 +581,10 @@ pub fn open_fire() -> CardDefinition {
         name: "Open Fire",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+        effect: Effect::DealDamage {
+            to: target_any(),
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -469,9 +598,8 @@ pub fn gideons_reproach() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature.and(
-                    SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
-                ),
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking)),
             ),
             amount: Value::Const(4),
         },

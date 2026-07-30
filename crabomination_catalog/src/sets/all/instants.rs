@@ -19,9 +19,9 @@ pub fn force_of_will() -> CardDefinition {
             not_your_turn_only: false,
             target_filter: None,
             condition: None,
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
+            exile_from_graveyard_count: 0,
+            return_to_hand: None,
+            sacrifice_permanents: None,
             effect_override: None,
             dash: false,
             blitz: false,
@@ -30,7 +30,8 @@ pub fn force_of_will() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }

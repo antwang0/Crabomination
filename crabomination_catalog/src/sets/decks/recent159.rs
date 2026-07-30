@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef};
-use crate::mana::{b, cost, g, generic, r, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, w};
 
 /// Fanatical Strength — {1}{G} Instant. Target creature gets +3/+3 and gains
 /// trample until end of turn.
@@ -49,7 +49,10 @@ pub fn festerleech() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+            effect: Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
@@ -83,7 +86,10 @@ pub fn cornered_crook() -> CardDefinition {
             description: "Sacrifice an artifact to deal 3 damage?".into(),
             filter: R::Artifact,
             count: Value::ONE,
-            then: Box::new(Effect::DealDamage { to: target_any(), amount: Value::Const(3) }),
+            then: Box::new(Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(3),
+            }),
             else_: None,
         })],
         ..Default::default()
@@ -145,7 +151,10 @@ pub fn absolving_lammasu() -> CardDefinition {
                 what: Selector::EachPermanent(R::Creature),
             }),
             on_dies(Effect::Seq(vec![
-                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
                 Effect::Suspect {
                     what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
                 },

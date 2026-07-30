@@ -7,8 +7,10 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, heroic, target_any, target_filtered};
-use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaCost};
+use crate::effect::{
+    Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest,
+};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 
 fn creature(
     name: &'static str,
@@ -22,7 +24,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: ct, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: ct,
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         keywords: kw,
@@ -31,7 +36,13 @@ fn creature(
 }
 
 fn spell(name: &'static str, mana: ManaCost, kind: CardType, effect: Effect) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![kind], effect, ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![kind],
+        effect,
+        ..Default::default()
+    }
 }
 
 /// "Inspired — Whenever this creature becomes untapped, …" (CR 702.108).
@@ -52,7 +63,10 @@ fn aura(name: &'static str, mana: ManaCost, bonus: EquipBonus) -> CardDefinition
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(bonus),
         ..Default::default()
     }
@@ -73,18 +87,17 @@ fn nyx_token(
         toughness: t,
         colors: vec![color],
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: ct, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: ct,
+            ..Default::default()
+        },
         keywords: kw,
         ..Default::default()
     }
 }
 
 /// "Inspired — … you may pay `mana`. If you do, create `count` `token`s."
-fn inspired_pay_for_tokens(
-    mana: ManaCost,
-    token: TokenDefinition,
-    count: i32,
-) -> TriggeredAbility {
+fn inspired_pay_for_tokens(mana: ManaCost, token: TokenDefinition, count: i32) -> TriggeredAbility {
     inspired(Effect::MayPay {
         description: format!("Pay for {}", token.name),
         mana_cost: mana,
@@ -223,7 +236,10 @@ pub fn stormcaller_of_keranos() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), u()]),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..creature(
@@ -294,7 +310,14 @@ pub fn kioras_follower() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..creature("Kiora's Follower", cost(&[g(), u()]), 2, 2, vec![CreatureType::Merfolk], vec![])
+        ..creature(
+            "Kiora's Follower",
+            cost(&[g(), u()]),
+            2,
+            2,
+            vec![CreatureType::Merfolk],
+            vec![],
+        )
     }
 }
 
@@ -330,10 +353,19 @@ pub fn reckless_reveler() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
             sac_cost: true,
-            effect: Effect::Destroy { what: target_filtered(R::Artifact) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            },
             ..Default::default()
         }],
-        ..creature("Reckless Reveler", cost(&[generic(1), r()]), 2, 1, vec![CreatureType::Satyr], vec![])
+        ..creature(
+            "Reckless Reveler",
+            cost(&[generic(1), r()]),
+            2,
+            1,
+            vec![CreatureType::Satyr],
+            vec![],
+        )
     }
 }
 
@@ -343,7 +375,14 @@ pub fn pheres_band_raiders() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![inspired_pay_for_tokens(
             cost(&[generic(2), g()]),
-            nyx_token("Centaur", 3, 3, Color::Green, vec![CreatureType::Centaur], vec![]),
+            nyx_token(
+                "Centaur",
+                3,
+                3,
+                Color::Green,
+                vec![CreatureType::Centaur],
+                vec![],
+            ),
             1,
         )],
         ..creature(
@@ -363,7 +402,14 @@ pub fn god_favored_general() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![inspired_pay_for_tokens(
             cost(&[generic(2), w()]),
-            nyx_token("Soldier", 1, 1, Color::White, vec![CreatureType::Soldier], vec![]),
+            nyx_token(
+                "Soldier",
+                1,
+                1,
+                Color::White,
+                vec![CreatureType::Soldier],
+                vec![],
+            ),
             2,
         )],
         ..creature(
@@ -383,7 +429,14 @@ pub fn forlorn_pseudamma() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![inspired_pay_for_tokens(
             cost(&[generic(2), b()]),
-            nyx_token("Zombie", 2, 2, Color::Black, vec![CreatureType::Zombie], vec![]),
+            nyx_token(
+                "Zombie",
+                2,
+                2,
+                Color::Black,
+                vec![CreatureType::Zombie],
+                vec![],
+            ),
             1,
         )],
         ..creature(
@@ -460,9 +513,9 @@ pub fn kraken_of_the_straits() -> CardDefinition {
         6,
         6,
         vec![CreatureType::Kraken],
-        vec![Keyword::CantBeBlockedByPowerLessThanCount(Box::new(R::HasLandType(
-            crate::card::LandType::Island,
-        )))],
+        vec![Keyword::CantBeBlockedByPowerLessThanCount(Box::new(
+            R::HasLandType(crate::card::LandType::Island),
+        ))],
     )
 }
 
@@ -497,7 +550,14 @@ pub fn fate_unraveler() -> CardDefinition {
                 amount: Value::ONE,
             },
         }],
-        ..creature("Fate Unraveler", cost(&[generic(3), b()]), 3, 4, vec![CreatureType::Hag], vec![])
+        ..creature(
+            "Fate Unraveler",
+            cost(&[generic(3), b()]),
+            3,
+            4,
+            vec![CreatureType::Hag],
+            vec![],
+        )
     }
 }
 
@@ -514,7 +574,10 @@ pub fn pain_seer() -> CardDefinition {
                     count: Value::ONE,
                 })),
             },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]))],
         ..creature(
             "Pain Seer",
@@ -530,11 +593,9 @@ pub fn pain_seer() -> CardDefinition {
 /// Odunos River Trawler — {2}{B} 2/2. ETB and a {W}-sacrifice both return an
 /// enchantment creature card from your graveyard to hand.
 pub fn odunos_river_trawler() -> CardDefinition {
-    let recur = || {
-        Effect::Move {
-            what: target_filtered(R::Creature.and(R::Enchantment).and(R::InGraveyard)),
-            to: ZoneDest::Hand(PlayerRef::You),
-        }
+    let recur = || Effect::Move {
+        what: target_filtered(R::Creature.and(R::Enchantment).and(R::InGraveyard)),
+        to: ZoneDest::Hand(PlayerRef::You),
     };
     CardDefinition {
         triggered_abilities: vec![etb(recur())],
@@ -570,7 +631,14 @@ pub fn scourge_of_skola_vale() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..creature("Scourge of Skola Vale", cost(&[generic(2), g()]), 0, 0, vec![CreatureType::Hydra], vec![Keyword::Trample])
+        ..creature(
+            "Scourge of Skola Vale",
+            cost(&[generic(2), g()]),
+            0,
+            0,
+            vec![CreatureType::Hydra],
+            vec![Keyword::Trample],
+        )
     }
 }
 
@@ -582,17 +650,28 @@ pub fn eater_of_hope() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[b()]),
                 sac_other_filter: Some((R::Creature, 1)),
-                effect: Effect::Regenerate { what: Selector::This },
+                effect: Effect::Regenerate {
+                    what: Selector::This,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), b()]),
                 sac_other_filter: Some((R::Creature, 2)),
-                effect: Effect::Destroy { what: target_filtered(R::Creature) },
+                effect: Effect::Destroy {
+                    what: target_filtered(R::Creature),
+                },
                 ..Default::default()
             },
         ],
-        ..creature("Eater of Hope", cost(&[generic(5), b(), b()]), 6, 4, vec![CreatureType::Demon], vec![Keyword::Flying])
+        ..creature(
+            "Eater of Hope",
+            cost(&[generic(5), b(), b()]),
+            6,
+            4,
+            vec![CreatureType::Demon],
+            vec![Keyword::Flying],
+        )
     }
 }
 
@@ -607,7 +686,10 @@ pub fn forgestoker_dragon() -> CardDefinition {
                 filter: R::IsAttacking,
             }),
             effect: Effect::Seq(vec![
-                Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::ONE },
+                Effect::DealDamage {
+                    to: target_filtered(R::Creature),
+                    amount: Value::ONE,
+                },
                 Effect::GrantKeyword {
                     what: Selector::Target(0),
                     keyword: Keyword::CantBlock,
@@ -616,7 +698,14 @@ pub fn forgestoker_dragon() -> CardDefinition {
             ]),
             ..Default::default()
         }],
-        ..creature("Forgestoker Dragon", cost(&[generic(4), r(), r()]), 5, 4, vec![CreatureType::Dragon], vec![Keyword::Flying])
+        ..creature(
+            "Forgestoker Dragon",
+            cost(&[generic(4), r(), r()]),
+            5,
+            4,
+            vec![CreatureType::Dragon],
+            vec![Keyword::Flying],
+        )
     }
 }
 
@@ -628,10 +717,20 @@ pub fn silent_sentinel() -> CardDefinition {
             description: "Return an enchantment from your graveyard".into(),
             body: Box::new(Effect::Move {
                 what: target_filtered(R::Enchantment.and(R::InGraveyard)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             }),
         })],
-        ..creature("Silent Sentinel", cost(&[generic(5), w(), w()]), 4, 6, vec![CreatureType::Archon], vec![Keyword::Flying])
+        ..creature(
+            "Silent Sentinel",
+            cost(&[generic(5), w(), w()]),
+            4,
+            6,
+            vec![CreatureType::Archon],
+            vec![Keyword::Flying],
+        )
     }
 }
 
@@ -717,7 +816,10 @@ pub fn scouring_sands() -> CardDefinition {
                 to: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
                 amount: Value::ONE,
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         ]),
     )
 }
@@ -746,7 +848,9 @@ pub fn gild() -> CardDefinition {
         cost(&[generic(3), b()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::Exile { what: target_filtered(R::Creature) },
+            Effect::Exile {
+                what: target_filtered(R::Creature),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -769,7 +873,9 @@ pub fn dawn_to_dusk() -> CardDefinition {
                     what: target_filtered(R::Enchantment.and(R::InGraveyard)),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-                Effect::Destroy { what: target_filtered(R::Enchantment) },
+                Effect::Destroy {
+                    what: target_filtered(R::Enchantment),
+                },
             ],
             min: 1,
             max: 2,
@@ -810,7 +916,10 @@ pub fn sudden_storm() -> CardDefinition {
                 skip_untap: true,
                 exact: false,
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         ]),
     )
 }
@@ -826,14 +935,20 @@ pub fn peregrination() -> CardDefinition {
             Effect::Search {
                 who: PlayerRef::You,
                 filter: R::Land.and(R::HasSupertype(Supertype::Basic)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
             Effect::Search {
                 who: PlayerRef::You,
                 filter: R::Land.and(R::HasSupertype(Supertype::Basic)),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         ]),
     )
 }
@@ -898,7 +1013,10 @@ pub fn lightning_volley() -> CardDefinition {
             what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
             ability: Box::new(ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::DealDamage { to: target_any(), amount: Value::ONE },
+                effect: Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             }),
             duration: Duration::EndOfTurn,
@@ -972,7 +1090,11 @@ pub fn weight_of_the_underworld() -> CardDefinition {
     aura(
         "Weight of the Underworld",
         cost(&[generic(3), b()]),
-        EquipBonus { power: -3, toughness: -2, ..Default::default() },
+        EquipBonus {
+            power: -3,
+            toughness: -2,
+            ..Default::default()
+        },
     )
 }
 
@@ -986,8 +1108,14 @@ pub fn oracles_insight() -> CardDefinition {
             activated_abilities: vec![ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::Seq(vec![
-                    Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Scry {
+                        who: PlayerRef::You,
+                        amount: Value::ONE,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 ]),
                 ..Default::default()
             }],
@@ -1000,7 +1128,10 @@ pub fn oracles_insight() -> CardDefinition {
 /// block only creatures with flying.
 pub fn stratus_walk() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
         ..aura(
             "Stratus Walk",
             cost(&[generic(1), u()]),
@@ -1076,7 +1207,10 @@ pub fn epharas_enlightenment() -> CardDefinition {
         ..aura(
             "Ephara's Enlightenment",
             cost(&[generic(1), w(), u()]),
-            EquipBonus { keywords: vec![Keyword::Flying], ..Default::default() },
+            EquipBonus {
+                keywords: vec![Keyword::Flying],
+                ..Default::default()
+            },
         )
     }
 }
@@ -1094,7 +1228,11 @@ pub fn thunderous_might() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        ..aura("Thunderous Might", cost(&[generic(1), r()]), EquipBonus::default())
+        ..aura(
+            "Thunderous Might",
+            cost(&[generic(1), r()]),
+            EquipBonus::default(),
+        )
     }
 }
 
@@ -1114,7 +1252,9 @@ pub fn siren_song_lyre() -> CardDefinition {
             activated_abilities: vec![ActivatedAbility {
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
-                effect: Effect::Tap { what: target_filtered(R::Creature) },
+                effect: Effect::Tap {
+                    what: target_filtered(R::Creature),
+                },
                 ..Default::default()
             }],
             ..Default::default()

@@ -9,9 +9,9 @@
 //! Tests in `recent_b/recent290`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,
-    EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
-    StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
+    EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes,
+    Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, ZoneDest};
@@ -36,12 +36,17 @@ pub fn krosan_restorer() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::Untap { what: target_filtered(R::Land), up_to: None },
+                effect: Effect::Untap {
+                    what: target_filtered(R::Land),
+                    up_to: None,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 tap_cost: true,
-                condition: Some(Predicate::ThresholdActive { who: PlayerRef::You }),
+                condition: Some(Predicate::ThresholdActive {
+                    who: PlayerRef::You,
+                }),
                 effect: Effect::Untap {
                     what: Selector::EachPermanent(R::Land),
                     up_to: Some(Value::Const(3)),
@@ -82,9 +87,14 @@ pub fn vraska_the_silencer() -> CardDefinition {
                 body: Box::new(Effect::Seq(vec![
                     Effect::Move {
                         what: Selector::TriggerSource,
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: true,
+                        },
                     },
-                    Effect::BecomeTreasure { what: Selector::LastMoved },
+                    Effect::BecomeTreasure {
+                        what: Selector::LastMoved,
+                    },
                 ])),
                 else_: None,
             },
@@ -111,8 +121,13 @@ pub fn zoyowa_lava_tongue() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::DescendedThisTurn { who: PlayerRef::You }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::DescendedThisTurn {
+                who: PlayerRef::You,
+            }),
             effect: Effect::Punisher {
                 chooser: Selector::Player(PlayerRef::EachOpponent),
                 options: vec![
@@ -153,8 +168,11 @@ pub fn discerning_financier() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer)
-                .with_filter(Predicate::OpponentControlsMoreLandsThanYou),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::OpponentControlsMoreLandsThanYou),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -165,11 +183,17 @@ pub fn discerning_financier() -> CardDefinition {
             mana_cost: cost(&[generic(2), w()]),
             effect: Effect::Seq(vec![
                 Effect::GainControl {
-                    what: target_filtered(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Treasure).and(R::ControlledByYou)),
+                    what: target_filtered(
+                        R::HasArtifactSubtype(crate::card::ArtifactSubtype::Treasure)
+                            .and(R::ControlledByYou),
+                    ),
                     to: Some(PlayerRef::EachOpponent),
                     duration: Duration::Permanent,
                 },
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
             ..Default::default()
         }],
@@ -184,7 +208,10 @@ pub fn grove_rumbler() -> CardDefinition {
         name: "Grove Rumbler",
         cost: cost(&[generic(2), r(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Trample],
@@ -208,7 +235,10 @@ pub fn blister_beetle() -> CardDefinition {
         name: "Blister Beetle",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::PumpPT {
@@ -227,7 +257,9 @@ pub fn swift_response() -> CardDefinition {
         name: "Swift Response",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy { what: target_filtered(R::Creature.and(R::Tapped)) },
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::Tapped)),
+        },
         ..Default::default()
     }
 }
@@ -243,7 +275,9 @@ pub fn might_beyond_reason() -> CardDefinition {
             what: target_filtered(R::Creature),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::IfPred {
-                pred: Box::new(Predicate::DeliriumActive { who: PlayerRef::You }),
+                pred: Box::new(Predicate::DeliriumActive {
+                    who: PlayerRef::You,
+                }),
                 then: Box::new(Value::Const(3)),
                 else_: Box::new(Value::Const(2)),
             },
@@ -275,7 +309,10 @@ pub fn astral_wingspan() -> CardDefinition {
             keywords: vec![Keyword::Flying],
             ..Default::default()
         }),
-        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
         ..Default::default()
     }
 }
@@ -298,7 +335,9 @@ pub fn frontier_warmonger() -> CardDefinition {
         toughness: 4,
         static_abilities: vec![StaticAbility {
             description: "Attacking creatures you control have menace.",
-            effect: StaticEffect::GrantKeywordToAttackers { keyword: Keyword::Menace },
+            effect: StaticEffect::GrantKeywordToAttackers {
+                keyword: Keyword::Menace,
+            },
         }],
         ..Default::default()
     }

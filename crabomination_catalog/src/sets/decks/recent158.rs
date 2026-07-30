@@ -11,7 +11,7 @@ use crate::card::{
 use crate::effect::shortcut::{on_dies, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, w, Color};
+use crate::mana::{Color, b, cost, g, generic, w};
 
 /// Starlit Soothsayer — {2}{B} 2/2 Bat Cleric with flying. At the beginning of
 /// your end step, if you gained or lost life this turn, surveil 1.
@@ -28,13 +28,23 @@ pub fn starlit_soothsayer() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
                 cond: Predicate::Any(vec![
-                    Predicate::PlayerGainedLifeThisTurn { who: PlayerRef::You },
-                    Predicate::PlayerLostLifeThisTurn { who: PlayerRef::You },
+                    Predicate::PlayerGainedLifeThisTurn {
+                        who: PlayerRef::You,
+                    },
+                    Predicate::PlayerLostLifeThisTurn {
+                        who: PlayerRef::You,
+                    },
                 ]),
-                then: Box::new(Effect::Surveil { who: PlayerRef::You, amount: Value::ONE }),
+                then: Box::new(Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -58,7 +68,9 @@ pub fn omenport_vigilante() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Double strike as long as you've committed a crime this turn.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::CommittedCrimeThisTurn { who: PlayerRef::You },
+                condition: Predicate::CommittedCrimeThisTurn {
+                    who: PlayerRef::You,
+                },
                 power: 0,
                 toughness: 0,
                 keywords: vec![Keyword::DoubleStrike],
@@ -85,7 +97,9 @@ pub fn essence_channeler() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Flying and vigilance as long as you've lost life this turn.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::You },
+                condition: Predicate::PlayerLostLifeThisTurn {
+                    who: PlayerRef::You,
+                },
                 power: 0,
                 toughness: 0,
                 keywords: vec![Keyword::Flying, Keyword::Vigilance],
@@ -136,7 +150,10 @@ pub fn cactarantula() -> CardDefinition {
                 actor_is_opponent: true,
                 ..EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource)
             },
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -157,17 +174,20 @@ pub fn inventive_wingsmith() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::All(vec![
-                    Predicate::SpellsCastThisTurnEquals {
-                        who: PlayerRef::You,
-                        count: Value::Const(0),
-                    },
-                    Predicate::EntityMatches {
-                        what: Selector::This,
-                        filter: R::HasKeyword(Keyword::Flying).negate(),
-                    },
-                ])),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::All(vec![
+                Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::You,
+                    count: Value::Const(0),
+                },
+                Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::HasKeyword(Keyword::Flying).negate(),
+                },
+            ])),
             effect: Effect::AddKeywordCounter {
                 what: Selector::This,
                 keyword: Keyword::Flying,

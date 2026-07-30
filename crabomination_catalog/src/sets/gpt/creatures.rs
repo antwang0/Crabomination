@@ -16,14 +16,23 @@ use crate::mana::{Color, b, cost, generic, hybrid, w};
 /// creature it haunts dies, you gain 2 life and draw a card.
 pub fn mourning_thrull() -> CardDefinition {
     let payoff = Effect::Seq(vec![
-        Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        },
     ]);
     CardDefinition {
         name: "Mourning Thrull",
         cost: cost(&[generic(1), hybrid(Color::White, Color::Black)]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thrull], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thrull],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -32,7 +41,9 @@ pub fn mourning_thrull() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: payoff.clone(),
             },
-            on_dies(Effect::HauntCreature { body: Box::new(payoff) }),
+            on_dies(Effect::HauntCreature {
+                body: Box::new(payoff),
+            }),
         ],
         ..Default::default()
     }
@@ -42,13 +53,19 @@ pub fn mourning_thrull() -> CardDefinition {
 /// it haunts dies, destroy target enchantment.
 pub fn absolver_thrull() -> CardDefinition {
     let destroy = Effect::Destroy {
-        what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Enchantment },
+        what: Selector::TargetFiltered {
+            slot: 0,
+            filter: SelectionRequirement::Enchantment,
+        },
     };
     CardDefinition {
         name: "Absolver Thrull",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thrull], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thrull],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![
@@ -56,7 +73,9 @@ pub fn absolver_thrull() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: destroy.clone(),
             },
-            on_dies(Effect::HauntCreature { body: Box::new(destroy) }),
+            on_dies(Effect::HauntCreature {
+                body: Box::new(destroy),
+            }),
         ],
         ..Default::default()
     }
@@ -69,7 +88,10 @@ pub fn shrieking_grotesque() -> CardDefinition {
         name: "Shrieking Grotesque",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Gargoyle], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gargoyle],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -118,15 +140,24 @@ pub fn douse_in_gloom() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::HauntCreature {
                 body: Box::new(Effect::Seq(vec![
                     Effect::DealDamage {
                         to: Selector::Player(PlayerRef::EachOpponent),
                         amount: Value::Const(2),
                     },
-                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
                 ])),
             },
         ]),

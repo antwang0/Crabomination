@@ -8,7 +8,10 @@ use crate::mana::{cost, generic, u};
 
 /// Take an extra turn after this one.
 fn extra_turn_body() -> Effect {
-    Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::Const(1) }
+    Effect::TakeExtraTurn {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+    }
 }
 
 /// Time Walk — {1}{U} Sorcery. "Take an extra turn after this one."
@@ -82,11 +85,10 @@ pub fn nexus_of_fate() -> CardDefinition {
 /// Elemental creature with haste. (The self-exile rider is omitted.)
 pub fn part_the_waterveil() -> CardDefinition {
     use crate::card::{
-        AlternativeCost, CounterType, CreatureType, Keyword, SelectionRequirement, Selector,
-        Value,
+        AlternativeCost, CounterType, CreatureType, Keyword, SelectionRequirement, Selector, Value,
     };
-    use crate::effect::shortcut::target_filtered;
     use crate::effect::Duration;
+    use crate::effect::shortcut::target_filtered;
     let own_land = SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou);
     CardDefinition {
         name: "Part the Waterveil",

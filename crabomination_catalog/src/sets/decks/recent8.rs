@@ -12,7 +12,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, on_dies, target_filtered};
 use crate::effect::{Effect, PlayerRef, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 use crabomination_base::tokens::clue_token;
 
 // ── Earthbend (CR 701.66) ──────────────────────────────────────────────────
@@ -23,7 +23,10 @@ pub fn badgermole_cub() -> CardDefinition {
         name: "Badgermole Cub",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Badger], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Badger],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Earthbend { n: Value::Const(1) })],
@@ -37,7 +40,10 @@ pub fn badgermole() -> CardDefinition {
         name: "Badgermole",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Badger], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Badger],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::Earthbend { n: Value::Const(2) })],
@@ -52,7 +58,11 @@ pub fn earthbending_student() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Warrior,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 1,
@@ -69,7 +79,11 @@ pub fn earth_village_ruffians() -> CardDefinition {
         cost: cost(&[generic(2), hybrid(Color::Black, Color::Green)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Rogue],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Soldier,
+                CreatureType::Rogue,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -91,7 +105,10 @@ pub fn earthbender_ascension() -> CardDefinition {
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
         ]))],
         ..Default::default()
@@ -107,8 +124,14 @@ pub fn blighted_blackthorn() -> CardDefinition {
         description: "Blight 2 to draw a card and lose 1 life?".into(),
         body: Box::new(Effect::Seq(vec![
             Effect::Blight { n: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
-            Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ])),
     };
     CardDefinition {
@@ -163,7 +186,10 @@ pub fn boggart_mischief() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black, Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -174,7 +200,11 @@ pub fn boggart_mischief() -> CardDefinition {
             description: "Blight 1 to create two Goblins?".into(),
             body: Box::new(Effect::Seq(vec![
                 Effect::Blight { n: Value::Const(1) },
-                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: goblin },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: goblin,
+                },
             ])),
         })],
         ..Default::default()
@@ -190,10 +220,18 @@ pub fn airbending_lesson() -> CardDefinition {
         name: "Airbending Lesson",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
-            Effect::Airbend { what: target_filtered(SelectionRequirement::Nonland) },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Airbend {
+                what: target_filtered(SelectionRequirement::Nonland),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -208,7 +246,11 @@ pub fn aang_the_last_airbender() -> CardDefinition {
         supertypes: vec![crate::card::Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Avatar, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Avatar,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -218,7 +260,9 @@ pub fn aang_the_last_airbender() -> CardDefinition {
             max_targets: 1,
             min_targets: 0,
             filter: SelectionRequirement::Nonland.and(SelectionRequirement::OtherThanSource),
-            effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
+            effect: Box::new(Effect::Airbend {
+                what: Selector::Target(0),
+            }),
         })],
         ..Default::default()
     }
@@ -237,7 +281,9 @@ pub fn airbender_ascension() -> CardDefinition {
                 max_targets: 1,
                 min_targets: 0,
                 filter: SelectionRequirement::Creature,
-                effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
+                effect: Box::new(Effect::Airbend {
+                    what: Selector::Target(0),
+                }),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
@@ -252,17 +298,26 @@ pub fn airbender_ascension() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                    .with_filter(Predicate::ValueAtLeast(
-                        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Quest },
-                        Value::Const(4),
-                    )),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Quest,
+                    },
+                    Value::Const(4),
+                )),
                 effect: Effect::ApplyToTargets {
                     max_targets: 1,
                     min_targets: 0,
-                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
                     effect: Box::new(Effect::Seq(vec![
-                        Effect::Exile { what: Selector::Target(0) },
+                        Effect::Exile {
+                            what: Selector::Target(0),
+                        },
                         Effect::Move {
                             what: Selector::Target(0),
                             to: ZoneDest::Battlefield {
@@ -285,15 +340,27 @@ pub fn whirlwind_technique() -> CardDefinition {
         name: "Whirlwind Technique",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::ONE,
+                random: false,
+            },
             Effect::ApplyToTargets {
                 max_targets: 2,
                 min_targets: 0,
                 filter: SelectionRequirement::Creature,
-                effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
+                effect: Box::new(Effect::Airbend {
+                    what: Selector::Target(0),
+                }),
             },
         ]),
         ..Default::default()
@@ -322,7 +389,9 @@ pub fn glider_staff() -> CardDefinition {
             max_targets: 1,
             min_targets: 0,
             filter: SelectionRequirement::Creature,
-            effect: Box::new(Effect::Airbend { what: Selector::Target(0) }),
+            effect: Box::new(Effect::Airbend {
+                what: Selector::Target(0),
+            }),
         })],
         ..Default::default()
     }
@@ -398,7 +467,11 @@ pub fn forecasting_fortune_teller() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Advisor, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Advisor,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 1,
@@ -420,7 +493,10 @@ pub fn pretending_poxbearers() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ally], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ally],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -450,7 +526,11 @@ pub fn merchant_of_many_hats() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Peasant, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Peasant,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -485,8 +565,15 @@ pub fn yuyan_archers() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Discard a card to draw a card?".into(),
             body: Box::new(Effect::Seq(vec![
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ])),
         })],
         ..Default::default()
@@ -499,11 +586,17 @@ pub fn platypus_bear() -> CardDefinition {
         name: "Platypus-Bear",
         cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue)]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bear],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Defender],
-        triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::Mill {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
         ..Default::default()
     }
 }
@@ -516,7 +609,11 @@ pub fn compassionate_healer() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Cleric,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -524,8 +621,14 @@ pub fn compassionate_healer() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::GainLife { who: Selector::You, amount: Value::ONE },
-                Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::ONE,
+                },
             ]),
         }],
         ..Default::default()

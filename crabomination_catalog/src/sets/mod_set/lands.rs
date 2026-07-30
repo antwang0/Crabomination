@@ -9,7 +9,9 @@
 //!   artifact. Built inline here since the existing `dual_land_with`
 //!   helper doesn't compose `CardType::Artifact` onto a Land.
 
-use super::super::{dual_land_with, fastland_etb_conditional_tap, shockland_pay_two_or_tap, tap_add};
+use super::super::{
+    dual_land_with, fastland_etb_conditional_tap, shockland_pay_two_or_tap, tap_add,
+};
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, Effect, Keyword, LandType, Subtypes,
 };
@@ -249,9 +251,12 @@ pub fn darksteel_citadel() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -360,49 +365,81 @@ pub fn karns_bastion() -> CardDefinition {
 
 pub fn blazemire_verge() -> CardDefinition {
     super::super::verge_land(
-        "Blazemire Verge", Color::Black, Color::Red, LandType::Swamp, LandType::Mountain,
+        "Blazemire Verge",
+        Color::Black,
+        Color::Red,
+        LandType::Swamp,
+        LandType::Mountain,
     )
 }
 
 pub fn thornspire_verge() -> CardDefinition {
     super::super::verge_land(
-        "Thornspire Verge", Color::Red, Color::Green, LandType::Mountain, LandType::Forest,
+        "Thornspire Verge",
+        Color::Red,
+        Color::Green,
+        LandType::Mountain,
+        LandType::Forest,
     )
 }
 
 pub fn bleachbone_verge() -> CardDefinition {
     super::super::verge_land(
-        "Bleachbone Verge", Color::White, Color::Black, LandType::Plains, LandType::Swamp,
+        "Bleachbone Verge",
+        Color::White,
+        Color::Black,
+        LandType::Plains,
+        LandType::Swamp,
     )
 }
 
 pub fn riverpyre_verge() -> CardDefinition {
     super::super::verge_land(
-        "Riverpyre Verge", Color::Blue, Color::Red, LandType::Island, LandType::Mountain,
+        "Riverpyre Verge",
+        Color::Blue,
+        Color::Red,
+        LandType::Island,
+        LandType::Mountain,
     )
 }
 
 pub fn wastewood_verge() -> CardDefinition {
     super::super::verge_land(
-        "Wastewood Verge", Color::Black, Color::Green, LandType::Swamp, LandType::Forest,
+        "Wastewood Verge",
+        Color::Black,
+        Color::Green,
+        LandType::Swamp,
+        LandType::Forest,
     )
 }
 
 pub fn floodfarm_verge() -> CardDefinition {
     super::super::verge_land(
-        "Floodfarm Verge", Color::White, Color::Blue, LandType::Plains, LandType::Island,
+        "Floodfarm Verge",
+        Color::White,
+        Color::Blue,
+        LandType::Plains,
+        LandType::Island,
     )
 }
 
 pub fn gloomlake_verge() -> CardDefinition {
     super::super::verge_land(
-        "Gloomlake Verge", Color::Blue, Color::Black, LandType::Island, LandType::Swamp,
+        "Gloomlake Verge",
+        Color::Blue,
+        Color::Black,
+        LandType::Island,
+        LandType::Swamp,
     )
 }
 
 pub fn hushwood_verge() -> CardDefinition {
     super::super::verge_land(
-        "Hushwood Verge", Color::Green, Color::White, LandType::Forest, LandType::Plains,
+        "Hushwood Verge",
+        Color::Green,
+        Color::White,
+        LandType::Forest,
+        LandType::Plains,
     )
 }
 
@@ -480,7 +517,10 @@ pub fn urzas_saga() -> CardDefinition {
                     filter: SelectionRequirement::Artifact
                         .and(SelectionRequirement::ManaValueAtMost(1))
                         .and(SelectionRequirement::HasXInCost.negate()),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ),
         ],
@@ -490,12 +530,20 @@ pub fn urzas_saga() -> CardDefinition {
 
 pub fn sunbillow_verge() -> CardDefinition {
     super::super::verge_land(
-        "Sunbillow Verge", Color::White, Color::Red, LandType::Mountain, LandType::Plains,
+        "Sunbillow Verge",
+        Color::White,
+        Color::Red,
+        LandType::Mountain,
+        LandType::Plains,
     )
 }
 
 pub fn willowrush_verge() -> CardDefinition {
     super::super::verge_land(
-        "Willowrush Verge", Color::Blue, Color::Green, LandType::Forest, LandType::Island,
+        "Willowrush Verge",
+        Color::Blue,
+        Color::Green,
+        LandType::Forest,
+        LandType::Island,
     )
 }

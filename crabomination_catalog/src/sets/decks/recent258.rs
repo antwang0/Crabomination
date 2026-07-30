@@ -7,13 +7,16 @@ use crate::card::{
     SplitHalf, Subtypes, TokenDefinition,
 };
 use crate::effect::{Effect, PlayerRef, Selector, Value};
-use crate::mana::{cost, generic, hybrid, Color};
+use crate::mana::{Color, cost, generic, hybrid};
 
 fn thopter_token() -> TokenDefinition {
     TokenDefinition {
         name: "Thopter".into(),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -46,7 +49,10 @@ pub fn fuss_bother() -> CardDefinition {
                         count: Value::Const(3),
                         definition: thopter_token(),
                     },
-                    Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                    Effect::Surveil {
+                        who: PlayerRef::You,
+                        amount: Value::Const(2),
+                    },
                 ]),
             },
             fuse: false,
@@ -67,9 +73,19 @@ pub fn cease_desist() -> CardDefinition {
         cost: cost(&[generic(1), bg]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::ExileUpToNFromGraveyards { count: Value::Const(2), of: None, single: true },
-            Effect::GainLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
-            Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE },
+            Effect::ExileUpToNFromGraveyards {
+                count: Value::Const(2),
+                of: None,
+                single: true,
+            },
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::ONE,
+            },
         ]),
         split: Some(Box::new(SplitCard {
             right: SplitHalf {

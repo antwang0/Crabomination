@@ -6,20 +6,17 @@
 use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CounterType,
     CreatureType, EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, SelectionRequirement as R, Selector,  Subtypes,
-    Supertype, TriggeredAbility, Value,
+    Predicate, SelectionRequirement as R, Selector, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest, ZoneRef};
 use crate::game::effects::{food_token, treasure_token};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 use super::woe_roles::{cursed_role, monster_role, young_hero_role};
 
-
 // ── White ─────────────────────────────────────────────────────────────────────
-
 
 /// Cooped Up — {1}{W} Aura. Enchant creature; it can't attack or block. {2}{W}:
 /// Exile enchanted creature.
@@ -32,21 +29,24 @@ pub fn cooped_up() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::CantAttack, Keyword::CantBlock],
             ..Default::default()
         }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), w()]),
-            effect: Effect::Exile { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            effect: Effect::Exile {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
             ..Default::default()
         }],
         ..Default::default()
     }
 }
-
-
 
 // ── Blue ──────────────────────────────────────────────────────────────────────
 
@@ -113,8 +113,9 @@ pub fn dream_spoilers() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
+            ),
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
                 min_targets: 0,
@@ -139,7 +140,9 @@ pub fn feed_the_cauldron() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Creature.and(R::ManaValueAtMost(3))) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::ManaValueAtMost(3))),
+            },
             Effect::If {
                 cond: Predicate::IsTurnOf(PlayerRef::You),
                 then: Box::new(Effect::CreateToken {
@@ -218,7 +221,6 @@ pub fn embereth_veteran() -> CardDefinition {
     }
 }
 
-
 // ── Green ─────────────────────────────────────────────────────────────────────
 
 /// Bestial Bloodline — {1}{G} Aura. Enchant creature; it gets +2/+2. {4}{G}:
@@ -232,12 +234,22 @@ pub fn bestial_bloodline() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { power: 2, toughness: 2, ..Default::default() }),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            ..Default::default()
+        }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4), g()]),
             from_graveyard: true,
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -283,7 +295,10 @@ pub fn elvish_archivist() -> CardDefinition {
                             filter: R::Enchantment,
                         })
                 },
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             },
         ],
         ..Default::default()
@@ -332,11 +347,19 @@ pub fn bespoke_battlegarb() -> CardDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Equipment],
             ..Default::default()
         },
-        equipped_bonus: Some(EquipBonus { power: 2, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            ..Default::default()
+        }),
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer)
-                .with_filter(Predicate::CelebrationActive { who: PlayerRef::You }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::CelebrationActive {
+                who: PlayerRef::You,
+            }),
             effect: Effect::Attach {
                 what: Selector::This,
                 to: target_filtered(R::Creature.and(R::ControlledByYou)),
@@ -357,8 +380,15 @@ pub fn collectors_vault() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
@@ -390,7 +420,10 @@ pub fn eriettes_tempting_apple() -> CardDefinition {
                 to: None,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
@@ -402,7 +435,10 @@ pub fn eriettes_tempting_apple() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
                 sac_cost: true,
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -440,8 +476,15 @@ pub fn tempest_hart() -> CardDefinition {
             cost: cost(&[generic(1), u()]),
             card_types: vec![CardType::Instant],
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-                Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                    random: false,
+                },
             ]),
         })),
         triggered_abilities: vec![TriggeredAbility {
@@ -467,7 +510,10 @@ fn rat_token() -> crate::card::TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         keywords: vec![Keyword::CantBlock],
         ..Default::default()
     }
@@ -481,7 +527,10 @@ fn bird_token() -> crate::card::TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     }
@@ -495,7 +544,10 @@ fn faerie_token() -> crate::card::TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
         ..Default::default()
     }
@@ -515,7 +567,11 @@ pub fn twisted_sewer_witch() -> CardDefinition {
         power: 3,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: rat_token() },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: rat_token(),
+            },
             Effect::CreateTokenAttachedToEach {
                 target: Selector::EachMatching {
                     zone: ZoneRef::Battlefield,
@@ -534,7 +590,10 @@ pub fn mintstrosity() -> CardDefinition {
         name: "Mintstrosity",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
@@ -641,7 +700,10 @@ pub fn leaping_ambush() -> CardDefinition {
                 keyword: Keyword::Reach,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
         ]),
         ..Default::default()
     }
@@ -659,10 +721,18 @@ pub fn plunge_into_winter() -> CardDefinition {
                 max_targets: 1,
                 min_targets: 0,
                 filter: R::Creature,
-                effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                effect: Box::new(Effect::Tap {
+                    what: Selector::Target(0),
+                }),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -676,7 +746,10 @@ pub fn into_the_fae_court() -> CardDefinition {
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -701,11 +774,12 @@ pub fn knight_of_doves() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Enchantment,
-                }),
+                },
+            ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -728,7 +802,10 @@ pub fn fae_flight() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: 1,
             keywords: vec![Keyword::Flying],
@@ -750,7 +827,10 @@ pub fn gingerbread_hunter() -> CardDefinition {
         name: "Gingerbread Hunter",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         adventure: Some(Box::new(Adventure {

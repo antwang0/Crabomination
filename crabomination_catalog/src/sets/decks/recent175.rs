@@ -21,7 +21,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Magmakin Artillerist — {2}{R} 1/4 Elemental Pirate. Whenever you discard one
 /// or more cards, deal that much damage to each opponent. Cycling {1}{R}. When
@@ -69,7 +69,10 @@ pub fn outpace_oblivion() -> CardDefinition {
             max_targets: 1,
             min_targets: 0,
             filter: R::Creature.or(R::Planeswalker),
-            effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(5) }),
+            effect: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(5),
+            }),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
@@ -130,7 +133,10 @@ pub fn waxen_shapethief() -> CardDefinition {
         name: "Waxen Shapethief",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Shapeshifter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flash, Keyword::Cycling(cost(&[generic(2)]))],
         enters_as_copy: Some(EntersAsCopy {
             filter: R::Creature.or(R::Artifact).and(R::ControlledByYou),
@@ -147,20 +153,27 @@ pub fn waxen_shapethief() -> CardDefinition {
 pub fn quag_feast() -> CardDefinition {
     let target = Selector::TargetFiltered {
         slot: 0,
-        filter: R::Creature.or(R::Planeswalker).or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+        filter: R::Creature
+            .or(R::Planeswalker)
+            .or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
     };
     CardDefinition {
         name: "Quag Feast",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::If {
                 cond: Predicate::ValueAtMost(
                     Value::ManaValueOf(Box::new(target.clone())),
                     Value::GraveyardSizeOf(PlayerRef::You),
                 ),
-                then: Box::new(Effect::Destroy { what: target.clone() }),
+                then: Box::new(Effect::Destroy {
+                    what: target.clone(),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -209,11 +222,16 @@ pub fn explosive_getaway() -> CardDefinition {
                 max_targets: 1,
                 min_targets: 0,
                 filter: R::Artifact.or(R::Creature),
-                effect: Box::new(Effect::ExileReturnNextEndStep { what: Selector::Target(0) }),
+                effect: Box::new(Effect::ExileReturnNextEndStep {
+                    what: Selector::Target(0),
+                }),
             },
             Effect::ForEach {
                 selector: Selector::EachPermanent(R::Creature),
-                body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(4) }),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(4),
+                }),
             },
         ]),
         ..Default::default()
@@ -227,7 +245,10 @@ pub fn lightwheel_enhancements() -> CardDefinition {
         name: "Lightwheel Enhancements",
         cost: cost(&[w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         keywords: vec![Keyword::StartYourEngines],
         effect: Effect::Attach {
             what: Selector::This,
@@ -255,7 +276,10 @@ pub fn thopter_fabricator() -> CardDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     };
@@ -263,15 +287,25 @@ pub fn thopter_fabricator() -> CardDefinition {
         name: "Thopter Fabricator",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Crew(2)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::Triggerer, n: 2 })
+                .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
+                    who: PlayerRef::Triggerer,
+                    n: 2,
+                })
                 .once_per_turn(),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: thopter },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: thopter,
+            },
         }],
         ..Default::default()
     }
@@ -291,14 +325,20 @@ pub fn coalstoke_gearhulk() -> CardDefinition {
         name: "Coalstoke Gearhulk",
         cost: cost(&[generic(1), b(), b(), r(), r()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Menace, Keyword::Deathtouch],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(R::Creature.and(R::InGraveyard).and(R::ManaValueAtMost(4))),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::AddCounter {
                 what: Selector::Target(0),
@@ -308,7 +348,11 @@ pub fn coalstoke_gearhulk() -> CardDefinition {
             grant(Keyword::Menace),
             grant(Keyword::Deathtouch),
             grant(Keyword::Haste),
-            Effect::AtNextEndStep { body: Box::new(Effect::Exile { what: Selector::Target(0) }) },
+            Effect::AtNextEndStep {
+                body: Box::new(Effect::Exile {
+                    what: Selector::Target(0),
+                }),
+            },
         ]))],
         ..Default::default()
     }
@@ -326,7 +370,10 @@ pub fn march_of_the_world_ooze() -> CardDefinition {
         toughness: 3,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -351,9 +398,14 @@ pub fn march_of_the_world_ooze() -> CardDefinition {
             },
         ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
-                .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::Triggerer)))),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: elephant },
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(
+                Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::Triggerer))),
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: elephant,
+            },
         }],
         ..Default::default()
     }
@@ -368,7 +420,10 @@ pub fn possession_engine() -> CardDefinition {
         name: "Possession Engine",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Crew(3)],
@@ -387,17 +442,26 @@ pub fn oildeep_gearhulk() -> CardDefinition {
         name: "Oildeep Gearhulk",
         cost: cost(&[u(), u(), b(), b()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Lifelink, Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
+        keywords: vec![
+            Keyword::Lifelink,
+            Keyword::Ward(WardCost::Mana(cost(&[generic(1)]))),
+        ],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DiscardChosen {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 count: Value::ONE,
                 filter: R::Any,
             },
-            Effect::Draw { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
         ]))],
         ..Default::default()
     }
@@ -424,7 +488,10 @@ pub fn repurposing_bay() -> CardDefinition {
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: R::Artifact.and(R::ManaValueEqualsSacrificedPlus(1)),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ]),
             ..Default::default()
@@ -436,20 +503,30 @@ pub fn repurposing_bay() -> CardDefinition {
 /// Wreck Remover — {4} 3/4 Construct. Whenever this enters or attacks, exile up
 /// to one target card from a graveyard and gain 1 life. Cycling {2}.
 pub fn wreck_remover() -> CardDefinition {
-    let ability = || Effect::Seq(vec![
-        Effect::ApplyToTargets {
-            max_targets: 1,
-            min_targets: 0,
-            filter: R::InGraveyard,
-            effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
-        },
-        Effect::GainLife { who: Selector::You, amount: Value::ONE },
-    ]);
+    let ability = || {
+        Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 1,
+                min_targets: 0,
+                filter: R::InGraveyard,
+                effect: Box::new(Effect::Exile {
+                    what: Selector::Target(0),
+                }),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
+        ])
+    };
     CardDefinition {
         name: "Wreck Remover",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
@@ -544,12 +621,18 @@ pub fn flood_the_engine() -> CardDefinition {
         name: "Flood the Engine",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         effect: Effect::Attach {
             what: Selector::This,
             to: target_filtered(R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))),
         },
-        equipped_bonus: Some(EquipBonus { remove_abilities: true, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            remove_abilities: true,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::Tap {
             what: Selector::AttachedTo(Box::new(Selector::This)),
         })],

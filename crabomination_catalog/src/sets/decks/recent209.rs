@@ -6,7 +6,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword,
-    Selector, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
+    SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
     Value,
 };
 use crate::effect::shortcut::{etb, on_you_attack};
@@ -14,7 +14,7 @@ use crate::effect::{
     Duration, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, PlayerStaticTarget,
     Predicate, ZoneDest, ZoneRef,
 };
-use crate::mana::{cost, g, generic, r, u, w, Color, ManaCost, ManaSymbol};
+use crate::mana::{Color, ManaCost, ManaSymbol, cost, g, generic, r, u, w};
 
 /// Giant Cindermaw — {2}{R} 4/3 Dinosaur Beast. Trample; players can't gain life.
 pub fn giant_cindermaw() -> CardDefinition {
@@ -31,7 +31,9 @@ pub fn giant_cindermaw() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         static_abilities: vec![StaticAbility {
             description: "Players can't gain life.",
-            effect: StaticEffect::PlayerCannotGainLife { target: PlayerStaticTarget::EachPlayer },
+            effect: StaticEffect::PlayerCannotGainLife {
+                target: PlayerStaticTarget::EachPlayer,
+            },
         }],
         ..Default::default()
     }
@@ -47,7 +49,9 @@ pub fn feldons_cane() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             exile_self_cost: true,
-            effect: Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+            effect: Effect::ShuffleGraveyardIntoLibrary {
+                who: PlayerRef::You,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -63,13 +67,18 @@ pub fn uncharted_haven() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Tap { what: Selector::This },
+                effect: Effect::Tap {
+                    what: Selector::This,
+                },
             },
             etb(Effect::ChooseColorForSelf),
         ],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::ChosenColorOfSource },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::ChosenColorOfSource,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -83,7 +92,10 @@ pub fn ancestor_dragon() -> CardDefinition {
         name: "Ancestor Dragon",
         cost: cost(&[generic(4), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 6,
         keywords: vec![Keyword::Flying],
@@ -211,7 +223,10 @@ pub fn dragon_mage() -> CardDefinition {
                     amount: Value::Const(100),
                     random: false,
                 },
-                Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(7) },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::Const(7),
+                },
             ]),
         }],
         ..Default::default()
@@ -236,7 +251,10 @@ pub fn fierce_empath() -> CardDefinition {
         name: "Fierce Empath",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Search {
@@ -259,7 +277,10 @@ pub fn obliterating_bolt() -> CardDefinition {
             Effect::ExileIfWouldDieThisTurn {
                 what: crate::effect::shortcut::target_filtered(R::Creature.or(R::Planeswalker)),
             },
-            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) },
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(4),
+            },
         ]),
         ..Default::default()
     }
@@ -278,7 +299,10 @@ pub fn elspeths_smite() -> CardDefinition {
                     R::Creature.and(R::IsAttacking.or(R::IsBlocking)),
                 ),
             },
-            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(3),
+            },
         ]),
         ..Default::default()
     }
@@ -291,7 +315,10 @@ pub fn taurean_mauler() -> CardDefinition {
         name: "Taurean Mauler",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Shapeshifter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Changeling],

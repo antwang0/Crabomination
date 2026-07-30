@@ -44,15 +44,9 @@ static AKH: &[Factory] = &[
     super::akh::open_fire,
     super::akh::gideons_reproach,
 ];
-static ALL: &[Factory] = &[
-    super::all::force_of_will,
-];
-static AP: &[Factory] = &[
-    super::ap::gaeas_skyfolk,
-];
-static ARN: &[Factory] = &[
-    super::arn::juzam_djinn,
-];
+static ALL: &[Factory] = &[super::all::force_of_will];
+static AP: &[Factory] = &[super::ap::gaeas_skyfolk];
+static ARN: &[Factory] = &[super::arn::juzam_djinn];
 static BNG: &[Factory] = &[
     super::bng::akroan_skyguard,
     super::bng::chorus_of_the_tides,
@@ -6403,6 +6397,10 @@ static DECKS: &[Factory] = &[
     super::decks::reversal_of_fortune,
     super::decks::spectral_shift,
     super::decks::summoners_egg,
+    super::decks::liars_pendulum,
+    super::decks::scythe_of_the_wretched,
+    super::decks::shared_fate,
+    super::decks::spellweaver_helix,
     super::decks::endless_cockroaches,
     super::decks::poison_tip_archer,
     super::decks::altar_of_dementia,
@@ -8134,9 +8132,7 @@ static EOE: &[Factory] = &[
     super::eoe::devastating_onslaught,
     super::eoe::unravel,
 ];
-static FEM: &[Factory] = &[
-    super::fem::hymn_to_tourach,
-];
+static FEM: &[Factory] = &[super::fem::hymn_to_tourach];
 static FIN: &[Factory] = &[
     super::fin::iron_giant,
     super::fin::sazhs_chocobo,
@@ -8551,10 +8547,7 @@ static GTC11: &[Factory] = &[
     super::gtc11::deathpact_angel,
     super::gtc11::voidwalk,
 ];
-static GTC12: &[Factory] = &[
-    super::gtc12::clan_defiance,
-    super::gtc12::domri_rade,
-];
+static GTC12: &[Factory] = &[super::gtc12::clan_defiance, super::gtc12::domri_rade];
 static GTC13: &[Factory] = &[
     super::gtc13::undercity_plague,
     super::gtc13::thrull_parasite,
@@ -8709,13 +8702,8 @@ static GTC9: &[Factory] = &[
     super::gtc9::murder_investigation,
     super::gtc9::dying_wish,
 ];
-static ICE: &[Factory] = &[
-    super::ice::brainstorm,
-];
-static INV: &[Factory] = &[
-    super::inv::terminate,
-    super::inv::opt,
-];
+static ICE: &[Factory] = &[super::ice::brainstorm];
+static INV: &[Factory] = &[super::inv::terminate, super::inv::opt];
 static JOU: &[Factory] = &[
     super::jou::oreskos_swiftclaw,
     super::jou::pensive_minotaur,
@@ -8853,9 +8841,7 @@ static JOU3: &[Factory] = &[
     super::jou3::stormchaser_chimera,
     super::jou3::ajani_mentor_of_heroes,
 ];
-static KHM: &[Factory] = &[
-    super::khm::dragonkin_berserker,
-];
+static KHM: &[Factory] = &[super::khm::dragonkin_berserker];
 static KLD: &[Factory] = &[
     super::kld::attune_with_aether,
     super::kld::rogue_refiner,
@@ -9224,9 +9210,7 @@ static LEA: &[Factory] = &[
     super::lea::demonic_tutor,
     super::lea::wheel_of_fortune,
 ];
-static M11: &[Factory] = &[
-    super::m11::preordain,
-];
+static M11: &[Factory] = &[super::m11::preordain];
 static M15: &[Factory] = &[
     super::m15::triplicate_spirits,
     super::m15::ephemeral_shields,
@@ -10534,12 +10518,8 @@ static ONE: &[Factory] = &[
     super::one::rhuk_hexgold_nabber,
     super::one::ria_ivor_bane_of_bladehold,
 ];
-static PC2: &[Factory] = &[
-    super::pc2::baleful_strix,
-];
-static POR: &[Factory] = &[
-    super::por::shock,
-];
+static PC2: &[Factory] = &[super::pc2::baleful_strix];
+static POR: &[Factory] = &[super::por::shock];
 static RAV: &[Factory] = &[
     super::rav::boros_swiftblade,
     super::rav::courier_hawk,
@@ -15988,9 +15968,7 @@ static THS: &[Factory] = &[
     super::ths::agent_of_horizons,
     super::ths::nykthos_shrine_to_nyx,
 ];
-static TMP: &[Factory] = &[
-    super::tmp::reanimate,
-];
+static TMP: &[Factory] = &[super::tmp::reanimate];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,
     super::war::naga_eternal,
@@ -16306,5 +16284,7 @@ pub fn per_set_card_factories() -> &'static [(&'static str, &'static [Factory])]
 
 /// Every zero-arg card factory exposed under `sets::*`.
 pub fn all_catalog_card_factories() -> impl Iterator<Item = Factory> {
-    per_set_card_factories().iter().flat_map(|(_, fs)| fs.iter().copied())
+    per_set_card_factories()
+        .iter()
+        .flat_map(|(_, fs)| fs.iter().copied())
 }

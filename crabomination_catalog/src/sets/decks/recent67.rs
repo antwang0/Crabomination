@@ -7,9 +7,11 @@ use crate::card::{
     Subtypes, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, Value};
+use crate::effect::{
+    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, Value,
+};
+use crate::mana::{Color, b, cost, g, generic, r, w};
 use crabomination_base::tokens;
-use crate::mana::{b, cost, g, generic, r, w, Color};
 
 /// The 1/1 red Mercenary token (OTJ) — "{T}: Target creature you control gets
 /// +1/+0 until end of turn. Activate only as a sorcery."
@@ -20,7 +22,10 @@ fn mercenary_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mercenary], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mercenary],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sorcery_speed: true,
@@ -83,7 +88,10 @@ pub fn gold_rush() -> CardDefinition {
             Effect::PumpPT {
                 what: target_filtered(R::Creature),
                 power: Value::Times(Box::new(treasures_you_control()), Box::new(Value::Const(2))),
-                toughness: Value::Times(Box::new(treasures_you_control()), Box::new(Value::Const(2))),
+                toughness: Value::Times(
+                    Box::new(treasures_you_control()),
+                    Box::new(Value::Const(2)),
+                ),
                 duration: Duration::EndOfTurn,
             },
         ]),
@@ -118,7 +126,9 @@ pub fn prosperity_tycoon() -> CardDefinition {
                     keyword: Keyword::Indestructible,
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Tap { what: Selector::This },
+                Effect::Tap {
+                    what: Selector::This,
+                },
             ]),
             ..Default::default()
         }],
@@ -161,7 +171,10 @@ pub fn nyxborn_unicorn() -> CardDefinition {
         name: "Nyxborn Unicorn",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Unicorn],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![crate::effect::shortcut::mentor()],
@@ -192,14 +205,20 @@ pub fn iron_fist_pulverizer() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(2) },
+                Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                },
             ),
             effect: Effect::Seq(vec![
                 Effect::DealDamage {
                     to: target_filtered(R::OpponentPlayer),
                     amount: Value::Const(2),
                 },
-                Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::ONE,
+                },
             ]),
         }],
         ..Default::default()

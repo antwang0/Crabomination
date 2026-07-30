@@ -9655,13 +9655,33 @@ impl GameState {
         }
         // CR 614 — Possessed Portal: "If a player would draw a card, that
         // player skips that draw instead."
-        if self.battlefield.iter().any(|c| {
-            c.definition
-                .static_abilities
-                .iter()
-                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::PlayersSkipDraws))
-        }) {
+        let global_static = |want: &crate::effect::StaticEffect| {
+            self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| sa.effect == *want)
+            })
+        };
+        if global_static(&crate::effect::StaticEffect::PlayersSkipDraws) {
             return false;
+        }
+        // CR 614 — Shared Fate: the draw becomes "exile the top card of one of
+        // your opponents' libraries face down; you may play it from exile".
+        if global_static(&crate::effect::StaticEffect::SharedFate) {
+            let victim = (0..self.players.len())
+                .find(|q| *q != p && !self.players[*q].library.is_empty());
+            let Some(victim) = victim else { return false };
+            let Some(mut card) = self.players[victim].library.pop() else { return false };
+            card.face_down = true;
+            card.may_play_until = Some(crate::card::MayPlayPermission {
+                player: p,
+                granted_turn: self.turn_number,
+                duration: crate::card::MayPlayDuration::WhileExiled,
+                exile_after: false,
+                miracle: false,
+            });
+            let card_id = card.id;
+            self.exile.push(card);
+            events.push(GameEvent::PermanentExiled { card_id });
+            return true;
         }
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
@@ -15633,8 +15653,10 @@ fn static_effect_to_effects(
             // Fist of Suns — consulted by `effective_alternative_cost` at cast
             // time; no layer effect.
             | StaticEffect::FiveColorAlternativeCost
-            // Possessed Portal — consulted by `draw_one`; no layer effect.
+            // Possessed Portal / Shared Fate — consulted by `draw_one`; no
+            // layer effect.
             | StaticEffect::PlayersSkipDraws
+            | StaticEffect::SharedFate
             // CounterAmplifierOncePerTurn (Cursed Wombat) — consulted in the
             // `Effect::AddCounter` +1/+1 path; no layer effect.
             | StaticEffect::CounterAmplifierOncePerTurn

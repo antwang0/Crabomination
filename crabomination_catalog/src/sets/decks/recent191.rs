@@ -63,7 +63,10 @@ pub fn longhorn_sharpshooter() -> CardDefinition {
         plot_cost: Some(cost(&[generic(3), r()])),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecomesPlotted, EventScope::SelfSource),
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(2),
+            },
         }],
         ..Default::default()
     }

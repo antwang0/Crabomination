@@ -4,7 +4,9 @@
 //! `Predicate::SourceAttackedThisTurn` + `once_per_turn`, so it can only be
 //! used once each turn and only if the creature attacked this turn.
 
-use crate::card::{CardDefinition, CardType, CounterType, CreatureType, Effect, Selector, Subtypes, Value};
+use crate::card::{
+    CardDefinition, CardType, CounterType, CreatureType, Effect, Selector, Subtypes, Value,
+};
 use crate::effect::shortcut::boast;
 use crate::mana::{cost, generic, r};
 

@@ -45,9 +45,12 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -78,9 +81,12 @@ pub fn millstone() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -100,7 +106,10 @@ pub fn hedron_crawler() -> CardDefinition {
         name: "Hedron Crawler",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -154,11 +163,14 @@ pub fn mind_stone() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             ActivatedAbility {
@@ -174,11 +186,14 @@ pub fn mind_stone() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: true,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -193,10 +208,10 @@ pub fn mind_stone() -> CardDefinition {
 /// via the existing `Move(Target → Hand(OwnerOf(Target)))` pattern from
 /// Vapor Snag).
 pub fn aether_spellbomb() -> CardDefinition {
-    use crate::card::{Selector, Value};
-    use crate::effect::shortcut::target_filtered;
-    use crate::effect::ZoneDest;
     use crate::card::SelectionRequirement;
+    use crate::card::{Selector, Value};
+    use crate::effect::ZoneDest;
+    use crate::effect::shortcut::target_filtered;
     use crate::mana::u;
     CardDefinition {
         name: "Aether Spellbomb",
@@ -217,11 +232,14 @@ pub fn aether_spellbomb() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: true,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             // {1}, Sacrifice this: Draw a card.
@@ -230,16 +248,22 @@ pub fn aether_spellbomb() -> CardDefinition {
                 discard_cost: None,
                 tap_cost: false,
                 mana_cost: cost(&[generic(1)]),
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 once_per_turn: false,
                 sorcery_speed: false,
                 sac_cost: true,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -272,11 +296,13 @@ pub fn zuran_orb() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
+            exile_self_cost: false,
+            exile_other_filter: None,
             self_counter_cost_reduction: None,
             // Sacrifice a land as an activation cost.
             sac_other_filter: Some((SelectionRequirement::Land, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -333,9 +359,12 @@ pub fn chromatic_star() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -386,11 +415,14 @@ pub fn soul_guide_lantern() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             // {2}, {T}, Sac: Each player exiles their graveyard, you draw.
@@ -408,17 +440,23 @@ pub fn soul_guide_lantern() -> CardDefinition {
                         },
                         to: ZoneDest::Exile,
                     },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                 ]),
                 once_per_turn: false,
                 sorcery_speed: false,
                 sac_cost: true,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -453,8 +491,7 @@ pub fn cankerbloom() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::Destroy {
                     what: target_filtered(
-                        SelectionRequirement::Artifact
-                            .or(SelectionRequirement::Enchantment),
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
                     ),
                 },
                 Effect::Proliferate,
@@ -465,9 +502,12 @@ pub fn cankerbloom() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -505,9 +545,12 @@ pub fn fellwar_stone() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -555,9 +598,12 @@ pub fn monument_to_endurance() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -626,7 +672,10 @@ pub fn walking_ballista() -> CardDefinition {
                 // Counter is paid as a real cost (CR 602.5b) — can't be
                 // over-activated off the stack.
                 remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
-                effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+                effect: Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -659,7 +708,10 @@ pub fn triskelion() -> CardDefinition {
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
         activated_abilities: vec![ActivatedAbility {
             remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
-            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+            effect: Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -687,7 +739,7 @@ pub fn hangarback_walker() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -903,7 +955,10 @@ pub fn hedron_archive() -> CardDefinition {
                 discard_cost: None,
                 tap_cost: true,
                 sac_cost: true,
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
                 ..Default::default()
             },
         ],
@@ -917,7 +972,9 @@ pub fn hedron_archive() -> CardDefinition {
 fn enters_tapped_trigger() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::Tap { what: Selector::This },
+        effect: Effect::Tap {
+            what: Selector::This,
+        },
     }
 }
 
@@ -927,7 +984,10 @@ fn tap_for(pool: ManaPayload) -> ActivatedAbility {
         energy_cost: 0,
         discard_cost: None,
         tap_cost: true,
-        effect: Effect::AddMana { who: PlayerRef::You, pool },
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool,
+        },
         ..Default::default()
     }
 }
@@ -969,7 +1029,10 @@ pub fn prophetic_prism() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
@@ -998,7 +1061,10 @@ pub fn fountain_of_renewal() -> CardDefinition {
                 EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
                 EventScope::YourControl,
             ),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -1011,12 +1077,18 @@ pub fn cathodion() -> CardDefinition {
         name: "Cathodion",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(3)) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(3)),
+            },
         }],
         ..Default::default()
     }
@@ -1029,12 +1101,18 @@ pub fn bottle_gnomes() -> CardDefinition {
         name: "Bottle Gnomes",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gnome],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -1048,7 +1126,10 @@ pub fn universal_automaton() -> CardDefinition {
         name: "Universal Automaton",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Shapeshifter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Changeling],
@@ -1057,12 +1138,21 @@ pub fn universal_automaton() -> CardDefinition {
 }
 
 /// Affinity-for-artifacts vanilla body: costs {1} less per artifact you control.
-fn affinity_body(name: &'static str, mv: u32, ct: crate::card::CreatureType, p: i32, t: i32) -> CardDefinition {
+fn affinity_body(
+    name: &'static str,
+    mv: u32,
+    ct: crate::card::CreatureType,
+    p: i32,
+    t: i32,
+) -> CardDefinition {
     CardDefinition {
         name,
         cost: cost(&[generic(mv)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![ct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![ct],
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         affinity_filter: Some(SelectionRequirement::Artifact),
@@ -1090,7 +1180,10 @@ pub fn court_homunculus() -> CardDefinition {
         name: "Court Homunculus",
         cost: cost(&[w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Homunculus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Homunculus],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         static_abilities: vec![StaticAbility {
@@ -1122,7 +1215,10 @@ pub fn chief_of_the_foundry() -> CardDefinition {
         name: "Chief of the Foundry",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         static_abilities: vec![StaticAbility {
@@ -1258,7 +1354,10 @@ pub fn birthing_pod() -> CardDefinition {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Creature
                         .and(SelectionRequirement::ManaValueEqualsSacrificedPlus(1)),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ]),
             ..Default::default()
@@ -1290,7 +1389,10 @@ pub fn the_great_henge() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Colors(vec![Color::Green]),
                 },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ]),
             ..Default::default()
         }],
@@ -1301,7 +1403,10 @@ pub fn the_great_henge() -> CardDefinition {
                     filter: SelectionRequirement::Creature.and(SelectionRequirement::NotToken),
                 }),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 Effect::AddCounter {
                     what: Selector::TriggerSource,
                     kind: CounterType::PlusOnePlusOne,
@@ -1327,21 +1432,24 @@ pub fn mana_vault() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         static_abilities: vec![StaticAbility {
             description: "Mana Vault doesn't untap during your untap step.",
-            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
-        }],
-        activated_abilities: vec![
-            ActivatedAbility {
-                tap_cost: true,
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::Colorless(Value::Const(3)),
-                },
-                ..Default::default()
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::This,
             },
-        ],
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(3)),
+            },
+            ..Default::default()
+        }],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
                 effect: Effect::If {
                     cond: Predicate::EntityMatches {
                         what: Selector::This,
@@ -1350,20 +1458,29 @@ pub fn mana_vault() -> CardDefinition {
                     then: Box::new(Effect::MayPay {
                         description: "Pay {4} to untap Mana Vault?".into(),
                         mana_cost: cost(&[generic(4)]),
-                        body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                        body: Box::new(Effect::Untap {
+                            what: Selector::This,
+                            up_to: None,
+                        }),
                         else_: None,
                     }),
                     else_: Box::new(Effect::Noop),
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Draw),
+                    EventScope::YourControl,
+                ),
                 effect: Effect::If {
                     cond: Predicate::EntityMatches {
                         what: Selector::This,
                         filter: SelectionRequirement::Tapped,
                     },
-                    then: Box::new(Effect::DealDamage { to: Selector::You, amount: Value::Const(1) }),
+                    then: Box::new(Effect::DealDamage {
+                        to: Selector::You,
+                        amount: Value::Const(1),
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             },
@@ -1428,7 +1545,10 @@ pub fn aetherflux_reservoir() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             life_cost: 50,
-            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(50) },
+            effect: Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(50),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -1446,7 +1566,11 @@ pub fn mox_diamond() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            effect: Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -1561,11 +1685,17 @@ pub fn mana_crypt() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::FlipCoin {
                 count: Value::Const(1),
                 on_heads: Box::new(Effect::Noop),
-                on_tails: Box::new(Effect::DealDamage { to: Selector::You, amount: Value::Const(3) }),
+                on_tails: Box::new(Effect::DealDamage {
+                    to: Selector::You,
+                    amount: Value::Const(3),
+                }),
             },
         }],
         ..Default::default()

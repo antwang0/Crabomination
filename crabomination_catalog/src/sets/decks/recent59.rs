@@ -6,9 +6,9 @@ use crate::card::{
     EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, Subtypes,
     TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{cast_is_instant_or_sorcery, etb, target_filtered};
 use crate::effect::PlayerRef;
-use crate::mana::{cost, generic, r, u, w, Color};
+use crate::effect::shortcut::{cast_is_instant_or_sorcery, etb, target_filtered};
+use crate::mana::{Color, cost, generic, r, u, w};
 
 /// Sky Terror — {R}{W} 2/2 Dinosaur with flying and menace.
 pub fn sky_terror() -> CardDefinition {
@@ -16,7 +16,10 @@ pub fn sky_terror() -> CardDefinition {
         name: "Sky Terror",
         cost: cost(&[r(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Menace],
@@ -33,14 +36,21 @@ pub fn talrands_invocation() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
         name: "Talrand's Invocation",
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: drake },
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: drake,
+        },
         ..Default::default()
     }
 }
@@ -62,7 +72,8 @@ pub fn ondu_cleric() -> CardDefinition {
             // "this or another Ally you control" → any Ally you control entering.
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource, filter: R::HasCreatureType(CreatureType::Ally),
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Ally),
                 }),
             effect: Effect::GainLife {
                 who: Selector::You,
@@ -83,14 +94,20 @@ pub fn aven_eternal() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie, CreatureType::Bird, CreatureType::Warrior],
+            creature_types: vec![
+                CreatureType::Zombie,
+                CreatureType::Bird,
+                CreatureType::Warrior,
+            ],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Amass {
-            who: PlayerRef::You, count: Value::Const(1), extra_type: Some(CreatureType::Zombie),
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            extra_type: Some(CreatureType::Zombie),
         })],
         ..Default::default()
     }
@@ -104,12 +121,15 @@ pub fn storm_fleet_arsonist() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Orc, CreatureType::Pirate], ..Default::default()
+            creature_types: vec![CreatureType::Orc, CreatureType::Pirate],
+            ..Default::default()
         },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
+            cond: Predicate::PlayerAttackedThisTurn {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::Sacrifice {
                 who: target_filtered(R::OpponentPlayer),
                 count: Value::ONE,
@@ -131,7 +151,10 @@ pub fn metallurgic_summonings() -> CardDefinition {
         power: 0,
         toughness: 0,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -144,7 +167,11 @@ pub fn metallurgic_summonings() -> CardDefinition {
             // An X/X token = a 0/0 body plus X +1/+1 counters (X = the cast
             // spell's mana value, read off the trigger source on the stack).
             effect: Effect::Seq(vec![
-                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: construct },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: construct,
+                },
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,
                     kind: CounterType::PlusOnePlusOne,

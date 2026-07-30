@@ -58,7 +58,9 @@ pub fn early_winter() -> CardDefinition {
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::Exile { what: target_filtered(R::Creature) },
+            Effect::Exile {
+                what: target_filtered(R::Creature),
+            },
             Effect::Exile {
                 what: target_filtered(R::Enchantment.and(R::ControlledByOpponent)),
             },
@@ -86,7 +88,10 @@ pub fn high_stride() -> CardDefinition {
                 keyword: Keyword::Reach,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
         ]),
         ..Default::default()
     }
@@ -127,8 +132,14 @@ pub fn playful_shove() -> CardDefinition {
         effect: Effect::Seq(vec![
             // Bare `Target(0)` is an any-target (creature / player / walker), as
             // Lightning Strike models direct burn.
-            Effect::DealDamage { to: Selector::Target(0), amount: crate::card::Value::ONE },
-            Effect::Draw { who: Selector::You, amount: crate::card::Value::ONE },
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: crate::card::Value::ONE,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: crate::card::Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -202,7 +213,10 @@ pub fn reptilian_recruiter() -> CardDefinition {
                     to: Some(PlayerRef::You),
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Untap { what: Selector::Target(0), up_to: None },
+                Effect::Untap {
+                    what: Selector::Target(0),
+                    up_to: None,
+                },
                 Effect::GrantKeyword {
                     what: Selector::Target(0),
                     keyword: Keyword::Haste,

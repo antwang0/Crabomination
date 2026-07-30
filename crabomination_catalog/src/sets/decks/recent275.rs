@@ -31,7 +31,10 @@ pub fn stargaze() -> CardDefinition {
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
             },
-            Effect::LoseLife { who: Selector::You, amount: Value::XFromCost },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::XFromCost,
+            },
         ]),
         ..Default::default()
     }
@@ -123,7 +126,13 @@ pub fn harvestrite_host() -> CardDefinition {
                 // Draw only on the second resolution this turn (shared per-turn
                 // resolution counter; exact for a lone Harvestrite Host).
                 Effect::NthResolutionThisTurn {
-                    branches: vec![Effect::Noop, Effect::Draw { who: Selector::You, amount: Value::ONE }],
+                    branches: vec![
+                        Effect::Noop,
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::ONE,
+                        },
+                    ],
                 },
             ]),
         }],

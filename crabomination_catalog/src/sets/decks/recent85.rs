@@ -4,24 +4,32 @@
 //! `tests/recent85.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword,
-    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R,
+    StaticAbility, StaticEffect, Subtypes,
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
-use crate::mana::{cost, g, generic, w, b};
+use crate::mana::{b, cost, g, generic, w};
 
 /// Enchantment that names a creature type at ETB and grants it `keyword`.
-fn chosen_type_keyword(name: &'static str, mana: &[crate::mana::ManaSymbol],
-                       keyword: Keyword) -> CardDefinition {
+fn chosen_type_keyword(
+    name: &'static str,
+    mana: &[crate::mana::ManaSymbol],
+    keyword: Keyword,
+) -> CardDefinition {
     CardDefinition {
         name,
         cost: cost(mana),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        triggered_abilities: vec![etb(Effect::NameCreatureType {
+            what: Selector::This,
+        })],
         static_abilities: vec![StaticAbility {
             description: "Creatures of the chosen type have the granted keyword.",
-            effect: StaticEffect::GrantKeywordToChosenType { keyword, opponents: false },
+            effect: StaticEffect::GrantKeywordToChosenType {
+                keyword,
+                opponents: false,
+            },
         }],
         ..Default::default()
     }
@@ -49,19 +57,30 @@ pub fn cover_of_darkness() -> CardDefinition {
 /// {3}{G}{G}, {T}: Search your library for a card named Elvish Clancaller,
 /// reveal it, put it into your hand, then shuffle.
 pub fn elvish_clancaller() -> CardDefinition {
-    let others = || Selector::EachPermanent(
-        R::HasCreatureType(CreatureType::Elf).and(R::ControlledByYou).and(R::OtherThanSource),
-    );
+    let others = || {
+        Selector::EachPermanent(
+            R::HasCreatureType(CreatureType::Elf)
+                .and(R::ControlledByYou)
+                .and(R::OtherThanSource),
+        )
+    };
     CardDefinition {
         name: "Elvish Clancaller",
         cost: cost(&[g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         static_abilities: vec![StaticAbility {
             description: "Other Elves you control get +1/+1.",
-            effect: StaticEffect::PumpPT { applies_to: others(), power: 1, toughness: 1 },
+            effect: StaticEffect::PumpPT {
+                applies_to: others(),
+                power: 1,
+                toughness: 1,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), g(), g()]),

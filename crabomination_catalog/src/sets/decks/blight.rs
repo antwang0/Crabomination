@@ -41,9 +41,14 @@ pub fn auntie_ool_cursewretch() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::ControlledByYou,
                 },
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
                 else_: Box::new(Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                    who: Selector::Player(PlayerRef::ControllerOf(Box::new(
+                        Selector::TriggerSource,
+                    ))),
                     amount: Value::Const(1),
                 }),
             },

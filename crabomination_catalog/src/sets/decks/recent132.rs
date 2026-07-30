@@ -2,16 +2,16 @@
 //! Food/enchantment payoffs. Adds the `CantBeBlockedByPowerAtLeast` evasion
 //! keyword (Squeak By). Tests in `crabomination/src/tests/recent132.rs`.
 
+use super::woe_roles::royal_role;
 use crate::card::{
-    ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
-    SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
+    ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType,
+    EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
+    Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef};
 use crate::game::effects::{food_token, treasure_token};
 use crate::mana::{b, cost, g, generic, r, w};
-use super::woe_roles::{royal_role};
-
 
 // ── White ─────────────────────────────────────────────────────────────────────
 
@@ -23,7 +23,10 @@ pub fn cheeky_house_mouse() -> CardDefinition {
         name: "Cheeky House-Mouse",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mouse], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         adventure: Some(Box::new(Adventure {
@@ -110,16 +113,23 @@ pub fn ashioks_reaper() -> CardDefinition {
         name: "Ashiok's Reaper",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Enchantment,
-                }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                },
+            ),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -134,7 +144,10 @@ pub fn two_headed_hunter() -> CardDefinition {
         name: "Two-Headed Hunter",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Menace],
@@ -159,14 +172,20 @@ pub fn grabby_giant() -> CardDefinition {
         name: "Grabby Giant",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Reach],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), r()]),
             sac_other_filter: Some((R::Artifact.or(R::Land), 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         adventure: Some(Box::new(Adventure {
@@ -193,7 +212,10 @@ pub fn hollow_scavenger() -> CardDefinition {
         name: "Hollow Scavenger",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wolf],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -212,7 +234,11 @@ pub fn hollow_scavenger() -> CardDefinition {
             name: "Bakery Raid",
             cost: cost(&[g()]),
             card_types: vec![CardType::Sorcery],
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: food_token() },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: food_token(),
+            },
         })),
         ..Default::default()
     }
@@ -254,12 +280,17 @@ pub fn skybeast_tracker() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::ManaValueAtLeast(5),
-                }),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: food_token() },
+                },
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: food_token(),
+            },
         }],
         ..Default::default()
     }

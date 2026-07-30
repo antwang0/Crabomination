@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value};
-use crate::mana::{b, cost, g, generic, w, Color};
+use crate::mana::{Color, b, cost, g, generic, w};
 
 /// Fungal Infection — {B} Instant. Target creature gets -1/-1 until end of
 /// turn; create a 1/1 green Saproling.
@@ -19,7 +19,10 @@ pub fn fungal_infection() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Saproling], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Saproling],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -50,7 +53,10 @@ pub fn prakhata_pillar_bug() -> CardDefinition {
         name: "Prakhata Pillar-Bug",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
@@ -72,7 +78,10 @@ pub fn savai_sabertooth() -> CardDefinition {
         name: "Savai Sabertooth",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         ..Default::default()
@@ -87,7 +96,10 @@ pub fn territorial_boar() -> CardDefinition {
         name: "Territorial Boar",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {

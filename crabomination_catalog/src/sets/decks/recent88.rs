@@ -27,7 +27,10 @@ pub fn lava_burst() -> CardDefinition {
         name: "Lava Burst",
         cost: cost(&[x(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage { to: target(), amount: Value::XFromCost },
+        effect: Effect::DealDamage {
+            to: target(),
+            amount: Value::XFromCost,
+        },
         ..Default::default()
     }
 }
@@ -43,7 +46,10 @@ pub fn jagged_lightning() -> CardDefinition {
             max_targets: 2,
             min_targets: 0,
             filter: R::Creature,
-            effect: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) }),
+            effect: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(3),
+            }),
         },
         ..Default::default()
     }
@@ -60,7 +66,10 @@ pub fn rain_of_embers() -> CardDefinition {
             selector: Selector::EachPermanent(
                 R::Creature.and(R::Not(Box::new(R::HasKeyword(Keyword::Flying)))),
             ),
-            body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(1) }),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(1),
+            }),
         },
         ..Default::default()
     }
@@ -69,24 +78,33 @@ pub fn rain_of_embers() -> CardDefinition {
 /// Thunderfoot Baloth — {3}{G}{G} 5/5 Beast. Other creatures you control get
 /// +2/+2 and have trample.
 pub fn thunderfoot_baloth() -> CardDefinition {
-    let others = || Selector::EachPermanent(
-        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
-    );
+    let others =
+        || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource));
     CardDefinition {
         name: "Thunderfoot Baloth",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         static_abilities: vec![
             StaticAbility {
                 description: "Other creatures you control get +2/+2.",
-                effect: StaticEffect::PumpPT { applies_to: others(), power: 2, toughness: 2 },
+                effect: StaticEffect::PumpPT {
+                    applies_to: others(),
+                    power: 2,
+                    toughness: 2,
+                },
             },
             StaticAbility {
                 description: "Other creatures you control have trample.",
-                effect: StaticEffect::GrantKeyword { applies_to: others(), keyword: Keyword::Trample },
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: others(),
+                    keyword: Keyword::Trample,
+                },
             },
         ],
         ..Default::default()

@@ -21,7 +21,10 @@ fn colorless_spirit_token() -> TokenDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -34,7 +37,10 @@ fn red_menace_spirit_token() -> TokenDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Menace],
         ..Default::default()
     }
@@ -65,7 +71,10 @@ pub fn golden_tail_trainer() -> CardDefinition {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::PumpPT {
                 what: Selector::EachPermanent(
-                    R::Creature.and(R::ControlledByYou).and(R::IsModified).and(R::OtherThanSource),
+                    R::Creature
+                        .and(R::ControlledByYou)
+                        .and(R::IsModified)
+                        .and(R::OtherThanSource),
                 ),
                 power: Value::PowerOf(Box::new(Selector::This)),
                 toughness: Value::PowerOf(Box::new(Selector::This)),
@@ -83,19 +92,30 @@ pub fn kami_of_terrible_secrets() -> CardDefinition {
         name: "Kami of Terrible Secrets",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::All(vec![
-                Predicate::SelectorExists(Selector::EachPermanent(R::Artifact.and(R::ControlledByYou))),
+                Predicate::SelectorExists(Selector::EachPermanent(
+                    R::Artifact.and(R::ControlledByYou),
+                )),
                 Predicate::SelectorExists(Selector::EachPermanent(
                     R::Enchantment.and(R::ControlledByYou),
                 )),
             ]),
             then: Box::new(Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ])),
             else_: Box::new(Effect::Noop),
         })],
@@ -162,7 +182,10 @@ pub fn walking_skyscraper() -> CardDefinition {
         name: "Walking Skyscraper",
         cost: cost(&[generic(8)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 8,
         toughness: 8,
         keywords: vec![Keyword::Trample],
@@ -194,7 +217,10 @@ pub fn masters_rebuke() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamageEqualToPower {
-            source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            source: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature.and(R::ControlledByYou),
+            },
             target: Selector::TargetFiltered {
                 slot: 1,
                 filter: R::Creature.or(R::Planeswalker).and(R::ControlledByOpponent),
@@ -218,7 +244,8 @@ pub fn tempered_in_solitude() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 duration: MayPlayDuration::EndOfThisTurn,
-                pay_any_color: false, pay_own_cost: false,
+                pay_any_color: false,
+                pay_own_cost: false,
                 uncast_penalty: None,
             },
         }],
@@ -264,7 +291,10 @@ pub fn thundering_raiju() -> CardDefinition {
         name: "Thundering Raiju",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Haste],
@@ -280,7 +310,10 @@ pub fn thundering_raiju() -> CardDefinition {
                     to: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::CountMatching {
                         sel: Box::new(Selector::EachPermanent(
-                            R::Creature.and(R::ControlledByYou).and(R::IsModified).and(R::OtherThanSource),
+                            R::Creature
+                                .and(R::ControlledByYou)
+                                .and(R::IsModified)
+                                .and(R::OtherThanSource),
                         )),
                         filter: R::Any,
                     },
@@ -340,7 +373,8 @@ pub fn atsushi_the_blazing_sky() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 duration: MayPlayDuration::EndOfControllersNextTurn,
-                pay_any_color: false, pay_own_cost: false,
+                pay_any_color: false,
+                pay_own_cost: false,
                 uncast_penalty: None,
             },
             mint_treasures(3),
@@ -372,7 +406,10 @@ pub fn junji_the_midnight_sky() -> CardDefinition {
                     amount: Value::Const(2),
                     random: false,
                 },
-                Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
             ]),
             Effect::Seq(vec![
                 Effect::Move {
@@ -386,7 +423,10 @@ pub fn junji_the_midnight_sky() -> CardDefinition {
                         tapped: false,
                     },
                 },
-                Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ]),
         ]))],
         ..Default::default()
@@ -425,7 +465,10 @@ pub fn chishiro_the_shattered_blade() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::ActivePlayer,
+                ),
                 effect: Effect::AddCounter {
                     what: Selector::EachPermanent(
                         R::Creature.and(R::ControlledByYou).and(R::IsModified),
@@ -491,7 +534,10 @@ pub fn traproot_kami() -> CardDefinition {
         name: "Traproot Kami",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 0,
         toughness: 0,
         keywords: vec![Keyword::Defender, Keyword::Reach],
@@ -530,8 +576,13 @@ pub fn you_are_already_dead() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Creature.and(R::DealtDamageThisTurn)) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::DealtDamageThisTurn)),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }

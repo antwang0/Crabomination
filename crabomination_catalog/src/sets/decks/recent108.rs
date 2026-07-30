@@ -30,7 +30,10 @@ pub fn urzas_cave() -> CardDefinition {
                 effect: Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Land,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
                 ..Default::default()
             },
@@ -78,12 +81,20 @@ pub fn sleep_cursed_faerie() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)])))],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Ward(crate::card::WardCost::Mana(cost(&[generic(2)]))),
+        ],
         enters_with_counters: Some((CounterType::Stun, Value::Const(3))),
-        triggered_abilities: vec![etb(Effect::Tap { what: Selector::This })],
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: Selector::This,
+        })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), u()]),
-            effect: Effect::Untap { what: Selector::This, up_to: None },
+            effect: Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -113,7 +124,10 @@ pub fn manabond() -> CardDefinition {
                             zone: crate::card::Zone::Hand,
                             filter: SelectionRequirement::Land,
                         },
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                     Effect::Discard {
                         who: Selector::You,
@@ -152,17 +166,17 @@ pub fn nissa_resurgent_animist() -> CardDefinition {
             // "The second time this resolves each turn" ≈ the second land
             // drop this turn.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl).with_filter(
-                    Predicate::ValueAtLeast(
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl)
+                    .with_filter(Predicate::ValueAtLeast(
                         Value::LandsPlayedThisTurn(PlayerRef::You),
                         Value::Const(2),
-                    ),
-                )
-                .once_per_turn(),
+                    ))
+                    .once_per_turn(),
                 effect: Effect::RevealUntilFind {
                     who: PlayerRef::You,
-                    find: SelectionRequirement::HasCreatureType(CreatureType::Elf)
-                        .or(SelectionRequirement::HasCreatureType(CreatureType::Elemental)),
+                    find: SelectionRequirement::HasCreatureType(CreatureType::Elf).or(
+                        SelectionRequirement::HasCreatureType(CreatureType::Elemental),
+                    ),
                     to: ZoneDest::Hand(PlayerRef::You),
                     cap: Value::Const(999),
                     life_per_revealed: 0,

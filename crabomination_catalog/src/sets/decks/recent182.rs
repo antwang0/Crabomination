@@ -44,7 +44,10 @@ pub fn finneas_ace_archer() -> CardDefinition {
                     ))),
                     Value::Const(10),
                 ),
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]))],

@@ -15,8 +15,13 @@ pub fn worldsouls_rage() -> CardDefinition {
         cost: cost(&[x(), r(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target(), amount: Value::XFromCost },
-            Effect::DeployLandsFromHandAndGraveyard { count: Value::XFromCost },
+            Effect::DealDamage {
+                to: target(),
+                amount: Value::XFromCost,
+            },
+            Effect::DeployLandsFromHandAndGraveyard {
+                count: Value::XFromCost,
+            },
         ]),
         ..Default::default()
     }
@@ -31,7 +36,10 @@ pub fn ill_timed_explosion() -> CardDefinition {
         cost: cost(&[generic(2), u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::MayDiscard {
                 description: "Discard two cards?".into(),
                 count: Value::Const(2),

@@ -2,12 +2,13 @@
 //! `classic_sets/dgm`.
 
 use crate::card::{
-    AlternativeCost, CardDefinition, CardType, EnchantmentSubtype, Effect, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility, Value,
+    AlternativeCost, CardDefinition, CardType, Effect, EnchantmentSubtype, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
+    Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn aura(name: &'static str, mc: crate::mana::ManaCost, enchant: R) -> CardDefinition {
     CardDefinition {
@@ -18,7 +19,13 @@ fn aura(name: &'static str, mc: crate::mana::ManaCost, enchant: R) -> CardDefini
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: Selector::TargetFiltered { slot: 0, filter: enchant } },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: enchant,
+            },
+        },
         ..Default::default()
     }
 }
@@ -44,8 +51,17 @@ pub fn phytoburst() -> CardDefinition {
 pub fn weapon_surge() -> CardDefinition {
     let body = |what: Selector| {
         Effect::Seq(vec![
-            Effect::PumpPT { what: what.clone(), power: Value::Const(1), toughness: Value::Const(0), duration: Duration::EndOfTurn },
-            Effect::GrantKeyword { what, keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+            Effect::PumpPT {
+                what: what.clone(),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what,
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
         ])
     };
     CardDefinition {
@@ -55,7 +71,9 @@ pub fn weapon_surge() -> CardDefinition {
         effect: body(target_filtered(R::Creature.and(R::ControlledByYou))),
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[generic(1), r()]),
-            effect_override: Some(body(Selector::EachPermanent(R::Creature.and(R::ControlledByYou)))),
+            effect_override: Some(body(Selector::EachPermanent(
+                R::Creature.and(R::ControlledByYou),
+            ))),
             ..Default::default()
         }),
         ..Default::default()
@@ -68,7 +86,9 @@ pub fn clear_a_path() -> CardDefinition {
         name: "Clear a Path",
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Destroy { what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Defender))) },
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Defender))),
+        },
         ..Default::default()
     }
 }
@@ -79,7 +99,9 @@ pub fn mending_touch() -> CardDefinition {
         name: "Mending Touch",
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Regenerate { what: target_filtered(R::Creature) },
+        effect: Effect::Regenerate {
+            what: target_filtered(R::Creature),
+        },
         ..Default::default()
     }
 }
@@ -90,7 +112,9 @@ pub fn wake_the_reflections() -> CardDefinition {
         name: "Wake the Reflections",
         cost: cost(&[w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Populate { who: PlayerRef::You },
+        effect: Effect::Populate {
+            who: PlayerRef::You,
+        },
         ..Default::default()
     }
 }
@@ -121,9 +145,13 @@ pub fn riot_control() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
-                amount: Value::CountOf(Box::new(Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)))),
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByOpponent),
+                ))),
             },
-            Effect::PreventAllDamageThisTurn { target: Selector::Player(PlayerRef::You) },
+            Effect::PreventAllDamageThisTurn {
+                target: Selector::Player(PlayerRef::You),
+            },
         ]),
         ..Default::default()
     }
@@ -138,11 +166,17 @@ pub fn punish_the_enemy() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 0, filter: R::Player.or(R::Planeswalker) },
+                to: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Player.or(R::Planeswalker),
+                },
                 amount: Value::Const(3),
             },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 amount: Value::Const(3),
             },
         ]),
@@ -161,7 +195,9 @@ pub fn lyev_decree() -> CardDefinition {
             max_targets: 2,
             min_targets: 0,
             filter: R::Creature.and(R::ControlledByOpponent),
-            effect: Box::new(Effect::Detain { what: Selector::Target(0) }),
+            effect: Box::new(Effect::Detain {
+                what: Selector::Target(0),
+            }),
         },
         ..Default::default()
     }
@@ -226,7 +262,9 @@ pub fn uncovered_clues() -> CardDefinition {
         effect: Effect::LookPickToHand {
             who: PlayerRef::You,
             count: Value::Const(4),
-            pick_filter: Some(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+            pick_filter: Some(
+                R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            ),
             take: Some(Value::Const(2)),
             optional: true,
             rest_to_graveyard: false,
@@ -243,7 +281,10 @@ pub fn uncovered_clues() -> CardDefinition {
 /// Warped Physique — {U}{B} Instant. Target creature gets +X/-X until end of
 /// turn, where X is the number of cards in your hand.
 pub fn warped_physique() -> CardDefinition {
-    let x = Value::CardsInHandMatching { who: PlayerRef::You, filter: R::Any };
+    let x = Value::CardsInHandMatching {
+        who: PlayerRef::You,
+        filter: R::Any,
+    };
     CardDefinition {
         name: "Warped Physique",
         cost: cost(&[u(), b()]),
@@ -271,7 +312,10 @@ pub fn morgue_burst() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 1, filter: R::Creature.or(R::Player).or(R::Planeswalker) },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                },
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
         ]),
@@ -312,14 +356,20 @@ pub fn bred_for_the_hunt() -> CardDefinition {
         cost: cost(&[generic(1), g(), u()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
-                .with_filter(crate::card::Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::WithCounter(CounterType::PlusOnePlusOne),
-                }),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            )
+            .with_filter(crate::card::Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::WithCounter(CounterType::PlusOnePlusOne),
+            }),
             effect: Effect::MayDo {
                 description: "draw a card?".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
         ..Default::default()
@@ -334,7 +384,10 @@ pub fn sinister_possession() -> CardDefinition {
     // creature and `Selector::You` resolves to its controller (as in Nettling Curse).
     let lose2 = |kind| TriggeredAbility {
         event: EventSpec::new(kind, EventScope::SelfSource),
-        effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        effect: Effect::LoseLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
     };
     let mut c = aura("Sinister Possession", cost(&[b()]), R::Creature);
     c.equipped_bonus = Some(EquipBonus {
@@ -347,11 +400,19 @@ pub fn sinister_possession() -> CardDefinition {
 /// Runner's Bane — {1}{U} Aura. Enchant creature with power 3 or less. ETB tap
 /// it; it doesn't untap during its controller's untap step.
 pub fn runners_bane() -> CardDefinition {
-    let mut c = aura("Runner's Bane", cost(&[generic(1), u()]), R::Creature.and(R::PowerAtMost(3)));
-    c.triggered_abilities = vec![etb(Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) })];
+    let mut c = aura(
+        "Runner's Bane",
+        cost(&[generic(1), u()]),
+        R::Creature.and(R::PowerAtMost(3)),
+    );
+    c.triggered_abilities = vec![etb(Effect::Tap {
+        what: Selector::AttachedTo(Box::new(Selector::This)),
+    })];
     c.static_abilities = vec![StaticAbility {
         description: "Enchanted creature doesn't untap during its controller's untap step.",
-        effect: StaticEffect::PreventUntap { applies_to: Selector::AttachedTo(Box::new(Selector::This)) },
+        effect: StaticEffect::PreventUntap {
+            applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+        },
     }];
     c
 }
@@ -366,7 +427,10 @@ pub fn advent_of_the_wurm() -> CardDefinition {
         toughness: 5,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Trample],
         ..Default::default()
     };
@@ -374,7 +438,11 @@ pub fn advent_of_the_wurm() -> CardDefinition {
         name: "Advent of the Wurm",
         cost: cost(&[generic(1), g(), g(), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: wurm },
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: wurm,
+        },
         ..Default::default()
     }
 }

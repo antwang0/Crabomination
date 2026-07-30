@@ -2,10 +2,11 @@
 //! in `crabomination/src/tests/recent161.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Predicate, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
+    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
+    Predicate, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::target_filtered;
 use crate::effect::Effect;
+use crate::effect::shortcut::target_filtered;
 use crate::game::TurnStep;
 use crate::mana::{cost, g, generic, r, u, w};
 
@@ -17,11 +18,17 @@ pub fn incinerating_blast() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(6) },
+            Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::Const(6),
+            },
             Effect::MayDiscard {
                 description: "Discard a card to draw a card?".into(),
                 count: Value::ONE,
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: None,
             },
         ]),
@@ -44,8 +51,13 @@ pub fn needletooth_pack() -> CardDefinition {
         power: 4,
         toughness: 5,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                at_least: Value::ONE,
+            }),
             effect: Effect::AddCounter {
                 what: target_filtered(R::Creature.and(R::ControlledByYou)),
                 kind: CounterType::PlusOnePlusOne,
@@ -99,7 +111,10 @@ pub fn joust_through() -> CardDefinition {
                 to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
                 amount: Value::Const(3),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }

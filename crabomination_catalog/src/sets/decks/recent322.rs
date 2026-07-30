@@ -3,16 +3,22 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, Predicate, Selector,
-    SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    SelectionRequirement as R, Selector, StaticAbility, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{on_dies, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
 }
 
 fn creature(
@@ -27,7 +33,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -53,7 +62,11 @@ fn spell(name: &'static str, mana: ManaCost, sorcery: bool, effect: Effect) -> C
     CardDefinition {
         name,
         cost: mana,
-        card_types: vec![if sorcery { CardType::Sorcery } else { CardType::Instant }],
+        card_types: vec![if sorcery {
+            CardType::Sorcery
+        } else {
+            CardType::Instant
+        }],
         effect,
         ..Default::default()
     }
@@ -61,7 +74,12 @@ fn spell(name: &'static str, mana: ManaCost, sorcery: bool, effect: Effect) -> C
 
 /// The Fifth Dawn "Beacon" cycle: a big sorcery that shuffles itself back.
 fn beacon(name: &'static str, mana: ManaCost, body: Effect) -> CardDefinition {
-    spell(name, mana, true, Effect::Seq(vec![body, Effect::ShuffleSelfIntoLibrary]))
+    spell(
+        name,
+        mana,
+        true,
+        Effect::Seq(vec![body, Effect::ShuffleSelfIntoLibrary]),
+    )
 }
 
 /// "Whenever a player casts a spell, [effect]."
@@ -105,7 +123,10 @@ pub fn beacon_of_tomorrows() -> CardDefinition {
     beacon(
         "Beacon of Tomorrows",
         cost(&[generic(6), u(), u()]),
-        Effect::TakeExtraTurn { who: PlayerRef::Target(0), count: Value::ONE },
+        Effect::TakeExtraTurn {
+            who: PlayerRef::Target(0),
+            count: Value::ONE,
+        },
     )
 }
 
@@ -119,7 +140,10 @@ pub fn beacon_of_unrest() -> CardDefinition {
                 slot: 0,
                 filter: R::InGraveyard.and(R::Artifact.or(R::Creature)),
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
     )
 }
@@ -149,7 +173,10 @@ pub fn clock_of_omens() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_n_filter: Some((R::Artifact, 2)),
-            effect: Effect::Untap { what: target_filtered(R::Artifact), up_to: None },
+            effect: Effect::Untap {
+                what: target_filtered(R::Artifact),
+                up_to: None,
+            },
             ..Default::default()
         }],
         ..artifact("Clock of Omens", cost(&[generic(4)]))
@@ -187,8 +214,11 @@ pub fn gemstone_array() -> CardDefinition {
 pub fn energy_chamber() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::SelfSource,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::ChooseMode(vec![
                 Effect::AddCounter {
                     what: target_filtered(R::Artifact.and(R::Creature)),
@@ -375,8 +405,11 @@ pub fn desecration_elemental() -> CardDefinition {
 pub fn cosmic_larva() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::SelfSource,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::SacrificeSourceUnlessSacrifice { filter: R::Land },
         }],
         ..creature(
@@ -437,7 +470,10 @@ pub fn abunas_chant() -> CardDefinition {
             cost(&[generic(3), w()]),
             false,
             Effect::ChooseMode(vec![
-                Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(5),
+                },
                 Effect::PreventNextDamage {
                     target: target_filtered(R::Creature),
                     amount: Value::Const(5),
@@ -507,7 +543,9 @@ pub fn devour_in_shadow() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::ToughnessOf(Box::new(target_filtered(R::Creature))),
             },
-            Effect::DestroyNoRegen { what: target_filtered(R::Creature) },
+            Effect::DestroyNoRegen {
+                what: target_filtered(R::Creature),
+            },
         ]),
     )
 }
@@ -522,7 +560,9 @@ pub fn early_frost() -> CardDefinition {
             max_targets: 3,
             min_targets: 0,
             filter: R::Land,
-            effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+            effect: Box::new(Effect::Tap {
+                what: Selector::Target(0),
+            }),
         },
     )
 }
@@ -540,7 +580,10 @@ pub fn ferocious_charge() -> CardDefinition {
                 toughness: Value::Const(4),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]),
     )
 }
@@ -557,7 +600,10 @@ pub fn fill_with_fright() -> CardDefinition {
                 amount: Value::Const(2),
                 random: false,
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]),
     )
 }
@@ -576,7 +622,10 @@ pub fn blinkmoth_infusion() -> CardDefinition {
             "Blinkmoth Infusion",
             cost(&[generic(12), u(), u()]),
             false,
-            Effect::Untap { what: Selector::EachPermanent(R::Artifact), up_to: None },
+            Effect::Untap {
+                what: Selector::EachPermanent(R::Artifact),
+                up_to: None,
+            },
         )
     }
 }
@@ -593,7 +642,10 @@ pub fn dawns_reflection() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         static_abilities: vec![StaticAbility {
             description: "Whenever enchanted land is tapped for mana, its controller adds an additional two mana in any combination of colors.",
             effect: StaticEffect::ExtraManaOnLandTap {
@@ -619,7 +671,10 @@ pub fn eyes_of_the_watcher() -> CardDefinition {
             effect: Effect::MayPay {
                 description: "Pay {1} to scry 2?".into(),
                 mana_cost: cost(&[generic(1)]),
-                body: Box::new(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+                body: Box::new(Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                }),
                 else_: None,
             },
         }],

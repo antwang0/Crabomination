@@ -3,13 +3,13 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
-    StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
+    StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{discard, each_opponent_creature, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, RevealMissDest, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Herald of Eternal Dawn — {4}{W}{W}{W} 6/6 Angel. Flash, flying. You can't
 /// lose the game and your opponents can't win the game.
@@ -18,7 +18,10 @@ pub fn herald_of_eternal_dawn() -> CardDefinition {
         name: "Herald of Eternal Dawn",
         cost: cost(&[generic(4), w(), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flash, Keyword::Flying],
@@ -36,13 +39,19 @@ pub fn rune_sealed_wall() -> CardDefinition {
         name: "Rune-Sealed Wall",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 0,
         toughness: 6,
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -65,8 +74,14 @@ pub fn scrawling_crawler() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
-                effect: Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::ONE },
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::ONE,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
@@ -90,14 +105,20 @@ pub fn revenge_of_the_rats() -> CardDefinition {
         keywords: vec![Keyword::Flashback(cost(&[generic(2), b(), b()]))],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
-            count: Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature },
+            count: Value::CardsInGraveyardMatching {
+                who: PlayerRef::You,
+                filter: R::Creature,
+            },
             definition: TokenDefinition {
                 name: "Rat".into(),
                 power: 1,
                 toughness: 1,
                 card_types: vec![CardType::Creature],
                 colors: vec![Color::Black],
-                subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Rat],
+                    ..Default::default()
+                },
                 tapped: true,
                 ..Default::default()
             },
@@ -122,8 +143,12 @@ pub fn spinner_of_souls() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken }),
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::NotToken,
+                },
+            ),
             effect: Effect::MayDo {
                 description: "Dig for a creature card".into(),
                 body: Box::new(Effect::RevealUntilFind {
@@ -174,7 +199,10 @@ pub fn high_society_hunter() -> CardDefinition {
                         filter: R::NotToken.and(R::OtherThanSource),
                     },
                 ),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             },
         ],
         ..Default::default()

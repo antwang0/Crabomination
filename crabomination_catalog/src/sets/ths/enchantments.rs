@@ -3,8 +3,10 @@ use crate::card::{
     EventSpec, Keyword, SelectionRequirement, Selector, StaticAbility, StaticEffect, Subtypes,
     Supertype, TriggeredAbility, Value,
 };
+use crate::effect::{
+    Duration, PlayerRef, PlayerStaticTarget, shortcut::etb, shortcut::target_filtered,
+};
 use crate::game::types::TurnStep;
-use crate::effect::{Duration, PlayerRef, PlayerStaticTarget, shortcut::etb, shortcut::target_filtered};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Hopeful Eidolon — {W} Enchantment Creature — Spirit 1/1 Lifelink.
@@ -26,7 +28,11 @@ pub fn hopeful_eidolon() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Lifelink], scale: None, triggered_abilities: vec![], ..Default::default() }),
+            keywords: vec![Keyword::Lifelink],
+            scale: None,
+            triggered_abilities: vec![],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -78,7 +84,10 @@ fn god(
         keywords: vec![Keyword::Indestructible],
         static_abilities: vec![StaticAbility {
             description: "As long as your devotion to its color is less than five, this isn't a creature.",
-            effect: StaticEffect::NotCreatureWhileDevotionBelow { colors, threshold: 5 },
+            effect: StaticEffect::NotCreatureWhileDevotionBelow {
+                colors,
+                threshold: 5,
+            },
         }],
         ..Default::default()
     }
@@ -121,7 +130,13 @@ pub fn nylea_god_of_the_hunt() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..god("Nylea, God of the Hunt", cost(&[generic(3), g()]), vec![Color::Green], 6, 6)
+        ..god(
+            "Nylea, God of the Hunt",
+            cost(&[generic(3), g()]),
+            vec![Color::Green],
+            6,
+            6,
+        )
     }
 }
 
@@ -131,8 +146,14 @@ pub fn nylea_god_of_the_hunt() -> CardDefinition {
 pub fn thassa_god_of_the_sea() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
@@ -147,7 +168,13 @@ pub fn thassa_god_of_the_sea() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..god("Thassa, God of the Sea", cost(&[generic(2), u()]), vec![Color::Blue], 5, 5)
+        ..god(
+            "Thassa, God of the Sea",
+            cost(&[generic(2), u()]),
+            vec![Color::Blue],
+            5,
+            5,
+        )
     }
 }
 
@@ -166,7 +193,9 @@ pub fn erebos_god_of_the_dead() -> CardDefinition {
             },
             StaticAbility {
                 description: "You can't gain life.",
-                effect: StaticEffect::PlayerCannotGainLife { target: PlayerStaticTarget::Controller },
+                effect: StaticEffect::PlayerCannotGainLife {
+                    target: PlayerStaticTarget::Controller,
+                },
             },
         ],
         activated_abilities: vec![ActivatedAbility {
@@ -175,10 +204,19 @@ pub fn erebos_god_of_the_dead() -> CardDefinition {
             mana_cost: cost(&[generic(1), b()]),
             life_cost: 2,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
-        ..god("Erebos, God of the Dead", cost(&[generic(3), b()]), vec![Color::Black], 5, 7)
+        ..god(
+            "Erebos, God of the Dead",
+            cost(&[generic(3), b()]),
+            vec![Color::Black],
+            5,
+            7,
+        )
     }
 }
 
@@ -196,7 +234,10 @@ fn god_weapon(
         cost: cost_,
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Enchantment],
-        static_abilities: vec![StaticAbility { description, effect }],
+        static_abilities: vec![StaticAbility {
+            description,
+            effect,
+        }],
         ..Default::default()
     }
 }
@@ -229,7 +270,11 @@ pub fn spear_of_heliod() -> CardDefinition {
             "Spear of Heliod",
             cost(&[generic(1), w(), w()]),
             "Creatures you control get +1/+1.",
-            StaticEffect::PumpPT { applies_to: your_creatures(), power: 1, toughness: 1 },
+            StaticEffect::PumpPT {
+                applies_to: your_creatures(),
+                power: 1,
+                toughness: 1,
+            },
         )
     }
 }
@@ -251,7 +296,10 @@ pub fn whip_of_erebos() -> CardDefinition {
                     what: target_filtered(
                         SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
                     ),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::GrantKeyword {
                     what: Selector::Target(0),
@@ -260,7 +308,10 @@ pub fn whip_of_erebos() -> CardDefinition {
                 },
                 Effect::DelayUntil {
                     kind: DelayedTriggerKind::NextEndStep,
-                    body: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
+                    body: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Exile,
+                    }),
                 },
             ]),
             ..Default::default()
@@ -269,7 +320,10 @@ pub fn whip_of_erebos() -> CardDefinition {
             "Whip of Erebos",
             cost(&[generic(2), b(), b()]),
             "Creatures you control have lifelink.",
-            StaticEffect::GrantKeyword { applies_to: your_creatures(), keyword: Keyword::Lifelink },
+            StaticEffect::GrantKeyword {
+                applies_to: your_creatures(),
+                keyword: Keyword::Lifelink,
+            },
         )
     }
 }
@@ -296,7 +350,10 @@ pub fn hammer_of_purphoros() -> CardDefinition {
             "Hammer of Purphoros",
             cost(&[generic(2), r()]),
             "Creatures you control have haste.",
-            StaticEffect::GrantKeyword { applies_to: your_creatures(), keyword: Keyword::Haste },
+            StaticEffect::GrantKeyword {
+                applies_to: your_creatures(),
+                keyword: Keyword::Haste,
+            },
         )
     }
 }
@@ -312,7 +369,10 @@ fn god2(
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "As long as your devotion to its colors is less than seven, this isn't a creature.",
-            effect: StaticEffect::NotCreatureWhileDevotionBelow { colors: colors.clone(), threshold: 7 },
+            effect: StaticEffect::NotCreatureWhileDevotionBelow {
+                colors: colors.clone(),
+                threshold: 7,
+            },
         }],
         ..god(name, cost_, colors, power, toughness)
     }
@@ -328,7 +388,10 @@ pub fn heliod_god_of_the_sun() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Enchantment, CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cleric], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cleric],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -361,7 +424,13 @@ pub fn heliod_god_of_the_sun() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..god("Heliod, God of the Sun", cost(&[generic(3), w()]), vec![Color::White], 5, 6)
+        ..god(
+            "Heliod, God of the Sun",
+            cost(&[generic(3), w()]),
+            vec![Color::White],
+            5,
+            6,
+        )
     }
 }
 
@@ -392,7 +461,13 @@ pub fn purphoros_god_of_the_forge() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..god("Purphoros, God of the Forge", cost(&[generic(3), r()]), vec![Color::Red], 6, 5)
+        ..god(
+            "Purphoros, God of the Forge",
+            cost(&[generic(3), r()]),
+            vec![Color::Red],
+            6,
+            5,
+        )
     }
 }
 
@@ -425,7 +500,13 @@ pub fn xenagos_god_of_revels() -> CardDefinition {
                 },
             ]),
         }],
-        ..god2("Xenagos, God of Revels", cost(&[generic(3), r(), g()]), vec![Color::Red, Color::Green], 6, 5)
+        ..god2(
+            "Xenagos, God of Revels",
+            cost(&[generic(3), r(), g()]),
+            vec![Color::Red, Color::Green],
+            6,
+            5,
+        )
     }
 }
 
@@ -458,7 +539,13 @@ pub fn phenax_god_of_deception() -> CardDefinition {
                 },
             },
         ],
-        ..god("Phenax, God of Deception", cost(&[generic(3), u(), b()]), vec![Color::Blue, Color::Black], 4, 7)
+        ..god(
+            "Phenax, God of Deception",
+            cost(&[generic(3), u(), b()]),
+            vec![Color::Blue, Color::Black],
+            4,
+            7,
+        )
     }
 }
 
@@ -473,7 +560,10 @@ pub fn pharika_god_of_affliction() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Enchantment, CardType::Creature],
         colors: vec![Color::Black, Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Deathtouch],
         ..Default::default()
     };
@@ -494,7 +584,13 @@ pub fn pharika_god_of_affliction() -> CardDefinition {
             ]),
             ..Default::default()
         }],
-        ..god2("Pharika, God of Affliction", cost(&[generic(1), b(), g()]), vec![Color::Black, Color::Green], 5, 5)
+        ..god2(
+            "Pharika, God of Affliction",
+            cost(&[generic(1), b(), g()]),
+            vec![Color::Black, Color::Green],
+            5,
+            5,
+        )
     }
 }
 
@@ -548,7 +644,13 @@ pub fn mogis_god_of_slaughter() -> CardDefinition {
                 }),
             },
         }],
-        ..god2("Mogis, God of Slaughter", cost(&[generic(2), b(), r()]), vec![Color::Black, Color::Red], 7, 5)
+        ..god2(
+            "Mogis, God of Slaughter",
+            cost(&[generic(2), b(), r()]),
+            vec![Color::Black, Color::Red],
+            7,
+            5,
+        )
     }
 }
 
@@ -569,7 +671,13 @@ pub fn athreos_god_of_passage() -> CardDefinition {
                 }),
             },
         }],
-        ..god2("Athreos, God of Passage", cost(&[generic(1), w(), b()]), vec![Color::White, Color::Black], 5, 4)
+        ..god2(
+            "Athreos, God of Passage",
+            cost(&[generic(1), w(), b()]),
+            vec![Color::White, Color::Black],
+            5,
+            4,
+        )
     }
 }
 
@@ -597,7 +705,13 @@ pub fn iroas_god_of_victory() -> CardDefinition {
                 effect: StaticEffect::PreventDamageToYourAttackers,
             },
         ],
-        ..god("Iroas, God of Victory", cost(&[generic(2), r(), w()]), vec![Color::Red, Color::White], 7, 4)
+        ..god(
+            "Iroas, God of Victory",
+            cost(&[generic(2), r(), w()]),
+            vec![Color::Red, Color::White],
+            7,
+            4,
+        )
     }
 }
 
@@ -622,7 +736,13 @@ pub fn kruphix_god_of_horizons() -> CardDefinition {
                 effect: StaticEffect::UnspentManaBecomesColorless,
             },
         ],
-        ..god("Kruphix, God of Horizons", cost(&[generic(3), g(), u()]), vec![Color::Green, Color::Blue], 4, 7)
+        ..god(
+            "Kruphix, God of Horizons",
+            cost(&[generic(3), g(), u()]),
+            vec![Color::Green, Color::Blue],
+            4,
+            7,
+        )
     }
 }
 
@@ -633,13 +753,25 @@ pub fn ephara_god_of_the_polis() -> CardDefinition {
     use crate::game::types::TurnStep;
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
-                .with_filter(Predicate::AnotherCreatureEnteredControlLastTurn {
-                    who: PlayerRef::You,
-                }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::AnotherCreatureEnteredControlLastTurn {
+                who: PlayerRef::You,
+            }),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
-        ..god2("Ephara, God of the Polis", cost(&[generic(2), w(), u()]), vec![Color::White, Color::Blue], 6, 5)
+        ..god2(
+            "Ephara, God of the Polis",
+            cost(&[generic(2), w(), u()]),
+            vec![Color::White, Color::Blue],
+            6,
+            5,
+        )
     }
 }
 
@@ -649,20 +781,24 @@ pub fn keranos_god_of_storms() -> CardDefinition {
     use crate::card::Predicate;
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                .with_filter(Predicate::All(vec![
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
                     Predicate::IsTurnOf(PlayerRef::You),
                     Predicate::ValueAtMost(
                         Value::CardsDrawnThisTurn(PlayerRef::You),
                         Value::Const(1),
                     ),
-                ])),
+                ]),
+            ),
             effect: Effect::If {
                 cond: Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Land,
                 },
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
                 else_: Box::new(Effect::DealDamage {
                     to: target_filtered(
                         SelectionRequirement::Creature
@@ -673,7 +809,13 @@ pub fn keranos_god_of_storms() -> CardDefinition {
                 }),
             },
         }],
-        ..god2("Keranos, God of Storms", cost(&[generic(3), u(), r()]), vec![Color::Blue, Color::Red], 6, 5)
+        ..god2(
+            "Keranos, God of Storms",
+            cost(&[generic(3), u(), r()]),
+            vec![Color::Blue, Color::Red],
+            6,
+            5,
+        )
     }
 }
 
@@ -683,7 +825,10 @@ pub fn thassa_deep_dwelling() -> CardDefinition {
     use crate::game::types::TurnStep;
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::YourControl,
+            ),
             effect: Effect::MayDo {
                 description: "Exile another creature you control, then return it?".into(),
                 body: Box::new(Effect::Seq(vec![
@@ -713,7 +858,13 @@ pub fn thassa_deep_dwelling() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..god("Thassa, Deep-Dwelling", cost(&[generic(3), u()]), vec![Color::Blue], 6, 5)
+        ..god(
+            "Thassa, Deep-Dwelling",
+            cost(&[generic(3), u()]),
+            vec![Color::Blue],
+            6,
+            5,
+        )
     }
 }
 
@@ -726,8 +877,14 @@ pub fn erebos_bleak_hearted() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Pay 2 life to draw a card?".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                 ])),
             },
         }],
@@ -742,7 +899,13 @@ pub fn erebos_bleak_hearted() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..god("Erebos, Bleak-Hearted", cost(&[generic(3), b()]), vec![Color::Black], 5, 6)
+        ..god(
+            "Erebos, Bleak-Hearted",
+            cost(&[generic(3), b()]),
+            vec![Color::Black],
+            5,
+            6,
+        )
     }
 }
 
@@ -784,7 +947,13 @@ pub fn purphoros_bronze_blooded() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..god("Purphoros, Bronze-Blooded", cost(&[generic(4), r()]), vec![Color::Red], 7, 6)
+        ..god(
+            "Purphoros, Bronze-Blooded",
+            cost(&[generic(4), r()]),
+            vec![Color::Red],
+            7,
+            6,
+        )
     }
 }
 
@@ -817,7 +986,13 @@ pub fn nylea_keen_eyed() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..god("Nylea, Keen-Eyed", cost(&[generic(3), g()]), vec![Color::Green], 5, 6)
+        ..god(
+            "Nylea, Keen-Eyed",
+            cost(&[generic(3), g()]),
+            vec![Color::Green],
+            5,
+            6,
+        )
     }
 }
 
@@ -850,7 +1025,10 @@ pub fn klothys_god_of_destiny() -> CardDefinition {
                         ),
                     }),
                     else_: Box::new(Effect::Seq(vec![
-                        Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                        Effect::GainLife {
+                            who: Selector::You,
+                            amount: Value::Const(2),
+                        },
                         Effect::DealDamage {
                             to: Selector::Player(PlayerRef::EachOpponent),
                             amount: Value::Const(2),
@@ -859,6 +1037,12 @@ pub fn klothys_god_of_destiny() -> CardDefinition {
                 },
             ]),
         }],
-        ..god2("Klothys, God of Destiny", cost(&[generic(1), r(), g()]), vec![Color::Red, Color::Green], 4, 5)
+        ..god2(
+            "Klothys, God of Destiny",
+            cost(&[generic(1), r(), g()]),
+            vec![Color::Red, Color::Green],
+            4,
+            5,
+        )
     }
 }

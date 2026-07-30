@@ -9,7 +9,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef};
 use crate::game::types::TurnStep;
-use crate::mana::{cost, g, generic, r, w, x, Color, SpendRestriction};
+use crate::mana::{Color, SpendRestriction, cost, g, generic, r, w, x};
 
 /// By Force — {X}{R} Sorcery. Destroy X target artifacts.
 pub fn by_force() -> CardDefinition {
@@ -17,7 +17,9 @@ pub fn by_force() -> CardDefinition {
         name: "By Force",
         cost: cost(&[x(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DestroyTargets { filter: R::Artifact },
+        effect: Effect::DestroyTargets {
+            filter: R::Artifact,
+        },
         ..Default::default()
     }
 }
@@ -37,7 +39,9 @@ pub fn palace_jailer() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![
-            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            etb(Effect::BecomeMonarch {
+                who: PlayerRef::You,
+            }),
             etb(Effect::ExileUntilOpponentMonarch {
                 what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
             }),
@@ -79,13 +83,14 @@ pub fn leonin_vanguard() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
                 cond: Predicate::ValueAtLeast(
                     Value::CountMatching {
-                        sel: Box::new(Selector::EachPermanent(
-                            R::Creature.and(R::ControlledByYou),
-                        )),
+                        sel: Box::new(Selector::EachPermanent(R::Creature.and(R::ControlledByYou))),
                         filter: R::Creature.and(R::ControlledByYou),
                     },
                     Value::Const(3),
@@ -97,7 +102,10 @@ pub fn leonin_vanguard() -> CardDefinition {
                         toughness: Value::ONE,
                         duration: Duration::EndOfTurn,
                     },
-                    Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::ONE },
+                    Effect::GainLife {
+                        who: Selector::Player(PlayerRef::You),
+                        amount: Value::ONE,
+                    },
                 ])),
                 else_: Box::new(Effect::Noop),
             },
@@ -116,7 +124,9 @@ pub fn marchesas_decree() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
-            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            etb(Effect::BecomeMonarch {
+                who: PlayerRef::You,
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
                 effect: Effect::LoseLife {
@@ -144,7 +154,9 @@ pub fn thorn_of_the_black_rose() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Deathtouch],
-        triggered_abilities: vec![etb(Effect::BecomeMonarch { who: PlayerRef::You })],
+        triggered_abilities: vec![etb(Effect::BecomeMonarch {
+            who: PlayerRef::You,
+        })],
         ..Default::default()
     }
 }
@@ -163,9 +175,14 @@ pub fn throne_warden() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::YourControl,
+            ),
             effect: Effect::If {
-                cond: Predicate::IsMonarch { who: PlayerRef::You },
+                cond: Predicate::IsMonarch {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -189,24 +206,41 @@ pub fn skyline_despot() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
         name: "Skyline Despot",
         cost: cost(&[generic(5), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
-            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            etb(Effect::BecomeMonarch {
+                who: PlayerRef::You,
+            }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
                 effect: Effect::If {
-                    cond: Predicate::IsMonarch { who: PlayerRef::You },
-                    then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: dragon() }),
+                    cond: Predicate::IsMonarch {
+                        who: PlayerRef::You,
+                    },
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        definition: dragon(),
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             },
@@ -225,17 +259,28 @@ pub fn keeper_of_keys() -> CardDefinition {
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Mutant],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Rogue,
+                CreatureType::Mutant,
+            ],
             ..Default::default()
         },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![
-            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            etb(Effect::BecomeMonarch {
+                who: PlayerRef::You,
+            }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
                 effect: Effect::If {
-                    cond: Predicate::IsMonarch { who: PlayerRef::You },
+                    cond: Predicate::IsMonarch {
+                        who: PlayerRef::You,
+                    },
                     then: Box::new(Effect::GrantKeyword {
                         what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                         keyword: Keyword::Unblockable,
@@ -276,11 +321,12 @@ pub fn judith_the_scourge_diva() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::NotToken.and(R::OtherThanSource),
-                }),
+                },
+            ),
             effect: Effect::DealDamage {
                 to: target_filtered(R::Any),
                 amount: Value::ONE,
@@ -299,7 +345,10 @@ pub fn giada_font_of_hope() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
@@ -308,7 +357,9 @@ pub fn giada_font_of_hope() -> CardDefinition {
             effect: StaticEffect::TypeEntersWithCountersPerControlled {
                 creature_type: CreatureType::Angel,
                 kind: CounterType::PlusOnePlusOne,
-                per: R::Creature.and(R::HasCreatureType(CreatureType::Angel)).and(R::ControlledByYou),
+                per: R::Creature
+                    .and(R::HasCreatureType(CreatureType::Angel))
+                    .and(R::ControlledByYou),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -394,13 +445,28 @@ pub fn old_rutstein() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         ..Default::default()
     };
     let mill_branch = move || Effect::MillThenBranchByType {
-        land: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: treasure_token() }),
-        creature: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: insect() }),
-        noncreature: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: blood_token() }),
+        land: Box::new(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: treasure_token(),
+        }),
+        creature: Box::new(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: insect(),
+        }),
+        noncreature: Box::new(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: blood_token(),
+        }),
     };
     CardDefinition {
         name: "Old Rutstein",
@@ -416,7 +482,10 @@ pub fn old_rutstein() -> CardDefinition {
         triggered_abilities: vec![
             etb(mill_branch()),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
                 effect: mill_branch(),
             },
         ],
@@ -441,7 +510,10 @@ pub fn serra_ascendant() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Gets +5/+5 and has flying as long as you have 30 or more life.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::PlayerLifeAtLeast { who: PlayerRef::You, life: 30 },
+                condition: Predicate::PlayerLifeAtLeast {
+                    who: PlayerRef::You,
+                    life: 30,
+                },
                 power: 5,
                 toughness: 5,
                 keywords: vec![Keyword::Flying],
@@ -462,7 +534,10 @@ pub fn angelic_accord() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -472,8 +547,15 @@ pub fn angelic_accord() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
             effect: Effect::If {
-                cond: Predicate::LifeGainedThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(4) },
-                then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: angel }),
+                cond: Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(4),
+                },
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: angel,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -489,8 +571,14 @@ pub fn warleaders_helix() -> CardDefinition {
         cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(4) },
-            Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(4) },
+            Effect::DealDamage {
+                to: target_filtered(R::Any),
+                amount: Value::Const(4),
+            },
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(4),
+            },
         ]),
         ..Default::default()
     }
@@ -527,13 +615,22 @@ pub fn firemane_avenger() -> CardDefinition {
         name: "Firemane Avenger",
         cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![battalion(Effect::Seq(vec![
-            Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(3) },
-            Effect::GainLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(3) },
+            Effect::DealDamage {
+                to: target_filtered(R::Any),
+                amount: Value::Const(3),
+            },
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(3),
+            },
         ]))],
         ..Default::default()
     }
@@ -551,7 +648,10 @@ pub fn assemble_the_legion() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red, Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -559,12 +659,21 @@ pub fn assemble_the_legion() -> CardDefinition {
         cost: cost(&[generic(3), r(), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::Seq(vec![
-                Effect::AddCounter { what: Selector::This, kind: CounterType::Muster, amount: Value::ONE },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Muster,
+                    amount: Value::ONE,
+                },
                 Effect::CreateToken {
                     who: PlayerRef::You,
-                    count: Value::TotalCountersOn { what: Box::new(Selector::This) },
+                    count: Value::TotalCountersOn {
+                        what: Box::new(Selector::This),
+                    },
                     definition: soldier,
                 },
             ]),
@@ -588,7 +697,9 @@ pub fn war_priest_of_thune() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "destroy target enchantment".into(),
-            body: Box::new(Effect::Destroy { what: target_filtered(R::Enchantment) }),
+            body: Box::new(Effect::Destroy {
+                what: target_filtered(R::Enchantment),
+            }),
         })],
         ..Default::default()
     }
@@ -601,7 +712,10 @@ pub fn goldnight_redeemer() -> CardDefinition {
         name: "Goldnight Redeemer",
         cost: cost(&[generic(4), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -663,7 +777,9 @@ pub fn kinsbaile_borderguard() -> CardDefinition {
         )),
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
-            count: Value::TotalCountersOn { what: Box::new(Selector::This) },
+            count: Value::TotalCountersOn {
+                what: Box::new(Selector::This),
+            },
             definition: kithkin(),
         })],
         ..Default::default()
@@ -701,7 +817,10 @@ pub fn terror_of_the_peaks() -> CardDefinition {
         name: "Terror of the Peaks",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -743,7 +862,10 @@ pub fn tuktuk_the_explorer() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Haste],
@@ -825,7 +947,10 @@ pub fn ravos_soultender() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::MayDo {
                 description: "return a creature card from your graveyard to your hand".into(),
                 body: Box::new(Effect::Move {
@@ -877,11 +1002,16 @@ pub fn regal_behemoth() -> CardDefinition {
         name: "Regal Behemoth",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::BecomeMonarch { who: PlayerRef::You })],
+        triggered_abilities: vec![etb(Effect::BecomeMonarch {
+            who: PlayerRef::You,
+        })],
         static_abilities: vec![SA {
             description: "Whenever you tap a land for mana while you're the monarch, add an additional one mana.",
             effect: StaticEffect::ExtraManaOnLandTap {
@@ -906,7 +1036,10 @@ pub fn gallant_cavalry() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Knight],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -932,9 +1065,13 @@ pub fn gallant_cavalry() -> CardDefinition {
 /// Valiant Knight — {3}{W} 3/4 Human Knight. Other Knights you control get
 /// +1/+1; {3}{W}{W}: Knights you control gain double strike until end of turn.
 pub fn valiant_knight() -> CardDefinition {
-    let knights = || Selector::EachPermanent(
-        R::Creature.and(R::HasCreatureType(CreatureType::Knight)).and(R::ControlledByYou),
-    );
+    let knights = || {
+        Selector::EachPermanent(
+            R::Creature
+                .and(R::HasCreatureType(CreatureType::Knight))
+                .and(R::ControlledByYou),
+        )
+    };
     CardDefinition {
         name: "Valiant Knight",
         cost: cost(&[generic(3), w()]),
@@ -987,7 +1124,9 @@ pub fn custodi_lich() -> CardDefinition {
         power: 4,
         toughness: 2,
         triggered_abilities: vec![
-            etb(Effect::BecomeMonarch { who: PlayerRef::You }),
+            etb(Effect::BecomeMonarch {
+                who: PlayerRef::You,
+            }),
             etb(Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 count: Value::ONE,

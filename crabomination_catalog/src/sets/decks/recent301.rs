@@ -4,7 +4,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Selector, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
+    SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
@@ -41,14 +41,19 @@ pub fn gobhobbler_rats() -> CardDefinition {
         name: "Gobhobbler Rats",
         cost: cost(&[b(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         static_abilities: vec![
             StaticAbility {
                 description: "Hellbent — gets +1/+0 while you have no cards in hand.",
                 effect: StaticEffect::PumpSelfIf {
-                    condition: Predicate::HellbentActive { who: PlayerRef::You },
+                    condition: Predicate::HellbentActive {
+                        who: PlayerRef::You,
+                    },
                     power: 1,
                     toughness: 0,
                     keywords: vec![],
@@ -60,10 +65,14 @@ pub fn gobhobbler_rats() -> CardDefinition {
                     applies_to: Selector::This,
                     ability: ActivatedAbility {
                         mana_cost: cost(&[b()]),
-                        effect: Effect::Regenerate { what: Selector::This },
+                        effect: Effect::Regenerate {
+                            what: Selector::This,
+                        },
                         ..Default::default()
                     },
-                    condition: Some(Predicate::HellbentActive { who: PlayerRef::You }),
+                    condition: Some(Predicate::HellbentActive {
+                        who: PlayerRef::You,
+                    }),
                 },
             },
         ],
@@ -82,7 +91,10 @@ pub fn perplex() -> CardDefinition {
             what: target_filtered(R::IsSpellOnStack),
             cost: crate::card::WardCost::DiscardHand,
         },
-        activated_abilities: vec![crate::effect::shortcut::transmute(cost(&[generic(1), u(), b()]), 3)],
+        activated_abilities: vec![crate::effect::shortcut::transmute(
+            cost(&[generic(1), u(), b()]),
+            3,
+        )],
         ..Default::default()
     }
 }
@@ -132,7 +144,10 @@ pub fn skeletonize() -> CardDefinition {
                     definition: skeleton_token(),
                 }),
             },
-            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(3) },
+            Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::Const(3),
+            },
         ]),
         ..Default::default()
     }
@@ -144,12 +159,17 @@ fn skeleton_token() -> TokenDefinition {
         name: "Skeleton".into(),
         colors: vec![crate::mana::Color::Black],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Skeleton], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()

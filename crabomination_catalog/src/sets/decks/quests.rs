@@ -9,7 +9,11 @@ use crate::effect::{Effect, PlayerRef, Predicate};
 use crate::mana::{b, cost, r, u};
 
 fn quest_counter_on_self() -> Effect {
-    Effect::AddCounter { what: Selector::This, kind: CounterType::Quest, amount: Value::ONE }
+    Effect::AddCounter {
+        what: Selector::This,
+        kind: CounterType::Quest,
+        amount: Value::ONE,
+    }
 }
 
 /// Quest for Pure Flame — {R}. Your sources damaging an opponent accrue quest
@@ -20,7 +24,10 @@ pub fn quest_for_pure_flame() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::YourSourceDamagedOpponent),
+            event: EventSpec::new(
+                EventKind::PlayerDamaged,
+                EventScope::YourSourceDamagedOpponent,
+            ),
             effect: quest_counter_on_self(),
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -38,7 +45,9 @@ pub fn quest_for_pure_flame() -> CardDefinition {
 pub fn quest_for_ulas_temple() -> CardDefinition {
     let sea_monster = SelectionRequirement::Creature.and(
         SelectionRequirement::HasCreatureType(CreatureType::Kraken)
-            .or(SelectionRequirement::HasCreatureType(CreatureType::Leviathan))
+            .or(SelectionRequirement::HasCreatureType(
+                CreatureType::Leviathan,
+            ))
             .or(SelectionRequirement::HasCreatureType(CreatureType::Octopus))
             .or(SelectionRequirement::HasCreatureType(CreatureType::Serpent)),
     );
@@ -64,7 +73,10 @@ pub fn quest_for_ulas_temple() -> CardDefinition {
                     EventScope::AnyPlayer,
                 )
                 .with_filter(Predicate::ValueAtLeast(
-                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Quest },
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Quest,
+                    },
                     Value::Const(3),
                 )),
                 effect: Effect::PutFromHandOntoBattlefield {

@@ -3,16 +3,16 @@
 //! attacking anthem, a donate, and french-vanilla bodies. Tests in
 //! `tests/recent207.rs`.
 
-use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword, Predicate, Selector,
-    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
-    Value,
-};
 use crate::card::TriggeredAbility;
 use crate::card::Zone;
+use crate::card::{
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword, Predicate,
+    SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
+    TokenDefinition, Value,
+};
 use crate::effect::shortcut::{deal, drain, etb, target_filtered};
 use crate::effect::{Duration, EventKind, EventScope, EventSpec, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn dog_token() -> TokenDefinition {
     TokenDefinition {
@@ -21,7 +21,10 @@ fn dog_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -33,7 +36,10 @@ fn zombie_token() -> TokenDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -46,7 +52,10 @@ fn cat_lifelink_token() -> TokenDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
         keywords: vec![Keyword::Lifelink],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -57,7 +66,11 @@ pub fn release_the_dogs() -> CardDefinition {
         name: "Release the Dogs",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(4), definition: dog_token() },
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            definition: dog_token(),
+        },
         ..Default::default()
     }
 }
@@ -75,7 +88,10 @@ pub fn moment_of_triumph() -> CardDefinition {
                 toughness: Value::Const(2),
                 duration: Duration::EndOfTurn,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -90,7 +106,10 @@ pub fn deadly_riposte() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             deal(3, target_filtered(R::Creature.and(R::Tapped))),
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -119,12 +138,19 @@ pub fn maalfeld_twins() -> CardDefinition {
         name: "Maalfeld Twins",
         cost: cost(&[generic(5), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: zombie_token() },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: zombie_token(),
+            },
         }],
         ..Default::default()
     }
@@ -136,7 +162,10 @@ pub fn rapacious_dragon() -> CardDefinition {
         name: "Rapacious Dragon",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -184,7 +213,10 @@ pub fn mystic_archaeologist() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), u(), u()]),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -198,7 +230,9 @@ pub fn deathmark() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy {
-            what: target_filtered(R::Creature.and(R::HasColor(Color::Green).or(R::HasColor(Color::White)))),
+            what: target_filtered(
+                R::Creature.and(R::HasColor(Color::Green).or(R::HasColor(Color::White))),
+            ),
         },
         ..Default::default()
     }
@@ -210,7 +244,10 @@ pub fn magnigoth_sentry() -> CardDefinition {
         name: "Magnigoth Sentry",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Reach],
@@ -245,7 +282,9 @@ pub fn goblin_oriflamme() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Attacking creatures you control get +1/+0.",
             effect: StaticEffect::PumpPT {
-                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::IsAttacking)),
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::IsAttacking),
+                ),
                 power: 1,
                 toughness: 0,
             },
@@ -261,7 +300,10 @@ pub fn vampire_neonate() -> CardDefinition {
         name: "Vampire Neonate",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
         power: 0,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
@@ -315,17 +357,27 @@ pub fn regal_caracal() -> CardDefinition {
         name: "Regal Caracal",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         static_abilities: vec![
             StaticAbility {
                 description: "Other Cats you control get +1/+1.",
-                effect: StaticEffect::PumpPT { applies_to: other_cats(), power: 1, toughness: 1 },
+                effect: StaticEffect::PumpPT {
+                    applies_to: other_cats(),
+                    power: 1,
+                    toughness: 1,
+                },
             },
             StaticAbility {
                 description: "Other Cats you control have lifelink.",
-                effect: StaticEffect::GrantKeyword { applies_to: other_cats(), keyword: Keyword::Lifelink },
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: other_cats(),
+                    keyword: Keyword::Lifelink,
+                },
             },
         ],
         triggered_abilities: vec![etb(Effect::CreateToken {
@@ -366,7 +418,10 @@ pub fn rise_of_the_dark_realms() -> CardDefinition {
                 zone: Zone::Graveyard,
                 filter: R::Creature,
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -380,7 +435,10 @@ pub fn hidetsugus_second_rite() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::If {
-            cond: Predicate::PlayerLifeExactly { who: PlayerRef::Target(0), life: 10 },
+            cond: Predicate::PlayerLifeExactly {
+                who: PlayerRef::Target(0),
+                life: 10,
+            },
             then: Box::new(Effect::DealDamage {
                 to: Selector::Player(PlayerRef::Target(0)),
                 amount: Value::Const(10),

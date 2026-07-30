@@ -1,8 +1,8 @@
 use crate::card::{CardDefinition, CardType, SelectionRequirement, Selector, Value};
+use crate::effect::Effect;
 use crate::effect::shortcut::{
     add_mana, counter_target_spell, deal, pump_target, target, target_filtered,
 };
-use crate::effect::Effect;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Swords to Plowshares — {W}: exile target creature; its controller
@@ -17,11 +17,11 @@ pub fn swords_to_plowshares() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
-                amount: Value::PowerOf(Box::new(target_filtered(
-                    SelectionRequirement::Creature,
-                ))),
+                amount: Value::PowerOf(Box::new(target_filtered(SelectionRequirement::Creature))),
             },
-            Effect::Exile { what: Selector::Target(0) },
+            Effect::Exile {
+                what: Selector::Target(0),
+            },
         ]),
         ..Default::default()
     }
@@ -76,7 +76,9 @@ pub fn terror() -> CardDefinition {
         name: "Terror",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DestroyNoRegen { what: target_filtered(filter) },
+        effect: Effect::DestroyNoRegen {
+            what: target_filtered(filter),
+        },
         ..Default::default()
     }
 }
@@ -138,7 +140,6 @@ pub fn darkness() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 /// Essence Scatter — {1}{U} Instant. "Counter target creature spell."
 pub fn essence_scatter() -> CardDefinition {

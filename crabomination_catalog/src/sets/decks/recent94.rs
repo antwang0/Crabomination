@@ -6,8 +6,8 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, DynamicPt, Effect,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
-    SelectionRequirement as R, Selector, StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R,
+    Selector, StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, gain_life, on_attack, target_filtered};
 use crate::effect::{Duration, PlayerRef, StaticEffect, ZoneDest};
@@ -25,7 +25,14 @@ fn equipment_you_control() -> Selector {
 /// Grafted Wargear — {3} Equipment. Equipped creature gets +3/+2. Equip {0}.
 /// (The "becomes unattached → sacrifice that permanent" rider is dropped.)
 pub fn grafted_wargear() -> CardDefinition {
-    simple_equipment("Grafted Wargear", cost(&[generic(3)]), cost(&[]), 3, 2, vec![])
+    simple_equipment(
+        "Grafted Wargear",
+        cost(&[generic(3)]),
+        cost(&[]),
+        3,
+        2,
+        vec![],
+    )
 }
 
 /// Bloodforged Battle-Axe — {1} Equipment. Equipped creature gets +2/+0.
@@ -36,7 +43,10 @@ pub fn bloodforged_battle_axe() -> CardDefinition {
         name: "Bloodforged Battle-Axe",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
             power: 2,
@@ -73,7 +83,10 @@ pub fn hammer_of_nazahn() -> CardDefinition {
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
         equipped_bonus: Some(EquipBonus {
             power: 2,
@@ -116,11 +129,12 @@ pub fn reyav_master_smith() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Creature.and(R::IsEnchanted.or(R::IsEquipped)),
-                }),
+                },
+            ),
             effect: Effect::GrantKeyword {
                 what: Selector::TriggerSource,
                 keyword: Keyword::DoubleStrike,
@@ -169,7 +183,10 @@ pub fn kazuuls_toll_collector() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             sorcery_speed: true,
-            effect: Effect::Attach { what: equipment_you_control(), to: Selector::This },
+            effect: Effect::Attach {
+                what: equipment_you_control(),
+                to: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -198,7 +215,10 @@ pub fn stonehewer_giant() -> CardDefinition {
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             ..Default::default()
         }],
@@ -230,11 +250,12 @@ pub fn nazahn_revered_bladesmith() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
-                    .with_filter(Predicate::EntityMatches {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::Creature.and(R::IsEquipped),
-                    }),
+                    },
+                ),
                 effect: Effect::MayDo {
                     description: "Tap target creature an opponent controls".into(),
                     body: Box::new(Effect::Tap {
@@ -252,17 +273,17 @@ pub fn nazahn_revered_bladesmith() -> CardDefinition {
 /// creature you control with power 4 or greater gets +1/+1 and gains trample
 /// until end of turn.
 pub fn goreclaw_terror_of_qal_sisma() -> CardDefinition {
-    let big = || {
-        Selector::EachPermanent(
-            R::Creature.and(R::ControlledByYou).and(R::PowerAtLeast(4)),
-        )
-    };
+    let big =
+        || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::PowerAtLeast(4)));
     CardDefinition {
         name: "Goreclaw, Terror of Qal Sisma",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bear],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         static_abilities: vec![StaticAbility {
@@ -273,8 +294,17 @@ pub fn goreclaw_terror_of_qal_sisma() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![on_attack(Effect::Seq(vec![
-            Effect::PumpPT { what: big(), power: Value::Const(1), toughness: Value::Const(1), duration: Duration::EndOfTurn },
-            Effect::GrantKeyword { what: big(), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            Effect::PumpPT {
+                what: big(),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: big(),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
         ]))],
         ..Default::default()
     }
@@ -295,7 +325,10 @@ pub fn akiri_line_slinger() -> CardDefinition {
         power: 0,
         toughness: 3,
         keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
-        dynamic_pt: Some(DynamicPt::ArtifactsControlledPower { base_p: 0, base_t: 3 }),
+        dynamic_pt: Some(DynamicPt::ArtifactsControlledPower {
+            base_p: 0,
+            base_t: 3,
+        }),
         ..Default::default()
     }
 }
@@ -382,29 +415,56 @@ pub fn sylvia_brightspear() -> CardDefinition {
 /// Silverskin Armor — {2} Equipment. Equipped creature gets +1/+1. Equip {2}.
 /// (The "is an artifact in addition to its other types" rider is dropped.)
 pub fn silverskin_armor() -> CardDefinition {
-    simple_equipment("Silverskin Armor", cost(&[generic(2)]), cost(&[generic(2)]), 1, 1, vec![])
+    simple_equipment(
+        "Silverskin Armor",
+        cost(&[generic(2)]),
+        cost(&[generic(2)]),
+        1,
+        1,
+        vec![],
+    )
 }
 
 /// O-Naginata — {1} Equipment. Equipped creature gets +3/+0 and has trample.
 /// Equip {2}. (The "attach only to power 3+" restriction is dropped.)
 pub fn o_naginata() -> CardDefinition {
-    simple_equipment("O-Naginata", cost(&[generic(1)]), cost(&[generic(2)]), 3, 0,
-        vec![Keyword::Trample])
+    simple_equipment(
+        "O-Naginata",
+        cost(&[generic(1)]),
+        cost(&[generic(2)]),
+        3,
+        0,
+        vec![Keyword::Trample],
+    )
 }
 
 /// Prowler's Helm — {2} Equipment. Equipped creature can't be blocked except by
 /// Walls. Equip {2}.
 pub fn prowlers_helm() -> CardDefinition {
-    simple_equipment("Prowler's Helm", cost(&[generic(2)]), cost(&[generic(2)]), 0, 0,
-        vec![Keyword::CantBeBlockedExceptBy(Box::new(R::HasCreatureType(CreatureType::Wall)))])
+    simple_equipment(
+        "Prowler's Helm",
+        cost(&[generic(2)]),
+        cost(&[generic(2)]),
+        0,
+        0,
+        vec![Keyword::CantBeBlockedExceptBy(Box::new(
+            R::HasCreatureType(CreatureType::Wall),
+        ))],
+    )
 }
 
 /// Vorpal Sword — {B} Equipment. Equipped creature gets +2/+0 and has
 /// deathtouch. Equip {B}{B}. (The {5}{B}{B}{B} "loses the game" grant is
 /// dropped.)
 pub fn vorpal_sword() -> CardDefinition {
-    simple_equipment("Vorpal Sword", cost(&[b()]), cost(&[b(), b()]), 2, 0,
-        vec![Keyword::Deathtouch])
+    simple_equipment(
+        "Vorpal Sword",
+        cost(&[b()]),
+        cost(&[b(), b()]),
+        2,
+        0,
+        vec![Keyword::Deathtouch],
+    )
 }
 
 /// Argentum Armor — {6} Equipment. Equipped creature gets +6/+6. Whenever it
@@ -414,14 +474,19 @@ pub fn argentum_armor() -> CardDefinition {
         name: "Argentum Armor",
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(6)]))],
         equipped_bonus: Some(EquipBonus {
             power: 6,
             toughness: 6,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::Destroy { what: target_filtered(R::Permanent) },
+                effect: Effect::Destroy {
+                    what: target_filtered(R::Permanent),
+                },
             }],
             ..Default::default()
         }),
@@ -450,7 +515,9 @@ pub fn kwende_pride_of_femeref() -> CardDefinition {
             description: "Creatures you control with first strike have double strike.",
             effect: StaticEffect::GrantKeyword {
                 applies_to: Selector::EachPermanent(
-                    R::Creature.and(R::ControlledByYou).and(R::HasKeyword(Keyword::FirstStrike)),
+                    R::Creature
+                        .and(R::ControlledByYou)
+                        .and(R::HasKeyword(Keyword::FirstStrike)),
                 ),
                 keyword: Keyword::DoubleStrike,
             },

@@ -9,7 +9,8 @@ use crate::mana::{cost, generic, u};
 /// library is empty, it's a 10/10 with flying and vigilance. (The "skip a draw
 /// from an empty library" rider is inert here — deck-out isn't a loss.)
 pub fn living_conundrum() -> CardDefinition {
-    let library_empty = || Predicate::ValueAtMost(Value::LibrarySizeOf(PlayerRef::You), Value::ZERO);
+    let library_empty =
+        || Predicate::ValueAtMost(Value::LibrarySizeOf(PlayerRef::You), Value::ZERO);
     CardDefinition {
         name: "Living Conundrum",
         cost: cost(&[generic(4), u()]),

@@ -6,9 +6,11 @@ use crate::card::{
     SelectionRequirement as R, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, TriggeredAbility, ZoneDest};
+use crate::effect::{
+    Effect, EventKind, EventScope, EventSpec, PlayerRef, TriggeredAbility, ZoneDest,
+};
 use crate::game::effects::food_token;
-use crate::mana::{b, cost, g, generic, u, Color};
+use crate::mana::{Color, b, cost, g, generic, u};
 
 fn white_human_token() -> TokenDefinition {
     TokenDefinition {
@@ -17,7 +19,10 @@ fn white_human_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -29,7 +34,10 @@ pub fn scream_puff() -> CardDefinition {
         name: "Scream Puff",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
         power: 4,
         toughness: 5,
         keywords: vec![Keyword::Deathtouch],
@@ -63,7 +71,10 @@ pub fn beanstalk_wurm() -> CardDefinition {
             name: "Plant Beans",
             cost: cost(&[generic(1), g()]),
             card_types: vec![CardType::Sorcery],
-            effect: Effect::GrantExtraLandPlay { who: PlayerRef::You, count: Value::ONE },
+            effect: Effect::GrantExtraLandPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+            },
         })),
         ..Default::default()
     }
@@ -82,7 +93,10 @@ pub fn return_from_the_wilds() -> CardDefinition {
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: R::IsBasicLand,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
                 Effect::CreateToken {
                     who: PlayerRef::You,
@@ -123,7 +137,10 @@ pub fn stockpiling_celebrant() -> CardDefinition {
                     ),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
             ])),
         })],
         ..Default::default()
@@ -138,7 +155,10 @@ pub fn elusive_otter() -> CardDefinition {
         name: "Elusive Otter",
         cost: cost(&[u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Otter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Prowess, Keyword::CantBeBlockedByPowerLess],

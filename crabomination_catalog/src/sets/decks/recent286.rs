@@ -13,15 +13,18 @@ use crate::card::{
 };
 use crate::effect::shortcut::{cast_is_instant_or_sorcery, target_filtered};
 use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, StaticEffect,
-    ZoneDest,
+    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector,
+    StaticEffect, ZoneDest,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Convenience: an `Enchantment — Class` subtype block.
 fn class_subtypes() -> Subtypes {
-    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Class], ..Default::default() }
+    Subtypes {
+        enchantment_subtypes: vec![EnchantmentSubtype::Class],
+        ..Default::default()
+    }
 }
 
 /// A 1/1 blue and red Otter with prowess (Bloomburrow's Otter token).
@@ -32,7 +35,10 @@ fn otter_prowess_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue, Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Otter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Prowess],
         ..Default::default()
     }
@@ -121,7 +127,10 @@ pub fn gossips_talent() -> CardDefinition {
                         what: Selector::TriggerSource,
                         filter: R::Creature,
                     }),
-                effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+                effect: Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::ONE,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl)
@@ -133,12 +142,17 @@ pub fn gossips_talent() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
-                    .with_filter(Predicate::SourceClassLevelAtLeast(3)),
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::YourControl,
+                )
+                .with_filter(Predicate::SourceClassLevelAtLeast(3)),
                 effect: Effect::MayDo {
                     description: "Exile it, then return it under its owner's control".into(),
                     body: Box::new(Effect::Seq(vec![
-                        Effect::Exile { what: Selector::TriggerSource },
+                        Effect::Exile {
+                            what: Selector::TriggerSource,
+                        },
                         Effect::Move {
                             what: Selector::TriggerSource,
                             to: ZoneDest::Battlefield {
@@ -201,14 +215,20 @@ pub fn hunters_talent() -> CardDefinition {
                 ]),
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                    .with_filter(Predicate::All(vec![
-                        Predicate::SourceClassLevelAtLeast(3),
-                        Predicate::SelectorExists(Selector::EachPermanent(
-                            R::Creature.and(R::ControlledByYou).and(R::PowerAtLeast(4)),
-                        )),
-                    ])),
-                effect: Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE },
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::All(vec![
+                    Predicate::SourceClassLevelAtLeast(3),
+                    Predicate::SelectorExists(Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::PowerAtLeast(4)),
+                    )),
+                ])),
+                effect: Effect::Draw {
+                    who: Selector::Player(PlayerRef::You),
+                    amount: Value::ONE,
+                },
             },
         ],
         activated_abilities: vec![
@@ -250,8 +270,11 @@ pub fn scavengers_talent() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                    .with_filter(Predicate::SourceClassLevelAtLeast(3)),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::SourceClassLevelAtLeast(3)),
                 effect: Effect::MaySacrifice {
                     description: "Sacrifice three other nonland permanents".into(),
                     filter: R::ControlledByYou.and(R::Land.negate()),
@@ -259,7 +282,10 @@ pub fn scavengers_talent() -> CardDefinition {
                     then: Box::new(Effect::Seq(vec![
                         Effect::Move {
                             what: target_filtered(R::Creature.and(R::InYourGraveyard)),
-                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::You,
+                                tapped: false,
+                            },
                         },
                         Effect::AddCounter {
                             what: Selector::LastMoved,
@@ -300,29 +326,35 @@ pub fn bandits_talent() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::OpponentControl)
-                    .with_filter(Predicate::All(vec![
-                        Predicate::SourceClassLevelAtLeast(2),
-                        Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::ActivePlayer), Value::Const(1)),
-                    ])),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::OpponentControl,
+                )
+                .with_filter(Predicate::All(vec![
+                    Predicate::SourceClassLevelAtLeast(2),
+                    Predicate::ValueAtMost(
+                        Value::HandSizeOf(PlayerRef::ActivePlayer),
+                        Value::Const(1),
+                    ),
+                ])),
                 effect: Effect::LoseLife {
                     who: Selector::Player(PlayerRef::ActivePlayer),
                     amount: Value::Const(2),
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::ActivePlayer)
-                    .with_filter(Predicate::SourceClassLevelAtLeast(3)),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Draw),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::SourceClassLevelAtLeast(3)),
                 effect: Effect::Draw {
                     who: Selector::Player(PlayerRef::You),
                     amount: Value::OpponentsWithHandSizeAtMost(1),
                 },
             },
         ],
-        activated_abilities: vec![
-            level_up(&[b()], 1),
-            level_up(&[generic(3), b()], 2),
-        ],
+        activated_abilities: vec![level_up(&[b()], 1), level_up(&[generic(3), b()], 2)],
         ..Default::default()
     }
 }
@@ -345,7 +377,10 @@ pub fn wizard_class() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::ClassLevelReached, EventScope::SelfSource)
                     .with_filter(Predicate::SourceClassLevelIs(2)),
-                effect: Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::Const(2) },
+                effect: Effect::Draw {
+                    who: Selector::Player(PlayerRef::You),
+                    amount: Value::Const(2),
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
@@ -379,7 +414,10 @@ pub fn cleric_class() -> CardDefinition {
         subtypes: class_subtypes(),
         static_abilities: vec![StaticAbility {
             description: "Life gain is increased by 1",
-            effect: StaticEffect::LifeGainBonus { target: PlayerStaticTarget::Controller, amount: 1 },
+            effect: StaticEffect::LifeGainBonus {
+                target: PlayerStaticTarget::Controller,
+                amount: 1,
+            },
         }],
         triggered_abilities: vec![
             TriggeredAbility {
@@ -397,7 +435,10 @@ pub fn cleric_class() -> CardDefinition {
                 effect: Effect::Seq(vec![
                     Effect::Move {
                         what: target_filtered(R::Creature.and(R::InYourGraveyard)),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                     Effect::GainLife {
                         who: Selector::Player(PlayerRef::You),
@@ -428,8 +469,13 @@ pub fn warlock_class() -> CardDefinition {
         subtypes: class_subtypes(),
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                    .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE }),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                    at_least: Value::ONE,
+                }),
                 effect: Effect::LoseLife {
                     who: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::ONE,
@@ -445,8 +491,11 @@ pub fn warlock_class() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                    .with_filter(Predicate::SourceClassLevelAtLeast(3)),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::SourceClassLevelAtLeast(3)),
                 effect: Effect::LoseLife {
                     who: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::LifeLostThisTurn(PlayerRef::EachOpponent),
@@ -472,7 +521,11 @@ fn sword_token() -> TokenDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -513,12 +566,16 @@ pub fn blacksmiths_talent() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer)
-                    .with_filter(Predicate::SourceClassLevelAtLeast(2)),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::BeginCombat),
+                    EventScope::ActivePlayer,
+                )
+                .with_filter(Predicate::SourceClassLevelAtLeast(2)),
                 effect: Effect::Attach {
                     what: Selector::TargetFiltered {
                         slot: 0,
-                        filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou),
+                        filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .and(R::ControlledByYou),
                     },
                     to: Selector::TargetFiltered {
                         slot: 1,
@@ -547,7 +604,10 @@ fn wall_token() -> TokenDefinition {
         toughness: 4,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Defender],
         ..Default::default()
     }
@@ -559,8 +619,9 @@ fn wall_token() -> TokenDefinition {
 /// on becoming level 3, return target noncreature, nonland permanent card from
 /// your graveyard to the battlefield.
 pub fn builders_talent() -> CardDefinition {
-    let noncreature_nonland =
-        R::Permanent.and(R::HasCardType(CardType::Creature).negate()).and(R::Land.negate());
+    let noncreature_nonland = R::Permanent
+        .and(R::HasCardType(CardType::Creature).negate())
+        .and(R::Land.negate());
     CardDefinition {
         name: "Builder's Talent",
         cost: cost(&[generic(1), w()]),
@@ -595,7 +656,10 @@ pub fn builders_talent() -> CardDefinition {
                     .with_filter(Predicate::SourceClassLevelIs(3)),
                 effect: Effect::Move {
                     what: target_filtered(noncreature_nonland.and(R::InYourGraveyard)),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             },
         ],
@@ -618,7 +682,10 @@ pub fn caretakers_talent() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::TokenCreated, EventScope::YourControl)
                     .once_per_turn(),
-                effect: Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::Player(PlayerRef::You),
+                    amount: Value::ONE,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::ClassLevelReached, EventScope::SelfSource)
@@ -668,7 +735,10 @@ pub fn innkeepers_talent() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         subtypes: class_subtypes(),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::AddCounter {
                 what: target_filtered(R::Creature.and(R::ControlledByYou)),
                 kind: CounterType::PlusOnePlusOne,

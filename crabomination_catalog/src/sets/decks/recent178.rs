@@ -18,7 +18,10 @@ pub fn marching_duodrone() -> CardDefinition {
         name: "Marching Duodrone",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![on_attack(Effect::CreateToken {
@@ -61,7 +64,10 @@ pub fn fiendish_panda() -> CardDefinition {
                         .and(R::Not(Box::new(R::HasCreatureType(CreatureType::Bear))))
                         .and(R::ManaValueAtMostSourcePower),
                 },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             }),
         ],
         ..Default::default()

@@ -6,16 +6,14 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, Predicate, Selector, SelectionRequirement, Subtypes,
+    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement, Selector, Subtypes,
     TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{
     etb, etb_gain_life, magecraft, mint_pests, on_attack, pump_target, target, target_filtered,
 };
-use crate::effect::{
-    Duration, LibraryPosition, PlayerRef, StaticAbility, StaticEffect, ZoneDest,
-};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::effect::{Duration, LibraryPosition, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 // ── Campus land cycle ─────────────────────────────────────────────────────
 
@@ -26,7 +24,10 @@ fn campus_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefini
     let scry = ActivatedAbility {
         tap_cost: true,
         mana_cost: cost(&[generic(4)]),
-        effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        effect: Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -127,7 +128,10 @@ pub fn needlethorn_drake() -> CardDefinition {
         name: "Needlethorn Drake",
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
@@ -164,7 +168,10 @@ pub fn waterfall_aerialist() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))),
+        ],
         ..Default::default()
     }
 }
@@ -175,7 +182,10 @@ pub fn springmane_cervin() -> CardDefinition {
         name: "Springmane Cervin",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elk],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         triggered_abilities: vec![etb_gain_life(2)],
@@ -208,7 +218,10 @@ pub fn scurrid_colony() -> CardDefinition {
         name: "Scurrid Colony",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Squirrel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Reach],
@@ -237,7 +250,10 @@ pub fn wormhole_serpent() -> CardDefinition {
         name: "Wormhole Serpent",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Serpent],
+            ..Default::default()
+        },
         power: 3,
         toughness: 5,
         activated_abilities: vec![ActivatedAbility {
@@ -261,7 +277,10 @@ pub fn mage_hunter() -> CardDefinition {
         name: "Mage Hunter",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         triggered_abilities: vec![
@@ -382,7 +401,10 @@ pub fn oggyar_battle_seer() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -432,13 +454,19 @@ pub fn campus_guide() -> CardDefinition {
         name: "Campus Guide",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::IsBasicLand,
-            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            to: ZoneDest::Library {
+                who: PlayerRef::You,
+                pos: LibraryPosition::Top,
+            },
         })],
         ..Default::default()
     }
@@ -453,7 +481,10 @@ pub fn biblioplex_assistant() -> CardDefinition {
         name: "Biblioplex Assistant",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Gargoyle], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gargoyle],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -466,7 +497,10 @@ pub fn biblioplex_assistant() -> CardDefinition {
             ),
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
-                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: LibraryPosition::Top,
+                },
             }),
         })],
         ..Default::default()
@@ -489,13 +523,18 @@ pub fn overgrown_arch() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 sac_cost: true,
                 mana_cost: cost(&[generic(2)]),
-                effect: Effect::Learn { who: PlayerRef::You },
+                effect: Effect::Learn {
+                    who: PlayerRef::You,
+                },
                 ..Default::default()
             },
         ],
@@ -512,9 +551,7 @@ pub fn expel() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
-            ),
+            what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::Tapped)),
             to: ZoneDest::Exile,
         },
         ..Default::default()
@@ -533,7 +570,10 @@ pub fn crushing_disappointment() -> CardDefinition {
                 who: Selector::Player(PlayerRef::EachPlayer),
                 amount: Value::Const(2),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -615,7 +655,10 @@ pub fn thrilling_discovery() -> CardDefinition {
         cost: cost(&[r(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::MayDo {
                 description: "Discard two cards, then draw three cards.".into(),
                 body: Box::new(Effect::Seq(vec![
@@ -624,7 +667,10 @@ pub fn thrilling_discovery() -> CardDefinition {
                         amount: Value::Const(2),
                         random: false,
                     },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(3),
+                    },
                 ])),
             },
         ]),
@@ -639,7 +685,12 @@ pub fn arcane_subtraction() -> CardDefinition {
         name: "Arcane Subtraction",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![pump_target(-4, 0), Effect::Learn { who: PlayerRef::You }]),
+        effect: Effect::Seq(vec![
+            pump_target(-4, 0),
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -710,7 +761,10 @@ pub fn infuse_with_vitality() -> CardDefinition {
                 }),
                 duration: Duration::EndOfTurn,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }

@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::{Effect, PlayerRef, Selector, Value};
-use crate::mana::{cost, generic, r, u, w, g};
+use crate::mana::{cost, g, generic, r, u, w};
 
 /// Academy Wall — {2}{U} 0/5 Wall. Defender. Whenever you cast an instant or
 /// sorcery spell, you may draw a card, then discard a card. Once each turn.
@@ -17,7 +17,10 @@ pub fn academy_wall() -> CardDefinition {
         name: "Academy Wall",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 0,
         toughness: 5,
         keywords: vec![Keyword::Defender],
@@ -25,15 +28,21 @@ pub fn academy_wall() -> CardDefinition {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::HasCardType(CardType::Instant)
-                        .or(R::HasCardType(CardType::Sorcery)),
+                    filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
                 })
                 .once_per_turn(),
             effect: Effect::MayDo {
                 description: "Draw a card, then discard a card".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
-                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                        random: false,
+                    },
                 ])),
             },
         }],
@@ -63,7 +72,10 @@ pub fn battlewing_mystic() -> CardDefinition {
                     amount: Value::HandSizeOf(PlayerRef::You),
                     random: false,
                 },
-                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ])),
             else_: Box::new(Effect::Noop),
         })],

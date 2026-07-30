@@ -10,10 +10,10 @@
 //! `crabomination/src/tests/recent179.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,
-    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
-    MayPlayDuration, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
-    TriggeredAbility, Value, WardCost,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, MayPlayDuration,
+    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility,
+    Value, WardCost,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
@@ -34,7 +34,10 @@ pub fn twinblade_blessing() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Flash],
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::DoubleStrike],
             ..Default::default()
@@ -51,11 +54,16 @@ pub fn tragic_banshee() -> CardDefinition {
         name: "Tragic Banshee",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 5,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE },
+            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                at_least: Value::ONE,
+            },
             then: Box::new(Effect::PumpPT {
                 what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
                 power: Value::Const(-13),
@@ -82,9 +90,14 @@ pub fn midnight_snack() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
-                cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
+                cond: Predicate::PlayerAttackedThisTurn {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
@@ -121,7 +134,10 @@ pub fn uncharted_voyage() -> CardDefinition {
                     pos: LibraryPosition::OwnerChoice,
                 },
             },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -139,7 +155,10 @@ pub fn raise_the_past() -> CardDefinition {
                 zone: ZoneRef::Graveyard(PlayerRef::You),
                 filter: R::Creature.and(R::ManaValueAtMost(2)),
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -153,7 +172,10 @@ pub fn sylvan_scavenging() -> CardDefinition {
         name: "Raccoon".to_string(),
         colors: vec![crate::mana::Color::Green],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Raccoon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Raccoon],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         ..Default::default()
@@ -163,7 +185,10 @@ pub fn sylvan_scavenging() -> CardDefinition {
         cost: cost(&[generic(1), g(), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::ChooseMode(vec![
                 Effect::AddCounter {
                     what: target_filtered(R::Creature.and(R::ControlledByYou)),
@@ -202,7 +227,10 @@ pub fn ravenous_amulet() -> CardDefinition {
                 sac_other_filter: Some((R::Creature, 1)),
                 sorcery_speed: true,
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                     Effect::AddCounter {
                         what: Selector::This,
                         kind: CounterType::Charge,
@@ -272,7 +300,10 @@ pub fn twinflame_tyrant() -> CardDefinition {
         name: "Twinflame Tyrant",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 3,
         toughness: 5,
         keywords: vec![Keyword::Flying],
@@ -332,7 +363,10 @@ pub fn fear_of_falling() -> CardDefinition {
         name: "Fear of Falling",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],

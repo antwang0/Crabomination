@@ -161,7 +161,7 @@ pub fn lightning_berserker() -> CardDefinition {
 /// graveyard to the battlefield tapped and attacking (CR 508.3a).
 pub fn alesha_who_smiles_at_death() -> CardDefinition {
     use crate::effect::ZoneDest;
-    use crate::mana::{hybrid, Color, ManaCost};
+    use crate::mana::{Color, ManaCost, hybrid};
     CardDefinition {
         name: "Alesha, Who Smiles at Death",
         cost: cost(&[generic(2), r()]),
@@ -190,9 +190,14 @@ pub fn alesha_who_smiles_at_death() -> CardDefinition {
                         filter: SelectionRequirement::Creature
                             .and(SelectionRequirement::PowerAtMost(2)),
                     },
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
-                Effect::JoinCombatAttacking { what: Selector::LastMoved },
+                Effect::JoinCombatAttacking {
+                    what: Selector::LastMoved,
+                },
             ])),
             else_: None,
         })],
@@ -250,8 +255,15 @@ pub fn jeskai_elder() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
                 ]),
             },
         ],
@@ -282,10 +294,15 @@ pub fn bloodsoaked_champion() -> CardDefinition {
             mana_cost: cost(&[generic(1), b()]),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             from_graveyard: true,
-            condition: Some(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+            condition: Some(Predicate::PlayerAttackedThisTurn {
+                who: PlayerRef::You,
+            }),
             ..Default::default()
         }],
         ..Default::default()

@@ -21,13 +21,21 @@ pub fn wickerfolk_thresher() -> CardDefinition {
         name: "Wickerfolk Thresher",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Scarecrow], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Scarecrow],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
-                .with_filter(Predicate::DeliriumActive { who: PlayerRef::You }),
-            effect: Effect::RevealTopLandToBattlefieldElseHand { who: PlayerRef::You },
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::DeliriumActive {
+                    who: PlayerRef::You,
+                },
+            ),
+            effect: Effect::RevealTopLandToBattlefieldElseHand {
+                who: PlayerRef::You,
+            },
         }],
         ..Default::default()
     }
@@ -40,10 +48,16 @@ pub fn resilient_roadrunner() -> CardDefinition {
         name: "Resilient Roadrunner",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Haste, Keyword::ProtectionFromCreatureType(CreatureType::Coyote)],
+        keywords: vec![
+            Keyword::Haste,
+            Keyword::ProtectionFromCreatureType(CreatureType::Coyote),
+        ],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             effect: Effect::GrantKeyword {
@@ -73,7 +87,10 @@ pub fn giant_beaver() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Saddle(3)],
         triggered_abilities: vec![attacks_while_saddled(Effect::AddCounter {
-            what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature.and(R::ControlledByYou),
+            },
             kind: CounterType::PlusOnePlusOne,
             amount: Value::ONE,
         })],
@@ -104,13 +121,19 @@ pub fn ornery_tumblewagg() -> CardDefinition {
                     EventScope::ActivePlayer,
                 ),
                 effect: Effect::AddCounter {
-                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature,
+                    },
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
                 },
             },
             attacks_while_saddled(Effect::DoubleCountersOnEach {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature,
+                },
                 kind: CounterType::PlusOnePlusOne,
             }),
         ],

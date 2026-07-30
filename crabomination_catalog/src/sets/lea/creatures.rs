@@ -1,9 +1,9 @@
 use super::tap_add;
+use crate::card::SelectionRequirement;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
     EventSpec, Keyword, LandType, Subtypes, TriggeredAbility,
 };
-use crate::card::SelectionRequirement;
 use crate::effect::shortcut::{deal, etb_gain_life, target, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, Selector, Value};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
@@ -99,9 +99,12 @@ pub fn prodigal_sorcerer() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -142,10 +145,7 @@ pub fn hypnotic_specter() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::SelfSource,
-            ),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             // Combat fires this trigger with `target = Player(damaged)` so
             // `PlayerRef::Target(0)` resolves to exactly the player who took
             // damage — not every opponent.
@@ -236,9 +236,12 @@ pub fn birds_of_paradise() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -331,7 +334,8 @@ pub fn samite_healer() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -348,7 +352,10 @@ pub fn gray_ogre() -> CardDefinition {
         name: "Gray Ogre",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ogre], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ogre],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         ..Default::default()
@@ -361,7 +368,10 @@ pub fn hurloon_minotaur() -> CardDefinition {
         name: "Hurloon Minotaur",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Minotaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         ..Default::default()
@@ -374,7 +384,10 @@ pub fn spined_wurm() -> CardDefinition {
         name: "Spined Wurm",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         ..Default::default()
@@ -387,7 +400,10 @@ pub fn trained_armodon() -> CardDefinition {
         name: "Trained Armodon",
         cost: cost(&[generic(1), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         ..Default::default()
@@ -400,7 +416,10 @@ pub fn pearled_unicorn() -> CardDefinition {
         name: "Pearled Unicorn",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Unicorn],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         ..Default::default()
@@ -413,7 +432,10 @@ pub fn obsianus_golem() -> CardDefinition {
         name: "Obsianus Golem",
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 4,
         toughness: 6,
         ..Default::default()
@@ -426,7 +448,10 @@ pub fn eager_cadet() -> CardDefinition {
         name: "Eager Cadet",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         ..Default::default()
@@ -439,7 +464,10 @@ pub fn elite_vanguard() -> CardDefinition {
         name: "Elite Vanguard",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         ..Default::default()
@@ -452,7 +480,10 @@ pub fn devoted_hero() -> CardDefinition {
         name: "Devoted Hero",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         ..Default::default()
@@ -465,7 +496,10 @@ pub fn giant_spider() -> CardDefinition {
         name: "Giant Spider",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Reach],
@@ -479,7 +513,10 @@ pub fn air_elemental() -> CardDefinition {
         name: "Air Elemental",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -493,7 +530,10 @@ pub fn scryb_sprites() -> CardDefinition {
         name: "Scryb Sprites",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -507,7 +547,10 @@ pub fn tundra_wolves() -> CardDefinition {
         name: "Tundra Wolves",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wolf],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::FirstStrike],
@@ -521,7 +564,10 @@ pub fn mesa_pegasus() -> CardDefinition {
         name: "Mesa Pegasus",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Pegasus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pegasus],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Banding],
@@ -535,7 +581,10 @@ pub fn wall_of_air() -> CardDefinition {
         name: "Wall of Air",
         cost: cost(&[generic(1), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 1,
         toughness: 5,
         keywords: vec![Keyword::Defender, Keyword::Flying],
@@ -549,7 +598,10 @@ pub fn wall_of_swords() -> CardDefinition {
         name: "Wall of Swords",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 3,
         toughness: 5,
         keywords: vec![Keyword::Defender, Keyword::Flying],
@@ -563,7 +615,10 @@ pub fn wall_of_wood() -> CardDefinition {
         name: "Wall of Wood",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         toughness: 3,
         keywords: vec![Keyword::Defender],
         ..Default::default()
@@ -576,7 +631,10 @@ pub fn wall_of_stone() -> CardDefinition {
         name: "Wall of Stone",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         toughness: 8,
         keywords: vec![Keyword::Defender],
         ..Default::default()
@@ -589,7 +647,10 @@ pub fn yotian_soldier() -> CardDefinition {
         name: "Yotian Soldier",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
@@ -604,7 +665,10 @@ pub fn royal_assassin() -> CardDefinition {
         name: "Royal Assassin",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Assassin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Assassin],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -628,7 +692,10 @@ pub fn wall_of_fire() -> CardDefinition {
         name: "Wall of Fire",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         toughness: 5,
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![pump_one_zero(&[r()])],
@@ -642,7 +709,10 @@ pub fn flame_spirit() -> CardDefinition {
         name: "Flame Spirit",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         activated_abilities: vec![pump_one_zero(&[r()])],
@@ -656,7 +726,10 @@ pub fn goblin_balloon_brigade() -> CardDefinition {
         name: "Goblin Balloon Brigade",
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -721,7 +794,10 @@ fn body(
         name,
         cost: cost(cost_syms),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -732,27 +808,69 @@ fn body(
 // White
 /// Youthful Knight — {1}{W} 2/1 Knight with first strike.
 pub fn youthful_knight() -> CardDefinition {
-    body("Youthful Knight", &[generic(1), w()], vec![CreatureType::Human, CreatureType::Knight], 2, 1, vec![Keyword::FirstStrike])
+    body(
+        "Youthful Knight",
+        &[generic(1), w()],
+        vec![CreatureType::Human, CreatureType::Knight],
+        2,
+        1,
+        vec![Keyword::FirstStrike],
+    )
 }
 /// Standing Troops — {2}{W} 1/4 Soldier with vigilance.
 pub fn standing_troops() -> CardDefinition {
-    body("Standing Troops", &[generic(2), w()], vec![CreatureType::Soldier], 1, 4, vec![Keyword::Vigilance])
+    body(
+        "Standing Troops",
+        &[generic(2), w()],
+        vec![CreatureType::Soldier],
+        1,
+        4,
+        vec![Keyword::Vigilance],
+    )
 }
 /// Benalish Hero — {W} 1/1 Soldier with banding.
 pub fn benalish_hero() -> CardDefinition {
-    body("Benalish Hero", &[w()], vec![CreatureType::Human, CreatureType::Soldier], 1, 1, vec![Keyword::Banding])
+    body(
+        "Benalish Hero",
+        &[w()],
+        vec![CreatureType::Human, CreatureType::Soldier],
+        1,
+        1,
+        vec![Keyword::Banding],
+    )
 }
 /// Skyhunter Skirmisher — {1}{W} 1/1 Cat Knight with flying and double strike.
 pub fn skyhunter_skirmisher() -> CardDefinition {
-    body("Skyhunter Skirmisher", &[generic(1), w()], vec![CreatureType::Cat, CreatureType::Knight], 1, 1, vec![Keyword::Flying, Keyword::DoubleStrike])
+    body(
+        "Skyhunter Skirmisher",
+        &[generic(1), w()],
+        vec![CreatureType::Cat, CreatureType::Knight],
+        1,
+        1,
+        vec![Keyword::Flying, Keyword::DoubleStrike],
+    )
 }
 /// Knight Errant — {1}{W} 2/2 Human Knight.
 pub fn knight_errant() -> CardDefinition {
-    body("Knight Errant", &[generic(1), w()], vec![CreatureType::Human, CreatureType::Knight], 2, 2, vec![])
+    body(
+        "Knight Errant",
+        &[generic(1), w()],
+        vec![CreatureType::Human, CreatureType::Knight],
+        2,
+        2,
+        vec![],
+    )
 }
 /// Venerable Monk — {2}{W} 2/2 Monk Cleric. "When this enters, you gain 2 life."
 pub fn venerable_monk() -> CardDefinition {
-    let mut c = body("Venerable Monk", &[generic(2), w()], vec![CreatureType::Monk, CreatureType::Cleric], 2, 2, vec![]);
+    let mut c = body(
+        "Venerable Monk",
+        &[generic(2), w()],
+        vec![CreatureType::Monk, CreatureType::Cleric],
+        2,
+        2,
+        vec![],
+    );
     c.triggered_abilities = vec![etb_gain_life(2)];
     c
 }
@@ -760,45 +878,115 @@ pub fn venerable_monk() -> CardDefinition {
 // Blue
 /// Snapping Drake — {3}{U} 3/2 Drake with flying.
 pub fn snapping_drake() -> CardDefinition {
-    body("Snapping Drake", &[generic(3), u()], vec![CreatureType::Drake], 3, 2, vec![Keyword::Flying])
+    body(
+        "Snapping Drake",
+        &[generic(3), u()],
+        vec![CreatureType::Drake],
+        3,
+        2,
+        vec![Keyword::Flying],
+    )
 }
 /// Phantom Warrior — {1}{U}{U} 2/2 Illusion Warrior that can't be blocked.
 pub fn phantom_warrior() -> CardDefinition {
-    body("Phantom Warrior", &[generic(1), u(), u()], vec![CreatureType::Illusion, CreatureType::Warrior], 2, 2, vec![Keyword::Unblockable])
+    body(
+        "Phantom Warrior",
+        &[generic(1), u(), u()],
+        vec![CreatureType::Illusion, CreatureType::Warrior],
+        2,
+        2,
+        vec![Keyword::Unblockable],
+    )
 }
 /// Merfolk of the Pearl Trident — {U} 1/1 Merfolk.
 pub fn merfolk_of_the_pearl_trident() -> CardDefinition {
-    body("Merfolk of the Pearl Trident", &[u()], vec![CreatureType::Merfolk], 1, 1, vec![])
+    body(
+        "Merfolk of the Pearl Trident",
+        &[u()],
+        vec![CreatureType::Merfolk],
+        1,
+        1,
+        vec![],
+    )
 }
 /// Vodalian Soldiers — {1}{U} 1/2 Merfolk Soldier.
 pub fn vodalian_soldiers() -> CardDefinition {
-    body("Vodalian Soldiers", &[generic(1), u()], vec![CreatureType::Merfolk, CreatureType::Soldier], 1, 2, vec![])
+    body(
+        "Vodalian Soldiers",
+        &[generic(1), u()],
+        vec![CreatureType::Merfolk, CreatureType::Soldier],
+        1,
+        2,
+        vec![],
+    )
 }
 /// Sea Eagle — {1}{U} 1/1 Bird with flying.
 pub fn sea_eagle() -> CardDefinition {
-    body("Sea Eagle", &[generic(1), u()], vec![CreatureType::Bird], 1, 1, vec![Keyword::Flying])
+    body(
+        "Sea Eagle",
+        &[generic(1), u()],
+        vec![CreatureType::Bird],
+        1,
+        1,
+        vec![Keyword::Flying],
+    )
 }
 /// Wind Spirit — {3}{U} 2/3 Spirit with flying.
 pub fn wind_spirit() -> CardDefinition {
-    body("Wind Spirit", &[generic(3), u()], vec![CreatureType::Spirit], 2, 3, vec![Keyword::Flying])
+    body(
+        "Wind Spirit",
+        &[generic(3), u()],
+        vec![CreatureType::Spirit],
+        2,
+        3,
+        vec![Keyword::Flying],
+    )
 }
 
 // Black
 /// Scathe Zombies — {2}{B} 2/2 Zombie.
 pub fn scathe_zombies() -> CardDefinition {
-    body("Scathe Zombies", &[generic(2), b()], vec![CreatureType::Zombie], 2, 2, vec![])
+    body(
+        "Scathe Zombies",
+        &[generic(2), b()],
+        vec![CreatureType::Zombie],
+        2,
+        2,
+        vec![],
+    )
 }
 /// Walking Corpse — {1}{B} 2/2 Zombie.
 pub fn walking_corpse() -> CardDefinition {
-    body("Walking Corpse", &[generic(1), b()], vec![CreatureType::Zombie], 2, 2, vec![])
+    body(
+        "Walking Corpse",
+        &[generic(1), b()],
+        vec![CreatureType::Zombie],
+        2,
+        2,
+        vec![],
+    )
 }
 /// Bog Imp — {1}{B} 1/1 Imp with flying.
 pub fn bog_imp() -> CardDefinition {
-    body("Bog Imp", &[generic(1), b()], vec![CreatureType::Imp], 1, 1, vec![Keyword::Flying])
+    body(
+        "Bog Imp",
+        &[generic(1), b()],
+        vec![CreatureType::Imp],
+        1,
+        1,
+        vec![Keyword::Flying],
+    )
 }
 /// Looming Shade — {2}{B} 2/2 Shade. "{B}: +1/+1 until end of turn."
 pub fn looming_shade() -> CardDefinition {
-    let mut c = body("Looming Shade", &[generic(2), b()], vec![CreatureType::Shade], 2, 2, vec![]);
+    let mut c = body(
+        "Looming Shade",
+        &[generic(2), b()],
+        vec![CreatureType::Shade],
+        2,
+        2,
+        vec![],
+    );
     c.activated_abilities = vec![pump_nn(&[b()], 1)];
     c
 }
@@ -806,27 +994,69 @@ pub fn looming_shade() -> CardDefinition {
 // Red
 /// Mons's Goblin Raiders — {R} 1/1 Goblin.
 pub fn mons_goblin_raiders() -> CardDefinition {
-    body("Mons's Goblin Raiders", &[r()], vec![CreatureType::Goblin], 1, 1, vec![])
+    body(
+        "Mons's Goblin Raiders",
+        &[r()],
+        vec![CreatureType::Goblin],
+        1,
+        1,
+        vec![],
+    )
 }
 /// Raging Goblin — {R} 1/1 Goblin with haste.
 pub fn raging_goblin() -> CardDefinition {
-    body("Raging Goblin", &[r()], vec![CreatureType::Goblin], 1, 1, vec![Keyword::Haste])
+    body(
+        "Raging Goblin",
+        &[r()],
+        vec![CreatureType::Goblin],
+        1,
+        1,
+        vec![Keyword::Haste],
+    )
 }
 /// Goblin Piker — {1}{R} 2/1 Goblin.
 pub fn goblin_piker() -> CardDefinition {
-    body("Goblin Piker", &[generic(1), r()], vec![CreatureType::Goblin], 2, 1, vec![])
+    body(
+        "Goblin Piker",
+        &[generic(1), r()],
+        vec![CreatureType::Goblin],
+        2,
+        1,
+        vec![],
+    )
 }
 /// Goblin Chariot — {1}{R} 2/2 Goblin with haste.
 pub fn goblin_chariot() -> CardDefinition {
-    body("Goblin Chariot", &[generic(1), r()], vec![CreatureType::Goblin], 2, 2, vec![Keyword::Haste])
+    body(
+        "Goblin Chariot",
+        &[generic(1), r()],
+        vec![CreatureType::Goblin],
+        2,
+        2,
+        vec![Keyword::Haste],
+    )
 }
 /// Mountain Goat — {R} 1/1 Goat with mountainwalk.
 pub fn mountain_goat() -> CardDefinition {
-    body("Mountain Goat", &[r()], vec![CreatureType::Goat], 1, 1, vec![Keyword::Landwalk(LandType::Mountain)])
+    body(
+        "Mountain Goat",
+        &[r()],
+        vec![CreatureType::Goat],
+        1,
+        1,
+        vec![Keyword::Landwalk(LandType::Mountain)],
+    )
 }
 /// Dragon Hatchling — {1}{R}{R} 0/1 Dragon with flying. "{R}: +1/+0 EOT."
 pub fn dragon_hatchling() -> CardDefinition {
-    let mut c = body("Dragon Hatchling", &[generic(1), r(), r()], vec![CreatureType::Dragon], 0, 1, vec![Keyword::Flying]);
+    let mut c = body(
+        "Dragon Hatchling",
+        &[generic(1), r(), r()],
+        vec![CreatureType::Dragon],
+        0,
+        1,
+        vec![Keyword::Flying],
+    );
     c.activated_abilities = vec![pump_one_zero(&[r()])];
     c
 }
@@ -834,20 +1064,43 @@ pub fn dragon_hatchling() -> CardDefinition {
 // Green
 /// Panther Warriors — {3}{G} 6/1 Cat Warrior.
 pub fn panther_warriors() -> CardDefinition {
-    body("Panther Warriors", &[generic(3), g()], vec![CreatureType::Cat, CreatureType::Warrior], 6, 1, vec![])
+    body(
+        "Panther Warriors",
+        &[generic(3), g()],
+        vec![CreatureType::Cat, CreatureType::Warrior],
+        6,
+        1,
+        vec![],
+    )
 }
 /// Redwood Treefolk — {4}{G} 3/6 Treefolk.
 pub fn redwood_treefolk() -> CardDefinition {
-    body("Redwood Treefolk", &[generic(4), g()], vec![CreatureType::Treefolk], 3, 6, vec![])
+    body(
+        "Redwood Treefolk",
+        &[generic(4), g()],
+        vec![CreatureType::Treefolk],
+        3,
+        6,
+        vec![],
+    )
 }
 /// Gorilla Chieftain — {2}{G} 3/3 Ape. "{1}{G}: Regenerate this creature."
 pub fn gorilla_chieftain() -> CardDefinition {
-    let mut c = body("Gorilla Chieftain", &[generic(2), g()], vec![CreatureType::Ape], 3, 3, vec![]);
+    let mut c = body(
+        "Gorilla Chieftain",
+        &[generic(2), g()],
+        vec![CreatureType::Ape],
+        3,
+        3,
+        vec![],
+    );
     c.activated_abilities = vec![ActivatedAbility {
         energy_cost: 0,
         discard_cost: None,
         mana_cost: cost(&[generic(1), g()]),
-        effect: Effect::Regenerate { what: Selector::This },
+        effect: Effect::Regenerate {
+            what: Selector::This,
+        },
         ..Default::default()
     }];
     c

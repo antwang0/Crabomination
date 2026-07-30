@@ -34,7 +34,10 @@ pub fn hellish_sideswipe() -> CardDefinition {
             },
             Effect::If {
                 cond: Predicate::SacrificedWasVehicle,
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -128,7 +131,10 @@ pub fn interface_ace() -> CardDefinition {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource)
                 .with_filter(Predicate::IsTurnOf(PlayerRef::You))
                 .once_per_turn(),
-            effect: Effect::Untap { what: Selector::This, up_to: None },
+            effect: Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
         }],
         ..Default::default()
     }

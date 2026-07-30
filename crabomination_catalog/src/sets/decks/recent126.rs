@@ -6,7 +6,9 @@ use crate::card::{
     Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{drain, etb, target_filtered};
-use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, Value, ZoneDest};
+use crate::effect::{
+    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, Value, ZoneDest,
+};
 use crate::mana::{b, cost, generic, r, u, w};
 
 /// Mine Raider — {2}{R} 3/2 Human Rogue with trample. ETB: if you control
@@ -47,7 +49,10 @@ pub fn scorching_shot() -> CardDefinition {
         name: "Scorching Shot",
         cost: cost(&[r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(5) },
+        effect: Effect::DealDamage {
+            to: target_filtered(R::Creature),
+            amount: Value::Const(5),
+        },
         ..Default::default()
     }
 }
@@ -106,12 +111,16 @@ pub fn raven_of_fell_omens() -> CardDefinition {
         name: "Raven of Fell Omens",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
+                .once_per_turn(),
             effect: drain(1),
         }],
         ..Default::default()

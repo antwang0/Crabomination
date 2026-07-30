@@ -11,7 +11,7 @@ use crate::effect::{
     DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector,
     ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, u, x, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, x};
 
 fn walker(
     name: &'static str,
@@ -25,7 +25,10 @@ fn walker(
         cost: mana,
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Planeswalker],
-        subtypes: Subtypes { planeswalker_subtypes: vec![subtype], ..Default::default() },
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![subtype],
+            ..Default::default()
+        },
         base_loyalty: loyalty,
         loyalty_abilities: abilities,
         ..Default::default()
@@ -42,7 +45,10 @@ pub fn epic_experiment() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::ExileLinked {
-                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::XFromCost },
+                what: Selector::TopOfLibrary {
+                    who: PlayerRef::You,
+                    count: Value::XFromCost,
+                },
             },
             Effect::CastAnyOrderWithoutPaying {
                 what: Selector::CardExiledWithSource,
@@ -53,7 +59,10 @@ pub fn epic_experiment() -> CardDefinition {
                         .and(R::ManaValueAtMostXFromCost),
                 ),
             },
-            Effect::Move { what: Selector::CardExiledWithSource, to: ZoneDest::Graveyard },
+            Effect::Move {
+                what: Selector::CardExiledWithSource,
+                to: ZoneDest::Graveyard,
+            },
         ]),
         ..Default::default()
     }
@@ -84,7 +93,10 @@ pub fn jace_architect_of_thought() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -2,
-                effect: Effect::FactOrFiction { count: Value::Const(3), to_bottom: true },
+                effect: Effect::FactOrFiction {
+                    count: Value::Const(3),
+                    to_bottom: true,
+                },
                 ..Default::default()
             },
             LoyaltyAbility {
@@ -123,7 +135,9 @@ pub fn rakdos_lord_of_riots() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Trample],
-        cast_condition: Some(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent }),
+        cast_condition: Some(Predicate::PlayerLostLifeThisTurn {
+            who: PlayerRef::EachOpponent,
+        }),
         static_abilities: vec![StaticAbility {
             description: "Creature spells you cast cost {1} less to cast for each 1 life your \
                           opponents have lost this turn.",
@@ -146,7 +160,10 @@ pub fn search_the_city() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
             crate::effect::shortcut::etb(Effect::ExileLinked {
-                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(5) },
+                what: Selector::TopOfLibrary {
+                    who: PlayerRef::You,
+                    count: Value::Const(5),
+                },
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
@@ -176,7 +193,9 @@ pub fn vraska_the_unseen() -> CardDefinition {
         },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::LoseGame { who: PlayerRef::DefendingPlayer },
+            effect: Effect::LoseGame {
+                who: PlayerRef::DefendingPlayer,
+            },
         }],
         ..Default::default()
     };
@@ -202,7 +221,9 @@ pub fn vraska_the_unseen() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -3,
-                effect: Effect::Destroy { what: target_filtered(R::Nonland.and(R::Permanent)) },
+                effect: Effect::Destroy {
+                    what: target_filtered(R::Nonland.and(R::Permanent)),
+                },
                 ..Default::default()
             },
             LoyaltyAbility {

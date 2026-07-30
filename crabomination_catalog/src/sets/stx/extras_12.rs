@@ -10,12 +10,15 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -812,7 +815,8 @@ pub fn witherbloom_cultivator_b120() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             effect: drain(1),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -871,7 +875,8 @@ pub fn pest_cultmaster_b121() -> CardDefinition {
                 amount: Value::Const(1),
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -907,7 +912,8 @@ pub fn witherbloom_sapdrinker_b121() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -942,7 +948,8 @@ pub fn witherbloom_bonechanter_b121() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -972,7 +979,8 @@ pub fn pest_ringleader_b121() -> CardDefinition {
             mana_cost: ManaCost::default(),
             effect: drain(2),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -1009,7 +1017,8 @@ pub fn witherbloom_reaper_b121() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -1055,7 +1064,8 @@ pub fn pest_cultcaller_b122() -> CardDefinition {
             mana_cost: cost(&[b()]),
             effect: drain(1),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -1082,10 +1092,7 @@ pub fn witherbloom_bloodgrafter_b122() -> CardDefinition {
         triggered_abilities: vec![
             etb_drain(2),
             TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::CreatureSacrificed,
-                    EventScope::YourControl,
-                ),
+                event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
                 effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -1128,7 +1135,8 @@ pub fn witherbloom_composter_b122() -> CardDefinition {
                 },
             ]),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -1182,8 +1190,8 @@ pub fn witherbloom_sapdrainer_b122() -> CardDefinition {
 /// returns when a legal target exists; falls through when graveyard is
 /// empty). Wires reanimation via Move(target → Library top).
 pub fn witherbloom_necrotutor_b122() -> CardDefinition {
-    use crate::effect::{LibraryPosition, ZoneDest};
     use crate::card::Zone;
+    use crate::effect::{LibraryPosition, ZoneDest};
     CardDefinition {
         name: "Witherbloom Necrotutor (Batch 122)",
         cost: cost(&[generic(2), b()]),
@@ -1294,8 +1302,7 @@ pub fn inkling_quillstrike_b122() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::PumpPT {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
             power: Value::Const(-2),
             toughness: Value::Const(-2),
@@ -1328,8 +1335,7 @@ pub fn silverquill_mentor_b122() -> CardDefinition {
             etb_gain_life(2),
             magecraft_target_pump(
                 target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 1,
                 1,
@@ -1570,8 +1576,7 @@ pub fn fractal_multiplier_b122() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::AddCounter {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),

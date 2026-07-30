@@ -8,11 +8,14 @@ use crate::card::{
 };
 use crate::effect::shortcut::{on_dies, target_filtered};
 use crate::effect::{PlayerRef, ZoneDest};
-use crabomination_base::tokens::treasure_token;
 use crate::mana::{b, cost, g, generic};
+use crabomination_base::tokens::treasure_token;
 
 fn etb(effect: Effect) -> TriggeredAbility {
-    TriggeredAbility { event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource), effect }
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect,
+    }
 }
 
 /// Liliana's Standard Bearer — {2}{B} 3/1 Zombie Knight with flash. ETB draw X,
@@ -61,7 +64,10 @@ pub fn skullport_merchant() -> CardDefinition {
                 R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Treasure)),
                 1,
             )),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -75,7 +81,10 @@ pub fn bone_picker() -> CardDefinition {
         name: "Bone Picker",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
@@ -94,14 +103,23 @@ pub fn driver_of_the_dead() -> CardDefinition {
         name: "Driver of the Dead",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         triggered_abilities: vec![on_dies(Effect::Move {
             what: target_filtered(
-                R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMost(2)).and(R::OtherThanSource),
+                R::Creature
+                    .and(R::InYourGraveyard)
+                    .and(R::ManaValueAtMost(2))
+                    .and(R::OtherThanSource),
             ),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         })],
         ..Default::default()
     }
@@ -121,9 +139,11 @@ pub fn gixian_infiltrator() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::OtherThanSource },
-            ),
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::OtherThanSource,
+                }),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -142,7 +162,9 @@ pub fn hunger_of_the_howlpack() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::If {
-            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(1) },
+            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                at_least: Value::Const(1),
+            },
             then: Box::new(Effect::AddCounter {
                 what: target_filtered(R::Creature),
                 kind: CounterType::PlusOnePlusOne,

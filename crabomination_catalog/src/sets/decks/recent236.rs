@@ -10,7 +10,7 @@ use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, Value,
     ZoneDest, ZoneRef,
 };
-use crate::mana::{b, cost, generic, r, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, generic, r, w};
 
 fn on_unlock(effect: Effect) -> crate::card::TriggeredAbility {
     crate::card::TriggeredAbility {
@@ -93,8 +93,14 @@ pub fn derelict_attic_widows_walk() -> CardDefinition {
             name: "Derelict Attic".into(),
             cost: cost(&[generic(2), b()]),
             triggered_abilities: vec![on_unlock(Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-                Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ]))],
             ..Default::default()
         },
@@ -156,7 +162,10 @@ pub fn funeral_room_awakening_hall() -> CardDefinition {
                     zone: ZoneRef::Graveyard(PlayerRef::You),
                     filter: R::Creature,
                 },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             })],
             ..Default::default()
         },
@@ -222,7 +231,10 @@ pub fn terror_of_towashi() -> CardDefinition {
             body: Box::new(Effect::Reflexive {
                 body: Box::new(Effect::Move {
                     what: target_filtered(R::Creature.and(R::InYourGraveyard)),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 }),
             }),
             else_: None,

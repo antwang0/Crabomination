@@ -3,8 +3,8 @@
 //! `tests/recent_b/recent280.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, SelectionRequirement as R,
-    Subtypes, TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType,
+    SelectionRequirement as R, Subtypes, TriggeredAbility,
 };
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{etb, target_filtered};
@@ -35,7 +35,10 @@ pub fn brandywine_farmer() -> CardDefinition {
         triggered_abilities: vec![
             etb(food()),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
                 effect: food(),
             },
         ],
@@ -60,8 +63,15 @@ pub fn captain_of_umbar() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
             ]),
             ..Default::default()
         }],
@@ -112,7 +122,13 @@ pub fn cirith_ungol_patrol() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::Seq(vec![Effect::Draw { who: Selector::You, amount: Value::ONE }, food()]),
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                food(),
+            ]),
             ..Default::default()
         }],
         ..Default::default()
@@ -127,8 +143,12 @@ pub fn claim_the_precious() -> CardDefinition {
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Creature) },
-            Effect::RingTempts { who: PlayerRef::You },
+            Effect::Destroy {
+                what: target_filtered(R::Creature),
+            },
+            Effect::RingTempts {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -148,7 +168,11 @@ pub fn deceive_the_messenger() -> CardDefinition {
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Amass { who: PlayerRef::You, count: Value::ONE, extra_type: Some(CreatureType::Orc) },
+            Effect::Amass {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                extra_type: Some(CreatureType::Orc),
+            },
         ]),
         ..Default::default()
     }
@@ -168,7 +192,9 @@ pub fn dreadful_as_the_storm() -> CardDefinition {
                 toughness: Value::Const(5),
                 duration: Duration::EndOfTurn,
             },
-            Effect::RingTempts { who: PlayerRef::You },
+            Effect::RingTempts {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -193,7 +219,9 @@ pub fn breaking_of_the_fellowship() -> CardDefinition {
                     filter: R::Creature.and(R::ControlledByOpponent),
                 },
             },
-            Effect::RingTempts { who: PlayerRef::You },
+            Effect::RingTempts {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }

@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{dies_mint_token, target_any};
 use crate::effect::{Duration, Effect, Selector, Value};
-use crate::mana::{b, cost, g, generic, r, u, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u};
 
 /// Nightmare — {5}{B} Nightmare Horse. Flying. Power and toughness are each
 /// equal to the number of Swamps you control.
@@ -39,7 +39,10 @@ pub fn rukh_egg() -> CardDefinition {
         toughness: 4,
         colors: vec![Color::Red],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     };
@@ -47,7 +50,10 @@ pub fn rukh_egg() -> CardDefinition {
         name: "Rukh Egg",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 0,
         toughness: 3,
         triggered_abilities: vec![dies_mint_token(rukh, 1)],
@@ -61,7 +67,10 @@ pub fn sabertooth_tiger() -> CardDefinition {
         name: "Sabertooth Tiger",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::FirstStrike],
@@ -75,7 +84,10 @@ pub fn ironroot_treefolk() -> CardDefinition {
         name: "Ironroot Treefolk",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            ..Default::default()
+        },
         power: 3,
         toughness: 5,
         ..Default::default()
@@ -88,7 +100,10 @@ pub fn fire_elemental() -> CardDefinition {
         name: "Fire Elemental",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         ..Default::default()
@@ -117,7 +132,10 @@ pub fn segovian_leviathan() -> CardDefinition {
         name: "Segovian Leviathan",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Leviathan], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Leviathan],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Landwalk(LandType::Island)],
@@ -132,7 +150,10 @@ pub fn vampire_bats() -> CardDefinition {
         name: "Vampire Bats",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bat],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -157,7 +178,10 @@ pub fn durkwood_boars() -> CardDefinition {
         name: "Durkwood Boars",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         ..Default::default()
@@ -170,7 +194,10 @@ pub fn wall_of_spears() -> CardDefinition {
         name: "Wall of Spears",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Defender, Keyword::FirstStrike],
@@ -184,7 +211,10 @@ pub fn wall_of_ice() -> CardDefinition {
         name: "Wall of Ice",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 0,
         toughness: 7,
         keywords: vec![Keyword::Defender],
@@ -201,7 +231,10 @@ pub fn rod_of_ruin() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             tap_cost: true,
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()

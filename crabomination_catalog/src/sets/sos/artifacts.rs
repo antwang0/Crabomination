@@ -7,8 +7,8 @@
 //! once the Crew primitive lands.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, Effect, EventKind, EventScope,
-    EventSpec, SelectionRequirement, Subtypes, TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec,
+    SelectionRequirement, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, Selector, Value, ZoneDest};
@@ -56,10 +56,12 @@ pub fn cauldron_of_essence() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
+            exile_self_cost: false,
+            exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -115,7 +117,8 @@ pub fn diary_of_dreams() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: Some(CounterType::Page),
             sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -153,7 +156,7 @@ pub fn diary_of_dreams() -> CardDefinition {
 /// `ManaPool::pay_for_spell`).
 pub fn tablet_of_discovery() -> CardDefinition {
     use crate::effect::ManaPayload;
-    use crate::mana::{r, SpendRestriction};
+    use crate::mana::{SpendRestriction, r};
     CardDefinition {
         name: "Tablet of Discovery",
         cost: cost(&[generic(2), r()]),
@@ -172,11 +175,14 @@ pub fn tablet_of_discovery() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             ActivatedAbility {
@@ -195,11 +201,14 @@ pub fn tablet_of_discovery() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -215,7 +224,8 @@ pub fn tablet_of_discovery() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: false,
-                    pay_own_cost: true, any_color: false,
+                    pay_own_cost: true,
+                    any_color: false,
                 },
             ]),
         }],
@@ -247,11 +257,14 @@ pub fn potioners_trove() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             ActivatedAbility {
@@ -271,15 +284,20 @@ pub fn potioners_trove() -> CardDefinition {
                 // `Predicate::InstantsOrSorceriesCastThisTurnAtLeast`
                 // (push XIII), backed by the new
                 // `Player.instants_or_sorceries_cast_this_turn` tally.
-                condition: Some(crate::card::Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
-                    who: PlayerRef::You,
-                    at_least: Value::Const(1),
-                }),
+                condition: Some(
+                    crate::card::Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
+                        who: PlayerRef::You,
+                        at_least: Value::Const(1),
+                    },
+                ),
                 life_cost: 0,
                 from_graveyard: false,
-                exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -300,7 +318,7 @@ pub fn potioners_trove() -> CardDefinition {
 /// and sorcery spells (enforced by `ManaPool::pay_for_spell`).
 pub fn resonating_lute() -> CardDefinition {
     use crate::card::Predicate;
-    use crate::mana::{r, u, SpendRestriction};
+    use crate::mana::{SpendRestriction, r, u};
     CardDefinition {
         name: "Resonating Lute",
         cost: cost(&[generic(2), u(), r()]),
@@ -323,9 +341,12 @@ pub fn resonating_lute() -> CardDefinition {
             )),
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         // "Lands you control have '{T}: Add two mana of any one color.
@@ -379,7 +400,8 @@ pub fn ark_of_hunger() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: false,
-                    pay_own_cost: true, any_color: false,
+                    pay_own_cost: true,
+                    any_color: false,
                 },
             ]),
             once_per_turn: false,
@@ -388,9 +410,12 @@ pub fn ark_of_hunger() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -423,7 +448,9 @@ pub fn ark_of_hunger() -> CardDefinition {
 /// Hand(You) }`. The Vehicle stays a non-creature artifact until crewed,
 /// then animates to a 3/2 flier for the turn.
 pub fn strixhaven_skycoach() -> CardDefinition {
-    use crate::card::{ArtifactSubtype, EventKind, EventScope, EventSpec, Keyword, TriggeredAbility};
+    use crate::card::{
+        ArtifactSubtype, EventKind, EventScope, EventSpec, Keyword, TriggeredAbility,
+    };
     use crate::effect::{PlayerRef as PR, ZoneDest as ZD};
     CardDefinition {
         name: "Strixhaven Skycoach",
@@ -449,5 +476,3 @@ pub fn strixhaven_skycoach() -> CardDefinition {
         ..Default::default()
     }
 }
-
-

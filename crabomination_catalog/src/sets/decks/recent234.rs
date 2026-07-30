@@ -9,7 +9,7 @@ use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, SpreeMode, Value,
 };
-use crate::mana::{b, cost, g, generic, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, w};
 
 fn spree(modes: Vec<SpreeMode>) -> Effect {
     Effect::Spree { modes }
@@ -52,7 +52,10 @@ pub fn trash_the_town() -> CardDefinition {
                             EventKind::DealsCombatDamageToPlayer,
                             EventScope::SelfSource,
                         ),
-                        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                        effect: Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::Const(2),
+                        },
                     }),
                     duration: Duration::EndOfTurn,
                 },
@@ -69,7 +72,10 @@ fn mercenary_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mercenary], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mercenary],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sorcery_speed: true,
@@ -96,7 +102,9 @@ pub fn unfortunate_accident() -> CardDefinition {
         effect: spree(vec![
             mode(
                 cost(&[generic(2), b()]),
-                Effect::Destroy { what: target_filtered(R::Creature) },
+                Effect::Destroy {
+                    what: target_filtered(R::Creature),
+                },
             ),
             mode(
                 cost(&[generic(1)]),

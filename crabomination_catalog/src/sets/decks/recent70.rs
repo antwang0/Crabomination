@@ -46,7 +46,10 @@ pub fn dwarven_grunt() -> CardDefinition {
         name: "Dwarven Grunt",
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Landwalk(LandType::Mountain)],
@@ -112,7 +115,10 @@ pub fn anaba_shaman() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
             tap_cost: true,
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -141,7 +147,10 @@ pub fn zephyr_falcon() -> CardDefinition {
         name: "Zephyr Falcon",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
@@ -155,7 +164,10 @@ pub fn regal_unicorn() -> CardDefinition {
         name: "Regal Unicorn",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Unicorn],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         ..Default::default()

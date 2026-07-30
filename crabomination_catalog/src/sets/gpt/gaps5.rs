@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn wurm_token() -> TokenDefinition {
     TokenDefinition {
@@ -17,7 +17,10 @@ fn wurm_token() -> TokenDefinition {
         toughness: 6,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -98,7 +101,9 @@ pub fn wreak_havoc() -> CardDefinition {
         cost: cost(&[generic(2), r(), g()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::CantBeCountered],
-        effect: Effect::Destroy { what: target_filtered(R::Artifact.or(R::Land)) },
+        effect: Effect::Destroy {
+            what: target_filtered(R::Artifact.or(R::Land)),
+        },
         ..Default::default()
     }
 }
@@ -127,8 +132,13 @@ pub fn quicken() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::GrantSorceriesAsFlash { who: PlayerRef::You },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::GrantSorceriesAsFlash {
+                who: PlayerRef::You,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -149,7 +159,11 @@ pub fn wurmweaver_coil() -> CardDefinition {
             what: Selector::This,
             to: target_filtered(R::Creature.and(R::HasColor(Color::Green))),
         },
-        equipped_bonus: Some(EquipBonus { power: 6, toughness: 6, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 6,
+            toughness: 6,
+            ..Default::default()
+        }),
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             mana_cost: cost(&[g(), g(), g()]),

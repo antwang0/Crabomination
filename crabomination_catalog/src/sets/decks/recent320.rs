@@ -4,16 +4,21 @@
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EquipBonus, EquipScale, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, Selector, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
+    Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes, TriggeredAbility,
     Value,
 };
 use crate::effect::shortcut::{etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, StaticEffect};
 use crate::game::TurnStep;
-use crate::mana::{cost, g, generic, r, u, ManaCost};
+use crate::mana::{ManaCost, cost, g, generic, r, u};
 
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
 }
 
 fn creature(
@@ -28,7 +33,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -166,7 +174,9 @@ pub fn thought_prison() -> CardDefinition {
             etb(Effect::MayDo {
                 description: "Look at target player's hand and exile a nonland card?".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::LookAtHand { who: Selector::Player(PlayerRef::Target(0)) },
+                    Effect::LookAtHand {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                    },
                     Effect::ExileChosenFromHand {
                         from: Selector::Player(PlayerRef::Target(0)),
                         count: Value::ONE,
@@ -230,7 +240,10 @@ pub fn farsight_mask() -> CardDefinition {
                 }))),
             effect: Effect::MayDo {
                 description: "Draw a card?".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
         ..artifact("Farsight Mask", cost(&[generic(5)]))
@@ -281,7 +294,10 @@ pub fn power_conduit() -> CardDefinition {
 pub fn gate_to_the_aether() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
             effect: Effect::RevealTopMayPutOntoBattlefield {
                 who: PlayerRef::ActivePlayer,
                 filter: R::Artifact.or(R::Creature).or(R::Enchantment).or(R::Land),
@@ -325,10 +341,20 @@ pub fn arc_slogger() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
             exile_top_cost: 10,
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
-        ..creature("Arc-Slogger", cost(&[generic(3), r(), r()]), 4, 5, vec![CreatureType::Beast], vec![])
+        ..creature(
+            "Arc-Slogger",
+            cost(&[generic(3), r(), r()]),
+            4,
+            5,
+            vec![CreatureType::Beast],
+            vec![],
+        )
     }
 }
 
@@ -340,7 +366,9 @@ pub fn neurok_spy() -> CardDefinition {
         2,
         2,
         vec![CreatureType::Human, CreatureType::Rogue],
-        vec![Keyword::CantBeBlockedIfDefenderControls(Box::new(R::Artifact))],
+        vec![Keyword::CantBeBlockedIfDefenderControls(Box::new(
+            R::Artifact,
+        ))],
     )
 }
 
@@ -348,8 +376,11 @@ pub fn neurok_spy() -> CardDefinition {
 pub fn myr_prototype() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::SelfSource,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -362,7 +393,9 @@ pub fn myr_prototype() -> CardDefinition {
             2,
             2,
             vec![CreatureType::Myr],
-            vec![Keyword::CantAttackOrBlockUnlessPayPerCounter(CounterType::PlusOnePlusOne)],
+            vec![Keyword::CantAttackOrBlockUnlessPayPerCounter(
+                CounterType::PlusOnePlusOne,
+            )],
         )
     }
 }
@@ -391,7 +424,10 @@ pub fn lumengrid_augur() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::ONE,
+                },
                 Effect::Discard {
                     who: Selector::Player(PlayerRef::Target(0)),
                     amount: Value::ONE,
@@ -401,7 +437,10 @@ pub fn lumengrid_augur() -> CardDefinition {
                     cond: Predicate::SelectorExists(Selector::DiscardedThisResolution {
                         filter: R::Artifact,
                     }),
-                    then: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                    then: Box::new(Effect::Untap {
+                        what: Selector::This,
+                        up_to: None,
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             ]),
@@ -448,7 +487,9 @@ pub fn war_elemental() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             etb(Effect::If {
-                cond: Predicate::PlayerDamagedThisTurn { who: PlayerRef::EachOpponent },
+                cond: Predicate::PlayerDamagedThisTurn {
+                    who: PlayerRef::EachOpponent,
+                },
                 then: Box::new(Effect::Noop),
                 else_: Box::new(Effect::SacrificeSource),
             }),
@@ -461,7 +502,14 @@ pub fn war_elemental() -> CardDefinition {
                 },
             },
         ],
-        ..creature("War Elemental", cost(&[r(), r(), r()]), 1, 1, vec![CreatureType::Elemental], vec![])
+        ..creature(
+            "War Elemental",
+            cost(&[r(), r(), r()]),
+            1,
+            1,
+            vec![CreatureType::Elemental],
+            vec![],
+        )
     }
 }
 
@@ -482,9 +530,14 @@ pub fn march_of_the_machines() -> CardDefinition {
 pub fn fatespinner() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
-                .from_opponent(),
-            effect: Effect::ChooseStepToSkipThisTurn { who: PlayerRef::ActivePlayer },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            )
+            .from_opponent(),
+            effect: Effect::ChooseStepToSkipThisTurn {
+                who: PlayerRef::ActivePlayer,
+            },
         }],
         ..creature(
             "Fatespinner",

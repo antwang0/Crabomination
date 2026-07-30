@@ -16,7 +16,7 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **Mirrodin (MRD) closed to 4 cards** (`set_gaps.py mrd`: 70 → 4). The
+- **Mirrodin (MRD) complete** (`set_gaps.py mrd` at zero). The
   primitives that closure added: `GameEvent`/`EventKind::{LibraryShuffled,
   TappedForMana}` (CR 103.2c / 605) behind a central
   `GameState::shuffle_library`; `Effect::{LookAtHand, ChooseStepToSkipThisTurn,
@@ -36,6 +36,25 @@ exercising each) was elided in a compaction pass; recover it from
   action routing, `PlayerView.controlled_by`); a hand you've looked at stays
   visible via `GameState.hands_revealed_to` and a client HUD chip. Tests in
   `recent_b/mrd`, `core_rules/cr_recent43`.
+- **Mirrodin block complete** — MRD, DST and **Fifth Dawn (5DN)** all report
+  zero `set_gaps.py` gaps. The 5DN closure (`decks::recent322`–`recent324`,
+  ~120 cards) added: `Keyword::CantBeEquipped` (CR 702.6c),
+  `StaticEffect::{MaxAttackersPerCombat, MaxBlockersPerCombat}` (CR 506.2 /
+  509.1b — Silent Arbiter, honoured by the bot planner, the client's Attack
+  All and a HUD chip), `StaticEffect::FiveColorAlternativeCost` (CR 118.9 —
+  Fist of Suns, behind `effective_alternative_cost`),
+  `StaticEffect::{PlayersSkipDraws, SharedFate}` (CR 121.2a draw
+  replacements), `Effect::{GainControlWhileSourceTapped, DoubleUnspentMana,
+  CounterAbilityAndDestroySource, RevealImprintDeployCreature,
+  ImprintFromGraveyard, SpellweaverCopy, ReversalOfFortune,
+  EachPlayerSacrificesUnlessDiscards, ReturnVictimAndAttachSelf,
+  LiarsPendulum}`, `CardDefinition.sacrifice_when_you_control_no_other`
+  (CR 603.8 state trigger), `ActivatedAbility.remove_counter_among_kinds`,
+  `Value::SacrificedCount`, `SelectionRequirement::PowerAtMostYourCount`, and
+  `PlayerRef::CounteredSpellController`. Correctness: CR 506.4 (a control
+  change removes a permanent from combat) and CR 603.10a (a *static-granted*
+  "when this dies" ability now fires from the death LKI snapshot — Endless
+  Whispers). Tests in `recent_b/{fdn5,mrd}`, `core_rules/cr_recent44`.
 - **Darksteel (DST) complete** (`set_gaps.py dst` at zero). The primitives that
   closure added: `GameEvent::DamageDealt.from_card` +
   `EventScope::YourOtherSourceDamagedOpponent` (the printed "other than this

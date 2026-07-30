@@ -18,9 +18,20 @@ pub fn undercity_plague() -> CardDefinition {
         cost: cost(&[generic(4), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::LoseLife { who: victim(), amount: Value::ONE },
-            Effect::Discard { who: victim(), amount: Value::ONE, random: false },
-            Effect::Sacrifice { who: Selector::Target(0), count: Value::ONE, filter: R::Permanent },
+            Effect::LoseLife {
+                who: victim(),
+                amount: Value::ONE,
+            },
+            Effect::Discard {
+                who: victim(),
+                amount: Value::ONE,
+                random: false,
+            },
+            Effect::Sacrifice {
+                who: Selector::Target(0),
+                count: Value::ONE,
+                filter: R::Permanent,
+            },
             Effect::Cipher,
         ]),
         ..Default::default()
@@ -34,7 +45,10 @@ pub fn thrull_parasite() -> CardDefinition {
         name: "Thrull Parasite",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thrull], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thrull],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![extort()],

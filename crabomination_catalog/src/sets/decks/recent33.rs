@@ -4,12 +4,12 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility,
-    Value,
+    EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, Color};
+use crate::mana::{Color, b, cost, g, generic};
 
 /// Sacrifice a creature you control (folded as an activated-cost first step).
 fn sac_your_creature() -> Effect {
@@ -27,12 +27,18 @@ pub fn endless_cockroaches() -> CardDefinition {
         name: "Endless Cockroaches",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
         }],
         ..Default::default()
     }
@@ -46,7 +52,8 @@ pub fn poison_tip_archer() -> CardDefinition {
         cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Archer], ..Default::default()
+            creature_types: vec![CreatureType::Elf, CreatureType::Archer],
+            ..Default::default()
         },
         power: 2,
         toughness: 3,
@@ -54,11 +61,13 @@ pub fn poison_tip_archer() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
                 crate::effect::Predicate::EntityMatches {
-                    what: Selector::TriggerSource, filter: SelectionRequirement::OtherThanSource,
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::OtherThanSource,
                 },
             ),
             effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1),
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
             },
         }],
         ..Default::default()
@@ -76,9 +85,13 @@ pub fn altar_of_dementia() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::SacrificeAndRemember {
                     who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
                 },
-                Effect::Mill { who: target_filtered(SelectionRequirement::Player), amount: Value::SacrificedPower },
+                Effect::Mill {
+                    who: target_filtered(SelectionRequirement::Player),
+                    amount: Value::SacrificedPower,
+                },
             ]),
             ..Default::default()
         }],
@@ -94,7 +107,8 @@ pub fn sadistic_hypnotist() -> CardDefinition {
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Minion], ..Default::default()
+            creature_types: vec![CreatureType::Human, CreatureType::Minion],
+            ..Default::default()
         },
         power: 2,
         toughness: 2,
@@ -123,7 +137,10 @@ pub fn sprout_swarm() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Saproling], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Saproling],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -131,7 +148,11 @@ pub fn sprout_swarm() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Convoke, Keyword::Buyback(cost(&[generic(3)]))],
-        effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: saproling },
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: saproling,
+        },
         ..Default::default()
     }
 }

@@ -10,12 +10,15 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -66,8 +69,7 @@ pub fn lorehold_anthem() -> CardDefinition {
             description: "Creatures you control get +1/+1.",
             effect: StaticEffect::PumpPT {
                 applies_to: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 power: 1,
                 toughness: 1,
@@ -370,8 +372,7 @@ pub fn quandrix_calculator() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 body: Box::new(Effect::AddCounter {
                     what: Selector::TriggerSource,
@@ -489,8 +490,7 @@ pub fn prismari_maelstrom() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CounterSpell {
                 what: target_filtered(
-                    SelectionRequirement::IsSpellOnStack
-                        .and(SelectionRequirement::Creature),
+                    SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::Creature),
                 ),
             },
             Effect::DealDamage {
@@ -554,8 +554,7 @@ pub fn quandrix_mentor() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::AddCounter {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
@@ -563,8 +562,7 @@ pub fn quandrix_mentor() -> CardDefinition {
             },
             magecraft(Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
@@ -588,10 +586,8 @@ pub fn silverquill_riposte() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Destroy {
             what: target_filtered(
-                SelectionRequirement::Creature.and(
-                    SelectionRequirement::IsAttacking
-                        .or(SelectionRequirement::IsBlocking),
-                ),
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking)),
             ),
         },
         ..Default::default()
@@ -649,8 +645,7 @@ pub fn lorehold_recurrence() -> CardDefinition {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
                 zone: crate::card::Zone::Graveyard,
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker),
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             }),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
@@ -835,8 +830,7 @@ pub fn lorehold_recall() -> CardDefinition {
                 amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
                 to: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player),
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Player),
                 },
             },
         ]),
@@ -858,8 +852,7 @@ pub fn quandrix_refraction() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::CounterSpell {
                 what: target_filtered(
-                    SelectionRequirement::IsSpellOnStack
-                        .and(SelectionRequirement::Creature),
+                    SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::Creature),
                 ),
             },
             Effect::Scry {
@@ -1226,8 +1219,10 @@ pub fn witherbloom_loremage() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
@@ -1424,7 +1419,8 @@ pub fn witherbloom_apothecary() -> CardDefinition {
                     .and(SelectionRequirement::OtherThanSource),
                 1,
             )),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -1515,8 +1511,10 @@ pub fn prismari_painter() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -1634,8 +1632,7 @@ pub fn witherbloom_geneticist() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::AddCounter {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
@@ -1645,8 +1642,7 @@ pub fn witherbloom_geneticist() -> CardDefinition {
                 event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
                 effect: Effect::AddCounter {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),

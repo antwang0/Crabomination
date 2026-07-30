@@ -1,7 +1,9 @@
 //! More red burn: Flame Burst, Lightning Blast, Inferno (board+players), and
 //! Crater Hellion (Echo + ETB sweep). Tests in `tests/recent89.rs`.
 
-use crate::card::{CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, Subtypes};
+use crate::card::{
+    CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, Subtypes,
+};
 use crate::effect::shortcut::{deal, etb, target};
 use crate::effect::{Effect, PlayerRef, Selector, Value};
 use crate::mana::{cost, generic, r};
@@ -37,11 +39,17 @@ pub fn inferno() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ForEach {
                 selector: Selector::EachPermanent(R::Creature),
-                body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(6) }),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(6),
+                }),
             },
             Effect::ForEach {
                 selector: Selector::Player(PlayerRef::EachPlayer),
-                body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(6) }),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(6),
+                }),
             },
         ]),
         ..Default::default()
@@ -55,13 +63,19 @@ pub fn crater_hellion() -> CardDefinition {
         name: "Crater Hellion",
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Echo(cost(&[generic(4), r(), r()]))],
         triggered_abilities: vec![etb(Effect::ForEach {
             selector: Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),
-            body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(4) }),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(4),
+            }),
         })],
         ..Default::default()
     }

@@ -9,9 +9,11 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{dash, etb, target_any, target_filtered};
-use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, Value};
+use crate::effect::{
+    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, Value,
+};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u};
 
 /// Chrome Steed — {4} 2/2 Artifact Creature — Horse. Metalcraft — gets +2/+2
 /// while you control three or more artifacts.
@@ -20,13 +22,18 @@ pub fn chrome_steed() -> CardDefinition {
         name: "Chrome Steed",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horse], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horse],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         static_abilities: vec![StaticAbility {
             description: "Metalcraft — +2/+2 while you control three or more artifacts.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::MetalcraftActive { who: PlayerRef::You },
+                condition: Predicate::MetalcraftActive {
+                    who: PlayerRef::You,
+                },
                 power: 2,
                 toughness: 2,
                 keywords: vec![],
@@ -43,13 +50,19 @@ pub fn vulshok_replica() -> CardDefinition {
         name: "Vulshok Replica",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Berserker], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Berserker],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
             sac_cost: true,
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(3),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -62,7 +75,10 @@ pub fn colossodon_yearling() -> CardDefinition {
         name: "Colossodon Yearling",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         ..Default::default()
@@ -76,7 +92,10 @@ pub fn bloodhall_ooze() -> CardDefinition {
         name: "Bloodhall Ooze",
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![
@@ -97,8 +116,11 @@ fn upkeep_may_grow(color_name: &'static str, color: Color) -> TriggeredAbility {
         _ => "Put a +1/+1 counter on Bloodhall Ooze (control a black permanent)?".to_string(),
     };
     TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer)
-            .with_filter(cond),
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::Upkeep),
+            EventScope::ActivePlayer,
+        )
+        .with_filter(cond),
         effect: Effect::MayDo {
             description,
             body: Box::new(Effect::AddCounter {
@@ -172,7 +194,10 @@ pub fn barrage_ogre() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_other_filter: Some((R::Artifact, 1)),
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -185,7 +210,10 @@ pub fn craw_giant() -> CardDefinition {
         name: "Craw Giant",
         cost: cost(&[generic(3), g(), g(), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
         power: 6,
         toughness: 4,
         keywords: vec![Keyword::Trample, Keyword::Rampage(2)],
@@ -199,7 +227,10 @@ pub fn reckless_imp() -> CardDefinition {
         name: "Reckless Imp",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Imp], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::CantBlock],

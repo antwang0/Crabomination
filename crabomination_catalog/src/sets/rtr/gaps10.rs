@@ -2,17 +2,17 @@
 //! graveyard-recursion Golgari legend, a coin-flip artifact bomb, and an
 //! X-charge-counter mana enchantment. Tests in `classic_sets/rtr`.
 
+use crate::card::DynamicPt;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect,
     EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
     SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility, Value,
 };
-use crate::card::DynamicPt;
+use crate::effect::shortcut::{etb, on_attack, on_dies, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
-use crate::effect::shortcut::{etb, on_attack, on_dies, target_filtered};
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 
 /// Conjured Currency — {5}{U} Enchantment. At the beginning of your upkeep, you
 /// may exchange control of this enchantment and target permanent you neither
@@ -23,7 +23,10 @@ pub fn conjured_currency() -> CardDefinition {
         cost: cost(&[generic(5), u()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::MayDo {
                 description: "Exchange control of Conjured Currency and target permanent?".into(),
                 body: Box::new(Effect::ExchangeControl {
@@ -86,7 +89,10 @@ pub fn jarad_golgari_lich_lord() -> CardDefinition {
                         count: Value::ONE,
                         filter: R::HasLandType(LandType::Forest),
                     },
-                    Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    },
                 ]),
                 ..Default::default()
             },
@@ -111,7 +117,10 @@ pub fn volatile_rig() -> CardDefinition {
         name: "Volatile Rig",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample, Keyword::MustAttack],
@@ -121,7 +130,9 @@ pub fn volatile_rig() -> CardDefinition {
                 effect: Effect::FlipCoin {
                     count: Value::ONE,
                     on_heads: Box::new(Effect::Noop),
-                    on_tails: Box::new(Effect::SacrificePermanent { what: Selector::This }),
+                    on_tails: Box::new(Effect::SacrificePermanent {
+                        what: Selector::This,
+                    }),
                 },
             },
             on_dies(Effect::FlipCoin {
@@ -183,7 +194,10 @@ pub fn oak_street_innkeeper() -> CardDefinition {
         name: "Oak Street Innkeeper",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         static_abilities: vec![StaticAbility {
@@ -212,7 +226,10 @@ pub fn urban_burgeoning() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         static_abilities: vec![StaticAbility {
             description: "Enchanted land untaps during each other player's untap step.",
             effect: StaticEffect::UntapAttachedEachUntapStep,
@@ -228,7 +245,10 @@ pub fn street_sweeper() -> CardDefinition {
         name: "Street Sweeper",
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 4,
         toughness: 6,
         triggered_abilities: vec![on_attack(Effect::Destroy {
@@ -275,7 +295,10 @@ pub fn racecourse_fury() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         static_abilities: vec![StaticAbility {
             description: "Enchanted land has \"{T}: Target creature gains haste until end of turn.\"",
             effect: StaticEffect::GrantActivatedAbility {
@@ -306,7 +329,10 @@ pub fn security_blockade() -> CardDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Knight],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Vigilance],
         ..Default::default()
     };
@@ -318,7 +344,10 @@ pub fn security_blockade() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
@@ -368,12 +397,21 @@ pub fn mana_bloom() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
-                .with_filter(Predicate::ValueAtMost(
-                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
-                    Value::Const(0),
-                )),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::ValueAtMost(
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Charge,
+                },
+                Value::Const(0),
+            )),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
         }],
         ..Default::default()
     }

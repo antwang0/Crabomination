@@ -3,13 +3,13 @@
 //! `crabomination/src/tests/recent140.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, ExileReturnZone, Keyword,
-    SelectionRequirement as R, Selector, Subtypes, Value,
+    CardDefinition, CardType, CreatureType, ExileReturnZone, Keyword, SelectionRequirement as R,
+    Selector, Subtypes, Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, ZoneRef};
 use crate::game::effects::food_token;
-use crate::mana::{b, cost, generic, r, w, x, Color};
+use crate::mana::{Color, b, cost, generic, r, w, x};
 
 /// 1/1 black Rat token with "This token can't block."
 fn rat_token() -> crate::card::TokenDefinition {
@@ -19,7 +19,10 @@ fn rat_token() -> crate::card::TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         keywords: vec![Keyword::CantBlock],
         ..Default::default()
     }
@@ -39,7 +42,11 @@ pub fn food_coma() -> CardDefinition {
                 what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
                 return_to: ExileReturnZone::Battlefield,
             },
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: food_token() },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: food_token(),
+            },
         ]))],
         ..Default::default()
     }

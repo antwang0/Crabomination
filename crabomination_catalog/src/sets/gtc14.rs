@@ -18,15 +18,28 @@ pub fn one_thousand_lashes() -> CardDefinition {
         name: "One Thousand Lashes",
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(crate::card::EquipBonus {
-            keywords: vec![Keyword::CantAttack, Keyword::CantBlock, Keyword::CantActivateAbilities],
+            keywords: vec![
+                Keyword::CantAttack,
+                Keyword::CantBlock,
+                Keyword::CantActivateAbilities,
+            ],
             ..Default::default()
         }),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::AnyPlayer)
-                .with_filter(Predicate::ActivePlayerControls(Box::new(attached()))),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::ActivePlayerControls(Box::new(attached()))),
             effect: Effect::LoseLife {
                 who: Selector::Player(PlayerRef::ControllerOf(Box::new(attached()))),
                 amount: Value::ONE,
@@ -44,7 +57,10 @@ pub fn frontline_medic() -> CardDefinition {
         name: "Frontline Medic",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Cleric], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![battalion(Effect::GrantKeyword {

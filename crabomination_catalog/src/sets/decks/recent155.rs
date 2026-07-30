@@ -37,7 +37,10 @@ pub fn benthic_criminologists() -> CardDefinition {
         description: "Sacrifice an artifact to draw a card?".into(),
         filter: R::Artifact,
         count: Value::ONE,
-        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+        then: Box::new(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        }),
         else_: None,
     };
     CardDefinition {
@@ -72,7 +75,10 @@ pub fn agency_coroner() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), b()]),
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -89,10 +95,11 @@ pub fn call_a_surprise_witness() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(
-                    R::Creature.and(R::InGraveyard).and(R::ManaValueAtMost(3)),
-                ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                what: target_filtered(R::Creature.and(R::InGraveyard).and(R::ManaValueAtMost(3))),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::AddKeywordCounter {
                 what: Selector::Target(0),

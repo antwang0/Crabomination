@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect};
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 /// Votary of the Conclave — {W} 1/1 Human Soldier. {2}{G}: Regenerate this.
 pub fn votary_of_the_conclave() -> CardDefinition {
@@ -23,7 +23,9 @@ pub fn votary_of_the_conclave() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), g()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -37,13 +39,19 @@ pub fn torpid_moloch() -> CardDefinition {
         name: "Torpid Moloch",
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((R::Land, 3)),
-            effect: Effect::LoseKeywordThisTurn { what: Selector::This, keyword: Keyword::Defender },
+            effect: Effect::LoseKeywordThisTurn {
+                what: Selector::This,
+                keyword: Keyword::Defender,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -58,8 +66,14 @@ pub fn psychic_drain() -> CardDefinition {
         cost: cost(&[x(), u(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::XFromCost },
-            Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::XFromCost,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::XFromCost,
+            },
         ]),
         ..Default::default()
     }
@@ -73,9 +87,14 @@ pub fn rolling_spoil() -> CardDefinition {
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Land) },
+            Effect::Destroy {
+                what: target_filtered(R::Land),
+            },
             Effect::If {
-                cond: Predicate::ManaSpentOfColorAtLeast { color: Color::Black, at_least: 1 },
+                cond: Predicate::ManaSpentOfColorAtLeast {
+                    color: Color::Black,
+                    at_least: 1,
+                },
                 then: Box::new(Effect::PumpPT {
                     what: Selector::EachPermanent(R::Creature),
                     power: Value::Const(-1),
@@ -101,7 +120,10 @@ pub fn quickchange() -> CardDefinition {
                 what: target_filtered(R::Creature),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -114,7 +136,10 @@ pub fn ursapine() -> CardDefinition {
         name: "Ursapine",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
@@ -156,7 +181,10 @@ pub fn tidewater_minion() -> CardDefinition {
             },
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::Untap { what: target_filtered(R::Permanent), up_to: None },
+                effect: Effect::Untap {
+                    what: target_filtered(R::Permanent),
+                    up_to: None,
+                },
                 ..Default::default()
             },
         ],
@@ -172,8 +200,14 @@ pub fn twisted_justice() -> CardDefinition {
         cost: cost(&[generic(4), u(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember { who: PlayerRef::Target(0), filter: R::Creature },
-            Effect::Draw { who: Selector::You, amount: Value::SacrificedPower },
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::Target(0),
+                filter: R::Creature,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::SacrificedPower,
+            },
         ]),
         ..Default::default()
     }
@@ -190,7 +224,10 @@ pub fn strands_of_undeath() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         triggered_abilities: vec![etb(Effect::Discard {
             who: Selector::Player(PlayerRef::Target(0)),
             amount: Value::Const(2),
@@ -198,7 +235,9 @@ pub fn strands_of_undeath() -> CardDefinition {
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
-            effect: Effect::Regenerate { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            effect: Effect::Regenerate {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
             ..Default::default()
         }],
         ..Default::default()

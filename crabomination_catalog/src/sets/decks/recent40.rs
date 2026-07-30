@@ -4,12 +4,12 @@
 //! the new `StaticEffect::PreventAllDamageToController` (Glacial Chasm, CR 615).
 //! Tests in `tests/recent40.rs`.
 
+use crate::card::CumulativeUpkeepCost;
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
     Keyword, LandType, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes,
     TokenDefinition, TriggeredAbility, Value,
 };
-use crate::card::CumulativeUpkeepCost;
 use crate::effect::{ActivatedAbility, Duration, ManaPayload, PlayerRef, Predicate};
 use crate::mana::{Color, b, cost, generic, snow_mana, w};
 
@@ -17,7 +17,10 @@ use crate::mana::{Color, b, cost, generic, snow_mana, w};
 fn tap_for(color: Color) -> ActivatedAbility {
     ActivatedAbility {
         tap_cost: true,
-        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![color]) },
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::Colors(vec![color]),
+        },
         ..Default::default()
     }
 }
@@ -26,7 +29,10 @@ fn tap_for(color: Color) -> ActivatedAbility {
 fn tap_for_colorless(n: u32) -> ActivatedAbility {
     ActivatedAbility {
         tap_cost: true,
-        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(n as i32)) },
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::Colorless(Value::Const(n as i32)),
+        },
         ..Default::default()
     }
 }
@@ -40,7 +46,9 @@ fn enters_tapped_unless_land(gate: LandType) -> TriggeredAbility {
                 R::HasLandType(gate).and(R::ControlledByYou),
             )),
             then: Box::new(Effect::Noop),
-            else_: Box::new(Effect::Tap { what: Selector::This }),
+            else_: Box::new(Effect::Tap {
+                what: Selector::This,
+            }),
         },
     }
 }
@@ -53,8 +61,14 @@ pub fn ancient_tomb() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(2)) },
-                Effect::DealDamage { to: Selector::You, amount: Value::Const(2) },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(2)),
+                },
+                Effect::DealDamage {
+                    to: Selector::You,
+                    amount: Value::Const(2),
+                },
             ]),
             ..Default::default()
         }],
@@ -75,7 +89,11 @@ pub fn city_of_traitors() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::HasCardType(CardType::Land),
                 }),
-            effect: Effect::Sacrifice { who: Selector::This, count: Value::Const(1), filter: R::HasCardType(CardType::Land) },
+            effect: Effect::Sacrifice {
+                who: Selector::This,
+                count: Value::Const(1),
+                filter: R::HasCardType(CardType::Land),
+            },
         }],
         ..Default::default()
     }
@@ -92,8 +110,14 @@ pub fn tarnished_citadel() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::Seq(vec![
-                    Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
-                    Effect::DealDamage { to: Selector::You, amount: Value::Const(3) },
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                    },
+                    Effect::DealDamage {
+                        to: Selector::You,
+                        amount: Value::Const(3),
+                    },
                 ]),
                 ..Default::default()
             },
@@ -114,7 +138,10 @@ pub fn cascading_cataracts() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(5)]),
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyColors(Value::Const(5)) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyColors(Value::Const(5)),
+                },
                 ..Default::default()
             },
         ],
@@ -135,8 +162,14 @@ pub fn castle_locthwain() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[generic(1), b(), b()]),
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                    Effect::LoseLife { who: Selector::You, amount: Value::HandSizeOf(PlayerRef::You) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::HandSizeOf(PlayerRef::You),
+                    },
                 ]),
                 ..Default::default()
             },
@@ -154,7 +187,10 @@ pub fn castle_ardenvale() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -166,7 +202,11 @@ pub fn castle_ardenvale() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(2), w(), w()]),
-                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: human },
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: human,
+                },
                 ..Default::default()
             },
         ],
@@ -243,7 +283,10 @@ pub fn field_of_the_dead() -> CardDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -253,7 +296,9 @@ pub fn field_of_the_dead() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Tap { what: Selector::This },
+                effect: Effect::Tap {
+                    what: Selector::This,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
@@ -262,9 +307,16 @@ pub fn field_of_the_dead() -> CardDefinition {
                             what: Selector::TriggerSource,
                             filter: R::HasCardType(CardType::Land),
                         },
-                        Predicate::ValueAtLeast(Value::DifferentlyNamedLandsControlled, Value::Const(7)),
+                        Predicate::ValueAtLeast(
+                            Value::DifferentlyNamedLandsControlled,
+                            Value::Const(7),
+                        ),
                     ])),
-                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: zombie },
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: zombie,
+                },
             },
         ],
         ..Default::default()
@@ -281,7 +333,11 @@ pub fn glacial_chasm() -> CardDefinition {
         keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Life(2))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Sacrifice { who: Selector::You, count: Value::Const(1), filter: R::HasCardType(CardType::Land) },
+            effect: Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: R::HasCardType(CardType::Land),
+            },
         }],
         static_abilities: vec![
             StaticAbility {

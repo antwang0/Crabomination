@@ -4,11 +4,13 @@
 //! disruption, and a kicker land-fetch. Tests in `tests/recent206.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, Predicate,
-    SelectionRequirement as R, Selector, StaticAbility, Subtypes, Supertype, TriggeredAbility,
+    CardDefinition, CardType, CreatureType, Effect, Keyword, Predicate, SelectionRequirement as R,
+    Selector, StaticAbility, Subtypes, Supertype, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, EventKind, EventScope, EventSpec, PlayerRef, StaticEffect, Value, ZoneDest};
+use crate::effect::{
+    Duration, EventKind, EventScope, EventSpec, PlayerRef, StaticEffect, Value, ZoneDest,
+};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Swiftblade Vindicator — {R}{W} 1/1. Double strike, vigilance, trample.
@@ -157,7 +159,10 @@ pub fn involuntary_employment() -> CardDefinition {
                 to: None,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
@@ -195,7 +200,10 @@ pub fn grow_from_the_ashes() -> CardDefinition {
     let fetch = || Effect::Search {
         who: PlayerRef::You,
         filter: R::IsBasicLand,
-        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        to: ZoneDest::Battlefield {
+            controller: PlayerRef::You,
+            tapped: false,
+        },
     };
     CardDefinition {
         name: "Grow from the Ashes",

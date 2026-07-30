@@ -4,7 +4,7 @@
 //! `tests/recent92.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, Effect,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EnchantmentSubtype,
     EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
     StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility, Value,
 };
@@ -23,7 +23,10 @@ fn on_cast_is(effect: Effect) -> TriggeredAbility {
 
 /// Copy the just-cast spell `count` times, each choosing new targets.
 fn copy_cast_spell(count: Value) -> Effect {
-    Effect::CopySpellMayChooseTargets { what: Selector::TriggerSource, count }
+    Effect::CopySpellMayChooseTargets {
+        what: Selector::TriggerSource,
+        count,
+    }
 }
 
 /// Firemind Vessel — {4} Artifact. Enters tapped. {T}: add two mana of any
@@ -36,11 +39,16 @@ pub fn firemind_vessel() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         static_abilities: vec![StaticAbility {
             description: "This artifact enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyColors(Value::Const(2)) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyColors(Value::Const(2)),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -114,7 +122,10 @@ pub fn nivmizzet_dracogenius() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[u(), r()]),
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -182,7 +193,10 @@ pub fn electrodominance() -> CardDefinition {
         cost: cost(&[x(), r(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_any(), amount: Value::XFromCost },
+            Effect::DealDamage {
+                to: target_any(),
+                amount: Value::XFromCost,
+            },
             Effect::CastFromHandWithoutPaying {
                 filter: Some(R::ManaValueAtMostXFromCost),
             },

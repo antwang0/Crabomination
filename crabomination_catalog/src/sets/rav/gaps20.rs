@@ -9,7 +9,7 @@ use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn saproling() -> TokenDefinition {
     TokenDefinition {
@@ -18,7 +18,10 @@ fn saproling() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Saproling], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Saproling],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -97,13 +100,19 @@ pub fn pollenbright_wings() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::Flying],
             ..Default::default()
         }),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::EnchantedBySource),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::EnchantedBySource,
+            ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::PowerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
@@ -137,7 +146,10 @@ pub fn moonlight_bargain() -> CardDefinition {
         name: "Moonlight Bargain",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::LookTopEachPayLifeOrBin { count: Value::Const(5), life: 2 },
+        effect: Effect::LookTopEachPayLifeOrBin {
+            count: Value::Const(5),
+            life: 2,
+        },
         ..Default::default()
     }
 }
@@ -149,7 +161,9 @@ pub fn tunnel_vision() -> CardDefinition {
         name: "Tunnel Vision",
         cost: cost(&[generic(5), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::NameCardRevealUntilThenBin { who: PlayerRef::Target(0) },
+        effect: Effect::NameCardRevealUntilThenBin {
+            who: PlayerRef::Target(0),
+        },
         ..Default::default()
     }
 }

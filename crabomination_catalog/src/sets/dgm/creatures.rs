@@ -9,10 +9,13 @@ use crate::card::{
 };
 use crate::effect::shortcut::{battalion, etb, on_attack, scavenge, target_filtered, unleash};
 use crate::effect::{Duration, ManaPayload, PlayerRef, Selector, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 
 /// Two-or-more-Gates intervening 'if' for the Gatekeeper cycle.
@@ -162,7 +165,10 @@ pub fn woodlot_crawler() -> CardDefinition {
         subtypes: creatures(vec![CreatureType::Insect]),
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::Landwalk(LandType::Forest), Keyword::Protection(Color::Green)],
+        keywords: vec![
+            Keyword::Landwalk(LandType::Forest),
+            Keyword::Protection(Color::Green),
+        ],
         ..Default::default()
     }
 }
@@ -215,7 +221,11 @@ pub fn beetleform_mage() -> CardDefinition {
         name: "Beetleform Mage",
         cost: cost(&[generic(1), g(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: creatures(vec![CreatureType::Human, CreatureType::Insect, CreatureType::Wizard]),
+        subtypes: creatures(vec![
+            CreatureType::Human,
+            CreatureType::Insect,
+            CreatureType::Wizard,
+        ]),
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -271,8 +281,14 @@ pub fn zhur_taa_druid() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(vec![Color::Green], Value::ONE) },
-                Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColors(vec![Color::Green], Value::ONE),
+                },
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::ONE,
+                },
             ]),
             ..Default::default()
         }],
@@ -373,7 +389,9 @@ pub fn carnage_gladiator() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b(), r()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -459,10 +477,11 @@ pub fn fluxcharger() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellMatches(
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellMatches(
                     R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
-                )),
+                ),
+            ),
             effect: Effect::MayDo {
                 description: "switch Fluxcharger's power and toughness?".into(),
                 body: Box::new(Effect::SwitchPT {
@@ -489,7 +508,10 @@ pub fn hired_torturer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(3), b()]),
-            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -508,7 +530,10 @@ pub fn blood_scrivener() -> CardDefinition {
         toughness: 1,
         static_abilities: vec![StaticAbility {
             description: "If you would draw a card while you have no cards in hand, instead draw two cards and lose 1 life.",
-            effect: StaticEffect::EmptyHandDrawBonus { extra: 1, life_loss: 1 },
+            effect: StaticEffect::EmptyHandDrawBonus {
+                extra: 1,
+                life_loss: 1,
+            },
         }],
         ..Default::default()
     }
@@ -575,7 +600,10 @@ pub fn opal_lake_gatekeepers() -> CardDefinition {
             cond: two_gates(),
             then: Box::new(Effect::MayDo {
                 description: "draw a card?".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             }),
             else_: Box::new(Effect::Noop),
         })],
@@ -618,7 +646,10 @@ pub fn saruli_gatekeepers() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![etb(Effect::If {
             cond: two_gates(),
-            then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(7) }),
+            then: Box::new(Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(7),
+            }),
             else_: Box::new(Effect::Noop),
         })],
         ..Default::default()
@@ -655,9 +686,21 @@ pub fn trostanis_summoner() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: knight_vigilance_token() },
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: centaur },
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: rhino },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: knight_vigilance_token(),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: centaur,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: rhino,
+            },
         ]))],
         ..Default::default()
     }
@@ -699,23 +742,53 @@ fn maze_elemental(
 
 /// Maze Sentinel — {5}{W} 3/6. Vigilance; your multicolored creatures have it.
 pub fn maze_sentinel() -> CardDefinition {
-    maze_elemental("Maze Sentinel", cost(&[generic(5), w()]), 3, 6, Keyword::Vigilance)
+    maze_elemental(
+        "Maze Sentinel",
+        cost(&[generic(5), w()]),
+        3,
+        6,
+        Keyword::Vigilance,
+    )
 }
 /// Maze Glider — {5}{U} 3/5. Flying; your multicolored creatures have it.
 pub fn maze_glider() -> CardDefinition {
-    maze_elemental("Maze Glider", cost(&[generic(5), u()]), 3, 5, Keyword::Flying)
+    maze_elemental(
+        "Maze Glider",
+        cost(&[generic(5), u()]),
+        3,
+        5,
+        Keyword::Flying,
+    )
 }
 /// Maze Abomination — {5}{B} 4/5. Deathtouch; your multicolored creatures have it.
 pub fn maze_abomination() -> CardDefinition {
-    maze_elemental("Maze Abomination", cost(&[generic(5), b()]), 4, 5, Keyword::Deathtouch)
+    maze_elemental(
+        "Maze Abomination",
+        cost(&[generic(5), b()]),
+        4,
+        5,
+        Keyword::Deathtouch,
+    )
 }
 /// Maze Rusher — {5}{R} 6/3. Haste; your multicolored creatures have it.
 pub fn maze_rusher() -> CardDefinition {
-    maze_elemental("Maze Rusher", cost(&[generic(5), r()]), 6, 3, Keyword::Haste)
+    maze_elemental(
+        "Maze Rusher",
+        cost(&[generic(5), r()]),
+        6,
+        3,
+        Keyword::Haste,
+    )
 }
 /// Maze Behemoth — {5}{G} 5/4. Trample; your multicolored creatures have it.
 pub fn maze_behemoth() -> CardDefinition {
-    maze_elemental("Maze Behemoth", cost(&[generic(5), g()]), 5, 4, Keyword::Trample)
+    maze_elemental(
+        "Maze Behemoth",
+        cost(&[generic(5), g()]),
+        5,
+        4,
+        Keyword::Trample,
+    )
 }
 
 /// Korozda Gorgon — {3}{B}{G} 2/5 with deathtouch. {2}, Remove a +1/+1 counter

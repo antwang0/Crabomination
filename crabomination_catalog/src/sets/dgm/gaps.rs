@@ -12,10 +12,13 @@ use crate::effect::shortcut::{
 };
 use crate::effect::{Duration, ExtraManaKind, PlayerRef, Selector, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, x};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 
 /// Sire of Insanity — {4}{B}{R} 6/4. At the beginning of each end step, each
@@ -29,10 +32,7 @@ pub fn sire_of_insanity() -> CardDefinition {
         power: 6,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(TurnStep::End),
-                EventScope::AnyPlayer,
-            ),
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
             effect: Effect::Discard {
                 who: Selector::Player(PlayerRef::EachPlayer),
                 amount: Value::Const(100), // capped at hand size — "their hand"
@@ -138,7 +138,9 @@ pub fn lavinia_of_the_tenth() -> CardDefinition {
         keywords: vec![Keyword::Protection(Color::Red)],
         triggered_abilities: vec![etb(Effect::Detain {
             what: Selector::EachPermanent(
-                R::Nonland.and(R::ControlledByOpponent).and(R::ManaValueAtMost(4)),
+                R::Nonland
+                    .and(R::ControlledByOpponent)
+                    .and(R::ManaValueAtMost(4)),
             ),
         })],
         ..Default::default()
@@ -166,8 +168,14 @@ pub fn blood_baron_of_vizkopa() -> CardDefinition {
             description: "While you have 30+ life and an opponent has 10 or less, +6/+6 and flying.",
             effect: PumpSelfIf {
                 condition: Predicate::All(vec![
-                    Predicate::PlayerLifeAtLeast { who: PlayerRef::You, life: 30 },
-                    Predicate::PlayerLifeAtMost { who: PlayerRef::EachOpponent, life: 10 },
+                    Predicate::PlayerLifeAtLeast {
+                        who: PlayerRef::You,
+                        life: 30,
+                    },
+                    Predicate::PlayerLifeAtMost {
+                        who: PlayerRef::EachOpponent,
+                        life: 10,
+                    },
                 ]),
                 power: 6,
                 toughness: 6,
@@ -288,7 +296,10 @@ pub fn smelt_ward_gatekeepers() -> CardDefinition {
                     to: None,
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Untap { what: Selector::Target(0), up_to: None },
+                Effect::Untap {
+                    what: Selector::Target(0),
+                    up_to: None,
+                },
                 Effect::GrantKeyword {
                     what: Selector::Target(0),
                     keyword: Keyword::Haste,
@@ -324,8 +335,14 @@ pub fn scion_of_vitu_ghazi() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SourceWasCast,
             then: Box::new(Effect::Seq(vec![
-                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: bird },
-                Effect::Populate { who: PlayerRef::You },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: bird,
+                },
+                Effect::Populate {
+                    who: PlayerRef::You,
+                },
             ])),
             else_: Box::new(Effect::Noop),
         })],
@@ -349,10 +366,16 @@ pub fn rot_farm_skeleton() -> CardDefinition {
             from_graveyard: true,
             sorcery_speed: true,
             effect: Effect::Seq(vec![
-                Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+                Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::Const(4),
+                },
                 Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ]),
             ..Default::default()
@@ -405,7 +428,10 @@ pub fn obzedats_aid() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
             what: target_filtered(R::PermanentCard.and(R::InYourGraveyard)),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -414,15 +440,19 @@ pub fn obzedats_aid() -> CardDefinition {
 /// Drown in Filth — {B}{G} Sorcery. Mill four; target creature gets -1/-1 until
 /// end of turn for each land card in your graveyard.
 pub fn drown_in_filth() -> CardDefinition {
-    let lands_in_gy = || {
-        Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Land }
+    let lands_in_gy = || Value::CardsInGraveyardMatching {
+        who: PlayerRef::You,
+        filter: R::Land,
     };
     CardDefinition {
         name: "Drown in Filth",
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
             Effect::PumpPT {
                 what: target_filtered(R::Creature),
                 power: Value::Diff(Box::new(Value::Const(0)), Box::new(lands_in_gy())),
@@ -442,8 +472,15 @@ pub fn blast_of_genius() -> CardDefinition {
         cost: cost(&[generic(4), u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
             Effect::DealDamage {
                 to: target_any(),
                 amount: Value::GreatestDiscardedManaValueThisEffect,
@@ -505,7 +542,9 @@ pub fn mazes_end() -> CardDefinition {
         card_types: vec![CardType::Land],
         static_abilities: vec![StaticAbility {
             description: "This land enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         activated_abilities: vec![
             ActivatedAbility {
@@ -524,14 +563,19 @@ pub fn mazes_end() -> CardDefinition {
                     Effect::Search {
                         who: PlayerRef::You,
                         filter: R::HasLandType(crate::card::LandType::Gate),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                     Effect::If {
                         cond: Predicate::ValueAtLeast(
                             Value::DistinctlyNamedGatesControlled,
                             Value::Const(10),
                         ),
-                        then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                        then: Box::new(Effect::WinGame {
+                            who: PlayerRef::You,
+                        }),
                         else_: Box::new(Effect::Noop),
                     },
                 ]),
@@ -554,8 +598,14 @@ pub fn progenitor_mimic() -> CardDefinition {
         enters_as_copy: Some(EntersAsCopy {
             filter: R::Creature,
             extra_triggered: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl)
-                    .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::NotToken }),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                )
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::NotToken,
+                }),
                 effect: Effect::CreateTokenCopyOf {
                     who: PlayerRef::You,
                     count: Value::ONE,

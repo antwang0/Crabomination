@@ -42,7 +42,10 @@ pub fn cloister_gargoyle() -> CardDefinition {
         name: "Cloister Gargoyle",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Gargoyle], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gargoyle],
+            ..Default::default()
+        },
         toughness: 4,
         triggered_abilities: vec![etb(Effect::Venture)],
         static_abilities: vec![StaticAbility {
@@ -65,12 +68,17 @@ pub fn dungeon_crawler() -> CardDefinition {
         name: "Dungeon Crawler",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         static_abilities: vec![StaticAbility {
             description: "This creature enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DungeonCompleted, EventScope::FromYourGraveyard),
@@ -189,7 +197,9 @@ pub fn dungeon_descent() -> CardDefinition {
         card_types: vec![CardType::Land],
         static_abilities: vec![StaticAbility {
             description: "This land enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         activated_abilities: vec![
             ActivatedAbility {
@@ -205,7 +215,9 @@ pub fn dungeon_descent() -> CardDefinition {
                 mana_cost: cost(&[generic(4)]),
                 sorcery_speed: true,
                 tap_other_filter: Some(
-                    R::Creature.and(R::ControlledByYou).and(R::HasSupertype(Supertype::Legendary)),
+                    R::Creature
+                        .and(R::ControlledByYou)
+                        .and(R::HasSupertype(Supertype::Legendary)),
                 ),
                 effect: Effect::Venture,
                 ..Default::default()
@@ -286,7 +298,10 @@ pub fn precipitous_drop() -> CardDefinition {
         },
         effect: Effect::Attach {
             what: Selector::This,
-            to: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature,
+            },
         },
         triggered_abilities: vec![etb(Effect::Venture)],
         equipped_bonus: Some(EquipBonus {
@@ -334,7 +349,10 @@ pub fn radiant_solar() -> CardDefinition {
         name: "Radiant Solar",
         cost: cost(&[generic(5), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 3,
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
@@ -352,7 +370,10 @@ pub fn radiant_solar() -> CardDefinition {
             discard_self_cost: true,
             effect: Effect::Seq(vec![
                 Effect::Venture,
-                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
             ]),
             ..Default::default()
         }],
@@ -391,7 +412,10 @@ pub fn secret_door() -> CardDefinition {
         name: "Secret Door",
         cost: cost(&[u()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         toughness: 4,
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![ActivatedAbility {
@@ -438,7 +462,10 @@ pub fn rangers_hawk() -> CardDefinition {
         name: "Ranger's Hawk",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -446,9 +473,7 @@ pub fn rangers_hawk() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(3)]),
             sorcery_speed: true,
-            tap_other_filter: Some(
-                R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
-            ),
+            tap_other_filter: Some(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
             effect: Effect::Venture,
             ..Default::default()
         }],
@@ -478,7 +503,9 @@ pub fn fifty_feet_of_rope() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(3)]),
-                effect: Effect::SkipNextUntap { what: target_filtered(R::Creature) },
+                effect: Effect::SkipNextUntap {
+                    what: target_filtered(R::Creature),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -506,13 +533,19 @@ pub fn shessra_deaths_whisper() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Elf, CreatureType::Warlock],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Elf,
+                CreatureType::Warlock,
+            ],
             ..Default::default()
         },
         power: 1,
         toughness: 3,
         triggered_abilities: vec![
-            etb(Effect::MustBlockSource { what: target_filtered(R::Creature) }),
+            etb(Effect::MustBlockSource {
+                what: target_filtered(R::Creature),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(TurnStep::End),
@@ -525,7 +558,10 @@ pub fn shessra_deaths_whisper() -> CardDefinition {
                 effect: Effect::MayPayLife {
                     description: "Pay 2 life to draw a card?".into(),
                     amount: Value::Const(2),
-                    body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
                     else_: None,
                 },
             },
@@ -540,7 +576,10 @@ pub fn underdark_basilisk() -> CardDefinition {
         name: "Underdark Basilisk",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Basilisk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Basilisk],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
@@ -593,7 +632,11 @@ pub fn ellywick_tumblestrum() -> CardDefinition {
         card_types: vec![CardType::Planeswalker],
         base_loyalty: 4,
         loyalty_abilities: vec![
-            LoyaltyAbility { loyalty_cost: 1, effect: Effect::Venture, ..Default::default() },
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Venture,
+                ..Default::default()
+            },
             LoyaltyAbility {
                 loyalty_cost: -2,
                 effect: Effect::LookPickToHand {
@@ -637,10 +680,6 @@ pub fn ellywick_tumblestrum() -> CardDefinition {
     }
 }
 
-
-
-
-
 /// Priest of Ancient Lore — {2}{W} Dwarf Cleric 2/1. ETB: gain 1 life, draw.
 pub fn priest_of_ancient_lore() -> CardDefinition {
     CardDefinition {
@@ -654,13 +693,18 @@ pub fn priest_of_ancient_lore() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
 }
-
 
 /// Circle of Dreams Druid — {G}{G}{G} Elf Druid 2/1. {T}: Add {G} for each
 /// creature you control.
@@ -703,13 +747,18 @@ pub fn manticore() -> CardDefinition {
         name: "Manticore",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Manticore], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Manticore],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Destroy {
             what: target_filtered(
-                R::Creature.and(R::ControlledByOpponent).and(R::DealtDamageThisTurn),
+                R::Creature
+                    .and(R::ControlledByOpponent)
+                    .and(R::DealtDamageThisTurn),
             ),
         })],
         ..Default::default()
@@ -731,7 +780,9 @@ pub fn plundering_barbarian() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::ChooseMode(vec![
-            Effect::Destroy { what: target_filtered(R::Artifact) },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -761,7 +812,9 @@ pub fn half_elf_monk() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(1), w()]),
-            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            effect: Effect::Tap {
+                what: target_filtered(R::Creature),
+            },
             ..Default::default()
         }],
         ..Default::default()

@@ -17,14 +17,20 @@ pub fn slick_imitator() -> CardDefinition {
         name: "Slick Imitator",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::StartYourEngines],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             sac_cost: true,
-            condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+            condition: Some(Predicate::SpeedAtLeast {
+                who: PlayerRef::You,
+                speed: 4,
+            }),
             effect: Effect::CopySpellMayChooseTargets {
                 what: target_filtered(R::IsSpellOnStack.and(R::ControlledByYou)),
                 count: Value::ONE,
@@ -101,7 +107,11 @@ pub fn spire_mechcycle() -> CardDefinition {
             exhaust: true,
             tap_other_filter: Some(vehicles_you_control.clone()),
             effect: Effect::Seq(vec![
-                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Creature, until_eot: false },
+                Effect::AddCardTypeIndefinitely {
+                    what: Selector::This,
+                    card_type: CardType::Creature,
+                    until_eot: false,
+                },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,

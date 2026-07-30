@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::{ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, hybrid, phyrexian, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, phyrexian, r, u, w};
 
 /// Solphim, Mayhem Dominus — {2}{R}{R} 5/4. Doubles noncombat damage your
 /// sources deal to opponents; {1}{R/P}{R/P}, discard two: gains an
@@ -71,7 +71,10 @@ pub fn atraxa_praetors_voice() -> CardDefinition {
             Keyword::Lifelink,
         ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::Proliferate,
         }],
         ..Default::default()
@@ -134,7 +137,10 @@ pub fn deathrite_shaman() -> CardDefinition {
                 mana_cost: cost(&[g()]),
                 effect: Effect::Seq(vec![
                     exile_target(SelectionRequirement::Creature),
-                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
                 ]),
                 ..Default::default()
             },
@@ -208,17 +214,29 @@ pub fn arcane_laboratory() -> CardDefinition {
 
 /// Flashfires — {3}{R} Sorcery. Destroy all Plains.
 pub fn flashfires() -> CardDefinition {
-    destroy_all_landtype("Flashfires", cost(&[generic(3), r()]), crate::card::LandType::Plains)
+    destroy_all_landtype(
+        "Flashfires",
+        cost(&[generic(3), r()]),
+        crate::card::LandType::Plains,
+    )
 }
 
 /// Tsunami — {3}{G} Sorcery. Destroy all Islands.
 pub fn tsunami() -> CardDefinition {
-    destroy_all_landtype("Tsunami", cost(&[generic(3), g()]), crate::card::LandType::Island)
+    destroy_all_landtype(
+        "Tsunami",
+        cost(&[generic(3), g()]),
+        crate::card::LandType::Island,
+    )
 }
 
 /// Boiling Seas — {3}{R} Sorcery. Destroy all Islands.
 pub fn boiling_seas() -> CardDefinition {
-    destroy_all_landtype("Boiling Seas", cost(&[generic(3), r()]), crate::card::LandType::Island)
+    destroy_all_landtype(
+        "Boiling Seas",
+        cost(&[generic(3), r()]),
+        crate::card::LandType::Island,
+    )
 }
 
 fn destroy_all_landtype(
@@ -443,12 +461,21 @@ pub fn staff_of_nin() -> CardDefinition {
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::ONE },
+            effect: Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -462,7 +489,10 @@ pub fn ivory_tower() -> CardDefinition {
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::GainLife {
                 who: Selector::You,
                 amount: Value::NonNeg(Box::new(Value::Diff(
@@ -501,7 +531,10 @@ pub fn caustic_caterpillar() -> CardDefinition {
         name: "Caustic Caterpillar",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -526,7 +559,10 @@ pub fn noxious_revival() -> CardDefinition {
         cost: cost(&[phyrexian(Color::Green)]),
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
-            what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::InGraveyard },
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::InGraveyard,
+            },
             to: ZoneDest::Library {
                 who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                 pos: crate::effect::LibraryPosition::Top,
@@ -543,7 +579,10 @@ pub fn bane_of_progress() -> CardDefinition {
         name: "Bane of Progress",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
@@ -622,7 +661,8 @@ pub fn whirlwind() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy {
             what: Selector::EachPermanent(
-                SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
             ),
         },
         ..Default::default()
@@ -660,7 +700,10 @@ pub fn serenity() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::DestroyNoRegen {
                 what: Selector::EachPermanent(
                     SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),

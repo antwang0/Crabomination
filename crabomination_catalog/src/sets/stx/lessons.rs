@@ -20,8 +20,8 @@
 //!   Summoning ({3}{W}{B}) and Pest Summoning ({B}{G}).
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword, Selector, SelectionRequirement,
-    SpellSubtype, Subtypes, TokenDefinition, Value,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword, SelectionRequirement,
+    Selector, SpellSubtype, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef};
@@ -148,7 +148,9 @@ pub fn guiding_voice() -> CardDefinition {
                 amount: Value::Const(1),
             },
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
-            Effect::Learn { who: PlayerRef::You },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -296,7 +298,9 @@ pub fn mascot_interpretation() -> CardDefinition {
                 amount: Value::Const(2),
             },
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
-            Effect::Learn { who: PlayerRef::You },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -329,7 +333,9 @@ pub fn reduce_rubble() -> CardDefinition {
                 amount: Value::Const(3),
             },
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
-            Effect::Learn { who: PlayerRef::You },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -517,7 +523,7 @@ pub fn pyromathematics() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::DealDamageDivided {
-                retaliate_to_source: false,
+            retaliate_to_source: false,
             total: Value::Const(3),
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
@@ -577,7 +583,7 @@ pub fn fractal_studies() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -687,7 +693,7 @@ pub fn mascot_lesson_b32() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -725,8 +731,9 @@ pub fn confront_the_doubt() -> CardDefinition {
             Effect::DiscardChosen {
                 from: Selector::Player(PlayerRef::Target(0)),
                 count: Value::Const(1),
-                filter: SelectionRequirement::Nonland
-                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature))),
+                filter: SelectionRequirement::Nonland.and(SelectionRequirement::Not(Box::new(
+                    SelectionRequirement::Creature,
+                ))),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -753,7 +760,10 @@ pub fn test_of_patience() -> CardDefinition {
             Effect::CounterAbility {
                 what: target_filtered(SelectionRequirement::Permanent),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }

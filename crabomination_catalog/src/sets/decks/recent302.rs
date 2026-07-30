@@ -5,12 +5,12 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, Selector, SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility,
+    Keyword, SelectionRequirement as R, Selector, Subtypes, TokenDefinition, TriggeredAbility,
     Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Haazda Exonerator — {W} 1/1 Human Cleric. {T}, Sacrifice this creature:
 /// Destroy target Aura.
@@ -66,7 +66,10 @@ pub fn whiptail_moloch() -> CardDefinition {
         name: "Whiptail Moloch",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
         power: 6,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::DealDamage {
@@ -107,7 +110,9 @@ pub fn gnat_alley_creeper() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        keywords: vec![Keyword::CantBeBlockedBy(Box::new(R::HasKeyword(Keyword::Flying)))],
+        keywords: vec![Keyword::CantBeBlockedBy(Box::new(R::HasKeyword(
+            Keyword::Flying,
+        )))],
         ..Default::default()
     }
 }
@@ -133,7 +138,10 @@ pub fn silkwing_scout() -> CardDefinition {
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: R::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
             ..Default::default()
         }],
@@ -174,7 +182,10 @@ pub fn patagia_viper() -> CardDefinition {
         name: "Patagia Viper",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -208,7 +219,10 @@ pub fn squealing_devil() -> CardDefinition {
         name: "Squealing Devil",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Devil],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Fear],
@@ -242,8 +256,11 @@ pub fn slaughterhouse_bouncer() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource)
-                .with_filter(Predicate::HellbentActive { who: PlayerRef::You }),
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource).with_filter(
+                Predicate::HellbentActive {
+                    who: PlayerRef::You,
+                },
+            ),
             effect: Effect::PumpPT {
                 what: target_filtered(R::Creature),
                 power: Value::Const(-3),
@@ -261,12 +278,17 @@ pub fn transguild_courier() -> CardDefinition {
         name: "Transguild Courier",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         static_abilities: vec![crate::card::StaticAbility {
             description: "Transguild Courier is all colors.",
-            effect: crate::card::StaticEffect::GrantAllColors { applies_to: Selector::This },
+            effect: crate::card::StaticEffect::GrantAllColors {
+                applies_to: Selector::This,
+            },
         }],
         ..Default::default()
     }
@@ -280,7 +302,10 @@ pub fn wakestone_gargoyle() -> CardDefinition {
         name: "Wakestone Gargoyle",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Gargoyle], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gargoyle],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Defender, Keyword::Flying],
@@ -304,8 +329,13 @@ pub fn wakestone_gargoyle() -> CardDefinition {
 fn sac_unless_color_spent(color: Color) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(
-            Predicate::Not(Box::new(Predicate::SourceCastWithColorSpent { color, at_least: 1 })),
+            Predicate::Not(Box::new(Predicate::SourceCastWithColorSpent {
+                color,
+                at_least: 1,
+            })),
         ),
-        effect: Effect::SacrificePermanent { what: Selector::This },
+        effect: Effect::SacrificePermanent {
+            what: Selector::This,
+        },
     }
 }

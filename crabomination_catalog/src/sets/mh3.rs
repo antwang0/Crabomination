@@ -4,12 +4,10 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility,
-    Value,
+    EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{
-    add_any_one_color, add_colorless, etb, on_attack, target_filtered,
-};
+use crate::effect::shortcut::{add_any_one_color, add_colorless, etb, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
 use crate::mana::{b, colorless, cost, g, generic, r, u, w};
 
@@ -69,8 +67,16 @@ pub fn nightshade_dryad() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
         activated_abilities: vec![
-            ActivatedAbility { tap_cost: true, effect: add_colorless(1), ..Default::default() },
-            ActivatedAbility { tap_cost: true, effect: add_any_one_color(1), ..Default::default() },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: add_colorless(1),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: add_any_one_color(1),
+                ..Default::default()
+            },
         ],
         ..Default::default()
     }
@@ -89,8 +95,14 @@ pub fn serum_visionary() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]))],
         ..Default::default()
     }
@@ -197,7 +209,10 @@ pub fn retrofitted_transmogrant() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
                 Effect::AddCounter {
                     what: Selector::This,
@@ -260,7 +275,10 @@ pub fn consuming_corruption() -> CardDefinition {
                 ),
                 amount: swamps.clone(),
             },
-            Effect::GainLife { who: Selector::You, amount: swamps },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: swamps,
+            },
         ]),
         ..Default::default()
     }
@@ -309,8 +327,15 @@ pub fn tempest_harvester() -> CardDefinition {
             tap_cost: true,
             energy_cost: 1,
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
             ]),
             ..Default::default()
         }],
@@ -332,11 +357,18 @@ pub fn snapping_voidcraw() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Devoid],
         activated_abilities: vec![
-            ActivatedAbility { tap_cost: true, effect: add_colorless(2), ..Default::default() },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: add_colorless(2),
+                ..Default::default()
+            },
             ActivatedAbility {
                 mana_cost: cost(&[generic(3), colorless(1)]),
                 tap_cost: true,
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
         ],
@@ -351,12 +383,13 @@ pub fn solar_transformer() -> CardDefinition {
         name: "Solar Transformer",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![
-            super::etb_tap(),
-            etb(Effect::AddEnergy(Value::Const(3))),
-        ],
+        triggered_abilities: vec![super::etb_tap(), etb(Effect::AddEnergy(Value::Const(3)))],
         activated_abilities: vec![
-            ActivatedAbility { tap_cost: true, effect: add_colorless(1), ..Default::default() },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: add_colorless(1),
+                ..Default::default()
+            },
             ActivatedAbility {
                 tap_cost: true,
                 energy_cost: 1,
@@ -388,7 +421,10 @@ pub fn roil_cartographer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             energy_cost: 6,
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -414,8 +450,15 @@ pub fn horrid_shadowspinner() -> CardDefinition {
         triggered_abilities: vec![on_attack(Effect::MayDo {
             description: "draw cards equal to its power, then discard that many".into(),
             body: Box::new(Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: power.clone() },
-                Effect::Discard { who: Selector::You, amount: power, random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: power.clone(),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: power,
+                    random: false,
+                },
             ])),
         })],
         ..Default::default()
@@ -431,7 +474,10 @@ pub fn unfathomable_truths() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Devoid],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -489,9 +535,8 @@ pub fn phyrexian_ironworks() -> CardDefinition {
 /// Breathe Your Last — {1}{B}{B} Instant. Destroy target creature or
 /// planeswalker; you gain 1 life for each of its colors.
 pub fn breathe_your_last() -> CardDefinition {
-    let target = || target_filtered(
-        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-    );
+    let target =
+        || target_filtered(SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker));
     CardDefinition {
         name: "Breathe Your Last",
         cost: cost(&[generic(1), b(), b()]),
@@ -518,7 +563,8 @@ pub fn fowl_strike() -> CardDefinition {
         keywords: vec![Keyword::Reinforce(2, cost(&[generic(2), g()]))],
         effect: Effect::Destroy {
             what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
             ),
         },
         ..Default::default()
@@ -533,7 +579,11 @@ pub fn scurrilous_sentry() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Knight, CreatureType::Rogue],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Knight,
+                CreatureType::Rogue,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -666,8 +716,14 @@ pub fn fetid_gargantua() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "draw two cards and lose 2 life".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-                    Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
                 ])),
             },
         }],

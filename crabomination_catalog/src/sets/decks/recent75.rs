@@ -45,7 +45,10 @@ pub fn serpent_warrior() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![etb(Effect::LoseLife { who: Selector::You, amount: Value::Const(3) })],
+        triggered_abilities: vec![etb(Effect::LoseLife {
+            who: Selector::You,
+            amount: Value::Const(3),
+        })],
         ..Default::default()
     }
 }
@@ -56,7 +59,10 @@ pub fn ekundu_griffin() -> CardDefinition {
         name: "Ekundu Griffin",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::FirstStrike],
@@ -71,12 +77,21 @@ pub fn nettletooth_djinn() -> CardDefinition {
         name: "Nettletooth Djinn",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Djinn], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-            effect: Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::DealDamage {
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -88,7 +103,10 @@ pub fn hulking_cyclops() -> CardDefinition {
         name: "Hulking Cyclops",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cyclops], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cyclops],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::CantBlock],
@@ -103,7 +121,10 @@ pub fn pygmy_pyrosaur() -> CardDefinition {
         name: "Pygmy Pyrosaur",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::CantBlock],
@@ -128,7 +149,10 @@ pub fn owl_familiar() -> CardDefinition {
         name: "Owl Familiar",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -144,7 +168,10 @@ pub fn fire_drake() -> CardDefinition {
         name: "Fire Drake",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -169,7 +196,10 @@ pub fn muck_rats() -> CardDefinition {
         name: "Muck Rats",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         ..Default::default()

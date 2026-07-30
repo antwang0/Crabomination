@@ -3,7 +3,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, Selector, SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
+    Keyword, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{bloodthirst, target_filtered};
 use crate::effect::{Duration, Effect};
@@ -17,7 +17,10 @@ pub fn battering_wurm() -> CardDefinition {
         name: "Battering Wurm",
         cost: cost(&[generic(6), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::CantBeBlockedByPowerLess],
@@ -32,7 +35,9 @@ pub fn caustic_rain() -> CardDefinition {
         name: "Caustic Rain",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Exile { what: target_filtered(R::Land) },
+        effect: Effect::Exile {
+            what: target_filtered(R::Land),
+        },
         ..Default::default()
     }
 }
@@ -43,7 +48,10 @@ pub fn daggerclaw_imp() -> CardDefinition {
         name: "Daggerclaw Imp",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Imp], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::CantBlock],
@@ -57,7 +65,10 @@ pub fn dryad_sophisticate() -> CardDefinition {
         name: "Dryad Sophisticate",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dryad], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dryad],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::LandwalkFiltered(Box::new(R::IsNonbasicLand))],
@@ -72,7 +83,10 @@ pub fn harrier_griffin() -> CardDefinition {
         name: "Harrier Griffin",
         cost: cost(&[generic(5), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -81,7 +95,9 @@ pub fn harrier_griffin() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::Upkeep),
                 EventScope::ActivePlayer,
             ),
-            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            effect: Effect::Tap {
+                what: target_filtered(R::Creature),
+            },
         }],
         ..Default::default()
     }
@@ -135,7 +151,10 @@ pub fn abyssal_nocturnus() -> CardDefinition {
         name: "Abyssal Nocturnus",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {

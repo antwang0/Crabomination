@@ -7,9 +7,8 @@
 
 use crate::card::{
     ActivatedAbility, AlternativeCost, CardDefinition, CardType, CreatureType, DynamicPt, Effect,
-    EventKind,
-    EventScope, EventSpec, Keyword, PlaneswalkerSubtype, Selector, SelectionRequirement, Subtypes,
-    Supertype, TriggeredAbility, Value,
+    EventKind, EventScope, EventSpec, Keyword, PlaneswalkerSubtype, SelectionRequirement, Selector,
+    Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, ZoneDest};
@@ -201,8 +200,14 @@ pub fn griselbrand() -> CardDefinition {
             mana_cost: ManaCost::default(),
             // "Pay 7 life: Draw seven cards."
             effect: Effect::Seq(vec![
-                Effect::LoseLife { who: Selector::You, amount: Value::Const(7) },
-                Effect::Draw { who: Selector::You, amount: Value::Const(7) },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(7),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(7),
+                },
             ]),
             once_per_turn: false,
             sorcery_speed: false,
@@ -210,9 +215,12 @@ pub fn griselbrand() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -238,7 +246,10 @@ pub fn psychic_frog() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         activated_abilities: vec![
             // "Discard a card: Put a +1/+1 counter on Psychic Frog."
@@ -344,8 +355,7 @@ pub fn solitude() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Exile {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
             },
         }],
@@ -357,9 +367,9 @@ pub fn solitude() -> CardDefinition {
             not_your_turn_only: false,
             target_filter: None,
             condition: None,
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
+            exile_from_graveyard_count: 0,
+            return_to_hand: None,
+            sacrifice_permanents: None,
             effect_override: None,
             dash: false,
             blitz: false,
@@ -368,7 +378,8 @@ pub fn solitude() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -427,8 +438,7 @@ pub fn fury() -> CardDefinition {
             effect: Effect::DealDamageDivided {
                 retaliate_to_source: false,
                 total: Value::Const(4),
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker),
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                 max_targets: 2,
             },
         }],
@@ -494,7 +504,9 @@ pub fn endurance() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::EachOpponent },
+            effect: Effect::ShuffleGraveyardIntoLibrary {
+                who: PlayerRef::EachOpponent,
+            },
         }],
         alternative_cost: Some(AlternativeCost {
             mana_cost: ManaCost::default(),
@@ -535,14 +547,22 @@ pub fn ophidian() -> CardDefinition {
         name: "Ophidian",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         triggered_abilities: vec![on_unblocked(Effect::MayDo {
             description: "Draw a card (this assigns no combat damage)".into(),
             body: Box::new(Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                Effect::PreventAllCombatDamageInvolving { target: Selector::This },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::PreventAllCombatDamageInvolving {
+                    target: Selector::This,
+                },
             ])),
         })],
         ..Default::default()
@@ -585,7 +605,10 @@ pub fn torch_courier() -> CardDefinition {
         name: "Torch Courier",
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Haste],
@@ -675,8 +698,7 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         // scans the battlefield for any permanent carrying this static
         // ability (rather than matching on the printed name).
         static_abilities: vec![crate::card::StaticAbility {
-            description:
-                "Permanents entering the battlefield don't cause abilities of \
+            description: "Permanents entering the battlefield don't cause abilities of \
                  permanents your opponents control to trigger. If a permanent \
                  entering the battlefield causes a triggered ability of a \
                  permanent you control to trigger, that ability triggers an \
@@ -732,7 +754,9 @@ pub fn teferi_time_raveler() -> CardDefinition {
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: 1,
-                effect: Effect::GrantSorceriesAsFlash { who: PlayerRef::You },
+                effect: Effect::GrantSorceriesAsFlash {
+                    who: PlayerRef::You,
+                },
             },
             LoyaltyAbility {
                 x_cost: false,

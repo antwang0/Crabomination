@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, evolve, outlast, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef};
-use crate::mana::{b, cost, g, generic, hybrid, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, u, w};
 
 /// Anthem granting `keyword` to your creatures that carry a +1/+1 counter.
 fn counter_bearers_have(keyword: Keyword, description: &'static str) -> StaticAbility {
@@ -28,7 +28,11 @@ fn counter_bearers_have(keyword: Keyword, description: &'static str) -> StaticAb
 }
 
 fn plus_one(what: Selector, amount: Value) -> Effect {
-    Effect::AddCounter { what, kind: CounterType::PlusOnePlusOne, amount }
+    Effect::AddCounter {
+        what,
+        kind: CounterType::PlusOnePlusOne,
+        amount,
+    }
 }
 
 /// Good-Fortune Unicorn — {1}{G}{W} 2/2 Unicorn. Whenever another creature you
@@ -38,7 +42,10 @@ pub fn good_fortune_unicorn() -> CardDefinition {
         name: "Good-Fortune Unicorn",
         cost: cost(&[generic(1), g(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Unicorn],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
@@ -85,7 +92,10 @@ pub fn managorger_hydra() -> CardDefinition {
         name: "Managorger Hydra",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Hydra], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hydra],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Trample],
@@ -106,14 +116,20 @@ pub fn herd_baloth() -> CardDefinition {
         toughness: 4,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
         name: "Herd Baloth",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
@@ -141,7 +157,10 @@ pub fn duskshell_crawler() -> CardDefinition {
         name: "Duskshell Crawler",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 0,
         toughness: 3,
         triggered_abilities: vec![etb(plus_one(target_filtered(R::Creature), Value::ONE))],
@@ -184,7 +203,10 @@ pub fn kami_of_whispered_hopes() -> CardDefinition {
         name: "Kami of Whispered Hopes",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         static_abilities: vec![StaticAbility {
@@ -213,12 +235,18 @@ pub fn old_gnawbone() -> CardDefinition {
         cost: cost(&[generic(5), g(), g()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::TriggerEventAmount,
@@ -271,7 +299,10 @@ pub fn nissa_voice_of_zendikar() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant],
+            ..Default::default()
+        },
         ..Default::default()
     };
     let lands = || Value::count(Selector::EachPermanent(R::Land.and(R::ControlledByYou)));
@@ -306,8 +337,14 @@ pub fn nissa_voice_of_zendikar() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -7,
                 effect: Effect::Seq(vec![
-                    Effect::GainLife { who: Selector::You, amount: lands() },
-                    Effect::Draw { who: Selector::You, amount: lands() },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: lands(),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: lands(),
+                    },
                 ]),
                 ..Default::default()
             },
@@ -373,7 +410,10 @@ pub fn corpsejack_menace() -> CardDefinition {
         name: "Corpsejack Menace",
         cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fungus],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         static_abilities: vec![StaticAbility {
@@ -436,7 +476,10 @@ pub fn cold_eyed_selkie() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::MayDo {
                 description: "Draw that many cards.".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount }),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::TriggerEventAmount,
+                }),
             },
         }],
         ..Default::default()
@@ -451,8 +494,14 @@ pub fn bioshift() -> CardDefinition {
         cost: crate::mana::ManaCost::new(vec![hybrid(Color::Green, Color::Blue)]),
         card_types: vec![CardType::Instant],
         effect: Effect::MoveAllCounters {
-            from: Selector::TargetFiltered { slot: 0, filter: R::Creature },
-            to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+            from: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature,
+            },
+            to: Selector::TargetFiltered {
+                slot: 1,
+                filter: R::Creature,
+            },
         },
         ..Default::default()
     }
@@ -492,7 +541,10 @@ pub fn feat_of_resistance() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            plus_one(target_filtered(R::Creature.and(R::ControlledByYou)), Value::ONE),
+            plus_one(
+                target_filtered(R::Creature.and(R::ControlledByYou)),
+                Value::ONE,
+            ),
             Effect::GrantProtectionFromChosenColor {
                 what: Selector::Target(0),
                 duration: Duration::EndOfTurn,

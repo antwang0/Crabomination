@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{draw, etb, eternalize, evolve, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u, w};
 
 use SelectionRequirement as R;
 
@@ -20,7 +20,10 @@ fn squirrel_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Squirrel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -34,7 +37,10 @@ pub fn thrasta_tempests_roar() -> CardDefinition {
         cost: cost(&[generic(10), g(), g()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 7,
         toughness: 7,
         keywords: vec![
@@ -100,7 +106,9 @@ pub fn chatterfang_squirrel_general() -> CardDefinition {
         keywords: vec![Keyword::Landwalk(LandType::Forest)],
         static_abilities: vec![StaticAbility {
             description: "If one or more tokens would be created under your control, those tokens plus that many 1/1 green Squirrel creature tokens are created instead.",
-            effect: StaticEffect::TokenCreationAddsTokenPerToken { definition: squirrel_token() },
+            effect: StaticEffect::TokenCreationAddsTokenPerToken {
+                definition: squirrel_token(),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
@@ -109,10 +117,7 @@ pub fn chatterfang_squirrel_general() -> CardDefinition {
             effect: Effect::PumpPT {
                 what: target_filtered(R::Creature),
                 power: Value::XFromCost,
-                toughness: Value::Diff(
-                    Box::new(Value::Const(0)),
-                    Box::new(Value::XFromCost),
-                ),
+                toughness: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
                 duration: Duration::EndOfTurn,
             },
             ..Default::default()
@@ -144,7 +149,10 @@ pub fn ravenous_squirrel() -> CardDefinition {
         name: "Ravenous Squirrel",
         cost: cost(&[hybrid(Color::Black, Color::Green)]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Squirrel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
@@ -163,7 +171,10 @@ pub fn ravenous_squirrel() -> CardDefinition {
             mana_cost: cost(&[generic(1), b(), g()]),
             sac_other_filter: Some((R::Artifact.or(R::Creature), 1)),
             effect: Effect::Seq(vec![
-                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 draw(1),
             ]),
             ..Default::default()
@@ -241,7 +252,10 @@ pub fn scurry_oak() -> CardDefinition {
         name: "Scurry Oak",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         triggered_abilities: vec![
@@ -269,9 +283,7 @@ pub fn scurry_oak() -> CardDefinition {
 /// control get +1/+0 and menace this turn.
 pub fn drey_keeper() -> CardDefinition {
     let squirrels = || {
-        Selector::EachPermanent(
-            R::HasCreatureType(CreatureType::Squirrel).and(R::ControlledByYou),
-        )
+        Selector::EachPermanent(R::HasCreatureType(CreatureType::Squirrel).and(R::ControlledByYou))
     };
     CardDefinition {
         name: "Drey Keeper",
@@ -320,7 +332,9 @@ pub fn sylvan_anthem() -> CardDefinition {
             description: "Green creatures you control get +1/+1.",
             effect: StaticEffect::PumpPT {
                 applies_to: Selector::EachPermanent(
-                    R::Creature.and(R::HasColor(Color::Green)).and(R::ControlledByYou),
+                    R::Creature
+                        .and(R::HasColor(Color::Green))
+                        .and(R::ControlledByYou),
                 ),
                 power: 1,
                 toughness: 1,
@@ -332,7 +346,10 @@ pub fn sylvan_anthem() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Creature.and(R::HasColor(Color::Green)),
                 }),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -345,7 +362,10 @@ pub fn timeless_dragon() -> CardDefinition {
         name: "Timeless Dragon",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![
@@ -425,7 +445,10 @@ pub fn young_necromancer() -> CardDefinition {
                 Effect::Reflexive {
                     body: Box::new(Effect::Move {
                         what: target_filtered(R::Creature),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     }),
                 },
             ])),
@@ -441,7 +464,10 @@ pub fn necrogoyf() -> CardDefinition {
         name: "Necrogoyf",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lhurgoyf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lhurgoyf],
+            ..Default::default()
+        },
         power: 0,
         toughness: 4,
         dynamic_pt: Some(crate::card::DynamicPt::CreatureCardsInAllGraveyardsPower { base_t: 4 }),
@@ -469,7 +495,9 @@ pub fn terminal_agony() -> CardDefinition {
         cost: cost(&[generic(2), b(), r()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Madness(cost(&[b(), r()]))],
-        effect: Effect::Destroy { what: target_filtered(R::Creature) },
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature),
+        },
         ..Default::default()
     }
 }
@@ -519,7 +547,10 @@ pub fn brainstone() -> CardDefinition {
             sac_cost: true,
             effect: Effect::Seq(vec![
                 draw(3),
-                Effect::PutOnLibraryFromHand { who: PlayerRef::You, count: Value::Const(2) },
+                Effect::PutOnLibraryFromHand {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                },
             ]),
             ..Default::default()
         }],
@@ -553,10 +584,16 @@ pub fn gargadon() -> CardDefinition {
         name: "Gargadon",
         cost: cost(&[generic(5), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 7,
         toughness: 5,
-        keywords: vec![Keyword::Trample, Keyword::Suspend(4, cost(&[generic(1), r()]))],
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Suspend(4, cost(&[generic(1), r()])),
+        ],
         ..Default::default()
     }
 }
@@ -578,7 +615,10 @@ fn arcbound(
         name,
         cost: cost(mana),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(n))),
         keywords: {
             let mut kws = kws;
@@ -592,7 +632,13 @@ fn arcbound(
 
 /// Arcbound Mouser — {W} 0/0 Cat. Lifelink, modular 1.
 pub fn arcbound_mouser() -> CardDefinition {
-    arcbound("Arcbound Mouser", &[w()], vec![CreatureType::Cat], 1, vec![Keyword::Lifelink])
+    arcbound(
+        "Arcbound Mouser",
+        &[w()],
+        vec![CreatureType::Cat],
+        1,
+        vec![Keyword::Lifelink],
+    )
 }
 
 /// Arcbound Prototype — {1}{W} 0/0. Modular 2.
@@ -634,8 +680,13 @@ pub fn arcbound_tracker() -> CardDefinition {
 
 /// Arcbound Slasher — {4}{R} 0/0 Cat. Modular 4, riot.
 pub fn arcbound_slasher() -> CardDefinition {
-    let mut def =
-        arcbound("Arcbound Slasher", &[generic(4), r()], vec![CreatureType::Cat], 4, vec![]);
+    let mut def = arcbound(
+        "Arcbound Slasher",
+        &[generic(4), r()],
+        vec![CreatureType::Cat],
+        4,
+        vec![],
+    );
     def.triggered_abilities.push(riot());
     def
 }
@@ -701,11 +752,12 @@ pub fn general_ferrous_rokiric() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::HexproofFromMonocolored],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Multicolored,
-                }),
+                },
+            ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -777,10 +829,16 @@ pub fn abiding_grace() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::ChooseMode(vec![
-                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 Effect::Move {
                     what: target_filtered(R::Creature.and(R::ManaValueAtMost(1))),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ]),
         }],
@@ -816,7 +874,10 @@ pub fn flametongue_yearling() -> CardDefinition {
         name: "Flametongue Yearling",
         cost: cost(&[r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Kavu], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Multikicker(cost(&[generic(2)]))],
@@ -852,12 +913,18 @@ pub fn sinister_starfish() -> CardDefinition {
         name: "Sinister Starfish",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Starfish], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Starfish],
+            ..Default::default()
+        },
         power: 0,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -922,7 +989,10 @@ pub fn myr_scrapling() -> CardDefinition {
         name: "Myr Scrapling",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Myr],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -945,7 +1015,10 @@ pub fn tormods_cryptkeeper() -> CardDefinition {
         name: "Tormod's Cryptkeeper",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
@@ -981,7 +1054,9 @@ pub fn legion_vanguard() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::Explore { who: Selector::This },
+            effect: Effect::Explore {
+                who: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -995,7 +1070,10 @@ pub fn vermin_gorger() -> CardDefinition {
         name: "Vermin Gorger",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -1006,7 +1084,10 @@ pub fn vermin_gorger() -> CardDefinition {
                     who: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::Const(2),
                 },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ]),
             ..Default::default()
         }],
@@ -1047,7 +1128,10 @@ pub fn late_to_dinner() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(R::Creature),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -1065,10 +1149,17 @@ pub fn kitchen_imp() -> CardDefinition {
         name: "Kitchen Imp",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Imp], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Madness(cost(&[b()]))],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Haste,
+            Keyword::Madness(cost(&[b()])),
+        ],
         ..Default::default()
     }
 }
@@ -1146,7 +1237,9 @@ pub fn foul_watcher() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Delirium — This creature gets +1/+0 as long as there are four or more card types among cards in your graveyard.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::DeliriumActive { who: PlayerRef::You },
+                condition: Predicate::DeliriumActive {
+                    who: PlayerRef::You,
+                },
                 power: 1,
                 toughness: 0,
                 keywords: vec![],
@@ -1172,7 +1265,10 @@ pub fn rift_sower() -> CardDefinition {
         keywords: vec![Keyword::Suspend(2, cost(&[g()]))],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::ONE),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -1185,7 +1281,10 @@ pub fn orchard_strider() -> CardDefinition {
         name: "Orchard Strider",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            ..Default::default()
+        },
         power: 6,
         toughness: 4,
         keywords: vec![Keyword::Typecycling(Box::new((
@@ -1211,7 +1310,10 @@ pub fn terramorph() -> CardDefinition {
         effect: Effect::Search {
             who: PlayerRef::You,
             filter: R::IsBasicLand,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -1223,12 +1325,17 @@ pub fn funnel_web_recluse() -> CardDefinition {
         name: "Funnel-Web Recluse",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
         power: 3,
         toughness: 5,
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE },
+            cond: Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                at_least: Value::ONE,
+            },
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -1246,7 +1353,10 @@ pub fn urban_daggertooth() -> CardDefinition {
         name: "Urban Daggertooth",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
@@ -1265,7 +1375,10 @@ pub fn jewel_eyed_cobra() -> CardDefinition {
         name: "Jewel-Eyed Cobra",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Deathtouch],
@@ -1284,7 +1397,10 @@ pub fn healers_flock() -> CardDefinition {
         name: "Healer's Flock",
         cost: cost(&[w(), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
@@ -1395,7 +1511,10 @@ pub fn soul_of_migration() -> CardDefinition {
         name: "Soul of Migration",
         cost: cost(&[generic(5), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -1425,20 +1544,30 @@ pub fn soul_of_migration() -> CardDefinition {
 /// creatures you control get +1/+1 and have vigilance.
 pub fn thraben_watcher() -> CardDefinition {
     let others = Selector::EachPermanent(
-        R::Creature.and(R::ControlledByYou).and(R::NotToken).and(R::OtherThanSource),
+        R::Creature
+            .and(R::ControlledByYou)
+            .and(R::NotToken)
+            .and(R::OtherThanSource),
     );
     CardDefinition {
         name: "Thraben Watcher",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         static_abilities: vec![
             StaticAbility {
                 description: "Other nontoken creatures you control get +1/+1.",
-                effect: StaticEffect::PumpPT { applies_to: others.clone(), power: 1, toughness: 1 },
+                effect: StaticEffect::PumpPT {
+                    applies_to: others.clone(),
+                    power: 1,
+                    toughness: 1,
+                },
             },
             StaticAbility {
                 description: "Other nontoken creatures you control have vigilance.",
@@ -1500,7 +1629,10 @@ pub fn steelfin_whale() -> CardDefinition {
         name: "Steelfin Whale",
         cost: cost(&[generic(5), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Whale], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Whale],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         affinity_filter: Some(R::Artifact),
@@ -1510,7 +1642,10 @@ pub fn steelfin_whale() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Artifact,
                 }),
-            effect: Effect::Untap { what: Selector::This, up_to: None },
+            effect: Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
         }],
         ..Default::default()
     }
@@ -1531,7 +1666,9 @@ pub fn tragic_fall() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::If {
-            cond: Predicate::HellbentActive { who: PlayerRef::You },
+            cond: Predicate::HellbentActive {
+                who: PlayerRef::You,
+            },
             then: shrink(-13),
             else_: shrink(-3),
         },

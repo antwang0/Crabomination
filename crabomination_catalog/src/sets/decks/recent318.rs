@@ -3,16 +3,21 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EventKind,
-    EventScope, EventSpec, Keyword, Predicate, Selector, SelectionRequirement as R,
-    StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{animate_land, etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
 }
 
 fn creature(
@@ -27,7 +32,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -60,7 +68,11 @@ fn entwine_spell(
     CardDefinition {
         name,
         cost: mana,
-        card_types: vec![if sorcery { CardType::Sorcery } else { CardType::Instant }],
+        card_types: vec![if sorcery {
+            CardType::Sorcery
+        } else {
+            CardType::Instant
+        }],
         keywords: vec![Keyword::Entwine(entwine)],
         effect: Effect::ChooseMode(modes),
         ..Default::default()
@@ -74,7 +86,9 @@ fn untap_toll(toll: ManaCost) -> (StaticAbility, TriggeredAbility) {
     (
         StaticAbility {
             description: "This creature doesn't untap during your untap step.",
-            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::This,
+            },
         },
         TriggeredAbility {
             event: EventSpec::new(
@@ -84,7 +98,10 @@ fn untap_toll(toll: ManaCost) -> (StaticAbility, TriggeredAbility) {
             effect: Effect::MayPay {
                 description: "Untap this creature".into(),
                 mana_cost: toll,
-                body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                body: Box::new(Effect::Untap {
+                    what: Selector::This,
+                    up_to: None,
+                }),
                 else_: None,
             },
         },
@@ -101,8 +118,13 @@ pub fn dreams_grip() -> CardDefinition {
         cost(&[generic(1)]),
         false,
         vec![
-            Effect::Tap { what: target_filtered(R::Permanent) },
-            Effect::Untap { what: target_filtered(R::Permanent), up_to: None },
+            Effect::Tap {
+                what: target_filtered(R::Permanent),
+            },
+            Effect::Untap {
+                what: target_filtered(R::Permanent),
+                up_to: None,
+            },
         ],
     )
 }
@@ -120,7 +142,9 @@ pub fn blinding_beam() -> CardDefinition {
                 max_targets: 2,
                 min_targets: 2,
                 filter: R::Creature,
-                effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                effect: Box::new(Effect::Tap {
+                    what: Selector::Target(0),
+                }),
             },
             Effect::CreaturesDontUntapNextUntapStep {
                 who: Selector::Player(PlayerRef::Target(0)),
@@ -144,7 +168,10 @@ pub fn roar_of_the_kha() -> CardDefinition {
                 toughness: Value::ONE,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::EachPermanent(mine), up_to: None },
+            Effect::Untap {
+                what: Selector::EachPermanent(mine),
+                up_to: None,
+            },
         ],
     )
 }
@@ -190,7 +217,10 @@ pub fn journey_of_discovery() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
                 count: Value::Const(2),
             },
-            Effect::GrantExtraLandPlay { who: PlayerRef::You, count: Value::Const(2) },
+            Effect::GrantExtraLandPlay {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+            },
         ],
     )
 }
@@ -205,7 +235,10 @@ pub fn incite_war() -> CardDefinition {
         false,
         vec![
             Effect::GrantKeyword {
-                what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
+                what: Selector::ControlledBy {
+                    who: PlayerRef::Target(0),
+                    filter: R::Creature,
+                },
                 keyword: Keyword::MustAttack,
                 duration: Duration::EndOfTurn,
             },
@@ -228,7 +261,10 @@ pub fn one_dozen_eyes() -> CardDefinition {
                 name: name.into(),
                 colors: vec![Color::Green],
                 card_types: vec![CardType::Creature],
-                subtypes: Subtypes { creature_types: vec![ct], ..Default::default() },
+                subtypes: Subtypes {
+                    creature_types: vec![ct],
+                    ..Default::default()
+                },
                 power,
                 toughness,
                 ..Default::default()
@@ -256,7 +292,10 @@ pub fn galvanic_key() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             tap_cost: true,
-            effect: Effect::Untap { what: target_filtered(R::Artifact), up_to: None },
+            effect: Effect::Untap {
+                what: target_filtered(R::Artifact),
+                up_to: None,
+            },
             ..Default::default()
         }],
         ..artifact("Galvanic Key", cost(&[generic(2)]))
@@ -296,7 +335,10 @@ pub fn lifespark_spellbomb() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(1)]),
                 sac_cost: true,
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
         ],
@@ -327,7 +369,9 @@ pub fn altar_of_shadows() -> CardDefinition {
             mana_cost: cost(&[generic(7)]),
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Destroy { what: target_filtered(R::Creature) },
+                Effect::Destroy {
+                    what: target_filtered(R::Creature),
+                },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::Charge,
@@ -378,8 +422,13 @@ pub fn rust_elemental() -> CardDefinition {
                     filter: R::Artifact.and(R::OtherThanSource),
                 }),
                 else_: Box::new(Effect::Seq(vec![
-                    Effect::Tap { what: Selector::This },
-                    Effect::LoseLife { who: Selector::You, amount: Value::Const(4) },
+                    Effect::Tap {
+                        what: Selector::This,
+                    },
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::Const(4),
+                    },
                 ])),
             },
         }],
@@ -412,7 +461,14 @@ pub fn dross_scorpion() -> CardDefinition {
                 }),
             },
         }],
-        ..artifact_creature("Dross Scorpion", cost(&[generic(4)]), 3, 1, vec![CreatureType::Scorpion], vec![])
+        ..artifact_creature(
+            "Dross Scorpion",
+            cost(&[generic(4)]),
+            3,
+            1,
+            vec![CreatureType::Scorpion],
+            vec![],
+        )
     }
 }
 
@@ -423,7 +479,10 @@ pub fn bosh_iron_golem() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), r()]),
             sac_other_filter: Some((R::Artifact, 1)),
-            effect: Effect::DealDamage { to: target_any(), amount: Value::SacrificedManaValue },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::SacrificedManaValue,
+            },
             ..Default::default()
         }],
         ..artifact_creature(
@@ -442,7 +501,10 @@ pub fn bosh_iron_golem() -> CardDefinition {
 /// Copperhoof Vorrac — grows with every untapped permanent across the table.
 pub fn copperhoof_vorrac() -> CardDefinition {
     CardDefinition {
-        dynamic_pt: Some(DynamicPt::BasePlusOpponentsUntappedPermanents { base_p: 2, base_t: 2 }),
+        dynamic_pt: Some(DynamicPt::BasePlusOpponentsUntappedPermanents {
+            base_p: 2,
+            base_t: 2,
+        }),
         ..creature(
             "Copperhoof Vorrac",
             cost(&[generic(3), g(), g()]),
@@ -460,7 +522,9 @@ pub fn loxodon_mender() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
             tap_cost: true,
-            effect: Effect::Regenerate { what: target_filtered(R::Artifact) },
+            effect: Effect::Regenerate {
+                what: target_filtered(R::Artifact),
+            },
             ..Default::default()
         }],
         ..creature(
@@ -485,7 +549,9 @@ pub fn lumengrid_sentinel() -> CardDefinition {
                 }),
             effect: Effect::MayDo {
                 description: "Tap target permanent".into(),
-                body: Box::new(Effect::Tap { what: target_filtered(R::Permanent) }),
+                body: Box::new(Effect::Tap {
+                    what: target_filtered(R::Permanent),
+                }),
             },
         }],
         ..creature(
@@ -504,7 +570,10 @@ pub fn lumengrid_sentinel() -> CardDefinition {
 pub fn flayed_nim() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToCreature,
+                EventScope::SelfSource,
+            ),
             effect: Effect::LoseLife {
                 who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                 amount: Value::TriggerEventAmount,
@@ -512,10 +581,19 @@ pub fn flayed_nim() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), b()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
-        ..creature("Flayed Nim", cost(&[generic(3), b()]), 2, 2, vec![CreatureType::Skeleton], vec![])
+        ..creature(
+            "Flayed Nim",
+            cost(&[generic(3), b()]),
+            2,
+            2,
+            vec![CreatureType::Skeleton],
+            vec![],
+        )
     }
 }
 
@@ -550,7 +628,10 @@ pub fn taj_nar_swordsmith() -> CardDefinition {
                 who: PlayerRef::You,
                 filter: R::HasArtifactSubtype(crate::card::ArtifactSubtype::Equipment)
                     .and(R::ManaValueAtMostXFromCost),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             }),
         })],
         ..creature(
@@ -635,7 +716,10 @@ pub fn relic_bane() -> CardDefinition {
         },
         effect: Effect::Attach {
             what: Selector::This,
-            to: Selector::TargetFiltered { slot: 0, filter: R::Artifact },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Artifact,
+            },
         },
         equipped_bonus: Some(crate::card::EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
@@ -664,11 +748,17 @@ pub fn dross_harvester() -> CardDefinition {
                     EventKind::StepBegins(TurnStep::End),
                     EventScope::ActivePlayer,
                 ),
-                effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(4) },
+                effect: Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(4),
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             },
         ],
         ..creature(

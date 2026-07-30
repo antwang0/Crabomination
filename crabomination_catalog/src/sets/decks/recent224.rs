@@ -43,7 +43,10 @@ pub fn long_river_lurker() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![etb(Effect::GrantKeyword {
-            what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature.and(R::ControlledByYou),
+            },
             keyword: Keyword::Unblockable,
             duration: Duration::EndOfTurn,
         })],
@@ -71,7 +74,9 @@ pub fn kolodin_triumph_caster() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Mounts and Vehicles you control have haste.",
             effect: StaticEffect::GrantKeyword {
-                applies_to: Selector::EachPermanent(mount_or_vehicle.clone().and(R::ControlledByYou)),
+                applies_to: Selector::EachPermanent(
+                    mount_or_vehicle.clone().and(R::ControlledByYou),
+                ),
                 keyword: Keyword::Haste,
             },
         }],
@@ -82,7 +87,9 @@ pub fn kolodin_triumph_caster() -> CardDefinition {
                         what: Selector::TriggerSource,
                         filter: R::HasCreatureType(CreatureType::Mount),
                     }),
-                effect: Effect::SetSaddled { what: Selector::TriggerSource },
+                effect: Effect::SetSaddled {
+                    what: Selector::TriggerSource,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
@@ -90,7 +97,10 @@ pub fn kolodin_triumph_caster() -> CardDefinition {
                         what: Selector::TriggerSource,
                         filter: R::HasArtifactSubtype(ArtifactSubtype::Vehicle),
                     }),
-                effect: Effect::AnimateAsCreature { what: Selector::TriggerSource, duration: Duration::EndOfTurn },
+                effect: Effect::AnimateAsCreature {
+                    what: Selector::TriggerSource,
+                    duration: Duration::EndOfTurn,
+                },
             },
         ],
         ..Default::default()
@@ -103,7 +113,10 @@ fn vehicle_3_2_crew1() -> TokenDefinition {
         power: 3,
         toughness: 2,
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Vehicle], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Crew(1)],
         ..Default::default()
     }
@@ -119,7 +132,11 @@ pub fn mu_yanling_wind_rider() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard, CreatureType::Pilot],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Wizard,
+                CreatureType::Pilot,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -141,13 +158,19 @@ pub fn mu_yanling_wind_rider() -> CardDefinition {
             }),
             // `once_per_turn` approximates "one or more … deal combat damage".
             TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
-                    .with_filter(Predicate::EntityMatches {
-                        what: Selector::TriggerSource,
-                        filter: R::HasKeyword(Keyword::Flying),
-                    })
-                    .once_per_turn(),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::YourControl,
+                )
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasKeyword(Keyword::Flying),
+                })
+                .once_per_turn(),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             },
         ],
         ..Default::default()

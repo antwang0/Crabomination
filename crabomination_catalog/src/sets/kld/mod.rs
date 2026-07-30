@@ -12,7 +12,7 @@ use crate::card::{
 };
 use crate::effect::{Duration, PlayerRef};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, ManaCost};
+use crate::mana::{ManaCost, b, cost, g, generic, r, u};
 
 /// {E}{E}{E}: Put a +1/+1 counter on this creature (energy-only activated
 /// ability via `PayEnergy`). The ability itself is free; the player commits
@@ -82,7 +82,10 @@ pub fn rogue_refiner() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             Effect::AddEnergy(Value::Const(2)),
         ]))],
         ..Default::default()
@@ -174,8 +177,14 @@ pub fn glint_sleeve_siphoner() -> CardDefinition {
                 effect: Effect::PayEnergy {
                     amount: 2,
                     then: Box::new(Effect::Seq(vec![
-                        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                        Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                        },
+                        Effect::LoseLife {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                        },
                     ])),
                 },
             },
@@ -187,8 +196,8 @@ pub fn glint_sleeve_siphoner() -> CardDefinition {
 /// Aether Hub — Land. When it enters, you get {E}. `{T}: Add {C}.`
 /// `{T}, Pay {E}: Add one mana of any color.`
 pub fn aether_hub() -> CardDefinition {
-    use crate::effect::shortcut::etb;
     use crate::effect::ManaPayload;
+    use crate::effect::shortcut::etb;
     CardDefinition {
         name: "Aether Hub",
         card_types: vec![CardType::Land],
@@ -220,8 +229,8 @@ pub fn aether_hub() -> CardDefinition {
 /// Servant of the Conduit — {1}{G} 2/2 Elf Druid. When it enters, you get
 /// {E}{E}. `{T}, Pay {E}: Add one mana of any color.`
 pub fn servant_of_the_conduit() -> CardDefinition {
-    use crate::effect::shortcut::etb;
     use crate::effect::ManaPayload;
+    use crate::effect::shortcut::etb;
     CardDefinition {
         name: "Servant of the Conduit",
         cost: cost(&[generic(1), g()]),
@@ -264,7 +273,10 @@ pub fn dynavolt_tower() -> CardDefinition {
             mana_cost: cost(&[generic(5)]),
             effect: Effect::PayEnergy {
                 amount: 5,
-                then: Box::new(Effect::DealDamage { to: target_any(), amount: Value::Const(4) }),
+                then: Box::new(Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::Const(4),
+                }),
             },
             once_per_turn: false,
             sorcery_speed: false,
@@ -304,7 +316,7 @@ pub fn aether_swooper() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -361,8 +373,14 @@ pub fn live_fast() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::AddEnergy(Value::Const(2)),
         ]),
         ..Default::default()
@@ -372,8 +390,8 @@ pub fn live_fast() -> CardDefinition {
 /// Highspire Infusion — {1}{G} Instant. Target creature gets +3/+3 until end
 /// of turn. You get {E}{E}.
 pub fn highspire_infusion() -> CardDefinition {
-    use crate::effect::shortcut::target_filtered;
     use crate::effect::Duration;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Highspire Infusion",
         cost: cost(&[generic(1), g()]),
@@ -399,8 +417,14 @@ pub fn glimmer_of_genius() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::AddEnergy(Value::Const(2)),
         ]),
         ..Default::default()
@@ -411,10 +435,15 @@ pub fn glimmer_of_genius() -> CardDefinition {
 /// and gain 3 life. {2}, Sacrifice: you get {E}{E}{E} and gain 3 life.
 pub fn woodweavers_puzzleknot() -> CardDefinition {
     use crate::effect::shortcut::etb;
-    let payoff = || Effect::Seq(vec![
-        Effect::AddEnergy(Value::Const(3)),
-        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
-    ]);
+    let payoff = || {
+        Effect::Seq(vec![
+            Effect::AddEnergy(Value::Const(3)),
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        ])
+    };
     CardDefinition {
         name: "Woodweaver's Puzzleknot",
         cost: cost(&[generic(2)]),
@@ -448,10 +477,15 @@ pub fn woodweavers_puzzleknot() -> CardDefinition {
 /// and draw a card. {2}, Sacrifice: you get {E}{E} and draw a card.
 pub fn glassblowers_puzzleknot() -> CardDefinition {
     use crate::effect::shortcut::etb;
-    let payoff = || Effect::Seq(vec![
-        Effect::AddEnergy(Value::Const(2)),
-        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-    ]);
+    let payoff = || {
+        Effect::Seq(vec![
+            Effect::AddEnergy(Value::Const(2)),
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ])
+    };
     CardDefinition {
         name: "Glassblower's Puzzleknot",
         cost: cost(&[generic(2)]),
@@ -510,8 +544,8 @@ pub fn aether_poisoner() -> CardDefinition {
 /// Aetherstream Leopard — {3}{G} 4/3 Cat. When it enters, you get {E}{E}.
 /// {E}{E}{E}{E}: this creature can't be blocked this turn.
 pub fn aetherstream_leopard() -> CardDefinition {
-    use crate::effect::shortcut::etb;
     use crate::effect::Duration;
+    use crate::effect::shortcut::etb;
     let mut sneak = pay_energy_counter(4);
     sneak.effect = Effect::PayEnergy {
         amount: 4,
@@ -540,8 +574,8 @@ pub fn aetherstream_leopard() -> CardDefinition {
 /// Riparian Tiger — {3}{G} 5/4 Cat. When it enters, you get {E}{E}. {E}{E}:
 /// this creature gains hexproof until end of turn.
 pub fn riparian_tiger() -> CardDefinition {
-    use crate::effect::shortcut::etb;
     use crate::effect::Duration;
+    use crate::effect::shortcut::etb;
     let mut guard = pay_energy_counter(2);
     guard.effect = Effect::PayEnergy {
         amount: 2,
@@ -571,8 +605,8 @@ pub fn riparian_tiger() -> CardDefinition {
 /// Whenever it attacks, you may pay {E}{E}; if you do, it gets +1/+1 until
 /// end of turn.
 pub fn voltaic_brawler() -> CardDefinition {
-    use crate::effect::shortcut::on_attack;
     use crate::effect::Duration;
+    use crate::effect::shortcut::on_attack;
     CardDefinition {
         name: "Voltaic Brawler",
         cost: cost(&[r(), g()]),
@@ -658,8 +692,8 @@ pub fn lathnu_hellion() -> CardDefinition {
 /// Greenbelt Rampager — {G} 3/4 Elephant. ETB: you get {E}{E}, then pay
 /// {E}{E} or return it to its owner's hand (`PayEnergyOrElse`, CR 107.16).
 pub fn greenbelt_rampager() -> CardDefinition {
-    use crate::effect::shortcut::etb;
     use crate::effect::ZoneDest;
+    use crate::effect::shortcut::etb;
     CardDefinition {
         name: "Greenbelt Rampager",
         cost: cost(&[g()]),
@@ -687,8 +721,8 @@ pub fn greenbelt_rampager() -> CardDefinition {
 /// Thriving Rhino — {3}{G} 3/3 Rhino. Whenever it attacks, you may pay
 /// {E}{E}; if you do, it gets +2/+2 until end of turn.
 pub fn thriving_rhino() -> CardDefinition {
-    use crate::effect::shortcut::on_attack;
     use crate::effect::Duration;
+    use crate::effect::shortcut::on_attack;
     CardDefinition {
         name: "Thriving Rhino",
         cost: cost(&[generic(2), g()]),
@@ -722,12 +756,14 @@ pub fn harnessed_lightning() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+            Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(3),
+            },
             Effect::If {
                 cond: Predicate::EntityMatches {
                     what: Selector::Target(0),
-                    filter: SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker),
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                 },
                 then: Box::new(Effect::AddEnergy(Value::Const(3))),
                 else_: Box::new(Effect::Noop),

@@ -11,7 +11,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{Effect, ManaPayload, PlayerRef, Predicate, Selector};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Rodeo Pyromancers — {3}{R} 3/4 Human Mercenary. Whenever you cast your first
 /// spell each turn, add {R}{R}.
@@ -28,7 +28,10 @@ pub fn rodeo_pyromancers() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::ONE },
+                Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                },
             ),
             effect: Effect::AddMana {
                 who: PlayerRef::You,
@@ -45,7 +48,10 @@ fn dinosaur_token() -> TokenDefinition {
         name: "Dinosaur".to_string(),
         colors: vec![Color::Red],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         ..Default::default()
@@ -66,7 +72,9 @@ pub fn scalestorm_summoner() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![on_attack(Effect::If {
-            cond: Predicate::FerociousActive { who: PlayerRef::You },
+            cond: Predicate::FerociousActive {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -91,10 +99,18 @@ pub fn marauding_sphinx() -> CardDefinition {
         },
         power: 3,
         toughness: 5,
-        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Ward(WardCost::generic(2))],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Vigilance,
+            Keyword::Ward(WardCost::generic(2)),
+        ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl).once_per_turn(),
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
+                .once_per_turn(),
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         }],
         ..Default::default()
     }
@@ -147,7 +163,9 @@ pub fn ruthless_lawbringer() -> CardDefinition {
             filter: R::Creature.and(R::OtherThanSource),
             count: Value::ONE,
             then: Box::new(Effect::Reflexive {
-                body: Box::new(Effect::Destroy { what: target_filtered(R::Nonland.and(R::Permanent)) }),
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(R::Nonland.and(R::Permanent)),
+                }),
             }),
             else_: None,
         })],

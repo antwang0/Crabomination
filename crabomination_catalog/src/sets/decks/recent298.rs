@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, Predicate};
-use crate::mana::{b, cost, g, generic, w, Color};
+use crate::mana::{Color, b, cost, g, generic, w};
 
 fn saproling_token() -> TokenDefinition {
     TokenDefinition {
@@ -17,13 +17,15 @@ fn saproling_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Saproling], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Saproling],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
 
 // ── Golgari ─────────────────────────────────────────────────────────────────
-
 
 /// Golgari Germination — {1}{B}{G} Enchantment. Whenever a nontoken creature
 /// you control dies, create a 1/1 green Saproling.
@@ -56,7 +58,10 @@ pub fn corpse_blockade() -> CardDefinition {
         name: "Corpse Blockade",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Defender],
@@ -73,7 +78,6 @@ pub fn corpse_blockade() -> CardDefinition {
     }
 }
 
-
 /// Vulturous Zombie — {4}{B}{G} 5/5 Zombie with Flying. Whenever another
 /// creature dies, put a +1/+1 counter on this creature.
 pub fn vulturous_zombie() -> CardDefinition {
@@ -81,7 +85,10 @@ pub fn vulturous_zombie() -> CardDefinition {
         name: "Vulturous Zombie",
         cost: cost(&[generic(4), b(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
@@ -109,14 +116,20 @@ pub fn grave_shell_scarab() -> CardDefinition {
         name: "Grave-Shell Scarab",
         cost: cost(&[generic(2), b(), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Dredge(1)],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             sac_cost: true,
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -153,11 +166,7 @@ pub fn vindictive_mob() -> CardDefinition {
 
 // ── Simic ───────────────────────────────────────────────────────────────────
 
-
-
-
 // ── Guild spells ────────────────────────────────────────────────────────────
-
 
 /// Seed Spark — {3}{W} Instant. Destroy target artifact or enchantment. If {G}
 /// was spent to cast this spell, create two 1/1 green Saprolings.
@@ -167,9 +176,14 @@ pub fn seed_spark() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact.or(R::Enchantment)),
+            },
             Effect::If {
-                cond: Predicate::ManaSpentOfColorAtLeast { color: Color::Green, at_least: 1 },
+                cond: Predicate::ManaSpentOfColorAtLeast {
+                    color: Color::Green,
+                    at_least: 1,
+                },
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(2),

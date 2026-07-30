@@ -7,11 +7,13 @@ use crate::card::{
     Keyword, Predicate, SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition,
     TriggeredAbility,
 };
-use crate::effect::shortcut::{add_any_one_color, backup, each_your_creature, etb, target_filtered};
+use crate::effect::shortcut::{
+    add_any_one_color, backup, each_your_creature, etb, target_filtered,
+};
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 /// Bonebreaker Giant — {4}{R} 4/4 Giant vanilla.
 pub fn bonebreaker_giant() -> CardDefinition {
@@ -19,7 +21,10 @@ pub fn bonebreaker_giant() -> CardDefinition {
         name: "Bonebreaker Giant",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         ..Default::default()
@@ -32,7 +37,10 @@ pub fn gnottvold_recluse() -> CardDefinition {
         name: "Gnottvold Recluse",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
         power: 4,
         toughness: 2,
         keywords: vec![Keyword::Reach],
@@ -94,12 +102,17 @@ pub fn duct_crawler() -> CardDefinition {
         name: "Duct Crawler",
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
-            effect: Effect::CantBlockSourceThisTurn { target: target_filtered(R::Creature) },
+            effect: Effect::CantBlockSourceThisTurn {
+                target: target_filtered(R::Creature),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -239,7 +252,10 @@ pub fn yavimaya_iconoclast() -> CardDefinition {
         name: "Yavimaya Iconoclast",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Trample, Keyword::Kicker(cost(&[r()]))],
@@ -306,7 +322,10 @@ pub fn shield_wall_sentinel() -> CardDefinition {
         name: "Shield-Wall Sentinel",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Defender],
@@ -330,7 +349,10 @@ pub fn kami_of_industry() -> CardDefinition {
         name: "Kami of Industry",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 3,
         toughness: 6,
         triggered_abilities: vec![etb(Effect::Seq(vec![
@@ -340,7 +362,10 @@ pub fn kami_of_industry() -> CardDefinition {
                         .and(R::InGraveyard)
                         .and(R::ManaValueAtMost(3)),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
@@ -349,7 +374,9 @@ pub fn kami_of_industry() -> CardDefinition {
             },
             Effect::DelayUntil {
                 kind: DelayedTriggerKind::NextEndStep,
-                body: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),
+                body: Box::new(Effect::SacrificePermanent {
+                    what: Selector::Target(0),
+                }),
             },
         ]))],
         ..Default::default()
@@ -366,7 +393,10 @@ pub fn wingmantle_chaplain() -> CardDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
         keywords: vec![Keyword::Flying],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -385,7 +415,9 @@ pub fn wingmantle_chaplain() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::CountMatching {
                     sel: Box::new(Selector::EachPermanent(
-                        R::Creature.and(R::HasKeyword(Keyword::Defender)).and(R::ControlledByYou),
+                        R::Creature
+                            .and(R::HasKeyword(Keyword::Defender))
+                            .and(R::ControlledByYou),
                     )),
                     filter: R::Creature,
                 },
@@ -395,7 +427,9 @@ pub fn wingmantle_chaplain() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
-                        filter: R::Creature.and(R::HasKeyword(Keyword::Defender)).and(R::OtherThanSource),
+                        filter: R::Creature
+                            .and(R::HasKeyword(Keyword::Defender))
+                            .and(R::OtherThanSource),
                     }),
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,

@@ -7,7 +7,7 @@ use crate::card::{
     Keyword, SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Predicate};
-use crate::mana::{cost, generic, g, u, w};
+use crate::mana::{cost, g, generic, u, w};
 
 /// Beast-Kin Ranger — {2}{G} Elf Ranger 3/3 with trample. Whenever another
 /// creature you control enters, it gets +1/+0 until end of turn.
@@ -24,12 +24,12 @@ pub fn beast_kin_ranger() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
-                },
-            ),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
             effect: Effect::PumpPT {
                 what: Selector::This,
                 power: Value::ONE,
@@ -48,7 +48,10 @@ pub fn marble_gargoyle() -> CardDefinition {
         name: "Marble Gargoyle",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Gargoyle], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gargoyle],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -73,7 +76,10 @@ pub fn coral_colony() -> CardDefinition {
         name: "Coral Colony",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Defender],

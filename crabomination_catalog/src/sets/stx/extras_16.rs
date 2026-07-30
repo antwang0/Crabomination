@@ -7,13 +7,13 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword,
-    Predicate, Selector, SelectionRequirement, SpellSubtype, StaticAbility, Subtypes, Supertype,
+    Predicate, SelectionRequirement, Selector, SpellSubtype, StaticAbility, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, Zone,
 };
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{etb, gain_life, on_dies, target, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, x};
 
 // ── Lessons ──────────────────────────────────────────────────────────────────
 
@@ -26,7 +26,10 @@ pub fn basic_conjuration() -> CardDefinition {
         name: "Basic Conjuration",
         cost: cost(&[generic(1), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             Effect::LookPickToHand {
                 who: PlayerRef::You,
@@ -54,10 +57,18 @@ pub fn start_from_scratch() -> CardDefinition {
         name: "Start from Scratch",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::ChooseMode(vec![
-            Effect::DealDamage { to: target(), amount: Value::Const(1) },
-            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+            Effect::DealDamage {
+                to: target(),
+                amount: Value::Const(1),
+            },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
         ]),
         ..Default::default()
     }
@@ -73,15 +84,24 @@ pub fn teachings_of_the_archaics() -> CardDefinition {
         name: "Teachings of the Archaics",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::If {
             // opp ≥ you + 4 → draw 3
             cond: Predicate::ValueAtLeast(opp(), Value::Sum(vec![you(), Value::Const(4)])),
-            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(3) }),
+            then: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            }),
             else_: Box::new(Effect::If {
                 // opp ≥ you + 1 → draw 2
                 cond: Predicate::ValueAtLeast(opp(), Value::Sum(vec![you(), Value::Const(1)])),
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                }),
                 else_: Box::new(Effect::Noop),
             }),
         },
@@ -101,7 +121,10 @@ fn inkling_2_1_token() -> TokenDefinition {
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors: vec![Color::White, Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Inkling], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -120,7 +143,9 @@ pub fn blot_out_the_sky() -> CardDefinition {
                 count: Value::XFromCost,
                 definition: inkling_2_1_token(),
             },
-            Effect::Tap { what: Selector::LastCreatedTokens },
+            Effect::Tap {
+                what: Selector::LastCreatedTokens,
+            },
             Effect::If {
                 cond: Predicate::ValueAtLeast(Value::XFromCost, Value::Const(6)),
                 then: Box::new(Effect::Destroy {
@@ -184,7 +209,9 @@ pub fn flunk() -> CardDefinition {
     let neg_x = || {
         // -X where X = 7 - hand → -X = hand - 7
         Value::Diff(
-            Box::new(Value::HandSizeOf(PlayerRef::ControllerOf(Box::new(Selector::Target(0))))),
+            Box::new(Value::HandSizeOf(PlayerRef::ControllerOf(Box::new(
+                Selector::Target(0),
+            )))),
             Box::new(Value::Const(7)),
         )
     };
@@ -235,10 +262,12 @@ pub fn reject() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::CounterUnlessPaid {
-            what: target_filtered(SelectionRequirement::IsSpellOnStack.and(
-                SelectionRequirement::HasCardType(CardType::Creature)
-                    .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
-            )),
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Creature)
+                        .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
+                ),
+            ),
             mana_cost: cost(&[generic(3)]),
             exile: true,
             extra_generic: None,
@@ -275,7 +304,8 @@ pub fn devouring_tendrils() -> CardDefinition {
                 },
                 amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
                     slot: 0,
-                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
                 })),
             },
         ]),
@@ -297,9 +327,13 @@ pub fn study_break() -> CardDefinition {
                 max_targets: 2,
                 min_targets: 0,
                 filter: SelectionRequirement::Creature,
-                effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                effect: Box::new(Effect::Tap {
+                    what: Selector::Target(0),
+                }),
             },
-            Effect::Learn { who: PlayerRef::You },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -312,7 +346,10 @@ pub fn golden_ratio() -> CardDefinition {
         name: "Golden Ratio",
         cost: cost(&[generic(1), g(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw { who: Selector::You, amount: Value::DistinctPowerYouControl },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::DistinctPowerYouControl,
+        },
         ..Default::default()
     }
 }
@@ -326,7 +363,10 @@ fn devil_1_1_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Devil],
+            ..Default::default()
+        },
         triggered_abilities: vec![on_dies(Effect::DealDamage {
             to: target(),
             amount: Value::Const(1),
@@ -431,7 +471,12 @@ pub fn culmination_of_studies() -> CardDefinition {
         cost: cost(&[x(), u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::XFromCost, link_to_source: false, face_down: false },
+            Effect::ExileTopOfLibrary {
+                who: Selector::You,
+                amount: Value::XFromCost,
+                link_to_source: false,
+                face_down: false,
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CountMatching {
@@ -478,7 +523,9 @@ pub fn semesters_end() -> CardDefinition {
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Planeswalker)
                 .and(SelectionRequirement::ControlledByYou),
-            effect: Box::new(Effect::ExileReturnNextEndStep { what: Selector::Target(0) }),
+            effect: Box::new(Effect::ExileReturnNextEndStep {
+                what: Selector::Target(0),
+            }),
         },
         ..Default::default()
     }
@@ -516,7 +563,10 @@ pub fn claim_the_firstborn() -> CardDefinition {
                 to: None,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
@@ -564,7 +614,9 @@ pub fn tamiyos_safekeeping() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::GrantKeyword {
-                what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou)),
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou),
+                ),
                 keyword: Keyword::Hexproof,
                 duration: Duration::EndOfTurn,
             },
@@ -600,7 +652,9 @@ pub fn disperse() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::Nonland)),
+            what: target_filtered(
+                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+            ),
             to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
         },
         ..Default::default()
@@ -618,8 +672,7 @@ pub fn make_your_move() -> CardDefinition {
             what: target_filtered(
                 SelectionRequirement::Artifact
                     .or(SelectionRequirement::Enchantment)
-                    .or(SelectionRequirement::Creature
-                        .and(SelectionRequirement::PowerAtLeast(4))),
+                    .or(SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4))),
             ),
         },
         ..Default::default()
@@ -653,7 +706,10 @@ pub fn elemental_masterpiece() -> CardDefinition {
         toughness: 4,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue, Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -666,7 +722,10 @@ pub fn elemental_masterpiece() -> CardDefinition {
             definition: elemental_4_4,
         },
         activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+            mana_cost: cost(&[
+                hybrid(Color::Blue, Color::Red),
+                hybrid(Color::Blue, Color::Red),
+            ]),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -708,7 +767,9 @@ pub fn detention_vortex() -> CardDefinition {
         }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
-            effect: Effect::Destroy { what: Selector::This },
+            effect: Effect::Destroy {
+                what: Selector::This,
+            },
             sorcery_speed: true,
             opponents_only: true,
             ..Default::default()
@@ -765,7 +826,9 @@ pub fn gnarled_professor() -> CardDefinition {
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::Learn { who: PlayerRef::You })],
+        triggered_abilities: vec![etb(Effect::Learn {
+            who: PlayerRef::You,
+        })],
         ..Default::default()
     }
 }
@@ -792,7 +855,9 @@ pub fn dream_strix() -> CardDefinition {
                 event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
                 effect: Effect::SacrificeSource,
             },
-            on_dies(Effect::Learn { who: PlayerRef::You }),
+            on_dies(Effect::Learn {
+                who: PlayerRef::You,
+            }),
         ],
         ..Default::default()
     }
@@ -808,7 +873,10 @@ pub fn retriever_phoenix() -> CardDefinition {
         name: "Retriever Phoenix",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Phoenix], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phoenix],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste],
@@ -820,7 +888,9 @@ pub fn retriever_phoenix() -> CardDefinition {
             // and must NOT learn again.
             effect: Effect::If {
                 cond: Predicate::SourceWasCast,
-                then: Box::new(Effect::Learn { who: PlayerRef::You }),
+                then: Box::new(Effect::Learn {
+                    who: PlayerRef::You,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -922,7 +992,10 @@ fn spirit_3_2_token() -> TokenDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red, Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -951,7 +1024,9 @@ pub fn illustrious_historian() -> CardDefinition {
                     count: Value::Const(1),
                     definition: spirit_3_2_token(),
                 },
-                Effect::Tap { what: Selector::LastCreatedToken },
+                Effect::Tap {
+                    what: Selector::LastCreatedToken,
+                },
             ]),
             ..Default::default()
         }],
@@ -966,7 +1041,10 @@ pub fn grinning_ignus() -> CardDefinition {
         name: "Grinning Ignus",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -974,8 +1052,14 @@ pub fn grinning_ignus() -> CardDefinition {
             return_self_cost: true,
             sorcery_speed: true,
             effect: Effect::Seq(vec![
-                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(2)) },
-                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Red]) },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(2)),
+                },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Red]),
+                },
             ]),
             ..Default::default()
         }],
@@ -1069,7 +1153,12 @@ pub fn deadly_brew() -> CardDefinition {
 pub fn dramatic_finale() -> CardDefinition {
     CardDefinition {
         name: "Dramatic Finale",
-        cost: cost(&[hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
+        cost: cost(&[
+            hybrid(Color::White, Color::Black),
+            hybrid(Color::White, Color::Black),
+            hybrid(Color::White, Color::Black),
+            hybrid(Color::White, Color::Black),
+        ]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Creature tokens you control get +1/+1.",
@@ -1107,7 +1196,9 @@ pub fn harness_infinity() -> CardDefinition {
         name: "Harness Infinity",
         cost: cost(&[generic(1), b(), b(), b(), g(), g(), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ExchangeHandAndGraveyard { who: PlayerRef::You },
+        effect: Effect::ExchangeHandAndGraveyard {
+            who: PlayerRef::You,
+        },
         exile_on_resolve: true,
         ..Default::default()
     }
@@ -1138,7 +1229,10 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 2,
-                effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+                effect: Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
             // -X: create a 0/0 Fractal with X +1/+1 counters (X = loyalty paid).
@@ -1175,8 +1269,8 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
                         what: Selector::LastMoved,
                         source_zone: crate::card::Zone::Exile,
                         exile_after: false,
-                copy: false,
-            },
+                        copy: false,
+                    },
                 ]),
                 ..Default::default()
             },

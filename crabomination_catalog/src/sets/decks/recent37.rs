@@ -8,13 +8,14 @@ use crate::card::{
 };
 use crate::effect::shortcut::draw;
 use crate::effect::{Duration, PlayerRef, Predicate, ZoneDest};
-use crate::mana::{b, cost, g, generic, w, Color};
+use crate::mana::{Color, b, cost, g, generic, w};
 
 /// "Whenever you cast an enchantment spell, draw a card."
 fn enchantress_draw_trigger() -> TriggeredAbility {
     TriggeredAbility {
-        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-            .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Enchantment)),
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::CastSpellMatches(SelectionRequirement::Enchantment),
+        ),
         effect: draw(1),
     }
 }
@@ -89,16 +90,18 @@ pub fn eidolon_of_blossoms() -> CardDefinition {
         name: "Eidolon of Blossoms",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Enchantment,
-                },
-            ),
+                }),
             effect: draw(1),
         }],
         ..Default::default()
@@ -140,9 +143,13 @@ pub fn golden_demise() -> CardDefinition {
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Ascend { who: PlayerRef::You },
+            Effect::Ascend {
+                who: PlayerRef::You,
+            },
             Effect::If {
-                cond: Predicate::HasCityBlessing { who: PlayerRef::You },
+                cond: Predicate::HasCityBlessing {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::PumpPT {
                     what: Selector::EachPermanent(
                         SelectionRequirement::Creature
@@ -198,7 +205,10 @@ pub fn sword_of_the_animist() -> CardDefinition {
                 effect: Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::IsBasicLand,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
             }],
             ..Default::default()
@@ -216,7 +226,10 @@ pub fn dawn_of_hope() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Lifelink],
         ..Default::default()
     };
@@ -235,7 +248,11 @@ pub fn dawn_of_hope() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), w()]),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: soldier },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: soldier,
+            },
             ..Default::default()
         }],
         ..Default::default()

@@ -3,12 +3,13 @@
 //! payoff, and a redirect. Tests in `tests/recent211.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword, Selector,
-    SelectionRequirement as R, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword,
+    SelectionRequirement as R, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility,
+    Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, EventKind, EventScope, EventSpec, PlayerRef, Predicate, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, Color};
+use crate::mana::{Color, b, cost, g, generic, r};
 
 /// Fynn, the Fangbearer — {1}{G} 1/3 Legendary Human Warrior. Deathtouch;
 /// whenever a creature you control with deathtouch deals combat damage to a
@@ -27,11 +28,14 @@ pub fn fynn_the_fangbearer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::HasKeyword(Keyword::Deathtouch),
-                }),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasKeyword(Keyword::Deathtouch),
+            }),
             effect: Effect::AddPoison {
                 who: Selector::Player(PlayerRef::Target(0)),
                 amount: Value::Const(2),
@@ -49,7 +53,10 @@ pub fn rivers_rebuke() -> CardDefinition {
         cost: cost(&[generic(4), crate::mana::u(), crate::mana::u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
-            what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Nonland },
+            what: Selector::ControlledBy {
+                who: PlayerRef::Target(0),
+                filter: R::Nonland,
+            },
             to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         },
         ..Default::default()
@@ -92,7 +99,10 @@ pub fn lathliss_dragon_queen() -> CardDefinition {
         toughness: 5,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     };
@@ -101,7 +111,10 @@ pub fn lathliss_dragon_queen() -> CardDefinition {
         cost: cost(&[generic(4), r(), r()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flying],

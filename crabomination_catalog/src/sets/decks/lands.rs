@@ -102,8 +102,12 @@ fn pathway(
 /// for {R}. Played via `PlayLand(id)` (front) or `PlayLandBack(id)` (back).
 pub fn blightstep_pathway() -> CardDefinition {
     pathway(
-        "Blightstep Pathway", LandType::Swamp, Color::Black,
-        "Searstep Pathway",   LandType::Mountain, Color::Red,
+        "Blightstep Pathway",
+        LandType::Swamp,
+        Color::Black,
+        "Searstep Pathway",
+        LandType::Mountain,
+        Color::Red,
     )
 }
 
@@ -111,32 +115,48 @@ pub fn blightstep_pathway() -> CardDefinition {
 /// for {B}; back (Slitherbore Pathway) is a Forest for {G}.
 pub fn darkbore_pathway() -> CardDefinition {
     pathway(
-        "Darkbore Pathway",    LandType::Swamp, Color::Black,
-        "Slitherbore Pathway", LandType::Forest, Color::Green,
+        "Darkbore Pathway",
+        LandType::Swamp,
+        Color::Black,
+        "Slitherbore Pathway",
+        LandType::Forest,
+        Color::Green,
     )
 }
 
 /// Branchloft Pathway // Boulderloft Pathway — G/W MDFC.
 pub fn branchloft_pathway() -> CardDefinition {
     pathway(
-        "Branchloft Pathway", LandType::Forest, Color::Green,
-        "Boulderloft Pathway", LandType::Plains, Color::White,
+        "Branchloft Pathway",
+        LandType::Forest,
+        Color::Green,
+        "Boulderloft Pathway",
+        LandType::Plains,
+        Color::White,
     )
 }
 
 /// Clearwater Pathway // Murkwater Pathway — U/B MDFC.
 pub fn clearwater_pathway() -> CardDefinition {
     pathway(
-        "Clearwater Pathway", LandType::Island, Color::Blue,
-        "Murkwater Pathway", LandType::Swamp, Color::Black,
+        "Clearwater Pathway",
+        LandType::Island,
+        Color::Blue,
+        "Murkwater Pathway",
+        LandType::Swamp,
+        Color::Black,
     )
 }
 
 /// Cragcrown Pathway // Timbercrown Pathway — R/G MDFC.
 pub fn cragcrown_pathway() -> CardDefinition {
     pathway(
-        "Cragcrown Pathway", LandType::Mountain, Color::Red,
-        "Timbercrown Pathway", LandType::Forest, Color::Green,
+        "Cragcrown Pathway",
+        LandType::Mountain,
+        Color::Red,
+        "Timbercrown Pathway",
+        LandType::Forest,
+        Color::Green,
     )
 }
 
@@ -284,9 +304,12 @@ pub fn gemstone_mine() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -339,11 +362,14 @@ pub fn gemstone_caverns() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             // {T}, Remove a luck counter: Add one mana of any color.
@@ -377,11 +403,14 @@ pub fn gemstone_caverns() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -422,16 +451,18 @@ pub fn cavern_of_souls() -> CardDefinition {
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::RestrictedToChosenType(Box::new(
-                        ManaPayload::AnyOneColor(Value::Const(1)),
-                    )),
+                    pool: ManaPayload::RestrictedToChosenType(Box::new(ManaPayload::AnyOneColor(
+                        Value::Const(1),
+                    ))),
                 },
                 ..Default::default()
             },
         ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCreatureType { what: Selector::This },
+            effect: Effect::NameCreatureType {
+                what: Selector::This,
+            },
         }],
         ..Default::default()
     }
@@ -478,11 +509,14 @@ pub fn cephalid_coliseum() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -513,8 +547,8 @@ pub fn shelldock_isle() -> CardDefinition {
                     what: Selector::CardExiledWithSource,
                     source_zone: crate::card::Zone::Exile,
                     exile_after: false,
-                copy: false,
-            },
+                    copy: false,
+                },
                 ..Default::default()
             },
         ],
@@ -523,7 +557,9 @@ pub fn shelldock_isle() -> CardDefinition {
             etb_tap(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Hideaway { count: Value::Const(4) },
+                effect: Effect::Hideaway {
+                    count: Value::Const(4),
+                },
             },
         ],
         ..Default::default()
@@ -551,8 +587,8 @@ fn lorwyn_hideaway_land(
                     what: Selector::CardExiledWithSource,
                     source_zone: crate::card::Zone::Exile,
                     exile_after: false,
-                copy: false,
-            },
+                    copy: false,
+                },
                 ..Default::default()
             },
         ],
@@ -560,7 +596,9 @@ fn lorwyn_hideaway_land(
             etb_tap(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Hideaway { count: Value::Const(4) },
+                effect: Effect::Hideaway {
+                    count: Value::Const(4),
+                },
             },
         ],
         ..Default::default()
@@ -682,12 +720,12 @@ pub fn shifting_woodland() -> CardDefinition {
             tap_add(Color::Green),
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), g(), g()]),
-                condition: Some(Predicate::DeliriumActive { who: PlayerRef::You }),
+                condition: Some(Predicate::DeliriumActive {
+                    who: PlayerRef::You,
+                }),
                 effect: Effect::BecomeCopyOfFor {
                     what: Selector::This,
-                    source: target_filtered(
-                        permanent_card.and(SelectionRequirement::InGraveyard),
-                    ),
+                    source: target_filtered(permanent_card.and(SelectionRequirement::InGraveyard)),
                     duration: Duration::EndOfTurn,
                     non_legendary: false,
                 },
@@ -703,7 +741,9 @@ pub fn shifting_woodland() -> CardDefinition {
                         .and(SelectionRequirement::OtherThanSource),
                 )),
                 then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap { what: Selector::This }),
+                else_: Box::new(Effect::Tap {
+                    what: Selector::This,
+                }),
             },
         }],
         ..Default::default()
@@ -867,7 +907,14 @@ pub(crate) fn colorless_manland(
 /// types (Changeling) until end of turn (still a land).
 pub fn mutavault() -> CardDefinition {
     use crate::card::Keyword;
-    colorless_manland("Mutavault", cost(&[generic(1)]), 2, 2, vec![], vec![Keyword::Changeling])
+    colorless_manland(
+        "Mutavault",
+        cost(&[generic(1)]),
+        2,
+        2,
+        vec![],
+        vec![Keyword::Changeling],
+    )
 }
 
 /// Mishra's Factory — `{T}: Add {C}`. `{1}`: becomes a 2/2 Assembly-Worker
@@ -876,8 +923,12 @@ pub fn mutavault() -> CardDefinition {
 pub fn mishras_factory() -> CardDefinition {
     use crate::card::CreatureType;
     colorless_manland(
-        "Mishra's Factory", cost(&[generic(1)]), 2, 2,
-        vec![CreatureType::AssemblyWorker], vec![],
+        "Mishra's Factory",
+        cost(&[generic(1)]),
+        2,
+        2,
+        vec![CreatureType::AssemblyWorker],
+        vec![],
     )
 }
 
@@ -886,8 +937,12 @@ pub fn mishras_factory() -> CardDefinition {
 pub fn inkmoth_nexus() -> CardDefinition {
     use crate::card::{CreatureType, Keyword};
     colorless_manland(
-        "Inkmoth Nexus", cost(&[generic(1)]), 1, 1,
-        vec![CreatureType::Blinkmoth], vec![Keyword::Flying, Keyword::Infect],
+        "Inkmoth Nexus",
+        cost(&[generic(1)]),
+        1,
+        1,
+        vec![CreatureType::Blinkmoth],
+        vec![Keyword::Flying, Keyword::Infect],
     )
 }
 
@@ -896,8 +951,12 @@ pub fn inkmoth_nexus() -> CardDefinition {
 pub fn blinkmoth_nexus() -> CardDefinition {
     use crate::card::{CreatureType, Keyword};
     colorless_manland(
-        "Blinkmoth Nexus", cost(&[generic(1)]), 1, 1,
-        vec![CreatureType::Blinkmoth], vec![Keyword::Flying],
+        "Blinkmoth Nexus",
+        cost(&[generic(1)]),
+        1,
+        1,
+        vec![CreatureType::Blinkmoth],
+        vec![Keyword::Flying],
     )
 }
 
@@ -944,9 +1003,14 @@ pub fn restless_reef() -> CardDefinition {
     use crate::card::{CreatureType, Keyword, SelectionRequirement as R};
     use crate::effect::shortcut::target_filtered;
     restless_land(
-        "Restless Reef", Color::Blue, Color::Black,
-        cost(&[generic(2), u(), crate::mana::b()]), 4, 4,
-        vec![CreatureType::Shark], vec![Keyword::Deathtouch],
+        "Restless Reef",
+        Color::Blue,
+        Color::Black,
+        cost(&[generic(2), u(), crate::mana::b()]),
+        4,
+        4,
+        vec![CreatureType::Shark],
+        vec![Keyword::Deathtouch],
         Effect::Mill {
             who: target_filtered(R::Player),
             amount: Value::Const(4),
@@ -960,9 +1024,14 @@ pub fn restless_bivouac() -> CardDefinition {
     use crate::card::{CreatureType, SelectionRequirement as R};
     use crate::effect::shortcut::target_filtered;
     restless_land(
-        "Restless Bivouac", Color::Red, Color::White,
-        cost(&[generic(1), crate::mana::r(), crate::mana::w()]), 2, 2,
-        vec![CreatureType::Ox], vec![],
+        "Restless Bivouac",
+        Color::Red,
+        Color::White,
+        cost(&[generic(1), crate::mana::r(), crate::mana::w()]),
+        2,
+        2,
+        vec![CreatureType::Ox],
+        vec![],
         Effect::AddCounter {
             what: target_filtered(R::Creature.and(R::ControlledByYou)),
             kind: crate::card::CounterType::PlusOnePlusOne,
@@ -977,9 +1046,14 @@ pub fn restless_vinestalk() -> CardDefinition {
     use crate::card::{CreatureType, Keyword, SelectionRequirement as R};
     use crate::effect::shortcut::target_filtered;
     restless_land(
-        "Restless Vinestalk", Color::Green, Color::Blue,
-        cost(&[generic(3), crate::mana::g(), u()]), 5, 5,
-        vec![CreatureType::Plant], vec![Keyword::Trample],
+        "Restless Vinestalk",
+        Color::Green,
+        Color::Blue,
+        cost(&[generic(3), crate::mana::g(), u()]),
+        5,
+        5,
+        vec![CreatureType::Plant],
+        vec![Keyword::Trample],
         Effect::MayDo {
             description: "Up to one other target creature has base power and toughness 3/3".into(),
             body: Box::new(Effect::SetBasePT {
@@ -997,9 +1071,14 @@ pub fn restless_vinestalk() -> CardDefinition {
 pub fn restless_fortress() -> CardDefinition {
     use crate::card::CreatureType;
     restless_land(
-        "Restless Fortress", Color::White, Color::Black,
-        cost(&[generic(2), crate::mana::w(), crate::mana::b()]), 1, 4,
-        vec![CreatureType::Nightmare], vec![],
+        "Restless Fortress",
+        Color::White,
+        Color::Black,
+        cost(&[generic(2), crate::mana::w(), crate::mana::b()]),
+        1,
+        4,
+        vec![CreatureType::Nightmare],
+        vec![],
         Effect::Drain {
             from: Selector::Player(PlayerRef::DefendingPlayer),
             to: Selector::You,
@@ -1012,12 +1091,17 @@ pub fn restless_fortress() -> CardDefinition {
 /// attacks, another target attacking creature gets +2/+0 and untaps.
 pub fn restless_ridgeline() -> CardDefinition {
     use crate::card::{CreatureType, SelectionRequirement as R};
-    use crate::effect::shortcut::target_filtered;
     use crate::effect::Duration;
+    use crate::effect::shortcut::target_filtered;
     restless_land(
-        "Restless Ridgeline", Color::Red, Color::Green,
-        cost(&[generic(2), crate::mana::r(), crate::mana::g()]), 3, 4,
-        vec![CreatureType::Dinosaur], vec![],
+        "Restless Ridgeline",
+        Color::Red,
+        Color::Green,
+        cost(&[generic(2), crate::mana::r(), crate::mana::g()]),
+        3,
+        4,
+        vec![CreatureType::Dinosaur],
+        vec![],
         Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(R::Creature.and(R::OtherThanSource)),
@@ -1025,7 +1109,10 @@ pub fn restless_ridgeline() -> CardDefinition {
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
         ]),
     )
 }
@@ -1035,9 +1122,14 @@ pub fn restless_ridgeline() -> CardDefinition {
 pub fn restless_cottage() -> CardDefinition {
     use crate::card::CreatureType;
     restless_land(
-        "Restless Cottage", Color::Black, Color::Green,
-        cost(&[generic(2), crate::mana::b(), crate::mana::g()]), 4, 4,
-        vec![CreatureType::Horror], vec![],
+        "Restless Cottage",
+        Color::Black,
+        Color::Green,
+        cost(&[generic(2), crate::mana::b(), crate::mana::g()]),
+        4,
+        4,
+        vec![CreatureType::Horror],
+        vec![],
         Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -1154,7 +1246,10 @@ pub fn boseiju_who_endures() -> CardDefinition {
             Effect::Search {
                 who: owner.clone(),
                 filter: has_basic_type,
-                to: crate::effect::ZoneDest::Battlefield { controller: owner, tapped: false },
+                to: crate::effect::ZoneDest::Battlefield {
+                    controller: owner,
+                    tapped: false,
+                },
             },
         ]),
     )
@@ -1170,7 +1265,12 @@ pub fn otawara_soaring_city() -> CardDefinition {
         Color::Blue,
         cost(&[generic(3), u()]),
         Effect::Move {
-            what: target_filtered(R::Artifact.or(R::Creature).or(R::Enchantment).or(R::Planeswalker)),
+            what: target_filtered(
+                R::Artifact
+                    .or(R::Creature)
+                    .or(R::Enchantment)
+                    .or(R::Planeswalker),
+            ),
             to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
         },
     )
@@ -1211,7 +1311,11 @@ pub fn sokenzan_crucible_of_defiance() -> CardDefinition {
         "Sokenzan, Crucible of Defiance",
         Color::Red,
         cost(&[generic(3), crate::mana::r()]),
-        Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: spirit },
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: spirit,
+        },
     )
 }
 
@@ -1224,7 +1328,10 @@ pub fn takenuma_abandoned_mire() -> CardDefinition {
         Color::Black,
         cost(&[generic(3), crate::mana::b()]),
         Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             Effect::Move {
                 what: Selector::take(
                     Selector::CardsInZone {
@@ -1244,8 +1351,8 @@ pub fn takenuma_abandoned_mire() -> CardDefinition {
 /// +X/+0 and gains trample until end of turn.
 pub fn kessig_wolf_run() -> CardDefinition {
     use crate::card::Keyword;
-    use crate::effect::shortcut::target_filtered;
     use crate::effect::Duration;
+    use crate::effect::shortcut::target_filtered;
     let pump = ActivatedAbility {
         tap_cost: true,
         mana_cost: cost(&[crate::mana::x(), crate::mana::r()]),
@@ -1275,40 +1382,60 @@ pub fn kessig_wolf_run() -> CardDefinition {
 /// Hengegate Pathway // Mistgate Pathway — W/U MDFC.
 pub fn hengegate_pathway() -> CardDefinition {
     pathway(
-        "Hengegate Pathway", LandType::Plains, Color::White,
-        "Mistgate Pathway", LandType::Island, Color::Blue,
+        "Hengegate Pathway",
+        LandType::Plains,
+        Color::White,
+        "Mistgate Pathway",
+        LandType::Island,
+        Color::Blue,
     )
 }
 
 /// Riverglide Pathway // Lavaglide Pathway — U/R MDFC.
 pub fn riverglide_pathway() -> CardDefinition {
     pathway(
-        "Riverglide Pathway", LandType::Island, Color::Blue,
-        "Lavaglide Pathway", LandType::Mountain, Color::Red,
+        "Riverglide Pathway",
+        LandType::Island,
+        Color::Blue,
+        "Lavaglide Pathway",
+        LandType::Mountain,
+        Color::Red,
     )
 }
 
 /// Barkchannel Pathway // Tidechannel Pathway — G/U MDFC.
 pub fn barkchannel_pathway() -> CardDefinition {
     pathway(
-        "Barkchannel Pathway", LandType::Forest, Color::Green,
-        "Tidechannel Pathway", LandType::Island, Color::Blue,
+        "Barkchannel Pathway",
+        LandType::Forest,
+        Color::Green,
+        "Tidechannel Pathway",
+        LandType::Island,
+        Color::Blue,
     )
 }
 
 /// Brightclimb Pathway // Grimclimb Pathway — W/B MDFC.
 pub fn brightclimb_pathway() -> CardDefinition {
     pathway(
-        "Brightclimb Pathway", LandType::Plains, Color::White,
-        "Grimclimb Pathway", LandType::Swamp, Color::Black,
+        "Brightclimb Pathway",
+        LandType::Plains,
+        Color::White,
+        "Grimclimb Pathway",
+        LandType::Swamp,
+        Color::Black,
     )
 }
 
 /// Needleverge Pathway // Pillarverge Pathway — R/W MDFC.
 pub fn needleverge_pathway() -> CardDefinition {
     pathway(
-        "Needleverge Pathway", LandType::Mountain, Color::Red,
-        "Pillarverge Pathway", LandType::Plains, Color::White,
+        "Needleverge Pathway",
+        LandType::Mountain,
+        Color::Red,
+        "Pillarverge Pathway",
+        LandType::Plains,
+        Color::White,
     )
 }
 
@@ -1317,16 +1444,36 @@ pub fn needleverge_pathway() -> CardDefinition {
 // `{T}: Add {C}` plus two `{T}: Add {color}, deals 1 damage to you` abilities;
 // no basic land types, enters untapped. Built via `super::super::painland`.
 
-pub fn adarkar_wastes() -> CardDefinition { painland("Adarkar Wastes", Color::White, Color::Blue) }
-pub fn underground_river() -> CardDefinition { painland("Underground River", Color::Blue, Color::Black) }
-pub fn sulfurous_springs() -> CardDefinition { painland("Sulfurous Springs", Color::Black, Color::Red) }
-pub fn karplusan_forest() -> CardDefinition { painland("Karplusan Forest", Color::Red, Color::Green) }
-pub fn brushland() -> CardDefinition { painland("Brushland", Color::Green, Color::White) }
-pub fn caves_of_koilos() -> CardDefinition { painland("Caves of Koilos", Color::White, Color::Black) }
-pub fn shivan_reef() -> CardDefinition { painland("Shivan Reef", Color::Blue, Color::Red) }
-pub fn llanowar_wastes() -> CardDefinition { painland("Llanowar Wastes", Color::Black, Color::Green) }
-pub fn yavimaya_coast() -> CardDefinition { painland("Yavimaya Coast", Color::Green, Color::Blue) }
-pub fn battlefield_forge() -> CardDefinition { painland("Battlefield Forge", Color::Red, Color::White) }
+pub fn adarkar_wastes() -> CardDefinition {
+    painland("Adarkar Wastes", Color::White, Color::Blue)
+}
+pub fn underground_river() -> CardDefinition {
+    painland("Underground River", Color::Blue, Color::Black)
+}
+pub fn sulfurous_springs() -> CardDefinition {
+    painland("Sulfurous Springs", Color::Black, Color::Red)
+}
+pub fn karplusan_forest() -> CardDefinition {
+    painland("Karplusan Forest", Color::Red, Color::Green)
+}
+pub fn brushland() -> CardDefinition {
+    painland("Brushland", Color::Green, Color::White)
+}
+pub fn caves_of_koilos() -> CardDefinition {
+    painland("Caves of Koilos", Color::White, Color::Black)
+}
+pub fn shivan_reef() -> CardDefinition {
+    painland("Shivan Reef", Color::Blue, Color::Red)
+}
+pub fn llanowar_wastes() -> CardDefinition {
+    painland("Llanowar Wastes", Color::Black, Color::Green)
+}
+pub fn yavimaya_coast() -> CardDefinition {
+    painland("Yavimaya Coast", Color::Green, Color::Blue)
+}
+pub fn battlefield_forge() -> CardDefinition {
+    painland("Battlefield Forge", Color::Red, Color::White)
+}
 
 // ── Rainbow lands ────────────────────────────────────────────────────────────
 
@@ -1340,8 +1487,14 @@ pub fn city_of_brass() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
-                Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                Effect::DealDamage {
+                    to: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
             ..Default::default()
         }],
@@ -1357,7 +1510,10 @@ pub fn mana_confluence() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             life_cost: 1,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -1421,60 +1577,125 @@ pub fn field_of_ruin() -> CardDefinition {
 // `etb_tap_then_gain_one` trigger taps it and gains the life.
 
 pub fn tranquil_cove() -> CardDefinition {
-    dual_land_with("Tranquil Cove", LandType::Plains, LandType::Island,
-        Color::White, Color::Blue, vec![etb_tap_then_gain_one()])
+    dual_land_with(
+        "Tranquil Cove",
+        LandType::Plains,
+        LandType::Island,
+        Color::White,
+        Color::Blue,
+        vec![etb_tap_then_gain_one()],
+    )
 }
 
 pub fn dismal_backwater() -> CardDefinition {
-    dual_land_with("Dismal Backwater", LandType::Island, LandType::Swamp,
-        Color::Blue, Color::Black, vec![etb_tap_then_gain_one()])
+    dual_land_with(
+        "Dismal Backwater",
+        LandType::Island,
+        LandType::Swamp,
+        Color::Blue,
+        Color::Black,
+        vec![etb_tap_then_gain_one()],
+    )
 }
 
 pub fn bloodfell_caves() -> CardDefinition {
-    dual_land_with("Bloodfell Caves", LandType::Swamp, LandType::Mountain,
-        Color::Black, Color::Red, vec![etb_tap_then_gain_one()])
+    dual_land_with(
+        "Bloodfell Caves",
+        LandType::Swamp,
+        LandType::Mountain,
+        Color::Black,
+        Color::Red,
+        vec![etb_tap_then_gain_one()],
+    )
 }
 
 pub fn rugged_highlands() -> CardDefinition {
-    dual_land_with("Rugged Highlands", LandType::Mountain, LandType::Forest,
-        Color::Red, Color::Green, vec![etb_tap_then_gain_one()])
+    dual_land_with(
+        "Rugged Highlands",
+        LandType::Mountain,
+        LandType::Forest,
+        Color::Red,
+        Color::Green,
+        vec![etb_tap_then_gain_one()],
+    )
 }
 
 pub fn blossoming_sands() -> CardDefinition {
-    dual_land_with("Blossoming Sands", LandType::Forest, LandType::Plains,
-        Color::Green, Color::White, vec![etb_tap_then_gain_one()])
+    dual_land_with(
+        "Blossoming Sands",
+        LandType::Forest,
+        LandType::Plains,
+        Color::Green,
+        Color::White,
+        vec![etb_tap_then_gain_one()],
+    )
 }
 
 // IKO completes the enemy-pair half of the gain-tapland cycle.
 pub fn jungle_hollow() -> CardDefinition {
-    dual_land_with("Jungle Hollow", LandType::Swamp, LandType::Forest,
-        Color::Black, Color::Green, vec![etb_tap_then_gain_one()])
+    dual_land_with(
+        "Jungle Hollow",
+        LandType::Swamp,
+        LandType::Forest,
+        Color::Black,
+        Color::Green,
+        vec![etb_tap_then_gain_one()],
+    )
 }
 
 pub fn scoured_barrens() -> CardDefinition {
-    dual_land_with("Scoured Barrens", LandType::Plains, LandType::Swamp,
-        Color::White, Color::Black, vec![etb_tap_then_gain_one()])
+    dual_land_with(
+        "Scoured Barrens",
+        LandType::Plains,
+        LandType::Swamp,
+        Color::White,
+        Color::Black,
+        vec![etb_tap_then_gain_one()],
+    )
 }
 
 pub fn swiftwater_cliffs() -> CardDefinition {
-    dual_land_with("Swiftwater Cliffs", LandType::Island, LandType::Mountain,
-        Color::Blue, Color::Red, vec![etb_tap_then_gain_one()])
+    dual_land_with(
+        "Swiftwater Cliffs",
+        LandType::Island,
+        LandType::Mountain,
+        Color::Blue,
+        Color::Red,
+        vec![etb_tap_then_gain_one()],
+    )
 }
 
 pub fn thornwood_falls() -> CardDefinition {
-    dual_land_with("Thornwood Falls", LandType::Forest, LandType::Island,
-        Color::Green, Color::Blue, vec![etb_tap_then_gain_one()])
+    dual_land_with(
+        "Thornwood Falls",
+        LandType::Forest,
+        LandType::Island,
+        Color::Green,
+        Color::Blue,
+        vec![etb_tap_then_gain_one()],
+    )
 }
 
 pub fn wind_scarred_crag() -> CardDefinition {
-    dual_land_with("Wind-Scarred Crag", LandType::Mountain, LandType::Plains,
-        Color::Red, Color::White, vec![etb_tap_then_gain_one()])
+    dual_land_with(
+        "Wind-Scarred Crag",
+        LandType::Mountain,
+        LandType::Plains,
+        Color::Red,
+        Color::White,
+        vec![etb_tap_then_gain_one()],
+    )
 }
 
 // ── Khans wedge tri-lands (enters tapped, taps for three colors) ────────────
 
 pub fn sandsteppe_citadel() -> CardDefinition {
-    tri_land("Sandsteppe Citadel", Color::White, Color::Black, Color::Green)
+    tri_land(
+        "Sandsteppe Citadel",
+        Color::White,
+        Color::Black,
+        Color::Green,
+    )
 }
 
 pub fn mystic_monastery() -> CardDefinition {
@@ -1557,8 +1778,15 @@ pub fn restless_vents() -> CardDefinition {
         Effect::MayDo {
             description: "Discard a card. If you do, draw a card.".into(),
             body: Box::new(Effect::Seq(vec![
-                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ])),
         },
     )
@@ -1581,7 +1809,9 @@ fn checkland_etb_conditional_tap(type_a: LandType, type_b: LandType) -> Triggere
                 n: Value::Const(1),
             },
             then: Box::new(Effect::Noop),
-            else_: Box::new(Effect::Tap { what: Selector::This }),
+            else_: Box::new(Effect::Tap {
+                what: Selector::This,
+            }),
         },
     }
 }
@@ -1605,34 +1835,94 @@ fn checkland(
 }
 
 pub fn glacial_fortress() -> CardDefinition {
-    checkland("Glacial Fortress", LandType::Plains, LandType::Island, Color::White, Color::Blue)
+    checkland(
+        "Glacial Fortress",
+        LandType::Plains,
+        LandType::Island,
+        Color::White,
+        Color::Blue,
+    )
 }
 pub fn drowned_catacomb() -> CardDefinition {
-    checkland("Drowned Catacomb", LandType::Island, LandType::Swamp, Color::Blue, Color::Black)
+    checkland(
+        "Drowned Catacomb",
+        LandType::Island,
+        LandType::Swamp,
+        Color::Blue,
+        Color::Black,
+    )
 }
 pub fn dragonskull_summit() -> CardDefinition {
-    checkland("Dragonskull Summit", LandType::Swamp, LandType::Mountain, Color::Black, Color::Red)
+    checkland(
+        "Dragonskull Summit",
+        LandType::Swamp,
+        LandType::Mountain,
+        Color::Black,
+        Color::Red,
+    )
 }
 pub fn rootbound_crag() -> CardDefinition {
-    checkland("Rootbound Crag", LandType::Mountain, LandType::Forest, Color::Red, Color::Green)
+    checkland(
+        "Rootbound Crag",
+        LandType::Mountain,
+        LandType::Forest,
+        Color::Red,
+        Color::Green,
+    )
 }
 pub fn sunpetal_grove() -> CardDefinition {
-    checkland("Sunpetal Grove", LandType::Forest, LandType::Plains, Color::Green, Color::White)
+    checkland(
+        "Sunpetal Grove",
+        LandType::Forest,
+        LandType::Plains,
+        Color::Green,
+        Color::White,
+    )
 }
 pub fn isolated_chapel() -> CardDefinition {
-    checkland("Isolated Chapel", LandType::Plains, LandType::Swamp, Color::White, Color::Black)
+    checkland(
+        "Isolated Chapel",
+        LandType::Plains,
+        LandType::Swamp,
+        Color::White,
+        Color::Black,
+    )
 }
 pub fn sulfur_falls() -> CardDefinition {
-    checkland("Sulfur Falls", LandType::Island, LandType::Mountain, Color::Blue, Color::Red)
+    checkland(
+        "Sulfur Falls",
+        LandType::Island,
+        LandType::Mountain,
+        Color::Blue,
+        Color::Red,
+    )
 }
 pub fn woodland_cemetery() -> CardDefinition {
-    checkland("Woodland Cemetery", LandType::Swamp, LandType::Forest, Color::Black, Color::Green)
+    checkland(
+        "Woodland Cemetery",
+        LandType::Swamp,
+        LandType::Forest,
+        Color::Black,
+        Color::Green,
+    )
 }
 pub fn clifftop_retreat() -> CardDefinition {
-    checkland("Clifftop Retreat", LandType::Mountain, LandType::Plains, Color::Red, Color::White)
+    checkland(
+        "Clifftop Retreat",
+        LandType::Mountain,
+        LandType::Plains,
+        Color::Red,
+        Color::White,
+    )
 }
 pub fn hinterland_harbor() -> CardDefinition {
-    checkland("Hinterland Harbor", LandType::Forest, LandType::Island, Color::Green, Color::Blue)
+    checkland(
+        "Hinterland Harbor",
+        LandType::Forest,
+        LandType::Island,
+        Color::Green,
+        Color::Blue,
+    )
 }
 
 // ── Worldwake / BFZ manlands (modern_decks-19) ───────────────────────────────
@@ -1810,8 +2100,14 @@ pub fn grove_of_the_burnwillows() -> CardDefinition {
     let colored = |c: Color| ActivatedAbility {
         tap_cost: true,
         effect: Effect::Seq(vec![
-            Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![c]) },
-            Effect::GainLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![c]),
+            },
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     };
@@ -1830,7 +2126,9 @@ pub fn grove_of_the_burnwillows() -> CardDefinition {
 /// Glimmervoid — Land. {T}: Add any color. Sacrificed at the end step if
 /// you control no artifacts.
 pub fn glimmervoid() -> CardDefinition {
-    use crate::card::{ActivatedAbility, EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    use crate::card::{
+        ActivatedAbility, EventKind, EventScope, EventSpec, Predicate, TriggeredAbility,
+    };
     use crate::effect::ManaPayload;
     use crate::game::types::TurnStep;
     CardDefinition {
@@ -1845,15 +2143,12 @@ pub fn glimmervoid() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(TurnStep::End),
-                EventScope::AnyPlayer,
-            )
-            .with_filter(Predicate::Not(Box::new(Predicate::SelectorExists(
-                Selector::EachPermanent(
-                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
-                ),
-            )))),
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
+                .with_filter(Predicate::Not(Box::new(Predicate::SelectorExists(
+                    Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    ),
+                )))),
             effect: Effect::SacrificeSource,
         }],
         ..Default::default()
@@ -1872,24 +2167,55 @@ fn cycling_dual(
 ) -> CardDefinition {
     use super::super::dual_land_with;
     let mut d = dual_land_with(name, type_a, type_b, color_a, color_b, vec![etb_tap()]);
-    d.keywords.push(crate::card::Keyword::Cycling(cost(&[generic(2)])));
+    d.keywords
+        .push(crate::card::Keyword::Cycling(cost(&[generic(2)])));
     d
 }
 
 pub fn irrigated_farmland() -> CardDefinition {
-    cycling_dual("Irrigated Farmland", LandType::Plains, LandType::Island, Color::White, Color::Blue)
+    cycling_dual(
+        "Irrigated Farmland",
+        LandType::Plains,
+        LandType::Island,
+        Color::White,
+        Color::Blue,
+    )
 }
 pub fn fetid_pools() -> CardDefinition {
-    cycling_dual("Fetid Pools", LandType::Island, LandType::Swamp, Color::Blue, Color::Black)
+    cycling_dual(
+        "Fetid Pools",
+        LandType::Island,
+        LandType::Swamp,
+        Color::Blue,
+        Color::Black,
+    )
 }
 pub fn canyon_slough() -> CardDefinition {
-    cycling_dual("Canyon Slough", LandType::Swamp, LandType::Mountain, Color::Black, Color::Red)
+    cycling_dual(
+        "Canyon Slough",
+        LandType::Swamp,
+        LandType::Mountain,
+        Color::Black,
+        Color::Red,
+    )
 }
 pub fn sheltered_thicket() -> CardDefinition {
-    cycling_dual("Sheltered Thicket", LandType::Mountain, LandType::Forest, Color::Red, Color::Green)
+    cycling_dual(
+        "Sheltered Thicket",
+        LandType::Mountain,
+        LandType::Forest,
+        Color::Red,
+        Color::Green,
+    )
 }
 pub fn scattered_groves() -> CardDefinition {
-    cycling_dual("Scattered Groves", LandType::Forest, LandType::Plains, Color::Green, Color::White)
+    cycling_dual(
+        "Scattered Groves",
+        LandType::Forest,
+        LandType::Plains,
+        Color::Green,
+        Color::White,
+    )
 }
 
 // ── AFR creature lands ───────────────────────────────────────────────────────
@@ -1936,7 +2262,11 @@ fn afr_land(
 pub fn hall_of_storm_giants() -> CardDefinition {
     use crate::card::{CreatureType, Keyword, WardCost};
     afr_land(
-        "Hall of Storm Giants", Color::Blue, cost(&[generic(5), u()]), 7, 7,
+        "Hall of Storm Giants",
+        Color::Blue,
+        cost(&[generic(5), u()]),
+        7,
+        7,
         vec![CreatureType::Giant],
         vec![Keyword::Ward(WardCost::generic(3))],
         None,
@@ -1947,8 +2277,13 @@ pub fn hall_of_storm_giants() -> CardDefinition {
 pub fn cave_of_the_frost_dragon() -> CardDefinition {
     use crate::card::{CreatureType, Keyword};
     afr_land(
-        "Cave of the Frost Dragon", Color::White, cost(&[generic(4), crate::mana::w()]), 3, 4,
-        vec![CreatureType::Dragon], vec![Keyword::Flying],
+        "Cave of the Frost Dragon",
+        Color::White,
+        cost(&[generic(4), crate::mana::w()]),
+        3,
+        4,
+        vec![CreatureType::Dragon],
+        vec![Keyword::Flying],
         None,
     )
 }
@@ -1959,9 +2294,16 @@ pub fn hive_of_the_eye_tyrant() -> CardDefinition {
     use crate::card::{CreatureType, Keyword, SelectionRequirement as R};
     use crate::effect::shortcut::target_filtered;
     afr_land(
-        "Hive of the Eye Tyrant", Color::Black, cost(&[generic(3), crate::mana::b()]), 3, 3,
-        vec![CreatureType::Horror], vec![Keyword::Menace],
-        Some(Effect::Exile { what: target_filtered(R::InGraveyard) }),
+        "Hive of the Eye Tyrant",
+        Color::Black,
+        cost(&[generic(3), crate::mana::b()]),
+        3,
+        3,
+        vec![CreatureType::Horror],
+        vec![Keyword::Menace],
+        Some(Effect::Exile {
+            what: target_filtered(R::InGraveyard),
+        }),
     )
 }
 
@@ -2014,14 +2356,21 @@ pub fn fountainport() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
                 sac_other_filter: Some((SelectionRequirement::IsToken, 1)),
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(3)]),
                 life_cost: 1,
-                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: fish },
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: fish,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -2055,9 +2404,14 @@ fn dsk_painland(name: &'static str, a: Color, b: Color) -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::If {
-                cond: Predicate::PlayerLifeAtMost { who: PlayerRef::EachPlayer, life: 13 },
+                cond: Predicate::PlayerLifeAtMost {
+                    who: PlayerRef::EachPlayer,
+                    life: 13,
+                },
                 then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap { what: Selector::This }),
+                else_: Box::new(Effect::Tap {
+                    what: Selector::This,
+                }),
             },
         }],
         ..Default::default()
@@ -2117,7 +2471,9 @@ fn slow_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefiniti
                     n: Value::Const(3),
                 },
                 then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap { what: Selector::This }),
+                else_: Box::new(Effect::Tap {
+                    what: Selector::This,
+                }),
             },
         }],
         ..Default::default()

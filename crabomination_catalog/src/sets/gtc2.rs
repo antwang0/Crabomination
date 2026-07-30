@@ -8,10 +8,13 @@ use crate::card::{
 };
 use crate::effect::shortcut::{on_attack, target_any, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, Value as V};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 
 /// Battalion (CR ability word) — a SelfSource "attacks" trigger gated on three
@@ -33,7 +36,10 @@ pub fn bomber_corps() -> CardDefinition {
         subtypes: creatures(vec![CreatureType::Human, CreatureType::Soldier]),
         power: 1,
         toughness: 2,
-        triggered_abilities: vec![battalion(Effect::DealDamage { to: target_any(), amount: V::ONE })],
+        triggered_abilities: vec![battalion(Effect::DealDamage {
+            to: target_any(),
+            amount: V::ONE,
+        })],
         ..Default::default()
     }
 }
@@ -91,7 +97,10 @@ pub fn nav_squad_commandos() -> CardDefinition {
                 toughness: V::ONE,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::This, up_to: None },
+            Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
         ]))],
         ..Default::default()
     }
@@ -243,9 +252,16 @@ pub fn riot_gear() -> CardDefinition {
         name: "Riot Gear",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 2, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 2,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -296,7 +312,9 @@ pub fn predators_rapport() -> CardDefinition {
             amount: V::Sum(vec![
                 // The filtered slot-0 selector declares the target (a creature
                 // you control); the toughness half reuses the resolved target.
-                V::PowerOf(Box::new(target_filtered(R::Creature.and(R::ControlledByYou)))),
+                V::PowerOf(Box::new(target_filtered(
+                    R::Creature.and(R::ControlledByYou),
+                ))),
                 V::ToughnessOf(Box::new(Selector::Target(0))),
             ]),
         },
@@ -316,7 +334,10 @@ pub fn deaths_approach() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             scale: Some(EquipScale {
                 filter: R::Any,

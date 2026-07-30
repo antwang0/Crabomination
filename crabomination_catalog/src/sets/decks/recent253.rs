@@ -1,13 +1,15 @@
 //! MKM (Murders at Karlov Manor) gap batch — Ravnica guild legends.
 //! Tests in `tests/recent_b/recent253.rs`.
 
-use crate::card::{CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, Subtypes, Supertype};
+use crate::card::{
+    CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, Subtypes, Supertype,
+};
 use crate::effect::shortcut::{etb, investigate, target_filtered};
 use crate::effect::{
     ActivatedAbility, Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate,
     Selector, TriggeredAbility, Value,
 };
-use crate::mana::{cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, cost, g, generic, hybrid, r, u, w};
 
 fn gw() -> crate::mana::ManaSymbol {
     hybrid(Color::Green, Color::White)
@@ -32,7 +34,10 @@ pub fn trostani_three_whispers() -> CardDefinition {
         cost: cost(&[g(), gw(), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dryad], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dryad],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         activated_abilities: vec![
@@ -66,9 +71,21 @@ pub fn ezrim_agency_chief() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             sac_other_filter: Some((R::Artifact.and(R::ControlledByYou), 1)),
             effect: Effect::ChooseMode(vec![
-                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Vigilance, duration: Duration::EndOfTurn },
-                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Lifelink, duration: Duration::EndOfTurn },
-                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Hexproof, duration: Duration::EndOfTurn },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Vigilance,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Hexproof,
+                    duration: Duration::EndOfTurn,
+                },
             ]),
             ..Default::default()
         }],
@@ -86,9 +103,16 @@ pub fn agrus_kos_spirit_of_justice() -> CardDefinition {
         min_targets: 0,
         filter: R::Creature,
         effect: Box::new(Effect::If {
-            cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::IsSuspected },
-            then: Box::new(Effect::Exile { what: Selector::Target(0) }),
-            else_: Box::new(Effect::Suspect { what: Selector::Target(0) }),
+            cond: Predicate::EntityMatches {
+                what: Selector::Target(0),
+                filter: R::IsSuspected,
+            },
+            then: Box::new(Effect::Exile {
+                what: Selector::Target(0),
+            }),
+            else_: Box::new(Effect::Suspect {
+                what: Selector::Target(0),
+            }),
         }),
     };
     CardDefinition {
@@ -124,27 +148,42 @@ pub fn aurelia_the_law_above() -> CardDefinition {
         cost: cost(&[generic(3), r(), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::YouAttack, EventScope::AnyPlayer).with_filter(
-                    Predicate::AttackedWithCountAtLeast { who: PlayerRef::ActivePlayer, at_least: 3 },
+                    Predicate::AttackedWithCountAtLeast {
+                        who: PlayerRef::ActivePlayer,
+                        at_least: 3,
+                    },
                 ),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::YouAttack, EventScope::AnyPlayer).with_filter(
-                    Predicate::AttackedWithCountAtLeast { who: PlayerRef::ActivePlayer, at_least: 5 },
+                    Predicate::AttackedWithCountAtLeast {
+                        who: PlayerRef::ActivePlayer,
+                        at_least: 5,
+                    },
                 ),
                 effect: Effect::Seq(vec![
                     Effect::DealDamage {
                         to: Selector::Player(PlayerRef::EachOpponent),
                         amount: Value::Const(3),
                     },
-                    Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(3),
+                    },
                 ]),
             },
         ],
@@ -165,12 +204,18 @@ pub fn rakdos_patron_of_chaos() -> CardDefinition {
         cost: cost(&[generic(4), b(), r()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::Punisher {
                 chooser: Selector::Player(PlayerRef::EachOpponent),
                 options: vec![Effect::Sacrifice {
@@ -178,7 +223,10 @@ pub fn rakdos_patron_of_chaos() -> CardDefinition {
                     count: Value::Const(2),
                     filter: R::Nonland.and(R::NotToken),
                 }],
-                otherwise: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                otherwise: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                }),
             },
         }],
         ..Default::default()
@@ -205,7 +253,10 @@ pub fn voja_jaws_of_the_conclave() -> CardDefinition {
         cost: cost(&[generic(2), r(), g(), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wolf],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![
@@ -221,7 +272,10 @@ pub fn voja_jaws_of_the_conclave() -> CardDefinition {
                     kind: crate::card::CounterType::PlusOnePlusOne,
                     amount: elves,
                 },
-                Effect::Draw { who: Selector::You, amount: wolves },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: wolves,
+                },
             ]),
         }],
         ..Default::default()

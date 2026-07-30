@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{on_dies, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 /// Glass Golem — {5} 6/2 Golem artifact creature (vanilla).
 pub fn glass_golem() -> CardDefinition {
@@ -15,7 +15,10 @@ pub fn glass_golem() -> CardDefinition {
         name: "Glass Golem",
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 6,
         toughness: 2,
         ..Default::default()
@@ -28,7 +31,10 @@ pub fn goliath_spider() -> CardDefinition {
         name: "Goliath Spider",
         cost: cost(&[generic(6), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
         power: 7,
         toughness: 6,
         keywords: vec![Keyword::Reach],
@@ -42,7 +48,10 @@ pub fn grayscaled_gharial() -> CardDefinition {
         name: "Grayscaled Gharial",
         cost: cost(&[u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Crocodile], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Crocodile],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Landwalk(LandType::Island)],
@@ -65,7 +74,10 @@ pub fn centaur_safeguard() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![on_dies(Effect::MayDo {
             description: "Gain 3 life".into(),
-            body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+            body: Box::new(Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            }),
         })],
         ..Default::default()
     }
@@ -77,7 +89,10 @@ pub fn greater_forgeling() -> CardDefinition {
         name: "Greater Forgeling",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         activated_abilities: vec![ActivatedAbility {
@@ -129,15 +144,25 @@ pub fn blazing_archon() -> CardDefinition {
     use crate::effect::StaticEffect;
     CardDefinition {
         name: "Blazing Archon",
-        cost: cost(&[generic(6), crate::mana::w(), crate::mana::w(), crate::mana::w()]),
+        cost: cost(&[
+            generic(6),
+            crate::mana::w(),
+            crate::mana::w(),
+            crate::mana::w(),
+        ]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Archon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Archon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 6,
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "Creatures can't attack you.",
-            effect: StaticEffect::CreaturesCantAttackController { protect_planeswalkers: false },
+            effect: StaticEffect::CreaturesCantAttackController {
+                protect_planeswalkers: false,
+            },
         }],
         ..Default::default()
     }
@@ -171,13 +196,18 @@ pub fn screeching_griffin() -> CardDefinition {
         name: "Screeching Griffin",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
-            effect: Effect::CantBlockSourceThisTurn { target: target_filtered(R::Creature) },
+            effect: Effect::CantBlockSourceThisTurn {
+                target: target_filtered(R::Creature),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -191,7 +221,10 @@ pub fn roofstalker_wight() -> CardDefinition {
         name: "Roofstalker Wight",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -214,7 +247,10 @@ pub fn sewerdreg() -> CardDefinition {
         name: "Sewerdreg",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Landwalk(LandType::Swamp)],
@@ -236,7 +272,10 @@ pub fn infectious_host() -> CardDefinition {
         name: "Infectious Host",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![on_dies(Effect::LoseLife {
@@ -264,9 +303,7 @@ pub fn loxodon_gatekeeper() -> CardDefinition {
             description: "Artifacts, creatures, and lands your opponents control enter tapped.",
             effect: StaticEffect::EntersTapped {
                 applies_to: Selector::EachPermanent(
-                    R::ControlledByOpponent.and(
-                        R::Artifact.or(R::Creature).or(R::Land),
-                    ),
+                    R::ControlledByOpponent.and(R::Artifact.or(R::Creature).or(R::Land)),
                 ),
             },
         }],
@@ -277,9 +314,8 @@ pub fn loxodon_gatekeeper() -> CardDefinition {
 /// Oathsworn Giant — {4}{W}{W} 3/4 Giant Soldier with vigilance. Other
 /// creatures you control get +0/+2 and have vigilance.
 pub fn oathsworn_giant() -> CardDefinition {
-    let others = || Selector::EachPermanent(
-        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
-    );
+    let others =
+        || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource));
     CardDefinition {
         name: "Oathsworn Giant",
         cost: cost(&[generic(4), w(), w()]),
@@ -294,11 +330,18 @@ pub fn oathsworn_giant() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Other creatures you control get +0/+2.",
-                effect: StaticEffect::PumpPT { applies_to: others(), power: 0, toughness: 2 },
+                effect: StaticEffect::PumpPT {
+                    applies_to: others(),
+                    power: 0,
+                    toughness: 2,
+                },
             },
             StaticAbility {
                 description: "… and have vigilance.",
-                effect: StaticEffect::GrantKeyword { applies_to: others(), keyword: Keyword::Vigilance },
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: others(),
+                    keyword: Keyword::Vigilance,
+                },
             },
         ],
         ..Default::default()

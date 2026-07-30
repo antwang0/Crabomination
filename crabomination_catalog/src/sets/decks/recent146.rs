@@ -4,12 +4,12 @@
 //! adventure (the new `StaticEffect::EntersTappedUnless`). Tests in
 //! `crabomination/src/tests/recent146.rs`.
 
+use crate::card::Zone;
 use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType,
     EnchantmentSubtype, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TriggeredAbility, Value, WardCost,
 };
-use crate::card::Zone;
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, LibraryPosition, PlayerRef, ZoneDest,
@@ -27,7 +27,10 @@ pub fn bitter_chill() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature doesn't untap during its controller's untap step.",
             effect: StaticEffect::PreventUntap {
@@ -35,7 +38,9 @@ pub fn bitter_chill() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![
-            etb(Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) }),
+            etb(Effect::Tap {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::PermanentLeavesBattlefield,
@@ -45,8 +50,14 @@ pub fn bitter_chill() -> CardDefinition {
                     description: "Pay {1}: scry 1, then draw a card.".into(),
                     mana_cost: cost(&[generic(1)]),
                     body: Box::new(Effect::Seq(vec![
-                        Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
-                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::Scry {
+                            who: PlayerRef::You,
+                            amount: Value::ONE,
+                        },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::ONE,
+                        },
                     ])),
                     else_: None,
                 },
@@ -60,10 +71,9 @@ pub fn bitter_chill() -> CardDefinition {
 /// hexproof, and haste while an opponent controls a planeswalker; grows and
 /// scries when your artifacts die; sac for life equal to its power.
 pub fn syr_ginger_the_meal_ender() -> CardDefinition {
-    let opponent_has_pw =
-        Predicate::SelectorExists(Selector::EachPermanent(
-            R::Planeswalker.and(R::ControlledByOpponent),
-        ));
+    let opponent_has_pw = Predicate::SelectorExists(Selector::EachPermanent(
+        R::Planeswalker.and(R::ControlledByOpponent),
+    ));
     let while_pw = |keyword: Keyword| StaticAbility {
         description: "Has trample, hexproof, and haste while an opponent controls a planeswalker.",
         effect: StaticEffect::SelfHasKeywordWhilePredicate {
@@ -100,7 +110,10 @@ pub fn syr_ginger_the_meal_ender() -> CardDefinition {
                     kind: crate::card::CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
                 },
-                Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::ONE,
+                },
             ]),
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -132,7 +145,10 @@ pub fn archon_of_the_wild_rose() -> CardDefinition {
         name: "Archon of the Wild Rose",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Archon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Archon],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -163,7 +179,11 @@ pub fn archon_of_the_wild_rose() -> CardDefinition {
 pub fn back_for_seconds() -> CardDefinition {
     let gy_creatures = |n: i32| {
         Selector::take(
-            Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::Creature },
+            Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: R::Creature,
+            },
             Value::Const(n),
         )
     };
@@ -179,8 +199,8 @@ pub fn back_for_seconds() -> CardDefinition {
             cond: Predicate::SpellWasBargained,
             then: Box::new(Effect::Seq(vec![
                 Effect::MayDo {
-                    description: "Put a creature card with mana value 4 or less onto the battlefield."
-                        .into(),
+                    description:
+                        "Put a creature card with mana value 4 or less onto the battlefield.".into(),
                     body: Box::new(Effect::Move {
                         what: Selector::take(
                             Selector::CardsInZone {
@@ -190,10 +210,16 @@ pub fn back_for_seconds() -> CardDefinition {
                             },
                             Value::ONE,
                         ),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     }),
                 },
-                Effect::Move { what: gy_creatures(1), to: ZoneDest::Hand(PlayerRef::You) },
+                Effect::Move {
+                    what: gy_creatures(1),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
             ])),
             else_: Box::new(Effect::Move {
                 what: gy_creatures(2),
@@ -212,7 +238,10 @@ pub fn faunsbane_troll() -> CardDefinition {
         name: "Faunsbane Troll",
         cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Troll], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Troll],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::CreateTokenAttachedTo {
@@ -230,7 +259,9 @@ pub fn faunsbane_troll() -> CardDefinition {
             effect: Effect::Seq(vec![
                 // Install the exile-if-would-die replacement before the fight
                 // deals (potentially lethal) damage.
-                Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+                Effect::ExileIfWouldDieThisTurn {
+                    what: Selector::Target(0),
+                },
                 Effect::Fight {
                     attacker: Selector::This,
                     defender: Selector::TargetFiltered {
@@ -254,10 +285,16 @@ pub fn horned_loch_whale() -> CardDefinition {
         name: "Horned Loch-Whale",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Whale], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Whale],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
-        keywords: vec![Keyword::Flash, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        keywords: vec![
+            Keyword::Flash,
+            Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))),
+        ],
         static_abilities: vec![StaticAbility {
             description: "This creature enters tapped unless it's your turn.",
             effect: StaticEffect::EntersTappedUnless {

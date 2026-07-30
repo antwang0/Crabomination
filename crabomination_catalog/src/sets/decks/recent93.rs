@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{draw, etb, target_filtered};
 use crate::effect::{PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, r, u, x, Color};
+use crate::mana::{Color, cost, generic, r, u, x};
 
 /// Galecaster Colossus — {5}{U}{U} 5/6 Giant Wizard. Tap an untapped Wizard you
 /// control: return target nonland permanent you don't control to its owner's
@@ -52,7 +52,10 @@ pub fn gadwick_the_wizened() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![
-            etb(Effect::Draw { who: Selector::You, amount: Value::XFromCost }),
+            etb(Effect::Draw {
+                who: Selector::You,
+                amount: Value::XFromCost,
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
                     Predicate::EntityMatches {
@@ -61,7 +64,9 @@ pub fn gadwick_the_wizened() -> CardDefinition {
                     },
                 ),
                 effect: Effect::Tap {
-                    what: target_filtered(R::Permanent.and(R::Nonland).and(R::ControlledByOpponent)),
+                    what: target_filtered(
+                        R::Permanent.and(R::Nonland).and(R::ControlledByOpponent),
+                    ),
                 },
             },
         ],
@@ -76,7 +81,10 @@ pub fn sphinx_of_lost_truths() -> CardDefinition {
         name: "Sphinx of Lost Truths",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
         power: 3,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Kicker(cost(&[generic(1), u()]))],

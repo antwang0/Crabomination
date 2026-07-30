@@ -10,7 +10,7 @@ use crate::effect::shortcut::etb;
 use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, StaticEffect,
 };
-use crate::mana::{b, cost, generic, r, u, Color};
+use crate::mana::{Color, b, cost, generic, r, u};
 
 /// Harnesser of Storms — {2}{R} 1/4 Otter Wizard. Once each turn, when you cast a
 /// noncreature or Otter spell, impulse the top card (playable until end of turn).
@@ -40,7 +40,8 @@ pub fn harnesser_of_storms() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::ONE,
                 duration: MayPlayDuration::EndOfThisTurn,
-                pay_any_color: false, pay_own_cost: false,
+                pay_any_color: false,
+                pay_own_cost: false,
                 uncast_penalty: None,
             },
         }],
@@ -62,7 +63,9 @@ pub fn flamecache_gecko() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
+            cond: Predicate::PlayerLostLifeThisTurn {
+                who: PlayerRef::EachOpponent,
+            },
             then: Box::new(Effect::AddMana {
                 who: PlayerRef::You,
                 pool: ManaPayload::Colors(vec![Color::Black, Color::Red]),
@@ -72,7 +75,10 @@ pub fn flamecache_gecko() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
             discard_cost: Some((R::Any, 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -92,8 +98,14 @@ pub fn intimidation_campaign() -> CardDefinition {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::ONE,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::ONE },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]))],
         ..Default::default()
     }
@@ -107,7 +119,10 @@ pub fn eddymurk_crab() -> CardDefinition {
         name: "Eddymurk Crab",
         cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental, CreatureType::Crab], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Crab],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flash],

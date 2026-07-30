@@ -26,7 +26,9 @@ pub fn vizier_of_the_menagerie() -> CardDefinition {
             },
             StaticAbility {
                 description: "You may cast creature spells from the top of your library.",
-                effect: StaticEffect::PlayFromLibraryTop { filter: R::Creature },
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: R::Creature,
+                },
             },
         ],
         ..Default::default()

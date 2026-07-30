@@ -11,7 +11,7 @@ use crate::effect::shortcut::{etb, investigate, modular_dies, outlast, target_fi
 use crate::effect::{
     Duration, Effect, LibraryPosition, PlayerRef, Predicate, StaticEffect, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 use SelectionRequirement as R;
 
@@ -70,7 +70,9 @@ pub fn arcus_acolyte() -> CardDefinition {
                     R::Creature
                         .and(R::ControlledByYou)
                         .and(R::OtherThanSource)
-                        .and(R::Not(Box::new(R::WithCounter(CounterType::PlusOnePlusOne)))),
+                        .and(R::Not(Box::new(R::WithCounter(
+                            CounterType::PlusOnePlusOne,
+                        )))),
                 ),
                 ability: outlast(gw()),
                 condition: None,
@@ -238,11 +240,7 @@ pub fn lonis_cryptozoologist() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![
-                CreatureType::Snake,
-                CreatureType::Elf,
-                CreatureType::Scout,
-            ],
+            creature_types: vec![CreatureType::Snake, CreatureType::Elf, CreatureType::Scout],
             ..Default::default()
         },
         power: 1,
@@ -330,9 +328,14 @@ pub fn bloodbraid_marauder() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::CantBlock],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource)
-                .with_filter(Predicate::DeliriumActive { who: PlayerRef::You }),
-            effect: Effect::Cascade { max_mv: Value::Const(2) },
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource).with_filter(
+                Predicate::DeliriumActive {
+                    who: PlayerRef::You,
+                },
+            ),
+            effect: Effect::Cascade {
+                max_mv: Value::Const(2),
+            },
         }],
         ..Default::default()
     }

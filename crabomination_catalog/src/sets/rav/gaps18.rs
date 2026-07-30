@@ -3,8 +3,8 @@
 //! (`CombatDamageToPlayerBecomesCountersAndMill`). Tests in `classic_sets/rav`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword,
-    SelectionRequirement as R, StaticAbility, Subtypes,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R,
+    StaticAbility, Subtypes,
 };
 use crate::effect::{Duration, Effect, Selector, StaticEffect};
 use crate::mana::{b, cost, g, generic, r, u, w};
@@ -61,7 +61,10 @@ pub fn sabertooth_alley_cat() -> CardDefinition {
         name: "Sabertooth Alley Cat",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::MustAttack],

@@ -12,7 +12,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, generic, u, w, x, Color};
+use crate::mana::{Color, b, cost, generic, u, w, x};
 
 /// Dune Drifter — {X}{W}{B} Artifact — Vehicle 3/3, Crew 2. When it enters,
 /// return target artifact or creature card with mana value X or less from your
@@ -37,7 +37,10 @@ pub fn dune_drifter() -> CardDefinition {
                     .and(R::InYourGraveyard)
                     .and(R::ManaValueAtMostXFromCost),
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         })],
         ..Default::default()
     }
@@ -67,7 +70,10 @@ pub fn vnwxt_verbose_host() -> CardDefinition {
             StaticAbility {
                 description: "Max speed — if you would draw a card, draw two cards instead.",
                 effect: StaticEffect::ControllerDrawsDoubledIf {
-                    condition: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                    condition: Predicate::SpeedAtLeast {
+                        who: PlayerRef::You,
+                        speed: 4,
+                    },
                 },
             },
         ],
@@ -82,7 +88,10 @@ fn tapped_zombie_token() -> TokenDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         tapped: true,
         ..Default::default()
     }
@@ -99,7 +108,11 @@ pub fn zahur_glorys_past() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie, CreatureType::Cat, CreatureType::Warrior],
+            creature_types: vec![
+                CreatureType::Zombie,
+                CreatureType::Cat,
+                CreatureType::Warrior,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -108,7 +121,10 @@ pub fn zahur_glorys_past() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((R::Creature, 1)),
             once_per_turn: true,
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -119,7 +135,10 @@ pub fn zahur_glorys_past() -> CardDefinition {
                 },
             ),
             effect: Effect::If {
-                cond: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                cond: Predicate::SpeedAtLeast {
+                    who: PlayerRef::You,
+                    speed: 4,
+                },
                 then: Box::new(Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
@@ -146,12 +165,18 @@ pub fn the_last_ride() -> CardDefinition {
         },
         power: 13,
         toughness: 13,
-        dynamic_pt: Some(DynamicPt::BaseMinusControllerLife { base_p: 13, base_t: 13 }),
+        dynamic_pt: Some(DynamicPt::BaseMinusControllerLife {
+            base_p: 13,
+            base_t: 13,
+        }),
         keywords: vec![Keyword::Crew(2)],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), b()]),
             life_cost: 2,
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -168,15 +193,27 @@ pub fn the_speed_demon() -> CardDefinition {
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::StartYourEngines],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::PlayerSpeed(PlayerRef::You) },
-                Effect::LoseLife { who: Selector::You, amount: Value::PlayerSpeed(PlayerRef::You) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::PlayerSpeed(PlayerRef::You),
+                },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::PlayerSpeed(PlayerRef::You),
+                },
             ]),
         }],
         ..Default::default()

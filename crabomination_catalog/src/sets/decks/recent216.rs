@@ -64,7 +64,10 @@ pub fn byway_barterer() -> CardDefinition {
                         amount: Value::HandSizeOf(PlayerRef::You),
                         random: false,
                     },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
                 ])),
                 description: "Discard your hand, then draw two?".into(),
             },
@@ -88,7 +91,10 @@ pub fn wicks_patrol() -> CardDefinition {
         power: 5,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             Effect::PumpPT {
                 what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
                 power: Value::Times(
@@ -120,7 +126,11 @@ pub fn maha_its_feathers_night() -> CardDefinition {
         },
         power: 6,
         toughness: 5,
-        keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::Ward(WardCost::Discard(1))],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Trample,
+            Keyword::Ward(WardCost::Discard(1)),
+        ],
         static_abilities: vec![StaticAbility {
             description: "Creatures your opponents control have base toughness 1.",
             effect: StaticEffect::SetBaseToughnessForMatching {

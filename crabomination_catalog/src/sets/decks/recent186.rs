@@ -27,7 +27,10 @@ pub fn vanish_from_sight() -> CardDefinition {
                     pos: LibraryPosition::OwnerChoice,
                 },
             },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -49,9 +52,15 @@ pub fn hearthborn_battler() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
-                Predicate::SpellsCastThisTurnEquals { who: PlayerRef::Triggerer, count: Value::Const(2) },
+                Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::Triggerer,
+                    count: Value::Const(2),
+                },
             ),
-            effect: Effect::DealDamage { to: target_filtered(R::OpponentPlayer), amount: Value::Const(2) },
+            effect: Effect::DealDamage {
+                to: target_filtered(R::OpponentPlayer),
+                amount: Value::Const(2),
+            },
         }],
         ..Default::default()
     }
@@ -72,7 +81,10 @@ pub fn inquisitive_glimmer() -> CardDefinition {
         toughness: 3,
         static_abilities: vec![StaticAbility {
             description: "Enchantment spells you cast cost {1} less to cast.",
-            effect: StaticEffect::CostReduction { filter: R::Enchantment, amount: 1 },
+            effect: StaticEffect::CostReduction {
+                filter: R::Enchantment,
+                amount: 1,
+            },
         }],
         ..Default::default()
     }
@@ -94,7 +106,9 @@ pub fn tidecaller_mentor() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::ThresholdActive { who: PlayerRef::You },
+            cond: Predicate::ThresholdActive {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::ApplyToTargets {
                 max_targets: 1,
                 min_targets: 0,
@@ -127,7 +141,9 @@ pub fn thought_stalker_warlock() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
+            cond: Predicate::PlayerLostLifeThisTurn {
+                who: PlayerRef::EachOpponent,
+            },
             then: Box::new(Effect::DiscardChosen {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 count: Value::ONE,

@@ -30,14 +30,19 @@ pub fn thought_shucker() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), u()]),
             activate_once: true,
-            condition: Some(Predicate::ThresholdActive { who: PlayerRef::You }),
+            condition: Some(Predicate::ThresholdActive {
+                who: PlayerRef::You,
+            }),
             effect: Effect::Seq(vec![
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
                 },
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
             ..Default::default()
         }],
@@ -63,9 +68,14 @@ pub fn shoreline_looter() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 Effect::If {
-                    cond: Predicate::ThresholdActive { who: PlayerRef::You },
+                    cond: Predicate::ThresholdActive {
+                        who: PlayerRef::You,
+                    },
                     then: Box::new(Effect::Noop),
                     else_: Box::new(Effect::Discard {
                         who: Selector::You,
@@ -88,10 +98,16 @@ pub fn ruthless_negotiation() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(4), b()]))],
         effect: Effect::Seq(vec![
-            Effect::ExileFromHand { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE },
+            Effect::ExileFromHand {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+            },
             Effect::If {
                 cond: Predicate::CastFromGraveyard,
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),

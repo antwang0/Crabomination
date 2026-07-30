@@ -6,7 +6,10 @@ use crate::card::{
     Keyword, LandType, SelectionRequirement as R, Subtypes, TokenDefinition,
 };
 use crate::effect::shortcut::{etb, target_filtered};
-use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility, Value, ZoneDest};
+use crate::effect::{
+    Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility, Value,
+    ZoneDest,
+};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
 /// Treacherous Greed — {1}{W}{B} Instant. Additional cost: sacrifice a creature
@@ -23,12 +26,18 @@ pub fn treacherous_greed() -> CardDefinition {
             count: 1,
         }],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             Effect::LoseLife {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(3),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
         ]),
         ..Default::default()
     }
@@ -60,7 +69,10 @@ pub fn flourishing_bloom_kin() -> CardDefinition {
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: R::Land.and(R::HasLandType(LandType::Forest)),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
                 Effect::Search {
                     who: PlayerRef::You,
@@ -89,7 +101,11 @@ pub fn concealed_weapon() -> CardDefinition {
             Keyword::Equip(cost(&[generic(1), r()])),
             Keyword::Disguise(cost(&[generic(2), r()])),
         ],
-        equipped_bonus: Some(EquipBonus { power: 3, toughness: 0, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 0,
+            ..Default::default()
+        }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
             effect: Effect::Attach {
@@ -165,7 +181,9 @@ pub fn krenko_baron_of_tin_street() -> CardDefinition {
             tap_cost: true,
             sac_other_filter: Some((R::Artifact.and(R::ControlledByYou), 1)),
             effect: Effect::AddCounter {
-                what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Goblin).and(R::ControlledByYou)),
+                what: Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Goblin).and(R::ControlledByYou),
+                ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
             },
@@ -208,7 +226,10 @@ pub fn cryptex() -> CardDefinition {
                 tap_cost: true,
                 collect_evidence_cost: Some(3),
                 effect: Effect::Seq(vec![
-                    Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyOneColor(Value::ONE),
+                    },
                     Effect::AddCounter {
                         what: Selector::This,
                         kind: CounterType::Unlock,
@@ -224,8 +245,14 @@ pub fn cryptex() -> CardDefinition {
                     n: 5,
                 }),
                 effect: Effect::Seq(vec![
-                    Effect::Surveil { who: PlayerRef::You, amount: Value::Const(3) },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                    Effect::Surveil {
+                        who: PlayerRef::You,
+                        amount: Value::Const(3),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(3),
+                    },
                 ]),
                 ..Default::default()
             },
@@ -238,8 +265,8 @@ pub fn cryptex() -> CardDefinition {
 /// {T}: Create a 1/1 colorless Thopter artifact creature token with flying.
 /// Activate only if you've sacrificed an artifact this turn.
 pub fn detectives_satchel() -> CardDefinition {
-    use crate::effect::shortcut::investigate;
     use crate::effect::ActivatedAbility;
+    use crate::effect::shortcut::investigate;
     CardDefinition {
         name: "Detective's Satchel",
         cost: cost(&[generic(2), u(), r()]),
@@ -285,7 +312,10 @@ pub fn polygraph_orb() -> CardDefinition {
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
             },
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]))],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
@@ -294,8 +324,16 @@ pub fn polygraph_orb() -> CardDefinition {
             effect: Effect::Punisher {
                 chooser: Selector::Player(PlayerRef::EachOpponent),
                 options: vec![
-                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
-                    Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Creature },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                        random: false,
+                    },
+                    Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::ONE,
+                        filter: R::Creature,
+                    },
                 ],
                 otherwise: Box::new(Effect::LoseLife {
                     who: Selector::Player(PlayerRef::EachOpponent),
@@ -316,10 +354,16 @@ pub fn undergrowth_recon() -> CardDefinition {
         cost: cost(&[generic(1), g(), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::Move {
                 what: target_filtered(R::Land),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
         }],
         ..Default::default()
@@ -342,19 +386,31 @@ pub fn dramatic_accusation() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::Seq(vec![
-            Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-            Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            Effect::Attach {
+                what: Selector::This,
+                to: target_filtered(R::Creature),
+            },
+            Effect::Tap {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
         ]),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::AnyPlayer),
-            effect: Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::Tap {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[u(), u()]),
             effect: Effect::Move {
                 what: Selector::AttachedTo(Box::new(Selector::This)),
                 to: ZoneDest::Library {
-                    who: PlayerRef::OwnerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
+                    who: PlayerRef::OwnerOf(Box::new(Selector::AttachedTo(Box::new(
+                        Selector::This,
+                    )))),
                     pos: LibraryPosition::Shuffled,
                 },
             },
@@ -368,7 +424,10 @@ fn thopter_token() -> TokenDefinition {
     TokenDefinition {
         name: "Thopter".into(),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -381,7 +440,10 @@ fn plant_0_1_token() -> TokenDefinition {
         name: "Plant".into(),
         colors: vec![crate::mana::Color::Green],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant],
+            ..Default::default()
+        },
         power: 0,
         toughness: 1,
         ..Default::default()
@@ -393,7 +455,10 @@ fn hasty_goblin_token() -> TokenDefinition {
         name: "Goblin".into(),
         colors: vec![crate::mana::Color::Red],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Haste],
@@ -409,7 +474,10 @@ pub fn lamplight_phoenix() -> CardDefinition {
         name: "Lamplight Phoenix",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Phoenix], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phoenix],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -435,7 +503,10 @@ pub fn slime_against_humanity() -> CardDefinition {
         name: "Ooze".into(),
         colors: vec![crate::mana::Color::Green],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze],
+            ..Default::default()
+        },
         power: 0,
         toughness: 0,
         keywords: vec![Keyword::Trample],
@@ -446,7 +517,11 @@ pub fn slime_against_humanity() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: ooze },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: ooze,
+            },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
                 kind: CounterType::PlusOnePlusOne,
@@ -466,16 +541,25 @@ pub fn magnetic_snuffler() -> CardDefinition {
         name: "Magnetic Snuffler",
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 4,
         toughness: 5,
         triggered_abilities: vec![
             etb(Effect::Seq(vec![
                 Effect::Move {
                     what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
-                Effect::Attach { what: Selector::LastMoved, to: Selector::This },
+                Effect::Attach {
+                    what: Selector::LastMoved,
+                    to: Selector::This,
+                },
             ])),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
@@ -514,12 +598,21 @@ pub fn cryptic_coat() -> CardDefinition {
             ..Default::default()
         }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Cloak { who: PlayerRef::You, amount: Value::ONE },
-            Effect::Attach { what: Selector::This, to: Selector::LastMoved },
+            Effect::Cloak {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
+            Effect::Attach {
+                what: Selector::This,
+                to: Selector::LastMoved,
+            },
         ]))],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), u()]),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -557,7 +650,9 @@ pub fn presumed_dead() -> CardDefinition {
         event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
         effect: Effect::Seq(vec![
             Effect::ReturnSelf,
-            Effect::Suspect { what: Selector::This },
+            Effect::Suspect {
+                what: Selector::This,
+            },
         ]),
     };
     CardDefinition {

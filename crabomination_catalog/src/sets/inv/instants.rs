@@ -22,7 +22,10 @@ pub fn opt() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
             draw(1),
         ]),
         ..Default::default()

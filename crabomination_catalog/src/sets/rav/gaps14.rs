@@ -17,15 +17,24 @@ pub fn razia_boros_archangel() -> CardDefinition {
         cost: cost(&[generic(4), r(), r(), w(), w()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 6,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::RedirectNextDamage {
-                target: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
-                to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                target: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 amount: Value::Const(3),
             },
             ..Default::default()

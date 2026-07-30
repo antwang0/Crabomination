@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// A self-source "when this dies" trigger.
 fn dies(effect: Effect) -> TriggeredAbility {
@@ -67,7 +67,10 @@ pub fn preening_champion() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue, Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -100,7 +103,10 @@ pub fn knight_of_the_new_coalition() -> CardDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::White, Color::Blue],
         keywords: vec![Keyword::Vigilance],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Knight],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -131,7 +137,10 @@ pub fn conscripted_infantry() -> CardDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -159,7 +168,10 @@ pub fn burrowing_razormaw() -> CardDefinition {
         name: "Burrowing Razormaw",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 2,
         triggered_abilities: vec![dies(Effect::Mill {
@@ -178,7 +190,10 @@ pub fn hoarding_recluse() -> CardDefinition {
         name: "Hoarding Recluse",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Reach, Keyword::Deathtouch],
@@ -348,7 +363,10 @@ pub fn coming_in_hot() -> CardDefinition {
                 keyword: Keyword::FirstStrike,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -373,7 +391,10 @@ pub fn arachnoid_adaptation() -> CardDefinition {
                 keyword: Keyword::Reach,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
         ]),
         ..Default::default()
     }
@@ -393,7 +414,9 @@ pub fn cosmic_hunger() -> CardDefinition {
             },
             target: Selector::TargetFiltered {
                 slot: 1,
-                filter: R::Creature.or(R::Planeswalker).or(R::HasCardType(CardType::Battle)),
+                filter: R::Creature
+                    .or(R::Planeswalker)
+                    .or(R::HasCardType(CardType::Battle)),
             },
         },
         ..Default::default()
@@ -411,7 +434,10 @@ pub fn mirrodin_avenged() -> CardDefinition {
             Effect::Destroy {
                 what: target_filtered(R::Creature.and(R::DealtDamageThisTurn)),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }

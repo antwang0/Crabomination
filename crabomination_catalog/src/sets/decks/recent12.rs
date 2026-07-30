@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Effect, PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, r, w, Color};
+use crate::mana::{Color, cost, generic, r, w};
 
 // ── Equipment payoff creatures ───────────────────────────────────────────────
 
@@ -45,7 +45,10 @@ pub fn kemba_kha_regent() -> CardDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -60,7 +63,10 @@ pub fn kemba_kha_regent() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CountMatching {
@@ -92,8 +98,9 @@ pub fn danitha_capashen() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Aura and Equipment spells you cast cost {1} less to cast.",
             effect: StaticEffect::CostReduction {
-                filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
-                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+                filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura).or(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                ),
                 amount: 1,
             },
         }],
@@ -125,10 +132,13 @@ pub fn auriok_steelshaper() -> CardDefinition {
                 effect: StaticEffect::PumpTeamIf {
                     condition: crate::effect::Predicate::SourceIsEquipped,
                     applies_to: Selector::EachPermanent(
-                        SelectionRequirement::ControlledByYou.and(SelectionRequirement::Creature).and(
-                            SelectionRequirement::HasCreatureType(CreatureType::Soldier)
-                                .or(SelectionRequirement::HasCreatureType(CreatureType::Knight)),
-                        ),
+                        SelectionRequirement::ControlledByYou
+                            .and(SelectionRequirement::Creature)
+                            .and(
+                                SelectionRequirement::HasCreatureType(CreatureType::Soldier).or(
+                                    SelectionRequirement::HasCreatureType(CreatureType::Knight),
+                                ),
+                            ),
                     ),
                     power: 1,
                     toughness: 1,
@@ -168,7 +178,9 @@ pub fn balan_wandering_knight() -> CardDefinition {
             effect: Effect::Attach {
                 what: Selector::EachPermanent(
                     SelectionRequirement::Artifact
-                        .and(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment))
+                        .and(SelectionRequirement::HasArtifactSubtype(
+                            ArtifactSubtype::Equipment,
+                        ))
                         .and(SelectionRequirement::ControlledByYou),
                 ),
                 to: Selector::This,
@@ -193,7 +205,11 @@ pub fn goblin_gaveleer() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Trample],
-        dynamic_pt: Some(DynamicPt::BasePlusPerAttachedEquipment { base_p: 1, base_t: 1, per: 2 }),
+        dynamic_pt: Some(DynamicPt::BasePlusPerAttachedEquipment {
+            base_p: 1,
+            base_t: 1,
+            per: 2,
+        }),
         ..Default::default()
     }
 }
@@ -209,7 +225,10 @@ pub fn valduk_keeper_of_the_flame() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Trample, Keyword::Haste],
         ..Default::default()
     };
@@ -234,8 +253,12 @@ pub fn valduk_keeper_of_the_flame() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::CountMatching {
                         sel: Box::new(Selector::AttachedToMe(Box::new(Selector::This))),
-                        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
-                            .or(SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
+                        filter: SelectionRequirement::HasArtifactSubtype(
+                            ArtifactSubtype::Equipment,
+                        )
+                        .or(SelectionRequirement::HasEnchantmentSubtype(
+                            EnchantmentSubtype::Aura,
+                        )),
                     },
                     definition: elemental,
                 },
@@ -354,7 +377,10 @@ pub fn flayer_husk() -> CardDefinition {
         toughness: 0,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -366,10 +392,21 @@ pub fn flayer_husk() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: germ },
-            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: germ,
+            },
+            Effect::Attach {
+                what: Selector::This,
+                to: Selector::LastCreatedToken,
+            },
         ]))],
         ..Default::default()
     }
@@ -389,7 +426,10 @@ pub fn lizard_blades() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::DoubleStrike, Keyword::Reconfigure(cost(&[generic(2)]))],
+        keywords: vec![
+            Keyword::DoubleStrike,
+            Keyword::Reconfigure(cost(&[generic(2)])),
+        ],
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::DoubleStrike],
             ..Default::default()
@@ -450,7 +490,10 @@ pub fn magnetic_theft() -> CardDefinition {
                 slot: 0,
                 filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
             },
-            to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Creature },
+            to: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature,
+            },
         },
         ..Default::default()
     }
@@ -465,7 +508,10 @@ pub fn srams_expertise() -> CardDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Servo], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Servo],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -473,7 +519,11 @@ pub fn srams_expertise() -> CardDefinition {
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(3), definition: servo },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                definition: servo,
+            },
             Effect::CastFromHandWithoutPaying {
                 filter: Some(SelectionRequirement::ManaValueAtMost(3)),
             },
@@ -501,7 +551,9 @@ pub fn sublime_exhalation() -> CardDefinition {
         static_abilities: vec![undaunted()],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Creature),
-            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
         },
         ..Default::default()
     }
@@ -519,7 +571,9 @@ pub fn curtains_call() -> CardDefinition {
             max_targets: 2,
             min_targets: 0,
             filter: SelectionRequirement::Creature,
-            effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+            effect: Box::new(Effect::Destroy {
+                what: Selector::Target(0),
+            }),
         },
         ..Default::default()
     }
@@ -567,8 +621,15 @@ pub fn nahiri_the_harbinger() -> CardDefinition {
                 effect: Effect::MayDo {
                     description: "Discard a card. If you do, draw a card.".into(),
                     body: Box::new(Effect::Seq(vec![
-                        Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
-                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::ONE,
+                            random: false,
+                        },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::ONE,
+                        },
                     ])),
                 },
                 x_cost: false,
@@ -578,10 +639,8 @@ pub fn nahiri_the_harbinger() -> CardDefinition {
                 effect: Effect::Exile {
                     what: target_filtered(
                         SelectionRequirement::Enchantment
-                            .or(SelectionRequirement::Artifact
-                                .and(SelectionRequirement::Tapped))
-                            .or(SelectionRequirement::Creature
-                                .and(SelectionRequirement::Tapped)),
+                            .or(SelectionRequirement::Artifact.and(SelectionRequirement::Tapped))
+                            .or(SelectionRequirement::Creature.and(SelectionRequirement::Tapped)),
                     ),
                 },
                 x_cost: false,
@@ -591,7 +650,10 @@ pub fn nahiri_the_harbinger() -> CardDefinition {
                 effect: Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 x_cost: false,
             },

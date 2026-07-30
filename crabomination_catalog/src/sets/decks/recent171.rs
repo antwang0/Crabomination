@@ -23,7 +23,11 @@ pub fn rover_blades() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::DoubleStrike, Keyword::Equip(cost(&[generic(4)])), Keyword::Crew(2)],
+        keywords: vec![
+            Keyword::DoubleStrike,
+            Keyword::Equip(cost(&[generic(4)])),
+            Keyword::Crew(2),
+        ],
         equipped_bonus: Some(crate::card::EquipBonus {
             keywords: vec![Keyword::DoubleStrike],
             ..Default::default()
@@ -45,7 +49,10 @@ pub fn spotcycle_scouter() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Crew(1)],
-        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
         ..Default::default()
     }
 }
@@ -64,7 +71,10 @@ pub fn veloheart_bike() -> CardDefinition {
         power: 4,
         toughness: 2,
         keywords: vec![Keyword::Crew(2)],
-        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
         activated_abilities: vec![crate::card::ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana {
@@ -111,7 +121,9 @@ pub fn stall_out() -> CardDefinition {
         keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         effect: Effect::Seq(vec![
             Effect::Tap {
-                what: target_filtered(R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle))),
+                what: target_filtered(
+                    R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                ),
             },
             Effect::AddCounter {
                 what: Selector::Target(0),

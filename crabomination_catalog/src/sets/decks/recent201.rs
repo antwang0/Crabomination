@@ -1,7 +1,9 @@
 //! DSK gap: Duskmourn's Domination (Control-Magic Aura that also shrinks and
 //! silences its host). Tests in `tests/recent201.rs`.
 
-use crate::card::{CardDefinition, CardType, EnchantmentSubtype, EquipBonus, SelectionRequirement as R, Subtypes};
+use crate::card::{
+    CardDefinition, CardType, EnchantmentSubtype, EquipBonus, SelectionRequirement as R, Subtypes,
+};
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Effect, Selector};
 use crate::mana::{cost, generic, u};
@@ -18,8 +20,13 @@ pub fn duskmourns_domination() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains { what: enchanted() })],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains {
+            what: enchanted(),
+        })],
         equipped_bonus: Some(EquipBonus {
             power: -3,
             toughness: 0,

@@ -95,10 +95,16 @@ pub fn fleeting_reflection() -> CardDefinition {
                 keyword: Keyword::Hexproof,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::BecomeCopyOfFor {
                 what: Selector::Target(0),
-                source: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                source: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 duration: Duration::EndOfTurn,
                 non_legendary: false,
             },

@@ -6,9 +6,9 @@ use crate::card::{
     EventSpec, Keyword, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes,
     Supertype, TriggeredAbility, Value, WardCost,
 };
-use crate::game::types::TurnStep;
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{ActivatedAbility, PlayerRef};
+use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, r, u, w};
 
 fn etb(effect: Effect) -> TriggeredAbility {
@@ -19,7 +19,9 @@ fn etb(effect: Effect) -> TriggeredAbility {
 }
 
 fn destroy_artifact_target() -> Effect {
-    Effect::Destroy { what: target_filtered(R::Artifact) }
+    Effect::Destroy {
+        what: target_filtered(R::Artifact),
+    }
 }
 
 /// Energy Flux — {1}{U} Enchantment. All artifacts have "At the beginning of
@@ -34,7 +36,10 @@ pub fn energy_flux() -> CardDefinition {
             effect: StaticEffect::GrantTriggeredAbility {
                 filter: R::Artifact,
                 ability: Box::new(TriggeredAbility {
-                    event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                    event: EventSpec::new(
+                        EventKind::StepBegins(TurnStep::Upkeep),
+                        EventScope::YourControl,
+                    ),
                     effect: Effect::UnlessPlayerPays {
                         who: PlayerRef::You,
                         cost: WardCost::generic(2),
@@ -53,7 +58,10 @@ pub fn uktabi_orangutan() -> CardDefinition {
         name: "Uktabi Orangutan",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ape], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ape],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(destroy_artifact_target())],
@@ -67,7 +75,10 @@ pub fn ingot_chewer() -> CardDefinition {
         name: "Ingot Chewer",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         triggered_abilities: vec![etb(destroy_artifact_target())],
@@ -87,7 +98,10 @@ pub fn manglehorn() -> CardDefinition {
         name: "Manglehorn",
         cost: cost(&[generic(1), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(destroy_artifact_target())],
@@ -117,7 +131,9 @@ pub fn viridian_zealot() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
             sac_cost: true,
-            effect: Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Artifact.or(R::Enchantment)),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -132,8 +148,12 @@ pub fn sundering_growth() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
-            Effect::Populate { who: PlayerRef::You },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact.or(R::Enchantment)),
+            },
+            Effect::Populate {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -146,12 +166,18 @@ pub fn glowrider() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cleric], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cleric],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         static_abilities: vec![StaticAbility {
             description: "Noncreature spells cost {1} more to cast.",
-            effect: StaticEffect::AdditionalCost { filter: R::Noncreature, amount: 1 },
+            effect: StaticEffect::AdditionalCost {
+                filter: R::Noncreature,
+                amount: 1,
+            },
         }],
         ..Default::default()
     }
@@ -172,7 +198,10 @@ pub fn harsh_mentor() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::AbilityActivated, EventScope::OpponentControl),
-            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(2) },
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(2),
+            },
         }],
         ..Default::default()
     }
@@ -185,13 +214,19 @@ pub fn hushwing_gryff() -> CardDefinition {
         name: "Hushwing Gryff",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "Creatures entering the battlefield don't cause abilities to trigger.",
-            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: false, also_artifacts: false },
+            effect: StaticEffect::SuppressCreatureEtbTriggers {
+                also_dies: false,
+                also_artifacts: false,
+            },
         }],
         ..Default::default()
     }

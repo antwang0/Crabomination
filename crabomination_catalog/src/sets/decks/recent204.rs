@@ -10,7 +10,7 @@ use crate::effect::shortcut::{draw, etb, target_filtered};
 use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility,
 };
-use crate::mana::{b, cost, generic, g, u};
+use crate::mana::{b, cost, g, generic, u};
 
 /// Saw — {2} Artifact — Equipment. Equipped creature gets +2/+0. Whenever it
 /// attacks, you may sacrifice another permanent to draw a card. Equip {2}.
@@ -54,7 +54,10 @@ pub fn unable_to_scream() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             set_base_pt: Some((0, 2)),
             set_card_types: Some(vec![CardType::Artifact, CardType::Creature]),
@@ -78,7 +81,10 @@ pub fn sporogenic_infection() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         triggered_abilities: vec![
             etb(Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -87,7 +93,9 @@ pub fn sporogenic_infection() -> CardDefinition {
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealtDamage, EventScope::EnchantedBySource),
-                effect: Effect::Destroy { what: Selector::TriggerSource },
+                effect: Effect::Destroy {
+                    what: Selector::TriggerSource,
+                },
             },
         ],
         ..Default::default()
@@ -102,8 +110,13 @@ pub fn under_the_skin() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::ManifestDread { who: PlayerRef::You },
-            Effect::ReturnGraveyardCardsToHand { filter: R::Permanent, max: Value::ONE },
+            Effect::ManifestDread {
+                who: PlayerRef::You,
+            },
+            Effect::ReturnGraveyardCardsToHand {
+                filter: R::Permanent,
+                max: Value::ONE,
+            },
         ]),
         ..Default::default()
     }

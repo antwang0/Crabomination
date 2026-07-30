@@ -17,7 +17,10 @@ pub fn guardian_kirin() -> CardDefinition {
         name: "Guardian Kirin",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Kirin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kirin],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -69,12 +72,16 @@ pub fn generous_visitor() -> CardDefinition {
         name: "Generous Visitor",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellMatches(R::HasCardType(CardType::Enchantment))),
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellMatches(R::HasCardType(CardType::Enchantment)),
+            ),
             effect: Effect::AddCounter {
                 what: target_filtered(R::Creature),
                 kind: CounterType::PlusOnePlusOne,
@@ -106,7 +113,10 @@ pub fn boon_of_boseiju() -> CardDefinition {
                 toughness: x(),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
         ]),
         ..Default::default()
     }

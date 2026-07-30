@@ -11,7 +11,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{cast_is_instant_or_sorcery, target_filtered};
 use crate::effect::{PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Mizzix of the Izmagnus — {2}{U}{R} 2/2 Legendary Goblin Wizard. Cast an
 /// instant or sorcery → get an experience counter; those spells cost {X} less,
@@ -176,7 +176,10 @@ pub fn meren_of_clan_nel_toth() -> CardDefinition {
                     ),
                     then: Box::new(Effect::Move {
                         what: target_filtered(R::Creature.and(R::OwnedByYou)),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     }),
                     else_: Box::new(Effect::Move {
                         what: Selector::Target(0),
@@ -205,7 +208,10 @@ pub fn kalemne_disciple_of_iroas() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        dynamic_pt: Some(DynamicPt::ControllerExperience { base_p: 2, base_t: 4 }),
+        dynamic_pt: Some(DynamicPt::ControllerExperience {
+            base_p: 2,
+            base_t: 4,
+        }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
                 Predicate::EntityMatches {

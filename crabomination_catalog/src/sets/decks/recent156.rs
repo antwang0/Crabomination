@@ -96,7 +96,10 @@ pub fn whiskerquill_scribe() -> CardDefinition {
         triggered_abilities: vec![valiant(Effect::MayDiscard {
             description: "Discard a card to draw a card?".into(),
             count: Value::ONE,
-            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            then: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            }),
             else_: None,
         })],
         ..Default::default()

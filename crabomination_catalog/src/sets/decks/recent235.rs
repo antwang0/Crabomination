@@ -2,15 +2,15 @@
 //! the manifest-dread `LastMoved` rider. Tests in `tests/recent235.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    RoomDoor, RoomDoors, SelectionRequirement as R, StaticAbility, Subtypes,
+    CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype, RoomDoor, RoomDoors,
+    SelectionRequirement as R, StaticAbility, Subtypes,
 };
 use crate::effect::shortcut::{on_attack, target_filtered};
 use crate::effect::{
-    ActivatedAbility, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef,
-    Selector, StaticEffect, Value, ZoneDest,
+    ActivatedAbility, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, Selector,
+    StaticEffect, Value, ZoneDest,
 };
-use crate::mana::{cost, g, generic, u, w, ManaCost};
+use crate::mana::{ManaCost, cost, g, generic, u, w};
 
 fn room(
     name: &'static str,
@@ -51,9 +51,14 @@ pub fn surgical_suite_hospital_room() -> CardDefinition {
             cost: cost(&[generic(1), w()]),
             triggered_abilities: vec![on_unlock(Effect::Move {
                 what: target_filtered(
-                    R::Creature.and(R::ManaValueAtMost(3)).and(R::InYourGraveyard),
+                    R::Creature
+                        .and(R::ManaValueAtMost(3))
+                        .and(R::InYourGraveyard),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             })],
             ..Default::default()
         },
@@ -93,7 +98,9 @@ pub fn underwater_tunnel_slimy_aquarium() -> CardDefinition {
             name: "Slimy Aquarium".into(),
             cost: cost(&[generic(3), u()]),
             triggered_abilities: vec![on_unlock(Effect::Seq(vec![
-                Effect::ManifestDread { who: PlayerRef::You },
+                Effect::ManifestDread {
+                    who: PlayerRef::You,
+                },
                 Effect::AddCounter {
                     what: Selector::LastMoved,
                     kind: CounterType::PlusOnePlusOne,
@@ -118,7 +125,10 @@ pub fn moldering_gym_weight_room() -> CardDefinition {
             triggered_abilities: vec![on_unlock(Effect::Search {
                 who: PlayerRef::You,
                 filter: R::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             })],
             ..Default::default()
         },
@@ -126,7 +136,9 @@ pub fn moldering_gym_weight_room() -> CardDefinition {
             name: "Weight Room".into(),
             cost: cost(&[generic(5), g()]),
             triggered_abilities: vec![on_unlock(Effect::Seq(vec![
-                Effect::ManifestDread { who: PlayerRef::You },
+                Effect::ManifestDread {
+                    who: PlayerRef::You,
+                },
                 Effect::AddCounter {
                     what: Selector::LastMoved,
                     kind: CounterType::PlusOnePlusOne,
@@ -215,11 +227,17 @@ pub fn orphans_of_the_wheat() -> CardDefinition {
         name: "Orphans of the Wheat",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![on_attack(Effect::TapAnyNumberThenPumpPerTapped {
-            filter: R::Creature.and(R::ControlledByYou).and(R::Untapped).and(R::OtherThanSource),
+            filter: R::Creature
+                .and(R::ControlledByYou)
+                .and(R::Untapped)
+                .and(R::OtherThanSource),
             power: 1,
             toughness: 1,
         })],

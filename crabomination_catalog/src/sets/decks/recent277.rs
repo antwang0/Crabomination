@@ -19,8 +19,13 @@ pub fn calamitys_wake() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::ExileAllGraveyards { filter: None, opponents_only: false },
-            Effect::CantCastNoncreatureThisTurn { who: Selector::Player(PlayerRef::EachPlayer) },
+            Effect::ExileAllGraveyards {
+                filter: None,
+                opponents_only: false,
+            },
+            Effect::CantCastNoncreatureThisTurn {
+                who: Selector::Player(PlayerRef::EachPlayer),
+            },
             Effect::ExileSource,
         ]),
         ..Default::default()
@@ -47,8 +52,12 @@ pub fn attentive_skywarden() -> CardDefinition {
             effect: Effect::ApplyToTargets {
                 max_targets: 1,
                 min_targets: 0,
-                filter: R::HasName("Incubator".into()).and(R::IsToken).and(R::ControlledByYou),
-                effect: Box::new(Effect::Transform { what: Selector::Target(0) }),
+                filter: R::HasName("Incubator".into())
+                    .and(R::IsToken)
+                    .and(R::ControlledByYou),
+                effect: Box::new(Effect::Transform {
+                    what: Selector::Target(0),
+                }),
             },
         }],
         ..Default::default()
@@ -60,10 +69,14 @@ pub fn attentive_skywarden() -> CardDefinition {
 /// noncreature, nonland permanent with mana value 1 or less.
 pub fn molten_collapse() -> CardDefinition {
     let modes = vec![
-        Effect::Destroy { what: target_filtered(R::Creature.or(R::Planeswalker)) },
+        Effect::Destroy {
+            what: target_filtered(R::Creature.or(R::Planeswalker)),
+        },
         Effect::Destroy {
             what: target_filtered(
-                R::Nonland.and(R::Creature.negate()).and(R::ManaValueAtMost(1)),
+                R::Nonland
+                    .and(R::Creature.negate())
+                    .and(R::ManaValueAtMost(1)),
             ),
         },
     ];
@@ -72,7 +85,9 @@ pub fn molten_collapse() -> CardDefinition {
         cost: cost(&[b(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::If {
-            cond: Predicate::DescendedThisTurn { who: PlayerRef::You },
+            cond: Predicate::DescendedThisTurn {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::ChooseModesCast {
                 modes: modes.clone(),
                 min: 1,

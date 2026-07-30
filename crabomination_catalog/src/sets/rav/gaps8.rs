@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn saproling_token() -> TokenDefinition {
     TokenDefinition {
@@ -19,7 +19,10 @@ fn saproling_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Saproling], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Saproling],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -33,7 +36,10 @@ fn voja_token() -> TokenDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green, Color::White],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wolf],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -47,7 +53,10 @@ fn white_spirit_flyer() -> TokenDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
         keywords: vec![Keyword::Flying],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -62,7 +71,9 @@ pub fn surge_of_zeal() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::GrantKeyword {
-            what: Selector::RadianceGroup { subject: Box::new(target_filtered(R::Creature)) },
+            what: Selector::RadianceGroup {
+                subject: Box::new(target_filtered(R::Creature)),
+            },
             keyword: Keyword::Haste,
             duration: Duration::EndOfTurn,
         },
@@ -78,7 +89,9 @@ pub fn incite_hysteria() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::GrantKeyword {
-            what: Selector::RadianceGroup { subject: Box::new(target_filtered(R::Creature)) },
+            what: Selector::RadianceGroup {
+                subject: Box::new(target_filtered(R::Creature)),
+            },
             keyword: Keyword::CantBlock,
             duration: Duration::EndOfTurn,
         },
@@ -94,7 +107,9 @@ pub fn leave_no_trace() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Destroy {
-            what: Selector::RadianceGroup { subject: Box::new(target_filtered(R::Enchantment)) },
+            what: Selector::RadianceGroup {
+                subject: Box::new(target_filtered(R::Enchantment)),
+            },
         },
         ..Default::default()
     }
@@ -109,7 +124,9 @@ pub fn bathe_in_light() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::GrantProtectionFromChosenColor {
-            what: Selector::RadianceGroup { subject: Box::new(target_filtered(R::Creature)) },
+            what: Selector::RadianceGroup {
+                subject: Box::new(target_filtered(R::Creature)),
+            },
             duration: Duration::EndOfTurn,
         },
         ..Default::default()
@@ -127,14 +144,19 @@ pub fn induce_paranoia() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::If {
-                cond: Predicate::ManaSpentOfColorAtLeast { color: Color::Black, at_least: 1 },
+                cond: Predicate::ManaSpentOfColorAtLeast {
+                    color: Color::Black,
+                    at_least: 1,
+                },
                 then: Box::new(Effect::Mill {
                     who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                     amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
                 }),
                 else_: Box::new(Effect::Noop),
             },
-            Effect::CounterSpell { what: Selector::Target(0) },
+            Effect::CounterSpell {
+                what: Selector::Target(0),
+            },
         ]),
         ..Default::default()
     }
@@ -147,7 +169,9 @@ pub fn mnemonic_nexus() -> CardDefinition {
         name: "Mnemonic Nexus",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::EachPlayer },
+        effect: Effect::ShuffleGraveyardIntoLibrary {
+            who: PlayerRef::EachPlayer,
+        },
         ..Default::default()
     }
 }
@@ -163,7 +187,10 @@ pub fn flash_conscription() -> CardDefinition {
         cost: cost(&[generic(5), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GainControl {
                 what: Selector::Target(0),
                 to: None,
@@ -175,7 +202,10 @@ pub fn flash_conscription() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::If {
-                cond: Predicate::ManaSpentOfColorAtLeast { color: Color::White, at_least: 1 },
+                cond: Predicate::ManaSpentOfColorAtLeast {
+                    color: Color::White,
+                    at_least: 1,
+                },
                 then: Box::new(Effect::GrantKeyword {
                     what: Selector::Target(0),
                     keyword: Keyword::Lifelink,
@@ -198,7 +228,9 @@ pub fn hex() -> CardDefinition {
             max_targets: 6,
             min_targets: 6,
             filter: R::Creature,
-            effect: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+            effect: Box::new(Effect::Destroy {
+                what: Selector::Target(0),
+            }),
         },
         ..Default::default()
     }
@@ -210,7 +242,10 @@ pub fn excruciator() -> CardDefinition {
         name: "Excruciator",
         cost: cost(&[generic(6), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar],
+            ..Default::default()
+        },
         power: 7,
         toughness: 7,
         static_abilities: vec![StaticAbility {
@@ -246,10 +281,15 @@ pub fn helldozer() -> CardDefinition {
                         what: Selector::Target(0),
                         filter: R::IsNonbasicLand,
                     },
-                    then: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                    then: Box::new(Effect::Untap {
+                        what: Selector::This,
+                        up_to: None,
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
-                Effect::Destroy { what: target_filtered(R::Land) },
+                Effect::Destroy {
+                    what: target_filtered(R::Land),
+                },
             ]),
             ..Default::default()
         }],
@@ -312,7 +352,9 @@ pub fn woodwraith_strangler() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             exile_other_filter: Some((R::Creature, 1)),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -363,11 +405,17 @@ pub fn stone_seeder_hierophant() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
-            effect: Effect::Untap { what: Selector::This, up_to: None },
+            effect: Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Untap { what: target_filtered(R::Land), up_to: None },
+            effect: Effect::Untap {
+                what: target_filtered(R::Land),
+                up_to: None,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -474,7 +522,10 @@ pub fn copy_enchantment() -> CardDefinition {
         name: "Copy Enchantment",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Enchantment],
-        enters_as_copy: Some(EntersAsCopy { filter: R::Enchantment, ..Default::default() }),
+        enters_as_copy: Some(EntersAsCopy {
+            filter: R::Enchantment,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -488,7 +539,9 @@ pub fn glare_of_subdual() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             tap_other_filter: Some(R::Creature.and(R::ControlledByYou)),
-            effect: Effect::Tap { what: target_filtered(R::Artifact.or(R::Creature)) },
+            effect: Effect::Tap {
+                what: target_filtered(R::Artifact.or(R::Creature)),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -505,7 +558,9 @@ pub fn voyager_staff() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             mana_cost: cost(&[generic(2)]),
-            effect: Effect::ExileReturnNextEndStep { what: target_filtered(R::Creature) },
+            effect: Effect::ExileReturnNextEndStep {
+                what: target_filtered(R::Creature),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -520,7 +575,10 @@ pub fn twilight_drover() -> CardDefinition {
         name: "Twilight Drover",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {

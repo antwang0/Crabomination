@@ -13,7 +13,7 @@ use crate::effect::{
     StaticAbility, StaticEffect, Value, ZoneDest,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{cost, b, g, generic, r, Color};
+use crate::mana::{Color, b, cost, g, generic, r};
 
 /// Flamewake Phoenix — {1}{R}{R} 2/2 Phoenix. Flying, haste, attacks each combat
 /// if able. Ferocious — at combat, if you control a power-4+ creature, you may
@@ -23,19 +23,30 @@ pub fn flamewake_phoenix() -> CardDefinition {
         name: "Flamewake Phoenix",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Phoenix], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phoenix],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::MustAttack],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::FromYourGraveyard)
-                .with_filter(Predicate::FerociousActive { who: PlayerRef::You }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::FromYourGraveyard,
+            )
+            .with_filter(Predicate::FerociousActive {
+                who: PlayerRef::You,
+            }),
             effect: Effect::MayPay {
                 description: "Pay {R} to return Flamewake Phoenix to the battlefield?".into(),
                 mana_cost: cost(&[r()]),
                 body: Box::new(Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 }),
                 else_: None,
             },
@@ -53,7 +64,10 @@ pub fn cryptic_caves() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -67,7 +81,10 @@ pub fn cryptic_caves() -> CardDefinition {
                     },
                     n: Value::Const(5),
                 }),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
         ],
@@ -89,10 +106,16 @@ pub fn new_horizons() -> CardDefinition {
         },
         effect: Effect::Attach {
             what: Selector::This,
-            to: Selector::TargetFiltered { slot: 0, filter: R::Land },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Land,
+            },
         },
         triggered_abilities: vec![etb(Effect::AddCounter {
-            what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature.and(R::ControlledByYou),
+            },
             kind: CounterType::PlusOnePlusOne,
             amount: Value::ONE,
         })],
@@ -162,7 +185,10 @@ fn drake_token() -> TokenDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue],
         keywords: vec![Keyword::Flying],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -176,7 +202,10 @@ pub fn myojin_of_nights_reach() -> CardDefinition {
         cost: cost(&[generic(5), b(), b(), b()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 5,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::If {

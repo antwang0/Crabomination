@@ -63,7 +63,7 @@ pub fn chandras_pyrohelix() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
-                retaliate_to_source: false,
+            retaliate_to_source: false,
             total: Value::Const(2),
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
@@ -82,7 +82,7 @@ pub fn forked_lightning() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
-                retaliate_to_source: false,
+            retaliate_to_source: false,
             total: Value::Const(4),
             filter: SelectionRequirement::Creature,
             max_targets: 3,
@@ -99,7 +99,7 @@ pub fn arc_lightning() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
-                retaliate_to_source: false,
+            retaliate_to_source: false,
             total: Value::Const(3),
             filter: SelectionRequirement::Creature.or(SelectionRequirement::Player),
             max_targets: 3,
@@ -139,8 +139,7 @@ pub fn vandalblast() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy {
             what: target_filtered(
-                SelectionRequirement::Artifact
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByOpponent),
             ),
         },
         alternative_cost: Some(AlternativeCost {
@@ -156,8 +155,7 @@ pub fn vandalblast() -> CardDefinition {
             sacrifice_permanents: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Artifact
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByOpponent),
                 ),
                 body: Box::new(Effect::Destroy {
                     what: Selector::TriggerSource,
@@ -170,7 +168,8 @@ pub fn vandalblast() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -191,7 +190,10 @@ pub fn natures_lore() -> CardDefinition {
             who: PlayerRef::You,
             filter: SelectionRequirement::Land
                 .and(SelectionRequirement::HasLandType(LandType::Forest)),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -210,11 +212,13 @@ pub fn fell() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::Tapped),
+                    SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
                 ),
             },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -261,7 +265,7 @@ pub fn upheaval() -> CardDefinition {
 /// of your library. Put two of them into your hand and the rest into your
 /// graveyard.
 pub fn rakshasas_bargain() -> CardDefinition {
-    use crate::mana::{mono_hybrid, Color};
+    use crate::mana::{Color, mono_hybrid};
     CardDefinition {
         name: "Rakshasa's Bargain",
         cost: cost(&[
@@ -296,8 +300,8 @@ pub fn rakshasas_bargain() -> CardDefinition {
 /// back's `CardDefinition` after `play_land_with_face` swaps faces, so
 /// the front retains its sorcery effect when cast from hand.
 pub fn sundering_eruption() -> CardDefinition {
-    use crate::card::LandType;
     use super::super::etb_tap;
+    use crate::card::LandType;
     let back = CardDefinition {
         name: "Mount Tyrhus",
         card_types: vec![CardType::Land],
@@ -333,14 +337,20 @@ pub fn big_score() -> CardDefinition {
         name: "Big Score",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard { count: 1, filter: None }],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
+            count: 1,
+            filter: None,
+        }],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 definition: treasure_token(),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -447,7 +457,9 @@ pub fn boil() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::HasLandType(LandType::Island)),
-            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
         },
         ..Default::default()
     }
@@ -465,8 +477,15 @@ pub fn compulsive_research() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(2),
+                random: false,
+            },
         ]),
         ..Default::default()
     }
@@ -479,9 +498,7 @@ pub fn demolish() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Artifact.or(SelectionRequirement::Land),
-            ),
+            what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Land)),
         },
         ..Default::default()
     }
@@ -582,8 +599,7 @@ pub fn archdruids_charm() -> CardDefinition {
             },
             Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
@@ -623,8 +639,6 @@ pub fn awaken_the_honored_dead() -> CardDefinition {
     }
 }
 
-
-
 // ── Explore ───────────────────────────────────────────────────────────────
 
 /// Explore — {G} Sorcery. "You may play an additional land this turn.
@@ -649,7 +663,6 @@ pub fn explore() -> CardDefinition {
     }
 }
 
-
 /// Arc Trail — {1}{R} Sorcery. "Arc Trail deals 2 damage to any target and
 /// 1 damage to another target." Two target slots: slot 0 takes 2, slot 1
 /// takes 1.
@@ -664,7 +677,10 @@ pub fn arc_trail() -> CardDefinition {
                 amount: Value::Const(2),
             },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Any },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Any,
+                },
                 amount: Value::Const(1),
             },
         ]),
@@ -686,11 +702,17 @@ pub fn cone_of_flame() -> CardDefinition {
                 amount: Value::Const(1),
             },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Any },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Any,
+                },
                 amount: Value::Const(2),
             },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 2, filter: SelectionRequirement::Any },
+                to: Selector::TargetFiltered {
+                    slot: 2,
+                    filter: SelectionRequirement::Any,
+                },
                 amount: Value::Const(3),
             },
         ]),
@@ -840,7 +862,8 @@ pub fn epic_confrontation() -> CardDefinition {
             Effect::PumpPT {
                 what: Selector::TargetFiltered {
                     slot: 0,
-                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
                 },
                 power: Value::Const(1),
                 toughness: Value::Const(2),
@@ -849,11 +872,13 @@ pub fn epic_confrontation() -> CardDefinition {
             Effect::Fight {
                 attacker: Selector::TargetFiltered {
                     slot: 0,
-                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
                 },
                 defender: Selector::TargetFiltered {
                     slot: 1,
-                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
                 },
             },
         ]),
@@ -874,7 +899,10 @@ pub fn renegade_tactics() -> CardDefinition {
                 keyword: Keyword::CantBlock,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -887,8 +915,14 @@ pub fn ancient_craving() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
         ]),
         ..Default::default()
     }
@@ -903,7 +937,10 @@ pub fn zombify() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -976,8 +1013,13 @@ pub fn disintegrate() -> CardDefinition {
         cost: cost(&[x(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::ExileIfWouldDieThisTurn { what: target_filtered(SelectionRequirement::Any) },
-            Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost },
+            Effect::ExileIfWouldDieThisTurn {
+                what: target_filtered(SelectionRequirement::Any),
+            },
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::XFromCost,
+            },
         ]),
         ..Default::default()
     }
@@ -991,12 +1033,15 @@ pub fn flame_sweep() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
-            selector: Selector::EachPermanent(
-                SelectionRequirement::Creature.and(SelectionRequirement::Not(Box::new(
-                    SelectionRequirement::HasKeyword(crate::card::Keyword::Flying),
+            selector: Selector::EachPermanent(SelectionRequirement::Creature.and(
+                SelectionRequirement::Not(Box::new(SelectionRequirement::HasKeyword(
+                    crate::card::Keyword::Flying,
                 ))),
-            ),
-            body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(2) }),
+            )),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(2),
+            }),
         },
         ..Default::default()
     }
@@ -1008,7 +1053,10 @@ pub fn tidings() -> CardDefinition {
         name: "Tidings",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(4),
+        },
         ..Default::default()
     }
 }
@@ -1019,7 +1067,10 @@ pub fn mind_spring() -> CardDefinition {
         name: "Mind Spring",
         cost: cost(&[x(), u(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::XFromCost,
+        },
         ..Default::default()
     }
 }
@@ -1031,8 +1082,14 @@ pub fn foresee() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(4) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(4),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -1044,7 +1101,9 @@ pub fn final_judgment() -> CardDefinition {
         name: "Final Judgment",
         cost: cost(&[generic(4), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Exile { what: Selector::EachPermanent(SelectionRequirement::Creature) },
+        effect: Effect::Exile {
+            what: Selector::EachPermanent(SelectionRequirement::Creature),
+        },
         ..Default::default()
     }
 }
@@ -1097,7 +1156,9 @@ pub fn fumigate() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::count(Selector::EachPermanent(SelectionRequirement::Creature)),
             },
-            Effect::DestroyNoRegen { what: Selector::EachPermanent(SelectionRequirement::Creature) },
+            Effect::DestroyNoRegen {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+            },
         ]),
         ..Default::default()
     }
@@ -1148,7 +1209,10 @@ pub fn grapple_with_the_past() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::Creature.or(SelectionRequirement::Land),
@@ -1268,24 +1332,31 @@ pub fn jeskas_will() -> CardDefinition {
         // both (a decider may still under-pick). Mode 1 adds {R} per card
         // in target opponent's hand (audit fix: was a flat {R}{R}{R}).
         effect: {
-            let modes = || vec![
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColor(
-                        Color::Red,
-                        Value::HandSizeOf(PlayerRef::Target(0)),
-                    ),
-                },
-                Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::You,
-                    count: Value::Const(3),
-                    duration: MayPlayDuration::EndOfThisTurn, pay_any_color: false, pay_own_cost: false,
-                    uncast_penalty: None,
-                },
-            ];
+            let modes = || {
+                vec![
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::OfColor(
+                            Color::Red,
+                            Value::HandSizeOf(PlayerRef::Target(0)),
+                        ),
+                    },
+                    Effect::ExileTopAndGrantMayPlay {
+                        who: PlayerRef::You,
+                        count: Value::Const(3),
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        pay_any_color: false,
+                        pay_own_cost: false,
+                        uncast_penalty: None,
+                    },
+                ]
+            };
             Effect::If {
                 cond: crate::effect::Predicate::YouControlACommander,
-                then: Box::new(Effect::ChooseN { picks: vec![0, 1], modes: modes() }),
+                then: Box::new(Effect::ChooseN {
+                    picks: vec![0, 1],
+                    modes: modes(),
+                }),
                 else_: Box::new(Effect::ChooseMode(modes())),
             }
         },
@@ -1302,7 +1373,7 @@ pub fn conflagrate() -> CardDefinition {
         cost: cost(&[x(), x(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
-                retaliate_to_source: false,
+            retaliate_to_source: false,
             total: Value::XFromCost,
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)

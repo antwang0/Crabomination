@@ -8,8 +8,8 @@
 //! the live power via `ManaValueAtMostSourcePower`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, MayPlayDuration, Selector,
-    SelectionRequirement, Subtypes, Supertype,
+    CardDefinition, CardType, CreatureType, Effect, Keyword, MayPlayDuration, SelectionRequirement,
+    Selector, Subtypes, Supertype,
 };
 use crate::mana::{b, cost, g, generic, r, u, w};
 
@@ -76,8 +76,8 @@ pub fn galazeth_prismari() -> CardDefinition {
 /// sorcery-speed gate) + `Effect::Untap` over each land you control.
 pub fn beledros_witherbloom() -> CardDefinition {
     use crate::card::{
-        ActivatedAbility, EventKind, EventScope, EventSpec, SelectionRequirement,
-        TriggeredAbility, Value,
+        ActivatedAbility, EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility,
+        Value,
     };
     use crate::effect::{PlayerRef, Selector};
     use crate::game::types::TurnStep;
@@ -126,8 +126,10 @@ pub fn beledros_witherbloom() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -190,7 +192,8 @@ pub fn velomachus_lorehold() -> CardDefinition {
                     duration: MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: false,
-                    pay_own_cost: false, any_color: false,
+                    pay_own_cost: false,
+                    any_color: false,
                 },
             ]),
         }],
@@ -239,8 +242,7 @@ pub fn tanazir_quandrix() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::DoubleCountersOnEach {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     kind: CounterType::PlusOnePlusOne,
                 },
@@ -335,8 +337,7 @@ pub fn shadrix_silverquill() -> CardDefinition {
                 EventScope::YourControl,
             ),
             effect: Effect::MayDo {
-                description: "choose two — each mode must target a different player"
-                    .to_string(),
+                description: "choose two — each mode must target a different player".to_string(),
                 body: Box::new(Effect::ChooseN {
                     // Default line: draw + lose 1 (mode 1), then mint an
                     // Inkling (mode 0). Each target-bearing mode owns its

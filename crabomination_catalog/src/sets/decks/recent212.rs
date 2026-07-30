@@ -4,12 +4,12 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword,
-    Selector, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype,
+    SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, EventKind, EventScope, EventSpec, PlayerRef, Predicate, ZoneRef};
-use crate::mana::{b, cost, g, generic, r, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, w};
 
 /// Goblin Smuggler — {2}{R} 2/2 Goblin Rogue. Haste; {T}: Another target
 /// creature with power 2 or less can't be blocked this turn.
@@ -78,7 +78,10 @@ pub fn aurelia_the_warleader() -> CardDefinition {
         cost: cost(&[generic(2), r(), r(), w(), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
@@ -107,7 +110,10 @@ pub fn mindsparker() -> CardDefinition {
         name: "Mindsparker",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
@@ -115,9 +121,9 @@ pub fn mindsparker() -> CardDefinition {
             event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(
                 Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::HasColor(Color::White)
-                        .or(R::HasColor(Color::Blue))
-                        .and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                    filter: R::HasColor(Color::White).or(R::HasColor(Color::Blue)).and(
+                        R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    ),
                 },
             ),
             effect: Effect::DealDamage {
@@ -178,7 +184,10 @@ pub fn crossway_troublemakers() -> CardDefinition {
         name: "Crossway Troublemakers",
         cost: cost(&[generic(5), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         static_abilities: vec![StaticAbility {
@@ -203,8 +212,14 @@ pub fn crossway_troublemakers() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "pay 2 life to draw a card".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 ])),
             },
         }],

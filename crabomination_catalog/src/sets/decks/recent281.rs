@@ -18,11 +18,16 @@ pub fn enraged_huorn() -> CardDefinition {
         name: "Enraged Huorn",
         cost: cost(&[generic(4), crate::mana::g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            ..Default::default()
+        },
         power: 4,
         toughness: 5,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::RingTempts { who: PlayerRef::You })],
+        triggered_abilities: vec![etb(Effect::RingTempts {
+            who: PlayerRef::You,
+        })],
         ..Default::default()
     }
 }
@@ -33,11 +38,17 @@ pub fn ithilien_kingfisher() -> CardDefinition {
         name: "Ithilien Kingfisher",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![on_dies(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        triggered_abilities: vec![on_dies(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
         ..Default::default()
     }
 }
@@ -61,7 +72,10 @@ pub fn escape_from_orthanc() -> CardDefinition {
                 keyword: Keyword::Flying,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
         ]),
         ..Default::default()
     }
@@ -113,13 +127,18 @@ pub fn east_mark_cavalier() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::Target(0),
-                    filter: R::HasCreatureType(CreatureType::Goblin)
-                        .or(R::HasCreatureType(CreatureType::Orc)),
-                }),
-            effect: Effect::Destroy { what: Selector::Target(0) },
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToCreature,
+                EventScope::SelfSource,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::Target(0),
+                filter: R::HasCreatureType(CreatureType::Goblin)
+                    .or(R::HasCreatureType(CreatureType::Orc)),
+            }),
+            effect: Effect::Destroy {
+                what: Selector::Target(0),
+            },
         }],
         ..Default::default()
     }

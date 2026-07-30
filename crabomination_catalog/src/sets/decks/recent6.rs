@@ -12,7 +12,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, magecraft, on_dies, target_filtered};
 use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::game::effects::treasure_token;
-use crate::mana::{b, cost, g, generic, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, u, w};
 
 // ── White ────────────────────────────────────────────────────────────────
 
@@ -37,7 +37,10 @@ pub fn karmic_guide() -> CardDefinition {
         ],
         triggered_abilities: vec![etb(Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         })],
         ..Default::default()
     }
@@ -170,8 +173,7 @@ pub fn councils_judgment() -> CardDefinition {
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::WillOfTheCouncilExile {
-            filter: SelectionRequirement::Nonland
-                .and(SelectionRequirement::ControlledByOpponent),
+            filter: SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
         },
         ..Default::default()
     }
@@ -306,7 +308,10 @@ pub fn tezzeret_the_seeker() -> CardDefinition {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Artifact
                         .and(SelectionRequirement::ManaValueAtMostXFromCost),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             },
         ],
@@ -330,9 +335,13 @@ pub fn dream_eater() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(4) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(4),
+            },
             Effect::MayDo {
-                description: "Return a nonland permanent an opponent controls to its owner's hand?".into(),
+                description: "Return a nonland permanent an opponent controls to its owner's hand?"
+                    .into(),
                 body: Box::new(Effect::Move {
                     what: target_filtered(
                         SelectionRequirement::Nonland
@@ -363,11 +372,14 @@ pub fn malcolm_keen_eyed_navigator() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::HasCreatureType(CreatureType::Pirate),
-                }),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Pirate),
+            }),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -400,7 +412,10 @@ pub fn faerie_mastermind() -> CardDefinition {
                     n: 2,
                 })
                 .once_per_turn(),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), u()]),
@@ -483,7 +498,10 @@ pub fn priest_of_forgotten_gods() -> CardDefinition {
             tap_cost: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 2)),
             effect: Effect::Seq(vec![
-                Effect::LoseLife { who: Selector::Target(0), amount: Value::Const(2) },
+                Effect::LoseLife {
+                    who: Selector::Target(0),
+                    amount: Value::Const(2),
+                },
                 Effect::Sacrifice {
                     who: Selector::Target(0),
                     count: Value::ONE,
@@ -493,7 +511,10 @@ pub fn priest_of_forgotten_gods() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::OfColor(Color::Black, Value::Const(2)),
                 },
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
             ..Default::default()
         }],
@@ -522,12 +543,17 @@ pub fn spawn_of_mayhem() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Trample],
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[generic(1), b(), b()]),
-            condition: Some(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent }),
+            condition: Some(Predicate::PlayerLostLifeThisTurn {
+                who: PlayerRef::EachOpponent,
+            }),
             ..Default::default()
         }),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::SelfSource,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::DealDamage {
                 amount: Value::ONE,
                 to: Selector::Player(PlayerRef::EachPlayer),
@@ -584,14 +610,18 @@ pub fn plague_engineer() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
-        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        triggered_abilities: vec![etb(Effect::NameCreatureType {
+            what: Selector::This,
+        })],
         static_abilities: vec![StaticAbility {
             description: "Creatures of the chosen type your opponents control get -1/-1.",
             effect: StaticEffect::AnthemForChosenType {
                 power: -1,
                 toughness: -1,
                 exclude_source: false,
-                opponents: true, per_counter: None },
+                opponents: true,
+                per_counter: None,
+            },
         }],
         ..Default::default()
     }
@@ -616,7 +646,8 @@ pub fn mukotai_soulripper() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::MaySacrifice {
-                description: "Sacrifice another artifact or creature? (+1/+1 counter + menace)".into(),
+                description: "Sacrifice another artifact or creature? (+1/+1 counter + menace)"
+                    .into(),
                 filter: SelectionRequirement::Creature
                     .or(SelectionRequirement::Artifact)
                     .and(SelectionRequirement::OtherThanSource),
@@ -699,10 +730,7 @@ pub fn marwyn_the_nurturer() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::OfColor(
-                    Color::Green,
-                    Value::PowerOf(Box::new(Selector::This)),
-                ),
+                pool: ManaPayload::OfColor(Color::Green, Value::PowerOf(Box::new(Selector::This))),
             },
             ..Default::default()
         }],
@@ -770,7 +798,9 @@ pub fn wolfir_avenger() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -786,11 +816,16 @@ pub fn mwonvuli_acid_moss() -> CardDefinition {
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(SelectionRequirement::Land) },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Land),
+            },
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::HasLandType(LandType::Forest),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
         ]),
         ..Default::default()
@@ -809,11 +844,17 @@ pub fn fabled_passage() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Move { what: Selector::This, to: ZoneDest::Graveyard },
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Graveyard,
+                },
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::IsBasicLand,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
                 Effect::If {
                     cond: Predicate::SelectorCountAtLeast {
@@ -822,7 +863,10 @@ pub fn fabled_passage() -> CardDefinition {
                         ),
                         n: Value::Const(4),
                     },
-                    then: Box::new(Effect::Untap { what: Selector::LastMoved, up_to: None }),
+                    then: Box::new(Effect::Untap {
+                        what: Selector::LastMoved,
+                        up_to: None,
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             ]),
@@ -865,7 +909,9 @@ pub fn mystic_sanctuary() -> CardDefinition {
                     n: Value::Const(4),
                 },
                 then: Box::new(Effect::MayDo {
-                    description: "Put an instant or sorcery from your graveyard on top of your library?".into(),
+                    description:
+                        "Put an instant or sorcery from your graveyard on top of your library?"
+                            .into(),
                     body: Box::new(Effect::Move {
                         what: target_filtered(
                             SelectionRequirement::HasCardType(CardType::Instant)
@@ -877,7 +923,9 @@ pub fn mystic_sanctuary() -> CardDefinition {
                         },
                     }),
                 }),
-                else_: Box::new(Effect::Tap { what: Selector::This }),
+                else_: Box::new(Effect::Tap {
+                    what: Selector::This,
+                }),
             },
         }],
         ..Default::default()

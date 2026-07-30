@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, ZoneDest};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 // ── Boros Radiance ──────────────────────────────────────────────────────────
 
@@ -17,13 +17,18 @@ use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 /// and each other creature that shares a color with it; those creatures get
 /// +2/+0 until end of turn.
 pub fn rally_the_righteous() -> CardDefinition {
-    let group = || Selector::RadianceGroup { subject: Box::new(target_filtered(R::Creature)) };
+    let group = || Selector::RadianceGroup {
+        subject: Box::new(target_filtered(R::Creature)),
+    };
     CardDefinition {
         name: "Rally the Righteous",
         cost: cost(&[generic(1), r(), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Untap { what: group(), up_to: None },
+            Effect::Untap {
+                what: group(),
+                up_to: None,
+            },
             Effect::PumpPT {
                 what: group(),
                 power: Value::Const(2),
@@ -45,15 +50,22 @@ pub fn vertigo_spawn() -> CardDefinition {
         name: "Vertigo Spawn",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Illusion], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Illusion],
+            ..Default::default()
+        },
         power: 0,
         toughness: 3,
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Tap { what: Selector::BlockedAttacker },
-                Effect::SkipNextUntap { what: Selector::BlockedAttacker },
+                Effect::Tap {
+                    what: Selector::BlockedAttacker,
+                },
+                Effect::SkipNextUntap {
+                    what: Selector::BlockedAttacker,
+                },
             ]),
         }],
         ..Default::default()
@@ -76,10 +88,14 @@ pub fn tin_street_hooligan() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource).with_filter(
-                Predicate::SourceCastWithColorSpent { color: Color::Green, at_least: 1 },
-            ),
-            effect: Effect::Destroy { what: target_filtered(R::Artifact) },
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::SourceCastWithColorSpent {
+                    color: Color::Green,
+                    at_least: 1,
+                }),
+            effect: Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            },
         }],
         ..Default::default()
     }
@@ -92,7 +108,10 @@ pub fn petrahydrox() -> CardDefinition {
         name: "Petrahydrox",
         cost: cost(&[generic(3), hybrid(Color::Blue, Color::Red)]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Weird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Weird],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
@@ -116,14 +135,20 @@ pub fn souls_of_the_faultless() -> CardDefinition {
         name: "Souls of the Faultless",
         cost: cost(&[w(), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 0,
         toughness: 4,
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealtCombatDamage, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::TriggerEventAmount,
+                },
                 Effect::LoseLife {
                     who: Selector::Player(PlayerRef::CombatDamagerController(Box::new(
                         Selector::This,
@@ -150,7 +175,10 @@ pub fn shadow_lance() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::FirstStrike],
             activated_abilities: vec![ActivatedAbility {
@@ -182,8 +210,14 @@ pub fn shielding_plax() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::Seq(vec![
-            Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Attach {
+                what: Selector::This,
+                to: target_filtered(R::Creature),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::Hexproof],
@@ -240,7 +274,9 @@ pub fn poison_the_well() -> CardDefinition {
                 to: Selector::Player(PlayerRef::ControllerOf(Box::new(target_filtered(R::Land)))),
                 amount: Value::Const(2),
             },
-            Effect::Destroy { what: target_filtered(R::Land) },
+            Effect::Destroy {
+                what: target_filtered(R::Land),
+            },
         ]),
         ..Default::default()
     }
@@ -256,7 +292,10 @@ pub fn congregation_at_dawn() -> CardDefinition {
         effect: Effect::SearchUpToN {
             who: PlayerRef::You,
             filter: R::Creature,
-            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            to: ZoneDest::Library {
+                who: PlayerRef::You,
+                pos: LibraryPosition::Top,
+            },
             count: Value::Const(3),
         },
         ..Default::default()

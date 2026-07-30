@@ -13,14 +13,16 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 /// CR 702.179 — the freerunning alternative cost: pay `mana`, legal only if a
 /// creature you control dealt combat damage to a player this turn.
 fn freerunning(mana: ManaCost) -> AlternativeCost {
     AlternativeCost {
         mana_cost: mana,
-        condition: Some(Predicate::DealtCombatDamageToPlayerThisTurn { who: PlayerRef::You }),
+        condition: Some(Predicate::DealtCombatDamageToPlayerThisTurn {
+            who: PlayerRef::You,
+        }),
         ..Default::default()
     }
 }
@@ -57,8 +59,14 @@ pub fn merciless_harlequin() -> CardDefinition {
         toughness: 1,
         alternative_cost: Some(freerunning(cost(&[generic(1), b()]))),
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -102,7 +110,10 @@ pub fn eagle_vision() -> CardDefinition {
         name: "Eagle Vision",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
         alternative_cost: Some(freerunning(cost(&[generic(1), u()]))),
         ..Default::default()
     }
@@ -147,11 +158,18 @@ pub fn chain_assassination() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::If {
-                cond: Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(1) },
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                cond: Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                    at_least: Value::Const(1),
+                },
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
                 else_: Box::new(Effect::Noop),
             },
-            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
         ]),
         alternative_cost: Some(freerunning(cost(&[generic(1), b()]))),
         ..Default::default()
@@ -170,7 +188,10 @@ pub fn restart_sequence() -> CardDefinition {
                 slot: 0,
                 filter: SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         alternative_cost: Some(freerunning(cost(&[generic(1), b()]))),
         ..Default::default()
@@ -190,14 +211,19 @@ pub fn escape_detection() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Creature),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         alternative_cost: Some(AlternativeCost {
             return_to_hand: Some((
                 SelectionRequirement::Creature.and(SelectionRequirement::HasColor(Color::Blue)),
                 1,
             )),
-            condition: Some(Predicate::DealtCombatDamageToPlayerThisTurn { who: PlayerRef::You }),
+            condition: Some(Predicate::DealtCombatDamageToPlayerThisTurn {
+                who: PlayerRef::You,
+            }),
             ..Default::default()
         }),
         ..Default::default()
@@ -221,7 +247,9 @@ pub fn overpowering_attack() -> CardDefinition {
                 ),
                 up_to: None,
             },
-            Effect::AdditionalCombatPhaseAfterMain { count: Value::Const(1) },
+            Effect::AdditionalCombatPhaseAfterMain {
+                count: Value::Const(1),
+            },
         ]),
         alternative_cost: Some(freerunning(cost(&[generic(2), r()]))),
         ..Default::default()

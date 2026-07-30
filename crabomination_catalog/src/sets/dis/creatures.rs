@@ -6,7 +6,7 @@ use crate::card::{
 use crate::effect::shortcut::{forecast, target_filtered};
 use crate::effect::{Duration, PlayerRef};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Azorius First-Wing — {1}{W}{U} 2/2 Bird Soldier Flying
 pub fn azorius_first_wing() -> CardDefinition {
@@ -76,7 +76,9 @@ pub fn cytoplast_root_kin() -> CardDefinition {
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByYou)
                         .and(SelectionRequirement::OtherThanSource)
-                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                        .and(SelectionRequirement::WithCounter(
+                            CounterType::PlusOnePlusOne,
+                        )),
                 ),
                 body: Box::new(Effect::AddCounter {
                     what: Selector::TriggerSource,
@@ -123,10 +125,9 @@ pub fn vigean_graftmage() -> CardDefinition {
             discard_cost: None,
             mana_cost: cost(&[generic(1), u()]),
             effect: Effect::Untap {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
-                ),
+                what: target_filtered(SelectionRequirement::Creature.and(
+                    SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                )),
                 up_to: None,
             },
             ..Default::default()
@@ -154,10 +155,9 @@ pub fn helium_squirter() -> CardDefinition {
             discard_cost: None,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::GrantKeyword {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
-                ),
+                what: target_filtered(SelectionRequirement::Creature.and(
+                    SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                )),
                 keyword: Keyword::Flying,
                 duration: Duration::EndOfTurn,
             },
@@ -174,7 +174,10 @@ pub fn assault_zeppelid() -> CardDefinition {
         name: "Assault Zeppelid",
         cost: cost(&[generic(2), g(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Trample],
@@ -214,7 +217,13 @@ pub fn sky_hussar() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_n_filter: Some((wu_creature, 2)),
-            ..forecast(cost(&[]), Effect::Draw { who: Selector::You, amount: Value::ONE })
+            ..forecast(
+                cost(&[]),
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+            )
         }],
         ..Default::default()
     }
@@ -231,7 +240,10 @@ pub fn stalking_vengeance() -> CardDefinition {
         name: "Stalking Vengeance",
         cost: cost(&[generic(5), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Haste],
@@ -283,7 +295,10 @@ pub fn azorius_herald() -> CardDefinition {
         name: "Azorius Herald",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Unblockable],
@@ -295,7 +310,10 @@ pub fn azorius_herald() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::If {
-                    cond: Predicate::SourceCastWithColorSpent { color: Color::Blue, at_least: 1 },
+                    cond: Predicate::SourceCastWithColorSpent {
+                        color: Color::Blue,
+                        at_least: 1,
+                    },
                     then: Box::new(Effect::Noop),
                     else_: Box::new(Effect::SacrificeSource),
                 },
@@ -371,7 +389,10 @@ pub fn haazda_shield_mate() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::MayPay {
                 description: "Pay {W}{W} or sacrifice Haazda Shield Mate?".into(),
                 mana_cost: cost(&[w(), w()]),
@@ -416,7 +437,9 @@ pub fn jagged_poppet() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource)
-                    .with_filter(Predicate::HellbentActive { who: PlayerRef::You }),
+                    .with_filter(Predicate::HellbentActive {
+                        who: PlayerRef::You,
+                    }),
                 effect: Effect::Discard {
                     who: Selector::Player(PlayerRef::DefendingPlayer),
                     amount: Value::TriggerEventAmount,
@@ -448,7 +471,11 @@ pub fn rakdos_augermage() -> CardDefinition {
             tap_cost: true,
             sorcery_speed: true,
             effect: Effect::Seq(vec![
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
                 Effect::DiscardChosen {
                     from: Selector::Player(PlayerRef::EachOpponent),
                     count: Value::ONE,
@@ -468,7 +495,10 @@ pub fn drekavac() -> CardDefinition {
         name: "Drekavac",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
@@ -494,7 +524,10 @@ pub fn crypt_champion() -> CardDefinition {
         name: "Crypt Champion",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::DoubleStrike],
@@ -503,7 +536,10 @@ pub fn crypt_champion() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::If {
-                    cond: Predicate::SourceCastWithColorSpent { color: Color::Red, at_least: 1 },
+                    cond: Predicate::SourceCastWithColorSpent {
+                        color: Color::Red,
+                        at_least: 1,
+                    },
                     then: Box::new(Effect::Noop),
                     else_: Box::new(Effect::SacrificeSource),
                 },

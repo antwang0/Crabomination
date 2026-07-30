@@ -8,9 +8,11 @@ use crate::card::{
     EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, Subtypes,
     Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{cast_is_instant_or_sorcery, cast_is_noncreature, deal, draw, target_any};
+use crate::effect::shortcut::{
+    cast_is_instant_or_sorcery, cast_is_noncreature, deal, draw, target_any,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef};
-use crate::mana::{cost, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, cost, generic, hybrid, r, u, w};
 
 /// A {U/R} hybrid mana symbol.
 fn hybrid_ur() -> crate::mana::ManaSymbol {
@@ -25,7 +27,10 @@ fn white_spirit_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     }
@@ -57,7 +62,10 @@ pub fn kykar_winds_fury() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((R::HasCreatureType(CreatureType::Spirit), 1)),
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Red, Value::Const(1)) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(Color::Red, Value::Const(1)),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -103,7 +111,10 @@ fn insect_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue, Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying, Keyword::Haste],
         ..Default::default()
     }
@@ -118,7 +129,10 @@ pub fn the_locust_god() -> CardDefinition {
         cost: cost(&[generic(4), u(), r()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::God], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::God],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Haste],
@@ -134,7 +148,11 @@ pub fn the_locust_god() -> CardDefinition {
             mana_cost: cost(&[generic(2), u(), r()]),
             effect: Effect::Seq(vec![
                 draw(1),
-                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
             ]),
             ..Default::default()
         }],
@@ -220,7 +238,10 @@ pub fn charmbreaker_devils() -> CardDefinition {
         name: "Charmbreaker Devils",
         cost: cost(&[generic(5), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Devil],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![
@@ -281,7 +302,10 @@ pub fn pyromancer_ascension() -> CardDefinition {
                     .with_filter(cast_is_instant_or_sorcery()),
                 effect: Effect::If {
                     cond: Predicate::ValueAtLeast(
-                        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Quest },
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Quest,
+                        },
                         Value::Const(2),
                     ),
                     then: Box::new(Effect::CopySpellMayChooseTargets {

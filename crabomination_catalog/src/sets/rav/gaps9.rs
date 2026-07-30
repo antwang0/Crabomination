@@ -6,9 +6,9 @@ use crate::card::{
     EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility,
     Value,
 };
-use crate::game::TurnStep;
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
+use crate::game::TurnStep;
 use crate::mana::{b, cost, g, generic};
 
 /// Necroplasm — {1}{B}{B} 1/1 Ooze. Upkeep: put a +1/+1 counter on it. End
@@ -19,13 +19,19 @@ pub fn necroplasm() -> CardDefinition {
         name: "Necroplasm",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Dredge(2)],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
                 effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -33,7 +39,10 @@ pub fn necroplasm() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::YourControl,
+                ),
                 effect: Effect::DestroyEachCreatureWithManaValue {
                     value: Value::CountersOn {
                         what: Box::new(Selector::This),
@@ -81,12 +90,18 @@ pub fn woebringer_demon() -> CardDefinition {
         name: "Woebringer Demon",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
             effect: Effect::If {
                 cond: Predicate::ValueAtLeast(
                     Value::CreatureCountControlledBy(PlayerRef::ActivePlayer),
@@ -123,7 +138,10 @@ pub fn perilous_forays() -> CardDefinition {
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: R::Land.and(basic_type),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
             ..Default::default()
         }],

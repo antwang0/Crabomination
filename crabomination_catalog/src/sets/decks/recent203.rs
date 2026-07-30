@@ -3,15 +3,15 @@
 //! combat-counter Wurm. Tests in `tests/recent203.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Keyword,
-    SelectionRequirement as R, StaticAbility, Subtypes, Supertype,
+    CardDefinition, CardType, CounterType, CreatureType, Keyword, SelectionRequirement as R,
+    StaticAbility, Subtypes, Supertype,
 };
 use crate::effect::shortcut::{deal, target_filtered};
 use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, StaticEffect,
-    TriggeredAbility, Value, ZoneDest,
+    Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector,
+    StaticEffect, TriggeredAbility, Value, ZoneDest,
 };
-use crate::mana::{b, cost, generic, g, r, w};
+use crate::mana::{b, cost, g, generic, r, w};
 
 /// Valkyrie's Call — {3}{W}{W} Enchantment. Whenever a nontoken, non-Angel
 /// creature you control dies, return that card to the battlefield with a +1/+1
@@ -31,7 +31,10 @@ pub fn valkyries_call() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::TriggerSource,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::AddCounter {
                     what: Selector::LastMoved,
@@ -78,7 +81,10 @@ pub fn infernal_vessel() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::AddCounter {
                     what: Selector::LastMoved,
@@ -107,7 +113,9 @@ pub fn fiery_annihilation() -> CardDefinition {
         // Install the die→exile replacement first, then deal the damage, so a
         // creature this kills is exiled rather than buried.
         effect: Effect::Seq(vec![
-            Effect::ExileIfWouldDieThisTurn { what: target_filtered(R::Creature) },
+            Effect::ExileIfWouldDieThisTurn {
+                what: target_filtered(R::Creature),
+            },
             deal(5, target_filtered(R::Creature)),
         ]),
         ..Default::default()
@@ -135,7 +143,9 @@ pub fn violent_urge() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::If {
-                cond: Predicate::DeliriumActive { who: PlayerRef::You },
+                cond: Predicate::DeliriumActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::GrantKeyword {
                     what: target_filtered(R::Creature),
                     keyword: Keyword::DoubleStrike,
@@ -204,13 +214,19 @@ pub fn quilled_greatwurm() -> CardDefinition {
         name: "Quilled Greatwurm",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::AddCounter {
                 what: Selector::TriggerSource,
                 kind: CounterType::PlusOnePlusOne,

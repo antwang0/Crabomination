@@ -32,7 +32,10 @@ pub fn barkform_harvester() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Move {
                 what: target_filtered(R::Any),
-                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Bottom },
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: LibraryPosition::Bottom,
+                },
             },
             ..Default::default()
         }],
@@ -49,7 +52,11 @@ pub fn bonebind_orator() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Squirrel, CreatureType::Warlock, CreatureType::Bard],
+            creature_types: vec![
+                CreatureType::Squirrel,
+                CreatureType::Warlock,
+                CreatureType::Bard,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -86,7 +93,10 @@ pub fn clifftop_lookout() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::RevealUntilFind {
             who: PlayerRef::You,
             find: R::Land,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: true,
+            },
             cap: Value::Const(60),
             life_per_revealed: 0,
             miss_dest: RevealMissDest::BottomRandom,
@@ -111,8 +121,11 @@ pub fn brambleguard_captain() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::PumpPT {
                 what: target_filtered(R::Creature.and(R::ControlledByYou)),
                 power: Value::PowerOf(Box::new(Selector::This)),
@@ -148,7 +161,9 @@ pub fn downwind_ambusher() -> CardDefinition {
             },
             Effect::Destroy {
                 what: target_filtered(
-                    R::Creature.and(R::ControlledByOpponent).and(R::DealtDamageThisTurn),
+                    R::Creature
+                        .and(R::ControlledByOpponent)
+                        .and(R::DealtDamageThisTurn),
                 ),
             },
         ]))],
@@ -168,7 +183,10 @@ pub fn cracked_skull() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         triggered_abilities: vec![
             etb(Effect::DiscardChosen {
                 from: Selector::Player(PlayerRef::EachOpponent),
@@ -177,7 +195,9 @@ pub fn cracked_skull() -> CardDefinition {
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealtDamage, EventScope::EnchantedBySource),
-                effect: Effect::Destroy { what: Selector::TriggerSource },
+                effect: Effect::Destroy {
+                    what: Selector::TriggerSource,
+                },
             },
         ],
         ..Default::default()
@@ -195,17 +215,28 @@ pub fn beastie_beatdown() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::If {
-                cond: Predicate::DeliriumActive { who: PlayerRef::You },
+                cond: Predicate::DeliriumActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::AddCounter {
-                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.and(R::ControlledByYou),
+                    },
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(2),
                 }),
                 else_: Box::new(Effect::Noop),
             },
             Effect::DealDamageEqualToPower {
-                source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
-                target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+                source: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
+                target: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                },
             },
         ]),
         ..Default::default()
@@ -220,7 +251,10 @@ pub fn balustrade_wurm() -> CardDefinition {
         name: "Balustrade Wurm",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::CantBeCountered, Keyword::Trample, Keyword::Haste],
@@ -228,11 +262,16 @@ pub fn balustrade_wurm() -> CardDefinition {
             mana_cost: cost(&[generic(2), g(), g()]),
             from_graveyard: true,
             sorcery_speed: true,
-            condition: Some(Predicate::DeliriumActive { who: PlayerRef::You }),
+            condition: Some(Predicate::DeliriumActive {
+                who: PlayerRef::You,
+            }),
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::AddCounter {
                     what: Selector::LastMoved,
@@ -254,7 +293,9 @@ pub fn drag_to_the_roots() -> CardDefinition {
         cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Instant],
         self_cost_reduction_if_delirium: Some(2),
-        effect: Effect::Destroy { what: target_filtered(R::Nonland.and(R::Permanent)) },
+        effect: Effect::Destroy {
+            what: target_filtered(R::Nonland.and(R::Permanent)),
+        },
         ..Default::default()
     }
 }

@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, x, ManaCost};
+use crate::mana::{ManaCost, b, cost, g, generic, r, u, w, x};
 
 use SelectionRequirement as R;
 
@@ -66,7 +66,10 @@ pub fn inevitable_betrayal() -> CardDefinition {
             who: PlayerRef::Target(0),
             picker: PlayerRef::You,
             filter: R::Creature,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }

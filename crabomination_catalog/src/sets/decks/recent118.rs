@@ -19,7 +19,10 @@ pub fn arcane_epiphany() -> CardDefinition {
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Instant],
         self_cost_reduction_if_control: vec![(R::HasCreatureType(CreatureType::Wizard), 1)],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -34,10 +37,17 @@ pub fn agate_assault() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::Seq(vec![
                 // Install the death replacement first, then deal the damage.
-                Effect::ExileIfWouldDieThisTurn { what: target_filtered(R::Creature) },
-                Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) },
+                Effect::ExileIfWouldDieThisTurn {
+                    what: target_filtered(R::Creature),
+                },
+                Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(4),
+                },
             ]),
-            Effect::Exile { what: target_filtered(R::Artifact) },
+            Effect::Exile {
+                what: target_filtered(R::Artifact),
+            },
         ]),
         ..Default::default()
     }
@@ -72,7 +82,9 @@ pub fn bark_knuckle_boxer() -> CardDefinition {
 /// Brambleguard Veteran — {1}{G}{G} 3/4 Raccoon Warrior. Whenever you expend 4,
 /// Raccoons you control get +1/+1 and gain vigilance until end of turn.
 pub fn brambleguard_veteran() -> CardDefinition {
-    let raccoons = || Selector::EachPermanent(R::HasCreatureType(CreatureType::Raccoon).and(R::ControlledByYou));
+    let raccoons = || {
+        Selector::EachPermanent(R::HasCreatureType(CreatureType::Raccoon).and(R::ControlledByYou))
+    };
     CardDefinition {
         name: "Brambleguard Veteran",
         cost: cost(&[generic(1), g(), g()]),
@@ -112,13 +124,18 @@ pub fn attack_in_the_box() -> CardDefinition {
         name: "Attack-in-the-Box",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Toy], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Toy],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource),
             effect: Effect::MayDo {
-                description: "have it get +4/+0 until end of turn, then sacrifice it at the next end step".into(),
+                description:
+                    "have it get +4/+0 until end of turn, then sacrifice it at the next end step"
+                        .into(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::PumpPT {
                         what: Selector::This,
@@ -126,7 +143,9 @@ pub fn attack_in_the_box() -> CardDefinition {
                         toughness: Value::ZERO,
                         duration: Duration::EndOfTurn,
                     },
-                    Effect::AtNextEndStep { body: Box::new(Effect::SacrificeSource) },
+                    Effect::AtNextEndStep {
+                        body: Box::new(Effect::SacrificeSource),
+                    },
                 ])),
             },
         }],
@@ -143,16 +162,35 @@ pub fn arbiter_of_woe() -> CardDefinition {
         name: "Arbiter of Woe",
         cost: cost(&[generic(4), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent { filter: R::Creature, count: 1 }],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature,
+            count: 1,
+        }],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Discard { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::ONE, random: false },
-            Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::ONE,
+                random: false,
+            },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]))],
         ..Default::default()
     }

@@ -10,7 +10,7 @@ use crate::card::{
 use crate::effect::shortcut::etb;
 use crate::effect::{Effect, PlayerRef, Selector, Value};
 use crate::game::TurnStep;
-use crate::mana::{cost, g, generic, r, Color};
+use crate::mana::{Color, cost, g, generic, r};
 
 /// Untamed Kavu — {1}{G} 2/2 Kavu with vigilance and trample. Kicker {3}; if
 /// kicked, it enters with three +1/+1 counters.
@@ -19,10 +19,17 @@ pub fn untamed_kavu() -> CardDefinition {
         name: "Untamed Kavu",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Kavu], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Kicker(cost(&[generic(3)]))],
+        keywords: vec![
+            Keyword::Vigilance,
+            Keyword::Trample,
+            Keyword::Kicker(cost(&[generic(3)])),
+        ],
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SpellWasKicked,
             then: Box::new(Effect::AddCounter {
@@ -53,7 +60,10 @@ pub fn manaform_hellkite() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
         dynamic_pt: Some((Value::CastSpellManaSpent, Value::CastSpellManaSpent)),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::YourControl,
+            ),
             effect: Effect::ExileSource,
         }],
         ..Default::default()
@@ -62,13 +72,17 @@ pub fn manaform_hellkite() -> CardDefinition {
         name: "Manaform Hellkite",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
+            ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,

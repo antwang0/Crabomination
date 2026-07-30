@@ -13,7 +13,7 @@ use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, ZoneDest,
 };
 use crate::game::effects::food_token;
-use crate::mana::{b, cost, g, generic, r, u, w, Color, SpendRestriction};
+use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u, w};
 
 /// 1/1 black Rat token with "This token can't block."
 fn rat_token() -> crate::card::TokenDefinition {
@@ -23,7 +23,10 @@ fn rat_token() -> crate::card::TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         keywords: vec![Keyword::CantBlock],
         ..Default::default()
     }
@@ -87,17 +90,22 @@ pub fn totentanz_swarm_piper() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warlock, CreatureType::Bard],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Warlock,
+                CreatureType::Bard,
+            ],
             ..Default::default()
         },
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::NotToken,
-                }),
+                },
+            ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -156,7 +164,10 @@ pub fn neva_stalked_by_nightmares() -> CardDefinition {
                         kind: CounterType::PlusOnePlusOne,
                         amount: Value::ONE,
                     },
-                    Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                    Effect::Scry {
+                        who: PlayerRef::You,
+                        amount: Value::ONE,
+                    },
                 ]),
             },
         ],
@@ -181,9 +192,7 @@ pub fn syr_armont_the_redeemer() -> CardDefinition {
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::CreateTokenAttachedTo {
-            target: target_filtered(
-                R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
-            ),
+            target: target_filtered(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource)),
             definition: super::woe_roles::monster_role(),
         })],
         static_abilities: vec![StaticAbility {
@@ -235,7 +244,11 @@ pub fn troyan_gutsy_explorer() -> CardDefinition {
                 mana_cost: cost(&[u()]),
                 effect: Effect::Seq(vec![
                     draw(1),
-                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                        random: false,
+                    },
                 ]),
                 ..Default::default()
             },
@@ -254,7 +267,11 @@ pub fn johann_apprentice_sorcerer() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard, CreatureType::Sorcerer],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Wizard,
+                CreatureType::Sorcerer,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -280,7 +297,9 @@ pub fn solitary_sanctuary() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![
             etb(Effect::Seq(vec![
-                Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+                Effect::Tap {
+                    what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                },
                 Effect::AddCounter {
                     what: Selector::Target(0),
                     kind: CounterType::Stun,
@@ -288,11 +307,12 @@ pub fn solitary_sanctuary() -> CardDefinition {
                 },
             ])),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Tapped, EventScope::YouTapped)
-                    .with_filter(Predicate::EntityMatches {
+                event: EventSpec::new(EventKind::Tapped, EventScope::YouTapped).with_filter(
+                    Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::Creature.and(R::ControlledByOpponent),
-                    }),
+                    },
+                ),
                 effect: Effect::AddCounter {
                     what: target_filtered(R::Creature.and(R::ControlledByYou)),
                     kind: CounterType::PlusOnePlusOne,

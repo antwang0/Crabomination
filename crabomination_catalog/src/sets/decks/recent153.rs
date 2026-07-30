@@ -12,7 +12,7 @@ use crate::effect::shortcut::etb;
 use crate::effect::{Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef};
 use crate::game::effects::treasure_token;
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, generic, u, w, Color};
+use crate::mana::{Color, b, cost, generic, u, w};
 
 /// Gold Pan — {2} Equipment. ETB makes a Treasure; equipped creature gets +1/+1.
 /// Equip {1}.
@@ -26,7 +26,11 @@ pub fn gold_pan() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::ONE,
@@ -48,9 +52,15 @@ pub fn conductive_machete() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
-        equipped_bonus: Some(EquipBonus { power: 2, toughness: 1, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 1,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::ManifestDread { who: PlayerRef::You },
+            Effect::ManifestDread {
+                who: PlayerRef::You,
+            },
             Effect::Attach {
                 what: Selector::This,
                 to: Selector::take(
@@ -100,12 +110,19 @@ pub fn baron_bertram_graywater() -> CardDefinition {
                 }),
                 ..EventSpec::new(EventKind::TokenCreated, EventScope::YourControl)
             },
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: vampire },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: vampire,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
             sac_other_filter: Some((R::Creature.or(R::Artifact), 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -128,10 +145,19 @@ pub fn jem_lightfoote_sky_explorer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
-                cond: Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(0) },
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                cond: Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::You,
+                    count: Value::Const(0),
+                },
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -146,7 +172,10 @@ pub fn canyon_crab() -> CardDefinition {
         name: "Canyon Crab",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Crab], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Crab],
+            ..Default::default()
+        },
         power: 0,
         toughness: 5,
         activated_abilities: vec![ActivatedAbility {
@@ -160,12 +189,25 @@ pub fn canyon_crab() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
-                cond: Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(0) },
+                cond: Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::You,
+                    count: Value::Const(0),
+                },
                 then: Box::new(Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
-                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                        random: false,
+                    },
                 ])),
                 else_: Box::new(Effect::Noop),
             },

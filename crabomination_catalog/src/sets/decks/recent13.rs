@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, u, Color};
+use crate::mana::{Color, b, cost, g, generic, u};
 
 /// Misery's Shadow — {1}{B} Shade 2/2. If a creature an opponent controls would
 /// die, exile it instead. {1}: this creature gets +1/+1 until end of turn.
@@ -18,7 +18,10 @@ pub fn miserys_shadow() -> CardDefinition {
         name: "Misery's Shadow",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Shade], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shade],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         static_abilities: vec![StaticAbility {
@@ -49,7 +52,11 @@ pub fn glarb_calamitys_augur() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Frog, CreatureType::Wizard, CreatureType::Noble],
+            creature_types: vec![
+                CreatureType::Frog,
+                CreatureType::Wizard,
+                CreatureType::Noble,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -58,13 +65,15 @@ pub fn glarb_calamitys_augur() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "You may play lands and cast spells with mana value 4 or greater from the top of your library.",
             effect: StaticEffect::PlayFromLibraryTop {
-                filter: SelectionRequirement::Land
-                    .or(SelectionRequirement::ManaValueAtLeast(4)),
+                filter: SelectionRequirement::Land.or(SelectionRequirement::ManaValueAtLeast(4)),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -90,7 +99,10 @@ pub fn archfiend_of_the_dross() -> CardDefinition {
         enters_with_counters: Some((CounterType::Oil, Value::Const(4))),
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::ActivePlayer,
+                ),
                 effect: Effect::Seq(vec![
                     Effect::RemoveCounter {
                         what: Selector::This,
@@ -99,10 +111,15 @@ pub fn archfiend_of_the_dross() -> CardDefinition {
                     },
                     Effect::If {
                         cond: Predicate::ValueAtMost(
-                            Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Oil },
+                            Value::CountersOn {
+                                what: Box::new(Selector::This),
+                                kind: CounterType::Oil,
+                            },
                             Value::Const(0),
                         ),
-                        then: Box::new(Effect::LoseGame { who: PlayerRef::You }),
+                        then: Box::new(Effect::LoseGame {
+                            who: PlayerRef::You,
+                        }),
                         else_: Box::new(Effect::Noop),
                     },
                 ]),

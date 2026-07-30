@@ -6,12 +6,16 @@
 
 use crate::card::{CardDefinition, CardType, CounterType, StaticAbility, StaticEffect};
 use crate::effect::shortcut::{draw, etb};
-use crate::effect::{Effect, EventKind, EventScope, EventSpec, Predicate, Selector, TriggeredAbility, Value};
+use crate::effect::{
+    Effect, EventKind, EventScope, EventSpec, Predicate, Selector, TriggeredAbility, Value,
+};
 use crate::mana::{cost, generic, u};
 
 /// ETB "choose a creature type" trigger.
 fn choose_type() -> TriggeredAbility {
-    etb(Effect::NameCreatureType { what: Selector::This })
+    etb(Effect::NameCreatureType {
+        what: Selector::This,
+    })
 }
 
 /// Kindred Discovery — {3}{U}{U} Enchantment. Choose a creature type. Whenever

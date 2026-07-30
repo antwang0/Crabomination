@@ -8,7 +8,7 @@ use crate::card::{
     Keyword, Predicate, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::{Effect, PlayerRef};
-use crate::mana::{cost, generic, Color};
+use crate::mana::{Color, cost, generic};
 
 fn role_aura(name: &'static str, color: Color, bonus: EquipBonus) -> TokenDefinition {
     TokenDefinition {
@@ -26,7 +26,14 @@ fn role_aura(name: &'static str, color: Color, bonus: EquipBonus) -> TokenDefini
 
 /// Cursed Role: enchanted creature is 1/1.
 pub(crate) fn cursed_role() -> TokenDefinition {
-    role_aura("Cursed", Color::Black, EquipBonus { set_base_pt: Some((1, 1)), ..Default::default() })
+    role_aura(
+        "Cursed",
+        Color::Black,
+        EquipBonus {
+            set_base_pt: Some((1, 1)),
+            ..Default::default()
+        },
+    )
 }
 
 /// Monster Role: enchanted creature gets +1/+1 and has trample.
@@ -34,7 +41,12 @@ pub(crate) fn monster_role() -> TokenDefinition {
     role_aura(
         "Monster",
         Color::Red,
-        EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Trample], ..Default::default() },
+        EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Trample],
+            ..Default::default()
+        },
     )
 }
 
@@ -63,7 +75,10 @@ pub(crate) fn sorcerer_role() -> TokenDefinition {
             toughness: 1,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                effect: Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::ONE,
+                },
             }],
             ..Default::default()
         },
@@ -104,7 +119,11 @@ pub(crate) fn wicked_role() -> TokenDefinition {
     let mut t = role_aura(
         "Wicked",
         Color::Black,
-        EquipBonus { power: 1, toughness: 1, ..Default::default() },
+        EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        },
     );
     t.triggered_abilities = vec![TriggeredAbility {
         event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),

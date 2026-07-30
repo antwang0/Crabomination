@@ -3,8 +3,8 @@
 //! Tests in `tests/recent197.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, LandType,
-    SelectionRequirement as R, Subtypes,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, LandType, SelectionRequirement as R,
+    Subtypes,
 };
 use crate::card::{EventKind, EventScope, EventSpec, Keyword, TriggeredAbility};
 use crate::effect::shortcut::target_filtered;
@@ -19,7 +19,10 @@ pub fn seize_the_secrets() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
         self_cost_reduction_if_crime: Some(1),
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }
@@ -38,7 +41,10 @@ pub fn take_for_a_ride() -> CardDefinition {
                 to: Some(PlayerRef::You),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
@@ -68,7 +74,10 @@ pub fn silver_deputy() -> CardDefinition {
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: R::IsBasicLand.or(R::HasLandType(LandType::Desert)),
-                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: LibraryPosition::Top,
+                },
             },
         }],
         activated_abilities: vec![ActivatedAbility {

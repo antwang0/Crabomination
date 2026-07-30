@@ -37,8 +37,16 @@ pub fn nezumi_bladeblesser() -> CardDefinition {
         power: 3,
         toughness: 2,
         static_abilities: vec![
-            gated(Keyword::Deathtouch, R::Artifact, "Deathtouch while you control an artifact."),
-            gated(Keyword::Menace, R::Enchantment, "Menace while you control an enchantment."),
+            gated(
+                Keyword::Deathtouch,
+                R::Artifact,
+                "Deathtouch while you control an artifact.",
+            ),
+            gated(
+                Keyword::Menace,
+                R::Enchantment,
+                "Menace while you control an enchantment.",
+            ),
         ],
         ..Default::default()
     }
@@ -51,7 +59,10 @@ pub fn iron_apprentice() -> CardDefinition {
         name: "Iron Apprentice",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 0,
         toughness: 0,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
@@ -70,14 +81,26 @@ pub fn circuit_mender() -> CardDefinition {
         name: "Circuit Mender",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         triggered_abilities: vec![
-            etb(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+            etb(Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             },
         ],
         ..Default::default()
@@ -121,7 +144,10 @@ pub fn moon_circuit_hacker() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Draw a card?".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                     Effect::If {
                         cond: Predicate::Not(Box::new(Predicate::EntityMatches {
                             what: Selector::This,
@@ -227,7 +253,10 @@ pub fn reito_sentinel() -> CardDefinition {
         name: "Reito Sentinel",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Defender],
@@ -277,7 +306,10 @@ pub fn akki_ronin() -> CardDefinition {
             effect: Effect::MayDiscard {
                 description: "Discard a card to draw a card?".into(),
                 count: Value::Const(1),
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
                 else_: None,
             },
         }],

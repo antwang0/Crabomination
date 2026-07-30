@@ -1,11 +1,11 @@
 //! Gap batch — OTJ/BLB spells & value creatures on existing primitives.
 //! Tests in `tests/recent231.rs`.
 
+use crate::card::StaticAbility;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword,
     SelectionRequirement as R, Subtypes,
 };
-use crate::card::StaticAbility;
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Effect, PlayerRef, Predicate, Selector, StaticEffect, Value, ZoneDest};
 use crate::mana::{cost, g, generic, r, u};
@@ -21,7 +21,9 @@ pub fn volcanic_spite() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    R::Creature.or(R::Planeswalker).or(R::HasCardType(CardType::Battle)),
+                    R::Creature
+                        .or(R::Planeswalker)
+                        .or(R::HasCardType(CardType::Battle)),
                 ),
                 amount: Value::Const(3),
             },
@@ -45,13 +47,19 @@ pub fn rampaging_soulrager() -> CardDefinition {
         name: "Rampaging Soulrager",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 1,
         toughness: 4,
         static_abilities: vec![StaticAbility {
             description: "Gets +3/+0 as long as there are two or more unlocked doors among Rooms you control.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::UnlockedDoorsControlledAtLeast { who: PlayerRef::You, count: 2 },
+                condition: Predicate::UnlockedDoorsControlledAtLeast {
+                    who: PlayerRef::You,
+                    count: 2,
+                },
                 power: 3,
                 toughness: 0,
                 keywords: vec![],
@@ -87,7 +95,10 @@ pub fn lilysplash_mentor() -> CardDefinition {
                 },
                 Effect::Move {
                     what: Selector::Target(0),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::AddCounter {
                     what: Selector::LastMoved,

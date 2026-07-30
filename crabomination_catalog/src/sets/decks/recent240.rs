@@ -16,9 +16,15 @@ use crate::mana::{cost, g, generic, r, w};
 /// tapped, [effect]."
 fn survival(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::PostCombatMain), EventScope::ActivePlayer),
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::PostCombatMain),
+            EventScope::ActivePlayer,
+        ),
         effect: Effect::If {
-            cond: Predicate::EntityMatches { what: Selector::This, filter: R::Tapped },
+            cond: Predicate::EntityMatches {
+                what: Selector::This,
+                filter: R::Tapped,
+            },
             then: Box::new(effect),
             else_: Box::new(Effect::Noop),
         },
@@ -33,13 +39,22 @@ pub fn fear_of_abduction() -> CardDefinition {
         name: "Fear of Abduction",
         cost: cost(&[generic(4), w(), w()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        additional_cast_cost: vec![AdditionalCastCost::ExilePermanent { filter: R::Creature, count: 1 }],
+        additional_cast_cost: vec![AdditionalCastCost::ExilePermanent {
+            filter: R::Creature,
+            count: 1,
+        }],
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
-            what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByOpponent) },
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature.and(R::ControlledByOpponent),
+            },
             return_to: ExileReturnZone::Hand,
         })],
         ..Default::default()
@@ -55,8 +70,14 @@ pub fn say_its_name() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
-            Effect::ReturnGraveyardCardsToHand { filter: R::Creature.or(R::Land), max: Value::Const(1) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::ReturnGraveyardCardsToHand {
+                filter: R::Creature.or(R::Land),
+                max: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -77,12 +98,25 @@ pub fn coordinated_clobbering() -> CardDefinition {
         effect: Effect::OptionalTargets {
             min: 2,
             body: Box::new(Effect::Seq(vec![
-                Effect::Tap { what: Selector::TargetFiltered { slot: 0, filter: mine.clone() } },
+                Effect::Tap {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: mine.clone(),
+                    },
+                },
                 Effect::DealDamageEqualToPower {
                     source: Selector::Target(0),
-                    target: Selector::TargetFiltered { slot: 1, filter: theirs },
+                    target: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: theirs,
+                    },
                 },
-                Effect::Tap { what: Selector::TargetFiltered { slot: 2, filter: mine } },
+                Effect::Tap {
+                    what: Selector::TargetFiltered {
+                        slot: 2,
+                        filter: mine,
+                    },
+                },
                 Effect::DealDamageEqualToPower {
                     source: Selector::Target(2),
                     target: Selector::Target(1),
@@ -104,7 +138,10 @@ pub fn waltz_of_rage() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamageEqualToPowerToEach {
-                source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                source: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
                 targets: Selector::EachPermanent(R::Creature),
                 each_opponent: false,
             },
@@ -140,12 +177,17 @@ pub fn veteran_survivor() -> CardDefinition {
             max_targets: 1,
             min_targets: 0,
             filter: R::InGraveyard,
-            effect: Box::new(Effect::ExileWithSource { what: Selector::Target(0) }),
+            effect: Box::new(Effect::ExileWithSource {
+                what: Selector::Target(0),
+            }),
         })],
         static_abilities: vec![StaticAbility {
             description: "While 3+ cards exiled with this, it gets +3/+3 and has hexproof.",
             effect: StaticEffect::PumpTeamIf {
-                condition: Predicate::ValueAtLeast(Value::CardsExiledWithSourceCount, Value::Const(3)),
+                condition: Predicate::ValueAtLeast(
+                    Value::CardsExiledWithSourceCount,
+                    Value::Const(3),
+                ),
                 applies_to: Selector::This,
                 power: 3,
                 toughness: 3,

@@ -19,7 +19,10 @@ pub fn armored_armadillo() -> CardDefinition {
         name: "Armored Armadillo",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Armadillo], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Armadillo],
+            ..Default::default()
+        },
         power: 0,
         toughness: 4,
         keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(1)])))],
@@ -44,7 +47,10 @@ pub fn ambush_gigapede() -> CardDefinition {
         name: "Ambush Gigapede",
         cost: cost(&[generic(4), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 6,
         toughness: 2,
         keywords: vec![Keyword::Flash],
@@ -65,7 +71,10 @@ pub fn desperate_bloodseeker() -> CardDefinition {
         name: "Desperate Bloodseeker",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
@@ -112,8 +121,13 @@ pub fn eriettes_lullaby() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Creature.and(R::Tapped)) },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::Tapped)),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -126,13 +140,19 @@ pub fn geyser_drake() -> CardDefinition {
         name: "Geyser Drake",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "During turns other than yours, spells you cast cost {1} less to cast.",
-            effect: StaticEffect::CostReductionDuringOpponentsTurn { filter: R::Any, amount: 1 },
+            effect: StaticEffect::CostReductionDuringOpponentsTurn {
+                filter: R::Any,
+                amount: 1,
+            },
         }],
         ..Default::default()
     }

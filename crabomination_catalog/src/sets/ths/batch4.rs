@@ -2,12 +2,12 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement as R,
-    StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    EventSpec, Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
+    Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, heroic, monstrosity, on_becomes_monstrous, target_filtered};
-use crate::effect::{Duration, Effect, Predicate, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, ZoneDest};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(
     name: &'static str,
@@ -21,7 +21,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: ct, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: ct,
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         keywords: kw,
@@ -217,7 +220,10 @@ pub fn medomai_the_ageless() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::ONE },
+            effect: Effect::TakeExtraTurn {
+                who: PlayerRef::You,
+                count: Value::ONE,
+            },
         }],
         static_abilities: vec![StaticAbility {
             description: "This creature can't attack during extra turns.",
@@ -246,7 +252,9 @@ pub fn priest_of_iroas() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), w()]),
             sac_cost: true,
-            effect: Effect::Destroy { what: target_filtered(R::Enchantment) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Enchantment),
+            },
             ..Default::default()
         }],
         ..creature(
@@ -305,7 +313,10 @@ pub fn reaper_of_the_wilds() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         }],
         activated_abilities: vec![
             grant(cost(&[b()]), Keyword::Deathtouch),
@@ -367,7 +378,10 @@ pub fn steam_augury() -> CardDefinition {
         name: "Steam Augury",
         cost: cost(&[generic(2), u(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::FactOrFiction { count: Value::Const(5), to_bottom: false },
+        effect: Effect::FactOrFiction {
+            count: Value::Const(5),
+            to_bottom: false,
+        },
         ..Default::default()
     }
 }
@@ -456,7 +470,10 @@ pub fn warriors_lesson() -> CardDefinition {
                         EventKind::DealsCombatDamageToPlayer,
                         EventScope::SelfSource,
                     ),
-                    effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    effect: Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 }),
                 duration: Duration::EndOfTurn,
             }),
@@ -475,10 +492,16 @@ pub fn bident_of_thassa() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Enchantment, CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            ),
             effect: Effect::MayDo {
                 description: String::from("Draw a card?"),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -505,7 +528,9 @@ pub fn bow_of_nylea() -> CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Artifact],
         static_abilities: vec![StaticAbility {
             description: "Attacking creatures you control have deathtouch.",
-            effect: StaticEffect::GrantKeywordToAttackers { keyword: Keyword::Deathtouch },
+            effect: StaticEffect::GrantKeywordToAttackers {
+                keyword: Keyword::Deathtouch,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
@@ -521,7 +546,10 @@ pub fn bow_of_nylea() -> CardDefinition {
                         to: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))),
                         amount: Value::Const(2),
                     },
-                    Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(3),
+                    },
                     Effect::ShuffleGraveyardCardsIntoLibrary {
                         who: PlayerRef::You,
                         filter: R::Any,

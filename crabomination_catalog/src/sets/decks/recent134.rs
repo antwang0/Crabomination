@@ -2,16 +2,15 @@
 //! graveyard value. All ride existing primitives. Tests in
 //! `crabomination/src/tests/recent134.rs`.
 
+use super::woe_roles::{wicked_role, young_hero_role};
 use crate::card::{
-    Adventure, CardDefinition, CardType, CounterType, CreatureType, Keyword, Predicate, SelectionRequirement as R, Selector,
-    StaticAbility, StaticEffect, Subtypes, TokenDefinition, Value,
+    Adventure, CardDefinition, CardType, CounterType, CreatureType, Keyword, Predicate,
+    SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
+    Value,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
-use super::woe_roles::{wicked_role, young_hero_role};
-
-
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn white_human_token() -> TokenDefinition {
     TokenDefinition {
@@ -20,7 +19,10 @@ fn white_human_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -46,7 +48,11 @@ pub fn belunas_gatekeeper() -> CardDefinition {
             cost: cost(&[generic(1), u()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::Move {
-                what: target_filtered(R::Creature.and(R::ControlledByOpponent).and(R::ManaValueAtMost(3))),
+                what: target_filtered(
+                    R::Creature
+                        .and(R::ControlledByOpponent)
+                        .and(R::ManaValueAtMost(3)),
+                ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
         })),
@@ -62,9 +68,18 @@ pub fn freeze_in_place() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
-            Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::Const(3) },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Tap {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(3),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -82,8 +97,14 @@ pub fn succumb_to_the_cold() -> CardDefinition {
             min_targets: 0,
             filter: R::Creature.and(R::ControlledByOpponent),
             effect: Box::new(Effect::Seq(vec![
-                Effect::Tap { what: Selector::Target(0) },
-                Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },
+                Effect::Tap {
+                    what: Selector::Target(0),
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::ONE,
+                },
             ])),
         },
         ..Default::default()
@@ -99,7 +120,10 @@ pub fn bellowing_bruiser() -> CardDefinition {
         name: "Bellowing Bruiser",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ogre], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ogre],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Haste],
@@ -142,7 +166,9 @@ pub fn gallant_pie_wielder() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Celebration — Gallant Pie-Wielder has double strike while two or more nonland permanents entered under your control this turn.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::CelebrationActive { who: PlayerRef::You },
+                condition: Predicate::CelebrationActive {
+                    who: PlayerRef::You,
+                },
                 power: 0,
                 toughness: 0,
                 keywords: vec![Keyword::DoubleStrike],
@@ -166,14 +192,20 @@ pub fn woodland_acolyte() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
         adventure: Some(Box::new(Adventure {
             name: "Mend the Wilds",
             cost: cost(&[g()]),
             card_types: vec![CardType::Instant],
             effect: Effect::Move {
                 what: target_filtered(R::PermanentCard.and(R::InYourGraveyard)),
-                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: LibraryPosition::Top,
+                },
             },
         })),
         ..Default::default()
@@ -193,7 +225,9 @@ pub fn stroke_of_midnight() -> CardDefinition {
                 count: Value::ONE,
                 definition: white_human_token(),
             },
-            Effect::Destroy { what: target_filtered(R::Nonland) },
+            Effect::Destroy {
+                what: target_filtered(R::Nonland),
+            },
         ]),
         ..Default::default()
     }
@@ -209,8 +243,15 @@ pub fn return_triumphant() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMost(3))),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                what: target_filtered(
+                    R::Creature
+                        .and(R::InYourGraveyard)
+                        .and(R::ManaValueAtMost(3)),
+                ),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::CreateTokenAttachedTo {
                 target: Selector::LastMoved,
@@ -265,7 +306,10 @@ pub fn sugar_rush() -> CardDefinition {
                 toughness: Value::ZERO,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }

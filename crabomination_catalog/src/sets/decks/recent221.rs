@@ -4,7 +4,7 @@
 use crate::card::{CardDefinition, CardType, CreatureType, Subtypes, Supertype, TriggeredAbility};
 use crate::effect::shortcut::etb;
 use crate::effect::{Effect, EventKind, EventScope, EventSpec, Predicate, Selector, Value};
-use crate::mana::{cost, b, g, generic, r, w};
+use crate::mana::{b, cost, g, generic, r, w};
 
 /// Diamond Mare — {2} Artifact Creature — Horse 1/3. As it enters, choose a
 /// color; whenever you cast a spell of the chosen color, gain 1 life.
@@ -13,7 +13,10 @@ pub fn diamond_mare() -> CardDefinition {
         name: "Diamond Mare",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horse], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horse],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         triggered_abilities: vec![
@@ -21,7 +24,10 @@ pub fn diamond_mare() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                     .with_filter(Predicate::CastSpellSharesChosenColorOfSource),
-                effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             },
         ],
         ..Default::default()
@@ -40,7 +46,10 @@ fn tyrant(
         cost: mana,
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         ..Default::default()
@@ -49,17 +58,35 @@ fn tyrant(
 
 /// Kalakscion, Hunger Tyrant — {1}{B}{B} Legendary Crocodile 7/2 (vanilla).
 pub fn kalakscion_hunger_tyrant() -> CardDefinition {
-    tyrant("Kalakscion, Hunger Tyrant", cost(&[generic(1), b(), b()]), vec![CreatureType::Crocodile], 7, 2)
+    tyrant(
+        "Kalakscion, Hunger Tyrant",
+        cost(&[generic(1), b(), b()]),
+        vec![CreatureType::Crocodile],
+        7,
+        2,
+    )
 }
 
 /// Tyrox, Saurid Tyrant — {1}{R} Legendary Dinosaur Warrior 4/1 (vanilla).
 pub fn tyrox_saurid_tyrant() -> CardDefinition {
-    tyrant("Tyrox, Saurid Tyrant", cost(&[generic(1), r()]), vec![CreatureType::Dinosaur, CreatureType::Warrior], 4, 1)
+    tyrant(
+        "Tyrox, Saurid Tyrant",
+        cost(&[generic(1), r()]),
+        vec![CreatureType::Dinosaur, CreatureType::Warrior],
+        4,
+        1,
+    )
 }
 
 /// Terrian, World Tyrant — {2}{G}{G}{G} Legendary Dinosaur Ooze 9/7 (vanilla).
 pub fn terrian_world_tyrant() -> CardDefinition {
-    tyrant("Terrian, World Tyrant", cost(&[generic(2), g(), g(), g()]), vec![CreatureType::Dinosaur, CreatureType::Ooze], 9, 7)
+    tyrant(
+        "Terrian, World Tyrant",
+        cost(&[generic(2), g(), g(), g()]),
+        vec![CreatureType::Dinosaur, CreatureType::Ooze],
+        9,
+        7,
+    )
 }
 
 /// Sundial, Dawn Tyrant — {1}{W} Legendary Artifact Creature — Construct 3/3
@@ -70,7 +97,10 @@ pub fn sundial_dawn_tyrant() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         ..Default::default()

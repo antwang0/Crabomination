@@ -97,34 +97,94 @@ fn dual(name: &'static str, a: LandType, b: LandType, ca: Color, cb: Color) -> C
 }
 
 pub fn tundra() -> CardDefinition {
-    dual("Tundra", LandType::Plains, LandType::Island, Color::White, Color::Blue)
+    dual(
+        "Tundra",
+        LandType::Plains,
+        LandType::Island,
+        Color::White,
+        Color::Blue,
+    )
 }
 pub fn underground_sea() -> CardDefinition {
-    dual("Underground Sea", LandType::Island, LandType::Swamp, Color::Blue, Color::Black)
+    dual(
+        "Underground Sea",
+        LandType::Island,
+        LandType::Swamp,
+        Color::Blue,
+        Color::Black,
+    )
 }
 pub fn badlands() -> CardDefinition {
-    dual("Badlands", LandType::Swamp, LandType::Mountain, Color::Black, Color::Red)
+    dual(
+        "Badlands",
+        LandType::Swamp,
+        LandType::Mountain,
+        Color::Black,
+        Color::Red,
+    )
 }
 pub fn taiga() -> CardDefinition {
-    dual("Taiga", LandType::Mountain, LandType::Forest, Color::Red, Color::Green)
+    dual(
+        "Taiga",
+        LandType::Mountain,
+        LandType::Forest,
+        Color::Red,
+        Color::Green,
+    )
 }
 pub fn savannah() -> CardDefinition {
-    dual("Savannah", LandType::Forest, LandType::Plains, Color::Green, Color::White)
+    dual(
+        "Savannah",
+        LandType::Forest,
+        LandType::Plains,
+        Color::Green,
+        Color::White,
+    )
 }
 pub fn scrubland() -> CardDefinition {
-    dual("Scrubland", LandType::Plains, LandType::Swamp, Color::White, Color::Black)
+    dual(
+        "Scrubland",
+        LandType::Plains,
+        LandType::Swamp,
+        Color::White,
+        Color::Black,
+    )
 }
 pub fn volcanic_island() -> CardDefinition {
-    dual("Volcanic Island", LandType::Island, LandType::Mountain, Color::Blue, Color::Red)
+    dual(
+        "Volcanic Island",
+        LandType::Island,
+        LandType::Mountain,
+        Color::Blue,
+        Color::Red,
+    )
 }
 pub fn bayou() -> CardDefinition {
-    dual("Bayou", LandType::Swamp, LandType::Forest, Color::Black, Color::Green)
+    dual(
+        "Bayou",
+        LandType::Swamp,
+        LandType::Forest,
+        Color::Black,
+        Color::Green,
+    )
 }
 pub fn plateau() -> CardDefinition {
-    dual("Plateau", LandType::Mountain, LandType::Plains, Color::Red, Color::White)
+    dual(
+        "Plateau",
+        LandType::Mountain,
+        LandType::Plains,
+        Color::Red,
+        Color::White,
+    )
 }
 pub fn tropical_island() -> CardDefinition {
-    dual("Tropical Island", LandType::Forest, LandType::Island, Color::Green, Color::Blue)
+    dual(
+        "Tropical Island",
+        LandType::Forest,
+        LandType::Island,
+        Color::Green,
+        Color::Blue,
+    )
 }
 
 /// The Snow-Covered basics (KHM printing): basic snow lands, one per color.
@@ -133,7 +193,10 @@ fn snow_basic(name: &'static str, land_type: LandType, color: Color) -> CardDefi
         name,
         supertypes: vec![Supertype::Basic, Supertype::Snow],
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![land_type], ..Default::default() },
+        subtypes: Subtypes {
+            land_types: vec![land_type],
+            ..Default::default()
+        },
         activated_abilities: vec![tap_add(color)],
         ..Default::default()
     }

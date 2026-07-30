@@ -143,12 +143,16 @@ pub fn break_the_ice() -> CardDefinition {
         name: "Break the Ice",
         cost: cost(&[b(), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Destroy { what: target_filtered(filter.clone()) },
+        effect: Effect::Destroy {
+            what: target_filtered(filter.clone()),
+        },
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[generic(4), b(), b()]),
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(filter),
-                body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                body: Box::new(Effect::Destroy {
+                    what: Selector::TriggerSource,
+                }),
             }),
             ..Default::default()
         }),
@@ -174,7 +178,9 @@ pub fn obsidian_charmaw() -> CardDefinition {
         static_abilities: vec![crate::card::StaticAbility {
             description: "Costs {1} less per opponent land that could produce {C}.",
             effect: StaticEffect::SelfCostReducedPerPermanentMatching {
-                filter: R::Land.and(R::ControlledByOpponent).and(R::ProducesColorless),
+                filter: R::Land
+                    .and(R::ControlledByOpponent)
+                    .and(R::ProducesColorless),
                 per: 1,
             },
         }],
@@ -282,11 +288,15 @@ pub fn steel_dromedary() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::DoesntUntapWhileCounter(CounterType::PlusOnePlusOne)],
+        keywords: vec![Keyword::DoesntUntapWhileCounter(
+            CounterType::PlusOnePlusOne,
+        )],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         static_abilities: vec![crate::card::StaticAbility {
             description: "This creature enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(

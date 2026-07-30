@@ -13,7 +13,10 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 /// Shared Siege subtypes block.
 fn siege() -> Subtypes {
-    Subtypes { battle_subtypes: vec![BattleSubtype::Siege], ..Default::default() }
+    Subtypes {
+        battle_subtypes: vec![BattleSubtype::Siege],
+        ..Default::default()
+    }
 }
 
 /// Invasion of Zendikar // Awakened Skyclave — {3}{G} Siege, defense 3. ETB:
@@ -25,7 +28,10 @@ pub fn invasion_of_zendikar() -> CardDefinition {
         name: "Awakened Skyclave",
         card_types: vec![CardType::Creature],
         color_indicator: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Haste],
@@ -49,7 +55,10 @@ pub fn invasion_of_zendikar() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::SearchUpToN {
             who: PlayerRef::You,
             filter: SelectionRequirement::IsBasicLand,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: true,
+            },
             count: Value::Const(2),
         })],
         back_face: Some(Box::new(skyclave)),
@@ -67,7 +76,10 @@ pub fn invasion_of_kaladesh() -> CardDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     };
@@ -105,7 +117,10 @@ pub fn invasion_of_amonkhet() -> CardDefinition {
         name: "Lazotep Convert",
         card_types: vec![CardType::Creature],
         color_indicator: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         ..Default::default()
@@ -117,13 +132,19 @@ pub fn invasion_of_amonkhet() -> CardDefinition {
         subtypes: siege(),
         defense: 4,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(3) },
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(3),
+            },
             Effect::Discard {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
                 random: false,
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         back_face: Some(Box::new(convert)),
         ..Default::default()
@@ -138,7 +159,10 @@ pub fn invasion_of_ravnica() -> CardDefinition {
     let paragon = CardDefinition {
         name: "Guildpact Paragon",
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         ..Default::default()
@@ -169,7 +193,10 @@ pub fn invasion_of_theros() -> CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         color_indicator: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::God], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::God],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
@@ -179,7 +206,10 @@ pub fn invasion_of_theros() -> CardDefinition {
                     filter: SelectionRequirement::Enchantment
                         .and(SelectionRequirement::OtherThanSource),
                 }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     };
@@ -207,7 +237,10 @@ pub fn invasion_of_tarkir() -> CardDefinition {
         name: "Defiant Thundermaw",
         card_types: vec![CardType::Creature],
         color_indicator: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Trample],

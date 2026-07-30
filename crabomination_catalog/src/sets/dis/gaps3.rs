@@ -16,10 +16,16 @@ pub fn azorius_ploy() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PreventCombatDamageByTargetThisTurn {
-                target: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                target: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature,
+                },
             },
             Effect::PreventCombatDamageToTargetThisTurn {
-                target: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                target: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
             },
         ]),
         ..Default::default()

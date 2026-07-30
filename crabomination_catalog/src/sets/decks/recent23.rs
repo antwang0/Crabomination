@@ -200,7 +200,10 @@ pub fn bedhead_beastie() -> CardDefinition {
         name: "Bedhead Beastie",
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 5,
         toughness: 6,
         keywords: vec![
@@ -220,7 +223,10 @@ pub fn daggermaw_megalodon() -> CardDefinition {
         name: "Daggermaw Megalodon",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Shark], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shark],
+            ..Default::default()
+        },
         power: 5,
         toughness: 7,
         keywords: vec![
@@ -267,10 +273,15 @@ pub fn bashful_beastie() -> CardDefinition {
         name: "Bashful Beastie",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
-        triggered_abilities: vec![on_dies(Effect::ManifestDread { who: PlayerRef::You })],
+        triggered_abilities: vec![on_dies(Effect::ManifestDread {
+            who: PlayerRef::You,
+        })],
         ..Default::default()
     }
 }
@@ -321,7 +332,6 @@ pub fn frantic_strength() -> CardDefinition {
     }
 }
 
-
 /// Most Valuable Slayer — {3}{R} 2/4 Human Warrior. Whenever you attack, target
 /// attacking creature gets +1/+0 and gains first strike until end of turn.
 pub fn most_valuable_slayer() -> CardDefinition {
@@ -366,7 +376,9 @@ pub fn twist_reality() -> CardDefinition {
             Effect::CounterSpell {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
             },
-            Effect::ManifestDread { who: PlayerRef::You },
+            Effect::ManifestDread {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -386,7 +398,10 @@ pub fn vengeful_possession() -> CardDefinition {
                 to: None,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
@@ -395,8 +410,15 @@ pub fn vengeful_possession() -> CardDefinition {
             Effect::MayDo {
                 description: "Discard a card to draw a card?".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                 ])),
             },
         ]),
@@ -434,7 +456,10 @@ pub fn gearseeker_serpent() -> CardDefinition {
         name: "Gearseeker Serpent",
         cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Serpent],
+            ..Default::default()
+        },
         power: 5,
         toughness: 6,
         affinity_filter: Some(
@@ -460,7 +485,10 @@ pub fn aetherjacket() -> CardDefinition {
         name: "Aetherjacket",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
@@ -515,7 +543,9 @@ pub fn gas_guzzler() -> CardDefinition {
         keywords: vec![Keyword::StartYourEngines],
         static_abilities: vec![StaticAbility {
             description: "This creature enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
@@ -523,8 +553,14 @@ pub fn gas_guzzler() -> CardDefinition {
                 SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
                 1,
             )),
-            condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            condition: Some(Predicate::SpeedAtLeast {
+                who: PlayerRef::You,
+                speed: 4,
+            }),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -570,7 +606,9 @@ pub fn unnerving_grasp() -> CardDefinition {
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                 }),
             },
-            Effect::ManifestDread { who: PlayerRef::You },
+            Effect::ManifestDread {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -606,11 +644,17 @@ pub fn splitskin_doll() -> CardDefinition {
         name: "Splitskin Doll",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Toy], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Toy],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             Effect::If {
                 cond: Predicate::SelectorCountAtLeast {
                     sel: Selector::EachPermanent(
@@ -641,7 +685,10 @@ pub fn skittering_surveyor() -> CardDefinition {
         name: "Skittering Surveyor",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::MayDo {
@@ -665,13 +712,13 @@ pub fn agonasaur_rex() -> CardDefinition {
         name: "Agonasaur Rex",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 8,
         toughness: 8,
-        keywords: vec![
-            Keyword::Trample,
-            Keyword::Cycling(cost(&[generic(2), g()])),
-        ],
+        keywords: vec![Keyword::Trample, Keyword::Cycling(cost(&[generic(2), g()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
             effect: Effect::ApplyToTargets {

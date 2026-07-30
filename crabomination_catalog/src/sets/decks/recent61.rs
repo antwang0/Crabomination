@@ -48,7 +48,10 @@ pub fn somberwald_vigilante() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
-            effect: Effect::DealDamage { to: Selector::BlockingCreatures, amount: Value::Const(1) },
+            effect: Effect::DealDamage {
+                to: Selector::BlockingCreatures,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -103,7 +106,10 @@ pub fn perimeter_captain() -> CardDefinition {
             ),
             effect: Effect::MayDo {
                 description: "Gain 2 life".into(),
-                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                }),
             },
         }],
         ..Default::default()
@@ -186,7 +192,10 @@ pub fn fireblade_charger() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "As long as this creature is equipped, it has haste.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::EntityMatches { what: Selector::This, filter: R::IsEquipped },
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::IsEquipped,
+                },
                 power: 0,
                 toughness: 0,
                 keywords: vec![Keyword::Haste],

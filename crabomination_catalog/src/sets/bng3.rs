@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{heroic, target_filtered, tribute};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(
     name: &'static str,
@@ -22,7 +22,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: ct, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: ct,
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         keywords: kw,
@@ -40,7 +43,10 @@ fn fated(name: &'static str, mana: ManaCost, body: Effect) -> CardDefinition {
             body,
             Effect::If {
                 cond: Predicate::IsTurnOf(PlayerRef::You),
-                then: Box::new(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+                then: Box::new(Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -145,7 +151,10 @@ pub fn fated_return() -> CardDefinition {
         Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(R::Creature.and(R::InGraveyard)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
@@ -293,7 +302,12 @@ pub fn chromanticore() -> CardDefinition {
         (4, 4),
         vec![CreatureType::Manticore],
         suite.clone(),
-        EquipBonus { power: 4, toughness: 4, keywords: suite, ..Default::default() },
+        EquipBonus {
+            power: 4,
+            toughness: 4,
+            keywords: suite,
+            ..Default::default()
+        },
     )
 }
 
@@ -342,7 +356,10 @@ pub fn herald_of_torment() -> CardDefinition {
                 EventKind::StepBegins(crabomination_base::turn_step::TurnStep::Upkeep),
                 EventScope::YourControl,
             ),
-            effect: Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+            effect: Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..bestow_creature(
             "Herald of Torment",
@@ -421,7 +438,10 @@ pub fn everflame_eidolon() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[r()]),
             effect: Effect::If {
-                cond: Predicate::EntityMatches { what: Selector::This, filter: R::IsBestowed },
+                cond: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::IsBestowed,
+                },
                 then: Box::new(pump(Selector::AttachedTo(Box::new(Selector::This)))),
                 else_: Box::new(pump(Selector::This)),
             },
@@ -434,7 +454,11 @@ pub fn everflame_eidolon() -> CardDefinition {
             (1, 1),
             vec![CreatureType::Spirit],
             vec![],
-            EquipBonus { power: 1, toughness: 1, ..Default::default() },
+            EquipBonus {
+                power: 1,
+                toughness: 1,
+                ..Default::default()
+            },
         )
     }
 }
@@ -442,7 +466,9 @@ pub fn everflame_eidolon() -> CardDefinition {
 /// Eidolon of Countless Battles — {1}{W}{W} 0/0; it and the enchanted creature
 /// each get +1/+1 per creature and per Aura you control. Bestow {2}{W}{W}.
 pub fn eidolon_of_countless_battles() -> CardDefinition {
-    let count = R::Creature.or(R::HasEnchantmentSubtype(crate::card::EnchantmentSubtype::Aura));
+    let count = R::Creature.or(R::HasEnchantmentSubtype(
+        crate::card::EnchantmentSubtype::Aura,
+    ));
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "This creature gets +1/+1 for each creature you control and +1/+1 for each Aura you control.",
@@ -560,7 +586,10 @@ pub fn akroan_conscriptor() -> CardDefinition {
                 to: None,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
@@ -594,7 +623,14 @@ pub fn satyr_firedancer() -> CardDefinition {
                 amount: Value::TriggerEventAmount,
             },
         }],
-        ..creature("Satyr Firedancer", cost(&[generic(1), r()]), 1, 1, vec![CreatureType::Satyr], vec![])
+        ..creature(
+            "Satyr Firedancer",
+            cost(&[generic(1), r()]),
+            1,
+            1,
+            vec![CreatureType::Satyr],
+            vec![],
+        )
     }
 }
 
@@ -681,7 +717,10 @@ pub fn champion_of_stray_souls() -> CardDefinition {
                     filter: None,
                     count: Value::XFromCost,
                     up_to: false,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 ..Default::default()
             },
@@ -783,10 +822,16 @@ pub fn vortex_elemental() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        ..creature("Vortex Elemental", cost(&[u()]), 0, 1, vec![CreatureType::Elemental], vec![])
+        ..creature(
+            "Vortex Elemental",
+            cost(&[u()]),
+            0,
+            1,
+            vec![CreatureType::Elemental],
+            vec![],
+        )
     }
 }
-
 
 /// Floodtide Serpent — {4}{U} 4/4 that can't attack unless you bounce an
 /// enchantment you control.
@@ -795,7 +840,14 @@ pub fn floodtide_serpent() -> CardDefinition {
         keywords: vec![Keyword::AttackCostBounce(Box::new(
             R::Enchantment.and(R::ControlledByYou),
         ))],
-        ..creature("Floodtide Serpent", cost(&[generic(4), u()]), 4, 4, vec![CreatureType::Serpent], vec![])
+        ..creature(
+            "Floodtide Serpent",
+            cost(&[generic(4), u()]),
+            4,
+            4,
+            vec![CreatureType::Serpent],
+            vec![],
+        )
     }
 }
 
@@ -851,8 +903,14 @@ pub fn kiora_the_crashing_wave() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -1,
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
-                    Effect::GrantExtraLandPlay { who: PlayerRef::You, count: Value::ONE },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
+                    Effect::GrantExtraLandPlay {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                    },
                 ]),
                 ..Default::default()
             },

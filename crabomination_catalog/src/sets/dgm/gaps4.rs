@@ -40,7 +40,10 @@ pub fn notion_thief() -> CardDefinition {
 /// one.)
 pub fn boros_battleshaper() -> CardDefinition {
     let grant = |slot: u8, kw: Keyword| Effect::GrantKeyword {
-        what: Selector::TargetFiltered { slot, filter: R::Creature },
+        what: Selector::TargetFiltered {
+            slot,
+            filter: R::Creature,
+        },
         keyword: kw,
         duration: Duration::EndOfTurn,
     };
@@ -55,7 +58,10 @@ pub fn boros_battleshaper() -> CardDefinition {
         power: 5,
         toughness: 5,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::AnyPlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::AnyPlayer,
+            ),
             effect: Effect::OptionalTargets {
                 min: 0,
                 body: Box::new(Effect::Seq(vec![
@@ -91,7 +97,9 @@ pub fn varolz_the_scar_striped() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()

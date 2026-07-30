@@ -56,7 +56,9 @@ pub fn garzas_assassin() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             effect: Effect::Destroy {
-                what: target_filtered(R::Creature.and(R::HasColor(crate::mana::Color::Black).negate())),
+                what: target_filtered(
+                    R::Creature.and(R::HasColor(crate::mana::Color::Black).negate()),
+                ),
             },
             ..Default::default()
         }],

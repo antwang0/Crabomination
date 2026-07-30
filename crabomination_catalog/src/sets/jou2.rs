@@ -12,7 +12,7 @@ use crate::effect::{
     AttackingTokenCleanup, Duration, Effect, EventKind, EventScope, EventSpec, ExtraManaKind,
     PlayerRef, Predicate, Selector, ZoneDest, ZoneRef,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(
     name: &'static str,
@@ -26,7 +26,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: ct, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: ct,
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         keywords: kw,
@@ -50,7 +53,13 @@ fn nyx_creature(
 }
 
 fn spell(name: &'static str, mana: ManaCost, kind: CardType, effect: Effect) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![kind], effect, ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![kind],
+        effect,
+        ..Default::default()
+    }
 }
 
 // ── Strive (CR 702.122) ──────────────────────────────────────────────────────
@@ -217,7 +226,10 @@ pub fn colossal_heroics() -> CardDefinition {
                 toughness: Value::Const(2),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
         ]),
     )
 }
@@ -231,7 +243,9 @@ pub fn consign_to_dust() -> CardDefinition {
         CardType::Instant,
         cost(&[generic(2), g()]),
         R::Artifact.or(R::Enchantment),
-        Effect::Destroy { what: Selector::Target(0) },
+        Effect::Destroy {
+            what: Selector::Target(0),
+        },
     )
 }
 
@@ -244,7 +258,10 @@ pub fn kioras_dismissal() -> CardDefinition {
         CardType::Instant,
         cost(&[u()]),
         R::Enchantment,
-        Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+        Effect::Move {
+            what: Selector::Target(0),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        },
     )
 }
 
@@ -291,7 +308,9 @@ pub fn silence_the_believers() -> CardDefinition {
         CardType::Instant,
         cost(&[generic(2), b()]),
         R::Creature,
-        Effect::Exile { what: Selector::Target(0) },
+        Effect::Exile {
+            what: Selector::Target(0),
+        },
     )
 }
 
@@ -310,7 +329,10 @@ pub fn harness_by_force() -> CardDefinition {
                 to: None,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
@@ -347,7 +369,9 @@ pub fn hour_of_need() -> CardDefinition {
                     ..Default::default()
                 },
             },
-            Effect::Exile { what: Selector::Target(0) },
+            Effect::Exile {
+                what: Selector::Target(0),
+            },
         ]),
     )
 }
@@ -390,7 +414,9 @@ pub fn polymorphous_rush() -> CardDefinition {
         cost(&[generic(1), u()]),
         R::Creature.and(R::ControlledByYou),
         Effect::Seq(vec![
-            Effect::ChoosePermanentForSource { filter: R::Creature },
+            Effect::ChoosePermanentForSource {
+                filter: R::Creature,
+            },
             Effect::BecomeCopyOfFor {
                 what: Selector::Target(0),
                 source: Selector::ChosenPermanentOfSource,
@@ -482,7 +508,10 @@ pub fn setessan_tactics() -> CardDefinition {
 fn constellation(body: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
-            Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Enchantment },
+            Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Enchantment,
+            },
         ),
         effect: body,
     }
@@ -819,9 +848,15 @@ pub fn tethmos_high_priest() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![heroic(Effect::Move {
             what: target_filtered(
-                R::Creature.and(R::InGraveyard).and(R::ManaValueAtMost(2)).and(R::OwnedByYou),
+                R::Creature
+                    .and(R::InGraveyard)
+                    .and(R::ManaValueAtMost(2))
+                    .and(R::OwnedByYou),
             ),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         })],
         ..creature(
             "Tethmos High Priest",
@@ -974,7 +1009,10 @@ pub fn sigiled_starfish() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..creature(
@@ -1091,7 +1129,10 @@ pub fn swarmborn_giant() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![monstrosity(cost(&[generic(4), g(), g()]), 2)],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::ControllerDealtCombatDamage, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::ControllerDealtCombatDamage,
+                EventScope::SelfSource,
+            ),
             effect: Effect::SacrificeSource,
         }],
         static_abilities: vec![StaticAbility {
@@ -1224,9 +1265,14 @@ pub fn spiteful_blow() -> CardDefinition {
         cost(&[generic(4), b(), b()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Creature) },
             Effect::Destroy {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Land },
+                what: target_filtered(R::Creature),
+            },
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Land,
+                },
             },
         ]),
     )
@@ -1244,11 +1290,13 @@ pub fn spite_of_mogis() -> CardDefinition {
                 to: target_filtered(R::Creature),
                 amount: Value::count(Selector::EachMatching {
                     zone: ZoneRef::Graveyard(PlayerRef::You),
-                    filter: R::HasCardType(CardType::Instant)
-                        .or(R::HasCardType(CardType::Sorcery)),
+                    filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
                 }),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
     )
 }
@@ -1261,7 +1309,10 @@ pub fn starfall() -> CardDefinition {
         cost(&[generic(4), r()]),
         CardType::Instant,
         Effect::Seq(vec![
-            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(3) },
+            Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::Const(3),
+            },
             Effect::If {
                 cond: Predicate::EntityMatches {
                     what: Selector::Target(0),
@@ -1329,7 +1380,10 @@ pub fn rise_of_eagles() -> CardDefinition {
                     ..Default::default()
                 },
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
     )
 }
@@ -1439,9 +1493,7 @@ pub fn ritual_of_the_returned() -> CardDefinition {
 /// Pull from the Deep — {2}{U}{U} Sorcery. Return up to one target instant and
 /// up to one target sorcery card from your graveyard to your hand; exile this.
 pub fn pull_from_the_deep() -> CardDefinition {
-    let gy = |t: CardType| {
-        R::HasCardType(t).and(R::InGraveyard).and(R::OwnedByYou)
-    };
+    let gy = |t: CardType| R::HasCardType(t).and(R::InGraveyard).and(R::OwnedByYou);
     CardDefinition {
         exile_on_resolve: true,
         ..spell(
@@ -1456,7 +1508,10 @@ pub fn pull_from_the_deep() -> CardDefinition {
                         to: ZoneDest::Hand(PlayerRef::You),
                     },
                     Effect::Move {
-                        what: Selector::TargetFiltered { slot: 1, filter: gy(CardType::Sorcery) },
+                        what: Selector::TargetFiltered {
+                            slot: 1,
+                            filter: gy(CardType::Sorcery),
+                        },
                         to: ZoneDest::Hand(PlayerRef::You),
                     },
                 ])),
@@ -1473,8 +1528,12 @@ pub fn deicide() -> CardDefinition {
         cost(&[generic(1), w()]),
         CardType::Instant,
         Effect::Seq(vec![
-            Effect::ExileSameNameAsTarget { what: target_filtered(R::Enchantment) },
-            Effect::Exile { what: Selector::Target(0) },
+            Effect::ExileSameNameAsTarget {
+                what: target_filtered(R::Enchantment),
+            },
+            Effect::Exile {
+                what: Selector::Target(0),
+            },
         ]),
     )
 }
@@ -1492,7 +1551,10 @@ pub fn oppressive_rays() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::CantAttackOrBlockUnlessPay(3)],
             ..Default::default()
@@ -1516,7 +1578,10 @@ pub fn market_festival() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         static_abilities: vec![StaticAbility {
             description: "Whenever enchanted land is tapped for mana, its controller adds two \
                           mana in any combination of colors.",
@@ -1540,7 +1605,9 @@ pub fn thassas_ire() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), u()]),
-            effect: Effect::TapOrUntap { what: target_filtered(R::Creature) },
+            effect: Effect::TapOrUntap {
+                what: target_filtered(R::Creature),
+            },
             ..Default::default()
         }],
         ..Default::default()

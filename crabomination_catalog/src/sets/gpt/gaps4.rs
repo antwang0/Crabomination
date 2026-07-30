@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, OpeningHandEffect, PlayerRef, Selector, StaticEffect};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// 1/1 white Pegasus token with flying.
 fn pegasus_token() -> TokenDefinition {
@@ -21,7 +21,10 @@ fn pegasus_token() -> TokenDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
         keywords: vec![Keyword::Flying],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Pegasus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pegasus],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -34,7 +37,10 @@ fn saproling_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Saproling], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Saproling],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -61,13 +67,19 @@ pub fn starved_rusalka() -> CardDefinition {
         name: "Starved Rusalka",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[g()]),
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -81,7 +93,10 @@ pub fn stratozeppelid() -> CardDefinition {
         name: "Stratozeppelid",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
@@ -104,7 +119,10 @@ pub fn schismotivate() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 power: Value::Const(-4),
                 toughness: Value::ZERO,
                 duration: Duration::EndOfTurn,
@@ -125,7 +143,10 @@ pub fn to_arms() -> CardDefinition {
                 what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                 up_to: None,
             },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -140,7 +161,10 @@ fn weird_token() -> TokenDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue],
         keywords: vec![Keyword::Defender, Keyword::Flying],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Weird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Weird],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -154,7 +178,11 @@ pub fn thunderheads() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Replicate(cost(&[generic(2), u()]))],
         effect: Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: weird_token() },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: weird_token(),
+            },
             Effect::ExileLastCreatedTokensAtNextEndStep,
         ]),
         ..Default::default()
@@ -168,7 +196,10 @@ pub fn sky_swallower() -> CardDefinition {
         name: "Sky Swallower",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Leviathan], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Leviathan],
+            ..Default::default()
+        },
         power: 8,
         toughness: 8,
         keywords: vec![Keyword::Flying],
@@ -194,7 +225,10 @@ pub fn infiltrators_magemark() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         static_abilities: vec![StaticAbility {
             description: "Creatures you control that are enchanted get +1/+1 and can't be blocked except by creatures with defender.",
             effect: StaticEffect::AnthemForFilter {
@@ -230,7 +264,9 @@ pub fn teysa_orzhov_scion() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((R::Creature.and(R::HasColor(Color::White)), 3)),
-            effect: Effect::Exile { what: target_filtered(R::Creature) },
+            effect: Effect::Exile {
+                what: target_filtered(R::Creature),
+            },
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -354,7 +390,10 @@ pub fn leyline_of_the_meek() -> CardDefinition {
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![anthem(false), anthem(true)],
-        opening_hand: Some(OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
+        opening_hand: Some(OpeningHandEffect::StartInPlay {
+            tapped: false,
+            extra: Effect::Noop,
+        }),
         ..Default::default()
     }
 }
@@ -370,7 +409,10 @@ pub fn leyline_of_singularity() -> CardDefinition {
             description: "All nonland permanents are legendary.",
             effect: StaticEffect::AllNonlandPermanentsAreLegendary,
         }],
-        opening_hand: Some(OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
+        opening_hand: Some(OpeningHandEffect::StartInPlay {
+            tapped: false,
+            extra: Effect::Noop,
+        }),
         ..Default::default()
     }
 }
@@ -381,10 +423,16 @@ pub fn leyline_of_singularity() -> CardDefinition {
 /// creature, or create a 1/1 green Saproling.
 pub fn ulasht_the_hate_seed() -> CardDefinition {
     let red = Value::count(Selector::EachPermanent(
-        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource).and(R::HasColor(Color::Red)),
+        R::Creature
+            .and(R::ControlledByYou)
+            .and(R::OtherThanSource)
+            .and(R::HasColor(Color::Red)),
     ));
     let green = Value::count(Selector::EachPermanent(
-        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource).and(R::HasColor(Color::Green)),
+        R::Creature
+            .and(R::ControlledByYou)
+            .and(R::OtherThanSource)
+            .and(R::HasColor(Color::Green)),
     ));
     CardDefinition {
         name: "Ulasht, the Hate Seed",
@@ -402,7 +450,10 @@ pub fn ulasht_the_hate_seed() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
             effect: Effect::ChooseMode(vec![
-                Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::ONE },
+                Effect::DealDamage {
+                    to: target_filtered(R::Creature),
+                    amount: Value::ONE,
+                },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
@@ -431,7 +482,9 @@ pub fn sanguine_praetor() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::DestroyEachCreatureWithManaValue { value: Value::SacrificedManaValue },
+            effect: Effect::DestroyEachCreatureWithManaValue {
+                value: Value::SacrificedManaValue,
+            },
             ..Default::default()
         }],
         ..Default::default()

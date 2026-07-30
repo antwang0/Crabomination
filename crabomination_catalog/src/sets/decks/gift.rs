@@ -9,11 +9,14 @@ use crate::card::{
 };
 use crate::effect::shortcut::{each_your_creature, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{cost, b, generic, g, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Opponent draws one card — the "Gift a card" payload.
 fn opponent_draws_one() -> Effect {
-    Effect::Draw { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) }
+    Effect::Draw {
+        who: Selector::Player(PlayerRef::EachOpponent),
+        amount: Value::Const(1),
+    }
 }
 
 /// Opponent creates a Food token — the "Gift a Food" payload.
@@ -46,7 +49,9 @@ fn tapped_fish_token() -> TokenDefinition {
 /// gets +2/+2; if the gift was promised, it also gains indestructible.
 pub fn crumb_and_get_it() -> CardDefinition {
     let pump = Effect::PumpPT {
-        what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+        what: target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ),
         power: Value::Const(2),
         toughness: Value::Const(2),
         duration: Duration::EndOfTurn,
@@ -80,7 +85,10 @@ pub fn crumb_and_get_it() -> CardDefinition {
 /// creature; if the gift was promised, also deal 3 damage to that creature's
 /// controller.
 pub fn blooming_blast() -> CardDefinition {
-    let bolt = Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) };
+    let bolt = Effect::DealDamage {
+        to: Selector::Target(0),
+        amount: Value::Const(2),
+    };
     CardDefinition {
         name: "Blooming Blast",
         cost: cost(&[generic(1), r()]),
@@ -214,7 +222,11 @@ pub fn dawns_truce() -> CardDefinition {
         who: PlayerRef::You,
         filter: SelectionRequirement::Permanent,
     };
-    let grant = |kw| Effect::GrantKeyword { what: your_perms(), keyword: kw, duration: Duration::EndOfTurn };
+    let grant = |kw| Effect::GrantKeyword {
+        what: your_perms(),
+        keyword: kw,
+        duration: Duration::EndOfTurn,
+    };
     CardDefinition {
         name: "Dawn's Truce",
         cost: cost(&[generic(1), w()]),
@@ -237,7 +249,10 @@ pub fn dawns_truce() -> CardDefinition {
 pub fn wildfire_howl() -> CardDefinition {
     let sweep = || Effect::ForEach {
         selector: Selector::EachPermanent(SelectionRequirement::Creature),
-        body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(2) }),
+        body: Box::new(Effect::DealDamage {
+            to: Selector::TriggerSource,
+            amount: Value::Const(2),
+        }),
     };
     CardDefinition {
         name: "Wildfire Howl",
@@ -248,7 +263,10 @@ pub fn wildfire_howl() -> CardDefinition {
             label: "a card",
             gifted_effect: Effect::Seq(vec![
                 opponent_draws_one(),
-                Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+                Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(1),
+                },
                 sweep(),
             ]),
         })),
@@ -264,11 +282,9 @@ pub fn mind_spiral() -> CardDefinition {
         who: target_filtered(SelectionRequirement::Player),
         amount: Value::Const(3),
     };
-    let opp_creature = || {
-        Selector::TargetFiltered {
-            slot: 1,
-            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-        }
+    let opp_creature = || Selector::TargetFiltered {
+        slot: 1,
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
     };
     CardDefinition {
         name: "Mind Spiral",
@@ -284,7 +300,9 @@ pub fn mind_spiral() -> CardDefinition {
                     definition: tapped_fish_token(),
                 },
                 draw3(),
-                Effect::Tap { what: opp_creature() },
+                Effect::Tap {
+                    what: opp_creature(),
+                },
                 Effect::AddCounter {
                     what: opp_creature(),
                     kind: crate::card::CounterType::Stun,
@@ -331,7 +349,10 @@ pub fn sazacaps_brew() -> CardDefinition {
         name: "Sazacap's Brew",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
-        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1, filter: None }],
+        additional_cast_cost: vec![AdditionalCastCost::Discard {
+            count: 1,
+            filter: None,
+        }],
         effect: draw2(),
         gift: Some(Box::new(Gift {
             label: "a tapped Fish",
@@ -345,7 +366,8 @@ pub fn sazacaps_brew() -> CardDefinition {
                 Effect::PumpPT {
                     what: Selector::TargetFiltered {
                         slot: 1,
-                        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
                     },
                     power: Value::Const(2),
                     toughness: Value::Const(0),
@@ -369,7 +391,10 @@ pub fn dewdrop_cure() -> CardDefinition {
             .and(SelectionRequirement::ManaValueAtMost(2)),
         effect: Box::new(Effect::Move {
             what: Selector::Target(0),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         }),
     };
     CardDefinition {
@@ -409,7 +434,8 @@ pub fn consumed_by_greed() -> CardDefinition {
                 Effect::Move {
                     what: Selector::TargetFiltered {
                         slot: 0,
-                        filter: SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::InYourGraveyard),
                     },
                     to: ZoneDest::Hand(PlayerRef::You),
                 },

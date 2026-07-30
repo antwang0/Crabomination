@@ -3,19 +3,25 @@
 //! `classic_sets/gtc`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EnchantmentSubtype,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, Subtypes,
-    TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect,
+    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword,
+    SelectionRequirement as R, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, extort, target_any, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, Selector};
-use crate::mana::{b, colored, cost, g, generic, hybrid, r, w, Color};
+use crate::mana::{Color, b, colored, cost, g, generic, hybrid, r, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 fn aura() -> Subtypes {
-    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() }
+    Subtypes {
+        enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+        ..Default::default()
+    }
 }
 
 // ── Guild Keyrunes ──────────────────────────────────────────────────────────
@@ -37,7 +43,10 @@ fn keyrune(
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(vec![c1, c2], Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColors(vec![c1, c2], Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -67,23 +76,58 @@ fn keyrune(
 
 /// Boros Keyrune — animates into a 1/1 Soldier with double strike.
 pub fn boros_keyrune() -> CardDefinition {
-    keyrune("Boros Keyrune", Color::Red, Color::White, (1, 1), CreatureType::Soldier, vec![Keyword::DoubleStrike])
+    keyrune(
+        "Boros Keyrune",
+        Color::Red,
+        Color::White,
+        (1, 1),
+        CreatureType::Soldier,
+        vec![Keyword::DoubleStrike],
+    )
 }
 /// Dimir Keyrune — a 2/2 Horror that can't be blocked (modeled as EOT Unblockable).
 pub fn dimir_keyrune() -> CardDefinition {
-    keyrune("Dimir Keyrune", Color::Blue, Color::Black, (2, 2), CreatureType::Horror, vec![Keyword::Unblockable])
+    keyrune(
+        "Dimir Keyrune",
+        Color::Blue,
+        Color::Black,
+        (2, 2),
+        CreatureType::Horror,
+        vec![Keyword::Unblockable],
+    )
 }
 /// Gruul Keyrune — a 3/2 Beast with trample.
 pub fn gruul_keyrune() -> CardDefinition {
-    keyrune("Gruul Keyrune", Color::Red, Color::Green, (3, 2), CreatureType::Beast, vec![Keyword::Trample])
+    keyrune(
+        "Gruul Keyrune",
+        Color::Red,
+        Color::Green,
+        (3, 2),
+        CreatureType::Beast,
+        vec![Keyword::Trample],
+    )
 }
 /// Orzhov Keyrune — a 1/4 Thrull with lifelink.
 pub fn orzhov_keyrune() -> CardDefinition {
-    keyrune("Orzhov Keyrune", Color::White, Color::Black, (1, 4), CreatureType::Thrull, vec![Keyword::Lifelink])
+    keyrune(
+        "Orzhov Keyrune",
+        Color::White,
+        Color::Black,
+        (1, 4),
+        CreatureType::Thrull,
+        vec![Keyword::Lifelink],
+    )
 }
 /// Simic Keyrune — a 2/3 Crab with hexproof.
 pub fn simic_keyrune() -> CardDefinition {
-    keyrune("Simic Keyrune", Color::Green, Color::Blue, (2, 3), CreatureType::Crab, vec![Keyword::Hexproof])
+    keyrune(
+        "Simic Keyrune",
+        Color::Green,
+        Color::Blue,
+        (2, 3),
+        CreatureType::Crab,
+        vec![Keyword::Hexproof],
+    )
 }
 
 // ── Extort creatures ────────────────────────────────────────────────────────
@@ -152,7 +196,11 @@ pub fn ripscale_predator() -> CardDefinition {
 pub fn merfolk_of_the_depths() -> CardDefinition {
     CardDefinition {
         name: "Merfolk of the Depths",
-        cost: cost(&[generic(4), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[
+            generic(4),
+            hybrid(Color::Green, Color::Blue),
+            hybrid(Color::Green, Color::Blue),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: creatures(vec![CreatureType::Merfolk, CreatureType::Soldier]),
         power: 4,
@@ -166,12 +214,18 @@ pub fn merfolk_of_the_depths() -> CardDefinition {
 pub fn deathcult_rogue() -> CardDefinition {
     CardDefinition {
         name: "Deathcult Rogue",
-        cost: cost(&[generic(1), hybrid(Color::Blue, Color::Black), hybrid(Color::Blue, Color::Black)]),
+        cost: cost(&[
+            generic(1),
+            hybrid(Color::Blue, Color::Black),
+            hybrid(Color::Blue, Color::Black),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: creatures(vec![CreatureType::Human, CreatureType::Rogue]),
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::CantBeBlockedExceptBy(Box::new(R::HasCreatureType(CreatureType::Rogue)))],
+        keywords: vec![Keyword::CantBeBlockedExceptBy(Box::new(
+            R::HasCreatureType(CreatureType::Rogue),
+        ))],
         ..Default::default()
     }
 }
@@ -204,7 +258,10 @@ pub fn spark_trooper() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Trample, Keyword::Lifelink, Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::End), EventScope::AnyPlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::AnyPlayer,
+            ),
             effect: Effect::SacrificeSource,
         }],
         ..Default::default()
@@ -248,7 +305,10 @@ pub fn holy_mantle() -> CardDefinition {
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Enchantment],
         subtypes: aura(),
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 2,
@@ -267,9 +327,15 @@ pub fn forced_adaptation() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Enchantment],
         subtypes: aura(),
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::AddCounter {
                 what: Selector::AttachedTo(Box::new(Selector::This)),
                 kind: CounterType::PlusOnePlusOne,
@@ -289,7 +355,9 @@ pub fn shielded_passage() -> CardDefinition {
         name: "Shielded Passage",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::PreventAllDamageThisTurn { target: target_filtered(R::Creature) },
+        effect: Effect::PreventAllDamageThisTurn {
+            target: target_filtered(R::Creature),
+        },
         ..Default::default()
     }
 }
@@ -332,8 +400,16 @@ pub fn aerial_maneuver() -> CardDefinition {
                 toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             },
-            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Flying, duration: Duration::EndOfTurn },
-            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
         ]),
         ..Default::default()
     }
@@ -347,8 +423,15 @@ pub fn mugging() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(2) },
-            Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn },
+            Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::Const(2),
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
         ]),
         ..Default::default()
     }
@@ -376,7 +459,10 @@ pub fn homing_lightning() -> CardDefinition {
         name: "Homing Lightning",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::SameNameDamage { subject: target_filtered(R::Creature), amount: Value::Const(4) },
+        effect: Effect::SameNameDamage {
+            subject: target_filtered(R::Creature),
+            amount: Value::Const(4),
+        },
         ..Default::default()
     }
 }
@@ -390,7 +476,10 @@ pub fn massive_raid() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_any(),
-            amount: Value::CountOf(Box::new(Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature })),
+            amount: Value::CountOf(Box::new(Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: R::Creature,
+            })),
         },
         ..Default::default()
     }
@@ -405,7 +494,10 @@ pub fn ground_assault() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(R::Creature),
-            amount: Value::CountOf(Box::new(Selector::ControlledBy { who: PlayerRef::You, filter: R::Land })),
+            amount: Value::CountOf(Box::new(Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: R::Land,
+            })),
         },
         ..Default::default()
     }

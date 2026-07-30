@@ -10,12 +10,17 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x, ManaCost};
+use crate::mana::{
+    Color, ManaCost, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x,
+};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -180,8 +185,7 @@ pub fn mizzium_mortars() -> CardDefinition {
             sacrifice_permanents: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
                 body: Box::new(Effect::DealDamage {
                     to: Selector::TriggerSource,
@@ -195,7 +199,8 @@ pub fn mizzium_mortars() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -322,9 +327,9 @@ pub fn past_in_flames() -> CardDefinition {
             not_your_turn_only: false,
             target_filter: None,
             condition: None,
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
+            exile_from_graveyard_count: 0,
+            return_to_hand: None,
+            sacrifice_permanents: None,
             effect_override: None,
             dash: false,
             blitz: false,
@@ -333,7 +338,8 @@ pub fn past_in_flames() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -412,9 +418,9 @@ pub fn resurgent_belief() -> CardDefinition {
             not_your_turn_only: false,
             target_filter: None,
             condition: None,
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
+            exile_from_graveyard_count: 0,
+            return_to_hand: None,
+            sacrifice_permanents: None,
             effect_override: None,
             dash: false,
             blitz: false,
@@ -423,7 +429,8 @@ pub fn resurgent_belief() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -457,7 +464,9 @@ pub fn enthusiastic_study() -> CardDefinition {
                 keyword: Keyword::Trample,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Learn { who: PlayerRef::You },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -494,7 +503,7 @@ pub fn forked_bolt() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {
-                retaliate_to_source: false,
+            retaliate_to_source: false,
             total: Value::Const(2),
             filter: SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
@@ -682,8 +691,7 @@ pub fn sublime_epiphany() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     source: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     extra_creature_types: vec![],
                     extra_card_types: vec![],
@@ -735,14 +743,9 @@ pub fn persist() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(
-                        SelectionRequirement::HasSupertype(
-                            crate::card::Supertype::Legendary,
-                        )
-                        .negate(),
-                    ),
-                ),
+                what: target_filtered(SelectionRequirement::Creature.and(
+                    SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary).negate(),
+                )),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -891,7 +894,7 @@ pub fn damnable_pact() -> CardDefinition {
     CardDefinition {
         name: "Damnable Pact",
         cost: cost(&[x(), b(), b()]),
- // X is added at cast time via `x_value`
+        // X is added at cast time via `x_value`
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Draw {
@@ -1128,7 +1131,6 @@ pub fn skywarp_skaab() -> CardDefinition {
     }
 }
 
-
 // ── Anger (STA reprint, Judgment) ───────────────────────────────────────────
 
 /// Anger — {3}{R} Creature — Incarnation, 2/2 (Judgment / STA reprint).
@@ -1170,7 +1172,6 @@ pub fn anger() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Triskaidekaphile (STX 2021, mono blue) ──────────────────────────────────
 
@@ -1223,9 +1224,7 @@ pub fn triskaidekaphile() -> CardDefinition {
                         who: Selector::You,
                         amount: Value::Const(1),
                     },
-                    Effect::SetNoMaxHandSize {
-                        who: Selector::You,
-                    },
+                    Effect::SetNoMaxHandSize { who: Selector::You },
                 ]),
             },
             // Upkeep: if you have exactly 13 cards in hand, you win.
@@ -1244,7 +1243,6 @@ pub fn triskaidekaphile() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Excellent Education (STX 2021, mono white) ──────────────────────────────
 
@@ -1278,7 +1276,6 @@ pub fn excellent_education() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Sproutback Trudge (STX 2021, mono green) ────────────────────────────────
 
@@ -1320,7 +1317,6 @@ pub fn sproutback_trudge() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Wonder (STA reprint, Judgment) ──────────────────────────────────────────
 
@@ -1389,7 +1385,6 @@ pub fn wonder() -> CardDefinition {
     }
 }
 
-
 // ── Brawn (STA reprint, Judgment) ───────────────────────────────────────────
 
 /// Brawn — {3}{G} Creature — Incarnation, 3/3 (Judgment / STA reprint).
@@ -1428,7 +1423,6 @@ pub fn brawn() -> CardDefinition {
     }
 }
 
-
 // ── Deep Analysis (STA reprint, Torment) ───────────────────────────────────
 
 /// Deep Analysis — {3}{U} Sorcery (STA reprint, originally Torment).
@@ -1453,7 +1447,6 @@ pub fn deep_analysis() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Kasmina's Transmutation (STA reprint, Strixhaven Loyalty) ──────────────
 
@@ -1482,7 +1475,6 @@ pub fn kasminas_transmutation() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Crippling Fear (STA reprint, Conflux) ──────────────────────────────────
 
@@ -1517,7 +1509,6 @@ pub fn crippling_fear() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Tribute to Hunger (STA reprint, Time Spiral) ───────────────────────────
 
@@ -1558,7 +1549,6 @@ pub fn tribute_to_hunger() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Valor (STA reprint, Judgment) ───────────────────────────────────────────
 
@@ -1773,8 +1763,10 @@ pub fn tome_of_the_infinite() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -1883,8 +1875,10 @@ pub fn heirloom_mirror() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             ActivatedAbility {
@@ -1904,8 +1898,10 @@ pub fn heirloom_mirror() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -2312,7 +2308,9 @@ pub fn strixhaven_stadium() -> CardDefinition {
                                     kind: CounterType::Point,
                                 },
                             },
-                            Effect::LoseGame { who: PlayerRef::Target(0) },
+                            Effect::LoseGame {
+                                who: PlayerRef::Target(0),
+                            },
                         ])),
                         else_: Box::new(Effect::Noop),
                     },
@@ -2381,7 +2379,9 @@ pub fn rise_of_extus() -> CardDefinition {
                 to: ZoneDest::Exile,
             },
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
-            Effect::Learn { who: PlayerRef::You },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }

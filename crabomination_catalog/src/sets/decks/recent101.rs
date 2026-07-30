@@ -64,7 +64,10 @@ pub fn sunblade_samurai() -> CardDefinition {
                     filter: R::IsBasicLand.and(R::HasLandType(LandType::Plains)),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ]),
             ..Default::default()
         }],
@@ -114,7 +117,9 @@ pub fn undercity_scrounger() -> CardDefinition {
         toughness: 4,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            condition: Some(Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(1) }),
+            condition: Some(Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                at_least: Value::Const(1),
+            }),
             effect: mint_treasures(1),
             ..Default::default()
         }],
@@ -189,14 +194,20 @@ pub fn mnemonic_sphere() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(1), u()]),
                 sac_cost: true,
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[u()]),
                 from_hand: true,
                 discard_self_cost: true,
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
         ],
@@ -213,16 +224,19 @@ pub fn suit_up() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::BecomeCreature {
-                what: target_filtered(R::Creature.or(R::HasArtifactSubtype(
-                    crate::card::ArtifactSubtype::Vehicle,
-                ))),
+                what: target_filtered(
+                    R::Creature.or(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Vehicle)),
+                ),
                 power: Value::Const(4),
                 toughness: Value::Const(5),
                 creature_types: vec![],
                 keywords: vec![],
                 duration: crate::effect::Duration::EndOfTurn,
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -238,7 +252,10 @@ pub fn careful_consideration() -> CardDefinition {
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
             Effect::If {
                 cond: Predicate::Any(vec![
                     Predicate::CurrentStepIs(TurnStep::PreCombatMain),

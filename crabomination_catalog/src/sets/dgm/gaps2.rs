@@ -2,15 +2,19 @@
 //! Krasis Incubation, and the Fuse split cards. Tests in `classic_sets/dgm`.
 
 use crate::card::{
-    ActivatedAbility, AlternativeCost, CardDefinition, CardType, CreatureType, Effect, EnchantmentSubtype,
-    EquipBonus, Keyword, SelectionRequirement as R, SplitCard, SplitHalf, Subtypes, Value,
+    ActivatedAbility, AlternativeCost, CardDefinition, CardType, CreatureType, Effect,
+    EnchantmentSubtype, EquipBonus, Keyword, SelectionRequirement as R, SplitCard, SplitHalf,
+    Subtypes, Value,
 };
-use crate::effect::shortcut::{target_filtered};
+use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 
 /// Aetherling — {4}{U}{U} 4/5 Shapeshifter. {U}: blink until the next end step;
@@ -36,7 +40,9 @@ pub fn aetherling() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[u()]),
-                effect: Effect::ExileReturnToOwnerNextEndStep { what: Selector::This },
+                effect: Effect::ExileReturnToOwnerNextEndStep {
+                    what: Selector::This,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -61,7 +67,10 @@ pub fn aetherling() -> CardDefinition {
 pub fn dragonshift() -> CardDefinition {
     let animate = |what: Selector| {
         Effect::Seq(vec![
-            Effect::LoseAllAbilities { what: what.clone(), duration: Duration::EndOfTurn },
+            Effect::LoseAllAbilities {
+                what: what.clone(),
+                duration: Duration::EndOfTurn,
+            },
             Effect::BecomeColor {
                 what: what.clone(),
                 colors: vec![Color::Blue, Color::Red],
@@ -73,8 +82,17 @@ pub fn dragonshift() -> CardDefinition {
                 creature_types: vec![CreatureType::Dragon],
                 duration: Duration::EndOfTurn,
             },
-            Effect::SetBasePT { what: what.clone(), power: Value::Const(4), toughness: Value::Const(4), duration: Duration::EndOfTurn },
-            Effect::GrantKeyword { what, keyword: Keyword::Flying, duration: Duration::EndOfTurn },
+            Effect::SetBasePT {
+                what: what.clone(),
+                power: Value::Const(4),
+                toughness: Value::Const(4),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
         ])
     };
     CardDefinition {
@@ -106,9 +124,16 @@ pub fn krasis_incubation() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
-            keywords: vec![Keyword::CantAttack, Keyword::CantBlock, Keyword::CantActivateAbilities],
+            keywords: vec![
+                Keyword::CantAttack,
+                Keyword::CantBlock,
+                Keyword::CantActivateAbilities,
+            ],
             ..Default::default()
         }),
         activated_abilities: vec![ActivatedAbility {
@@ -120,7 +145,10 @@ pub fn krasis_incubation() -> CardDefinition {
                     kind: crate::card::CounterType::PlusOnePlusOne,
                     amount: Value::Const(2),
                 },
-                Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
             ]),
             ..Default::default()
         }],

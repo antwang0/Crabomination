@@ -31,7 +31,6 @@ pub fn bloodscale_prowler() -> CardDefinition {
     }
 }
 
-
 /// Ordruun Commando — {3}{R} 4/1 Minotaur Soldier. {W}: Prevent the next 1
 /// damage that would be dealt to this creature this turn.
 pub fn ordruun_commando() -> CardDefinition {
@@ -47,7 +46,10 @@ pub fn ordruun_commando() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
-            effect: Effect::PreventNextDamage { target: Selector::This, amount: Value::ONE },
+            effect: Effect::PreventNextDamage {
+                target: Selector::This,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -128,26 +130,39 @@ pub fn vigean_hydropon() -> CardDefinition {
 
 // ── Rakdos Hellbent ─────────────────────────────────────────────────────────
 
-
 /// Twinstrike — {3}{B}{R} Instant. Deal 2 damage to each of two target
 /// creatures; Hellbent — destroy those creatures instead if you have no cards
 /// in hand.
 pub fn twinstrike() -> CardDefinition {
-    let t0 = || Selector::TargetFiltered { slot: 0, filter: R::Creature };
-    let t1 = || Selector::TargetFiltered { slot: 1, filter: R::Creature };
+    let t0 = || Selector::TargetFiltered {
+        slot: 0,
+        filter: R::Creature,
+    };
+    let t1 = || Selector::TargetFiltered {
+        slot: 1,
+        filter: R::Creature,
+    };
     CardDefinition {
         name: "Twinstrike",
         cost: cost(&[generic(3), b(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::If {
-            cond: Predicate::HellbentActive { who: PlayerRef::You },
+            cond: Predicate::HellbentActive {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::Seq(vec![
                 Effect::Destroy { what: t0() },
                 Effect::Destroy { what: t1() },
             ])),
             else_: Box::new(Effect::Seq(vec![
-                Effect::DealDamage { to: t0(), amount: Value::Const(2) },
-                Effect::DealDamage { to: t1(), amount: Value::Const(2) },
+                Effect::DealDamage {
+                    to: t0(),
+                    amount: Value::Const(2),
+                },
+                Effect::DealDamage {
+                    to: t1(),
+                    amount: Value::Const(2),
+                },
             ])),
         },
         ..Default::default()
@@ -155,8 +170,6 @@ pub fn twinstrike() -> CardDefinition {
 }
 
 // ── Izzet / Dimir ───────────────────────────────────────────────────────────
-
-
 
 /// Poisonbelly Ogre — {4}{B} 3/3 Ogre Warrior. Whenever another creature
 /// enters, its controller loses 1 life.
@@ -187,7 +200,6 @@ pub fn poisonbelly_ogre() -> CardDefinition {
     }
 }
 
-
 /// Devouring Light — {1}{W}{W} Instant with Convoke. Exile target attacking or
 /// blocking creature.
 pub fn devouring_light() -> CardDefinition {
@@ -211,7 +223,10 @@ pub fn fangren_pathcutter() -> CardDefinition {
         name: "Fangren Pathcutter",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 6,
         triggered_abilities: vec![on_attack(Effect::GrantKeyword {

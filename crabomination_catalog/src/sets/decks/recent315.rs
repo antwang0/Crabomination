@@ -2,9 +2,7 @@
 //! (CR 616.1c replacement ordering, CR 704.7 single loss replacement).
 //! Tests in `core_rules/cr_recent42`.
 
-use crate::card::{
-    CardDefinition, CardType, CreatureType, Selector, StaticAbility, Subtypes,
-};
+use crate::card::{CardDefinition, CardType, CreatureType, Selector, StaticAbility, Subtypes};
 use crate::effect::StaticEffect;
 use crate::mana::{cost, generic};
 
@@ -29,12 +27,17 @@ pub fn rusted_sentinel() -> CardDefinition {
         name: "Rusted Sentinel",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         static_abilities: vec![StaticAbility {
             description: "This creature enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         ..Default::default()
     }

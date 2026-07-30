@@ -14,7 +14,10 @@ pub fn sedge_scorpion() -> CardDefinition {
         name: "Sedge Scorpion",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Scorpion], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Scorpion],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Deathtouch],
@@ -28,7 +31,10 @@ pub fn pharikas_chosen() -> CardDefinition {
         name: "Pharika's Chosen",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Deathtouch],
@@ -42,7 +48,10 @@ pub fn yoked_ox() -> CardDefinition {
         name: "Yoked Ox",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ox], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ox],
+            ..Default::default()
+        },
         toughness: 4,
         ..Default::default()
     }
@@ -54,7 +63,10 @@ pub fn two_headed_cerberus() -> CardDefinition {
         name: "Two-Headed Cerberus",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::DoubleStrike],
@@ -78,7 +90,10 @@ pub fn voyaging_satyr() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: true,
-            effect: Effect::Untap { what: target_filtered(SelectionRequirement::Land), up_to: None },
+            effect: Effect::Untap {
+                what: target_filtered(SelectionRequirement::Land),
+                up_to: None,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -117,7 +132,10 @@ pub fn voyages_end() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Creature),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -145,7 +163,10 @@ pub fn vulpine_goliath() -> CardDefinition {
         name: "Vulpine Goliath",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Fox], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fox],
+            ..Default::default()
+        },
         power: 6,
         toughness: 5,
         keywords: vec![Keyword::Trample],
@@ -159,7 +180,10 @@ pub fn felhide_minotaur() -> CardDefinition {
         name: "Felhide Minotaur",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Minotaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         ..Default::default()
@@ -215,7 +239,10 @@ pub fn pharikas_cure() -> CardDefinition {
                 to: target_filtered(SelectionRequirement::Creature),
                 amount: Value::Const(2),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -227,7 +254,9 @@ pub fn fade_into_antiquity() -> CardDefinition {
         name: "Fade into Antiquity",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Exile { what: target_filtered(SelectionRequirement::Enchantment) },
+        effect: Effect::Exile {
+            what: target_filtered(SelectionRequirement::Enchantment),
+        },
         ..Default::default()
     }
 }
@@ -276,7 +305,10 @@ pub fn cavalry_pegasus() -> CardDefinition {
         name: "Cavalry Pegasus",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Pegasus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pegasus],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -292,7 +324,10 @@ pub fn mnemonic_wall() -> CardDefinition {
         name: "Mnemonic Wall",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         toughness: 4,
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![etb(Effect::Move {
@@ -314,11 +349,17 @@ pub fn horizon_scholar() -> CardDefinition {
         name: "Horizon Scholar",
         cost: cost(&[generic(5), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
         ..Default::default()
     }
 }
@@ -329,7 +370,10 @@ pub fn anvilwrought_raptor() -> CardDefinition {
         name: "Anvilwrought Raptor",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::FirstStrike],
@@ -343,7 +387,10 @@ pub fn bronze_sable() -> CardDefinition {
         name: "Bronze Sable",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         ..Default::default()
@@ -356,7 +403,10 @@ pub fn guardians_of_meletis() -> CardDefinition {
         name: "Guardians of Meletis",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         toughness: 6,
         keywords: vec![Keyword::Defender],
         ..Default::default()
@@ -370,7 +420,10 @@ pub fn opaline_unicorn() -> CardDefinition {
         name: "Opaline Unicorn",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Unicorn],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         activated_abilities: vec![crate::sets::tap_add_any_color()],
@@ -416,7 +469,10 @@ pub fn asphodel_wanderer() -> CardDefinition {
         name: "Asphodel Wanderer",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Skeleton, CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Soldier],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         ..Default::default()
@@ -436,7 +492,10 @@ pub fn returned_centaur() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(4) })],
+        triggered_abilities: vec![etb(Effect::Mill {
+            who: Selector::You,
+            amount: Value::Const(4),
+        })],
         ..Default::default()
     }
 }
@@ -449,7 +508,10 @@ pub fn baleful_eidolon() -> CardDefinition {
         name: "Baleful Eidolon",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Deathtouch],
@@ -457,7 +519,11 @@ pub fn baleful_eidolon() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Deathtouch], scale: None, triggered_abilities: vec![], ..Default::default() }),
+            keywords: vec![Keyword::Deathtouch],
+            scale: None,
+            triggered_abilities: vec![],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

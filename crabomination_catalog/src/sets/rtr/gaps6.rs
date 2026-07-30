@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 /// Trostani's Judgment — {5}{W} Instant. Exile target creature, then populate.
 pub fn trostanis_judgment() -> CardDefinition {
@@ -17,8 +17,12 @@ pub fn trostanis_judgment() -> CardDefinition {
         cost: cost(&[generic(5), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Exile { what: target_filtered(R::Creature) },
-            Effect::Populate { who: PlayerRef::You },
+            Effect::Exile {
+                what: target_filtered(R::Creature),
+            },
+            Effect::Populate {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -53,8 +57,15 @@ pub fn thoughtflare() -> CardDefinition {
         cost: cost(&[generic(3), u(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(4) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(2),
+                random: false,
+            },
         ]),
         ..Default::default()
     }
@@ -72,7 +83,10 @@ pub fn dramatic_rescue() -> CardDefinition {
                 what: target_filtered(R::Creature),
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -101,7 +115,9 @@ pub fn survey_the_wreckage() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Land) },
+            Effect::Destroy {
+                what: target_filtered(R::Land),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -111,7 +127,10 @@ pub fn survey_the_wreckage() -> CardDefinition {
                     toughness: 1,
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Red],
-                    subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Goblin],
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
             },
@@ -129,13 +148,19 @@ pub fn rites_of_reaping() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature,
+                },
                 power: Value::Const(3),
                 toughness: Value::Const(3),
                 duration: Duration::EndOfTurn,
             },
             Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 power: Value::Const(-3),
                 toughness: Value::Const(-3),
                 duration: Duration::EndOfTurn,
@@ -153,8 +178,13 @@ pub fn inaction_injunction() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Detain { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Detain {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -181,8 +211,17 @@ pub fn treasured_find() -> CardDefinition {
 pub fn chemisters_trick() -> CardDefinition {
     let base = |sel: Selector| {
         Effect::Seq(vec![
-            Effect::PumpPT { what: sel.clone(), power: Value::Const(-2), toughness: Value::ZERO, duration: Duration::EndOfTurn },
-            Effect::GrantKeyword { what: sel, keyword: Keyword::MustAttack, duration: Duration::EndOfTurn },
+            Effect::PumpPT {
+                what: sel.clone(),
+                power: Value::Const(-2),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: sel,
+                keyword: Keyword::MustAttack,
+                duration: Duration::EndOfTurn,
+            },
         ])
     };
     CardDefinition {
@@ -192,7 +231,9 @@ pub fn chemisters_trick() -> CardDefinition {
         effect: base(target_filtered(R::Creature.and(R::ControlledByOpponent))),
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[generic(3), u(), r()]),
-            effect_override: Some(base(Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)))),
+            effect_override: Some(base(Selector::EachPermanent(
+                R::Creature.and(R::ControlledByOpponent),
+            ))),
             ..Default::default()
         }),
         ..Default::default()

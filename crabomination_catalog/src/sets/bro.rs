@@ -14,11 +14,18 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 /// Helper: a Prototype face from its cost symbols and printed size.
 fn proto(c: ManaCost, power: i32, toughness: i32) -> Option<Box<Prototype>> {
-    Some(Box::new(Prototype { cost: c, power, toughness }))
+    Some(Box::new(Prototype {
+        cost: c,
+        power,
+        toughness,
+    }))
 }
 
 fn construct(creature_types: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types, ..Default::default() }
+    Subtypes {
+        creature_types,
+        ..Default::default()
+    }
 }
 
 /// Goring Warplow — {6} 5/4 Construct. Prototype {1}{B} — 1/1. Deathtouch.
@@ -354,7 +361,10 @@ pub fn recommission() -> CardDefinition {
                         .or(SelectionRequirement::Artifact)
                         .and(SelectionRequirement::ManaValueAtMost(3)),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::AddCounter {
                 what: Selector::LastMoved,
@@ -380,11 +390,16 @@ pub fn depth_charge_colossus() -> CardDefinition {
         toughness: 9,
         static_abilities: vec![StaticAbility {
             description: "This creature doesn't untap during your untap step.",
-            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::This,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
-            effect: Effect::Untap { what: Selector::This, up_to: None },
+            effect: Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
             ..Default::default()
         }],
         prototype: proto(cost(&[generic(4), u(), u()]), 6, 6),
@@ -403,7 +418,11 @@ pub fn bitter_reunion() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "discard a card, then draw two".into(),
             body: Box::new(Effect::Seq(vec![
-                Effect::Discard { who: you(), amount: Value::Const(1), random: false },
+                Effect::Discard {
+                    who: you(),
+                    amount: Value::Const(1),
+                    random: false,
+                },
                 draw(2),
             ])),
         })],
@@ -514,7 +533,10 @@ pub fn penregon_strongbull() -> CardDefinition {
                     toughness: Value::Const(1),
                     duration: Duration::EndOfTurn,
                 },
-                Effect::DealDamage { to: each_opponent(), amount: Value::Const(1) },
+                Effect::DealDamage {
+                    to: each_opponent(),
+                    amount: Value::Const(1),
+                },
             ]),
             ..Default::default()
         }],
@@ -526,7 +548,7 @@ pub fn penregon_strongbull() -> CardDefinition {
 /// ETB creates a 1/1 white Soldier. "{1}, Sacrifice another creature: This
 /// creature gets +2/+1 until end of turn."
 pub fn phyrexian_warhorse() -> CardDefinition {
-    use crate::card::{TokenDefinition, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::card::{EventKind, EventScope, EventSpec, TokenDefinition, TriggeredAbility};
     use crate::effect::Predicate;
     CardDefinition {
         name: "Phyrexian Warhorse",

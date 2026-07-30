@@ -42,7 +42,10 @@ pub fn jackdaw_savior() -> CardDefinition {
                         .and(R::InYourGraveyard)
                         .and(R::ManaValueLessThanEventAmount),
                 },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         }],
         ..Default::default()
@@ -103,7 +106,11 @@ pub fn soul_shackled_zombie() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::ExileUpToNFromGraveyards { count: Value::Const(2), of: None, single: true },
+                Effect::ExileUpToNFromGraveyards {
+                    count: Value::Const(2),
+                    of: None,
+                    single: true,
+                },
                 Effect::If {
                     cond: Predicate::EntityMatchesAny {
                         what: Selector::LastMoved,
@@ -114,7 +121,10 @@ pub fn soul_shackled_zombie() -> CardDefinition {
                             who: Selector::Player(PlayerRef::EachOpponent),
                             amount: Value::Const(2),
                         },
-                        Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                        Effect::GainLife {
+                            who: Selector::You,
+                            amount: Value::Const(2),
+                        },
                     ])),
                     else_: Box::new(Effect::Noop),
                 },

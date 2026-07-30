@@ -6,17 +6,23 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R,
     StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
+use crate::effect::Predicate;
 use crate::effect::shortcut::{etb, target_any, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, StaticEffect};
-use crate::effect::Predicate;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 
 fn aura() -> Subtypes {
-    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() }
+    Subtypes {
+        enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+        ..Default::default()
+    }
 }
 
 /// Alms Beast — {2}{W}{B} 6/6 Beast. Creatures blocking or blocked by it have
@@ -32,7 +38,10 @@ pub fn alms_beast() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Creatures blocking or blocked by this creature have lifelink.",
             effect: StaticEffect::PumpTeamIf {
-                condition: Predicate::EntityMatches { what: Selector::This, filter: R::Permanent },
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::Permanent,
+                },
                 applies_to: Selector::CreaturesInCombatWith(Box::new(Selector::This)),
                 power: 0,
                 toughness: 0,
@@ -65,7 +74,10 @@ pub fn hold_the_gates() -> CardDefinition {
             StaticAbility {
                 description: "Creatures you control have vigilance.",
                 effect: StaticEffect::PumpTeamIf {
-                    condition: Predicate::EntityMatches { what: Selector::This, filter: R::Permanent },
+                    condition: Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: R::Permanent,
+                    },
                     applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                     power: 0,
                     toughness: 0,
@@ -85,8 +97,15 @@ pub fn way_of_the_thief() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Enchantment],
         subtypes: aura(),
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { power: 2, toughness: 2, ..Default::default() }),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            ..Default::default()
+        }),
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature can't be blocked as long as you control a Gate.",
             effect: StaticEffect::PumpTeamIf {
@@ -157,7 +176,10 @@ pub fn five_alarm_fire() -> CardDefinition {
         ],
         activated_abilities: vec![ActivatedAbility {
             remove_counter_cost: Some((CounterType::Charge, 5)),
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(5) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(5),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -237,7 +259,10 @@ pub fn enter_the_infinite() -> CardDefinition {
         cost: cost(&[generic(8), u(), u(), u(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::LibrarySizeOf(PlayerRef::You) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::LibrarySizeOf(PlayerRef::You),
+            },
             Effect::PutCardFromHandOnTopOfLibrary { who: Selector::You },
             Effect::SetNoMaxHandSize { who: Selector::You },
         ]),
@@ -265,7 +290,9 @@ pub fn mark_for_death() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::GrantKeyword {
-                what: Selector::OtherCreaturesControlledByControllerOf(Box::new(Selector::Target(0))),
+                what: Selector::OtherCreaturesControlledByControllerOf(Box::new(Selector::Target(
+                    0,
+                ))),
                 keyword: Keyword::CantBlock,
                 duration: Duration::EndOfTurn,
             },
@@ -361,7 +388,10 @@ pub fn borborygmos_enraged() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             discard_cost: Some((R::Land, 1)),
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(3),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -392,7 +422,9 @@ pub fn mystic_genesis() -> CardDefinition {
                     ..Default::default()
                 },
             },
-            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+            Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack),
+            },
         ]),
         ..Default::default()
     }
@@ -459,7 +491,10 @@ pub fn tin_street_market() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Enchantment],
         subtypes: aura(),
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         static_abilities: vec![StaticAbility {
             description: "Enchanted land has \"{T}, Discard a card: Draw a card.\"",
             effect: StaticEffect::GrantActivatedAbility {
@@ -467,7 +502,10 @@ pub fn tin_street_market() -> CardDefinition {
                 ability: ActivatedAbility {
                     tap_cost: true,
                     discard_cost: Some((R::Any, 1)),
-                    effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    effect: Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                     ..Default::default()
                 },
                 condition: None,
@@ -476,4 +514,3 @@ pub fn tin_street_market() -> CardDefinition {
         ..Default::default()
     }
 }
-

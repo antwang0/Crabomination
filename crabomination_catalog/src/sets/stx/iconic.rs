@@ -5,12 +5,14 @@
 //! cantrip).
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, LoyaltyAbility, PlaneswalkerSubtype, Selector, SelectionRequirement,
-    Subtypes, Supertype, TriggeredAbility, Value,
+    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
+    LoyaltyAbility, PlaneswalkerSubtype, SelectionRequirement, Selector, Subtypes, Supertype,
+    TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, target_filtered};
 use crate::effect::PlayerRef;
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, target_filtered,
+};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
 // ── Strict Proctor ──────────────────────────────────────────────────────────
@@ -68,7 +70,10 @@ pub fn sedgemoor_witch() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Menace, Keyword::Ward(crate::card::WardCost::Life(3))],
+        keywords: vec![
+            Keyword::Menace,
+            Keyword::Ward(crate::card::WardCost::Life(3)),
+        ],
         triggered_abilities: vec![crate::effect::shortcut::magecraft_mint_pest()],
         ..Default::default()
     }
@@ -135,8 +140,7 @@ pub fn mage_hunters_onslaught() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                 ),
             },
             // "Whenever a creature blocks this turn, its controller
@@ -146,9 +150,7 @@ pub fn mage_hunters_onslaught() -> CardDefinition {
                 trigger: Box::new(TriggeredAbility {
                     event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
                     effect: Effect::LoseLife {
-                        who: Selector::Player(PlayerRef::ControllerOf(Box::new(
-                            Selector::This,
-                        ))),
+                        who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::This))),
                         amount: Value::Const(1),
                     },
                 }),
@@ -303,8 +305,7 @@ pub fn lorehold_strikeforce() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 power: Value::Const(2),
                 toughness: Value::Const(0),
@@ -312,8 +313,7 @@ pub fn lorehold_strikeforce() -> CardDefinition {
             },
             Effect::GrantKeyword {
                 what: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 keyword: Keyword::Trample,
                 duration: Duration::EndOfTurn,
@@ -1416,7 +1416,10 @@ pub fn professor_onyx() -> CardDefinition {
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
-                    Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                     Effect::LookPickToHand {
                         who: PlayerRef::You,
                         count: Value::Const(3),
@@ -1441,9 +1444,9 @@ pub fn professor_onyx() -> CardDefinition {
                     who: Selector::Player(PlayerRef::EachOpponent),
                     count: Value::Const(1),
                     filter: SelectionRequirement::Creature.and(
-                        SelectionRequirement::HasGreatestPowerAmongControlled(
-                            Box::new(SelectionRequirement::Creature),
-                        ),
+                        SelectionRequirement::HasGreatestPowerAmongControlled(Box::new(
+                            SelectionRequirement::Creature,
+                        )),
                     ),
                 },
             },
@@ -1588,8 +1591,7 @@ pub fn dina_soul_steeper() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             sac_other_filter: Some((
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::OtherThanSource),
+                SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
                 1,
             )),
             effect: Effect::PumpPT {
@@ -1643,8 +1645,7 @@ pub fn zimone_quandrix_prodigy() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::IfAtLeast {
                         value: Box::new(Value::count(Selector::EachPermanent(
-                            SelectionRequirement::Land
-                                .and(SelectionRequirement::ControlledByYou),
+                            SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
                         ))),
                         threshold: 8,
                         then: Box::new(Value::Const(2)),
@@ -1672,10 +1673,8 @@ pub fn adventurous_impulse() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: false,
-            pick_filter: Some(
-                SelectionRequirement::Creature.or(SelectionRequirement::Land),
-            ),
-        
+            pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
+
             take: None,
             to_battlefield: false,
             gain_life_if_pick: None,

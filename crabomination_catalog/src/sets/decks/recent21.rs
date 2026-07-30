@@ -19,7 +19,10 @@ fn mercenary_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mercenary], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mercenary],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sorcery_speed: true,
@@ -124,7 +127,10 @@ pub fn ankle_biter() -> CardDefinition {
         name: "Ankle Biter",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Deathtouch],
@@ -179,10 +185,16 @@ pub fn plan_the_heist() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::If {
                 cond: Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::You), Value::Const(0)),
-                then: Box::new(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(3) }),
+                then: Box::new(Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(3),
+                }),
                 else_: Box::new(Effect::Noop),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
         ]),
         ..Default::default()
     }
@@ -195,7 +207,10 @@ pub fn wanted_griffin() -> CardDefinition {
         name: "Wanted Griffin",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -214,7 +229,10 @@ pub fn sterling_hound() -> CardDefinition {
         name: "Sterling Hound",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Surveil {
@@ -247,8 +265,12 @@ pub fn hardbristle_bandit() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl).once_per_turn(),
-            effect: Effect::Untap { what: Selector::This, up_to: None },
+            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
+                .once_per_turn(),
+            effect: Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
         }],
         ..Default::default()
     }

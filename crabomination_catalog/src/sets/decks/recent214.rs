@@ -4,7 +4,7 @@
 //! and a Formidable haste-granter. Tests in `tests/recent214.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardType, CardDefinition, CounterType, CreatureType, EnchantmentSubtype,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EquipBonus, Keyword, LandType, SelectionRequirement as R, StaticAbility, StaticEffect,
     Subtypes, Supertype, TokenDefinition, TriggeredAbility,
 };
@@ -13,7 +13,7 @@ use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, Value,
     ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Biogenic Upgrade — {4}{G}{G} Sorcery. Distribute three +1/+1 counters among
 /// one, two, or three target creatures, then double the number of +1/+1
@@ -45,7 +45,10 @@ pub fn herald_of_faith() -> CardDefinition {
         name: "Herald of Faith",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -62,18 +65,27 @@ pub fn arcanis_the_omnipotent() -> CardDefinition {
         cost: cost(&[generic(3), u(), u(), u()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wizard], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wizard],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), u(), u()]),
-                effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
                 ..Default::default()
             },
         ],
@@ -89,9 +101,17 @@ pub fn confiscate() -> CardDefinition {
         name: "Confiscate",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Permanent) },
-        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains { what: enchanted() })],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Permanent),
+        },
+        triggered_abilities: vec![etb(Effect::GainControlWhileSourceRemains {
+            what: enchanted(),
+        })],
         ..Default::default()
     }
 }
@@ -103,8 +123,14 @@ pub fn unflinching_courage() -> CardDefinition {
         name: "Unflinching Courage",
         cost: cost(&[generic(1), g(), w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 2,
@@ -122,7 +148,10 @@ pub fn suspicious_shambler() -> CardDefinition {
         name: "Suspicious Shambler",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 4,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -158,11 +187,12 @@ pub fn kalastria_highborn() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             // YourControl fires for the source's own death too (SBA funnel).
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::HasCreatureType(CreatureType::Vampire),
-                }),
+                },
+            ),
             effect: Effect::MayPay {
                 description: "Pay {B} to drain 2?".into(),
                 mana_cost: cost(&[b()]),
@@ -219,7 +249,10 @@ pub fn kitesail_corsair() -> CardDefinition {
         toughness: 1,
         static_abilities: vec![StaticAbility {
             description: "Has flying as long as it's attacking.",
-            effect: StaticEffect::SelfHasKeywordWhile { keyword: Keyword::Flying, condition: R::IsAttacking },
+            effect: StaticEffect::SelfHasKeywordWhile {
+                keyword: Keyword::Flying,
+                condition: R::IsAttacking,
+            },
         }],
         ..Default::default()
     }
@@ -232,7 +265,10 @@ pub fn sphinx_of_the_final_word() -> CardDefinition {
         name: "Sphinx of the Final Word",
         cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::CantBeCountered, Keyword::Flying, Keyword::Hexproof],
@@ -253,13 +289,19 @@ pub fn drogskol_reaver() -> CardDefinition {
         name: "Drogskol Reaver",
         cost: cost(&[generic(5), w(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 3,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::DoubleStrike, Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -299,7 +341,10 @@ pub fn primeval_bounty() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
             },
         ],
         ..Default::default()
@@ -315,12 +360,19 @@ pub fn deadly_plot() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::Destroy { what: target_filtered(R::Creature.or(R::Planeswalker)) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.or(R::Planeswalker)),
+            },
             Effect::Move {
                 what: target_filtered(
-                    R::HasCreatureType(CreatureType::Zombie).and(R::Creature).and(R::InYourGraveyard),
+                    R::HasCreatureType(CreatureType::Zombie)
+                        .and(R::Creature)
+                        .and(R::InYourGraveyard),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
         ]),
         ..Default::default()
@@ -344,9 +396,14 @@ pub fn surrak_the_hunt_caller() -> CardDefinition {
         power: 5,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
-                cond: Predicate::FormidableActive { who: PlayerRef::You },
+                cond: Predicate::FormidableActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::GrantKeyword {
                     what: target_filtered(R::Creature.and(R::ControlledByYou)),
                     keyword: Keyword::Haste,
@@ -388,7 +445,10 @@ pub fn gateway_sneak() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             },
         ],
         ..Default::default()
@@ -411,7 +471,9 @@ pub fn shipwreck_dowser() -> CardDefinition {
         keywords: vec![Keyword::Prowess],
         triggered_abilities: vec![etb(Effect::Move {
             what: target_filtered(
-                R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::InYourGraveyard),
+                R::HasCardType(CardType::Instant)
+                    .or(R::HasCardType(CardType::Sorcery))
+                    .and(R::InYourGraveyard),
             ),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
@@ -447,7 +509,10 @@ pub fn immersturm_predator() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
-                effect: Effect::Move { what: target_filtered(R::InGraveyard), to: ZoneDest::Exile },
+                effect: Effect::Move {
+                    what: target_filtered(R::InGraveyard),
+                    to: ZoneDest::Exile,
+                },
             },
         ],
         activated_abilities: vec![ActivatedAbility {
@@ -458,7 +523,9 @@ pub fn immersturm_predator() -> CardDefinition {
                     keyword: Keyword::Indestructible,
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Tap { what: Selector::This },
+                Effect::Tap {
+                    what: Selector::This,
+                },
             ]),
             ..Default::default()
         }],
@@ -485,7 +552,8 @@ pub fn wildborn_preserver() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::Creature.and(R::Not(Box::new(R::HasCreatureType(CreatureType::Human)))),
+                    filter: R::Creature
+                        .and(R::Not(Box::new(R::HasCreatureType(CreatureType::Human)))),
                 }),
             effect: Effect::MayPayGenericUpTo {
                 max: Value::Const(20),
@@ -512,11 +580,16 @@ pub fn prayer_of_binding() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::ExileUntilSourceLeaves {
                 what: target_filtered(
-                    R::Permanent.and(R::ControlledByOpponent).and(R::Not(Box::new(R::Land))),
+                    R::Permanent
+                        .and(R::ControlledByOpponent)
+                        .and(R::Not(Box::new(R::Land))),
                 ),
                 return_to: crate::card::ExileReturnZone::Battlefield,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]))],
         ..Default::default()
     }
@@ -546,7 +619,10 @@ fn black_zombie_2_2() -> TokenDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -558,7 +634,10 @@ fn green_beast_3_3() -> TokenDefinition {
         toughness: 3,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }

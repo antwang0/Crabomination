@@ -2,24 +2,35 @@
 //! pump, and combat triggers. Tests in `classic_sets/gtc`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EnchantmentSubtype, EquipBonus,
-    EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, Subtypes,
-    TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EnchantmentSubtype,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R,
+    Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{target_filtered};
+use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 fn aura() -> Subtypes {
-    Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() }
+    Subtypes {
+        enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+        ..Default::default()
+    }
 }
 
 /// Bloodrush (CR ability word): a from-hand, discard-this-as-cost activated
 /// ability that pumps a target attacking creature until end of turn.
-fn bloodrush(mana: crate::mana::ManaCost, power: i32, toughness: i32, extra: Vec<Keyword>) -> ActivatedAbility {
+fn bloodrush(
+    mana: crate::mana::ManaCost,
+    power: i32,
+    toughness: i32,
+    extra: Vec<Keyword>,
+) -> ActivatedAbility {
     let mut body = vec![Effect::PumpPT {
         what: target_filtered(R::Creature.and(R::IsAttacking)),
         power: Value::Const(power),
@@ -75,11 +86,20 @@ pub fn scorchwalker() -> CardDefinition {
 pub fn leyline_phantom() -> CardDefinition {
     let bounce = || TriggeredAbility {
         event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-        effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+        effect: Effect::Move {
+            what: Selector::This,
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        },
     };
     let bounce_creature = TriggeredAbility {
-        event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
-        effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+        event: EventSpec::new(
+            EventKind::DealsCombatDamageToCreature,
+            EventScope::SelfSource,
+        ),
+        effect: Effect::Move {
+            what: Selector::This,
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        },
     };
     CardDefinition {
         name: "Leyline Phantom",
@@ -119,7 +139,10 @@ pub fn alpha_authority() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Enchantment],
         subtypes: aura(),
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::Hexproof, Keyword::CantBeBlockedByMoreThanOne],
             ..Default::default()
@@ -136,12 +159,21 @@ pub fn agoraphobia() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Enchantment],
         subtypes: aura(),
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { power: -5, ..Default::default() }),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: -5,
+            ..Default::default()
+        }),
         // The activation is the Aura's own ("Return *this Aura* to hand").
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), u()]),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -159,7 +191,10 @@ pub fn greenside_watcher() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Untap { what: target_filtered(R::HasLandType(LandType::Gate)), up_to: None },
+            effect: Effect::Untap {
+                what: target_filtered(R::HasLandType(LandType::Gate)),
+                up_to: None,
+            },
             ..Default::default()
         }],
         ..Default::default()

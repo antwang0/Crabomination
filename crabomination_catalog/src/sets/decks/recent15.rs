@@ -2,13 +2,12 @@
 //! `crabomination/src/tests/recent15.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility,
-    Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
+    Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Duration, Effect, PlayerRef, Predicate};
-use crate::mana::{b, cost, g, generic, Color};
+use crate::mana::{Color, b, cost, g, generic};
 
 /// Shaman of the Pack — {1}{B}{G} Elf Shaman 3/2. ETB: each opponent loses life
 /// equal to the number of Elves you control. (Printed "target opponent" is

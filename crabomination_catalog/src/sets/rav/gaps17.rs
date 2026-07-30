@@ -13,7 +13,10 @@ pub fn belltower_sphinx() -> CardDefinition {
         name: "Belltower Sphinx",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
         power: 2,
         toughness: 5,
         keywords: vec![Keyword::Flying],

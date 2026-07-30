@@ -7,7 +7,7 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::{Effect, PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, r, Color};
+use crate::mana::{Color, cost, generic, r};
 
 /// Squee, the Immortal — {1}{R}{R} 2/1 Goblin. Castable from graveyard or
 /// exile (modeled as pay-cost Move activations, like Gravecrawler).
@@ -16,7 +16,10 @@ pub fn squee_the_immortal() -> CardDefinition {
         mana_cost: cost(&[generic(1), r(), r()]),
         effect: Effect::Move {
             what: Selector::This,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         sorcery_speed: true,
         from_graveyard,
@@ -28,7 +31,10 @@ pub fn squee_the_immortal() -> CardDefinition {
         cost: cost(&[generic(1), r(), r()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         activated_abilities: vec![recast(true), recast(false)],
@@ -47,7 +53,11 @@ pub fn dark_depths() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             effect: Effect::Seq(vec![
-                Effect::RemoveCounter { what: Selector::This, kind: CounterType::Ice, amount: Value::ONE },
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Ice,
+                    amount: Value::ONE,
+                },
                 // The "when it has no ice counters" state trigger is folded
                 // into the removal.
                 Effect::If {
@@ -84,7 +94,10 @@ fn marit_lage() -> TokenDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }

@@ -13,7 +13,10 @@ pub fn wall_of_denial() -> CardDefinition {
         name: "Wall of Denial",
         cost: cost(&[generic(1), w(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 0,
         toughness: 8,
         keywords: vec![Keyword::Defender, Keyword::Flying, Keyword::Shroud],
@@ -28,10 +31,17 @@ pub fn fog_bank() -> CardDefinition {
         name: "Fog Bank",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 0,
         toughness: 2,
-        keywords: vec![Keyword::Defender, Keyword::Flying, Keyword::DealsNoCombatDamage],
+        keywords: vec![
+            Keyword::Defender,
+            Keyword::Flying,
+            Keyword::DealsNoCombatDamage,
+        ],
         static_abilities: vec![StaticAbility {
             description: "Prevent all combat damage that would be dealt to this creature.",
             effect: StaticEffect::PreventAllCombatDamageToThis,
@@ -47,7 +57,10 @@ pub fn guard_gomazoa() -> CardDefinition {
         name: "Guard Gomazoa",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Jellyfish], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jellyfish],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Defender, Keyword::Flying],

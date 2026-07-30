@@ -3,14 +3,13 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, Effect,
-    EnchantmentSubtype,
-    EventKind, EventScope, EventSpec, Keyword, Predicate, RoomDoor, RoomDoors,
+    EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, Predicate, RoomDoor, RoomDoors,
     SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{investigate, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, Color, SpendRestriction};
+use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u};
 
 /// Nethergoyf — {B} Lhurgoyf */1+*. Power = card types among cards in your
 /// graveyard, toughness = that + 1. Escape—{2}{B}, exile four other cards.
@@ -19,10 +18,16 @@ pub fn nethergoyf() -> CardDefinition {
         name: "Nethergoyf",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lhurgoyf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lhurgoyf],
+            ..Default::default()
+        },
         power: 0,
         toughness: 1,
-        dynamic_pt: Some(DynamicPt::CardTypesInControllerGraveyard { base_p: 0, base_t: 1 }),
+        dynamic_pt: Some(DynamicPt::CardTypesInControllerGraveyard {
+            base_p: 0,
+            base_t: 1,
+        }),
         keywords: vec![Keyword::Escape(cost(&[generic(2), b()]), 4)],
         ..Default::default()
     }
@@ -68,8 +73,7 @@ pub fn omen_hawker() -> CardDefinition {
 /// Hazardous Blast — {3}{R} Sorcery. 1 damage to each creature your opponents
 /// control; those creatures can't block this turn.
 pub fn hazardous_blast() -> CardDefinition {
-    let opp_creatures =
-        || R::Creature.and(R::ControlledByOpponent);
+    let opp_creatures = || R::Creature.and(R::ControlledByOpponent);
     CardDefinition {
         name: "Hazardous Blast",
         cost: cost(&[generic(3), r()]),
@@ -165,7 +169,9 @@ pub fn vexing_bauble() -> CardDefinition {
             event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer),
             effect: Effect::If {
                 cond: Predicate::ValueEquals(Value::CastSpellManaSpent, Value::Const(0)),
-                then: Box::new(Effect::CounterSpell { what: Selector::TriggerSource }),
+                then: Box::new(Effect::CounterSpell {
+                    what: Selector::TriggerSource,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -173,7 +179,10 @@ pub fn vexing_bauble() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -259,7 +268,10 @@ pub fn roaring_furnace_steaming_sauna() -> CardDefinition {
                         EventKind::StepBegins(TurnStep::End),
                         EventScope::ActivePlayer,
                     ),
-                    effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    effect: Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 }],
                 ..Default::default()
             },
@@ -285,11 +297,8 @@ pub fn defiled_crypt_cadaver_lab() -> CardDefinition {
                 name: "Defiled Crypt".to_string(),
                 cost: cost(&[generic(3), b()]),
                 triggered_abilities: vec![TriggeredAbility {
-                    event: EventSpec::new(
-                        EventKind::CardLeftGraveyard,
-                        EventScope::YourControl,
-                    )
-                    .once_per_turn(),
+                    event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                        .once_per_turn(),
                     effect: Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::ONE,
@@ -344,7 +353,10 @@ pub fn winter_misanthropic_guide() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Ward(WardCost::generic(2))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::Draw {
                 who: Selector::Player(PlayerRef::EachPlayer),
                 amount: Value::Const(2),
@@ -374,11 +386,14 @@ pub fn zimone_all_questioning() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::All(vec![
-                    Predicate::ValueAtLeast(Value::LandsPlayedThisTurn(PlayerRef::You), Value::ONE),
-                    Predicate::ValueIsPrime(lands_you_control()),
-                ])),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::All(vec![
+                Predicate::ValueAtLeast(Value::LandsPlayedThisTurn(PlayerRef::You), Value::ONE),
+                Predicate::ValueIsPrime(lands_you_control()),
+            ])),
             effect: Effect::Seq(vec![
                 Effect::CreateToken {
                     who: PlayerRef::You,
@@ -419,14 +434,20 @@ pub fn ghostly_dancers() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
         name: "Ghostly Dancers",
         cost: cost(&[generic(3), crate::mana::w(), crate::mana::w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 5,
         keywords: vec![Keyword::Flying],
@@ -474,7 +495,10 @@ pub fn pirated_copy() -> CardDefinition {
             extra_creature_types: vec![CreatureType::Pirate],
             extra_triggered: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             }],
             ..Default::default()
         }),
@@ -490,8 +514,12 @@ pub fn unwanted_remake() -> CardDefinition {
         cost: cost(&[crate::mana::w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Creature) },
-            Effect::ManifestDread { who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature),
+            },
+            Effect::ManifestDread {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+            },
         ]),
         ..Default::default()
     }
@@ -506,7 +534,10 @@ pub fn fear_of_the_dark() -> CardDefinition {
         name: "Fear of the Dark",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::Seq(vec![
@@ -535,7 +566,10 @@ pub fn brimstone_roundup() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mercenary], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mercenary],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sorcery_speed: true,
@@ -573,7 +607,10 @@ pub fn vat_emergence() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(R::Creature),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::Proliferate,
         ]),
@@ -598,7 +635,10 @@ pub fn shardmages_rescue() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         effect: Effect::Attach {
             what: Selector::This,
-            to: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature.and(R::ControlledByYou),
+            },
         },
         equipped_bonus: Some(EquipBonus {
             power: 1,
@@ -623,7 +663,11 @@ pub fn trail_of_crumbs() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: food_token() },
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: food_token(),
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)

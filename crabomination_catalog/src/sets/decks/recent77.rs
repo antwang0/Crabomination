@@ -11,7 +11,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{target_any, target_filtered};
 use crate::effect::{Duration, Effect, EventKind, PlayerRef, Selector, Value};
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 /// Vanilla creature helper.
 fn vanilla(
@@ -26,7 +26,10 @@ fn vanilla(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -52,31 +55,68 @@ fn self_pump(mana: ManaCost, power: i32, toughness: i32, once_per_turn: bool) ->
 
 /// Elvish Ranger — {2}{G} 4/1 Elf Ranger (vanilla).
 pub fn elvish_ranger() -> CardDefinition {
-    vanilla("Elvish Ranger", cost(&[generic(2), g()]), vec![CreatureType::Elf, CreatureType::Ranger], 4, 1, vec![])
+    vanilla(
+        "Elvish Ranger",
+        cost(&[generic(2), g()]),
+        vec![CreatureType::Elf, CreatureType::Ranger],
+        4,
+        1,
+        vec![],
+    )
 }
 
 /// Mons's Goblin Raiders — {R} 1/1 Goblin (vanilla).
 pub fn monss_goblin_raiders() -> CardDefinition {
-    vanilla("Mons's Goblin Raiders", cost(&[r()]), vec![CreatureType::Goblin], 1, 1, vec![])
+    vanilla(
+        "Mons's Goblin Raiders",
+        cost(&[r()]),
+        vec![CreatureType::Goblin],
+        1,
+        1,
+        vec![],
+    )
 }
 
 /// Ambush Party — {4}{R} 3/1 Human Rogue. First strike, haste.
 pub fn ambush_party() -> CardDefinition {
-    vanilla("Ambush Party", cost(&[generic(4), r()]), vec![CreatureType::Human, CreatureType::Rogue], 3, 1,
-        vec![Keyword::FirstStrike, Keyword::Haste])
+    vanilla(
+        "Ambush Party",
+        cost(&[generic(4), r()]),
+        vec![CreatureType::Human, CreatureType::Rogue],
+        3,
+        1,
+        vec![Keyword::FirstStrike, Keyword::Haste],
+    )
 }
 
 /// Sabretooth Tiger — {2}{R} 2/1 Cat. First strike.
 pub fn sabretooth_tiger() -> CardDefinition {
-    vanilla("Sabretooth Tiger", cost(&[generic(2), r()]), vec![CreatureType::Cat], 2, 1, vec![Keyword::FirstStrike])
+    vanilla(
+        "Sabretooth Tiger",
+        cost(&[generic(2), r()]),
+        vec![CreatureType::Cat],
+        2,
+        1,
+        vec![Keyword::FirstStrike],
+    )
 }
 
 /// Storm Shaman — {2}{R} 0/4 Human Cleric Shaman. {R}: +1/+0.
 pub fn storm_shaman() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![self_pump(cost(&[r()]), 1, 0, false)],
-        ..vanilla("Storm Shaman", cost(&[generic(2), r()]),
-            vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Shaman], 0, 4, vec![])
+        ..vanilla(
+            "Storm Shaman",
+            cost(&[generic(2), r()]),
+            vec![
+                CreatureType::Human,
+                CreatureType::Cleric,
+                CreatureType::Shaman,
+            ],
+            0,
+            4,
+            vec![],
+        )
     }
 }
 
@@ -84,7 +124,14 @@ pub fn storm_shaman() -> CardDefinition {
 pub fn yavimaya_ancients() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![self_pump(cost(&[g()]), 1, -2, false)],
-        ..vanilla("Yavimaya Ancients", cost(&[generic(3), g(), g()]), vec![CreatureType::Treefolk], 2, 7, vec![])
+        ..vanilla(
+            "Yavimaya Ancients",
+            cost(&[generic(3), g(), g()]),
+            vec![CreatureType::Treefolk],
+            2,
+            7,
+            vec![],
+        )
     }
 }
 
@@ -93,8 +140,14 @@ pub fn yavimaya_ancients() -> CardDefinition {
 pub fn wild_aesthir() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![self_pump(cost(&[w(), w()]), 2, 0, true)],
-        ..vanilla("Wild Aesthir", cost(&[generic(2), w()]), vec![CreatureType::Bird], 1, 1,
-            vec![Keyword::Flying, Keyword::FirstStrike])
+        ..vanilla(
+            "Wild Aesthir",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Bird],
+            1,
+            1,
+            vec![Keyword::Flying, Keyword::FirstStrike],
+        )
     }
 }
 
@@ -104,11 +157,26 @@ pub fn woolly_spider() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource).with_filter(
-                Predicate::EntityMatches { what: Selector::BlockedAttacker, filter: R::HasKeyword(Keyword::Flying) },
+                Predicate::EntityMatches {
+                    what: Selector::BlockedAttacker,
+                    filter: R::HasKeyword(Keyword::Flying),
+                },
             ),
-            effect: Effect::PumpPT { what: Selector::This, power: Value::Const(0), toughness: Value::Const(2), duration: Duration::EndOfTurn },
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(0),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
         }],
-        ..vanilla("Woolly Spider", cost(&[generic(1), g(), g()]), vec![CreatureType::Spider], 2, 3, vec![Keyword::Reach])
+        ..vanilla(
+            "Woolly Spider",
+            cost(&[generic(1), g(), g()]),
+            vec![CreatureType::Spider],
+            2,
+            3,
+            vec![Keyword::Reach],
+        )
     }
 }
 
@@ -119,12 +187,25 @@ pub fn orcish_artillery() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
-                Effect::DealDamage { to: Selector::You, amount: Value::Const(3) },
+                Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::Const(2),
+                },
+                Effect::DealDamage {
+                    to: Selector::You,
+                    amount: Value::Const(3),
+                },
             ]),
             ..Default::default()
         }],
-        ..vanilla("Orcish Artillery", cost(&[generic(1), r(), r()]), vec![CreatureType::Orc, CreatureType::Warrior], 1, 3, vec![])
+        ..vanilla(
+            "Orcish Artillery",
+            cost(&[generic(1), r(), r()]),
+            vec![CreatureType::Orc, CreatureType::Warrior],
+            1,
+            3,
+            vec![],
+        )
     }
 }
 
@@ -135,12 +216,25 @@ pub fn brothers_of_fire() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r(), r()]),
             effect: Effect::Seq(vec![
-                Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
-                Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
+                Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::Const(1),
+                },
+                Effect::DealDamage {
+                    to: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
             ..Default::default()
         }],
-        ..vanilla("Brothers of Fire", cost(&[generic(1), r(), r()]), vec![CreatureType::Human, CreatureType::Shaman], 2, 2, vec![])
+        ..vanilla(
+            "Brothers of Fire",
+            cost(&[generic(1), r(), r()]),
+            vec![CreatureType::Human, CreatureType::Shaman],
+            2,
+            2,
+            vec![],
+        )
     }
 }
 
@@ -151,10 +245,19 @@ pub fn goblin_digging_team() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::Destroy { what: target_filtered(R::HasCreatureType(CreatureType::Wall)) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::HasCreatureType(CreatureType::Wall)),
+            },
             ..Default::default()
         }],
-        ..vanilla("Goblin Digging Team", cost(&[r()]), vec![CreatureType::Goblin], 1, 1, vec![])
+        ..vanilla(
+            "Goblin Digging Team",
+            cost(&[r()]),
+            vec![CreatureType::Goblin],
+            1,
+            1,
+            vec![],
+        )
     }
 }
 
@@ -164,10 +267,19 @@ pub fn aysen_bureaucrats() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Tap { what: target_filtered(R::Creature.and(R::PowerAtMost(2))) },
+            effect: Effect::Tap {
+                what: target_filtered(R::Creature.and(R::PowerAtMost(2))),
+            },
             ..Default::default()
         }],
-        ..vanilla("Aysen Bureaucrats", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Advisor], 1, 1, vec![])
+        ..vanilla(
+            "Aysen Bureaucrats",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Human, CreatureType::Advisor],
+            1,
+            1,
+            vec![],
+        )
     }
 }
 
@@ -183,8 +295,14 @@ pub fn anaba_spirit_crafter() -> CardDefinition {
                 toughness: 0,
             },
         }],
-        ..vanilla("Anaba Spirit Crafter", cost(&[generic(2), r(), r()]),
-            vec![CreatureType::Minotaur, CreatureType::Shaman], 1, 3, vec![])
+        ..vanilla(
+            "Anaba Spirit Crafter",
+            cost(&[generic(2), r(), r()]),
+            vec![CreatureType::Minotaur, CreatureType::Shaman],
+            1,
+            3,
+            vec![],
+        )
     }
 }
 
@@ -195,27 +313,49 @@ pub fn anaba_ancestor() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::PumpPT {
-                what: target_filtered(R::HasCreatureType(CreatureType::Minotaur).and(R::OtherThanSource)),
+                what: target_filtered(
+                    R::HasCreatureType(CreatureType::Minotaur).and(R::OtherThanSource),
+                ),
                 power: Value::Const(1),
                 toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             },
             ..Default::default()
         }],
-        ..vanilla("Anaba Ancestor", cost(&[generic(1), r()]), vec![CreatureType::Minotaur, CreatureType::Spirit], 1, 1, vec![])
+        ..vanilla(
+            "Anaba Ancestor",
+            cost(&[generic(1), r()]),
+            vec![CreatureType::Minotaur, CreatureType::Spirit],
+            1,
+            1,
+            vec![],
+        )
     }
 }
 
 /// Elvish Bard — {3}{G}{G} 2/4 Elf Shaman Bard. All creatures able to block it
 /// do so (true Lure).
 pub fn elvish_bard() -> CardDefinition {
-    vanilla("Elvish Bard", cost(&[generic(3), g(), g()]),
-        vec![CreatureType::Elf, CreatureType::Shaman, CreatureType::Bard], 2, 4, vec![Keyword::AllMustBlock])
+    vanilla(
+        "Elvish Bard",
+        cost(&[generic(3), g(), g()]),
+        vec![CreatureType::Elf, CreatureType::Shaman, CreatureType::Bard],
+        2,
+        4,
+        vec![Keyword::AllMustBlock],
+    )
 }
 
 /// Marsh Goblins — {B}{R} 1/1 Goblin. Swampwalk.
 pub fn marsh_goblins() -> CardDefinition {
-    vanilla("Marsh Goblins", cost(&[b(), r()]), vec![CreatureType::Goblin], 1, 1, vec![Keyword::Landwalk(LandType::Swamp)])
+    vanilla(
+        "Marsh Goblins",
+        cost(&[b(), r()]),
+        vec![CreatureType::Goblin],
+        1,
+        1,
+        vec![Keyword::Landwalk(LandType::Swamp)],
+    )
 }
 
 /// Merfolk Assassin — {U}{U} 1/2 Merfolk Assassin. {T}: Destroy target
@@ -224,40 +364,77 @@ pub fn merfolk_assassin() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Destroy { what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Landwalk(LandType::Island)))) },
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    R::Creature.and(R::HasKeyword(Keyword::Landwalk(LandType::Island))),
+                ),
+            },
             ..Default::default()
         }],
-        ..vanilla("Merfolk Assassin", cost(&[u(), u()]), vec![CreatureType::Merfolk, CreatureType::Assassin], 1, 2, vec![])
+        ..vanilla(
+            "Merfolk Assassin",
+            cost(&[u(), u()]),
+            vec![CreatureType::Merfolk, CreatureType::Assassin],
+            1,
+            2,
+            vec![],
+        )
     }
 }
 
 /// Ghost Hounds — {1}{B} 1/1 Dog Spirit. Vigilance; whenever it blocks or
 /// becomes blocked by a white creature, it gains first strike until end of turn.
 pub fn ghost_hounds() -> CardDefinition {
-    let gain_fs = || Effect::GrantKeyword { what: Selector::This, keyword: Keyword::FirstStrike, duration: Duration::EndOfTurn };
+    let gain_fs = || Effect::GrantKeyword {
+        what: Selector::This,
+        keyword: Keyword::FirstStrike,
+        duration: Duration::EndOfTurn,
+    };
     CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource).with_filter(
-                    Predicate::EntityMatches { what: Selector::BlockedAttacker, filter: R::HasColor(Color::White) },
+                    Predicate::EntityMatches {
+                        what: Selector::BlockedAttacker,
+                        filter: R::HasColor(Color::White),
+                    },
                 ),
                 effect: gain_fs(),
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource).with_filter(
-                    Predicate::EntityMatches { what: Selector::BlockingCreatures, filter: R::HasColor(Color::White) },
-                ),
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::BlockingCreatures,
+                        filter: R::HasColor(Color::White),
+                    }),
                 effect: gain_fs(),
             },
         ],
-        ..vanilla("Ghost Hounds", cost(&[generic(1), b()]), vec![CreatureType::Dog, CreatureType::Spirit], 1, 1, vec![Keyword::Vigilance])
+        ..vanilla(
+            "Ghost Hounds",
+            cost(&[generic(1), b()]),
+            vec![CreatureType::Dog, CreatureType::Spirit],
+            1,
+            1,
+            vec![Keyword::Vigilance],
+        )
     }
 }
 
 /// Yavimaya Ants — {2}{G}{G} 5/1 Insect. Trample, haste. Cumulative upkeep {G}{G}.
 pub fn yavimaya_ants() -> CardDefinition {
-    vanilla("Yavimaya Ants", cost(&[generic(2), g(), g()]), vec![CreatureType::Insect], 5, 1,
-        vec![Keyword::Trample, Keyword::Haste, Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(cost(&[g(), g()])))])
+    vanilla(
+        "Yavimaya Ants",
+        cost(&[generic(2), g(), g()]),
+        vec![CreatureType::Insect],
+        5,
+        1,
+        vec![
+            Keyword::Trample,
+            Keyword::Haste,
+            Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(cost(&[g(), g()]))),
+        ],
+    )
 }
 
 /// Orcish Oriflamme — {3}{R} Enchantment. Attacking creatures you control get
@@ -270,7 +447,9 @@ pub fn orcish_oriflamme() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Attacking creatures you control get +1/+0.",
             effect: StaticEffect::PumpPT {
-                applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::IsAttacking)),
+                applies_to: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::IsAttacking),
+                ),
                 power: 1,
                 toughness: 0,
             },
@@ -286,15 +465,23 @@ pub fn regeneration() -> CardDefinition {
         name: "Regeneration",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature has \"{G}: Regenerate this creature.\"",
             effect: StaticEffect::GrantActivatedAbility {
                 applies_to: Selector::AttachedTo(Box::new(Selector::This)),
                 ability: ActivatedAbility {
                     mana_cost: cost(&[g()]),
-                    effect: Effect::Regenerate { what: Selector::This },
+                    effect: Effect::Regenerate {
+                        what: Selector::This,
+                    },
                     ..Default::default()
                 },
                 condition: None,
@@ -311,12 +498,24 @@ pub fn carapace() -> CardDefinition {
         name: "Carapace",
         cost: cost(&[g()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { power: 0, toughness: 2, ..Default::default() }),
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 0,
+            toughness: 2,
+            ..Default::default()
+        }),
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
-            effect: Effect::Regenerate { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            effect: Effect::Regenerate {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -329,9 +528,19 @@ pub fn feast_of_the_unicorn() -> CardDefinition {
         name: "Feast of the Unicorn",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { power: 4, toughness: 0, ..Default::default() }),
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 4,
+            toughness: 0,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -345,14 +554,19 @@ pub fn icequake() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::If {
-                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::HasSupertype(Supertype::Snow) },
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: R::HasSupertype(Supertype::Snow),
+                },
                 then: Box::new(Effect::DealDamage {
                     to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                     amount: Value::Const(1),
                 }),
                 else_: Box::new(Effect::Noop),
             },
-            Effect::Destroy { what: target_filtered(R::Land) },
+            Effect::Destroy {
+                what: target_filtered(R::Land),
+            },
         ]),
         ..Default::default()
     }
@@ -367,7 +581,9 @@ pub fn jokulhaups() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(R::Creature.or(R::Artifact).or(R::Land)),
-            body: Box::new(Effect::DestroyNoRegen { what: Selector::TriggerSource }),
+            body: Box::new(Effect::DestroyNoRegen {
+                what: Selector::TriggerSource,
+            }),
         },
         ..Default::default()
     }

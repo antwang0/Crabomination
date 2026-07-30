@@ -1,6 +1,6 @@
 use crate::card::{CardDefinition, CardType};
-use crate::effect::shortcut::discard;
 use crate::effect::Selector;
+use crate::effect::shortcut::discard;
 use crate::mana::{b, cost};
 
 /// Hymn to Tourach — {B}{B} Sorcery: target player discards two cards at random

@@ -29,12 +29,18 @@ pub fn surrak_elusive_hunter() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::CantBeCountered, Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourPermanentTargetedByOpponent)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::Creature,
-                }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            event: EventSpec::new(
+                EventKind::BecameTarget,
+                EventScope::YourPermanentTargetedByOpponent,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Creature,
+            }),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }

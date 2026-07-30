@@ -12,11 +12,15 @@ use crate::card::{
 };
 use crate::effect::shortcut::{draw, target_filtered};
 use crate::effect::{Duration, PlayerRef, Predicate, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Add one quest counter to this enchantment.
 fn add_quest() -> Effect {
-    Effect::AddCounter { what: Selector::This, kind: CounterType::Quest, amount: Value::Const(1) }
+    Effect::AddCounter {
+        what: Selector::This,
+        kind: CounterType::Quest,
+        amount: Value::Const(1),
+    }
 }
 
 /// Quest for the Goblin Lord — {R} Enchantment. Whenever a Goblin you control
@@ -39,7 +43,10 @@ pub fn quest_for_the_goblin_lord() -> CardDefinition {
             description: "While this has five or more quest counters, creatures you control get +2/+0.",
             effect: StaticEffect::PumpTeamIf {
                 condition: Predicate::ValueAtLeast(
-                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Quest },
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Quest,
+                    },
                     Value::Const(5),
                 ),
                 applies_to: Selector::EachPermanent(
@@ -101,7 +108,10 @@ pub fn quest_for_the_gemblades() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToCreature,
+                EventScope::YourControl,
+            ),
             effect: add_quest(),
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -134,7 +144,9 @@ pub fn quest_for_ancient_secrets() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             remove_counter_cost: Some((CounterType::Quest, 5)),
             sac_cost: true,
-            effect: Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::Target(0) },
+            effect: Effect::ShuffleGraveyardIntoLibrary {
+                who: PlayerRef::Target(0),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -163,7 +175,10 @@ pub fn quest_for_the_holy_relic() -> CardDefinition {
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::Attach {
                     what: Selector::LastMoved,
@@ -184,12 +199,16 @@ pub fn magebane_lizard() -> CardDefinition {
         name: "Magebane Lizard",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
         power: 1,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
-                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
+                Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
+            ),
             effect: Effect::DealDamage {
                 to: Selector::Player(PlayerRef::Triggerer),
                 amount: Value::NoncreatureSpellsCastThisTurn(PlayerRef::Triggerer),
@@ -206,7 +225,10 @@ pub fn atog() -> CardDefinition {
         name: "Atog",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Atog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Atog],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -235,7 +257,10 @@ pub fn origin_spellbomb() -> CardDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Myr],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -275,8 +300,11 @@ pub fn land_tax() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::ActivePlayer)
-                .with_filter(Predicate::OpponentControlsMoreLandsThanYou),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::OpponentControlsMoreLandsThanYou),
             effect: Effect::SearchUpToN {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::IsBasicLand,

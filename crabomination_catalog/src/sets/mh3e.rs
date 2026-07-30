@@ -27,8 +27,14 @@ pub fn izzet_generatorium() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            condition: Some(Predicate::EnergyPaidThisTurnAtLeast { who: PlayerRef::You, n: 4 }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            condition: Some(Predicate::EnergyPaidThisTurnAtLeast {
+                who: PlayerRef::You,
+                n: 4,
+            }),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -67,7 +73,8 @@ pub fn unstable_amulet() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 duration: MayPlayDuration::EndOfThisTurn,
-                pay_any_color: false, pay_own_cost: false,
+                pay_any_color: false,
+                pay_own_cost: false,
                 uncast_penalty: None,
             },
             ..Default::default()
@@ -84,7 +91,9 @@ pub fn planar_genesis() -> CardDefinition {
         name: "Planar Genesis",
         cost: cost(&[crate::mana::g(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::LookTopDeployLandOrHand { count: Value::Const(4) },
+        effect: Effect::LookTopDeployLandOrHand {
+            count: Value::Const(4),
+        },
         ..Default::default()
     }
 }
@@ -127,7 +136,10 @@ pub fn vega_the_watcher() -> CardDefinition {
                     filter: R::SpellNotCastFromHand,
                 },
             ),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -142,19 +154,27 @@ pub fn volatile_stormdrake() -> CardDefinition {
         name: "Volatile Stormdrake",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::HexproofFromAbilities],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::ExchangeControl {
                 a: Selector::This,
-                b: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByOpponent) },
+                b: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                },
             },
             Effect::AddEnergy(Value::Const(4)),
             Effect::PayEnergyOrElseValue {
                 amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
-                otherwise: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),
+                otherwise: Box::new(Effect::SacrificePermanent {
+                    what: Selector::Target(0),
+                }),
             },
         ]))],
         ..Default::default()
@@ -180,7 +200,10 @@ pub fn jolted_awake() -> CardDefinition {
                         slot: 0,
                         filter: R::InYourGraveyard.and(R::Artifact.or(R::Creature)),
                     },
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 }),
             },
         ]),
@@ -199,17 +222,26 @@ pub fn lethal_throwdown() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::ChooseMode(vec![
-                Effect::Sacrifice { who: Selector::You, count: Value::ONE, filter: R::Creature },
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::ONE,
+                    filter: R::Creature,
+                },
                 Effect::Seq(vec![
                     Effect::Sacrifice {
                         who: Selector::You,
                         count: Value::ONE,
                         filter: R::Creature.and(R::IsModified),
                     },
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 ]),
             ]),
-            Effect::Destroy { what: target_filtered(R::Creature.or(R::Planeswalker)) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.or(R::Planeswalker)),
+            },
         ]),
         ..Default::default()
     }
@@ -233,7 +265,10 @@ pub fn pyretic_rebirth() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 1, filter: R::Creature.or(R::Planeswalker) },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.or(R::Planeswalker),
+                },
                 amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
             },
         ]),
@@ -252,16 +287,25 @@ pub fn argent_dais() -> CardDefinition {
         enters_with_counters: Some((CounterType::Oil, Value::Const(2))),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::YouAttack, EventScope::AnyPlayer).with_filter(
-                Predicate::AttackedWithCountAtLeast { who: PlayerRef::ActivePlayer, at_least: 2 },
+                Predicate::AttackedWithCountAtLeast {
+                    who: PlayerRef::ActivePlayer,
+                    at_least: 2,
+                },
             ),
-            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Oil, amount: Value::ONE },
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Oil,
+                amount: Value::ONE,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             remove_counter_cost: Some((CounterType::Oil, 2)),
             effect: Effect::Seq(vec![
-                Effect::Exile { what: target_filtered(R::Permanent.and(R::Nonland).and(R::OtherThanSource)) },
+                Effect::Exile {
+                    what: target_filtered(R::Permanent.and(R::Nonland).and(R::OtherThanSource)),
+                },
                 Effect::Draw {
                     who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                     amount: Value::Const(2),
@@ -285,9 +329,13 @@ pub fn glimpse_the_impossible() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(3),
             duration: MayPlayDuration::EndOfThisTurn,
-            pay_any_color: false, pay_own_cost: false,
+            pay_any_color: false,
+            pay_own_cost: false,
             uncast_penalty: Some(Box::new(Effect::Seq(vec![
-                Effect::Move { what: Selector::Target(0), to: ZoneDest::Graveyard },
+                Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Graveyard,
+                },
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
@@ -314,8 +362,15 @@ pub fn chthonian_nightmare() -> CardDefinition {
             sac_other_filter: Some((R::Creature, 1)),
             return_self_cost: true,
             effect: Effect::Move {
-                what: target_filtered(R::Creature.and(R::InYourGraveyard).and(R::ManaValueExactlyXFromCost)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                what: target_filtered(
+                    R::Creature
+                        .and(R::InYourGraveyard)
+                        .and(R::ManaValueExactlyXFromCost),
+                ),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             ..Default::default()
         }],

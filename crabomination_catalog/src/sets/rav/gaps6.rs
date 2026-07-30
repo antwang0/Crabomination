@@ -80,9 +80,18 @@ pub fn flight_of_fancy() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(2) })],
-        equipped_bonus: Some(EquipBonus { keywords: vec![Keyword::Flying], ..Default::default() }),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -94,14 +103,19 @@ pub fn dimir_house_guard() -> CardDefinition {
         name: "Dimir House Guard",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Skeleton], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Fear],
         activated_abilities: vec![
             ActivatedAbility {
                 sac_other_filter: Some((R::Creature, 1)),
-                effect: Effect::Regenerate { what: Selector::This },
+                effect: Effect::Regenerate {
+                    what: Selector::This,
+                },
                 ..Default::default()
             },
             transmute(cost(&[generic(1), b(), b()]), 4),
@@ -117,7 +131,10 @@ pub fn ethereal_usher() -> CardDefinition {
         name: "Ethereal Usher",
         cost: cost(&[generic(5), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         activated_abilities: vec![
@@ -137,8 +154,6 @@ pub fn ethereal_usher() -> CardDefinition {
     }
 }
 
-
-
 /// Cyclopean Snare — {2} Artifact. {3}, {T}: Tap target creature, then return
 /// this artifact to its owner's hand.
 pub fn cyclopean_snare() -> CardDefinition {
@@ -150,7 +165,9 @@ pub fn cyclopean_snare() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(3)]),
             effect: Effect::Seq(vec![
-                Effect::Tap { what: target_filtered(R::Creature) },
+                Effect::Tap {
+                    what: target_filtered(R::Creature),
+                },
                 Effect::Move {
                     what: Selector::This,
                     to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
@@ -170,13 +187,18 @@ pub fn festival_of_the_guildpact() -> CardDefinition {
         cost: cost(&[x(), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::PreventNextDamage { target: Selector::You, amount: Value::XFromCost },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::PreventNextDamage {
+                target: Selector::You,
+                amount: Value::XFromCost,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
 }
-
 
 /// Viashino Fangtail — {2}{R}{R} 3/3 Lizard Warrior. {T}: deals 1 damage to any
 /// target.
@@ -193,7 +215,10 @@ pub fn viashino_fangtail() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::DealDamage { to: target_any(), amount: Value::ONE },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -207,7 +232,10 @@ pub fn undercity_shade() -> CardDefinition {
         name: "Undercity Shade",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Shade], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shade],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Fear],
@@ -293,7 +321,9 @@ pub fn tattered_drake() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[b()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -316,7 +346,10 @@ pub fn surveilling_sprite() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![on_dies(Effect::MayDo {
             description: "Draw a card".into(),
-            body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            body: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            }),
         })],
         ..Default::default()
     }
@@ -329,7 +362,10 @@ pub fn zephyr_spirit() -> CardDefinition {
         name: "Zephyr Spirit",
         cost: cost(&[generic(5), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 0,
         toughness: 6,
         triggered_abilities: vec![blocks(Effect::Move {

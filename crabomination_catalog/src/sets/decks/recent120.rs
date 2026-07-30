@@ -11,7 +11,7 @@ use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, Value, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Crypt Feaster — {3}{B} 3/4 Zombie with menace. Threshold — whenever it
 /// attacks, if seven or more cards are in your graveyard, it gets +2/+0.
@@ -20,13 +20,19 @@ pub fn crypt_feaster() -> CardDefinition {
         name: "Crypt Feaster",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
-                .with_filter(Predicate::ThresholdActive { who: PlayerRef::You }),
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::ThresholdActive {
+                    who: PlayerRef::You,
+                },
+            ),
             effect: Effect::PumpPT {
                 what: Selector::This,
                 power: Value::Const(2),
@@ -61,7 +67,10 @@ pub fn elfsworn_giant() -> CardDefinition {
         name: "Elfsworn Giant",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
         power: 5,
         toughness: 3,
         keywords: vec![Keyword::Reach],
@@ -105,7 +114,10 @@ pub fn courageous_goblin() -> CardDefinition {
         name: "Courageous Goblin",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
@@ -142,7 +154,10 @@ pub fn eager_trufflesnout() -> CardDefinition {
         name: "Eager Trufflesnout",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar],
+            ..Default::default()
+        },
         power: 4,
         toughness: 2,
         keywords: vec![Keyword::Trample],
@@ -166,7 +181,10 @@ fn cat_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }

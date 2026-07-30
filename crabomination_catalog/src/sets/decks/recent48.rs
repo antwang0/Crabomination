@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{on_attack, target_filtered};
 use crate::effect::{ManaPayload, PlayerRef};
-use crate::mana::{cost, g, generic, Color, ManaCost};
+use crate::mana::{Color, ManaCost, cost, g, generic};
 
 /// Predator Ooze — {G}{G}{G} 1/1 Ooze. Indestructible. Whenever it attacks, put
 /// a +1/+1 counter on it. Whenever a creature it dealt damage to this turn dies,
@@ -23,7 +23,10 @@ pub fn predator_ooze() -> CardDefinition {
         name: "Predator Ooze",
         cost: cost(&[g(), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Indestructible],
@@ -53,14 +56,20 @@ pub fn hornet_nest() -> CardDefinition {
         card_types: vec![CardType::Creature],
         keywords: vec![Keyword::Flying, Keyword::Deathtouch],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
         name: "Hornet Nest",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 0,
         toughness: 2,
         keywords: vec![Keyword::Defender],
@@ -83,7 +92,10 @@ pub fn aerie_ouphes() -> CardDefinition {
         name: "Aerie Ouphes",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ouphe], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ouphe],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Persist],
@@ -106,7 +118,10 @@ pub fn walking_atlas() -> CardDefinition {
         name: "Walking Atlas",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -183,7 +198,10 @@ pub fn gnarlid_colony() -> CardDefinition {
         name: "Gnarlid Colony",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Kicker(cost(&[generic(2), g()]))],
@@ -203,7 +221,9 @@ pub fn gnarlid_colony() -> CardDefinition {
             description: "Each creature you control with a +1/+1 counter on it has trample.",
             effect: StaticEffect::GrantKeyword {
                 applies_to: Selector::EachPermanent(
-                    R::Creature.and(R::ControlledByYou).and(R::WithCounter(CounterType::PlusOnePlusOne)),
+                    R::Creature
+                        .and(R::ControlledByYou)
+                        .and(R::WithCounter(CounterType::PlusOnePlusOne)),
                 ),
                 keyword: Keyword::Trample,
             },

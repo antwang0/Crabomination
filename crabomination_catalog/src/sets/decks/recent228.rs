@@ -11,7 +11,7 @@ use crate::effect::shortcut::{
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, StaticEffect, Value,
 };
-use crate::mana::{cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, cost, g, generic, r, u, w};
 
 fn medallion(name: &'static str, color: Color) -> CardDefinition {
     CardDefinition {
@@ -20,22 +20,35 @@ fn medallion(name: &'static str, color: Color) -> CardDefinition {
         card_types: vec![CardType::Artifact],
         static_abilities: vec![StaticAbility {
             description: "Spells of the chosen color cost {1} less to cast.",
-            effect: StaticEffect::CostReduction { filter: R::HasColor(color), amount: 1 },
+            effect: StaticEffect::CostReduction {
+                filter: R::HasColor(color),
+                amount: 1,
+            },
         }],
         ..Default::default()
     }
 }
 
 /// Pearl Medallion — {2} Artifact. White spells you cast cost {1} less.
-pub fn pearl_medallion() -> CardDefinition { medallion("Pearl Medallion", Color::White) }
+pub fn pearl_medallion() -> CardDefinition {
+    medallion("Pearl Medallion", Color::White)
+}
 /// Sapphire Medallion — {2} Artifact. Blue spells you cast cost {1} less.
-pub fn sapphire_medallion() -> CardDefinition { medallion("Sapphire Medallion", Color::Blue) }
+pub fn sapphire_medallion() -> CardDefinition {
+    medallion("Sapphire Medallion", Color::Blue)
+}
 /// Jet Medallion — {2} Artifact. Black spells you cast cost {1} less.
-pub fn jet_medallion() -> CardDefinition { medallion("Jet Medallion", Color::Black) }
+pub fn jet_medallion() -> CardDefinition {
+    medallion("Jet Medallion", Color::Black)
+}
 /// Ruby Medallion — {2} Artifact. Red spells you cast cost {1} less.
-pub fn ruby_medallion() -> CardDefinition { medallion("Ruby Medallion", Color::Red) }
+pub fn ruby_medallion() -> CardDefinition {
+    medallion("Ruby Medallion", Color::Red)
+}
 /// Emerald Medallion — {2} Artifact. Green spells you cast cost {1} less.
-pub fn emerald_medallion() -> CardDefinition { medallion("Emerald Medallion", Color::Green) }
+pub fn emerald_medallion() -> CardDefinition {
+    medallion("Emerald Medallion", Color::Green)
+}
 
 /// Annoyed Altisaur — {5}{G}{G} 6/5 Dinosaur. Reach, trample, cascade.
 pub fn annoyed_altisaur() -> CardDefinition {
@@ -43,7 +56,10 @@ pub fn annoyed_altisaur() -> CardDefinition {
         name: "Annoyed Altisaur",
         cost: cost(&[generic(5), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 6,
         toughness: 5,
         keywords: vec![Keyword::Reach, Keyword::Trample],
@@ -82,7 +98,10 @@ fn fish_token() -> TokenDefinition {
         toughness: 6,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Whale], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Whale],
+            ..Default::default()
+        },
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
@@ -92,7 +111,10 @@ fn fish_token() -> TokenDefinition {
                 toughness: 9,
                 card_types: vec![CardType::Creature],
                 colors: vec![Color::Blue],
-                subtypes: Subtypes { creature_types: vec![CreatureType::Kraken], ..Default::default() },
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Kraken],
+                    ..Default::default()
+                },
                 ..Default::default()
             },
         })],
@@ -104,7 +126,10 @@ fn fish_token() -> TokenDefinition {
         toughness: 3,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Fish], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fish],
+            ..Default::default()
+        },
         triggered_abilities: vec![on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
@@ -121,7 +146,10 @@ pub fn reef_worm() -> CardDefinition {
         name: "Reef Worm",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Worm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Worm],
+            ..Default::default()
+        },
         power: 0,
         toughness: 1,
         triggered_abilities: vec![on_dies(Effect::CreateToken {
@@ -148,7 +176,10 @@ pub fn deserted_temple() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::Untap {
-                    what: Selector::TargetFiltered { slot: 0, filter: R::Land },
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Land,
+                    },
                     up_to: None,
                 },
                 ..Default::default()
@@ -168,7 +199,10 @@ pub fn barbarian_ring() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::Seq(vec![
-                    Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Red]) },
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::Colors(vec![Color::Red]),
+                    },
                     deal(1, Selector::You),
                 ]),
                 ..Default::default()
@@ -177,7 +211,9 @@ pub fn barbarian_ring() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[r()]),
                 sac_cost: true,
-                condition: Some(Predicate::ThresholdActive { who: PlayerRef::You }),
+                condition: Some(Predicate::ThresholdActive {
+                    who: PlayerRef::You,
+                }),
                 effect: deal(2, target_any()),
                 ..Default::default()
             },
@@ -196,7 +232,9 @@ pub fn glass_casket() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
             what: Selector::TargetFiltered {
                 slot: 0,
-                filter: R::Creature.and(R::ControlledByOpponent).and(R::ManaValueAtMost(3)),
+                filter: R::Creature
+                    .and(R::ControlledByOpponent)
+                    .and(R::ManaValueAtMost(3)),
             },
             return_to: ExileReturnZone::Battlefield,
         })],
@@ -210,9 +248,16 @@ pub fn crystal_grotto() -> CardDefinition {
     CardDefinition {
         name: "Crystal Grotto",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) })],
+        triggered_abilities: vec![etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
         activated_abilities: vec![
-            ActivatedAbility { tap_cost: true, effect: add_colorless(1), ..Default::default() },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: add_colorless(1),
+                ..Default::default()
+            },
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(1)]),
@@ -258,7 +303,10 @@ pub fn molten_duplication() -> CardDefinition {
 /// Shackle Slinger — {2}{U} 3/2 Human Soldier. When you cast your second spell
 /// each turn, tap target opponent's creature, or stun it if already tapped.
 pub fn shackle_slinger() -> CardDefinition {
-    let target = Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByOpponent) };
+    let target = Selector::TargetFiltered {
+        slot: 0,
+        filter: R::Creature.and(R::ControlledByOpponent),
+    };
     CardDefinition {
         name: "Shackle Slinger",
         cost: cost(&[generic(2), u()]),
@@ -270,7 +318,10 @@ pub fn shackle_slinger() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![flurry(Effect::If {
-            cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::Tapped },
+            cond: Predicate::EntityMatches {
+                what: Selector::Target(0),
+                filter: R::Tapped,
+            },
             then: Box::new(Effect::AddCounter {
                 what: target.clone(),
                 kind: crate::card::CounterType::Stun,
@@ -290,14 +341,19 @@ pub fn fledgling_dragon() -> CardDefinition {
         name: "Fledgling Dragon",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "Threshold — +3/+3.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::ThresholdActive { who: PlayerRef::You },
+                condition: Predicate::ThresholdActive {
+                    who: PlayerRef::You,
+                },
                 power: 3,
                 toughness: 3,
                 keywords: vec![],
@@ -325,7 +381,10 @@ pub fn thunder_salvo() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
-            to: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature,
+            },
             amount: Value::Sum(vec![
                 Value::Const(2),
                 Value::OtherSpellsCastThisTurn(PlayerRef::You),

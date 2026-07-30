@@ -21,10 +21,15 @@ pub fn bog_rats() -> CardDefinition {
         name: "Bog Rats",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::CantBeBlockedBy(Box::new(R::HasCreatureType(CreatureType::Wall)))],
+        keywords: vec![Keyword::CantBeBlockedBy(Box::new(R::HasCreatureType(
+            CreatureType::Wall,
+        )))],
         ..Default::default()
     }
 }
@@ -40,13 +45,21 @@ pub fn serrated_arrows() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         enters_with_counters: Some((CounterType::Charge, Value::Const(3))),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::If {
                 cond: Predicate::ValueAtMost(
-                    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Charge,
+                    },
                     Value::Const(0),
                 ),
-                then: Box::new(Effect::SacrificePermanent { what: Selector::This }),
+                then: Box::new(Effect::SacrificePermanent {
+                    what: Selector::This,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -90,7 +103,10 @@ pub fn cackling_fiend() -> CardDefinition {
         name: "Cackling Fiend",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Discard {
@@ -118,9 +134,14 @@ pub fn skittering_skirge() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                },
             ),
-            effect: Effect::SacrificePermanent { what: Selector::This },
+            effect: Effect::SacrificePermanent {
+                what: Selector::This,
+            },
         }],
         ..Default::default()
     }
@@ -132,7 +153,10 @@ pub fn highland_giant() -> CardDefinition {
         name: "Highland Giant",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         ..Default::default()
@@ -162,7 +186,10 @@ pub fn mesa_falcon() -> CardDefinition {
         name: "Mesa Falcon",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],

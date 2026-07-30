@@ -2,8 +2,8 @@
 //! delirium punisher. Tests in `tests/recent205.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword,
-    SelectionRequirement as R, Subtypes, Value,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R,
+    Subtypes, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{
@@ -70,8 +70,13 @@ pub fn osseous_sticktwister() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::DeliriumActive { who: PlayerRef::You }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::DeliriumActive {
+                who: PlayerRef::You,
+            }),
             effect: Effect::Punisher {
                 chooser: Selector::Player(PlayerRef::EachOpponent),
                 options: vec![

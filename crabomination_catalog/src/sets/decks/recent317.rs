@@ -2,17 +2,23 @@
 //! payoffs and the upkeep taxers. Tests in `recent_b/mrd`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt, EquipBonus,
-    EnchantmentSubtype, EventKind, EventScope, EventSpec, Keyword, Predicate, Selector,
-    SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, DynamicPt,
+    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    SelectionRequirement as R, Selector, StaticAbility, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{blocks, etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
 use crate::game::TurnStep;
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
 }
 
 fn creature(
@@ -27,7 +33,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -77,7 +86,10 @@ fn aura(name: &'static str, mana: ManaCost, filter: R) -> CardDefinition {
 fn affinity_for_artifacts() -> StaticAbility {
     StaticAbility {
         description: "Affinity for artifacts.",
-        effect: StaticEffect::SelfCostReducedPerPermanentMatching { filter: R::Artifact, per: 1 },
+        effect: StaticEffect::SelfCostReducedPerPermanentMatching {
+            filter: R::Artifact,
+            per: 1,
+        },
     }
 }
 
@@ -85,7 +97,11 @@ fn spell(name: &'static str, mana: ManaCost, sorcery: bool, effect: Effect) -> C
     CardDefinition {
         name,
         cost: mana,
-        card_types: vec![if sorcery { CardType::Sorcery } else { CardType::Instant }],
+        card_types: vec![if sorcery {
+            CardType::Sorcery
+        } else {
+            CardType::Instant
+        }],
         effect,
         ..Default::default()
     }
@@ -109,7 +125,10 @@ fn shard(name: &'static str, pip: ManaCost, effect: Effect) -> CardDefinition {
 /// "At the beginning of each player's upkeep, that player `effect`."
 fn each_upkeep(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::Upkeep),
+            EventScope::AnyPlayer,
+        ),
         effect,
     }
 }
@@ -119,15 +138,28 @@ fn each_upkeep(effect: Effect) -> TriggeredAbility {
 /// Nim Lasher — {2}{B} 1/1 that grows with your artifact count.
 pub fn nim_lasher() -> CardDefinition {
     CardDefinition {
-        dynamic_pt: Some(DynamicPt::ArtifactsControlledPower { base_p: 1, base_t: 1 }),
-        ..creature("Nim Lasher", cost(&[generic(2), b()]), 1, 1, vec![CreatureType::Zombie], vec![])
+        dynamic_pt: Some(DynamicPt::ArtifactsControlledPower {
+            base_p: 1,
+            base_t: 1,
+        }),
+        ..creature(
+            "Nim Lasher",
+            cost(&[generic(2), b()]),
+            1,
+            1,
+            vec![CreatureType::Zombie],
+            vec![],
+        )
     }
 }
 
 /// Nim Shrieker — a 0/1 flier that grows with your artifact count.
 pub fn nim_shrieker() -> CardDefinition {
     CardDefinition {
-        dynamic_pt: Some(DynamicPt::ArtifactsControlledPower { base_p: 0, base_t: 1 }),
+        dynamic_pt: Some(DynamicPt::ArtifactsControlledPower {
+            base_p: 0,
+            base_t: 1,
+        }),
         ..creature(
             "Nim Shrieker",
             cost(&[generic(3), b()]),
@@ -142,10 +174,15 @@ pub fn nim_shrieker() -> CardDefinition {
 /// Nim Shambler — grows with your artifacts; sacrifice a creature to regenerate.
 pub fn nim_shambler() -> CardDefinition {
     CardDefinition {
-        dynamic_pt: Some(DynamicPt::ArtifactsControlledPower { base_p: 2, base_t: 1 }),
+        dynamic_pt: Some(DynamicPt::ArtifactsControlledPower {
+            base_p: 2,
+            base_t: 1,
+        }),
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((R::Creature, 1)),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..creature(
@@ -173,7 +210,14 @@ pub fn nim_replica() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..artifact_creature("Nim Replica", cost(&[generic(3)]), 3, 1, vec![CreatureType::Zombie], vec![])
+        ..artifact_creature(
+            "Nim Replica",
+            cost(&[generic(3)]),
+            3,
+            1,
+            vec![CreatureType::Zombie],
+            vec![],
+        )
     }
 }
 
@@ -187,7 +231,14 @@ pub fn myr_adapter() -> CardDefinition {
             base_t: 1,
             per: 1,
         }),
-        ..artifact_creature("Myr Adapter", cost(&[generic(3)]), 1, 1, vec![CreatureType::Myr], vec![])
+        ..artifact_creature(
+            "Myr Adapter",
+            cost(&[generic(3)]),
+            1,
+            1,
+            vec![CreatureType::Myr],
+            vec![],
+        )
     }
 }
 
@@ -197,10 +248,19 @@ pub fn myr_mindservant() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
-            effect: Effect::ShuffleLibrary { who: PlayerRef::You },
+            effect: Effect::ShuffleLibrary {
+                who: PlayerRef::You,
+            },
             ..Default::default()
         }],
-        ..artifact_creature("Myr Mindservant", cost(&[generic(1)]), 1, 1, vec![CreatureType::Myr], vec![])
+        ..artifact_creature(
+            "Myr Mindservant",
+            cost(&[generic(1)]),
+            1,
+            1,
+            vec![CreatureType::Myr],
+            vec![],
+        )
     }
 }
 
@@ -216,7 +276,14 @@ pub fn malachite_golem() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..artifact_creature("Malachite Golem", cost(&[generic(6)]), 5, 3, vec![CreatureType::Golem], vec![])
+        ..artifact_creature(
+            "Malachite Golem",
+            cost(&[generic(6)]),
+            5,
+            3,
+            vec![CreatureType::Golem],
+            vec![],
+        )
     }
 }
 
@@ -228,14 +295,19 @@ pub fn needlebug() -> CardDefinition {
         2,
         2,
         vec![CreatureType::Insect],
-        vec![Keyword::Flash, Keyword::ProtectionFromCardType(CardType::Artifact)],
+        vec![
+            Keyword::Flash,
+            Keyword::ProtectionFromCardType(CardType::Artifact),
+        ],
     )
 }
 
 /// Duskworker — regenerates when blocked; {3} pumps its power.
 pub fn duskworker() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![blocks(Effect::Regenerate { what: Selector::This })],
+        triggered_abilities: vec![blocks(Effect::Regenerate {
+            what: Selector::This,
+        })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             effect: Effect::PumpPT {
@@ -246,7 +318,14 @@ pub fn duskworker() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..artifact_creature("Duskworker", cost(&[generic(4)]), 2, 2, vec![CreatureType::Construct], vec![])
+        ..artifact_creature(
+            "Duskworker",
+            cost(&[generic(4)]),
+            2,
+            2,
+            vec![CreatureType::Construct],
+            vec![],
+        )
     }
 }
 
@@ -257,7 +336,14 @@ pub fn leveler() -> CardDefinition {
             who: PlayerRef::You,
             keep: Value::ZERO,
         })],
-        ..artifact_creature("Leveler", cost(&[generic(5)]), 10, 10, vec![CreatureType::Juggernaut], vec![])
+        ..artifact_creature(
+            "Leveler",
+            cost(&[generic(5)]),
+            10,
+            10,
+            vec![CreatureType::Juggernaut],
+            vec![],
+        )
     }
 }
 
@@ -292,11 +378,12 @@ pub fn nuisance_engine() -> CardDefinition {
 pub fn serum_tank() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Artifact,
-                }),
+                },
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::Charge,
@@ -307,7 +394,10 @@ pub fn serum_tank() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             tap_cost: true,
             remove_counter_cost: Some((CounterType::Charge, 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..artifact("Serum Tank", cost(&[generic(3)]))
@@ -321,7 +411,10 @@ pub fn granite_shard() -> CardDefinition {
     shard(
         "Granite Shard",
         cost(&[r()]),
-        Effect::DealDamage { to: target_any(), amount: Value::ONE },
+        Effect::DealDamage {
+            to: target_any(),
+            amount: Value::ONE,
+        },
     )
 }
 
@@ -343,7 +436,10 @@ pub fn pearl_shard() -> CardDefinition {
     shard(
         "Pearl Shard",
         cost(&[w()]),
-        Effect::PreventNextDamage { target: target_any(), amount: Value::Const(2) },
+        Effect::PreventNextDamage {
+            target: target_any(),
+            amount: Value::Const(2),
+        },
     )
 }
 
@@ -472,7 +568,14 @@ pub fn megatog() -> CardDefinition {
             ]),
             ..Default::default()
         }],
-        ..creature("Megatog", cost(&[generic(4), r(), r()]), 3, 4, vec![CreatureType::Atog], vec![])
+        ..creature(
+            "Megatog",
+            cost(&[generic(4), r(), r()]),
+            3,
+            4,
+            vec![CreatureType::Atog],
+            vec![],
+        )
     }
 }
 
@@ -513,9 +616,9 @@ pub fn krark_clan_shaman() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((R::Artifact, 1)),
             effect: Effect::DealDamage {
-                to: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(R::HasKeyword(
-                    Keyword::Flying,
-                ))))),
+                to: Selector::EachPermanent(
+                    R::Creature.and(R::Not(Box::new(R::HasKeyword(Keyword::Flying)))),
+                ),
                 amount: Value::ONE,
             },
             ..Default::default()
@@ -575,14 +678,24 @@ pub fn moriok_scavenger() -> CardDefinition {
 pub fn ogre_leadfoot() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::BlockingCreatures,
                     filter: R::Artifact,
-                }),
-            effect: Effect::Destroy { what: Selector::BlockingCreatures },
+                },
+            ),
+            effect: Effect::Destroy {
+                what: Selector::BlockingCreatures,
+            },
         }],
-        ..creature("Ogre Leadfoot", cost(&[generic(4), r()]), 3, 3, vec![CreatureType::Ogre], vec![])
+        ..creature(
+            "Ogre Leadfoot",
+            cost(&[generic(4), r()]),
+            3,
+            3,
+            vec![CreatureType::Ogre],
+            vec![],
+        )
     }
 }
 
@@ -598,7 +711,14 @@ pub fn rustmouth_ogre() -> CardDefinition {
                 }),
             },
         }],
-        ..creature("Rustmouth Ogre", cost(&[generic(4), r(), r()]), 5, 4, vec![CreatureType::Ogre], vec![])
+        ..creature(
+            "Rustmouth Ogre",
+            cost(&[generic(4), r(), r()]),
+            5,
+            4,
+            vec![CreatureType::Ogre],
+            vec![],
+        )
     }
 }
 
@@ -692,7 +812,9 @@ pub fn soul_nova() -> CardDefinition {
             Effect::Exile {
                 what: Selector::AttachedToMe(Box::new(Selector::Target(0))),
             },
-            Effect::Exile { what: target_filtered(R::Creature.and(R::IsAttacking)) },
+            Effect::Exile {
+                what: target_filtered(R::Creature.and(R::IsAttacking)),
+            },
         ]),
     )
 }
@@ -735,7 +857,10 @@ pub fn mindstorm_crown() -> CardDefinition {
             ),
             effect: Effect::If {
                 cond: Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::You), Value::ZERO),
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::DealDamage {
                     to: Selector::You,
                     amount: Value::ONE,
@@ -751,7 +876,9 @@ pub fn goblin_war_wagon() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "This creature doesn't untap during your untap step.",
-            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::This,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -761,7 +888,10 @@ pub fn goblin_war_wagon() -> CardDefinition {
             effect: Effect::MayPay {
                 description: "Untap Goblin War Wagon".into(),
                 mana_cost: cost(&[generic(2)]),
-                body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                body: Box::new(Effect::Untap {
+                    what: Selector::This,
+                    up_to: None,
+                }),
                 else_: None,
             },
         }],
@@ -794,4 +924,3 @@ pub fn neurok_familiar() -> CardDefinition {
         )
     }
 }
-

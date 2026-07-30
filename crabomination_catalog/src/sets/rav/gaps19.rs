@@ -7,8 +7,8 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
-    Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector,
-    TriggeredAbility, ZoneDest,
+    Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, TriggeredAbility,
+    ZoneDest,
 };
 use crate::game::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u, w, x};
@@ -38,8 +38,8 @@ pub fn brightflame() -> CardDefinition {
 /// Lurking Informant — {1}{U/B} 1/2 Human Rogue. {2}, {T}: look at the top
 /// card of target player's library; you may put it into their graveyard.
 pub fn lurking_informant() -> CardDefinition {
-    use crate::mana::hybrid;
     use crate::mana::Color;
+    use crate::mana::hybrid;
     CardDefinition {
         name: "Lurking Informant",
         cost: cost(&[generic(1), hybrid(Color::Blue, Color::Black)]),
@@ -70,8 +70,8 @@ pub fn lurking_informant() -> CardDefinition {
 /// end step, return every creature card that hit your graveyard from the
 /// battlefield this turn to your hand.
 pub fn gleancrawler() -> CardDefinition {
-    use crate::mana::hybrid;
     use crate::mana::Color;
+    use crate::mana::hybrid;
     let bg = || hybrid(Color::Black, Color::Green);
     CardDefinition {
         name: "Gleancrawler",
@@ -110,11 +110,10 @@ pub fn mindmoil() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::SpellCast,
-                EventScope::YourControl,
-            ),
-            effect: Effect::BottomHandThenDrawThatMany { who: PlayerRef::You },
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::BottomHandThenDrawThatMany {
+                who: PlayerRef::You,
+            },
         }],
         ..Default::default()
     }
@@ -127,12 +126,17 @@ pub fn leashling() -> CardDefinition {
         name: "Leashling",
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             effect: Effect::Seq(vec![
-                Effect::PutCardFromHandOnTopOfLibrary { who: Selector::Player(PlayerRef::You) },
+                Effect::PutCardFromHandOnTopOfLibrary {
+                    who: Selector::Player(PlayerRef::You),
+                },
                 Effect::Move {
                     what: Selector::This,
                     to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
@@ -195,11 +199,16 @@ pub fn plague_boiler() -> CardDefinition {
                         counter: CounterType::Plague,
                         n: 3,
                     }),
-                    ..EventSpec::new(EventKind::CounterAdded(CounterType::Plague), EventScope::SelfSource)
+                    ..EventSpec::new(
+                        EventKind::CounterAdded(CounterType::Plague),
+                        EventScope::SelfSource,
+                    )
                 },
                 effect: Effect::Seq(vec![
                     Effect::SacrificeSource,
-                    Effect::Destroy { what: Selector::EachPermanent(R::Nonland) },
+                    Effect::Destroy {
+                        what: Selector::EachPermanent(R::Nonland),
+                    },
                 ]),
             },
         ],
@@ -224,7 +233,10 @@ pub fn bloodletter_quill() -> CardDefinition {
                         kind: CounterType::Blood,
                         amount: Value::ONE,
                     },
-                    Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE },
+                    Effect::Draw {
+                        who: Selector::Player(PlayerRef::You),
+                        amount: Value::ONE,
+                    },
                     Effect::LoseLife {
                         who: Selector::Player(PlayerRef::You),
                         amount: Value::CountersOn {
@@ -256,7 +268,10 @@ pub fn drake_familiar() -> CardDefinition {
         name: "Drake Familiar",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -310,7 +325,9 @@ pub fn razias_purification() -> CardDefinition {
         name: "Razia's Purification",
         cost: cost(&[generic(4), r(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::EachPlayerKeepsNSacrificesRest { keep: Value::Const(3) },
+        effect: Effect::EachPlayerKeepsNSacrificesRest {
+            keep: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -326,7 +343,10 @@ pub fn instill_furor() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
                 filter: Some(Predicate::Not(Box::new(Predicate::EntityMatches {

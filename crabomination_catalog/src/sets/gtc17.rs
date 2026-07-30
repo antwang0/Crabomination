@@ -17,11 +17,16 @@ pub fn frenzied_tilling() -> CardDefinition {
         cost: cost(&[generic(3), r(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Land) },
+            Effect::Destroy {
+                what: target_filtered(R::Land),
+            },
             Effect::Search {
                 who: PlayerRef::You,
                 filter: R::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
         ]),
         ..Default::default()
@@ -39,7 +44,10 @@ pub fn contaminated_ground() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         static_abilities: vec![StaticAbility {
             description: "Enchanted land is a Swamp.",
             effect: StaticEffect::LandTypeChanger {
@@ -51,7 +59,10 @@ pub fn contaminated_ground() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
-                effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+                effect: Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             }],
             ..Default::default()
         }),

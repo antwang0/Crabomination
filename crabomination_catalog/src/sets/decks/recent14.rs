@@ -4,8 +4,8 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    EventKind, EventScope, EventSpec, SelectionRequirement, Selector, Subtypes,
-    TriggeredAbility, Value,
+    EventKind, EventScope, EventSpec, SelectionRequirement, Selector, Subtypes, TriggeredAbility,
+    Value,
 };
 use crate::effect::shortcut::{target_filtered, unearth};
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, ZoneDest};
@@ -61,7 +61,10 @@ pub fn yotian_frontliner() -> CardDefinition {
         name: "Yotian Frontliner",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
@@ -89,7 +92,10 @@ pub fn heaped_harvest() -> CardDefinition {
     let search = || Effect::Search {
         who: PlayerRef::You,
         filter: SelectionRequirement::IsBasicLand,
-        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        to: ZoneDest::Battlefield {
+            controller: PlayerRef::You,
+            tapped: true,
+        },
     };
     CardDefinition {
         name: "Heaped Harvest",
@@ -113,7 +119,10 @@ pub fn heaped_harvest() -> CardDefinition {
             tap_cost: true,
             sac_cost: true,
             mana_cost: cost(&[generic(2)]),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             ..Default::default()
         }],
         ..Default::default()

@@ -4,12 +4,12 @@
 //! `tests/recent82.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardType, CardDefinition, CreatureType, Keyword, SelectionRequirement as R,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R,
     StaticAbility, StaticEffect, Subtypes,
 };
 use crate::effect::shortcut::{magecraft_self_untap, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, Value};
-use crate::mana::{cost, generic, g, r, u, w, x};
+use crate::mana::{cost, g, generic, r, u, w, x};
 
 /// Alloy Myr — {3} 2/2 Myr artifact creature. {T}: Add one mana of any color.
 pub fn alloy_myr() -> CardDefinition {
@@ -17,7 +17,10 @@ pub fn alloy_myr() -> CardDefinition {
         name: "Alloy Myr",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Myr],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -65,7 +68,10 @@ pub fn ballista_squad() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[x(), w()]),
             tap_cost: true,
-            effect: Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::XFromCost },
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::XFromCost,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -79,12 +85,18 @@ pub fn gelectrode() -> CardDefinition {
         name: "Gelectrode",
         cost: cost(&[generic(1), u(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Weird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Weird],
+            ..Default::default()
+        },
         power: 0,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         triggered_abilities: vec![magecraft_self_untap()],
@@ -148,7 +160,9 @@ pub fn radiant_destiny() -> CardDefinition {
                 power: 1,
                 toughness: 1,
                 exclude_source: false,
-                opponents: false, per_counter: None },
+                opponents: false,
+                per_counter: None,
+            },
         }],
         ..Default::default()
     }
@@ -181,5 +195,3 @@ pub fn fires_of_yavimaya() -> CardDefinition {
         ..Default::default()
     }
 }
-
-

@@ -4,7 +4,7 @@
 use crate::card::{CardDefinition, CardType, CreatureType, SelectionRequirement as R};
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, Selector, SpreeMode, Value};
-use crate::mana::{cost, generic, r, u, ManaCost};
+use crate::mana::{ManaCost, cost, generic, r, u};
 
 fn spree(modes: Vec<SpreeMode>) -> Effect {
     Effect::Spree { modes }
@@ -35,7 +35,10 @@ pub fn metamorphic_blast() -> CardDefinition {
             ),
             mode(
                 cost(&[generic(3)]),
-                Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::Const(2),
+                },
             ),
         ]),
         ..Default::default()
@@ -60,11 +63,16 @@ pub fn return_the_favor() -> CardDefinition {
         effect: spree(vec![
             mode(
                 cost(&[generic(1)]),
-                Effect::CopySpellMayChooseTargets { what: a_spell(), count: Value::Const(1) },
+                Effect::CopySpellMayChooseTargets {
+                    what: a_spell(),
+                    count: Value::Const(1),
+                },
             ),
             mode(
                 cost(&[generic(1)]),
-                Effect::ChooseNewTargetsForSpell { what: target_filtered(R::IsSpellOnStack) },
+                Effect::ChooseNewTargetsForSpell {
+                    what: target_filtered(R::IsSpellOnStack),
+                },
             ),
         ]),
         ..Default::default()

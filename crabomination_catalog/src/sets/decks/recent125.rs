@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{attacks_while_saddled, etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{cost, g, generic, w, Color};
+use crate::mana::{Color, cost, g, generic, w};
 
 /// A 1/1 white Sheep — Bridled Bighorn's saddled-attack token.
 fn sheep_token() -> TokenDefinition {
@@ -17,7 +17,10 @@ fn sheep_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sheep], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sheep],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -87,11 +90,13 @@ pub fn sun_blessed_healer() -> CardDefinition {
             cond: Predicate::SpellWasKicked,
             then: Box::new(Effect::Move {
                 what: target_filtered(R::PermanentCard.and(R::ManaValueAtMost(2))),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             }),
             else_: Box::new(Effect::Noop),
         })],
         ..Default::default()
     }
 }
-

@@ -14,7 +14,10 @@ use crate::mana::{cost, g, generic, r, w};
 /// Day/night ETB: becomes day if it's neither day nor night.
 fn day_on_etb() -> TriggeredAbility {
     etb(Effect::If {
-        cond: Predicate::Not(Box::new(Predicate::Any(vec![Predicate::IsDay, Predicate::IsNight]))),
+        cond: Predicate::Not(Box::new(Predicate::Any(vec![
+            Predicate::IsDay,
+            Predicate::IsNight,
+        ]))),
         then: Box::new(Effect::BecomeDay),
         else_: Box::new(Effect::Noop),
     })

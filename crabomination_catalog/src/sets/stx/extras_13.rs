@@ -10,12 +10,15 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -65,8 +68,7 @@ pub fn quandrix_expansion_b122() -> CardDefinition {
                 what: Selector::LastCreatedTokens,
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::CountOf(Box::new(Selector::EachPermanent(
-                    SelectionRequirement::Land
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
                 ))),
             },
         ]),
@@ -157,8 +159,8 @@ pub fn witherbloom_vinegrowth_b123() -> CardDefinition {
 /// each opponent loses 2 life." A midrange recursion body with a
 /// drain on death.
 pub fn witherbloom_crypttender_b123() -> CardDefinition {
-    use crate::effect::shortcut::dies_lose_life_each_opp;
     use crate::card::Zone;
+    use crate::effect::shortcut::dies_lose_life_each_opp;
     CardDefinition {
         name: "Witherbloom Crypttender (Batch 123)",
         cost: cost(&[generic(3), b(), g()]),
@@ -240,7 +242,8 @@ pub fn witherbloom_bonesplitter_b123() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -503,12 +506,10 @@ pub fn lorehold_skirmisher_b123() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Haste],
-        triggered_abilities: vec![crate::effect::shortcut::on_attack(
-            Effect::DealDamage {
-                to: Selector::Target(0),
-                amount: Value::Const(1),
-            },
-        )],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::DealDamage {
+            to: Selector::Target(0),
+            amount: Value::Const(1),
+        })],
         ..Default::default()
     }
 }
@@ -628,8 +629,7 @@ pub fn fractal_pondlord_b123() -> CardDefinition {
                 what: Selector::LastCreatedTokens,
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::CountOf(Box::new(Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ))),
             },
         ]))],
@@ -823,8 +823,7 @@ pub fn quandrix_forester_b124() -> CardDefinition {
         triggered_abilities: vec![
             crate::effect::shortcut::etb(Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
@@ -860,10 +859,7 @@ pub fn quandrix_mathematician_b124() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::DealsCombatDamageToPlayer,
-                    EventScope::SelfSource,
-                ),
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -984,8 +980,7 @@ pub fn strixhaven_stasis_glyph_b160() -> CardDefinition {
             description: "Lands you control don't untap during your untap step.",
             effect: StaticEffect::PreventUntap {
                 applies_to: Selector::EachPermanent(
-                    SelectionRequirement::Land
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
                 ),
             },
         }],
@@ -1008,8 +1003,7 @@ pub fn back_to_basics() -> CardDefinition {
             description: "Nonbasic lands don't untap during their controllers' untap steps.",
             effect: StaticEffect::PreventUntap {
                 applies_to: Selector::EachPermanent(
-                    SelectionRequirement::Land
-                        .and(SelectionRequirement::IsBasicLand.negate()),
+                    SelectionRequirement::Land.and(SelectionRequirement::IsBasicLand.negate()),
                 ),
             },
         }],
@@ -1081,7 +1075,10 @@ pub fn arclight_phoenix() -> CardDefinition {
             }),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         }],
         ..Default::default()
@@ -1101,7 +1098,8 @@ pub fn opposition() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            tap_other_filter: Some(SelectionRequirement::Creature), from_hand: false,
+            tap_other_filter: Some(SelectionRequirement::Creature),
+            from_hand: false,
             effect: Effect::Tap {
                 what: target_filtered(
                     SelectionRequirement::Artifact
@@ -1147,8 +1145,7 @@ pub fn blustersquall() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Tap {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
         },
         alternative_cost: Some(AlternativeCost {
@@ -1164,8 +1161,7 @@ pub fn blustersquall() -> CardDefinition {
             sacrifice_permanents: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
                 body: Box::new(Effect::Tap {
                     what: Selector::TriggerSource,
@@ -1178,7 +1174,8 @@ pub fn blustersquall() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -1196,8 +1193,7 @@ pub fn electrickery() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
             amount: Value::Const(1),
         },
@@ -1214,8 +1210,7 @@ pub fn electrickery() -> CardDefinition {
             sacrifice_permanents: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
                 body: Box::new(Effect::DealDamage {
                     to: Selector::TriggerSource,
@@ -1229,7 +1224,8 @@ pub fn electrickery() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -1249,8 +1245,7 @@ pub fn teleportal() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 power: Value::Const(1),
                 toughness: Value::Const(0),
@@ -1275,8 +1270,7 @@ pub fn teleportal() -> CardDefinition {
             sacrifice_permanents: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 body: Box::new(Effect::Seq(vec![
                     Effect::PumpPT {
@@ -1299,7 +1293,8 @@ pub fn teleportal() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -1353,7 +1348,8 @@ pub fn street_spasm() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }

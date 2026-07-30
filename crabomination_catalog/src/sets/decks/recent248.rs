@@ -33,7 +33,9 @@ pub fn deadly_complication() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseModesCast {
             modes: vec![
-                Effect::Destroy { what: target_filtered(R::Creature) },
+                Effect::Destroy {
+                    what: target_filtered(R::Creature),
+                },
                 Effect::Seq(vec![
                     Effect::AddCounter {
                         what: target_filtered(

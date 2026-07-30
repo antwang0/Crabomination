@@ -5,7 +5,8 @@
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
-    MayPlayDuration, Predicate, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
+    MayPlayDuration, Predicate, SelectionRequirement as R, StaticAbility, Subtypes,
+    TriggeredAbility,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
@@ -49,7 +50,8 @@ pub fn alanias_pathmaker() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(1),
             duration: MayPlayDuration::EndOfControllersNextTurn,
-            pay_any_color: false, pay_own_cost: false,
+            pay_any_color: false,
+            pay_own_cost: false,
             uncast_penalty: None,
         })],
         ..Default::default()
@@ -63,7 +65,10 @@ pub fn apothecary_stomper() -> CardDefinition {
         name: "Apothecary Stomper",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
@@ -73,7 +78,10 @@ pub fn apothecary_stomper() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
         ]))],
         ..Default::default()
     }
@@ -87,13 +95,19 @@ pub fn armasaur_guide() -> CardDefinition {
         name: "Armasaur Guide",
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource).with_filter(
-                Predicate::AttackedWithCountAtLeast { who: PlayerRef::ActivePlayer, at_least: 3 },
+                Predicate::AttackedWithCountAtLeast {
+                    who: PlayerRef::ActivePlayer,
+                    at_least: 3,
+                },
             ),
             effect: Effect::AddCounter {
                 what: target_filtered(R::Creature.and(R::ControlledByYou)),
@@ -145,15 +159,23 @@ pub fn billowing_shriekmass() -> CardDefinition {
         name: "Billowing Shriekmass",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(3) })],
+        triggered_abilities: vec![etb(Effect::Mill {
+            who: Selector::You,
+            amount: Value::Const(3),
+        })],
         static_abilities: vec![StaticAbility {
             description: "Threshold — gets +2/+1 while seven or more cards are in your graveyard.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::ThresholdActive { who: PlayerRef::You },
+                condition: Predicate::ThresholdActive {
+                    who: PlayerRef::You,
+                },
                 power: 2,
                 toughness: 1,
                 keywords: vec![],

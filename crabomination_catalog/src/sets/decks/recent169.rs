@@ -24,7 +24,11 @@ pub fn skybox_ferry() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Flying, Keyword::Crew(2), Keyword::Cycling(cost(&[generic(2)]))],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Crew(2),
+            Keyword::Cycling(cost(&[generic(2)])),
+        ],
         ..Default::default()
     }
 }
@@ -59,12 +63,21 @@ pub fn pothole_mole() -> CardDefinition {
         name: "Pothole Mole",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mole], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mole],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
-            Effect::ReturnGraveyardCardsToHand { filter: R::Land, max: Value::ONE },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::ReturnGraveyardCardsToHand {
+                filter: R::Land,
+                max: Value::ONE,
+            },
         ]))],
         ..Default::default()
     }
@@ -88,7 +101,10 @@ pub fn roadside_blowout() -> CardDefinition {
                 ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -109,8 +125,14 @@ pub fn run_over() -> CardDefinition {
             1,
         )),
         effect: Effect::DealDamageEqualToPower {
-            source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
-            target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+            source: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature.and(R::ControlledByYou),
+            },
+            target: Selector::TargetFiltered {
+                slot: 1,
+                filter: R::Creature.and(R::ControlledByOpponent),
+            },
         },
         ..Default::default()
     }
@@ -125,15 +147,25 @@ pub fn pride_of_the_road() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie, CreatureType::Cat, CreatureType::Warrior],
+            creature_types: vec![
+                CreatureType::Zombie,
+                CreatureType::Cat,
+                CreatureType::Warrior,
+            ],
             ..Default::default()
         },
         power: 2,
         toughness: 5,
         keywords: vec![Keyword::Vigilance, Keyword::StartYourEngines],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::BeginCombat), EventScope::YourControl)
-                .with_filter(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::SpeedAtLeast {
+                who: PlayerRef::You,
+                speed: 4,
+            }),
             effect: Effect::GrantKeyword {
                 what: target_filtered(
                     R::Creature
@@ -165,13 +197,20 @@ pub fn rangers_refueler() -> CardDefinition {
         keywords: vec![Keyword::Crew(2)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::ExhaustAbilityActivated, EventScope::YourControl),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4)]),
             exhaust: true,
             effect: Effect::Seq(vec![
-                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Creature, until_eot: false },
+                Effect::AddCardTypeIndefinitely {
+                    what: Selector::This,
+                    card_type: CardType::Creature,
+                    until_eot: false,
+                },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -207,7 +246,11 @@ pub fn rocketeer_boostbuggy() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             exhaust: true,
             effect: Effect::Seq(vec![
-                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Creature, until_eot: false },
+                Effect::AddCardTypeIndefinitely {
+                    what: Selector::This,
+                    card_type: CardType::Creature,
+                    until_eot: false,
+                },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -235,7 +278,10 @@ pub fn point_the_way() -> CardDefinition {
             effect: Effect::SearchUpToN {
                 who: PlayerRef::You,
                 filter: R::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
                 count: Value::PlayerSpeed(PlayerRef::You),
             },
             ..Default::default()
@@ -261,7 +307,10 @@ pub fn perilous_snare() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sorcery_speed: true,
-            condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+            condition: Some(Predicate::SpeedAtLeast {
+                who: PlayerRef::You,
+                speed: 4,
+            }),
             effect: Effect::AddCounter {
                 what: target_filtered(
                     R::Creature

@@ -7,10 +7,10 @@ use crate::card::{
     EnchantmentSubtype, EquipBonus, EquipScale, EventKind, EventScope, EventSpec,
     SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::target_filtered;
 use crate::effect::Selector;
+use crate::effect::shortcut::target_filtered;
 use crate::game::TurnStep;
-use crate::mana::{cost, generic, hybrid, u, w, Color};
+use crate::mana::{Color, cost, generic, hybrid, u, w};
 
 /// Nivmagus Elemental — {U/R} 1/2 Elemental. Exile an instant or sorcery
 /// spell you control: put two +1/+1 counters on this creature.
@@ -26,7 +26,9 @@ pub fn nivmagus_elemental() -> CardDefinition {
         power: 1,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
-            exile_spell_cost: Some(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+            exile_spell_cost: Some(
+                R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -50,7 +52,10 @@ pub fn righteous_authority() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             scale: Some(EquipScale {
                 filter: R::Any,
@@ -62,8 +67,14 @@ pub fn righteous_authority() -> CardDefinition {
             // Fires on the enchanted creature's controller's draw step (the
             // bonus's triggers are granted to the host).
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::YourControl),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Draw),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             }],
             ..Default::default()
         }),

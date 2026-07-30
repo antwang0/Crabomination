@@ -10,12 +10,17 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, SpellSubtype, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, SpellSubtype, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x, ManaCost};
+use crate::mana::{
+    Color, ManaCost, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x,
+};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -94,7 +99,9 @@ pub fn field_trip() -> CardDefinition {
                 },
             },
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
-            Effect::Learn { who: PlayerRef::You },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -116,7 +123,10 @@ pub fn reduce_to_memory() -> CardDefinition {
         name: "Reduce to Memory",
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             Effect::Exile {
                 what: target_filtered(
@@ -151,8 +161,7 @@ pub fn baleful_mastery() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Exile {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker),
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             ),
         },
         alternative_cost: Some(AlternativeCost {
@@ -178,8 +187,7 @@ pub fn baleful_mastery() -> CardDefinition {
                 // opponent's draw without actually exiling anything.
                 Effect::Exile {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                     ),
                 },
             ])),
@@ -190,7 +198,8 @@ pub fn baleful_mastery() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -217,7 +226,9 @@ pub fn igneous_inspiration() -> CardDefinition {
                 amount: Value::Const(3),
             },
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
-            Effect::Learn { who: PlayerRef::You },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -252,8 +263,7 @@ pub fn combat_professor() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     power: Value::Const(1),
                     toughness: Value::Const(0),
@@ -336,7 +346,10 @@ pub fn spell_satchel() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[generic(3)]),
                 remove_counter_cost: Some((CounterType::Book, 3)),
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
         ],
@@ -367,7 +380,10 @@ pub fn excavated_wall() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
-            effect: Effect::Mill { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -393,17 +409,33 @@ pub fn snow_day() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             // Slot 0: tap + freeze the first creature.
-            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
-            Effect::SkipNextUntap { what: Selector::Target(0) },
+            Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::SkipNextUntap {
+                what: Selector::Target(0),
+            },
             // Slot 1: tap + freeze the second creature (optional — resolves
             // to no-op when only one target was chosen).
             Effect::Tap {
-                what: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature,
+                },
             },
-            Effect::SkipNextUntap { what: Selector::Target(1) },
+            Effect::SkipNextUntap {
+                what: Selector::Target(1),
+            },
             // Draw two cards, then discard a card.
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
         ]),
         ..Default::default()
     }
@@ -423,8 +455,14 @@ pub fn curate() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -485,7 +523,7 @@ pub fn resculpt() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -526,7 +564,9 @@ pub fn mortality_spear() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "This spell costs {2} less to cast if you gained life this turn.",
             effect: StaticEffect::SelfCostReducedIf {
-                condition: Predicate::PlayerGainedLifeThisTurn { who: PlayerRef::You },
+                condition: Predicate::PlayerGainedLifeThisTurn {
+                    who: PlayerRef::You,
+                },
                 amount: 2,
             },
         }],
@@ -557,7 +597,12 @@ pub fn daemogoth_titan() -> CardDefinition {
     };
     CardDefinition {
         name: "Daemogoth Titan",
-        cost: cost(&[hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]),
+        cost: cost(&[
+            hybrid(Color::Black, Color::Green),
+            hybrid(Color::Black, Color::Green),
+            hybrid(Color::Black, Color::Green),
+            hybrid(Color::Black, Color::Green),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Demon],
@@ -622,8 +667,14 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
                         amount: Value::Const(1),
                         random: false,
                     },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
                 ]),
             },
         ],
@@ -707,7 +758,10 @@ pub fn quandrix_cultivator() -> CardDefinition {
                         SelectionRequirement::HasLandType(LandType::Forest)
                             .or(SelectionRequirement::HasLandType(LandType::Island)),
                     ),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 }),
             },
         }],
@@ -724,10 +778,10 @@ pub fn quandrix_cultivator() -> CardDefinition {
 /// types."
 pub fn hofri_ghostforge() -> CardDefinition {
     use crate::card::{
-        EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement,
-        StaticAbility, TriggeredAbility,
+        EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement, StaticAbility,
+        TriggeredAbility,
     };
-    use crate::effect::{PlayerRef, Selector, StaticEffect, ZoneDest, Value};
+    use crate::effect::{PlayerRef, Selector, StaticEffect, Value, ZoneDest};
     let spirits = || {
         Selector::EachPermanent(
             SelectionRequirement::HasCreatureType(CreatureType::Spirit)
@@ -749,13 +803,17 @@ pub fn hofri_ghostforge() -> CardDefinition {
         // `CreateTokenCopyOf` resolves the source from exile, so it sees the
         // just-exiled card.
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken)),
-                }),
+                },
+            ),
             effect: Effect::Seq(vec![
-                Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Exile,
+                },
                 Effect::CreateTokenCopyOf {
                     extra_keywords: vec![],
                     who: PlayerRef::You,
@@ -782,15 +840,25 @@ pub fn hofri_ghostforge() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Spirits you control get +1/+1.",
-                effect: StaticEffect::PumpPT { applies_to: spirits(), power: 1, toughness: 1 },
+                effect: StaticEffect::PumpPT {
+                    applies_to: spirits(),
+                    power: 1,
+                    toughness: 1,
+                },
             },
             StaticAbility {
                 description: "Spirits you control have trample.",
-                effect: StaticEffect::GrantKeyword { applies_to: spirits(), keyword: Keyword::Trample },
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: spirits(),
+                    keyword: Keyword::Trample,
+                },
             },
             StaticAbility {
                 description: "Spirits you control have haste.",
-                effect: StaticEffect::GrantKeyword { applies_to: spirits(), keyword: Keyword::Haste },
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: spirits(),
+                    keyword: Keyword::Haste,
+                },
             },
         ],
         ..Default::default()
@@ -822,10 +890,7 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
             min_targets: 0,
             filter: SelectionRequirement::ControlledByOpponent
                 .and(SelectionRequirement::ManaValueAtMost(3))
-                .and(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker),
-                ),
+                .and(SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker)),
             effect: Box::new(Effect::GainControl {
                 what: Selector::Target(0),
                 to: None,
@@ -836,7 +901,6 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
     }
 }
 
-
 /// Confront the Past — {X}{B} Sorcery — Lesson. Choose one — return target
 /// planeswalker card with mana value X or less from your graveyard to the
 /// battlefield; or remove twice X loyalty counters from target planeswalker
@@ -846,7 +910,10 @@ pub fn confront_the_past() -> CardDefinition {
         name: "Confront the Past",
         cost: cost(&[x(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::ChooseMode(vec![
             Effect::Move {
                 what: target_filtered(
@@ -854,7 +921,10 @@ pub fn confront_the_past() -> CardDefinition {
                         .and(SelectionRequirement::InGraveyard)
                         .and(SelectionRequirement::ManaValueAtMostXFromCost),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::RemoveCounter {
                 what: target_filtered(
@@ -916,7 +986,10 @@ pub fn mascot_interception() -> CardDefinition {
                 to: None,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::PumpPT {
                 what: Selector::Target(0),
                 power: Value::Const(2),
@@ -963,7 +1036,10 @@ pub fn practical_research() -> CardDefinition {
         cost: cost(&[generic(3), u(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
             Effect::DiscardUnlessKind {
                 who: PlayerRef::You,
                 count: Value::Const(2),
@@ -1093,7 +1169,10 @@ pub fn letter_of_acceptance() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
                 sac_cost: true,
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
         ],
@@ -1114,7 +1193,10 @@ pub fn charge_through() -> CardDefinition {
                 keyword: Keyword::Trample,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -1130,8 +1212,12 @@ pub fn devious_cover_up() -> CardDefinition {
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::CounterSpell { what: target_filtered(SelectionRequirement::IsSpellOnStack) },
-            Effect::ExileAnyNumberFromGraveyards { filter: SelectionRequirement::Any },
+            Effect::CounterSpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            },
+            Effect::ExileAnyNumberFromGraveyards {
+                filter: SelectionRequirement::Any,
+            },
         ]),
         ..Default::default()
     }
@@ -1219,8 +1305,14 @@ pub fn mentors_guidance() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         // Scry 1, then draw a card.
         effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         // "When you cast this spell, copy it if you control a planeswalker,
         // Cleric, Druid, Shaman, Warlock, or Wizard."
@@ -1372,7 +1464,10 @@ pub fn expressive_iteration() -> CardDefinition {
             // "...and the rest on the bottom of your library" — bottom the
             // last leftover instead of leaving it on top.
             Effect::Move {
-                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(1) },
+                what: Selector::TopOfLibrary {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                },
                 to: crate::effect::ZoneDest::Library {
                     who: PlayerRef::You,
                     pos: crate::effect::LibraryPosition::Bottom,
@@ -1402,7 +1497,7 @@ pub fn expressive_iteration() -> CardDefinition {
 /// slots after a variable-count divided block. The {U/R}{U/R}, Discard
 /// → Treasure mode ships via `discard_activated`.
 pub fn magma_opus() -> CardDefinition {
-    use crate::mana::{hybrid, Color};
+    use crate::mana::{Color, hybrid};
     let elemental = TokenDefinition {
         name: "Elemental".into(),
         power: 4,
@@ -1548,11 +1643,12 @@ pub fn eyetwitch_brood() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Pest),
-                }),
+                },
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -1589,7 +1685,9 @@ pub fn first_day_of_class() -> CardDefinition {
                     },
                 ])),
             },
-            Effect::Learn { who: PlayerRef::You },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -1613,16 +1711,35 @@ pub fn first_day_of_class() -> CardDefinition {
 pub fn verdant_mastery() -> CardDefinition {
     use crate::card::AlternativeCost;
     let basic = || SelectionRequirement::IsBasicLand;
-    let to_your_bf = || ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true };
+    let to_your_bf = || ZoneDest::Battlefield {
+        controller: PlayerRef::You,
+        tapped: true,
+    };
     let to_hand = || ZoneDest::Hand(PlayerRef::You);
     // Base: put two basics onto the battlefield tapped under your control and
     // the rest (up to two) into your hand.
     let base = || {
         Effect::Seq(vec![
-            Effect::Search { who: PlayerRef::You, filter: basic(), to: to_your_bf() },
-            Effect::Search { who: PlayerRef::You, filter: basic(), to: to_your_bf() },
-            Effect::Search { who: PlayerRef::You, filter: basic(), to: to_hand() },
-            Effect::Search { who: PlayerRef::You, filter: basic(), to: to_hand() },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: basic(),
+                to: to_your_bf(),
+            },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: basic(),
+                to: to_your_bf(),
+            },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: basic(),
+                to: to_hand(),
+            },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: basic(),
+                to: to_hand(),
+            },
         ])
     };
     // Alt ({3}{G} paid): one basic goes onto the battlefield tapped under an
@@ -1631,11 +1748,26 @@ pub fn verdant_mastery() -> CardDefinition {
         Effect::Search {
             who: PlayerRef::You,
             filter: basic(),
-            to: ZoneDest::Battlefield { controller: PlayerRef::EachOpponent, tapped: true },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::EachOpponent,
+                tapped: true,
+            },
         },
-        Effect::Search { who: PlayerRef::You, filter: basic(), to: to_your_bf() },
-        Effect::Search { who: PlayerRef::You, filter: basic(), to: to_your_bf() },
-        Effect::Search { who: PlayerRef::You, filter: basic(), to: to_hand() },
+        Effect::Search {
+            who: PlayerRef::You,
+            filter: basic(),
+            to: to_your_bf(),
+        },
+        Effect::Search {
+            who: PlayerRef::You,
+            filter: basic(),
+            to: to_your_bf(),
+        },
+        Effect::Search {
+            who: PlayerRef::You,
+            filter: basic(),
+            to: to_hand(),
+        },
     ]);
     CardDefinition {
         name: "Verdant Mastery",
@@ -1883,7 +2015,10 @@ pub fn necrotic_fumes() -> CardDefinition {
         name: "Necrotic Fumes",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         additional_cast_cost: vec![AdditionalCastCost::ExilePermanent {
             filter: SelectionRequirement::Creature,
             count: 1,
@@ -1939,7 +2074,10 @@ pub fn containment_breach() -> CardDefinition {
         name: "Containment Breach",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
         effect: Effect::If {
             // Check the target's mana value before it's destroyed.
             cond: Predicate::ValueAtLeast(
@@ -2174,8 +2312,8 @@ pub fn wandering_archaic() -> CardDefinition {
         power: 4,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
-                .with_filter(Predicate::Any(vec![
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(
+                Predicate::Any(vec![
                     Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::HasCardType(CardType::Instant),
@@ -2184,7 +2322,8 @@ pub fn wandering_archaic() -> CardDefinition {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::HasCardType(CardType::Sorcery),
                     },
-                ])),
+                ]),
+            ),
             effect: Effect::CopySpellUnlessPaid {
                 what: Selector::TriggerSource,
                 mana_cost: cost(&[generic(2)]),
@@ -2287,14 +2426,32 @@ pub fn fervent_mastery() -> CardDefinition {
     use crate::card::AlternativeCost;
     let base = || {
         vec![
-            Effect::Search { who: PlayerRef::You, filter: SelectionRequirement::Any, to: ZoneDest::Hand(PlayerRef::You) },
-            Effect::Search { who: PlayerRef::You, filter: SelectionRequirement::Any, to: ZoneDest::Hand(PlayerRef::You) },
-            Effect::Search { who: PlayerRef::You, filter: SelectionRequirement::Any, to: ZoneDest::Hand(PlayerRef::You) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(3), random: true },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Any,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Any,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Any,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(3),
+                random: true,
+            },
         ]
     };
     let opponent_loot = vec![
-        Effect::DiscardAnyNumber { who: Selector::Player(PlayerRef::EachOpponent) },
+        Effect::DiscardAnyNumber {
+            who: Selector::Player(PlayerRef::EachOpponent),
+        },
         Effect::Draw {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::CountOf(Box::new(Selector::DiscardedThisResolution {

@@ -24,7 +24,10 @@ fn attack_while_saddled(effect: Effect) -> TriggeredAbility {
 fn mount(types: Vec<CreatureType>) -> Subtypes {
     let mut creature_types = types;
     creature_types.push(CreatureType::Mount);
-    Subtypes { creature_types, ..Default::default() }
+    Subtypes {
+        creature_types,
+        ..Default::default()
+    }
 }
 
 /// Vengeful Townsfolk — {2}{W} 3/3 Human Citizen. Whenever one or more other
@@ -69,8 +72,14 @@ pub fn loan_shark() -> CardDefinition {
         power: 3,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::SpellsCastThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(2) },
-            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            cond: Predicate::SpellsCastThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::Const(2),
+            },
+            then: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            }),
             else_: Box::new(Effect::Noop),
         })],
         plot_cost: Some(cost(&[generic(3), u()])),
@@ -96,7 +105,9 @@ pub fn servant_of_the_stinger() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::If {
-                cond: Predicate::CommittedCrimeThisTurn { who: PlayerRef::You },
+                cond: Predicate::CommittedCrimeThisTurn {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::MayDo {
                     description: "Sacrifice Servant of the Stinger to search your library?".into(),
                     body: Box::new(Effect::Seq(vec![
@@ -131,7 +142,8 @@ pub fn rattleback_apothecary() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl).once_per_turn(),
+            event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl)
+                .once_per_turn(),
             effect: Effect::ChooseMode(vec![
                 Effect::GrantKeyword {
                     what: target_filtered(R::Creature.and(R::ControlledByYou)),
@@ -166,8 +178,14 @@ pub fn wrangler_of_the_damned() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::End), EventScope::YourControl)
-                .with_filter(Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::ZERO }),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::SpellsCastThisTurnEquals {
+                who: PlayerRef::You,
+                count: Value::ZERO,
+            }),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -194,11 +212,8 @@ pub fn wrangler_of_the_damned() -> CardDefinition {
 /// saddled → put a +1/+1 counter on each other creature you control; gain 1
 /// life for each of those creatures.
 pub fn bounding_felidar() -> CardDefinition {
-    let others = || {
-        Selector::EachPermanent(
-            R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
-        )
-    };
+    let others =
+        || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource));
     CardDefinition {
         name: "Bounding Felidar",
         cost: cost(&[generic(5), w()]),
@@ -213,7 +228,10 @@ pub fn bounding_felidar() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::count(others()) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::count(others()),
+            },
         ]))],
         ..Default::default()
     }
@@ -236,7 +254,10 @@ pub fn trained_arynx() -> CardDefinition {
                 keyword: Keyword::FirstStrike,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         ]))],
         ..Default::default()
     }
@@ -285,11 +306,17 @@ pub fn quick_draw() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::LoseKeywordThisTurn {
-                what: Selector::ControlledBy { who: PlayerRef::Target(1), filter: R::Creature },
+                what: Selector::ControlledBy {
+                    who: PlayerRef::Target(1),
+                    filter: R::Creature,
+                },
                 keyword: Keyword::FirstStrike,
             },
             Effect::LoseKeywordThisTurn {
-                what: Selector::ControlledBy { who: PlayerRef::Target(1), filter: R::Creature },
+                what: Selector::ControlledBy {
+                    who: PlayerRef::Target(1),
+                    filter: R::Creature,
+                },
                 keyword: Keyword::DoubleStrike,
             },
         ]),
@@ -300,8 +327,9 @@ pub fn quick_draw() -> CardDefinition {
 /// Desert's Due — {1}{B} Instant. Target creature gets -2/-2 until end of turn,
 /// and an additional -1/-1 for each Desert you control.
 pub fn deserts_due() -> CardDefinition {
-    let deserts =
-        Value::count(Selector::EachPermanent(R::HasLandType(LandType::Desert).and(R::ControlledByYou)));
+    let deserts = Value::count(Selector::EachPermanent(
+        R::HasLandType(LandType::Desert).and(R::ControlledByYou),
+    ));
     let debuff = Value::Diff(Box::new(Value::Const(-2)), Box::new(deserts));
     CardDefinition {
         name: "Desert's Due",
@@ -362,7 +390,10 @@ pub fn the_weatherseed_treaty() -> CardDefinition {
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: R::IsBasicLand,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
                 },
             ),
             (

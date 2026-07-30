@@ -23,7 +23,10 @@ pub fn skyship_buccaneer() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![raid_etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        triggered_abilities: vec![raid_etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
         ..Default::default()
     }
 }
@@ -39,13 +42,18 @@ pub fn starlight_snare() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         triggered_abilities: vec![etb(Effect::Tap {
             what: Selector::AttachedTo(Box::new(Selector::This)),
         })],
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature doesn't untap during its controller's untap step.",
-            effect: StaticEffect::PreventUntap { applies_to: Selector::AttachedTo(Box::new(Selector::This)) },
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
         }],
         ..Default::default()
     }
@@ -97,7 +105,9 @@ pub fn dreadwing_scavenger() -> CardDefinition {
             description: "Threshold — has deathtouch while seven or more cards are in your graveyard.",
             effect: StaticEffect::SelfHasKeywordIf {
                 keyword: Keyword::Deathtouch,
-                condition: Predicate::ThresholdActive { who: PlayerRef::You },
+                condition: Predicate::ThresholdActive {
+                    who: PlayerRef::You,
+                },
             },
         }],
         triggered_abilities: vec![etb_loot(), on_attack_loot()],

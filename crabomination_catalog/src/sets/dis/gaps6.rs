@@ -6,7 +6,7 @@ use crate::card::{
 };
 use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 /// Momir Vig, Simic Visionary — {3}{G}{U} 2/2 Elf Wizard. Casting a green
 /// creature spell tutors a creature to the top of your library; casting a blue
@@ -31,7 +31,10 @@ pub fn momir_vig_simic_visionary() -> CardDefinition {
                 effect: Effect::Search {
                     who: PlayerRef::You,
                     filter: R::Creature,
-                    to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                    to: ZoneDest::Library {
+                        who: PlayerRef::You,
+                        pos: LibraryPosition::Top,
+                    },
                 },
             },
             TriggeredAbility {
@@ -56,14 +59,20 @@ pub fn sphinx_of_the_chimes() -> CardDefinition {
         name: "Sphinx of the Chimes",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
         power: 5,
         toughness: 6,
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             discard_cost: Some((R::Nonland, 2)),
             discard_cost_same_name: true,
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -84,10 +93,16 @@ pub fn elemental_resonance() -> CardDefinition {
         },
         effect: Effect::Attach {
             what: Selector::This,
-            to: Selector::TargetFiltered { slot: 0, filter: R::Permanent },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Permanent,
+            },
         },
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::PreCombatMain),
+                EventScope::YourControl,
+            ),
             effect: Effect::AddManaEqualToPermanentCost {
                 permanent: Selector::AttachedTo(Box::new(Selector::This)),
             },
@@ -104,7 +119,9 @@ pub fn vigean_intuition() -> CardDefinition {
         name: "Vigean Intuition",
         cost: cost(&[generic(3), g(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseTypeRevealTopPartition { count: Value::Const(4) },
+        effect: Effect::ChooseTypeRevealTopPartition {
+            count: Value::Const(4),
+        },
         ..Default::default()
     }
 }
@@ -117,7 +134,9 @@ pub fn fertile_imagination() -> CardDefinition {
         name: "Fertile Imagination",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::FertileImagination { per: Value::Const(2) },
+        effect: Effect::FertileImagination {
+            per: Value::Const(2),
+        },
         ..Default::default()
     }
 }
@@ -130,7 +149,9 @@ pub fn aethermages_touch() -> CardDefinition {
         name: "Aethermage's Touch",
         cost: cost(&[generic(2), w(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::AethermagesTouch { count: Value::Const(4) },
+        effect: Effect::AethermagesTouch {
+            count: Value::Const(4),
+        },
         ..Default::default()
     }
 }
@@ -225,7 +246,10 @@ pub fn isperia_the_inscrutable() -> CardDefinition {
         cost: cost(&[generic(1), w(), w(), u(), u()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
         power: 3,
         toughness: 6,
         keywords: vec![Keyword::Flying],
@@ -242,8 +266,8 @@ pub fn isperia_the_inscrutable() -> CardDefinition {
 /// "destroy the creature it damages at end of combat").
 pub fn simic_basilisk() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
-    use crate::effect::shortcut::target_filtered;
     use crate::effect::Duration;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Simic Basilisk",
         cost: cost(&[generic(4), g(), g()]),
@@ -283,9 +307,17 @@ pub fn evolution_vat() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(3)]),
             effect: Effect::Seq(vec![
-                Effect::Tap { what: Selector::TargetFiltered { slot: 0, filter: R::Creature } },
+                Effect::Tap {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature,
+                    },
+                },
                 Effect::AddCounter {
-                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature,
+                    },
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
                 },

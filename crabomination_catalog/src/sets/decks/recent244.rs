@@ -1,11 +1,11 @@
 //! MKM (Murders at Karlov Manor) gap batch — Detectives, Disguise, and
 //! investigate value. Tests in `tests/recent_b/recent244.rs`.
 
+use crate::card::{AdditionalCastCost, ArtifactSubtype, EventKind, EventScope, EventSpec};
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Keyword, SelectionRequirement as R,
     Subtypes, TriggeredAbility,
 };
-use crate::card::{AdditionalCastCost, ArtifactSubtype, EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{investigate, target_filtered};
 use crate::effect::{Effect, PlayerRef, Predicate, Selector, Value, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, x};
@@ -84,7 +84,10 @@ pub fn extract_a_confession() -> CardDefinition {
         name: "Extract a Confession",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 6, optional: true }],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence {
+            amount: 6,
+            optional: true,
+        }],
         effect: Effect::If {
             cond: Predicate::SpellCollectedEvidence,
             then: Box::new(Effect::SacrificeGreatestMV {
@@ -118,7 +121,10 @@ pub fn vitu_ghazi_inspector() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Reach],
-        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 6, optional: true }],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence {
+            amount: 6,
+            optional: true,
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             // "if evidence was collected" is read at resolution off the source's
@@ -131,7 +137,10 @@ pub fn vitu_ghazi_inspector() -> CardDefinition {
                         kind: CounterType::PlusOnePlusOne,
                         amount: Value::ONE,
                     },
-                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
                 ])),
                 else_: Box::new(Effect::Noop),
             },
@@ -155,12 +164,18 @@ pub fn curious_cadaver() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::FromYourGraveyard)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: R::HasArtifactSubtype(ArtifactSubtype::Clue),
-                }),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            event: EventSpec::new(
+                EventKind::PermanentSacrificed,
+                EventScope::FromYourGraveyard,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasArtifactSubtype(ArtifactSubtype::Clue),
+            }),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
         }],
         ..Default::default()
     }
@@ -177,7 +192,10 @@ pub fn they_went_this_way() -> CardDefinition {
             Effect::Search {
                 who: PlayerRef::You,
                 filter: R::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
             investigate(1),
         ]),
@@ -188,7 +206,7 @@ pub fn they_went_this_way() -> CardDefinition {
 /// Undercover Crocodelf — {4}{G}{U} Creature — Elf Crocodile Detective 5/5.
 /// Whenever it deals combat damage to a player, investigate. Disguise {3}{G/U}{G/U}.
 pub fn undercover_crocodelf() -> CardDefinition {
-    use crate::mana::{hybrid, Color};
+    use crate::mana::{Color, hybrid};
     CardDefinition {
         name: "Undercover Crocodelf",
         cost: cost(&[generic(4), g(), u()]),
@@ -246,7 +264,10 @@ pub fn sharp_eyed_rookie() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::All(vec![
-                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature,
+                    },
                     bigger,
                 ])),
             effect: Effect::Seq(vec![

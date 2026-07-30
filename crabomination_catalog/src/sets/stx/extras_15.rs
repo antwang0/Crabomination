@@ -5,12 +5,12 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Effect,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, Selector,
-    SelectionRequirement, Subtypes, TriggeredAbility, Value,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement,
+    Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{add_mana, each_opponent, etb, target, target_filtered};
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect};
-use crate::mana::{b, cost, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, generic, r, u, w};
 
 // ── Equipment ───────────────────────────────────────────────────────────────
 
@@ -21,9 +21,14 @@ pub fn poets_quill() -> CardDefinition {
         name: "Poet's Quill",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(1), b()]))],
-        triggered_abilities: vec![etb(Effect::Learn { who: PlayerRef::You })],
+        triggered_abilities: vec![etb(Effect::Learn {
+            who: PlayerRef::You,
+        })],
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
@@ -41,7 +46,10 @@ pub fn team_pennant() -> CardDefinition {
         name: "Team Pennant",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equip_token_cost: Some(cost(&[generic(1)])),
         equipped_bonus: Some(EquipBonus {
@@ -62,7 +70,10 @@ pub fn zephyr_boots() -> CardDefinition {
         name: "Zephyr Boots",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
             power: 0,
@@ -72,10 +83,19 @@ pub fn zephyr_boots() -> CardDefinition {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
                 ]),
-            }], ..Default::default() }),
+            }],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -198,7 +218,6 @@ pub fn blood_age_general() -> CardDefinition {
     }
 }
 
-
 // ── Spells & more creatures ─────────────────────────────────────────────────
 
 /// Go Blank — {2}{B} Sorcery. Target player discards two cards, then exile
@@ -214,7 +233,9 @@ pub fn go_blank() -> CardDefinition {
                 amount: Value::Const(2),
                 random: false,
             },
-            Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0) },
+            Effect::ExilePlayerGraveyard {
+                who: PlayerRef::Target(0),
+            },
         ]),
         ..Default::default()
     }
@@ -230,8 +251,14 @@ pub fn secret_rendezvous() -> CardDefinition {
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-            Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(3) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(3),
+            },
         ]),
         ..Default::default()
     }
@@ -244,12 +271,18 @@ pub fn fuming_effigy() -> CardDefinition {
         name: "Fuming Effigy",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
-            effect: Effect::DealDamage { to: each_opponent(), amount: Value::Const(1) },
+            effect: Effect::DealDamage {
+                to: each_opponent(),
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -263,7 +296,10 @@ pub fn kelpie_guide() -> CardDefinition {
         name: "Kelpie Guide",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![
@@ -305,9 +341,15 @@ pub fn explosive_welcome() -> CardDefinition {
         cost: cost(&[generic(7), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target(), amount: Value::Const(5) },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Any },
+                to: target(),
+                amount: Value::Const(5),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Any,
+                },
                 amount: Value::Const(3),
             },
             add_mana(vec![Color::Red, Color::Red, Color::Red]),

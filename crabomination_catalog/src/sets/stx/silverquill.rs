@@ -17,19 +17,19 @@
 //! the tracker; the body / keywords / P/T are still correct so the card is
 //! playable as a 4/3 lifelink flier or whatever.
 
-use crate::catalog::sets::sos::inkling_token;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, Predicate, Selector, SelectionRequirement, Subtypes, Supertype,
+    EventScope, EventSpec, Keyword, Predicate, SelectionRequirement, Selector, Subtypes, Supertype,
     TriggeredAbility, Value, Zone,
 };
+use crate::catalog::sets::sos::inkling_token;
 use crate::effect::shortcut::{
     drain, drain_and_scry, drain_and_surveil, etb, etb_drain, etb_gain_life, etb_mint_token,
     magecraft, magecraft_drain_each_opp, magecraft_gain_life, magecraft_scry, magecraft_self_pump,
     on_attack_drain, on_attack_gain_life, on_other_dies, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, hybrid, u, w, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, u, w};
 
 // ── Spirited Companion ──────────────────────────────────────────────────────
 
@@ -162,8 +162,7 @@ pub fn vanishing_verse() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Exile {
             what: target_filtered(
-                SelectionRequirement::Permanent
-                    .and(SelectionRequirement::Monocolored),
+                SelectionRequirement::Permanent.and(SelectionRequirement::Monocolored),
             ),
         },
         ..Default::default()
@@ -237,8 +236,7 @@ pub fn devastating_mastery() -> CardDefinition {
                 Effect::PlayerReturnsPermanentsToHand {
                     who: PlayerRef::EachOpponent,
                     count: Value::Const(2),
-                    filter: SelectionRequirement::Permanent
-                        .and(SelectionRequirement::Nonland),
+                    filter: SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
                     up_to: true,
                 },
                 sweep(),
@@ -283,11 +281,12 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
-                }),
+                },
+            ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -347,7 +346,8 @@ pub fn mavinda_students_advocate() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: true,
-                    pay_own_cost: true, any_color: false,
+                    pay_own_cost: true,
+                    any_color: false,
                 },
                 // "If that spell doesn't target a creature you control, it
                 // costs {8} more to cast this way."
@@ -366,8 +366,10 @@ pub fn mavinda_students_advocate() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -440,7 +442,11 @@ pub fn hunt_for_specimens() -> CardDefinition {
 pub fn silverquill_pledgemage() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Pledgemage",
-        cost: cost(&[generic(1), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
+        cost: cost(&[
+            generic(1),
+            hybrid(Color::White, Color::Black),
+            hybrid(Color::White, Color::Black),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
@@ -522,7 +528,10 @@ pub fn promising_duskmage() -> CardDefinition {
                     },
                     Value::Const(1),
                 ),
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -567,13 +576,12 @@ pub fn tenured_inkcaster() -> CardDefinition {
             // it attacks, each opponent loses 1 life and you gain 1
             // life."
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
-                    .with_filter(Predicate::EntityMatches {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
                         what: Selector::TriggerSource,
-                        filter: SelectionRequirement::WithCounter(
-                            CounterType::PlusOnePlusOne,
-                        ),
-                    }),
+                        filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                    },
+                ),
                 effect: Effect::Seq(vec![
                     Effect::LoseLife {
                         who: Selector::Player(PlayerRef::EachOpponent),
@@ -621,7 +629,10 @@ pub fn selfless_glyphweaver() -> CardDefinition {
             // the slot exists only to declare the choice; the survivor is
             // exempted from the sweep below.
             Effect::ForEach {
-                selector: Selector::TargetFiltered { slot: 0, filter: cre_or_pw.clone() },
+                selector: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: cre_or_pw.clone(),
+                },
                 body: Box::new(Effect::Noop),
             },
             Effect::Destroy {
@@ -660,8 +671,10 @@ pub fn selfless_glyphweaver() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: true,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         back_face: Some(Box::new(deadly_vanity)),
@@ -725,7 +738,11 @@ pub fn inkling_verselord() -> CardDefinition {
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric, CreatureType::Wizard],
+            creature_types: vec![
+                CreatureType::Inkling,
+                CreatureType::Cleric,
+                CreatureType::Wizard,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -797,10 +814,7 @@ pub fn inkrise_lifedrainer() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::SelfSource,
-            ),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::GainLife {
                 who: Selector::You,
                 amount: Value::Const(1),
@@ -837,7 +851,9 @@ pub fn silverquill_penman() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::MayDo {
-                description: "Discard a card. If you do, draw a card and each opponent loses 1 life.".to_string(),
+                description:
+                    "Discard a card. If you do, draw a card and each opponent loses 1 life."
+                        .to_string(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::Discard {
                         who: Selector::You,
@@ -1254,8 +1270,7 @@ pub fn silverquill_judge() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![magecraft(Effect::Tap {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
         })],
         ..Default::default()
@@ -1482,7 +1497,10 @@ pub fn defend_the_inkwell() -> CardDefinition {
                 to: Selector::You,
                 amount: Value::Const(2),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -1514,11 +1532,12 @@ pub fn inkling_witness() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Inkling),
-                }),
+                },
+            ),
             effect: Effect::GainLife {
                 who: Selector::You,
                 amount: Value::Const(1),
@@ -1595,8 +1614,8 @@ pub fn silverquill_sermon() -> CardDefinition {
 /// Stronger than Silverquill Reprimand at the same role since exile
 /// dodges Persist / Undying / gy-recursion shells.
 pub fn silverquill_censure() -> CardDefinition {
-    use crate::effect::shortcut::target_filtered;
     use crate::effect::ZoneDest;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Silverquill Censure",
         cost: cost(&[generic(1), w()]),
@@ -1604,8 +1623,7 @@ pub fn silverquill_censure() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::PowerAtMost(3)),
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(3)),
                 ),
                 to: ZoneDest::Exile,
             },
@@ -1966,7 +1984,10 @@ pub fn silverquill_inkscholar() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 Effect::Discard {
                     who: Selector::You,
                     amount: Value::Const(1),
@@ -2125,7 +2146,10 @@ pub fn silverquill_conviction() -> CardDefinition {
                 to: Selector::You,
                 amount: Value::Const(2),
             },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -2152,7 +2176,10 @@ pub fn silverquill_bookbearer() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         }],
         ..Default::default()
     }
@@ -2204,7 +2231,9 @@ pub fn silverquill_reckoning() -> CardDefinition {
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -2675,14 +2704,15 @@ pub fn inkling_sage() -> CardDefinition {
                 toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             },
-                    self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
     }
 }
-
 
 // ── Push (modern_decks) batch 24++: 1 more Silverquill card ────────────────
 
@@ -2777,8 +2807,7 @@ pub fn inkling_censurer() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Tap {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
             },
         }],
@@ -2840,7 +2869,7 @@ pub fn inkling_verseweaver() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -3166,7 +3195,7 @@ pub fn silverquill_scrivener_b30() -> CardDefinition {
                 count: Value::Const(3),
                 rest_to_graveyard: false,
                 pick_filter: None,
-            
+
                 take: None,
                 to_battlefield: false,
                 gain_life_if_pick: None,
@@ -3745,8 +3774,7 @@ pub fn silverquill_battle_chant() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 power: Value::Const(2),
                 toughness: Value::Const(1),
@@ -3754,8 +3782,7 @@ pub fn silverquill_battle_chant() -> CardDefinition {
             },
             Effect::GrantKeyword {
                 what: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 keyword: Keyword::Vigilance,
                 duration: Duration::EndOfTurn,
@@ -4653,7 +4680,10 @@ pub fn silverquill_purifier() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![
             etb_gain_life(2),
-            magecraft(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) }),
+            magecraft(Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            }),
         ],
         ..Default::default()
     }
@@ -4698,7 +4728,10 @@ pub fn silverquill_witnessing() -> CardDefinition {
                 to: Selector::You,
                 amount: Value::Const(3),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -5036,10 +5069,7 @@ pub fn inkling_saboteur() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::SelfSource,
-            ),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Discard {
                 who: Selector::Player(PlayerRef::Target(0)),
                 amount: Value::Const(1),
@@ -5889,7 +5919,11 @@ pub fn inkling_scriptmaster() -> CardDefinition {
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric, CreatureType::Wizard],
+            creature_types: vec![
+                CreatureType::Inkling,
+                CreatureType::Cleric,
+                CreatureType::Wizard,
+            ],
             ..Default::default()
         },
         power: 4,
@@ -6208,8 +6242,7 @@ pub fn silverquill_inkstrike() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ToughnessAtMost(2)),
+                SelectionRequirement::Creature.and(SelectionRequirement::ToughnessAtMost(2)),
             ),
         },
         ..Default::default()
@@ -6382,8 +6415,7 @@ pub fn silverquill_inkbinder() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     power: Value::Const(1),
                     toughness: Value::Const(1),
@@ -6391,8 +6423,7 @@ pub fn silverquill_inkbinder() -> CardDefinition {
                 },
                 Effect::GrantKeyword {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     keyword: Keyword::Lifelink,
                     duration: Duration::EndOfTurn,
@@ -6783,8 +6814,7 @@ pub fn silverquill_mentor() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
@@ -6964,7 +6994,10 @@ pub fn silverquill_eulogize() -> CardDefinition {
                     filter: SelectionRequirement::Creature
                         .and(SelectionRequirement::ManaValueAtMost(3)),
                 }),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -7796,7 +7829,8 @@ pub fn silverquill_wordmaiden() -> CardDefinition {
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
-            1, 1,
+            1,
+            1,
         )],
         ..Default::default()
     }
@@ -7906,10 +7940,7 @@ pub fn silverquill_scrivener_b59() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![
-            etb_surveil(1),
-            magecraft_scry(1),
-        ],
+        triggered_abilities: vec![etb_surveil(1), magecraft_scry(1)],
         ..Default::default()
     }
 }
@@ -8023,7 +8054,8 @@ pub fn silverquill_mageblade() -> CardDefinition {
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
-            1, 0,
+            1,
+            0,
         )],
         ..Default::default()
     }
@@ -8100,10 +8132,7 @@ pub fn silverquill_pentor_b61() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![
-            etb_gain_life(2),
-            crate::effect::shortcut::magecraft_scry(1),
-        ],
+        triggered_abilities: vec![etb_gain_life(2), crate::effect::shortcut::magecraft_scry(1)],
         ..Default::default()
     }
 }
@@ -8180,10 +8209,7 @@ pub fn silverquill_drainpoet() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![
-            etb_drain(3),
-            magecraft_gain_life(1),
-        ],
+        triggered_abilities: vec![etb_drain(3), magecraft_gain_life(1)],
         ..Default::default()
     }
 }
@@ -8356,10 +8382,11 @@ pub fn inkling_recitalist() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![magecraft_target_pump(
-            target_filtered(SelectionRequirement::Creature.and(
-                SelectionRequirement::HasCreatureType(CreatureType::Inkling),
-            )
-            .and(SelectionRequirement::ControlledByYou)),
+            target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Inkling))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
             1,
             1,
         )],
@@ -9834,8 +9861,14 @@ pub fn silverquill_honor_witness_b136() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
             ]),
         }],
         ..Default::default()
@@ -10126,8 +10159,7 @@ pub fn silverquill_penblade_b141() -> CardDefinition {
             },
             Effect::PumpPT {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 power: Value::Const(1),
                 toughness: Value::Const(1),
@@ -10781,10 +10813,7 @@ pub fn inkling_pyrescribe_b146() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![
-            etb_gain_life(1),
-            magecraft_gain_life(1),
-        ],
+        triggered_abilities: vec![etb_gain_life(1), magecraft_gain_life(1)],
         ..Default::default()
     }
 }
@@ -11302,7 +11331,11 @@ pub fn silverquill_penmaster_general_b150() -> CardDefinition {
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Wizard],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Cleric,
+                CreatureType::Wizard,
+            ],
             ..Default::default()
         },
         power: 4,
@@ -11373,8 +11406,8 @@ pub fn silverquill_doomscribe_b150() -> CardDefinition {
 /// Silverquill Verseblade (b150) — {W} Instant. Target creature you
 /// control gets +2/+2 EOT and gains lifelink EOT — combat trick + lifelink.
 pub fn silverquill_verseblade_b150() -> CardDefinition {
-    use crate::effect::shortcut::target_filtered;
     use crate::card::SelectionRequirement;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Silverquill Verseblade (b150)",
         cost: cost(&[w()]),
@@ -11894,10 +11927,16 @@ pub fn silverquill_manuscriber_b155() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![
-            etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) }),
+            etb(Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            }),
             magecraft(Effect::MayDo {
                 description: "Draw a card?".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             }),
         ],
         ..Default::default()
@@ -12028,7 +12067,10 @@ pub fn silverquill_curatorial_b155() -> CardDefinition {
                     zone: Zone::Graveyard,
                     filter: SelectionRequirement::Creature,
                 }),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         ]),
         ..Default::default()
@@ -12073,7 +12115,10 @@ pub fn silverquill_recital_b155() -> CardDefinition {
                 count: Value::Const(1),
                 definition: inkling_token(),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -12117,7 +12162,10 @@ pub fn silverquill_caesura_b155() -> CardDefinition {
             Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -12293,8 +12341,14 @@ pub fn silverquill_wordsmith_b155() -> CardDefinition {
         power: 1,
         toughness: 2,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -12330,7 +12384,10 @@ pub fn silverquill_eulogist_b155() -> CardDefinition {
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Creature),
             },
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -12648,7 +12705,10 @@ pub fn silverquill_edicter_b158() -> CardDefinition {
                 filter: SelectionRequirement::Creature,
                 count: Value::Const(1),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -12756,8 +12816,14 @@ pub fn silverquill_pen_sage_b159() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]))],
         ..Default::default()
     }
@@ -12865,7 +12931,10 @@ pub fn silverquill_pendrop_b160() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             drain(1),
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -12911,7 +12980,8 @@ pub fn silverquill_lectern_b160() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             self_counter_cost_reduction: None,
             ..Default::default()
         }],
@@ -13303,8 +13373,14 @@ pub fn silverquill_spiritspeaker_b165() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Scry { who: crate::effect::PlayerRef::You, amount: Value::Const(1) },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: crate::effect::PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -13318,8 +13394,13 @@ pub fn silverquill_vindict_b165() -> CardDefinition {
         cost: cost(&[generic(2), w(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: Selector::Target(0) },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Destroy {
+                what: Selector::Target(0),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -13357,7 +13438,10 @@ pub fn silverquill_deathmark_b165() -> CardDefinition {
                 toughness: Value::Const(-2),
                 duration: Duration::EndOfTurn,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -13385,8 +13469,7 @@ pub fn inkling_bonecaster_b166() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::PumpPT {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
             power: Value::Const(-1),
             toughness: Value::Const(-1),
@@ -13569,8 +13652,7 @@ pub fn silverquill_sentencing_b166() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ManaValueAtMost(4)),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(4)),
                 ),
                 to: ZoneDest::Exile,
             },
@@ -13726,8 +13808,7 @@ pub fn silverquill_banisher_b168() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ManaValueExactly(3)),
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueExactly(3)),
             ),
             to: ZoneDest::Exile,
         },
@@ -13767,11 +13848,12 @@ pub fn silverquill_penlord_b168() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Creature,
-                }),
+                },
+            ),
             effect: Effect::Drain {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 to: Selector::You,
@@ -13877,8 +13959,7 @@ pub fn umbral_juke() -> CardDefinition {
             Effect::Sacrifice {
                 who: target_filtered(SelectionRequirement::Player),
                 count: Value::Const(1),
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker),
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -13907,7 +13988,9 @@ pub fn silverquill_silencer() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![
-            etb(Effect::NameCard { what: Selector::This }),
+            etb(Effect::NameCard {
+                what: Selector::This,
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
                     .with_filter(Predicate::TriggerObjectNameMatchesNamedCard),
@@ -13916,7 +13999,10 @@ pub fn silverquill_silencer() -> CardDefinition {
                         who: Selector::Player(PlayerRef::Triggerer),
                         amount: Value::Const(3),
                     },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                 ]),
             },
         ],
@@ -13968,8 +14054,7 @@ pub fn humiliate() -> CardDefinition {
             // "Put a +1/+1 counter on a creature you control."
             Effect::AddCounter {
                 what: Selector::one_of(Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 )),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
@@ -14044,17 +14129,17 @@ pub fn shadewing_laureate() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasKeyword(Keyword::Flying),
-                }),
+                },
+            ),
             // "…put a +1/+1 counter on target creature you control" —
             // any of your creatures, not just the Laureate itself.
             effect: Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
@@ -14249,8 +14334,7 @@ pub fn silverquill_aegismage_b170() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             kind: CounterType::Shield,
             amount: Value::Const(1),
@@ -14278,8 +14362,7 @@ pub fn silverquill_quillsmith_b171() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
@@ -15114,7 +15197,10 @@ pub fn silverquill_mentordrain_b187() -> CardDefinition {
                 to: Selector::Player(PlayerRef::You),
                 amount: Value::Const(1),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -15174,7 +15260,10 @@ pub fn silverquill_inkletter_ii_b187() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             drain(2),
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -15222,7 +15311,10 @@ pub fn silverquill_inkdrain_b191() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             drain(3),
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -15250,7 +15342,10 @@ pub fn inkling_highscribe_b191() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
-            etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+            etb(Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            }),
             magecraft_gain_life(1),
         ],
         ..Default::default()
@@ -15441,7 +15536,10 @@ pub fn silverquill_litany_b188() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             drain(2),
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -15533,7 +15631,10 @@ pub fn silverquill_inkflood_b193() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             drain(2),
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -15668,7 +15769,10 @@ pub fn silverquill_exilescribe_b194() -> CardDefinition {
                 amount: Value::Const(1),
                 random: true,
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -15817,7 +15921,7 @@ pub fn silverquill_sergeant_b196() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -16049,7 +16153,10 @@ pub fn silverquill_inkdraw_b199() -> CardDefinition {
         name: "Silverquill Inkdraw (b199)",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -16338,11 +16445,12 @@ pub fn inkling_heartcaller_b202() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Inkling),
-                }),
+                },
+            ),
             effect: Effect::GainLife {
                 who: Selector::You,
                 amount: Value::Const(2),
@@ -16447,8 +16555,14 @@ pub fn silverquill_edictsong_b202() -> CardDefinition {
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -16527,7 +16641,8 @@ pub fn silverquill_pendant_b202() -> CardDefinition {
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
-            1, 0,
+            1,
+            0,
         )],
         ..Default::default()
     }

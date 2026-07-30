@@ -349,9 +349,12 @@ pub fn burrog_banemaker() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -390,9 +393,12 @@ pub fn noxious_newt() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -431,9 +437,12 @@ pub fn mindful_biomancer() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![etb_gain_life(1)],
@@ -659,7 +668,7 @@ pub fn rearing_embermare() -> CardDefinition {
 /// decline even when graveyard cards exist.
 pub fn ascendant_dustspeaker() -> CardDefinition {
     use crate::card::{CounterType, SelectionRequirement};
-    use crate::effect::{ZoneDest};
+    use crate::effect::ZoneDest;
     use crate::effect::shortcut::target_filtered;
     use crate::game::types::TurnStep;
     CardDefinition {
@@ -742,9 +751,12 @@ pub fn shattered_acolyte() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -789,9 +801,12 @@ pub fn summoned_dromedary() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: true,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -867,7 +882,7 @@ pub fn stirring_honormancer() -> CardDefinition {
 /// the cast spell's own target (`Selector::CastSpellTarget(0)`) —
 /// removing both the free target choice and the opt-out.
 pub fn conciliators_duelist() -> CardDefinition {
-    use crate::effect::{shortcut::repartee, DelayedTriggerKind, ZoneDest};
+    use crate::effect::{DelayedTriggerKind, ZoneDest, shortcut::repartee};
     CardDefinition {
         name: "Conciliator's Duelist",
         cost: cost(&[w(), w(), b(), b()]),
@@ -1001,10 +1016,7 @@ pub fn snooping_page() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             }),
             TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::DealsCombatDamageToPlayer,
-                    EventScope::SelfSource,
-                ),
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::Seq(vec![
                     Effect::Draw {
                         who: Selector::You,
@@ -1079,14 +1091,19 @@ pub fn scolding_administrator() -> CardDefinition {
             // `Effect::If` re-checks at resolution (the dies-trigger path
             // doesn't re-check filters).
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource)
-                    .with_filter(Predicate::ValueAtLeast(
-                        Value::TotalCountersOn { what: Box::new(Selector::This) },
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource).with_filter(
+                    Predicate::ValueAtLeast(
+                        Value::TotalCountersOn {
+                            what: Box::new(Selector::This),
+                        },
                         Value::Const(1),
-                    )),
+                    ),
+                ),
                 effect: Effect::If {
                     cond: Predicate::ValueAtLeast(
-                        Value::TotalCountersOn { what: Box::new(Selector::This) },
+                        Value::TotalCountersOn {
+                            what: Box::new(Selector::This),
+                        },
                         Value::Const(1),
                     ),
                     then: Box::new(Effect::ApplyToTargets {
@@ -1187,8 +1204,8 @@ pub fn environmental_scientist() -> CardDefinition {
 /// which carries its "gain 1 on attack" rider (token triggered abilities
 /// are materialised through `token_to_card_definition`).
 pub fn pestbrood_sloth() -> CardDefinition {
-    use crate::mana::g;
     use super::sorceries::pest_token;
+    use crate::mana::g;
     CardDefinition {
         name: "Pestbrood Sloth",
         cost: cost(&[generic(3), g()]),
@@ -1291,9 +1308,12 @@ pub fn teachers_pest() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: true,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -1337,12 +1357,13 @@ pub fn arnyn_deathbloom_botanist() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::PowerAtMost(1)
                         .or(SelectionRequirement::ToughnessAtMost(1)),
-                }),
+                },
+            ),
             effect: Effect::Drain {
                 from: crate::effect::shortcut::target_filtered(
                     SelectionRequirement::OpponentPlayer,
@@ -1397,26 +1418,26 @@ pub fn aziza_mage_tower_captain() -> CardDefinition {
             },
             else_: Box::new(Effect::Noop),
             then: Box::new(Effect::MayDo {
-            description: "Tap three untapped creatures you control to copy that spell?"
-                .to_string(),
-            body: Box::new(Effect::Seq(vec![
-                // Tap exactly 3 untapped creatures of the controller's
-                // CHOICE — an all-or-nothing cost; the outer `If` already
-                // guaranteed three candidates exist, and nothing can
-                // intervene mid-resolution.
-                Effect::TapUpToValue {
-                    count: Value::Const(3),
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::Untapped),
-                    skip_untap: false,
-                    exact: true,
-                },
-                Effect::CopySpellMayChooseTargets {
-                    what: Selector::TriggerSource,
-                    count: Value::Const(1),
-                },
-            ])),
+                description: "Tap three untapped creatures you control to copy that spell?"
+                    .to_string(),
+                body: Box::new(Effect::Seq(vec![
+                    // Tap exactly 3 untapped creatures of the controller's
+                    // CHOICE — an all-or-nothing cost; the outer `If` already
+                    // guaranteed three candidates exist, and nothing can
+                    // intervene mid-resolution.
+                    Effect::TapUpToValue {
+                        count: Value::Const(3),
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::Untapped),
+                        skip_untap: false,
+                        exact: true,
+                    },
+                    Effect::CopySpellMayChooseTargets {
+                        what: Selector::TriggerSource,
+                        count: Value::Const(1),
+                    },
+                ])),
             }),
         })],
         ..Default::default()
@@ -1513,17 +1534,19 @@ pub fn hardened_academic() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
             effect: Effect::AddCounter {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
@@ -1817,15 +1840,17 @@ pub fn charging_strifeknight() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
     }
 }
-
 
 // ── Increment / Opus / mana-spent rider creatures ──────────────────────────
 //
@@ -1899,11 +1924,8 @@ pub fn fractal_tender() -> CardDefinition {
             // body mints a Fractal via the shared `fractal_token()` and
             // piles 3 +1/+1 counters via `Selector::LastCreatedToken`.
             TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::StepBegins(TurnStep::End),
-                    EventScope::AnyPlayer,
-                )
-                .with_filter(Predicate::SourceGainedCounterThisTurn),
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
+                    .with_filter(Predicate::SourceGainedCounterThisTurn),
                 effect: Effect::Seq(vec![
                     Effect::CreateToken {
                         who: PlayerRef::You,
@@ -2021,7 +2043,10 @@ pub fn pensive_professor() -> CardDefinition {
                     EventKind::CounterAdded(CounterType::PlusOnePlusOne),
                     EventScope::SelfSource,
                 ),
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             },
         ],
         ..Default::default()
@@ -2067,9 +2092,8 @@ pub fn tester_of_the_tangential() -> CardDefinition {
                     EventScope::ActivePlayer,
                 ),
                 effect: Effect::MayPayX {
-                    description:
-                        "Pay {X}: move X +1/+1 counters from Tester to another creature?"
-                            .into(),
+                    description: "Pay {X}: move X +1/+1 counters from Tester to another creature?"
+                        .into(),
                     body: Box::new(Effect::MoveCounter {
                         from: Selector::This,
                         to: target_filtered(
@@ -2369,9 +2393,12 @@ pub fn eternal_student() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: true,
-            exile_self_cost: true, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: true,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -2428,8 +2455,10 @@ pub fn postmortem_professor() -> CardDefinition {
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                 1,
             )),
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -2570,27 +2599,30 @@ pub fn quandrix_the_proof() -> CardDefinition {
         // via `ManaValueOf(This)`, not a hard-coded cap), a one-shot
         // free-cast offer during trigger resolution, and a DECLINED hit is
         // bottomed with the rest instead of being stranded in exile.
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
-            effect: Effect::Cascade {
-                max_mv: Value::ManaValueOf(Box::new(Selector::This)),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+                effect: Effect::Cascade {
+                    max_mv: Value::ManaValueOf(Box::new(Selector::This)),
+                },
             },
-        },
-        // "Instant and sorcery spells you cast from your hand have cascade."
-        TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::All(vec![
-                    Predicate::CastFromHand,
-                    Predicate::EntityMatches {
-                        what: Selector::TriggerSource,
-                        filter: SelectionRequirement::HasCardType(CardType::Instant)
-                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                    },
-                ])),
-            effect: Effect::Cascade {
-                max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+            // "Instant and sorcery spells you cast from your hand have cascade."
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::All(vec![
+                        Predicate::CastFromHand,
+                        Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        },
+                    ]),
+                ),
+                effect: Effect::Cascade {
+                    max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                },
             },
-        }],
+        ],
         ..Default::default()
     }
 }
@@ -2662,10 +2694,7 @@ pub fn topiary_lecturer() -> CardDefinition {
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::OfColor(
-                    Color::Green,
-                    Value::PowerOf(Box::new(Selector::This)),
-                ),
+                pool: ManaPayload::OfColor(Color::Green, Value::PowerOf(Box::new(Selector::This))),
             },
             once_per_turn: false,
             sorcery_speed: false,
@@ -2673,9 +2702,12 @@ pub fn topiary_lecturer() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![increment_self_plus_one()],
@@ -2780,9 +2812,7 @@ pub fn sundering_archaic() -> CardDefinition {
             tap_cost: false,
             mana_cost: ManaCost::new(vec![generic(2)]),
             effect: Effect::Move {
-                what: crate::effect::shortcut::target_filtered(
-                    SelectionRequirement::InGraveyard,
-                ),
+                what: crate::effect::shortcut::target_filtered(SelectionRequirement::InGraveyard),
                 to: ZoneDest::Library {
                     who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
                     pos: LibraryPosition::Bottom,
@@ -2794,9 +2824,12 @@ pub fn sundering_archaic() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -2877,7 +2910,7 @@ pub fn poisoners_apprentice() -> CardDefinition {
 /// and sorcery spells (enforced by `ManaPool::pay_for_spell`).
 pub fn hydro_channeler() -> CardDefinition {
     use crate::effect::ManaPayload;
-    use crate::mana::{u, SpendRestriction};
+    use crate::mana::{SpendRestriction, u};
     CardDefinition {
         name: "Hydro-Channeler",
         cost: cost(&[generic(1), u()]),
@@ -2905,11 +2938,14 @@ pub fn hydro_channeler() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             ActivatedAbility {
@@ -2928,11 +2964,14 @@ pub fn hydro_channeler() -> CardDefinition {
                 sorcery_speed: false,
                 sac_cost: false,
                 condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -3030,9 +3069,12 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         static_abilities: vec![StaticAbility {
@@ -3067,7 +3109,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
 pub fn abstract_paintmage() -> CardDefinition {
     use crate::effect::ManaPayload;
     use crate::game::types::TurnStep;
-    use crate::mana::{r, u, SpendRestriction};
+    use crate::mana::{SpendRestriction, r, u};
     CardDefinition {
         name: "Abstract Paintmage",
         cost: cost(&[u(), hybrid(Color::Blue, Color::Red), r()]),
@@ -3233,8 +3275,7 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
             effect: crate::effect::StaticEffect::SelfCostReducedIf {
                 condition: Predicate::ValueAtLeast(
                     Value::ToughnessOf(Box::new(Selector::EachPermanent(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ))),
                     Value::Const(10),
                 ),
@@ -3305,7 +3346,9 @@ pub fn practiced_scrollsmith() -> CardDefinition {
     use crate::mana::r;
     let target_card = target_filtered(
         SelectionRequirement::Nonland
-            .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Creature)))
+            .and(SelectionRequirement::Not(Box::new(
+                SelectionRequirement::Creature,
+            )))
             .and(SelectionRequirement::InYourGraveyard),
     );
     CardDefinition {
@@ -3334,7 +3377,8 @@ pub fn practiced_scrollsmith() -> CardDefinition {
                     duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
                     to_owner: false,
                     exile_after: false,
-                    pay_own_cost: true, any_color: false,
+                    pay_own_cost: true,
+                    any_color: false,
                 },
             ]),
         }],
@@ -3389,10 +3433,7 @@ pub fn colossus_of_the_blood_age() -> CardDefinition {
                     Effect::DiscardAnyNumber { who: Selector::You },
                     Effect::Draw {
                         who: Selector::You,
-                        amount: Value::Sum(vec![
-                            Value::CardsDiscardedThisEffect,
-                            Value::Const(1),
-                        ]),
+                        amount: Value::Sum(vec![Value::CardsDiscardedThisEffect, Value::Const(1)]),
                     },
                 ]),
             },
@@ -3437,7 +3478,6 @@ pub fn soaring_stoneglider() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── 2026-05-01 push VII: Multicolored predicate, MDFC bodies, Lorehold capstone
 
@@ -3507,7 +3547,10 @@ pub fn colorstorm_stallion() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Ward(crate::card::WardCost::generic(1)), Keyword::Haste],
+        keywords: vec![
+            Keyword::Ward(crate::card::WardCost::generic(1)),
+            Keyword::Haste,
+        ],
         triggered_abilities: vec![opus_trigger(
             // Small body: +1/+1 until end of turn.
             Effect::PumpPT {
@@ -3591,7 +3634,9 @@ pub fn elemental_mascot() -> CardDefinition {
                 Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn, pay_any_color: false, pay_own_cost: true,
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                    pay_any_color: false,
+                    pay_own_cost: true,
                     uncast_penalty: None,
                 },
             ]),
@@ -3657,7 +3702,8 @@ pub fn zaffai_and_the_tempests() -> CardDefinition {
                 duration: MayPlayDuration::EndOfThisTurn,
                 to_owner: false,
                 exile_after: false,
-                pay_own_cost: false, any_color: false,
+                pay_own_cost: false,
+                any_color: false,
             },
         }],
         ..Default::default()
@@ -3695,10 +3741,7 @@ pub fn lorehold_the_historian() -> CardDefinition {
                     filter: SelectionRequirement::HasCardType(CardType::Instant)
                         .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                 },
-                Predicate::ValueEquals(
-                    Value::CardsDrawnThisTurn(PlayerRef::You),
-                    Value::Const(1),
-                ),
+                Predicate::ValueEquals(Value::CardsDrawnThisTurn(PlayerRef::You), Value::Const(1)),
             ]),
         ),
         effect: Effect::GrantMiracle {
@@ -3718,27 +3761,29 @@ pub fn lorehold_the_historian() -> CardDefinition {
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Haste],
-        triggered_abilities: vec![miracle_grant, TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(TurnStep::Upkeep),
-                EventScope::OpponentControl,
-            ),
-            effect: Effect::MayDo {
-                description: "Lorehold, the Historian: discard a card to draw a card?"
-                    .into(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Discard {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                        random: false,
-                    },
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                ])),
+        triggered_abilities: vec![
+            miracle_grant,
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::OpponentControl,
+                ),
+                effect: Effect::MayDo {
+                    description: "Lorehold, the Historian: discard a card to draw a card?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                            random: false,
+                        },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                        },
+                    ])),
+                },
             },
-        }],
+        ],
         ..Default::default()
     }
 }
@@ -3768,11 +3813,12 @@ pub fn mage_tower_referee() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Multicolored,
-                }),
+                },
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -3910,7 +3956,10 @@ pub fn tragedy_feaster() -> CardDefinition {
         },
         power: 7,
         toughness: 6,
-        keywords: vec![Keyword::Trample, Keyword::Ward(crate::card::WardCost::Discard(1))],
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Ward(crate::card::WardCost::Discard(1)),
+        ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::End),
@@ -3988,11 +4037,11 @@ pub fn forum_necroscribe() -> CardDefinition {
 /// or T, +1/+1 counter on Berta) is wired via
 /// `shortcut::increment_self_plus_one()`.
 pub fn berta_wise_extrapolator() -> CardDefinition {
+    use super::sorceries::fractal_token;
     use crate::card::{ActivatedAbility, CounterType, Supertype};
     use crate::effect::ManaPayload;
     use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::{g, u, x};
-    use super::sorceries::fractal_token;
     // Push (modern_decks bugfix pass): the printed `{X}, {T}` activation
     // is now wired for real — `activate_ability` accepts an `x_value`
     // (`mana_cost.with_x_value`), a `wants_ui` activator picks X via a
@@ -4033,9 +4082,12 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![
@@ -4096,9 +4148,7 @@ pub fn paradox_surveyor() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(5),
                 rest_to_graveyard: false,
-                pick_filter: Some(
-                    SelectionRequirement::Land.or(SelectionRequirement::HasXInCost),
-                ),
+                pick_filter: Some(SelectionRequirement::Land.or(SelectionRequirement::HasXInCost)),
                 take: None,
                 to_battlefield: false,
                 gain_life_if_pick: None,
@@ -4157,8 +4207,7 @@ pub fn magmablood_archaic() -> CardDefinition {
             // iterated cast's converge count is correctly observed.
             magecraft(Effect::PumpPT {
                 what: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 power: Value::ConvergedValue,
                 toughness: Value::Const(0),
@@ -4244,8 +4293,8 @@ pub fn wildgrowth_archaic() -> CardDefinition {
 pub fn ambitious_augmenter() -> CardDefinition {
     use crate::card::CounterType;
     use crate::catalog::sets::sos::sorceries::fractal_token;
-    use crate::effect::shortcut::increment_self_plus_one;
     use crate::effect::Predicate;
+    use crate::effect::shortcut::increment_self_plus_one;
     use crate::mana::g;
     // Death trigger: if the dying creature had one or more counters on
     // it, mint a 0/0 Fractal token and transfer the counters to it
@@ -4312,7 +4361,7 @@ pub fn ambitious_augmenter() -> CardDefinition {
 pub fn rubble_rouser() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::ManaPayload;
-    use crate::mana::{r, Color, ManaCost};
+    use crate::mana::{Color, ManaCost, r};
     CardDefinition {
         name: "Rubble Rouser",
         cost: cost(&[generic(2), r()]),
@@ -4352,8 +4401,10 @@ pub fn rubble_rouser() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: Some((SelectionRequirement::Any, 1)),
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -4727,7 +4778,10 @@ pub fn moseo_veins_new_dean() -> CardDefinition {
                     // "...to the BATTLEFIELD" (was wrongly to hand).
                     effect: Box::new(Effect::Move {
                         what: Selector::Target(0),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     }),
                 },
             },
@@ -4772,9 +4826,12 @@ pub fn stone_docent() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: true,
-            exile_self_cost: true, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: true,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -4833,17 +4890,15 @@ pub fn page_loose_leaf() -> CardDefinition {
                 )),
                 tap_cost: false,
                 mana_cost: ManaCost::default(),
-                effect: Effect::Seq(vec![
-                    Effect::RevealUntilFind {
-                        who: PlayerRef::You,
-                        find: SelectionRequirement::HasCardType(CardType::Instant)
-                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                        to: ZoneDest::Hand(PlayerRef::You),
-                        cap: Value::Const(60),
-                        life_per_revealed: 0,
-                        miss_dest: RevealMissDest::BottomRandom,
-                    },
-                ]),
+                effect: Effect::Seq(vec![Effect::RevealUntilFind {
+                    who: PlayerRef::You,
+                    find: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                    cap: Value::Const(60),
+                    life_per_revealed: 0,
+                    miss_dest: RevealMissDest::BottomRandom,
+                }]),
                 once_per_turn: false,
                 sorcery_speed: false,
                 sac_cost: false,
@@ -4856,8 +4911,10 @@ pub fn page_loose_leaf() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-                self_counter_cost_reduction: None, sac_other_filter: None,
-                tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -4949,9 +5006,7 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
     // a creature can never have acquired the counter through legal
     // play).
     let prepare_target = || {
-        target_filtered(
-            SelectionRequirement::Creature.and(SelectionRequirement::HasPrepareSpell),
-        )
+        target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::HasPrepareSpell))
     };
     CardDefinition {
         name: "Biblioplex Tomekeeper",
@@ -5073,7 +5128,9 @@ pub fn silverquill_the_disputant() -> CardDefinition {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(cast_is_instant_or_sorcery()),
             effect: Effect::MayDo {
-                description: "Casualty 1: sacrifice a creature with power 1 or greater to copy the spell?".into(),
+                description:
+                    "Casualty 1: sacrifice a creature with power 1 or greater to copy the spell?"
+                        .into(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::Sacrifice {
                         who: Selector::You,
@@ -5176,7 +5233,8 @@ pub fn nita_forum_conciliator() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -5186,8 +5244,7 @@ pub fn nita_forum_conciliator() -> CardDefinition {
                 .with_filter(Predicate::CastSpellNotOwnedByYou),
             effect: Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 body: Box::new(Effect::AddCounter {
                     what: Selector::TriggerSource,
@@ -5278,7 +5335,10 @@ pub fn prismari_the_inspiration() -> CardDefinition {
         },
         power: 7,
         toughness: 7,
-        keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::Life(5))],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Ward(crate::card::WardCost::Life(5)),
+        ],
         static_abilities: vec![StaticAbility {
             description: "Instant and sorcery spells you cast have storm.",
             effect: StaticEffect::GrantStormToISSpells,

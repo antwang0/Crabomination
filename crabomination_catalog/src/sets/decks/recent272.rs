@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{cost, generic, r, u, Color};
+use crate::mana::{Color, cost, generic, r, u};
 
 /// Ambitious Assault — {2}{R} Instant. Creatures you control get +2/+0 until end
 /// of turn. If you control a modified creature, draw a card.
@@ -18,7 +18,10 @@ pub fn ambitious_assault() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
-                what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+                what: Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: R::Creature,
+                },
                 power: Value::Const(2),
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
@@ -30,7 +33,10 @@ pub fn ambitious_assault() -> CardDefinition {
                     ),
                     n: Value::ONE,
                 },
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -48,7 +54,10 @@ pub fn revenge_of_the_drowned() -> CardDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Decayed],
         ..Default::default()
     };
@@ -64,7 +73,11 @@ pub fn revenge_of_the_drowned() -> CardDefinition {
                     pos: LibraryPosition::OwnerChoice,
                 },
             },
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: zombie },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: zombie,
+            },
         ]),
         ..Default::default()
     }

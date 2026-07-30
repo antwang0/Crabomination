@@ -106,7 +106,10 @@ pub fn donatellos_technique() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Sneak(cost(&[u()]))],
         alternative_cost: Some(sneak(cost(&[u()]))),
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }

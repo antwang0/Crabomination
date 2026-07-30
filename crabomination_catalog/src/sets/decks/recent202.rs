@@ -8,11 +8,11 @@ use crate::card::{
 };
 use crate::effect::shortcut::{cast_is_instant_or_sorcery, etb};
 use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, Predicate, Selector,
-    StaticEffect, TriggeredAbility,
+    Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, Predicate,
+    Selector, StaticEffect, TriggeredAbility,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u};
 
 /// Rite of the Dragoncaller — {4}{R}{R} Enchantment. Whenever you cast an instant
 /// or sorcery spell, create a 5/5 red Dragon creature token with flying.
@@ -24,7 +24,10 @@ pub fn rite_of_the_dragoncaller() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -34,7 +37,11 @@ pub fn rite_of_the_dragoncaller() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(cast_is_instant_or_sorcery()),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: dragon },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: dragon,
+            },
         }],
         ..Default::default()
     }
@@ -50,7 +57,10 @@ pub fn koma_world_eater() -> CardDefinition {
         toughness: 3,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Serpent],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -58,7 +68,10 @@ pub fn koma_world_eater() -> CardDefinition {
         cost: cost(&[generic(3), g(), g(), u(), u()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Serpent],
+            ..Default::default()
+        },
         power: 8,
         toughness: 12,
         keywords: vec![
@@ -103,7 +116,10 @@ pub fn niv_mizzet_visionary() -> CardDefinition {
                 EventKind::PlayerDealtNoncombatDamage,
                 EventScope::YourSourceDamagedOpponent,
             ),
-            effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::TriggerEventAmount,
+            },
         }],
         ..Default::default()
     }
@@ -117,13 +133,21 @@ pub fn perforating_artist() -> CardDefinition {
         name: "Perforating Artist",
         cost: cost(&[generic(1), b(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Devil],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::PlayerAttackedThisTurn {
+                who: PlayerRef::You,
+            }),
             effect: Effect::Punisher {
                 chooser: Selector::Player(PlayerRef::EachOpponent),
                 options: vec![
@@ -160,7 +184,10 @@ pub fn kiora_the_rising_tide() -> CardDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::Blue],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Octopus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Octopus],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -176,12 +203,22 @@ pub fn kiora_the_rising_tide() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![
             etb(Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-                Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                    random: false,
+                },
             ])),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
-                    .with_filter(Predicate::ThresholdActive { who: PlayerRef::You }),
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                    Predicate::ThresholdActive {
+                        who: PlayerRef::You,
+                    },
+                ),
                 effect: Effect::MayDo {
                     description: "Create Scion of the Deep.".into(),
                     body: Box::new(Effect::CreateToken {

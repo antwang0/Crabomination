@@ -21,7 +21,10 @@ pub fn throne_of_the_god_pharaoh() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::LoseLife {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::CountMatching {
@@ -44,7 +47,10 @@ pub fn su_chi() -> CardDefinition {
         name: "Su-Chi",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
@@ -66,7 +72,9 @@ pub fn secluded_courtyard() -> CardDefinition {
     CardDefinition {
         name: "Secluded Courtyard",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        triggered_abilities: vec![etb(Effect::NameCreatureType {
+            what: Selector::This,
+        })],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
@@ -102,7 +110,10 @@ pub fn aeolipile() -> CardDefinition {
             tap_cost: true,
             sac_cost: true,
             mana_cost: cost(&[generic(1)]),
-            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+            effect: Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -119,7 +130,10 @@ pub fn phyrexian_vault() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -135,7 +149,9 @@ pub fn vanquishers_banner() -> CardDefinition {
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![
-            etb(Effect::NameCreatureType { what: Selector::This }),
+            etb(Effect::NameCreatureType {
+                what: Selector::This,
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                     .with_filter(crate::effect::Predicate::TriggerObjectIsChosenType),
@@ -148,7 +164,9 @@ pub fn vanquishers_banner() -> CardDefinition {
                 power: 1,
                 toughness: 1,
                 exclude_source: false,
-                opponents: false, per_counter: None },
+                opponents: false,
+                per_counter: None,
+            },
         }],
         ..Default::default()
     }
@@ -162,14 +180,18 @@ pub fn icon_of_ancestry() -> CardDefinition {
         name: "Icon of Ancestry",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        triggered_abilities: vec![etb(Effect::NameCreatureType {
+            what: Selector::This,
+        })],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
                 power: 1,
                 toughness: 1,
                 exclude_source: false,
-                opponents: false, per_counter: None },
+                opponents: false,
+                per_counter: None,
+            },
         }],
         ..Default::default()
     }

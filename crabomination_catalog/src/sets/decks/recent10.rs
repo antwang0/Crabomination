@@ -18,7 +18,10 @@ fn white_ally() -> crate::card::TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![crate::mana::Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ally], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ally],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -37,14 +40,17 @@ pub fn glider_kids() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::ONE })],
+        triggered_abilities: vec![etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::ONE,
+        })],
         ..Default::default()
     }
 }
 
 /// Messenger Hawk — {2}{U/B} 1/2, Flying. When it enters, create a Clue.
 pub fn messenger_hawk() -> CardDefinition {
-    use crate::mana::{cost, generic, hybrid, Color};
+    use crate::mana::{Color, cost, generic, hybrid};
     CardDefinition {
         name: "Messenger Hawk",
         cost: cost(&[generic(2), hybrid(Color::Blue, Color::Black)]),
@@ -97,7 +103,11 @@ pub fn rowdy_snowballers() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Peasant, CreatureType::Ally],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Peasant,
+                CreatureType::Ally,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -174,7 +184,11 @@ pub fn iguana_parrot() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Lizard, CreatureType::Bird, CreatureType::Pirate],
+            creature_types: vec![
+                CreatureType::Lizard,
+                CreatureType::Bird,
+                CreatureType::Pirate,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -192,12 +206,16 @@ pub fn boar_q_pine() -> CardDefinition {
         name: "Boar-q-pine",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,

@@ -3,8 +3,8 @@
 //! "can't-be-countered" rider.
 
 use crate::card::{
-    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec,
-    SelectionRequirement, StaticAbility, TriggeredAbility,
+    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, SelectionRequirement,
+    StaticAbility, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, Selector, StaticEffect, Value};
@@ -122,14 +122,18 @@ pub fn static_prison() -> CardDefinition {
             etb(Effect::Seq(vec![
                 Effect::ExileUntilSourceLeaves {
                     what: target_filtered(
-                        SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
+                        SelectionRequirement::Nonland
+                            .and(SelectionRequirement::ControlledByOpponent),
                     ),
                     return_to: crate::card::ExileReturnZone::Battlefield,
                 },
                 Effect::AddEnergy(Value::Const(2)),
             ])),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::PreCombatMain),
+                    EventScope::YourControl,
+                ),
                 effect: Effect::PayEnergyOrElse {
                     amount: 1,
                     otherwise: Box::new(Effect::SacrificeSource),
@@ -168,7 +172,10 @@ pub fn ghostly_prison() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Creatures can't attack you unless their controller pays {2} for each.",
-            effect: StaticEffect::AttackTaxToController { amount: Value::Const(2), protect_planeswalkers: false },
+            effect: StaticEffect::AttackTaxToController {
+                amount: Value::Const(2),
+                protect_planeswalkers: false,
+            },
         }],
         ..Default::default()
     }
@@ -182,7 +189,10 @@ pub fn propaganda() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Creatures can't attack you unless their controller pays {2} for each.",
-            effect: StaticEffect::AttackTaxToController { amount: Value::Const(2), protect_planeswalkers: false },
+            effect: StaticEffect::AttackTaxToController {
+                amount: Value::Const(2),
+                protect_planeswalkers: false,
+            },
         }],
         ..Default::default()
     }
@@ -221,11 +231,12 @@ pub fn beastmaster_ascension() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
-                .with_filter(crate::effect::Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                crate::effect::Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Creature,
-                }),
+                },
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: crate::card::CounterType::Quest,
@@ -321,7 +332,9 @@ pub fn return_to_dust() -> CardDefinition {
             max_targets: 2,
             min_targets: 0,
             filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
-            effect: Box::new(Effect::Exile { what: Selector::Target(0) }),
+            effect: Box::new(Effect::Exile {
+                what: Selector::Target(0),
+            }),
         },
         ..Default::default()
     }
@@ -340,7 +353,10 @@ pub fn rhystic_study() -> CardDefinition {
             effect: Effect::UnlessPlayerPays {
                 who: PlayerRef::Triggerer,
                 cost: crate::card::WardCost::generic(1),
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()
@@ -357,17 +373,23 @@ pub fn mystic_remora() -> CardDefinition {
         name: "Mystic Remora",
         cost: cost(&[u()]),
         card_types: vec![CardType::Enchantment],
-        keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(cost(&[generic(1)])))],
+        keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(cost(
+            &[generic(1)],
+        )))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
-                .with_filter(crate::effect::Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(
+                crate::effect::Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Noncreature,
-                }),
+                },
+            ),
             effect: Effect::UnlessPlayerPays {
                 who: PlayerRef::Triggerer,
                 cost: crate::card::WardCost::generic(4),
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()
@@ -406,7 +428,9 @@ pub fn mana_drain() -> CardDefinition {
         name: "Mana Drain",
         cost: cost(&[u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CounterSpell { what: target_filtered(SelectionRequirement::Any) },
+        effect: Effect::CounterSpell {
+            what: target_filtered(SelectionRequirement::Any),
+        },
         ..Default::default()
     }
 }
@@ -418,7 +442,9 @@ pub fn fierce_guardianship() -> CardDefinition {
         name: "Fierce Guardianship",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CounterSpell { what: target_filtered(SelectionRequirement::Noncreature) },
+        effect: Effect::CounterSpell {
+            what: target_filtered(SelectionRequirement::Noncreature),
+        },
         ..Default::default()
     }
 }
@@ -431,7 +457,9 @@ pub fn deflecting_swat() -> CardDefinition {
         name: "Deflecting Swat",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CounterSpell { what: target_filtered(SelectionRequirement::Any) },
+        effect: Effect::CounterSpell {
+            what: target_filtered(SelectionRequirement::Any),
+        },
         ..Default::default()
     }
 }
@@ -460,7 +488,10 @@ pub fn collective_restraint() -> CardDefinition {
 /// quest counter on it. {1}{W}: Create a 4/4 white Angel with flying —
 /// activate only with four or more quest counters.
 pub fn luminarch_ascension() -> CardDefinition {
-    use crate::card::{ActivatedAbility, CounterType, CreatureType, Keyword, Predicate, Subtypes, TokenDefinition, Value as V};
+    use crate::card::{
+        ActivatedAbility, CounterType, CreatureType, Keyword, Predicate, Subtypes, TokenDefinition,
+        Value as V,
+    };
     use crate::mana::{Color, w};
     CardDefinition {
         name: "Luminarch Ascension",
@@ -489,7 +520,10 @@ pub fn luminarch_ascension() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), w()]),
             condition: Some(Predicate::ValueAtLeast(
-                V::CountersOn { what: Box::new(Selector::This), kind: CounterType::Quest },
+                V::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Quest,
+                },
                 V::Const(4),
             )),
             effect: Effect::CreateToken {
@@ -585,7 +619,10 @@ pub fn underworld_connections() -> CardDefinition {
                 ability: ActivatedAbility {
                     tap_cost: true,
                     life_cost: 1,
-                    effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    effect: Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                     ..Default::default()
                 },
                 condition: None,

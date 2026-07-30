@@ -90,17 +90,17 @@ pub fn rakdos_riteknife() -> CardDefinition {
                 ..Default::default()
             },
             ActivatedAbility {
-            mana_cost: cost(&[b(), r()]),
-            sac_cost: true,
-            effect: Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::Target(0)),
-                count: Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::Blood,
+                mana_cost: cost(&[b(), r()]),
+                sac_cost: true,
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    count: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Blood,
+                    },
+                    filter: R::Permanent,
                 },
-                filter: R::Permanent,
-            },
-            ..Default::default()
+                ..Default::default()
             },
         ],
         ..Default::default()

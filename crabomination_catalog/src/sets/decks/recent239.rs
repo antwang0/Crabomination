@@ -8,21 +8,27 @@ use crate::card::{
     TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::{animate_land, deal, target_filtered, valiant};
-use crate::game::types::TurnStep;
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload,
     OpeningHandEffect, PlayerRef, PlayerStaticTarget, Predicate, Selector, SpreeMode, StaticEffect,
     Value, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color, SpendRestriction};
+use crate::game::types::TurnStep;
+use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u, w, x};
 
 /// DSK **Survival** — "At the beginning of your second main phase, if this
 /// creature is tapped, …". Models to a PostCombatMain trigger gated on the
 /// source being tapped.
 fn survival(body: Effect) -> TriggeredAbility {
     TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::PostCombatMain), EventScope::YourControl)
-            .with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::Tapped }),
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::PostCombatMain),
+            EventScope::YourControl,
+        )
+        .with_filter(Predicate::EntityMatches {
+            what: Selector::This,
+            filter: R::Tapped,
+        }),
         effect: body,
     }
 }
@@ -40,7 +46,9 @@ pub fn betrayers_bargain() -> CardDefinition {
             pay: 2,
         }],
         effect: Effect::Seq(vec![
-            Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+            Effect::ExileIfWouldDieThisTurn {
+                what: Selector::Target(0),
+            },
             deal(5, target_filtered(R::Creature)),
         ]),
         ..Default::default()
@@ -56,8 +64,12 @@ pub fn untimely_malfunction() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::Destroy { what: target_filtered(R::Artifact) },
-            Effect::ChooseNewTargetsForSpell { what: target_filtered(R::IsSpellOnStack) },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            },
+            Effect::ChooseNewTargetsForSpell {
+                what: target_filtered(R::IsSpellOnStack),
+            },
             Effect::ApplyToTargets {
                 max_targets: 2,
                 min_targets: 1,
@@ -99,12 +111,17 @@ pub fn omnivorous_flytrap() -> CardDefinition {
             },
         ])
     };
-    let delirium = || Predicate::DeliriumActive { who: PlayerRef::You };
+    let delirium = || Predicate::DeliriumActive {
+        who: PlayerRef::You,
+    };
     CardDefinition {
         name: "Omnivorous Flytrap",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         triggered_abilities: vec![
@@ -144,7 +161,10 @@ pub fn norin_swift_survivalist() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Exile it, then play it from exile this turn".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                    Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Exile,
+                    },
                     Effect::GrantMayPlay {
                         what: Selector::LastMoved,
                         duration: MayPlayDuration::EndOfThisTurn,
@@ -236,10 +256,18 @@ pub fn kutzils_flanker() -> CardDefinition {
                     amount: Value::CreaturesDiedThisTurn(PlayerRef::You),
                 },
                 Effect::Seq(vec![
-                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-                    Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
+                    Effect::Scry {
+                        who: PlayerRef::You,
+                        amount: Value::Const(2),
+                    },
                 ]),
-                Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0) },
+                Effect::ExilePlayerGraveyard {
+                    who: PlayerRef::Target(0),
+                },
             ]),
         }],
         ..Default::default()
@@ -250,23 +278,33 @@ pub fn kutzils_flanker() -> CardDefinition {
 /// time it becomes saddled each turn, mill two, then it gets +X/+X until end of
 /// turn, where X is the number of creature cards in your graveyard.
 pub fn stubborn_burrowfiend() -> CardDefinition {
-    let gy_creatures =
-        || Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature };
+    let gy_creatures = || Value::CardsInGraveyardMatching {
+        who: PlayerRef::You,
+        filter: R::Creature,
+    };
     CardDefinition {
         name: "Stubborn Burrowfiend",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Badger, CreatureType::Beast, CreatureType::Mount],
+            creature_types: vec![
+                CreatureType::Badger,
+                CreatureType::Beast,
+                CreatureType::Mount,
+            ],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Saddle(2)],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::SelfSource).once_per_turn(),
+            event: EventSpec::new(EventKind::CrewsOrSaddles, EventScope::SelfSource)
+                .once_per_turn(),
             effect: Effect::Seq(vec![
-                Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
                 Effect::PumpPT {
                     what: Selector::This,
                     power: gy_creatures(),
@@ -297,12 +335,19 @@ pub fn unscrupulous_contractor() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::MaySacrifice {
-                description: "Sacrifice a creature: target player draws two cards and loses 2 life".into(),
+                description: "Sacrifice a creature: target player draws two cards and loses 2 life"
+                    .into(),
                 filter: R::Creature,
                 count: Value::ONE,
                 then: Box::new(Effect::Seq(vec![
-                    Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
-                    Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+                    Effect::Draw {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::Const(2),
+                    },
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::Const(2),
+                    },
                 ])),
                 else_: None,
             },
@@ -351,18 +396,27 @@ pub fn bite_down_on_crime() -> CardDefinition {
         name: "Bite Down on Crime",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 6, optional: true }],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence {
+            amount: 6,
+            optional: true,
+        }],
         self_cost_reduction_if_collect_evidence: Some(2),
         effect: Effect::Seq(vec![
             Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
                 power: Value::Const(2),
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
             Effect::DealDamageEqualToPower {
                 source: Selector::Target(0),
-                target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+                target: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                },
             },
         ]),
         ..Default::default()
@@ -376,7 +430,10 @@ pub fn bite_down_on_crime() -> CardDefinition {
 /// keeps its printed types and animates it.)
 pub fn behind_the_mask() -> CardDefinition {
     let animate = |power| Effect::BecomeCreature {
-        what: Selector::TargetFiltered { slot: 0, filter: R::Artifact.or(R::Creature) },
+        what: Selector::TargetFiltered {
+            slot: 0,
+            filter: R::Artifact.or(R::Creature),
+        },
         power: Value::Const(power),
         toughness: Value::Const(if power == 1 { 1 } else { 3 }),
         creature_types: vec![],
@@ -387,7 +444,10 @@ pub fn behind_the_mask() -> CardDefinition {
         name: "Behind the Mask",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 6, optional: true }],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence {
+            amount: 6,
+            optional: true,
+        }],
         effect: Effect::If {
             cond: Predicate::SpellCollectedEvidence,
             then: Box::new(animate(1)),
@@ -405,7 +465,10 @@ pub fn analyze_the_pollen() -> CardDefinition {
         name: "Analyze the Pollen",
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 8, optional: true }],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence {
+            amount: 8,
+            optional: true,
+        }],
         effect: Effect::If {
             cond: Predicate::SpellCollectedEvidence,
             then: Box::new(Effect::Search {
@@ -485,7 +548,10 @@ pub fn oakhollow_village() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -530,7 +596,10 @@ pub fn lupinflower_village() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -583,7 +652,10 @@ pub fn lilypad_village() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -606,7 +678,10 @@ pub fn lilypad_village() -> CardDefinition {
                     ),
                     n: Value::ONE,
                 }),
-                effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                effect: Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
                 ..Default::default()
             },
         ],
@@ -628,7 +703,10 @@ pub fn rockface_village() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -726,7 +804,10 @@ pub fn hollow_marauder() -> CardDefinition {
                 },
                 Effect::If {
                     cond: Predicate::LastDiscardedManaValueAtMost(3),
-                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                    then: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             ]),
@@ -782,11 +863,16 @@ pub fn crimestopper_sprite() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence { amount: 6, optional: true }],
+        additional_cast_cost: vec![AdditionalCastCost::CollectEvidence {
+            amount: 6,
+            optional: true,
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Tap { what: target_filtered(R::Creature) },
+                Effect::Tap {
+                    what: target_filtered(R::Creature),
+                },
                 Effect::If {
                     cond: Predicate::SpellCollectedEvidence,
                     then: Box::new(Effect::AddCounter {
@@ -828,19 +914,33 @@ pub fn fear_of_burning_alive() -> CardDefinition {
         name: "Fear of Burning Alive",
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nightmare], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::DealDamage { to: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(4) },
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(4),
+                },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::PlayerDealtNoncombatDamage, EventScope::OpponentControl)
-                    .with_filter(Predicate::DeliriumActive { who: PlayerRef::You }),
+                event: EventSpec::new(
+                    EventKind::PlayerDealtNoncombatDamage,
+                    EventScope::OpponentControl,
+                )
+                .with_filter(Predicate::DeliriumActive {
+                    who: PlayerRef::You,
+                }),
                 effect: Effect::DealDamage {
-                    to: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByOpponent) },
+                    to: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.and(R::ControlledByOpponent),
+                    },
                     amount: Value::TriggerEventAmount,
                 },
             },
@@ -857,7 +957,10 @@ pub fn creeping_peeper() -> CardDefinition {
         name: "Creeping Peeper",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Eye], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eye],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -883,7 +986,10 @@ pub fn leyline_of_hope() -> CardDefinition {
         name: "Leyline of Hope",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Enchantment],
-        opening_hand: Some(OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
+        opening_hand: Some(OpeningHandEffect::StartInPlay {
+            tapped: false,
+            extra: Effect::Noop,
+        }),
         static_abilities: vec![
             StaticAbility {
                 description: "If you would gain life, gain that much plus 1 instead.",
@@ -895,7 +1001,10 @@ pub fn leyline_of_hope() -> CardDefinition {
             StaticAbility {
                 description: "With 7+ life above starting, your creatures get +2/+2.",
                 effect: StaticEffect::PumpTeamIf {
-                    condition: Predicate::PlayerLifeAtLeastAboveStarting { who: PlayerRef::You, delta: 7 },
+                    condition: Predicate::PlayerLifeAtLeastAboveStarting {
+                        who: PlayerRef::You,
+                        delta: 7,
+                    },
                     applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                     power: 2,
                     toughness: 2,
@@ -917,7 +1026,10 @@ pub fn monstrous_emergence() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         additional_cast_cost: vec![AdditionalCastCost::ChooseOrRevealCreature],
         effect: Effect::DealDamage {
-            to: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature,
+            },
             amount: Value::XFromCost,
         },
         ..Default::default()
@@ -940,13 +1052,21 @@ pub fn oblivious_bookworm() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::YourControl,
+            ),
             effect: Effect::MayDo {
                 description: "Draw a card (then discard unless you had face-down activity)?".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                     Effect::If {
-                        cond: Predicate::FaceDownActivityThisTurn { who: PlayerRef::You },
+                        cond: Predicate::FaceDownActivityThisTurn {
+                            who: PlayerRef::You,
+                        },
                         then: Box::new(Effect::Noop),
                         else_: Box::new(Effect::Discard {
                             who: Selector::You,
@@ -969,10 +1089,17 @@ pub fn axebane_ferox() -> CardDefinition {
         name: "Axebane Ferox",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Deathtouch, Keyword::Haste, Keyword::Ward(WardCost::CollectEvidence(4))],
+        keywords: vec![
+            Keyword::Deathtouch,
+            Keyword::Haste,
+            Keyword::Ward(WardCost::CollectEvidence(4)),
+        ],
         ..Default::default()
     }
 }
@@ -1013,11 +1140,17 @@ pub fn trial_of_agony() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 0, filter: opp_creature() },
+                to: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: opp_creature(),
+                },
                 amount: Value::Const(5),
             },
             Effect::GrantKeyword {
-                what: Selector::TargetFiltered { slot: 1, filter: opp_creature() },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: opp_creature(),
+                },
                 keyword: Keyword::CantBlock,
                 duration: Duration::EndOfTurn,
             },
@@ -1049,7 +1182,9 @@ pub fn getaway_glamer() -> CardDefinition {
                             what: Selector::Target(0),
                             filter: R::HasGreatestPowerAmongAllCreatures,
                         },
-                        then: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                        then: Box::new(Effect::Destroy {
+                            what: Selector::Target(0),
+                        }),
                         else_: Box::new(Effect::Noop),
                     },
                 },
@@ -1097,9 +1232,21 @@ pub fn reluctant_role_model() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![
             survival(Effect::ChooseMode(vec![
-                Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Flying, amount: Value::ONE },
-                Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Lifelink, amount: Value::ONE },
-                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::AddKeywordCounter {
+                    what: Selector::This,
+                    keyword: Keyword::Flying,
+                    amount: Value::ONE,
+                },
+                Effect::AddKeywordCounter {
+                    what: Selector::This,
+                    keyword: Keyword::Lifelink,
+                    amount: Value::ONE,
+                },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
             ])),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
@@ -1122,7 +1269,9 @@ pub fn come_back_wrong() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: Selector::Target(0) },
+            Effect::Destroy {
+                what: Selector::Target(0),
+            },
             Effect::If {
                 // Only reanimate if the destroy actually buried a creature card
                 // (indestructible/regenerated creatures stay put; tokens vanish).
@@ -1133,11 +1282,16 @@ pub fn come_back_wrong() -> CardDefinition {
                 then: Box::new(Effect::Seq(vec![
                     Effect::Move {
                         what: Selector::Target(0),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                     Effect::DelayUntil {
                         kind: DelayedTriggerKind::NextEndStep,
-                        body: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),
+                        body: Box::new(Effect::SacrificePermanent {
+                            what: Selector::Target(0),
+                        }),
                     },
                 ])),
                 else_: Box::new(Effect::Noop),
@@ -1185,7 +1339,10 @@ pub fn altanak_the_thrice_called() -> CardDefinition {
                 EventKind::BecameTarget,
                 EventScope::YourPermanentTargetedByOpponent,
             ),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
@@ -1193,7 +1350,10 @@ pub fn altanak_the_thrice_called() -> CardDefinition {
             discard_self_cost: true,
             effect: Effect::Move {
                 what: target_filtered(R::Land.and(R::InYourGraveyard)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
             ..Default::default()
         }],

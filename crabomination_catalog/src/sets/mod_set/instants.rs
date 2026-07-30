@@ -5,7 +5,9 @@ use crate::card::{
     TokenDefinition,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, Predicate, Selector, Value, ZoneDest};
+use crate::effect::{
+    DelayedTriggerKind, Duration, PlayerRef, Predicate, Selector, Value, ZoneDest,
+};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 /// Path to Exile — {W} Instant. Exile target creature; its controller may
@@ -103,8 +105,7 @@ pub fn fatal_push() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Destroy {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ManaValueAtMost(2)),
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(2)),
             ),
         },
         ..Default::default()
@@ -120,8 +121,7 @@ pub fn spell_pierce() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(
-                SelectionRequirement::IsSpellOnStack
-                    .and(SelectionRequirement::Noncreature),
+                SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::Noncreature),
             ),
             mana_cost: cost(&[generic(2)]),
             exile: false,
@@ -197,8 +197,14 @@ pub fn consider() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -216,7 +222,10 @@ pub fn thought_scour() -> CardDefinition {
                 who: Selector::Player(PlayerRef::Target(0)),
                 amount: Value::Const(2),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -285,7 +294,10 @@ pub fn frantic_search() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::Discard {
                 who: Selector::You,
                 amount: Value::Const(2),
@@ -358,7 +370,7 @@ pub fn pact_of_the_titan() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
-                
+
                     static_abilities: vec![],
                     ..Default::default()
                 },
@@ -448,7 +460,7 @@ pub fn swan_song() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
-                
+
                     static_abilities: vec![],
                     ..Default::default()
                 },
@@ -499,15 +511,17 @@ pub fn paradoxical_outcome() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
-                SelectionRequirement::ControlledByYou
-                    .and(SelectionRequirement::Nonland),
+                SelectionRequirement::ControlledByYou.and(SelectionRequirement::Nonland),
             ),
             body: Box::new(Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::TriggerSource,
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ])),
         },
         ..Default::default()
@@ -549,7 +563,7 @@ pub fn pyrokinesis() -> CardDefinition {
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamageDivided {
-                retaliate_to_source: false,
+            retaliate_to_source: false,
             total: Value::Const(4),
             filter: SelectionRequirement::Creature,
             max_targets: 4,
@@ -562,9 +576,9 @@ pub fn pyrokinesis() -> CardDefinition {
             not_your_turn_only: false,
             target_filter: None,
             condition: None,
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
+            exile_from_graveyard_count: 0,
+            return_to_hand: None,
+            sacrifice_permanents: None,
             effect_override: None,
             dash: false,
             blitz: false,
@@ -573,7 +587,8 @@ pub fn pyrokinesis() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -661,7 +676,10 @@ pub fn deadly_dispute() -> CardDefinition {
                     .or(SelectionRequirement::Artifact)
                     .and(SelectionRequirement::ControlledByYou),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -703,10 +721,15 @@ pub fn cryptic_command() -> CardDefinition {
                         SelectionRequirement::Creature
                             .and(SelectionRequirement::ControlledByOpponent),
                     ),
-                    body: Box::new(Effect::Tap { what: Selector::TriggerSource }),
+                    body: Box::new(Effect::Tap {
+                        what: Selector::TriggerSource,
+                    }),
                 },
                 // Mode 3: draw a card.
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ],
         },
         ..Default::default()
@@ -723,8 +746,7 @@ pub fn blossoming_defense() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 power: Value::Const(2),
                 toughness: Value::Const(2),
@@ -903,12 +925,27 @@ pub fn turnabout() -> CardDefinition {
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::Tap   { what: each_opp(SelectionRequirement::Artifact) },
-            Effect::Untap { what: each_opp(SelectionRequirement::Artifact), up_to: None },
-            Effect::Tap   { what: each_opp(SelectionRequirement::Creature) },
-            Effect::Untap { what: each_opp(SelectionRequirement::Creature), up_to: None },
-            Effect::Tap   { what: each_opp(SelectionRequirement::Land) },
-            Effect::Untap { what: each_opp(SelectionRequirement::Land), up_to: None },
+            Effect::Tap {
+                what: each_opp(SelectionRequirement::Artifact),
+            },
+            Effect::Untap {
+                what: each_opp(SelectionRequirement::Artifact),
+                up_to: None,
+            },
+            Effect::Tap {
+                what: each_opp(SelectionRequirement::Creature),
+            },
+            Effect::Untap {
+                what: each_opp(SelectionRequirement::Creature),
+                up_to: None,
+            },
+            Effect::Tap {
+                what: each_opp(SelectionRequirement::Land),
+            },
+            Effect::Untap {
+                what: each_opp(SelectionRequirement::Land),
+                up_to: None,
+            },
         ]),
         ..Default::default()
     }
@@ -977,7 +1014,10 @@ pub fn dissolve() -> CardDefinition {
             Effect::CounterSpell {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -995,7 +1035,10 @@ pub fn flame_javelin() -> CardDefinition {
             mono_hybrid(2, Color::Red),
         ]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) },
+        effect: Effect::DealDamage {
+            to: Selector::Target(0),
+            amount: Value::Const(4),
+        },
         ..Default::default()
     }
 }
@@ -1018,7 +1061,7 @@ pub fn pongify() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -1090,7 +1133,10 @@ pub fn steady_progress() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Proliferate,
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -1104,7 +1150,10 @@ pub fn volt_charge() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(3),
+            },
             Effect::Proliferate,
         ]),
         ..Default::default()
@@ -1158,7 +1207,10 @@ pub fn gods_willing() -> CardDefinition {
                 ),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -1268,7 +1320,10 @@ pub fn vraskas_contempt() -> CardDefinition {
                     SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                 ),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -1285,7 +1340,9 @@ pub fn victim_of_night() -> CardDefinition {
             what: target_filtered(
                 SelectionRequirement::Creature.and(
                     SelectionRequirement::HasCreatureType(CreatureType::Vampire)
-                        .or(SelectionRequirement::HasCreatureType(CreatureType::Werewolf))
+                        .or(SelectionRequirement::HasCreatureType(
+                            CreatureType::Werewolf,
+                        ))
                         .or(SelectionRequirement::HasCreatureType(CreatureType::Zombie))
                         .negate(),
                 ),
@@ -1307,9 +1364,14 @@ pub fn force_of_vigor() -> CardDefinition {
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(art_or_ench.clone()) },
             Effect::Destroy {
-                what: Selector::TargetFiltered { slot: 1, filter: art_or_ench },
+                what: target_filtered(art_or_ench.clone()),
+            },
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: art_or_ench,
+                },
             },
         ]),
         alternative_cost: Some(AlternativeCost {
@@ -1414,19 +1476,28 @@ pub fn howl_from_beyond() -> CardDefinition {
 /// creatures. You lose 5 life." Slots 0 and 1 each target a nonblack creature.
 pub fn reckless_spite() -> CardDefinition {
     let nonblack_creature = || {
-        SelectionRequirement::Creature
-            .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasColor(Color::Black))))
+        SelectionRequirement::Creature.and(SelectionRequirement::Not(Box::new(
+            SelectionRequirement::HasColor(Color::Black),
+        )))
     };
     CardDefinition {
         name: "Reckless Spite",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(nonblack_creature()) },
             Effect::Destroy {
-                what: Selector::TargetFiltered { slot: 1, filter: nonblack_creature() },
+                what: target_filtered(nonblack_creature()),
             },
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(5) },
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: nonblack_creature(),
+                },
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(5),
+            },
         ]),
         ..Default::default()
     }
@@ -1497,7 +1568,10 @@ pub fn pulse_of_murasa() -> CardDefinition {
                 }),
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(6) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(6),
+            },
         ]),
         ..Default::default()
     }
@@ -1561,10 +1635,17 @@ pub fn convolute() -> CardDefinition {
 pub fn frost_breath() -> CardDefinition {
     use crate::card::CounterType;
     let tap_and_stun = |slot: u8| {
-        let sel = Selector::TargetFiltered { slot, filter: SelectionRequirement::Creature };
+        let sel = Selector::TargetFiltered {
+            slot,
+            filter: SelectionRequirement::Creature,
+        };
         Effect::Seq(vec![
             Effect::Tap { what: sel.clone() },
-            Effect::AddCounter { what: sel, kind: CounterType::Stun, amount: Value::Const(1) },
+            Effect::AddCounter {
+                what: sel,
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
         ])
     };
     CardDefinition {
@@ -1588,7 +1669,10 @@ pub fn costly_plunder() -> CardDefinition {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -1601,8 +1685,13 @@ pub fn pressure_point() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -1618,7 +1707,10 @@ pub fn reclaim() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
             what: target_filtered(SelectionRequirement::Any),
-            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            to: ZoneDest::Library {
+                who: PlayerRef::You,
+                pos: LibraryPosition::Top,
+            },
         },
         ..Default::default()
     }
@@ -1631,8 +1723,15 @@ pub fn catalog_draw() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
         ]),
         ..Default::default()
     }
@@ -1656,7 +1755,9 @@ pub fn teferis_protection() -> CardDefinition {
         exile_on_resolve: true,
         effect: Effect::Seq(vec![
             Effect::PreventAllCombatDamageThisTurn,
-            Effect::PreventAllDamageThisTurn { target: Selector::You },
+            Effect::PreventAllDamageThisTurn {
+                target: Selector::You,
+            },
             Effect::LifeLockThisTurn { who: Selector::You },
             Effect::PhaseOut {
                 what: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
@@ -1678,7 +1779,9 @@ pub fn comeuppance() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PreventAllCombatDamageThisTurn,
-            Effect::PreventAllDamageThisTurn { target: Selector::You },
+            Effect::PreventAllDamageThisTurn {
+                target: Selector::You,
+            },
         ]),
         ..Default::default()
     }
@@ -1692,7 +1795,10 @@ pub fn fact_or_fiction() -> CardDefinition {
         name: "Fact or Fiction",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::FactOrFiction { count: Value::Const(5), to_bottom: false },
+        effect: Effect::FactOrFiction {
+            count: Value::Const(5),
+            to_bottom: false,
+        },
         ..Default::default()
     }
 }
@@ -1757,7 +1863,10 @@ pub fn flash_foliage() -> CardDefinition {
                 },
                 filter: SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }

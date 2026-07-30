@@ -18,17 +18,28 @@ fn sac_creature(another: bool) -> Effect {
     if another {
         filter = filter.and(SelectionRequirement::OtherThanSource);
     }
-    Effect::Sacrifice { who: Selector::You, count: Value::Const(1), filter }
+    Effect::Sacrifice {
+        who: Selector::You,
+        count: Value::Const(1),
+        filter,
+    }
 }
 
-fn creature(name: &'static str, c: crate::mana::ManaCost, types: Vec<CreatureType>, p: i32, t: i32)
-    -> CardDefinition
-{
+fn creature(
+    name: &'static str,
+    c: crate::mana::ManaCost,
+    types: Vec<CreatureType>,
+    p: i32,
+    t: i32,
+) -> CardDefinition {
     CardDefinition {
         name,
         cost: c,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         ..Default::default()
@@ -38,12 +49,20 @@ fn creature(name: &'static str, c: crate::mana::ManaCost, types: Vec<CreatureTyp
 /// Cartel Aristocrat — {W}{B} 2/2 Human Advisor. Sacrifice another creature:
 /// this gains protection from the color of your choice until end of turn.
 pub fn cartel_aristocrat() -> CardDefinition {
-    let mut def = creature("Cartel Aristocrat", cost(&[w(), b()]),
-        vec![CreatureType::Human, CreatureType::Advisor], 2, 2);
+    let mut def = creature(
+        "Cartel Aristocrat",
+        cost(&[w(), b()]),
+        vec![CreatureType::Human, CreatureType::Advisor],
+        2,
+        2,
+    );
     def.activated_abilities = vec![ActivatedAbility {
         effect: Effect::Seq(vec![
             sac_creature(true),
-            Effect::GrantProtectionFromChosenColor { what: Selector::This, duration: Duration::EndOfTurn },
+            Effect::GrantProtectionFromChosenColor {
+                what: Selector::This,
+                duration: Duration::EndOfTurn,
+            },
         ]),
         ..Default::default()
     }];
@@ -53,12 +72,21 @@ pub fn cartel_aristocrat() -> CardDefinition {
 /// Bloodflow Connoisseur — {2}{B} 1/1 Vampire. Sacrifice a creature: put a
 /// +1/+1 counter on this creature.
 pub fn bloodflow_connoisseur() -> CardDefinition {
-    let mut def = creature("Bloodflow Connoisseur", cost(&[generic(2), b()]),
-        vec![CreatureType::Vampire], 1, 1);
+    let mut def = creature(
+        "Bloodflow Connoisseur",
+        cost(&[generic(2), b()]),
+        vec![CreatureType::Vampire],
+        1,
+        1,
+    );
     def.activated_abilities = vec![ActivatedAbility {
         effect: Effect::Seq(vec![
             sac_creature(false),
-            Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(1) },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }];
@@ -68,14 +96,25 @@ pub fn bloodflow_connoisseur() -> CardDefinition {
 /// Vampire Aristocrat — {2}{B} 2/2 Vampire Rogue Noble. Sacrifice a creature:
 /// this gets +2/+2 until end of turn.
 pub fn vampire_aristocrat() -> CardDefinition {
-    let mut def = creature("Vampire Aristocrat", cost(&[generic(2), b()]),
-        vec![CreatureType::Vampire, CreatureType::Rogue, CreatureType::Noble], 2, 2);
+    let mut def = creature(
+        "Vampire Aristocrat",
+        cost(&[generic(2), b()]),
+        vec![
+            CreatureType::Vampire,
+            CreatureType::Rogue,
+            CreatureType::Noble,
+        ],
+        2,
+        2,
+    );
     def.activated_abilities = vec![ActivatedAbility {
         effect: Effect::Seq(vec![
             sac_creature(false),
             Effect::PumpPT {
                 what: Selector::This,
-                power: Value::Const(2), toughness: Value::Const(2), duration: Duration::EndOfTurn,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
             },
         ]),
         ..Default::default()
@@ -87,21 +126,30 @@ pub fn vampire_aristocrat() -> CardDefinition {
 /// Whenever a creature an opponent controls dies, put a +1/+1 counter on Yahenni.
 /// Sacrifice another creature: Yahenni gains indestructible until end of turn.
 pub fn yahenni_undying_partisan() -> CardDefinition {
-    let mut def = creature("Yahenni, Undying Partisan", cost(&[generic(2), b()]),
-        vec![CreatureType::Aetherborn, CreatureType::Vampire], 2, 2);
+    let mut def = creature(
+        "Yahenni, Undying Partisan",
+        cost(&[generic(2), b()]),
+        vec![CreatureType::Aetherborn, CreatureType::Vampire],
+        2,
+        2,
+    );
     def.supertypes = vec![Supertype::Legendary];
     def.keywords = vec![Keyword::Haste];
     def.triggered_abilities = vec![TriggeredAbility {
         event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
         effect: Effect::AddCounter {
-            what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(1),
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
         },
     }];
     def.activated_abilities = vec![ActivatedAbility {
         effect: Effect::Seq(vec![
             sac_creature(true),
             Effect::GrantKeyword {
-                what: Selector::This, keyword: Keyword::Indestructible, duration: Duration::EndOfTurn,
+                what: Selector::This,
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
             },
         ]),
         ..Default::default()
@@ -114,8 +162,13 @@ pub fn yahenni_undying_partisan() -> CardDefinition {
 /// {1}{B}, Sacrifice another creature: Scry 1. Each opponent loses 1 life and
 /// you gain 1 life.
 pub fn bontu_the_glorified() -> CardDefinition {
-    let mut def = creature("Bontu the Glorified", cost(&[generic(2), b()]),
-        vec![CreatureType::God], 4, 6);
+    let mut def = creature(
+        "Bontu the Glorified",
+        cost(&[generic(2), b()]),
+        vec![CreatureType::God],
+        4,
+        6,
+    );
     def.supertypes = vec![Supertype::Legendary];
     def.keywords = vec![
         Keyword::Menace,
@@ -126,9 +179,18 @@ pub fn bontu_the_glorified() -> CardDefinition {
         mana_cost: cost(&[generic(1), b()]),
         effect: Effect::Seq(vec![
             sac_creature(true),
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-            Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }];
@@ -139,18 +201,28 @@ pub fn bontu_the_glorified() -> CardDefinition {
 /// beginning of your upkeep, sacrifice a creature. Whenever you sacrifice a
 /// creature, draw a card.
 pub fn smothering_abomination() -> CardDefinition {
-    let mut def = creature("Smothering Abomination", cost(&[generic(2), b(), b()]),
-        vec![CreatureType::Eldrazi], 4, 3);
+    let mut def = creature(
+        "Smothering Abomination",
+        cost(&[generic(2), b(), b()]),
+        vec![CreatureType::Eldrazi],
+        4,
+        3,
+    );
     def.keywords = vec![Keyword::Devoid, Keyword::Flying];
     def.triggered_abilities = vec![
         TriggeredAbility {
             event: EventSpec::new(
-                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), EventScope::ActivePlayer),
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: sac_creature(false),
         },
         TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         },
     ];
     def
@@ -158,8 +230,13 @@ pub fn smothering_abomination() -> CardDefinition {
 
 /// Butcher Ghoul — {1}{B} 1/1 Zombie. Undying.
 pub fn butcher_ghoul() -> CardDefinition {
-    let mut def = creature("Butcher Ghoul", cost(&[generic(1), b()]),
-        vec![CreatureType::Zombie], 1, 1);
+    let mut def = creature(
+        "Butcher Ghoul",
+        cost(&[generic(1), b()]),
+        vec![CreatureType::Zombie],
+        1,
+        1,
+    );
     def.keywords = vec![Keyword::Undying];
     def
 }
@@ -168,22 +245,36 @@ pub fn butcher_ghoul() -> CardDefinition {
 /// Deathtouch. Whenever another creature you control enters, you gain 1 life.
 /// Whenever another creature you control dies, each opponent loses 1 life.
 pub fn elas_il_kor_sadistic_pilgrim() -> CardDefinition {
-    let mut def = creature("Elas il-Kor, Sadistic Pilgrim", cost(&[w(), b()]),
-        vec![CreatureType::Phyrexian, CreatureType::Kor, CreatureType::Cleric], 2, 2);
+    let mut def = creature(
+        "Elas il-Kor, Sadistic Pilgrim",
+        cost(&[w(), b()]),
+        vec![
+            CreatureType::Phyrexian,
+            CreatureType::Kor,
+            CreatureType::Cleric,
+        ],
+        2,
+        2,
+    );
     def.supertypes = vec![Supertype::Legendary];
     def.keywords = vec![Keyword::Deathtouch];
     def.triggered_abilities = vec![
         TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                 .with_filter(crate::effect::Predicate::EntityMatches {
-                    what: Selector::TriggerSource, filter: SelectionRequirement::Creature,
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
                 }),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         },
         TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
             effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1),
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
             },
         },
     ];
@@ -193,12 +284,19 @@ pub fn elas_il_kor_sadistic_pilgrim() -> CardDefinition {
 /// Mahadi, Emporium Master — {1}{B}{R} 3/3 legendary Devil. At the beginning of
 /// your end step, create a Treasure token for each creature that died this turn.
 pub fn mahadi_emporium_master() -> CardDefinition {
-    let mut def = creature("Mahadi, Emporium Master", cost(&[generic(1), b(), r()]),
-        vec![CreatureType::Devil], 3, 3);
+    let mut def = creature(
+        "Mahadi, Emporium Master",
+        cost(&[generic(1), b(), r()]),
+        vec![CreatureType::Devil],
+        3,
+        3,
+    );
     def.supertypes = vec![Supertype::Legendary];
     def.triggered_abilities = vec![TriggeredAbility {
         event: EventSpec::new(
-            EventKind::StepBegins(crate::game::types::TurnStep::End), EventScope::ActivePlayer),
+            EventKind::StepBegins(crate::game::types::TurnStep::End),
+            EventScope::ActivePlayer,
+        ),
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::CreaturesDiedThisTurnTotal,
@@ -218,14 +316,19 @@ pub fn heartless_summoning() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Creature spells you cast cost {2} less to cast.",
-                effect: StaticEffect::CostReduction { filter: SelectionRequirement::Creature, amount: 2 },
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::Creature,
+                    amount: 2,
+                },
             },
             StaticAbility {
                 description: "Creatures you control get -1/-1.",
                 effect: StaticEffect::PumpPT {
                     applies_to: Selector::EachPermanent(
-                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
-                    power: -1, toughness: -1,
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: -1,
+                    toughness: -1,
                 },
             },
         ],

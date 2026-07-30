@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{cast_is_noncreature, etb};
 use crate::effect::{Duration, PlayerRef};
-use crate::mana::{cost, generic, hybrid, r, u, w, Color, ManaCost, ManaSymbol};
+use crate::mana::{Color, ManaCost, ManaSymbol, cost, generic, hybrid, r, u, w};
 
 fn thopter_token() -> TokenDefinition {
     TokenDefinition {
@@ -18,7 +18,10 @@ fn thopter_token() -> TokenDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -29,7 +32,10 @@ fn servo_token() -> TokenDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Servo], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Servo],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -140,7 +146,10 @@ pub fn ravenous_intruder() -> CardDefinition {
         name: "Ravenous Intruder",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Gremlin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gremlin],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -188,7 +197,10 @@ pub fn saheeli_sublime_artificer() -> CardDefinition {
         loyalty_abilities: vec![LoyaltyAbility {
             loyalty_cost: -2,
             effect: Effect::BecomeCopyOfFor {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Artifact.and(R::ControlledByYou) },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Artifact.and(R::ControlledByYou),
+                },
                 source: Selector::TargetFiltered {
                     slot: 1,
                     filter: R::Creature.or(R::Artifact).and(R::ControlledByYou),

@@ -7,7 +7,7 @@ use crate::card::{
     Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, x};
 
 /// Aurelia's Fury — {X}{R}{W} Instant. Deals X damage divided among any number
 /// of targets; each creature dealt damage this way is tapped, and each player
@@ -27,9 +27,15 @@ pub fn aurelias_fury() -> CardDefinition {
             // `DamagedThisResolution` yields only creatures + players; Tap
             // ignores the players and the noncreature lock ignores the
             // creatures.
-            Effect::Tap { what: Selector::DamagedThisResolution { filter: R::Creature } },
+            Effect::Tap {
+                what: Selector::DamagedThisResolution {
+                    filter: R::Creature,
+                },
+            },
             Effect::CantCastNoncreatureThisTurn {
-                who: Selector::DamagedThisResolution { filter: R::Creature },
+                who: Selector::DamagedThisResolution {
+                    filter: R::Creature,
+                },
             },
         ]),
         ..Default::default()
@@ -46,7 +52,10 @@ pub fn nightveil_specter() -> CardDefinition {
         name: "Nightveil Specter",
         cost: cost(&[ub(), ub(), ub()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Specter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Specter],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -83,7 +92,9 @@ pub fn vizkopa_confessor() -> CardDefinition {
             crate::effect::shortcut::extort(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::PayLifeRevealExileFromHand { opp: PlayerRef::EachOpponent },
+                effect: Effect::PayLifeRevealExileFromHand {
+                    opp: PlayerRef::EachOpponent,
+                },
             },
         ],
         ..Default::default()
@@ -105,7 +116,10 @@ pub fn soul_ransom() -> CardDefinition {
         },
         effect: Effect::Attach {
             what: Selector::This,
-            to: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature,
+            },
         },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -173,7 +187,10 @@ pub fn bane_alley_broker() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                     Effect::ExileChosenFromHand {
                         from: Selector::You,
                         count: Value::Const(1),

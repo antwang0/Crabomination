@@ -18,7 +18,10 @@ pub fn bog_badger() -> CardDefinition {
         name: "Bog Badger",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Badger], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Badger],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Kicker(cost(&[b()]))],
@@ -155,8 +158,14 @@ pub fn case_the_joint() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::LookAtTop { who: PlayerRef::EachPlayer, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::LookAtTop {
+                who: PlayerRef::EachPlayer,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }
@@ -175,7 +184,10 @@ pub fn buy_your_silence() -> CardDefinition {
                 count: Value::ONE,
                 definition: crabomination_base::tokens::treasure_token(),
             },
-            Effect::Move { what: target_filtered(R::Nonland), to: ZoneDest::Exile },
+            Effect::Move {
+                what: target_filtered(R::Nonland),
+                to: ZoneDest::Exile,
+            },
         ]),
         ..Default::default()
     }

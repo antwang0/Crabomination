@@ -1,6 +1,7 @@
 //! Modern Horizons 2 sweep, batch 6 — coin flips, devour-artifact, renown
 //! payoffs, kicker land-hosing, reveal-until burn. Tests in `tests/mh2e.rs`.
 
+use crate::card::MayPlayDuration;
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType,
@@ -8,9 +9,8 @@ use crate::card::{
     Value,
 };
 use crate::effect::shortcut::{etb, investigate, renown, target_any, target_filtered};
-use crate::card::MayPlayDuration;
 use crate::effect::{Duration, Effect, PlayerRef, Predicate, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, generic, r, u, w};
 
 use SelectionRequirement as R;
 
@@ -20,7 +20,10 @@ fn thopter_token() -> TokenDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     }
@@ -38,14 +41,20 @@ pub fn barbed_spike() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
-        equipped_bonus: Some(EquipBonus { power: 1, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
                 definition: thopter_token(),
             },
-            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+            Effect::Attach {
+                what: Selector::This,
+                to: Selector::LastCreatedToken,
+            },
         ]))],
         ..Default::default()
     }
@@ -60,9 +69,16 @@ pub fn break_ties() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Reinforce(1, cost(&[w()]))],
         effect: Effect::ChooseMode(vec![
-            Effect::Destroy { what: target_filtered(R::Artifact) },
-            Effect::Destroy { what: target_filtered(R::Enchantment) },
-            Effect::Move { what: target_filtered(R::Any), to: ZoneDest::Exile },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            },
+            Effect::Destroy {
+                what: target_filtered(R::Enchantment),
+            },
+            Effect::Move {
+                what: target_filtered(R::Any),
+                to: ZoneDest::Exile,
+            },
         ]),
         ..Default::default()
     }
@@ -94,7 +110,8 @@ pub fn breyas_apprentice() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::ONE,
                     duration: MayPlayDuration::EndOfControllersNextTurn,
-                    pay_any_color: false, pay_own_cost: false,
+                    pay_any_color: false,
+                    pay_own_cost: false,
                     uncast_penalty: None,
                 },
                 Effect::PumpPT {
@@ -129,7 +146,10 @@ pub fn caprichrome() -> CardDefinition {
         name: "Caprichrome",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goat],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flash, Keyword::Vigilance],
@@ -187,14 +207,20 @@ pub fn goblin_traprunner() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
         name: "Goblin Traprunner",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         power: 4,
         toughness: 2,
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::FlipCoin {
@@ -249,10 +275,7 @@ pub fn search_the_premises() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::Attacks,
-                EventScope::ControllerAttackedByOpponent,
-            ),
+            event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
             effect: investigate(1),
         }],
         ..Default::default()
@@ -270,15 +293,23 @@ pub fn so_shiny() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::EntityMatches {
                 what: Selector::EachPermanent(R::IsToken.and(R::ControlledByYou)),
                 filter: R::Any,
             },
             then: Box::new(Effect::Seq(vec![
-                Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) },
-                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Tap {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                },
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
             ])),
             else_: Box::new(Effect::Noop),
         })],
@@ -340,7 +371,10 @@ pub fn tizerus_charger() -> CardDefinition {
         name: "Tizerus Charger",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Pegasus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pegasus],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Escape(cost(&[generic(4), b()]), 5)],
@@ -376,7 +410,10 @@ pub fn graceful_restoration() -> CardDefinition {
             Effect::Seq(vec![
                 Effect::Move {
                     what: target_filtered(R::Creature),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::AddCounter {
                     what: Selector::LastMoved,
@@ -390,7 +427,10 @@ pub fn graceful_restoration() -> CardDefinition {
                 filter: R::Creature.and(R::PowerAtMost(2)),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 }),
             },
         ]),

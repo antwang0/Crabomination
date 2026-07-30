@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Predicate, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Spike Weaver — {2}{G}{G} 0/0 Spike. Enters with three +1/+1 counters.
 /// {2}, Remove a +1/+1 counter: put a +1/+1 counter on target creature.
@@ -19,7 +19,10 @@ pub fn spike_weaver() -> CardDefinition {
         name: "Spike Weaver",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spike], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spike],
+            ..Default::default()
+        },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
         activated_abilities: vec![
             ActivatedAbility {
@@ -50,7 +53,10 @@ pub fn glimmerpoint_stag() -> CardDefinition {
         name: "Glimmerpoint Stag",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elk],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
@@ -164,7 +170,9 @@ pub fn stormscape_apprentice() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[w()]),
-                effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+                effect: Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -202,8 +210,10 @@ pub fn cavern_harpy() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::HasColor(Color::Blue)
-                            .or(SelectionRequirement::HasColor(Color::Black))),
+                        .and(
+                            SelectionRequirement::HasColor(Color::Blue)
+                                .or(SelectionRequirement::HasColor(Color::Black)),
+                        ),
                 ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
@@ -228,7 +238,10 @@ pub fn stonecloaker() -> CardDefinition {
         name: "Stonecloaker",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Gargoyle], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gargoyle],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flash, Keyword::Flying],
@@ -268,7 +281,9 @@ pub fn stonehorn_dignitary() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::SkipNextCombatPhase { who: PlayerRef::EachOpponent },
+            effect: Effect::SkipNextCombatPhase {
+                who: PlayerRef::EachOpponent,
+            },
         }],
         ..Default::default()
     }
@@ -294,7 +309,9 @@ pub fn narcolepsy() -> CardDefinition {
                 EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                 EventScope::AnyPlayer,
             ),
-            effect: Effect::Tap { what: Selector::AttachedTo(Box::new(Selector::This)) },
+            effect: Effect::Tap {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
         }],
         ..Default::default()
     }

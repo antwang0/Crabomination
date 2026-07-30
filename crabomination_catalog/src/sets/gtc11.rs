@@ -9,10 +9,13 @@ use crate::card::{
 };
 use crate::effect::shortcut::{on_dies, target_filtered};
 use crate::effect::{PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, u, w};
 
 fn creatures(t: Vec<CreatureType>) -> Subtypes {
-    Subtypes { creature_types: t, ..Default::default() }
+    Subtypes {
+        creature_types: t,
+        ..Default::default()
+    }
 }
 
 /// Hindervines — {2}{G} Instant. Prevent all combat damage this turn dealt by
@@ -22,7 +25,9 @@ pub fn hindervines() -> CardDefinition {
         name: "Hindervines",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::PreventCombatDamageExceptDealtBy { except: R::WithCounter(CounterType::PlusOnePlusOne) },
+        effect: Effect::PreventCombatDamageExceptDealtBy {
+            except: R::WithCounter(CounterType::PlusOnePlusOne),
+        },
         ..Default::default()
     }
 }
@@ -49,8 +54,13 @@ pub fn lord_of_the_void() -> CardDefinition {
                     face_down: false,
                 },
                 Effect::Move {
-                    what: Selector::one_of(Selector::ExiledThisResolution { filter: R::Creature }),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    what: Selector::one_of(Selector::ExiledThisResolution {
+                        filter: R::Creature,
+                    }),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ]),
         }],
@@ -71,7 +81,10 @@ pub fn duskmantle_seer() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::ForEach {
                 selector: Selector::Player(PlayerRef::EachPlayer),
                 body: Box::new(Effect::Seq(vec![
@@ -84,7 +97,10 @@ pub fn duskmantle_seer() -> CardDefinition {
                         })),
                     },
                     Effect::Move {
-                        what: Selector::TopOfLibrary { who: PlayerRef::Triggerer, count: Value::ONE },
+                        what: Selector::TopOfLibrary {
+                            who: PlayerRef::Triggerer,
+                            count: Value::ONE,
+                        },
                         to: ZoneDest::Hand(PlayerRef::Triggerer),
                     },
                 ])),
@@ -115,7 +131,10 @@ pub fn deathpact_angel() -> CardDefinition {
                     zone: Zone::Graveyard,
                     filter: R::HasName("Deathpact Angel".into()),
                 }),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             ..Default::default()
         }],
@@ -146,10 +165,11 @@ pub fn voidwalk() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::ExileReturnToOwnerNextEndStep { what: target_filtered(R::Creature) },
+            Effect::ExileReturnToOwnerNextEndStep {
+                what: target_filtered(R::Creature),
+            },
             Effect::Cipher,
         ]),
         ..Default::default()
     }
 }
-

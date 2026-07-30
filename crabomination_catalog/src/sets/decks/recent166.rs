@@ -13,7 +13,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, target_any, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color, SpendRestriction};
+use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u, w};
 
 /// A 2/2 red Soldier token with firebending 1 (Firebender Ascension).
 fn firebending_soldier() -> TokenDefinition {
@@ -23,7 +23,10 @@ fn firebending_soldier() -> TokenDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Firebending(1)],
         ..Default::default()
     }
@@ -37,7 +40,10 @@ fn ally_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ally], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ally],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -108,7 +114,10 @@ pub fn white_lotus_hideout() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -125,7 +134,10 @@ pub fn white_lotus_hideout() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(1)]),
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::ONE),
+                },
                 ..Default::default()
             },
         ],
@@ -144,7 +156,10 @@ pub fn jasmine_dragon_tea_shop() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -181,11 +196,17 @@ pub fn secret_tunnel() -> CardDefinition {
     CardDefinition {
         name: "Secret Tunnel",
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Cave], ..Default::default() },
+        subtypes: Subtypes {
+            land_types: vec![LandType::Cave],
+            ..Default::default()
+        },
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -216,7 +237,10 @@ pub fn planetarium_of_wan_shi_tong() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -226,7 +250,8 @@ pub fn planetarium_of_wan_shi_tong() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::ONE,
                 duration: MayPlayDuration::EndOfThisTurn,
-                pay_any_color: false, pay_own_cost: false,
+                pay_any_color: false,
+                pay_own_cost: false,
                 uncast_penalty: None,
             },
         }],
@@ -251,11 +276,14 @@ pub fn phoenix_fleet_airship() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Crew(1)],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::PermanentsSacrificedThisTurnAtLeast {
-                    who: PlayerRef::You,
-                    at_least: Value::ONE,
-                }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::PermanentsSacrificedThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::ONE,
+            }),
             effect: Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -323,7 +351,10 @@ pub fn ragost_deft_gastronaut() -> CardDefinition {
                     who: PlayerRef::You,
                     at_least: Value::ONE,
                 }),
-            effect: Effect::Untap { what: Selector::This, up_to: None },
+            effect: Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
         }],
         ..Default::default()
     }
@@ -357,7 +388,11 @@ pub fn invasion_submersible() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             exhaust: true,
             effect: Effect::Seq(vec![
-                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Creature, until_eot: false },
+                Effect::AddCardTypeIndefinitely {
+                    what: Selector::This,
+                    card_type: CardType::Creature,
+                    until_eot: false,
+                },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -414,14 +449,20 @@ pub fn guardian_sunmare() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
-        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))), Keyword::Saddle(4)],
+        keywords: vec![
+            Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))),
+            Keyword::Saddle(4),
+        ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
                 .with_filter(Predicate::SourceSaddled),
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: R::Nonland.and(R::ManaValueAtMost(3)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         }],
         ..Default::default()
@@ -473,7 +514,10 @@ pub fn grim_bauble() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(2), b()]),
             sac_cost: true,
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -503,7 +547,10 @@ pub fn gastal_raider() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Max speed — gets +1/+1 and has menace.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                condition: Predicate::SpeedAtLeast {
+                    who: PlayerRef::You,
+                    speed: 4,
+                },
                 power: 1,
                 toughness: 1,
                 keywords: vec![Keyword::Menace],
@@ -524,7 +571,10 @@ pub fn basri_tomorrows_champion() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Lifelink],
         ..Default::default()
     };
@@ -543,7 +593,11 @@ pub fn basri_tomorrows_champion() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[w()]),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: cat() },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: cat(),
+            },
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -592,7 +646,10 @@ pub fn grim_javelineer() -> CardDefinition {
                     toughness: Value::Const(0),
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+                Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::ONE,
+                },
             ]),
         }],
         ..Default::default()
@@ -608,8 +665,14 @@ pub fn broodheart_engine() -> CardDefinition {
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
@@ -621,7 +684,10 @@ pub fn broodheart_engine() -> CardDefinition {
                     (R::Creature.or(R::HasArtifactSubtype(ArtifactSubtype::Vehicle)))
                         .and(R::InYourGraveyard),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             ..Default::default()
         }],
@@ -639,12 +705,18 @@ pub fn amonkhet_raceway() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 tap_cost: true,
-                condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+                condition: Some(Predicate::SpeedAtLeast {
+                    who: PlayerRef::You,
+                    speed: 4,
+                }),
                 effect: Effect::GrantKeyword {
                     what: target_any(),
                     keyword: Keyword::Haste,
@@ -691,7 +763,10 @@ fn insect_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -723,8 +798,15 @@ pub fn fearless_swashbuckler() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-                Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                    random: false,
+                },
             ]),
         }],
         ..Default::default()
@@ -804,7 +886,11 @@ pub fn hazoret_godseeker() -> CardDefinition {
         },
         power: 5,
         toughness: 3,
-        keywords: vec![Keyword::Indestructible, Keyword::Haste, Keyword::StartYourEngines],
+        keywords: vec![
+            Keyword::Indestructible,
+            Keyword::Haste,
+            Keyword::StartYourEngines,
+        ],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
@@ -841,7 +927,8 @@ pub fn aatchik_emerald_radian() -> CardDefinition {
                 count: Value::count(Selector::CardsInZone {
                     who: PlayerRef::You,
                     zone: crate::card::Zone::Graveyard,
-                    filter: R::HasCardType(CardType::Creature).or(R::HasCardType(CardType::Artifact)),
+                    filter: R::HasCardType(CardType::Creature)
+                        .or(R::HasCardType(CardType::Artifact)),
                 }),
                 definition: insect_token(),
             }),
@@ -877,7 +964,10 @@ fn pilot_token() -> TokenDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Pilot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pilot],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -914,7 +1004,10 @@ pub fn gastal_thrillroller() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
                 Effect::AddCounter {
                     what: Selector::This,
@@ -1032,7 +1125,10 @@ pub fn country_roads() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::White, Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::White, Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -1040,7 +1136,11 @@ pub fn country_roads() -> CardDefinition {
                 mana_cost: cost(&[generic(1), w()]),
                 sac_cost: true,
                 sorcery_speed: true,
-                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: pilot_token() },
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: pilot_token(),
+                },
                 ..Default::default()
             },
         ],
@@ -1049,9 +1149,6 @@ pub fn country_roads() -> CardDefinition {
 }
 
 // ── DFT / EOE closers ───────────────────────────────────────────────────────
-
-
-
 
 /// Voyager Glidecar — {W} Artifact — Vehicle 2/3. Crew 1. When it enters, scry 1.
 /// `Tap three other untapped creatures you control: Until end of turn, this
@@ -1068,9 +1165,15 @@ pub fn voyager_glidecar() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Crew(1)],
-        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::ONE })],
+        triggered_abilities: vec![etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::ONE,
+        })],
         activated_abilities: vec![ActivatedAbility {
-            tap_n_filter: Some((R::Creature.and(R::ControlledByYou).and(R::OtherThanSource), 3)),
+            tap_n_filter: Some((
+                R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                3,
+            )),
             effect: Effect::Seq(vec![
                 Effect::BecomeCreature {
                     what: Selector::This,
@@ -1104,7 +1207,10 @@ pub fn kickoff_celebrations() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayDiscard {
             description: "You may discard a card. If you do, draw two cards.".into(),
             count: Value::ONE,
-            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+            then: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            }),
             else_: None,
         })],
         ..Default::default()

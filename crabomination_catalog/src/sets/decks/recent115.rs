@@ -4,9 +4,11 @@
 //! `DynamicPt::BasePlusUnspentColorMana` (Omnath grows with unspent green).
 //! Tests in `tests/recent115.rs`.
 
-use crate::card::{CardDefinition, CardType, CreatureType, DynamicPt, StaticAbility, Subtypes, Supertype};
+use crate::card::{
+    CardDefinition, CardType, CreatureType, DynamicPt, StaticAbility, Subtypes, Supertype,
+};
 use crate::effect::StaticEffect;
-use crate::mana::{cost, g, generic, Color};
+use crate::mana::{Color, cost, g, generic};
 
 /// Upwelling — {3}{G} enchantment. Players don't lose unspent mana as steps
 /// and phases end.
@@ -32,8 +34,15 @@ pub fn omnath_locus_of_mana() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
-        dynamic_pt: Some(DynamicPt::BasePlusUnspentColorMana { base_p: 1, base_t: 1, color: Color::Green }),
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        dynamic_pt: Some(DynamicPt::BasePlusUnspentColorMana {
+            base_p: 1,
+            base_t: 1,
+            color: Color::Green,
+        }),
         static_abilities: vec![StaticAbility {
             description: "You don't lose unspent green mana as steps and phases end.",
             effect: StaticEffect::UnspentColorManaPersists(Color::Green),

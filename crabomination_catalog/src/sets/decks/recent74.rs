@@ -3,12 +3,10 @@
 //! primitives. Tests in `tests/recent74.rs`.
 
 use crate::card::SelectionRequirement as R;
-use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, Subtypes,
-};
+use crate::card::{ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, Subtypes};
 use crate::effect::shortcut::{etb, target_any};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, Value};
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 /// Water Elemental — {3}{U}{U} 5/4 Elemental (vanilla).
 pub fn water_elemental() -> CardDefinition {
@@ -16,7 +14,10 @@ pub fn water_elemental() -> CardDefinition {
         name: "Water Elemental",
         cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         ..Default::default()
@@ -29,7 +30,10 @@ pub fn wall_of_water() -> CardDefinition {
         name: "Wall of Water",
         cost: cost(&[generic(1), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
         power: 0,
         toughness: 5,
         keywords: vec![Keyword::Defender],
@@ -54,7 +58,10 @@ pub fn spitting_drake() -> CardDefinition {
         name: "Spitting Drake",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -79,13 +86,19 @@ pub fn blood_pet() -> CardDefinition {
         name: "Blood Pet",
         cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thrull], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thrull],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             mana_cost: ManaCost::default(),
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Black]) },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Black]),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -98,11 +111,17 @@ pub fn foul_imp() -> CardDefinition {
         name: "Foul Imp",
         cost: cost(&[b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Imp], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::LoseLife { who: Selector::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::LoseLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
         ..Default::default()
     }
 }
@@ -114,7 +133,10 @@ pub fn skyshroud_vampire() -> CardDefinition {
         name: "Skyshroud Vampire",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -138,7 +160,10 @@ pub fn feral_shadow() -> CardDefinition {
         name: "Feral Shadow",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nightstalker], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightstalker],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -152,7 +177,10 @@ pub fn rowan_treefolk() -> CardDefinition {
         name: "Rowan Treefolk",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         ..Default::default()
@@ -167,7 +195,11 @@ pub fn sabertooth_nishoba() -> CardDefinition {
         cost: cost(&[generic(4), g(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat, CreatureType::Beast, CreatureType::Warrior],
+            creature_types: vec![
+                CreatureType::Cat,
+                CreatureType::Beast,
+                CreatureType::Warrior,
+            ],
             ..Default::default()
         },
         power: 5,
@@ -198,7 +230,10 @@ pub fn kris_mage() -> CardDefinition {
             mana_cost: cost(&[r()]),
             tap_cost: true,
             discard_cost: Some((R::Any, 1)),
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()

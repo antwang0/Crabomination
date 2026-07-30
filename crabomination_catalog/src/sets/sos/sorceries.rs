@@ -342,10 +342,7 @@ pub fn procrastinate() -> CardDefinition {
             Effect::AddCounter {
                 what: Selector::Target(0),
                 kind: CounterType::Stun,
-                amount: Value::Times(
-                    Box::new(Value::Const(2)),
-                    Box::new(Value::XFromCost),
-                ),
+                amount: Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)),
             },
         ]),
         ..Default::default()
@@ -553,19 +550,15 @@ pub fn pull_from_the_grave() -> CardDefinition {
 /// decision shape; in practice the caster's pick lands on the same MV
 /// bucket as the opponent would be forced to choose.
 pub fn end_of_the_hunt() -> CardDefinition {
-    let inner =
-        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker);
+    let inner = SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker);
     CardDefinition {
         name: "End of the Hunt",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Exile {
-            what: target_filtered(
-                SelectionRequirement::ControlledByOpponent
-                    .and(SelectionRequirement::HasGreatestManaValueAmongControlled(
-                        Box::new(inner),
-                    )),
-            ),
+            what: target_filtered(SelectionRequirement::ControlledByOpponent.and(
+                SelectionRequirement::HasGreatestManaValueAmongControlled(Box::new(inner)),
+            )),
         },
         ..Default::default()
     }
@@ -787,26 +780,26 @@ pub fn moment_of_reckoning() -> CardDefinition {
             max: 4,
             allow_repeats: true,
             modes: vec![
-            // Mode 0: destroy target nonland permanent.
-            Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-                ),
-            },
-            // Mode 1: return target nonland PERMANENT card from your
-            // graveyard to the battlefield (audit fix: instants/sorceries
-            // are not legal targets).
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Permanent
-                        .and(SelectionRequirement::Nonland)
-                        .and(SelectionRequirement::InYourGraveyard),
-                ),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
+                // Mode 0: destroy target nonland permanent.
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                    ),
                 },
-            },
+                // Mode 1: return target nonland PERMANENT card from your
+                // graveyard to the battlefield (audit fix: instants/sorceries
+                // are not legal targets).
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent
+                            .and(SelectionRequirement::Nonland)
+                            .and(SelectionRequirement::InYourGraveyard),
+                    ),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                },
             ],
         },
         ..Default::default()
@@ -924,7 +917,7 @@ pub fn wisdom_of_ages() -> CardDefinition {
 /// (no auto-color picker required).
 pub fn rapturous_moment() -> CardDefinition {
     use crate::effect::ManaPayload;
-    use crate::mana::{r, u, Color};
+    use crate::mana::{Color, r, u};
     CardDefinition {
         name: "Rapturous Moment",
         cost: cost(&[generic(4), u(), r()]),
@@ -1018,8 +1011,7 @@ pub fn splatter_technique() -> CardDefinition {
             // Mode 1: 4 damage to each creature and planeswalker.
             Effect::DealDamage {
                 to: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                 ),
                 amount: Value::Const(4),
             },
@@ -1263,7 +1255,7 @@ pub fn killians_confidence() -> CardDefinition {
 /// the auto-decider picks each basic in turn.
 pub fn planar_engineering() -> CardDefinition {
     use crate::effect::ZoneDest;
-    
+
     CardDefinition {
         name: "Planar Engineering",
         cost: cost(&[generic(3), g()]),
@@ -1474,8 +1466,7 @@ pub fn chelonian_tackle() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 power: Value::Const(0),
                 toughness: Value::Const(10),
@@ -1546,8 +1537,7 @@ pub fn steal_the_show() -> CardDefinition {
                 // graveyard, to target creature or planeswalker.
                 Effect::DealDamage {
                     to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Planeswalker),
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                     ),
                     amount: is_graveyard_count,
                 },
@@ -1646,9 +1636,6 @@ pub fn wild_hypothesis() -> CardDefinition {
     }
 }
 
-
-
-
 /// Artistic Process — {3}{R}{R} Sorcery.
 /// "Choose one — / • Artistic Process deals 6 damage to target creature.
 /// / • Artistic Process deals 2 damage to each creature you don't
@@ -1680,8 +1667,7 @@ pub fn artistic_process() -> CardDefinition {
             // Mode 1: 2 damage to each creature you don't control.
             Effect::DealDamage {
                 to: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
                 amount: Value::Const(2),
             },
@@ -1865,8 +1851,8 @@ pub fn zimones_experiment() -> CardDefinition {
 /// upgraded branch takes two to hand (audit fix; previously Scry 3 →
 /// Draw 2).
 pub fn flow_state() -> CardDefinition {
-    use crate::mana::u;
     use crate::card::{Predicate, Zone};
+    use crate::mana::u;
     CardDefinition {
         name: "Flow State",
         cost: cost(&[generic(1), u()]),
@@ -1902,7 +1888,7 @@ pub fn flow_state() -> CardDefinition {
                 count: Value::Const(3),
                 rest_to_graveyard: false,
                 pick_filter: None,
-            
+
                 take: None,
                 to_battlefield: false,
                 gain_life_if_pick: None,
@@ -1941,8 +1927,7 @@ pub fn molten_note() -> CardDefinition {
             },
             Effect::Untap {
                 what: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 up_to: None,
             },
@@ -1961,7 +1946,7 @@ pub fn molten_note() -> CardDefinition {
 pub fn social_snub() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::Predicate;
-    use crate::mana::{w, b};
+    use crate::mana::{b, w};
     CardDefinition {
         name: "Social Snub",
         cost: cost(&[generic(1), w(), b()]),
@@ -1981,13 +1966,11 @@ pub fn social_snub() -> CardDefinition {
         // On-cast self-trigger. Filter ensures the caster controls a
         // creature at cast time (gate from the printed Oracle).
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource)
-                .with_filter(Predicate::SelectorExists(
-                    Selector::EachPermanent(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
-                    ),
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource).with_filter(
+                Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 )),
+            ),
             effect: Effect::MayDo {
                 description: "Copy Social Snub?".to_string(),
                 body: Box::new(Effect::CopySpell {
@@ -2016,9 +1999,9 @@ pub fn social_snub() -> CardDefinition {
 /// `fix_whats_broken_pays_x_life_and_returns_exact_mv`,
 /// `fix_whats_broken_only_returns_cards_at_exact_mv`.
 pub fn fix_whats_broken() -> CardDefinition {
-    use crate::effect::{Predicate, ZoneDest};
-    use crate::mana::{w, b};
     use crate::card::Zone;
+    use crate::effect::{Predicate, ZoneDest};
+    use crate::mana::{b, w};
     CardDefinition {
         name: "Fix What's Broken",
         cost: cost(&[generic(2), w(), b()]),
@@ -2075,8 +2058,7 @@ pub fn fix_whats_broken() -> CardDefinition {
 pub fn follow_the_lumarets() -> CardDefinition {
     use crate::effect::Predicate;
     use crate::mana::g;
-    let creature_or_land =
-        SelectionRequirement::Creature.or(SelectionRequirement::Land);
+    let creature_or_land = SelectionRequirement::Creature.or(SelectionRequirement::Land);
     let look = |take: i32| Effect::LookPickToHand {
         who: PlayerRef::You,
         count: Value::Const(4),
@@ -2141,8 +2123,7 @@ pub fn echocasting_symposium() -> CardDefinition {
                 who: PlayerRef::Target(1),
                 count: Value::Const(1),
                 source: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 extra_creature_types: vec![],
                 extra_card_types: vec![],
@@ -2175,8 +2156,8 @@ pub fn echocasting_symposium() -> CardDefinition {
 /// LAND plays through the may-play path aren't supported (same as
 /// Tablet of Discovery), so an exiled land can't be played.
 pub fn archaics_agony() -> CardDefinition {
-    use crate::effect::shortcut::target_filtered;
     use crate::effect::ZoneDest;
+    use crate::effect::shortcut::target_filtered;
     use crate::mana::r;
     CardDefinition {
         name: "Archaic's Agony",

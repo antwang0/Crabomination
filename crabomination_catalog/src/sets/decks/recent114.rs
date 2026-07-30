@@ -12,7 +12,7 @@ use crate::card::{
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, Value, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, hybrid, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, w};
 
 /// "Whenever you cast an enchantment spell, `body`." (Argothian Enchantress /
 /// Enchantress's Presence shape.)
@@ -186,14 +186,20 @@ pub fn starfield_of_nyx() -> CardDefinition {
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::SelfSource,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::MayDo {
                 description: "Return an enchantment card from your graveyard to the battlefield?"
                     .into(),
                 body: Box::new(Effect::Move {
                     what: target_filtered(SelectionRequirement::Enchantment),
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 }),
             },
         }],
@@ -215,7 +221,12 @@ pub fn starfield_of_nyx() -> CardDefinition {
 pub fn privileged_position() -> CardDefinition {
     CardDefinition {
         name: "Privileged Position",
-        cost: cost(&[generic(2), hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White)]),
+        cost: cost(&[
+            generic(2),
+            hybrid(Color::Green, Color::White),
+            hybrid(Color::Green, Color::White),
+            hybrid(Color::Green, Color::White),
+        ]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Other permanents you control have hexproof.",
@@ -256,7 +267,9 @@ pub fn nevermore() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::NameCard { what: Selector::This },
+            effect: Effect::NameCard {
+                what: Selector::This,
+            },
         }],
         static_abilities: vec![StaticAbility {
             description: "Spells with the chosen name can't be cast.",
@@ -304,16 +317,21 @@ pub fn season_of_growth() -> CardDefinition {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::Creature,
                     }),
-                effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+                effect: Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::ONE,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
                     Predicate::CastSpellTargetsMatch(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                 ),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             },
         ],
         ..Default::default()
@@ -362,12 +380,11 @@ pub fn calix_guided_by_fate() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Enchantment,
-                },
-            ),
+                }),
             effect: Effect::AddCounter {
                 what: target_filtered(SelectionRequirement::Creature),
                 kind: CounterType::PlusOnePlusOne,
@@ -393,10 +410,16 @@ pub fn angelic_renewal() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Sacrifice Angelic Renewal to return the dead creature?".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Move { what: Selector::This, to: ZoneDest::Graveyard },
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Graveyard,
+                    },
                     Effect::Move {
                         what: Selector::TriggerSource,
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                 ])),
             },
@@ -434,8 +457,11 @@ pub fn solitary_confinement() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::SelfSource,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::MayDiscard {
                 description: "Discard a card to keep Solitary Confinement?".into(),
                 count: Value::ONE,
@@ -449,7 +475,10 @@ pub fn solitary_confinement() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Skip your draw step.",
-                effect: StaticEffect::SkipStep { step: TurnStep::Draw, all_players: false },
+                effect: StaticEffect::SkipStep {
+                    step: TurnStep::Draw,
+                    all_players: false,
+                },
             },
             StaticAbility {
                 description: "You have hexproof.",
@@ -504,7 +533,10 @@ pub fn unquestioned_authority() -> CardDefinition {
         },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::ProtectionFromCreatures],
@@ -522,8 +554,11 @@ pub fn sacred_mesa() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::SelfSource,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::MaySacrifice {
                 description: "Sacrifice a Pegasus to keep Sacred Mesa?".into(),
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Pegasus),
@@ -676,7 +711,10 @@ pub fn angelic_destiny() -> CardDefinition {
         }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
         }],
         ..Default::default()
     }
@@ -693,10 +731,11 @@ pub fn tranquil_grove() -> CardDefinition {
             mana_cost: cost(&[generic(1), g(), g()]),
             effect: Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Enchantment
-                        .and(SelectionRequirement::OtherThanSource),
+                    SelectionRequirement::Enchantment.and(SelectionRequirement::OtherThanSource),
                 ),
-                body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                body: Box::new(Effect::Destroy {
+                    what: Selector::TriggerSource,
+                }),
             },
             ..Default::default()
         }],
@@ -761,7 +800,10 @@ pub fn flickering_ward() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -778,7 +820,10 @@ pub fn doomwake_giant() -> CardDefinition {
         name: "Doomwake Giant",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
         power: 4,
         toughness: 6,
         triggered_abilities: vec![constellation(Effect::PumpPT {
@@ -828,7 +873,11 @@ pub fn monk_idealist() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Monk, CreatureType::Cleric],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Monk,
+                CreatureType::Cleric,
+            ],
             ..Default::default()
         },
         power: 2,
@@ -856,9 +905,7 @@ pub fn commune_with_the_gods() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: true,
-            pick_filter: Some(
-                SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
-            ),
+            pick_filter: Some(SelectionRequirement::Creature.or(SelectionRequirement::Enchantment)),
             take: None,
             to_battlefield: false,
             gain_life_if_pick: None,
@@ -899,11 +946,17 @@ pub fn nyleas_presence() -> CardDefinition {
         },
         effect: Effect::Attach {
             what: Selector::This,
-            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Land },
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Land,
+            },
         },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         static_abilities: vec![StaticAbility {
             description: "Enchanted land is every basic land type.",
@@ -929,7 +982,10 @@ pub fn font_of_fertility() -> CardDefinition {
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
             ..Default::default()
         }],
@@ -949,7 +1005,9 @@ pub fn serene_heart() -> CardDefinition {
             selector: Selector::EachPermanent(SelectionRequirement::HasEnchantmentSubtype(
                 EnchantmentSubtype::Aura,
             )),
-            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
         },
         ..Default::default()
     }
@@ -963,11 +1021,12 @@ pub fn winds_of_rath() -> CardDefinition {
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
-            selector: Selector::EachPermanent(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsEnchanted))),
-            ),
-            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            selector: Selector::EachPermanent(SelectionRequirement::Creature.and(
+                SelectionRequirement::Not(Box::new(SelectionRequirement::IsEnchanted)),
+            )),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
         },
         ..Default::default()
     }
@@ -983,10 +1042,11 @@ pub fn calming_verse() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
-                SelectionRequirement::Enchantment
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByOpponent),
             ),
-            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
         },
         ..Default::default()
     }

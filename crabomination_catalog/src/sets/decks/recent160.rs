@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_dies, target_any};
 use crate::effect::{Effect, PlayerRef};
-use crate::mana::{b, cost, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, generic, r, u, w};
 
 /// Erudite Wizard — {2}{U} 2/3 Human Wizard. Whenever you draw your second card
 /// each turn, put a +1/+1 counter on it.
@@ -28,7 +28,10 @@ pub fn erudite_wizard() -> CardDefinition {
             event: EventSpec {
                 once_per_turn: true,
                 ..EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
-                    Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::You, n: 2 },
+                    Predicate::PlayerDrewAtLeastThisTurn {
+                        who: PlayerRef::You,
+                        n: 2,
+                    },
                 )
             },
             effect: Effect::AddCounter {
@@ -55,8 +58,13 @@ pub fn gorehorn_raider() -> CardDefinition {
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
-            then: Box::new(Effect::DealDamage { to: target_any(), amount: Value::Const(2) }),
+            cond: Predicate::PlayerAttackedThisTurn {
+                who: PlayerRef::You,
+            },
+            then: Box::new(Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(2),
+            }),
             else_: Box::new(Effect::Noop),
         })],
         ..Default::default()
@@ -79,7 +87,9 @@ pub fn gutless_plunderer() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
+            cond: Predicate::PlayerAttackedThisTurn {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::LookTopKeepOneRestToGraveyard {
                 count: Value::Const(3),
                 who: Some(PlayerRef::You),
@@ -110,7 +120,10 @@ pub fn hinterland_sanctifier() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Creature,
                 }),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -158,8 +171,15 @@ pub fn icewind_elemental() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
-            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::ONE,
+                random: false,
+            },
         ]))],
         ..Default::default()
     }
@@ -250,7 +270,9 @@ pub fn firespitter_whelp() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
                 Predicate::CastSpellMatches(
-                    R::Creature.negate().or(R::HasCreatureType(CreatureType::Dragon)),
+                    R::Creature
+                        .negate()
+                        .or(R::HasCreatureType(CreatureType::Dragon)),
                 ),
             ),
             effect: Effect::DealDamage {

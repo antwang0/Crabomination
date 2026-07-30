@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Effect, PlayerRef, Predicate, Selector};
-use crate::mana::{b, cost, generic, r, u, w, ManaCost};
+use crate::mana::{ManaCost, b, cost, generic, r, u, w};
 use crabomination_base::turn_step::TurnStep;
 
 /// An "enchant player" Aura: `Effect::Attach` anchored to a target player.
@@ -26,8 +26,14 @@ fn player_aura(
         name,
         cost: mana,
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: subs, ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Player) },
+        subtypes: Subtypes {
+            enchantment_subtypes: subs,
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Player),
+        },
         static_abilities: statics,
         triggered_abilities: triggered,
         ..Default::default()
@@ -37,8 +43,11 @@ fn player_aura(
 /// "At the beginning of enchanted player's upkeep, …"
 fn enchanted_player_upkeep(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
-            .with_filter(Predicate::IsTurnOf(PlayerRef::EnchantedPlayer)),
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::Upkeep),
+            EventScope::AnyPlayer,
+        )
+        .with_filter(Predicate::IsTurnOf(PlayerRef::EnchantedPlayer)),
         effect,
     }
 }
@@ -52,13 +61,19 @@ pub fn psychic_possession() -> CardDefinition {
         false,
         vec![StaticAbility {
             description: "Skip your draw step.",
-            effect: StaticEffect::SkipStep { step: TurnStep::Draw, all_players: false },
+            effect: StaticEffect::SkipStep {
+                step: TurnStep::Draw,
+                all_players: false,
+            },
         }],
         vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDrawn, EventScope::EnchantedBySource),
             effect: Effect::MayDo {
                 description: "Draw a card".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
     )

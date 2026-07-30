@@ -27,7 +27,10 @@ pub fn jukai_naturalist() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         static_abilities: vec![StaticAbility {
             description: "Enchantment spells you cast cost {1} less to cast.",
-            effect: StaticEffect::CostReduction { filter: R::Enchantment, amount: 1 },
+            effect: StaticEffect::CostReduction {
+                filter: R::Enchantment,
+                amount: 1,
+            },
         }],
         ..Default::default()
     }
@@ -41,7 +44,10 @@ pub fn ironhoof_boar() -> CardDefinition {
         name: "Ironhoof Boar",
         cost: cost(&[generic(5), r()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Trample, Keyword::Haste],
@@ -85,8 +91,14 @@ pub fn reinforced_ronin() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::End), EventScope::YourControl),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
@@ -107,10 +119,16 @@ pub fn colossal_skyturtle() -> CardDefinition {
         name: "Colossal Skyturtle",
         cost: cost(&[generic(4), g(), g(), u()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Turtle], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Turtle],
+            ..Default::default()
+        },
         power: 6,
         toughness: 5,
-        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))),
+        ],
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), g()]),
@@ -145,16 +163,20 @@ pub fn kami_of_transience() -> CardDefinition {
         name: "Kami of Transience",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Enchantment,
-                }),
+                },
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,

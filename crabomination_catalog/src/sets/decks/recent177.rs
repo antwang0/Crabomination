@@ -15,7 +15,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_attack};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Exemplar of Light — {2}{W}{W} 3/3 Angel with flying. Whenever you gain life,
 /// put a +1/+1 counter on it; whenever one or more +1/+1 counters are put on it,
@@ -25,7 +25,10 @@ pub fn exemplar_of_light() -> CardDefinition {
         name: "Exemplar of Light",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -44,7 +47,10 @@ pub fn exemplar_of_light() -> CardDefinition {
                     EventScope::SelfSource,
                 )
                 .once_per_turn(),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             },
         ],
         ..Default::default()
@@ -94,7 +100,10 @@ fn cat_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -122,13 +131,19 @@ pub fn arahbo_the_first_fang() -> CardDefinition {
         toughness: 2,
         static_abilities: vec![StaticAbility {
             description: "Other Cats you control get +1/+1.",
-            effect: StaticEffect::PumpPT { applies_to: other_cats, power: 1, toughness: 1 },
+            effect: StaticEffect::PumpPT {
+                applies_to: other_cats,
+                power: 1,
+                toughness: 1,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
-                    filter: R::Creature.and(R::HasCreatureType(CreatureType::Cat)).and(R::NotToken),
+                    filter: R::Creature
+                        .and(R::HasCreatureType(CreatureType::Cat))
+                        .and(R::NotToken),
                 }),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
@@ -158,7 +173,10 @@ pub fn bumbleflowers_sharepot() -> CardDefinition {
             sorcery_speed: true,
             mana_cost: cost(&[generic(5)]),
             effect: Effect::Destroy {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Nonland },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Nonland,
+                },
             },
             ..Default::default()
         }],
@@ -215,7 +233,10 @@ pub fn strix_lookout() -> CardDefinition {
         name: "Strix Lookout",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
@@ -223,8 +244,15 @@ pub fn strix_lookout() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(1), u()]),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
             ]),
             ..Default::default()
         }],
@@ -249,7 +277,10 @@ pub fn vanguard_seraph() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             // once_per_turn models "for the first time each turn".
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl).once_per_turn(),
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -270,7 +301,10 @@ pub fn vampire_soulcaller() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::CantBlock],
         triggered_abilities: vec![etb(Effect::Move {
-            what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::InYourGraveyard) },
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature.and(R::InYourGraveyard),
+            },
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         ..Default::default()
@@ -286,14 +320,19 @@ pub fn turn_inside_out() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature,
+                },
                 power: Value::Const(3),
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
             Effect::WhenTargetDiesThisTurn {
                 slot: 0,
-                body: Box::new(Effect::ManifestDread { who: PlayerRef::You }),
+                body: Box::new(Effect::ManifestDread {
+                    who: PlayerRef::You,
+                }),
                 filter: None,
             },
         ]),

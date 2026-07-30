@@ -5,15 +5,15 @@
 //! one tapped creature) — `GameAction::CastSpellAlternative` already pays the
 //! web-slinging cost and bounces the tapped creature. Tracked in `DECK_FEATURES.md`.
 
+use crate::card::{ActivatedAbility, TokenDefinition};
 use crate::card::{
     AlternativeCost, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
     EventSpec, Keyword, Predicate, SelectionRequirement, Selector, Subtypes, Supertype,
     TriggeredAbility, Value,
 };
-use crate::card::{ActivatedAbility, TokenDefinition};
-use crate::effect::shortcut::target_filtered;
 use crate::effect::Duration;
-use crate::mana::{cost, g, generic, w, Color, ManaCost};
+use crate::effect::shortcut::target_filtered;
+use crate::mana::{Color, ManaCost, cost, g, generic, w};
 
 /// CR 702.188 — the web-slinging alternative cost: pay `mana` and return one
 /// tapped creature you control to its owner's hand.
@@ -37,7 +37,11 @@ pub fn spider_man_web_slinger() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            creature_types: vec![
+                CreatureType::Spider,
+                CreatureType::Human,
+                CreatureType::Hero,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -56,7 +60,11 @@ pub fn amazing_spider_girl() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            creature_types: vec![
+                CreatureType::Spider,
+                CreatureType::Human,
+                CreatureType::Hero,
+            ],
             ..Default::default()
         },
         power: 5,
@@ -78,7 +86,11 @@ pub fn silk_web_weaver() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            creature_types: vec![
+                CreatureType::Spider,
+                CreatureType::Human,
+                CreatureType::Hero,
+            ],
             ..Default::default()
         },
         power: 3,
@@ -135,7 +147,11 @@ pub fn spider_man_india() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider, CreatureType::Human, CreatureType::Hero],
+            creature_types: vec![
+                CreatureType::Spider,
+                CreatureType::Human,
+                CreatureType::Hero,
+            ],
             ..Default::default()
         },
         power: 4,
@@ -151,8 +167,7 @@ pub fn spider_man_india() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::AddCounter {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),

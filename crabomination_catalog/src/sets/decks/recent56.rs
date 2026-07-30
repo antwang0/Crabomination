@@ -10,10 +10,14 @@ use crate::card::{
 use crate::effect::shortcut::{cast_is_noncreature, etb, target_filtered};
 use crate::effect::{Duration, PlayerRef, PlayerStaticTarget};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, w, Color};
+use crate::mana::{Color, b, cost, g, generic, w};
 
 fn plus_one_counter(what: Selector, n: i32) -> Effect {
-    Effect::AddCounter { what, kind: CounterType::PlusOnePlusOne, amount: Value::Const(n) }
+    Effect::AddCounter {
+        what,
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(n),
+    }
 }
 
 /// A 4/4 white Angel with flying (Speaker of the Heavens, Valkyrie Harbinger).
@@ -29,7 +33,10 @@ fn angel_token(vigilance: bool) -> TokenDefinition {
         keywords,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -44,18 +51,23 @@ pub fn bishop_of_wings() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         ..Default::default()
     };
     let angel_filter = || Predicate::EntityMatches {
-        what: Selector::TriggerSource, filter: R::HasCreatureType(CreatureType::Angel),
+        what: Selector::TriggerSource,
+        filter: R::HasCreatureType(CreatureType::Angel),
     };
     CardDefinition {
         name: "Bishop of Wings",
         cost: cost(&[w(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric], ..Default::default()
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
         },
         power: 1,
         toughness: 4,
@@ -63,13 +75,18 @@ pub fn bishop_of_wings() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                     .with_filter(angel_filter()),
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(4),
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
                     .with_filter(angel_filter()),
                 effect: Effect::CreateToken {
-                    who: PlayerRef::You, count: Value::ONE, definition: spirit,
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: spirit,
                 },
             },
         ],
@@ -84,7 +101,10 @@ pub fn youthful_valkyrie() -> CardDefinition {
         name: "Youthful Valkyrie",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -108,7 +128,8 @@ pub fn righteous_valkyrie() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Angel, CreatureType::Cleric], ..Default::default()
+            creature_types: vec![CreatureType::Angel, CreatureType::Cleric],
+            ..Default::default()
         },
         power: 2,
         toughness: 4,
@@ -128,7 +149,10 @@ pub fn righteous_valkyrie() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "While you have 7+ life above your starting total, creatures you control get +2/+2.",
             effect: StaticEffect::PumpTeamIf {
-                condition: Predicate::PlayerLifeAtLeastAboveStarting { who: PlayerRef::You, delta: 7 },
+                condition: Predicate::PlayerLifeAtLeastAboveStarting {
+                    who: PlayerRef::You,
+                    delta: 7,
+                },
                 applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                 power: 2,
                 toughness: 2,
@@ -147,7 +171,8 @@ pub fn twinblade_paladin() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Knight], ..Default::default()
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
         },
         power: 3,
         toughness: 3,
@@ -158,7 +183,10 @@ pub fn twinblade_paladin() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "While you have 25 or more life, this creature has double strike.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::PlayerLifeAtLeast { who: PlayerRef::You, life: 25 },
+                condition: Predicate::PlayerLifeAtLeast {
+                    who: PlayerRef::You,
+                    life: 25,
+                },
                 power: 0,
                 toughness: 0,
                 keywords: vec![Keyword::DoubleStrike],
@@ -177,7 +205,8 @@ pub fn trelasarra_moon_dancer() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Cleric], ..Default::default()
+            creature_types: vec![CreatureType::Elf, CreatureType::Cleric],
+            ..Default::default()
         },
         power: 2,
         toughness: 2,
@@ -185,7 +214,10 @@ pub fn trelasarra_moon_dancer() -> CardDefinition {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::Seq(vec![
                 plus_one_counter(Selector::This, 1),
-                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+                Effect::Scry {
+                    who: PlayerRef::You,
+                    amount: Value::Const(1),
+                },
             ]),
         }],
         ..Default::default()
@@ -201,7 +233,8 @@ pub fn dauntless_bodyguard() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Knight], ..Default::default()
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
         },
         power: 2,
         toughness: 1,
@@ -229,7 +262,8 @@ pub fn bloodthirsty_aerialist() -> CardDefinition {
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue], ..Default::default()
+            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
+            ..Default::default()
         },
         power: 2,
         toughness: 3,
@@ -252,14 +286,16 @@ pub fn vito_thorn_of_the_dusk_rose() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric], ..Default::default()
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
         },
         power: 1,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::LoseLife {
-                who: target_filtered(R::OpponentPlayer), amount: Value::TriggerEventAmount,
+                who: target_filtered(R::OpponentPlayer),
+                amount: Value::TriggerEventAmount,
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -283,14 +319,18 @@ pub fn rhox_faithmender() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Rhino, CreatureType::Monk], ..Default::default()
+            creature_types: vec![CreatureType::Rhino, CreatureType::Monk],
+            ..Default::default()
         },
         power: 1,
         toughness: 5,
         keywords: vec![Keyword::Lifelink],
         static_abilities: vec![StaticAbility {
             description: "If you would gain life, you gain twice that much instead.",
-            effect: StaticEffect::LifeGainMultiplier { target: PlayerStaticTarget::Controller, factor: 2 },
+            effect: StaticEffect::LifeGainMultiplier {
+                target: PlayerStaticTarget::Controller,
+                factor: 2,
+            },
         }],
         ..Default::default()
     }
@@ -306,7 +346,8 @@ pub fn angelic_chorus() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource, filter: R::Creature,
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
                 }),
             effect: Effect::GainLife {
                 who: Selector::You,
@@ -326,7 +367,10 @@ pub fn exquisite_blood() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeLost, EventScope::OpponentControl),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::TriggerEventAmount,
+            },
         }],
         ..Default::default()
     }
@@ -342,7 +386,10 @@ pub fn griffin_aerie() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -350,10 +397,20 @@ pub fn griffin_aerie() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
-                cond: Predicate::LifeGainedThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(3) },
-                then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: griffin }),
+                cond: Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(3),
+                },
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: griffin,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -367,13 +424,17 @@ pub fn epicure_of_blood() -> CardDefinition {
         name: "Epicure of Blood",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1),
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
             },
         }],
         ..Default::default()
@@ -390,21 +451,29 @@ pub fn crested_sunmare() -> CardDefinition {
         toughness: 5,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horse], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horse],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
         name: "Crested Sunmare",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horse], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horse],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         static_abilities: vec![StaticAbility {
             description: "Other Horses you control have indestructible.",
             effect: StaticEffect::GrantKeyword {
                 applies_to: Selector::EachPermanent(
-                    R::HasCreatureType(CreatureType::Horse).and(R::ControlledByYou).and(R::OtherThanSource),
+                    R::HasCreatureType(CreatureType::Horse)
+                        .and(R::ControlledByYou)
+                        .and(R::OtherThanSource),
                 ),
                 keyword: Keyword::Indestructible,
             },
@@ -412,8 +481,15 @@ pub fn crested_sunmare() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
             effect: Effect::If {
-                cond: Predicate::LifeGainedThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(1) },
-                then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: horse }),
+                cond: Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: horse,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -427,7 +503,10 @@ pub fn celestial_unicorn() -> CardDefinition {
         name: "Celestial Unicorn",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Unicorn],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
@@ -447,18 +526,23 @@ pub fn linden_the_steadfast_queen() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Noble], ..Default::default()
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
         },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Creature.and(R::HasColor(Color::White)),
-                }),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                },
+            ),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -472,7 +556,10 @@ pub fn souls_grace() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::GainLife {
             who: Selector::You,
-            amount: Value::PowerOf(Box::new(Selector::TargetFiltered { slot: 0, filter: R::Creature })),
+            amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Creature,
+            })),
         },
         ..Default::default()
     }
@@ -485,7 +572,10 @@ pub fn sunscorch_regent() -> CardDefinition {
         name: "Sunscorch Regent",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -493,7 +583,10 @@ pub fn sunscorch_regent() -> CardDefinition {
             event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
             effect: Effect::Seq(vec![
                 plus_one_counter(Selector::This, 1),
-                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
         }],
         ..Default::default()
@@ -510,7 +603,8 @@ pub fn kambal_consul_of_allocation() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Advisor], ..Default::default()
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
         },
         power: 2,
         toughness: 3,
@@ -518,8 +612,14 @@ pub fn kambal_consul_of_allocation() -> CardDefinition {
             event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
                 .with_filter(cast_is_noncreature()),
             effect: Effect::Seq(vec![
-                Effect::LoseLife { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(2) },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::Const(2),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ]),
         }],
         ..Default::default()
@@ -534,7 +634,8 @@ pub fn valkyrie_harbinger() -> CardDefinition {
         cost: cost(&[generic(4), w(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Angel, CreatureType::Cleric], ..Default::default()
+            creature_types: vec![CreatureType::Angel, CreatureType::Cleric],
+            ..Default::default()
         },
         power: 4,
         toughness: 5,
@@ -542,8 +643,15 @@ pub fn valkyrie_harbinger() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
             effect: Effect::If {
-                cond: Predicate::LifeGainedThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(4) },
-                then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: angel_token(true) }),
+                cond: Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(4),
+                },
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: angel_token(true),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -561,7 +669,10 @@ pub fn regal_bloodlord() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bat],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -569,7 +680,8 @@ pub fn regal_bloodlord() -> CardDefinition {
         cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier], ..Default::default()
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
         },
         power: 2,
         toughness: 4,
@@ -577,8 +689,15 @@ pub fn regal_bloodlord() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
             effect: Effect::If {
-                cond: Predicate::LifeGainedThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(1) },
-                then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: bat }),
+                cond: Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: bat,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -594,7 +713,8 @@ pub fn gideons_company() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier], ..Default::default()
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
         },
         power: 3,
         toughness: 3,

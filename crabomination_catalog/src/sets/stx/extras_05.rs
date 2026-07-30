@@ -10,12 +10,17 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x, ManaCost};
+use crate::mana::{
+    Color, ManaCost, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x,
+};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -162,7 +167,9 @@ pub fn lesson_in_honor() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
-            Effect::Learn { who: crate::effect::PlayerRef::You },
+            Effect::Learn {
+                who: crate::effect::PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -353,7 +360,12 @@ pub fn silverquill_sting() -> CardDefinition {
 pub fn blade_historian() -> CardDefinition {
     CardDefinition {
         name: "Blade Historian",
-        cost: cost(&[hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White)]),
+        cost: cost(&[
+            hybrid(Color::Red, Color::White),
+            hybrid(Color::Red, Color::White),
+            hybrid(Color::Red, Color::White),
+            hybrid(Color::Red, Color::White),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -477,10 +489,10 @@ pub fn forceful_mirror() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::CopySpell {
             what: target_filtered(
-                SelectionRequirement::IsSpellOnStack
-                    .and(SelectionRequirement::HasCardType(CardType::Instant).or(
-                        SelectionRequirement::HasCardType(CardType::Sorcery),
-                    )),
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
             ),
             count: Value::Const(1),
         },
@@ -1409,8 +1421,10 @@ pub fn lorehold_wand() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -1698,8 +1712,10 @@ pub fn witherbloom_ritualist() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -1864,8 +1880,10 @@ pub fn witherbloom_channeler() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             ActivatedAbility {
@@ -1886,8 +1904,10 @@ pub fn witherbloom_channeler() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],

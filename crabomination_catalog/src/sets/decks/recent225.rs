@@ -14,7 +14,7 @@ use crate::effect::shortcut::{
 use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Predicate, Selector, Value, ZoneDest, ZoneRef,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 /// Savage Ventmaw — {4}{R}{G} 4/4 Dragon. Flying; whenever it attacks, add
 /// {R}{R}{R}{G}{G}{G} that doesn't empty as steps and phases end this turn.
@@ -23,13 +23,23 @@ pub fn savage_ventmaw() -> CardDefinition {
         name: "Savage Ventmaw",
         cost: cost(&[generic(4), r(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![on_attack(Effect::AddManaKeptThisTurn {
             who: PlayerRef::You,
-            colors: vec![Color::Red, Color::Red, Color::Red, Color::Green, Color::Green, Color::Green],
+            colors: vec![
+                Color::Red,
+                Color::Red,
+                Color::Red,
+                Color::Green,
+                Color::Green,
+                Color::Green,
+            ],
         })],
         ..Default::default()
     }
@@ -48,7 +58,10 @@ pub fn fake_your_own_death() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature,
+                },
                 power: Value::Const(2),
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
@@ -70,7 +83,10 @@ fn zombie_2_2_tapped() -> TokenDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         tapped: true,
         ..Default::default()
     }
@@ -84,7 +100,10 @@ pub fn dread_summons() -> CardDefinition {
         cost: cost(&[x(), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Mill { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::XFromCost },
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::XFromCost,
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CreatureCardsMilledThisEffect,
@@ -134,7 +153,10 @@ pub fn makeshift_binding() -> CardDefinition {
                     },
                     return_to: ExileReturnZone::Battlefield,
                 },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ]),
         }],
         ..Default::default()
@@ -173,10 +195,16 @@ pub fn unauthorized_exit() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Permanent.and(R::Nonland) },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Permanent.and(R::Nonland),
+                },
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -213,9 +241,14 @@ pub fn it_doesnt_add_up() -> CardDefinition {
                     slot: 0,
                     filter: R::Creature.and(R::InYourGraveyard),
                 },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
-            Effect::Suspect { what: Selector::LastMoved },
+            Effect::Suspect {
+                what: Selector::LastMoved,
+            },
         ]),
         ..Default::default()
     }
@@ -240,7 +273,9 @@ pub fn eliminate_the_impossible() -> CardDefinition {
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
-            Effect::ClearSuspected { what: opp_creatures },
+            Effect::ClearSuspected {
+                what: opp_creatures,
+            },
         ]),
         ..Default::default()
     }
@@ -252,11 +287,16 @@ pub fn mirage_mesa() -> CardDefinition {
     CardDefinition {
         name: "Mirage Mesa",
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Desert], ..Default::default() },
+        subtypes: Subtypes {
+            land_types: vec![LandType::Desert],
+            ..Default::default()
+        },
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Tap { what: Selector::This },
+                effect: Effect::Tap {
+                    what: Selector::This,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -265,7 +305,10 @@ pub fn mirage_mesa() -> CardDefinition {
         ],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::ChosenColorOfSource },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::ChosenColorOfSource,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -279,7 +322,10 @@ fn angel_3_3_flying() -> TokenDefinition {
         toughness: 3,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     }
@@ -320,7 +366,10 @@ pub fn terramorphic_expanse() -> CardDefinition {
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: R::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
             ..Default::default()
         }],
@@ -338,7 +387,9 @@ pub fn valgavoths_lair() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Tap { what: Selector::This },
+                effect: Effect::Tap {
+                    what: Selector::This,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -347,7 +398,10 @@ pub fn valgavoths_lair() -> CardDefinition {
         ],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::ChosenColorOfSource },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::ChosenColorOfSource,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -365,7 +419,10 @@ pub fn pitiless_carnage() -> CardDefinition {
         effect: Effect::SacrificeAnyNumber {
             who: PlayerRef::You,
             filter: R::Permanent.and(R::ControlledByYou),
-            per_each: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            per_each: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
         },
         ..Default::default()
     }
@@ -377,7 +434,10 @@ fn golem_3_3() -> TokenDefinition {
         power: 3,
         toughness: 3,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -436,13 +496,19 @@ pub fn nightdrinker_moroii() -> CardDefinition {
         name: "Nightdrinker Moroii",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
         power: 4,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Disguise(cost(&[b(), b()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+            effect: Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
         }],
         ..Default::default()
     }
@@ -464,8 +530,11 @@ pub fn wojek_investigator() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer)
-                .with_filter(Predicate::AnOpponentHasMoreCardsInHand),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::AnOpponentHasMoreCardsInHand),
             effect: investigate(1),
         }],
         ..Default::default()
@@ -478,11 +547,17 @@ pub fn sandstorm_verge() -> CardDefinition {
     CardDefinition {
         name: "Sandstorm Verge",
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Desert], ..Default::default() },
+        subtypes: Subtypes {
+            land_types: vec![LandType::Desert],
+            ..Default::default()
+        },
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -490,7 +565,10 @@ pub fn sandstorm_verge() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 sorcery_speed: true,
                 effect: Effect::GrantKeyword {
-                    what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature,
+                    },
                     keyword: Keyword::CantBlock,
                     duration: Duration::EndOfTurn,
                 },

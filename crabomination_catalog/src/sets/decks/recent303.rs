@@ -4,13 +4,13 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, Selector, SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
+    Keyword, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, ManaPayload, PlayerRef, Predicate, ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 /// "Whenever you cast a multicolored spell, you may return this from your
 /// graveyard to your hand" — the shared Eidolon trigger (CR
@@ -18,23 +18,36 @@ use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 fn eidolon_recur() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::FromYourGraveyard).with_filter(
-            Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Multicolored },
+            Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::Multicolored,
+            },
         ),
         effect: Effect::MayDo {
             description: "return this from your graveyard to your hand".into(),
-            body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) }),
+            body: Box::new(Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
         },
     }
 }
 
 /// A 2/2 Spirit Eidolon with `activated` as its sac ability plus the shared
 /// multicolored graveyard-recur trigger.
-fn eidolon(name: &'static str, color_cost: crate::mana::ManaCost, activated: ActivatedAbility) -> CardDefinition {
+fn eidolon(
+    name: &'static str,
+    color_cost: crate::mana::ManaCost,
+    activated: ActivatedAbility,
+) -> CardDefinition {
     CardDefinition {
         name,
         cost: color_cost,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![activated],
@@ -51,7 +64,10 @@ pub fn enigma_eidolon() -> CardDefinition {
         ActivatedAbility {
             mana_cost: cost(&[u()]),
             sac_cost: true,
-            effect: Effect::Mill { who: target_filtered(R::Player), amount: Value::Const(3) },
+            effect: Effect::Mill {
+                who: target_filtered(R::Player),
+                amount: Value::Const(3),
+            },
             ..Default::default()
         },
     )
@@ -101,8 +117,14 @@ pub fn entropic_eidolon() -> CardDefinition {
             mana_cost: cost(&[b()]),
             sac_cost: true,
             effect: Effect::Seq(vec![
-                Effect::LoseLife { who: target_filtered(R::Player), amount: Value::ONE },
-                Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                Effect::LoseLife {
+                    who: target_filtered(R::Player),
+                    amount: Value::ONE,
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
             ..Default::default()
         },
@@ -142,8 +164,13 @@ pub fn ragamuffyn() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_other_filter: Some((R::Creature.or(R::Land), 1)),
-            condition: Some(Predicate::HellbentActive { who: PlayerRef::You }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            condition: Some(Predicate::HellbentActive {
+                who: PlayerRef::You,
+            }),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -157,7 +184,10 @@ pub fn soulsworn_jury() -> CardDefinition {
         name: "Soulsworn Jury",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Defender],
@@ -180,7 +210,10 @@ pub fn stoic_ephemera() -> CardDefinition {
         name: "Stoic Ephemera",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Defender, Keyword::Flying],
@@ -188,7 +221,9 @@ pub fn stoic_ephemera() -> CardDefinition {
             event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
             effect: Effect::DelayUntil {
                 kind: DelayedTriggerKind::EndOfCombat,
-                body: Box::new(Effect::SacrificePermanent { what: Selector::This }),
+                body: Box::new(Effect::SacrificePermanent {
+                    what: Selector::This,
+                }),
             },
         }],
         ..Default::default()
@@ -202,14 +237,19 @@ pub fn demons_jester() -> CardDefinition {
         name: "Demon's Jester",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Imp], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
         static_abilities: vec![crate::card::StaticAbility {
             description: "Hellbent — gets +2/+1 while you have no cards in hand.",
             effect: crate::card::StaticEffect::PumpSelfIf {
-                condition: Predicate::HellbentActive { who: PlayerRef::You },
+                condition: Predicate::HellbentActive {
+                    who: PlayerRef::You,
+                },
                 power: 2,
                 toughness: 1,
                 keywords: vec![],
@@ -233,7 +273,9 @@ pub fn minister_of_impediments() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            effect: Effect::Tap {
+                what: target_filtered(R::Creature),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -261,8 +303,13 @@ pub fn flame_kin_war_scout() -> CardDefinition {
                 },
             ),
             effect: Effect::Seq(vec![
-                Effect::SacrificePermanent { what: Selector::This },
-                Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(4) },
+                Effect::SacrificePermanent {
+                    what: Selector::This,
+                },
+                Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(4),
+                },
             ]),
         }],
         ..Default::default()

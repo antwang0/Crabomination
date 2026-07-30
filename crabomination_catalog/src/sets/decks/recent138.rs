@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_dies, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, StaticEffect, ZoneRef};
-use crate::mana::{b, cost, g, generic, w, Color};
+use crate::mana::{Color, b, cost, g, generic, w};
 
 /// 1/1 black Rat token with "This token can't block."
 fn rat_token() -> crate::card::TokenDefinition {
@@ -20,7 +20,10 @@ fn rat_token() -> crate::card::TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         keywords: vec![Keyword::CantBlock],
         ..Default::default()
     }
@@ -64,10 +67,17 @@ pub fn break_the_spell() -> CardDefinition {
                 filter: R::ControlledByYou.or(R::IsToken),
             },
             then: Box::new(Effect::Seq(vec![
-                Effect::Destroy { what: Selector::Target(0) },
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Destroy {
+                    what: Selector::Target(0),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ])),
-            else_: Box::new(Effect::Destroy { what: target_filtered(R::Enchantment) }),
+            else_: Box::new(Effect::Destroy {
+                what: target_filtered(R::Enchantment),
+            }),
         },
         ..Default::default()
     }
@@ -83,7 +93,10 @@ pub fn moment_of_valor() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::Seq(vec![
-                Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+                Effect::Untap {
+                    what: target_filtered(R::Creature),
+                    up_to: None,
+                },
                 Effect::PumpPT {
                     what: Selector::Target(0),
                     power: Value::ONE,
@@ -96,7 +109,9 @@ pub fn moment_of_valor() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                 },
             ]),
-            Effect::Destroy { what: target_filtered(R::Creature.and(R::PowerAtLeast(4))) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::PowerAtLeast(4))),
+            },
         ]),
         ..Default::default()
     }
@@ -113,7 +128,10 @@ pub fn specter_of_mortality() -> CardDefinition {
         name: "Specter of Mortality",
         cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Specter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Specter],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -140,7 +158,10 @@ pub fn tangled_colony() -> CardDefinition {
         name: "Tangled Colony",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::CantBlock],
@@ -172,7 +193,10 @@ pub fn gruff_triplets() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![
             etb(Effect::If {
-                cond: Predicate::EntityMatches { what: Selector::This, filter: R::NotToken },
+                cond: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::NotToken,
+                },
                 then: Box::new(Effect::CreateTokenCopyOf {
                     who: PlayerRef::You,
                     count: Value::Const(2),
@@ -210,7 +234,10 @@ pub fn howling_galefang() -> CardDefinition {
         name: "Howling Galefang",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],

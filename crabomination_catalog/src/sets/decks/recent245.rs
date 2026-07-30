@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, investigate, on_attack, on_attack_loot, target_filtered};
 use crate::effect::{Effect, PlayerRef, Selector, Value};
-use crate::mana::{b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
 
 /// The shared "{2}, Sacrifice this Equipment: Draw a card." line on the four
 /// MKM Clue Equipment.
@@ -16,14 +16,22 @@ fn sac_draw() -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: cost(&[generic(2)]),
         sac_cost: true,
-        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        },
         ..Default::default()
     }
 }
 
 /// A Clue Equipment shell: the Clue+Equipment type line, the sac-to-draw
 /// ability, and a printed Equip cost. Callers fill in the `equipped_bonus`.
-fn clue_equipment(name: &'static str, mv: ManaCost, equip: ManaCost, bonus: EquipBonus) -> CardDefinition {
+fn clue_equipment(
+    name: &'static str,
+    mv: ManaCost,
+    equip: ManaCost,
+    bonus: EquipBonus,
+) -> CardDefinition {
     CardDefinition {
         name,
         cost: mv,
@@ -53,7 +61,9 @@ pub fn wrench() -> CardDefinition {
             activated_abilities: vec![ActivatedAbility {
                 mana_cost: cost(&[generic(3)]),
                 tap_cost: true,
-                effect: Effect::Tap { what: target_filtered(crate::card::SelectionRequirement::Creature) },
+                effect: Effect::Tap {
+                    what: target_filtered(crate::card::SelectionRequirement::Creature),
+                },
                 ..Default::default()
             }],
             ..Default::default()
@@ -123,7 +133,11 @@ pub fn thinking_cap() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 2, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 2,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -135,7 +149,10 @@ fn thopter_token() -> TokenDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     }
@@ -155,7 +172,10 @@ pub fn surveillance_monitor() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![
-            etb(Effect::CollectEvidence { amount: Value::Const(4), then: Box::new(Effect::Noop) }),
+            etb(Effect::CollectEvidence {
+                amount: Value::Const(4),
+                then: Box::new(Effect::Noop),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EvidenceCollected, EventScope::YourControl),
                 effect: Effect::CreateToken {

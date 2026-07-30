@@ -4,8 +4,9 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    DynamicPt, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
-    StationBand, StaticAbility, Subtypes, TokenDefinition, TriggeredAbility, WardCost,
+    DynamicPt, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
+    SelectionRequirement, StaticAbility, StationBand, Subtypes, TokenDefinition, TriggeredAbility,
+    WardCost,
 };
 use crate::effect::shortcut::{
     etb, flurry, on_attack, on_dies, station, target, target_any, target_filtered, warp,
@@ -59,7 +60,11 @@ pub fn camera_launcher() -> CardDefinition {
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
                 },
-                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: thopter },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: thopter,
+                },
             ]),
             ..Default::default()
         }],
@@ -74,7 +79,10 @@ pub fn hazard_of_the_dunes() -> CardDefinition {
         name: "Hazard of the Dunes",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample, Keyword::Reach],
@@ -184,8 +192,15 @@ pub fn keen_buccaneer() -> CardDefinition {
             mana_cost: cost(&[generic(1), u()]),
             exhaust: true,
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -267,7 +282,10 @@ pub fn stampeding_scurryfoot() -> CardDefinition {
         name: "Stampeding Scurryfoot",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mouse], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -279,7 +297,11 @@ pub fn stampeding_scurryfoot() -> CardDefinition {
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
                 },
-                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: elephant },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: elephant,
+                },
             ]),
             ..Default::default()
         }],
@@ -307,7 +329,10 @@ pub fn mindspring_merfolk() -> CardDefinition {
             mana_cost: cost(&[x(), u(), u()]),
             exhaust: true,
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::XFromCost,
+                },
                 Effect::AddCounter {
                     what: Selector::EachPermanent(
                         SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
@@ -353,7 +378,10 @@ pub fn codecracker_hound() -> CardDefinition {
         name: "Codecracker Hound",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::LookPickToHand {
@@ -381,7 +409,10 @@ pub fn nova_hellkite() -> CardDefinition {
         name: "Nova Hellkite",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 4,
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Haste],
@@ -421,7 +452,9 @@ pub fn drix_fatemaker() -> CardDefinition {
                 applies_to: Selector::EachPermanent(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                        .and(SelectionRequirement::WithCounter(
+                            CounterType::PlusOnePlusOne,
+                        )),
                 ),
                 keyword: Keyword::Trample,
             },
@@ -447,7 +480,10 @@ pub fn broodguard_elite() -> CardDefinition {
         toughness: 0,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
             effect: Effect::MoveAllCounters {
                 from: Selector::This,
                 to: target_filtered(
@@ -492,7 +528,10 @@ pub fn eusocial_engineering() -> CardDefinition {
         power: 2,
         toughness: 2,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -526,7 +565,9 @@ pub fn decode_transmissions() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::If {
-            cond: Predicate::VoidActive { who: PlayerRef::You },
+            cond: Predicate::VoidActive {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::Seq(vec![
                 draw(2),
                 lose_life(2, Selector::Player(PlayerRef::EachOpponent)),
@@ -557,7 +598,10 @@ pub fn elegy_acolyte() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::YourControl,
+                ),
                 effect: draw_lose(),
             },
             TriggeredAbility {
@@ -566,7 +610,9 @@ pub fn elegy_acolyte() -> CardDefinition {
                     EventScope::ActivePlayer,
                 ),
                 effect: Effect::If {
-                    cond: Predicate::VoidActive { who: PlayerRef::You },
+                    cond: Predicate::VoidActive {
+                        who: PlayerRef::You,
+                    },
                     then: Box::new(draw_lose()),
                     else_: Box::new(Effect::Noop),
                 },
@@ -700,14 +746,25 @@ pub fn biosynthic_burst() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
-            Effect::GrantKeyword { what: target(), keyword: Keyword::Reach, duration: Duration::EndOfTurn },
-            Effect::GrantKeyword { what: target(), keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword {
+                what: target(),
+                keyword: Keyword::Reach,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target(),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
             Effect::GrantKeyword {
                 what: target(),
                 keyword: Keyword::Indestructible,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: target(), up_to: None },
+            Effect::Untap {
+                what: target(),
+                up_to: None,
+            },
         ]),
         ..Default::default()
     }
@@ -741,7 +798,9 @@ pub fn beyond_the_quiet() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Creature),
-            body: Box::new(Effect::Exile { what: Selector::TriggerSource }),
+            body: Box::new(Effect::Exile {
+                what: Selector::TriggerSource,
+            }),
         },
         ..Default::default()
     }
@@ -758,7 +817,9 @@ pub fn singularity_rupture() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ForEach {
                 selector: Selector::EachPermanent(SelectionRequirement::Creature),
-                body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                body: Box::new(Effect::Destroy {
+                    what: Selector::TriggerSource,
+                }),
             },
             Effect::MillHalf {
                 who: Selector::Player(PlayerRef::EachOpponent),
@@ -784,7 +845,10 @@ pub fn voyager_quickwelder() -> CardDefinition {
         toughness: 4,
         static_abilities: vec![StaticAbility {
             description: "Artifact spells you cast cost {1} less to cast.",
-            effect: StaticEffect::CostReduction { filter: SelectionRequirement::Artifact, amount: 1 },
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::Artifact,
+                amount: 1,
+            },
         }],
         ..Default::default()
     }
@@ -853,7 +917,10 @@ pub fn hulldrifter() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Crew(3)],
-        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
         ..Default::default()
     }
 }
@@ -865,7 +932,10 @@ pub fn tidal_terror() -> CardDefinition {
         name: "Tidal Terror",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Octopus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Octopus],
+            ..Default::default()
+        },
         power: 5,
         toughness: 6,
         keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), LandType::Island)],
@@ -971,12 +1041,22 @@ pub fn dauntless_scrapbot() -> CardDefinition {
         name: "Dauntless Scrapbot",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::ExileAllGraveyards { filter: None, opponents_only: true },
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
+            Effect::ExileAllGraveyards {
+                filter: None,
+                opponents_only: true,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lander_token(),
+            },
         ]))],
         ..Default::default()
     }
@@ -1033,7 +1113,10 @@ pub fn glacier_godmaw() -> CardDefinition {
         name: "Glacier Godmaw",
         cost: cost(&[generic(5), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Leviathan], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Leviathan],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Trample],
@@ -1112,7 +1195,9 @@ pub fn kavaron_skywarden() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::If {
-                cond: Predicate::VoidActive { who: PlayerRef::You },
+                cond: Predicate::VoidActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -1294,7 +1379,10 @@ pub fn dockworker_drone() -> CardDefinition {
         name: "Dockworker Drone",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
@@ -1406,11 +1494,16 @@ pub fn hymn_of_the_faller() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
             draw(1),
             lose_life(1, Selector::You),
             Effect::If {
-                cond: Predicate::VoidActive { who: PlayerRef::You },
+                cond: Predicate::VoidActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(draw(1)),
                 else_: Box::new(Effect::Noop),
             },
@@ -1428,7 +1521,10 @@ pub fn interceptor_mechan() -> CardDefinition {
         name: "Interceptor Mechan",
         cost: cost(&[generic(2), b(), r()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -1445,7 +1541,9 @@ pub fn interceptor_mechan() -> CardDefinition {
                     EventScope::ActivePlayer,
                 ),
                 effect: Effect::If {
-                    cond: Predicate::VoidActive { who: PlayerRef::You },
+                    cond: Predicate::VoidActive {
+                        who: PlayerRef::You,
+                    },
                     then: Box::new(Effect::AddCounter {
                         what: Selector::This,
                         kind: CounterType::PlusOnePlusOne,
@@ -1480,7 +1578,9 @@ pub fn insatiable_skittermaw() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::If {
-                cond: Predicate::VoidActive { who: PlayerRef::You },
+                cond: Predicate::VoidActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -1506,10 +1606,21 @@ pub fn wurmwall_sweeper() -> CardDefinition {
         name: "Wurmwall Sweeper",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
-        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) })],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
+        triggered_abilities: vec![etb(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 4, keywords: vec![Keyword::Flying], pt: Some((2, 2)), ..Default::default() }],
+        station: vec![StationBand {
+            min: 4,
+            keywords: vec![Keyword::Flying],
+            pt: Some((2, 2)),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -1521,13 +1632,28 @@ pub fn uthros_scanship() -> CardDefinition {
         name: "Uthros Scanship",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
         ]))],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 8, keywords: vec![Keyword::Flying], pt: Some((4, 4)), ..Default::default() }],
+        station: vec![StationBand {
+            min: 8,
+            keywords: vec![Keyword::Flying],
+            pt: Some((4, 4)),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -1540,7 +1666,10 @@ pub fn atmospheric_greenhouse() -> CardDefinition {
         name: "Atmospheric Greenhouse",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -1568,14 +1697,20 @@ pub fn wedgelight_rammer() -> CardDefinition {
         power: 2,
         toughness: 2,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
         name: "Wedgelight Rammer",
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
@@ -1600,12 +1735,19 @@ pub fn fell_gravship() -> CardDefinition {
         name: "Fell Gravship",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             Effect::ReturnGraveyardCardsToHand {
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+                filter: SelectionRequirement::Creature.or(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft),
+                ),
                 max: Value::Const(1),
             },
         ]))],
@@ -1628,7 +1770,10 @@ pub fn warmaker_gunship() -> CardDefinition {
         name: "Warmaker Gunship",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::DealDamage {
             amount: Value::count(Selector::EachPermanent(
                 SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
@@ -1638,7 +1783,12 @@ pub fn warmaker_gunship() -> CardDefinition {
             ),
         })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 6, keywords: vec![Keyword::Flying], pt: Some((4, 3)), ..Default::default() }],
+        station: vec![StationBand {
+            min: 6,
+            keywords: vec![Keyword::Flying],
+            pt: Some((4, 3)),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -1651,9 +1801,17 @@ pub fn sledge_class_seedship() -> CardDefinition {
         name: "Sledge-Class Seedship",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((4, 5)), ..Default::default() }],
+        station: vec![StationBand {
+            min: 7,
+            keywords: vec![Keyword::Flying],
+            pt: Some((4, 5)),
+            ..Default::default()
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::MayDo {
@@ -1681,7 +1839,10 @@ pub fn larval_scoutlander() -> CardDefinition {
         name: "Larval Scoutlander",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::MaySacrifice {
             description: "Sacrifice a land".into(),
             filter: SelectionRequirement::Land,
@@ -1689,13 +1850,21 @@ pub fn larval_scoutlander() -> CardDefinition {
             then: Box::new(Effect::SearchUpToN {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
                 count: Value::Const(2),
             }),
             else_: None,
         })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((3, 3)), ..Default::default() }],
+        station: vec![StationBand {
+            min: 7,
+            keywords: vec![Keyword::Flying],
+            pt: Some((3, 3)),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -1707,7 +1876,10 @@ pub fn galvanizing_sawship() -> CardDefinition {
         name: "Galvanizing Sawship",
         cost: cost(&[generic(5), r()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         activated_abilities: vec![station()],
         station: vec![StationBand {
             min: 3,
@@ -1727,15 +1899,24 @@ pub fn susurian_dirgecraft() -> CardDefinition {
         name: "Susurian Dirgecraft",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::Sacrifice {
             who: Selector::Player(PlayerRef::EachOpponent),
             count: Value::Const(1),
-            filter: SelectionRequirement::Creature
-                .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken))),
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::Not(Box::new(
+                SelectionRequirement::IsToken,
+            ))),
         })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((4, 3)), ..Default::default() }],
+        station: vec![StationBand {
+            min: 7,
+            keywords: vec![Keyword::Flying],
+            pt: Some((4, 3)),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -1747,7 +1928,10 @@ pub fn pinnacle_kill_ship() -> CardDefinition {
         name: "Pinnacle Kill-Ship",
         cost: cost(&[generic(7)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
             min_targets: 0,
@@ -1758,7 +1942,12 @@ pub fn pinnacle_kill_ship() -> CardDefinition {
             }),
         })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((7, 7)), ..Default::default() }],
+        station: vec![StationBand {
+            min: 7,
+            keywords: vec![Keyword::Flying],
+            pt: Some((7, 7)),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -1771,7 +1960,10 @@ pub fn debris_field_crusher() -> CardDefinition {
         name: "Debris Field Crusher",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::DealDamage {
             amount: Value::Const(3),
             to: target_any(),
@@ -1789,7 +1981,12 @@ pub fn debris_field_crusher() -> CardDefinition {
                 ..Default::default()
             },
         ],
-        station: vec![StationBand { min: 8, keywords: vec![Keyword::Flying], pt: Some((1, 5)), ..Default::default() }],
+        station: vec![StationBand {
+            min: 8,
+            keywords: vec![Keyword::Flying],
+            pt: Some((1, 5)),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -1802,7 +1999,10 @@ pub fn extinguisher_battleship() -> CardDefinition {
         name: "Extinguisher Battleship",
         cost: cost(&[generic(8)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(
@@ -1833,15 +2033,17 @@ pub fn specimen_freighter() -> CardDefinition {
         name: "Specimen Freighter",
         cost: cost(&[generic(5), u()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![
             etb(Effect::ApplyToTargets {
                 max_targets: 2,
                 min_targets: 0,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasArtifactSubtype(
-                        ArtifactSubtype::Spacecraft,
-                    )))),
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::Not(Box::new(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft),
+                ))),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
                     to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
@@ -1856,7 +2058,12 @@ pub fn specimen_freighter() -> CardDefinition {
             },
         ],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 9, keywords: vec![Keyword::Flying], pt: Some((4, 7)), ..Default::default() }],
+        station: vec![StationBand {
+            min: 9,
+            keywords: vec![Keyword::Flying],
+            pt: Some((4, 7)),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -1869,17 +2076,27 @@ pub fn rescue_skiff() -> CardDefinition {
         name: "Rescue Skiff",
         cost: cost(&[generic(5), w()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::Move {
             what: target_filtered(
-                SelectionRequirement::InYourGraveyard.and(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
-                ),
+                SelectionRequirement::InYourGraveyard
+                    .and(SelectionRequirement::Creature.or(SelectionRequirement::Enchantment)),
             ),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 10, keywords: vec![Keyword::Flying], pt: Some((5, 6)), ..Default::default() }],
+        station: vec![StationBand {
+            min: 10,
+            keywords: vec![Keyword::Flying],
+            pt: Some((5, 6)),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -1896,12 +2113,19 @@ pub fn lumen_class_frigate() -> CardDefinition {
         name: "Lumen-Class Frigate",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         activated_abilities: vec![station()],
         station: vec![
             StationBand {
                 min: 2,
-                statics: vec![StaticEffect::PumpPT { applies_to: others, power: 1, toughness: 1 }],
+                statics: vec![StaticEffect::PumpPT {
+                    applies_to: others,
+                    power: 1,
+                    toughness: 1,
+                }],
                 ..Default::default()
             },
             StationBand {
@@ -1924,7 +2148,10 @@ pub fn synthesizer_labship() -> CardDefinition {
         name: "Synthesizer Labship",
         cost: cost(&[u()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         activated_abilities: vec![station()],
         station: vec![
             StationBand {
@@ -1972,7 +2199,10 @@ pub fn entropic_battlecruiser() -> CardDefinition {
         name: "Entropic Battlecruiser",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![on_attack(Effect::Discard {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
@@ -2094,7 +2324,10 @@ pub fn icecave_crasher() -> CardDefinition {
         name: "Icecave Crasher",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample],
@@ -2132,7 +2365,10 @@ pub fn illvoi_galeblade() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             sac_cost: true,
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -2218,7 +2454,11 @@ pub fn honored_knight_captain() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Advisor, CreatureType::Knight],
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Advisor,
+                CreatureType::Knight,
+            ],
             ..Default::default()
         },
         power: 1,
@@ -2234,7 +2474,10 @@ pub fn honored_knight_captain() -> CardDefinition {
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             ..Default::default()
         }],
@@ -2249,7 +2492,10 @@ pub fn harmonious_grovestrider() -> CardDefinition {
         name: "Harmonious Grovestrider",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
         dynamic_pt: Some(DynamicPt::LandsControlled { base: 0 }),
         ..Default::default()
@@ -2265,10 +2511,9 @@ pub fn gravkill() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Exile {
-            what: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
-            ),
+            what: target_filtered(SelectionRequirement::Creature.or(
+                SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft),
+            )),
         },
         ..Default::default()
     }
@@ -2293,7 +2538,9 @@ pub fn depressurize() -> CardDefinition {
                     what: Selector::Target(0),
                     filter: SelectionRequirement::PowerAtMost(0),
                 },
-                then: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                then: Box::new(Effect::Destroy {
+                    what: Selector::Target(0),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -2332,7 +2579,10 @@ pub fn gravpack_monoist() -> CardDefinition {
         power: 2,
         toughness: 2,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         tapped: true,
         ..Default::default()
     };
@@ -2514,7 +2764,10 @@ pub fn kavaron_harrier() -> CardDefinition {
         power: 2,
         toughness: 2,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -2560,7 +2813,10 @@ pub fn dubious_delicacy() -> CardDefinition {
         name: "Dubious Delicacy",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Food], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Food],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![etb(Effect::ApplyToTargets {
             max_targets: 1,
@@ -2574,7 +2830,10 @@ pub fn dubious_delicacy() -> CardDefinition {
             }),
         })],
         activated_abilities: vec![
-            sac_ability(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+            sac_ability(Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            }),
             sac_ability(Effect::LoseLife {
                 who: Selector::Player(PlayerRef::Target(0)),
                 amount: Value::Const(3),
@@ -2592,7 +2851,10 @@ pub fn nebula_dragon() -> CardDefinition {
         name: "Nebula Dragon",
         cost: cost(&[generic(6), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -2613,9 +2875,14 @@ pub fn plasma_bolt() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { amount: Value::Const(2), to: target_any() },
+            Effect::DealDamage {
+                amount: Value::Const(2),
+                to: target_any(),
+            },
             Effect::If {
-                cond: Predicate::VoidActive { who: PlayerRef::You },
+                cond: Predicate::VoidActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::DealDamage {
                     amount: Value::Const(1),
                     to: Selector::Target(0),
@@ -2634,7 +2901,10 @@ pub fn remnant_elemental() -> CardDefinition {
         name: "Remnant Elemental",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         toughness: 4,
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
@@ -2674,7 +2944,10 @@ pub fn slagdrill_scrapper() -> CardDefinition {
                 SelectionRequirement::Artifact.or(SelectionRequirement::Land),
                 1,
             )),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -2729,18 +3002,30 @@ pub fn nutrient_block() -> CardDefinition {
         name: "Nutrient Block",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Food], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Food],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Indestructible],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_cost: true,
             mana_cost: cost(&[generic(2)]),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -2821,8 +3106,9 @@ pub fn rayblade_trooper() -> CardDefinition {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
-                        filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)
-                            .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken))),
+                        filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne).and(
+                            SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken)),
+                        ),
                     }),
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
@@ -2846,14 +3132,19 @@ pub fn frenzied_baloth() -> CardDefinition {
         name: "Frenzied Baloth",
         cost: cost(&[g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Trample, Keyword::Haste, Keyword::CantBeCountered],
         static_abilities: vec![
             StaticAbility {
                 description: "Creature spells you control can't be countered.",
-                effect: StaticEffect::SpellsUncounterable { filter: SelectionRequirement::Creature },
+                effect: StaticEffect::SpellsUncounterable {
+                    filter: SelectionRequirement::Creature,
+                },
             },
             StaticAbility {
                 description: "Combat damage can't be prevented.",
@@ -2941,7 +3232,10 @@ pub fn honor() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -2961,7 +3255,10 @@ pub fn radiant_strike() -> CardDefinition {
                         .or(SelectionRequirement::Creature.and(SelectionRequirement::Tapped)),
                 ),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
         ]),
         ..Default::default()
     }
@@ -3012,8 +3309,15 @@ pub fn mechan_navigator() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
             ]),
         }],
         ..Default::default()
@@ -3026,7 +3330,10 @@ pub fn monoist_sentry() -> CardDefinition {
         name: "Monoist Sentry",
         cost: cost(&[b()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         power: 4,
         toughness: 1,
         keywords: vec![Keyword::Defender],
@@ -3073,7 +3380,10 @@ pub fn flight_deck_coordinator() -> CardDefinition {
             ),
             effect: Effect::If {
                 cond: two_tapped_creatures(),
-                then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                then: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -3235,13 +3545,19 @@ pub fn gigastorm_titan() -> CardDefinition {
         name: "Gigastorm Titan",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         static_abilities: vec![StaticAbility {
             description: "Costs {3} less if you've cast another spell this turn.",
             effect: StaticEffect::SelfCostReducedIf {
-                condition: Predicate::SpellsCastThisTurnAtLeast { who: PlayerRef::You, at_least: Value::Const(1) },
+                condition: Predicate::SpellsCastThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
                 amount: 3,
             },
         }],
@@ -3256,7 +3572,10 @@ pub fn lashwhip_predator() -> CardDefinition {
         name: "Lashwhip Predator",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Plant, CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
         power: 5,
         toughness: 7,
         keywords: vec![Keyword::Reach],
@@ -3291,7 +3610,10 @@ pub fn cerebral_download() -> CardDefinition {
                     SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
                 )),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
         ]),
         ..Default::default()
     }
@@ -3304,8 +3626,15 @@ pub fn samis_curiosity() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lander_token(),
+            },
         ]),
         ..Default::default()
     }
@@ -3319,7 +3648,11 @@ pub fn lithobraking() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lander_token(),
+            },
             Effect::MaySacrifice {
                 description: "Sacrifice an artifact".into(),
                 filter: SelectionRequirement::Artifact,
@@ -3343,7 +3676,10 @@ pub fn rust_harvester() -> CardDefinition {
         name: "Rust Harvester",
         cost: cost(&[r()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Menace],
@@ -3375,7 +3711,10 @@ pub fn nanoform_sentinel() -> CardDefinition {
         name: "Nanoform Sentinel",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
@@ -3402,7 +3741,10 @@ fn robot_2_2() -> TokenDefinition {
         power: 2,
         toughness: 2,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -3482,10 +3824,9 @@ pub fn embrace_oblivion() -> CardDefinition {
             count: 1,
         }],
         effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
-            ),
+            what: target_filtered(SelectionRequirement::Creature.or(
+                SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft),
+            )),
         },
         ..Default::default()
     }
@@ -3508,16 +3849,21 @@ pub fn scrounge_for_eternity() -> CardDefinition {
             Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::InYourGraveyard
-                        .and(
-                            SelectionRequirement::Creature.or(SelectionRequirement::HasArtifactSubtype(
-                                ArtifactSubtype::Spacecraft,
-                            )),
-                        )
+                        .and(SelectionRequirement::Creature.or(
+                            SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft),
+                        ))
                         .and(SelectionRequirement::ManaValueAtMost(5)),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lander_token(),
+            },
         ]),
         ..Default::default()
     }
@@ -3562,7 +3908,9 @@ pub fn drill_too_deep() -> CardDefinition {
                 kind: CounterType::Charge,
                 amount: Value::Const(5),
             },
-            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
         ]),
         ..Default::default()
     }
@@ -3603,10 +3951,16 @@ pub fn mouth_of_the_storm() -> CardDefinition {
         name: "Mouth of the Storm",
         cost: cost(&[generic(6), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
-        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))),
+        ],
         triggered_abilities: vec![etb(Effect::PumpPT {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
@@ -3627,12 +3981,18 @@ pub fn chrome_companion() -> CardDefinition {
         name: "Chrome Companion",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
@@ -3670,7 +4030,10 @@ pub fn meltstrider_eulogist() -> CardDefinition {
                     filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
                 },
             ),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -3685,10 +4048,19 @@ pub fn cryogen_relic() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![
-            etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            etb(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             },
         ],
         activated_abilities: vec![ActivatedAbility {
@@ -3720,7 +4092,10 @@ pub fn hemosymbic_mite() -> CardDefinition {
         name: "Hemosymbic Mite",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mite], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mite],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
@@ -3842,7 +4217,10 @@ pub fn emissary_escort() -> CardDefinition {
         },
         power: 0,
         toughness: 4,
-        dynamic_pt: Some(DynamicPt::BasePlusGreatestOtherArtifactMv { base_p: 0, base_t: 4 }),
+        dynamic_pt: Some(DynamicPt::BasePlusGreatestOtherArtifactMv {
+            base_p: 0,
+            base_t: 4,
+        }),
         ..Default::default()
     }
 }
@@ -3910,7 +4288,10 @@ pub fn shattered_wings() -> CardDefinition {
                             .and(SelectionRequirement::HasKeyword(Keyword::Flying))),
                 ),
             },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -3954,9 +4335,15 @@ pub fn seedship_impact() -> CardDefinition {
                         SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
                     ),
                 },
-                Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: lander_token() },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: lander_token(),
+                },
             ])),
-            else_: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+            else_: Box::new(Effect::Destroy {
+                what: Selector::Target(0),
+            }),
         },
         ..Default::default()
     }
@@ -3971,7 +4358,10 @@ pub fn desculpting_blast() -> CardDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drone], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drone],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     };
@@ -4019,7 +4409,10 @@ pub fn lost_in_space() -> CardDefinition {
                     pos: crate::effect::LibraryPosition::OwnerChoice,
                 },
             },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -4093,9 +4486,15 @@ pub fn anticausal_vestige() -> CardDefinition {
         power: 7,
         toughness: 5,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 Effect::PutFromHandOntoBattlefield {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Permanent.and(
@@ -4176,7 +4575,10 @@ pub fn selfcraft_mechan() -> CardDefinition {
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
                 },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ])),
             else_: None,
         })],
@@ -4211,7 +4613,11 @@ pub fn cosmogrand_zenith() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![flurry(Effect::ChooseMode(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: soldier },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: soldier,
+            },
             Effect::AddCounter {
                 what: Selector::EachPermanent(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -4238,19 +4644,24 @@ pub fn seedship_broodtender() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(3) })],
+        triggered_abilities: vec![etb(Effect::Mill {
+            who: Selector::You,
+            amount: Value::Const(3),
+        })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), b(), g()]),
             sac_cost: true,
             sorcery_speed: true,
             effect: Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::InYourGraveyard.and(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
-                    ),
-                ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                what: target_filtered(SelectionRequirement::InYourGraveyard.and(
+                    SelectionRequirement::Creature.or(SelectionRequirement::HasArtifactSubtype(
+                        ArtifactSubtype::Spacecraft,
+                    )),
+                )),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             ..Default::default()
         }],
@@ -4265,7 +4676,10 @@ pub fn virus_beetle() -> CardDefinition {
         name: "Virus Beetle",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::Discard {
@@ -4285,7 +4699,9 @@ pub fn tragic_trajectory() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::If {
-            cond: Predicate::VoidActive { who: PlayerRef::You },
+            cond: Predicate::VoidActive {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(-10),
@@ -4363,7 +4779,10 @@ pub fn sunstar_lightsmith() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -4415,7 +4834,10 @@ pub fn zealous_display() -> CardDefinition {
             },
             Effect::If {
                 cond: Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You))),
-                then: Box::new(Effect::Untap { what: my_creatures(), up_to: None }),
+                then: Box::new(Effect::Untap {
+                    what: my_creatures(),
+                    up_to: None,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -4426,7 +4848,10 @@ pub fn zealous_display() -> CardDefinition {
 /// Thawbringer — {2}{G} Creature — Insect Scout 4/2. When it enters or dies,
 /// surveil 1.
 pub fn thawbringer() -> CardDefinition {
-    let surveil = || Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) };
+    let surveil = || Effect::Surveil {
+        who: PlayerRef::You,
+        amount: Value::Const(1),
+    };
     CardDefinition {
         name: "Thawbringer",
         cost: cost(&[generic(2), g()]),
@@ -4463,7 +4888,10 @@ pub fn susurian_voidborn() -> CardDefinition {
                     who: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::Const(1),
                 },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
         }],
         alternative_cost: Some(warp(cost(&[b()]))),
@@ -4488,7 +4916,10 @@ pub fn mental_modulation() -> CardDefinition {
                     SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
                 ),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -4574,7 +5005,10 @@ pub fn swarm_culler() -> CardDefinition {
                     .and(SelectionRequirement::ControlledByYou)
                     .and(SelectionRequirement::OtherThanSource),
                 count: Value::Const(1),
-                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
                 else_: None,
             },
         }],
@@ -4636,7 +5070,10 @@ pub fn zookeeper_mechan() -> CardDefinition {
         name: "Zookeeper Mechan",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         activated_abilities: vec![
@@ -4644,7 +5081,10 @@ pub fn zookeeper_mechan() -> CardDefinition {
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: crate::effect::ManaPayload::OfColor(crate::mana::Color::Red, Value::Const(1)),
+                    pool: crate::effect::ManaPayload::OfColor(
+                        crate::mana::Color::Red,
+                        Value::Const(1),
+                    ),
                 },
                 ..Default::default()
             },
@@ -4695,7 +5135,10 @@ pub fn vaultguard_trooper() -> CardDefinition {
                             amount: Value::Const(99),
                             random: false,
                         },
-                        Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::Const(2),
+                        },
                     ])),
                 }),
                 else_: Box::new(Effect::Noop),
@@ -4756,10 +5199,18 @@ pub fn voidforged_titan() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::If {
-                cond: Predicate::VoidActive { who: PlayerRef::You },
+                cond: Predicate::VoidActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                    Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                 ])),
                 else_: Box::new(Effect::Noop),
             },
@@ -4775,7 +5226,10 @@ pub fn meltstriders_gear() -> CardDefinition {
         name: "Meltstrider's Gear",
         cost: cost(&[g()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(5)]))],
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 2,
@@ -4801,9 +5255,16 @@ pub fn illvoi_light_jammer() -> CardDefinition {
         name: "Illvoi Light Jammer",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(3)]))],
-        equipped_bonus: Some(crate::card::EquipBonus { power: 1, toughness: 2, ..Default::default() }),
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 2,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Attach {
                 what: Selector::This,
@@ -4829,16 +5290,25 @@ pub fn hylderblade() -> CardDefinition {
         name: "Hylderblade",
         cost: cost(&[b()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
-        equipped_bonus: Some(crate::card::EquipBonus { power: 3, toughness: 1, ..Default::default() }),
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 3,
+            toughness: 1,
+            ..Default::default()
+        }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(crate::game::TurnStep::End),
                 EventScope::ActivePlayer,
             ),
             effect: Effect::If {
-                cond: Predicate::VoidActive { who: PlayerRef::You },
+                cond: Predicate::VoidActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::Attach {
                     what: Selector::This,
                     to: target_filtered(
@@ -4862,7 +5332,10 @@ pub fn sami_ships_engineer() -> CardDefinition {
         toughness: 2,
         tapped: true,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -4895,8 +5368,6 @@ pub fn sami_ships_engineer() -> CardDefinition {
     }
 }
 
-
-
 /// Starfighter Pilot — {1}{W} Creature — Human Pilot 2/2. Whenever it becomes
 /// tapped, surveil 1.
 pub fn starfighter_pilot() -> CardDefinition {
@@ -4912,7 +5383,10 @@ pub fn starfighter_pilot() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -4925,11 +5399,17 @@ pub fn starbreach_whale() -> CardDefinition {
         name: "Starbreach Whale",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Whale], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Whale],
+            ..Default::default()
+        },
         power: 3,
         toughness: 5,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
         alternative_cost: Some(warp(cost(&[generic(1), u()]))),
         ..Default::default()
     }
@@ -4972,7 +5452,10 @@ fn robot_token() -> TokenDefinition {
         power: 2,
         toughness: 2,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -4986,7 +5469,10 @@ fn eoe_planet(name: &'static str, color: crate::mana::Color) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        subtypes: Subtypes { land_types: vec![LandType::Planet], ..Default::default() },
+        subtypes: Subtypes {
+            land_types: vec![LandType::Planet],
+            ..Default::default()
+        },
         activated_abilities: vec![super::tap_add(color), station()],
         triggered_abilities: vec![super::etb_tap()],
         ..Default::default()
@@ -5011,7 +5497,9 @@ fn planet_mana_band(
                 pool: ManaPayload::OfColor(
                     color,
                     Value::CountMatching {
-                        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+                        sel: Box::new(Selector::EachPermanent(
+                            SelectionRequirement::ControlledByYou,
+                        )),
                         filter,
                     },
                 ),
@@ -5058,7 +5546,11 @@ pub fn adagia_windswept_bastion() -> CardDefinition {
 }
 pub fn evendo_waking_haven() -> CardDefinition {
     let mut c = eoe_planet("Evendo, Waking Haven", crate::mana::Color::Green);
-    c.station = vec![planet_mana_band(cost(&[g()]), crate::mana::Color::Green, SelectionRequirement::Creature)];
+    c.station = vec![planet_mana_band(
+        cost(&[g()]),
+        crate::mana::Color::Green,
+        SelectionRequirement::Creature,
+    )];
     c
 }
 pub fn kavaron_memorial_world() -> CardDefinition {
@@ -5112,7 +5604,10 @@ pub fn susur_secundi_void_altar() -> CardDefinition {
             life_cost: 2,
             sorcery_speed: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::SacrificedPower },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::SacrificedPower,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -5121,7 +5616,11 @@ pub fn susur_secundi_void_altar() -> CardDefinition {
 }
 pub fn uthros_titanic_godcore() -> CardDefinition {
     let mut c = eoe_planet("Uthros, Titanic Godcore", crate::mana::Color::Blue);
-    c.station = vec![planet_mana_band(cost(&[u()]), crate::mana::Color::Blue, SelectionRequirement::Artifact)];
+    c.station = vec![planet_mana_band(
+        cost(&[u()]),
+        crate::mana::Color::Blue,
+        SelectionRequirement::Artifact,
+    )];
     c
 }
 
@@ -5145,7 +5644,9 @@ pub fn pulsar_squadron_ace() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(5),
             rest_to_graveyard: false,
-            pick_filter: Some(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+            pick_filter: Some(SelectionRequirement::HasArtifactSubtype(
+                ArtifactSubtype::Spacecraft,
+            )),
             take: None,
             to_battlefield: false,
             gain_life_if_pick: None,
@@ -5178,7 +5679,10 @@ pub fn umbral_collar_zealot() -> CardDefinition {
                     .and(SelectionRequirement::OtherThanSource),
                 1,
             )),
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -5221,7 +5725,10 @@ pub fn station_monitor() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drone], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drone],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -5236,7 +5743,10 @@ pub fn station_monitor() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(2) },
+                Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                },
             ),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
@@ -5263,14 +5773,20 @@ pub fn virulent_silencer() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::Artifact
-                        .and(SelectionRequirement::Creature)
-                        .and(SelectionRequirement::NotToken),
-                }),
-            effect: Effect::AddPoison { who: Selector::Target(0), amount: Value::Const(2) },
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Artifact
+                    .and(SelectionRequirement::Creature)
+                    .and(SelectionRequirement::NotToken),
+            }),
+            effect: Effect::AddPoison {
+                who: Selector::Target(0),
+                amount: Value::Const(2),
+            },
         }],
         ..Default::default()
     }
@@ -5285,7 +5801,10 @@ pub fn steelswarm_operator() -> CardDefinition {
         effect: Effect::AddMana {
             who: PlayerRef::You,
             pool: ManaPayload::Restricted(
-                Box::new(ManaPayload::Colors(vec![crate::mana::Color::Blue; n as usize])),
+                Box::new(ManaPayload::Colors(vec![
+                    crate::mana::Color::Blue;
+                    n as usize
+                ])),
                 crate::mana::SpendRestriction::ArtifactOnly,
             ),
         },
@@ -5338,7 +5857,10 @@ pub fn syr_vondam_sunstar_exemplar() -> CardDefinition {
                         kind: CounterType::PlusOnePlusOne,
                         amount: Value::Const(1),
                     },
-                    Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                 ]),
             },
             TriggeredAbility {
@@ -5365,7 +5887,10 @@ pub fn starfield_shepherd() -> CardDefinition {
         name: "Starfield Shepherd",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -5373,8 +5898,7 @@ pub fn starfield_shepherd() -> CardDefinition {
             who: PlayerRef::You,
             filter: SelectionRequirement::IsBasicLand
                 .and(SelectionRequirement::HasLandType(LandType::Plains))
-                .or(SelectionRequirement::Creature
-                    .and(SelectionRequirement::ManaValueAtMost(1))),
+                .or(SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(1))),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         alternative_cost: Some(warp(cost(&[generic(1), w()]))),
@@ -5454,7 +5978,10 @@ pub fn xu_ifit_osteoharmonist() -> CardDefinition {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             ..Default::default()
         }],
@@ -5468,14 +5995,19 @@ pub fn xu_ifit_osteoharmonist() -> CardDefinition {
 /// you control.
 pub fn monoist_circuit_feeder() -> CardDefinition {
     let artifacts = || Value::CountMatching {
-        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+        sel: Box::new(Selector::EachPermanent(
+            SelectionRequirement::ControlledByYou,
+        )),
         filter: SelectionRequirement::Artifact,
     };
     CardDefinition {
         name: "Monoist Circuit-Feeder",
         cost: cost(&[generic(4), b(), b()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nautilus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nautilus],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -5538,7 +6070,10 @@ pub fn systems_override() -> CardDefinition {
                 to: None,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
@@ -5584,7 +6119,10 @@ pub fn mutinous_massacre() -> CardDefinition {
         name: "Mutinous Massacre",
         cost: cost(&[generic(3), b(), b(), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseN { picks: vec![0], modes: vec![mode(true), mode(false)] },
+        effect: Effect::ChooseN {
+            picks: vec![0],
+            modes: vec![mode(true), mode(false)],
+        },
         ..Default::default()
     }
 }
@@ -5604,9 +6142,12 @@ pub fn focus_fire() -> CardDefinition {
             amount: Value::Sum(vec![
                 Value::Const(2),
                 Value::CountMatching {
-                    sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
-                    filter: SelectionRequirement::Creature
-                        .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+                    sel: Box::new(Selector::EachPermanent(
+                        SelectionRequirement::ControlledByYou,
+                    )),
+                    filter: SelectionRequirement::Creature.or(
+                        SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft),
+                    ),
                 },
             ]),
         },
@@ -5632,8 +6173,7 @@ pub fn scour_for_scrap() -> CardDefinition {
                 },
                 Effect::Move {
                     what: target_filtered(
-                        SelectionRequirement::Artifact
-                            .and(SelectionRequirement::InYourGraveyard),
+                        SelectionRequirement::Artifact.and(SelectionRequirement::InYourGraveyard),
                     ),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
@@ -5678,8 +6218,15 @@ pub fn melded_moxite() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Discard a card, then draw two".into(),
             body: Box::new(Effect::Seq(vec![
-                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
-                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
             ])),
         })],
         activated_abilities: vec![ActivatedAbility {
@@ -5704,9 +6251,16 @@ pub fn squires_lightblade() -> CardDefinition {
         name: "Squire's Lightblade",
         cost: cost(&[w()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(3)]))],
-        equipped_bonus: Some(crate::card::EquipBonus { power: 1, toughness: 0, ..Default::default() }),
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 0,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Attach {
                 what: Selector::This,
@@ -5731,7 +6285,10 @@ pub fn auxiliary_boosters() -> CardDefinition {
         name: "Auxiliary Boosters",
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 1,
@@ -5745,7 +6302,10 @@ pub fn auxiliary_boosters() -> CardDefinition {
                 count: Value::Const(1),
                 definition: robot_token(),
             },
-            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+            Effect::Attach {
+                what: Selector::This,
+                to: Selector::LastCreatedToken,
+            },
         ]))],
         ..Default::default()
     }
@@ -5792,7 +6352,10 @@ pub fn terrasymbiosis() -> CardDefinition {
                 filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             })
             .once_per_turn(),
-            effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::TriggerEventAmount,
+            },
         }],
         ..Default::default()
     }
@@ -5806,8 +6369,14 @@ pub fn weapons_manufacturing() -> CardDefinition {
         name: "Munitions".into(),
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
-            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(2),
+            },
         }],
         ..Default::default()
     };
@@ -5839,11 +6408,13 @@ pub fn weapons_manufacturing() -> CardDefinition {
 pub fn syr_vondam_the_lucent() -> CardDefinition {
     use crate::card::Supertype;
     let buff = || {
-        let others = || Selector::EachPermanent(
-            SelectionRequirement::Creature
-                .and(SelectionRequirement::ControlledByYou)
-                .and(SelectionRequirement::OtherThanSource),
-        );
+        let others = || {
+            Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            )
+        };
         Effect::Seq(vec![
             Effect::PumpPT {
                 what: others(),
@@ -5882,14 +6453,23 @@ pub fn starwinder() -> CardDefinition {
         name: "Starwinder",
         cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Leviathan], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Leviathan],
+            ..Default::default()
+        },
         power: 7,
         toughness: 7,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::YourControl,
+            ),
             effect: Effect::MayDo {
                 description: "Draw that many cards".into(),
-                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount }),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::TriggerEventAmount,
+                }),
             },
         }],
         alternative_cost: Some(warp(cost(&[generic(2), u(), u()]))),
@@ -5930,7 +6510,9 @@ pub fn temporal_intervention() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Void — costs {2} less to cast.",
             effect: StaticEffect::SelfCostReducedIf {
-                condition: Predicate::VoidActive { who: PlayerRef::You },
+                condition: Predicate::VoidActive {
+                    who: PlayerRef::You,
+                },
                 amount: 2,
             },
         }],
@@ -5950,7 +6532,9 @@ pub fn vote_out() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Convoke],
-        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Creature),
+        },
         ..Default::default()
     }
 }
@@ -5980,7 +6564,8 @@ pub fn archenemys_charm() -> CardDefinition {
                 Effect::Seq(vec![
                     Effect::AddCounter {
                         what: target_filtered(
-                            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou),
                         ),
                         kind: CounterType::PlusOnePlusOne,
                         amount: Value::Const(2),
@@ -6014,7 +6599,10 @@ pub fn illvoi_infiltrator() -> CardDefinition {
         keywords: vec![Keyword::CantBeBlockedIfControllerCastSpells(2)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -6028,13 +6616,18 @@ pub fn cryoshatter() -> CardDefinition {
     use crate::card::{EnchantmentSubtype, EquipBonus};
     let destroy_host = |event: EventKind| TriggeredAbility {
         event: EventSpec::new(event, EventScope::SelfSource),
-        effect: Effect::Destroy { what: Selector::This },
+        effect: Effect::Destroy {
+            what: Selector::This,
+        },
     };
     CardDefinition {
         name: "Cryoshatter",
         cost: cost(&[u()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         effect: Effect::Attach {
             what: Selector::This,
             to: target_filtered(SelectionRequirement::Creature),
@@ -6059,13 +6652,17 @@ pub fn hardlight_containment() -> CardDefinition {
         name: "Hardlight Containment",
         cost: cost(&[w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             Effect::Attach {
                 what: Selector::This,
                 to: Selector::TargetFiltered {
                     slot: 0,
-                    filter: SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    filter: SelectionRequirement::Artifact
+                        .and(SelectionRequirement::ControlledByYou),
                 },
             },
             Effect::ExileUntilSourceLeaves {
@@ -6090,13 +6687,17 @@ pub fn meltstriders_resolve() -> CardDefinition {
         name: "Meltstrider's Resolve",
         cost: cost(&[g()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             Effect::Attach {
                 what: Selector::This,
                 to: Selector::TargetFiltered {
                     slot: 0,
-                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
                 },
             },
             Effect::Fight {
@@ -6120,17 +6721,24 @@ pub fn pain_for_all() -> CardDefinition {
         name: "Pain for All",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         effect: Effect::Seq(vec![
             Effect::Attach {
                 what: Selector::This,
                 to: Selector::TargetFiltered {
                     slot: 0,
-                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
                 },
             },
             Effect::DealDamage {
-                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Any },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Any,
+                },
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
         ]),
@@ -6147,22 +6755,32 @@ pub fn tractor_beam() -> CardDefinition {
         name: "Tractor Beam",
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         effect: Effect::Attach {
             what: Selector::This,
             to: Selector::TargetFiltered {
                 slot: 0,
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+                filter: SelectionRequirement::Creature.or(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft),
+                ),
             },
         },
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Tap { what: Selector::attached_to(Selector::This) },
-            Effect::GainControlWhileSourceRemains { what: Selector::attached_to(Selector::This) },
+            Effect::Tap {
+                what: Selector::attached_to(Selector::This),
+            },
+            Effect::GainControlWhileSourceRemains {
+                what: Selector::attached_to(Selector::This),
+            },
         ]))],
         static_abilities: vec![StaticAbility {
             description: "Enchanted permanent doesn't untap during its controller's untap step.",
-            effect: StaticEffect::PreventUntap { applies_to: Selector::attached_to(Selector::This) },
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::attached_to(Selector::This),
+            },
         }],
         ..Default::default()
     }
@@ -6221,7 +6839,9 @@ pub fn mmmenon_the_right_hand() -> CardDefinition {
             },
             StaticAbility {
                 description: "You may cast artifact spells from the top of your library.",
-                effect: StaticEffect::PlayFromLibraryTop { filter: SelectionRequirement::Artifact },
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: SelectionRequirement::Artifact,
+                },
             },
         ],
         ..Default::default()
@@ -6246,7 +6866,8 @@ pub fn memorial_vault() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Sum(vec![Value::Const(1), Value::SacrificedManaValue]),
                 duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                pay_any_color: true, pay_own_cost: false,
+                pay_any_color: true,
+                pay_own_cost: false,
                 uncast_penalty: None,
             },
             ..Default::default()
@@ -6279,7 +6900,10 @@ pub fn astelli_reclaimer() -> CardDefinition {
                     .and(SelectionRequirement::InYourGraveyard)
                     .and(SelectionRequirement::ManaValueAtMostCastManaSpent),
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         })],
         ..Default::default()
     }
@@ -6348,15 +6972,24 @@ pub fn the_seriema() -> CardDefinition {
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Artifact],
         supertypes: vec![crate::card::Supertype::Legendary],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::Search {
             who: PlayerRef::You,
-            filter: SelectionRequirement::Creature
-                .and(SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary)),
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::HasSupertype(
+                crate::card::Supertype::Legendary,
+            )),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         activated_abilities: vec![station()],
-        station: vec![StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((5, 5)), ..Default::default() }],
+        station: vec![StationBand {
+            min: 7,
+            keywords: vec![Keyword::Flying],
+            pt: Some((5, 5)),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -6369,7 +7002,10 @@ pub fn survey_mechan() -> CardDefinition {
         name: "Survey Mechan",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Hexproof],
@@ -6377,8 +7013,14 @@ pub fn survey_mechan() -> CardDefinition {
             mana_cost: cost(&[generic(10)]),
             sac_cost: true,
             effect: Effect::Seq(vec![
-                Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
-                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::Const(3),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
             ]),
             ..Default::default()
         }],
@@ -6495,7 +7137,10 @@ fn eoe_robot_token(tapped: bool) -> TokenDefinition {
         power: 2,
         toughness: 2,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         tapped,
         ..Default::default()
     }
@@ -6512,7 +7157,10 @@ pub fn dawnsire_sunstar_dreadnought() -> CardDefinition {
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact],
         supertypes: vec![crate::card::Supertype::Legendary],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         activated_abilities: vec![station()],
         station: vec![
             StationBand {
@@ -6532,7 +7180,12 @@ pub fn dawnsire_sunstar_dreadnought() -> CardDefinition {
                 }],
                 ..Default::default()
             },
-            StationBand { min: 20, keywords: vec![Keyword::Flying], pt: Some((20, 20)), ..Default::default() },
+            StationBand {
+                min: 20,
+                keywords: vec![Keyword::Flying],
+                pt: Some((20, 20)),
+                ..Default::default()
+            },
         ],
         ..Default::default()
     }
@@ -6548,11 +7201,17 @@ pub fn the_eternity_elevator() -> CardDefinition {
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact],
         supertypes: vec![crate::card::Supertype::Legendary],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(3)) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(3)),
+                },
                 ..Default::default()
             },
             station(),
@@ -6588,7 +7247,10 @@ pub fn infinite_guideline_station() -> CardDefinition {
         cost: cost(&[w(), u(), b(), r(), g()]),
         card_types: vec![CardType::Artifact],
         supertypes: vec![crate::card::Supertype::Legendary],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Spacecraft],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::CountMatching {
@@ -6637,7 +7299,10 @@ pub fn secluded_starforge() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -6680,7 +7345,8 @@ pub fn possibility_technician() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 duration: crate::card::MayPlayDuration::WhileExiled,
-                pay_any_color: false, pay_own_cost: false,
+                pay_any_color: false,
+                pay_own_cost: false,
                 uncast_penalty: None,
             },
         }],
@@ -6711,7 +7377,10 @@ pub fn haliya_guided_by_light() -> CardDefinition {
                         what: Selector::TriggerSource,
                         filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
                     }),
-                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(
@@ -6723,7 +7392,10 @@ pub fn haliya_guided_by_light() -> CardDefinition {
                         who: PlayerRef::You,
                         at_least: Value::Const(3),
                     },
-                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                    then: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             },
@@ -6749,8 +7421,15 @@ pub fn alpharael_dreaming_acolyte() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(2),
+                random: false,
+            },
         ]))],
         static_abilities: vec![StaticAbility {
             description: "During your turn, Alpharael has deathtouch.",
@@ -6783,7 +7462,9 @@ pub fn alpharael_stonechosen() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Ward(WardCost::Discard(1))],
         triggered_abilities: vec![on_attack(Effect::If {
-            cond: Predicate::VoidActive { who: PlayerRef::You },
+            cond: Predicate::VoidActive {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::LoseHalfLife {
                 who: Selector::Player(PlayerRef::DefendingPlayer),
                 rounded_up: true,
@@ -6804,7 +7485,10 @@ pub fn roving_actuator() -> CardDefinition {
         name: "Roving Actuator",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Robot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
@@ -6892,7 +7576,10 @@ pub fn atomic_microsizer() -> CardDefinition {
         name: "Atomic Microsizer",
         cost: cost(&[u()]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
             power: 1,
@@ -6933,7 +7620,10 @@ pub fn dyadrine_synthesis_amalgam() -> CardDefinition {
         cost: cost(&[x(), g(), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         supertypes: vec![crate::card::Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 0,
         toughness: 1,
         keywords: vec![Keyword::Trample],
@@ -6957,11 +7647,16 @@ pub fn zero_point_ballad() -> CardDefinition {
                         Value::ToughnessOf(Box::new(Selector::TriggerSource)),
                         Value::XFromCost,
                     ),
-                    then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                    then: Box::new(Effect::Destroy {
+                        what: Selector::TriggerSource,
+                    }),
                     else_: Box::new(Effect::Noop),
                 }),
             },
-            Effect::LoseLife { who: Selector::You, amount: Value::XFromCost },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::XFromCost,
+            },
         ]),
         ..Default::default()
     }
@@ -6993,8 +7688,13 @@ pub fn weftwalking() -> CardDefinition {
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef::You },
-            Effect::Draw { who: Selector::You, amount: Value::Const(7) },
+            Effect::ShuffleHandAndGraveyardIntoLibrary {
+                who: PlayerRef::You,
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(7),
+            },
         ]))],
         ..Default::default()
     }

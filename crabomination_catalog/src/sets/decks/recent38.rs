@@ -10,11 +10,16 @@ use crate::card::{
 };
 use crate::effect::shortcut::{discard, draw, target_filtered};
 use crate::effect::{Duration, PlayerRef, Predicate};
-use crate::mana::{cost, generic, Color};
+use crate::mana::{Color, cost, generic};
 
 /// A {3} Legendary Monument: `color` creature spells cost {1} less, plus a
 /// "whenever you cast a creature spell, `rider`" trigger.
-fn monument(name: &'static str, color: Color, reduce_desc: &'static str, rider: Effect) -> CardDefinition {
+fn monument(
+    name: &'static str,
+    color: Color,
+    reduce_desc: &'static str,
+    rider: Effect,
+) -> CardDefinition {
     CardDefinition {
         name,
         cost: cost(&[generic(3)]),
@@ -49,7 +54,10 @@ pub fn oketras_monument() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Warrior], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Warrior],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Vigilance],
         ..Default::default()
     };
@@ -57,7 +65,11 @@ pub fn oketras_monument() -> CardDefinition {
         "Oketra's Monument",
         Color::White,
         "White creature spells you cast cost {1} less to cast.",
-        Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: warrior },
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: warrior,
+        },
     )
 }
 

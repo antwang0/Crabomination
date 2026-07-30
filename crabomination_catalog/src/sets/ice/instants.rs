@@ -11,7 +11,10 @@ pub fn brainstorm() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             draw(3),
-            Effect::PutOnLibraryFromHand { who: PlayerRef::You, count: Value::Const(2) },
+            Effect::PutOnLibraryFromHand {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }

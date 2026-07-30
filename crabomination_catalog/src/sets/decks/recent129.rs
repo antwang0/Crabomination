@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef};
-use crate::mana::{cost, generic, r, u, w, Color};
+use crate::mana::{Color, cost, generic, r, u, w};
 
 fn rat_token() -> TokenDefinition {
     TokenDefinition {
@@ -19,7 +19,10 @@ fn rat_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         keywords: vec![Keyword::CantBlock],
         ..Default::default()
     }
@@ -117,7 +120,10 @@ pub fn werefox_bodyguard() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), w()]),
             sac_cost: true,
-            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -140,7 +146,9 @@ pub fn grand_ball_guest() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Celebration — Grand Ball Guest gets +1/+1 and has trample as long as two or more nonland permanents entered under your control this turn.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::CelebrationActive { who: PlayerRef::You },
+                condition: Predicate::CelebrationActive {
+                    who: PlayerRef::You,
+                },
                 power: 1,
                 toughness: 1,
                 keywords: vec![Keyword::Trample],
@@ -190,9 +198,16 @@ pub fn twisted_fealty() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura, EnchantmentSubtype::Role],
             ..Default::default()
         },
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
             effect: Effect::LoseLife {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
@@ -210,14 +225,20 @@ pub fn twisted_fealty() -> CardDefinition {
                 to: Some(PlayerRef::You),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
                 duration: Duration::EndOfTurn,
             },
             Effect::CreateTokenAttachedTo {
-                target: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                target: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 definition: wicked_role,
             },
         ]),

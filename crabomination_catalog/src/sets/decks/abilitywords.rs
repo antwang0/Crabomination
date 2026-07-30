@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::on_attack;
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, Value};
-use crate::mana::{b, cost, g, generic, r, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, w};
 
 // ── Threshold (7+ cards in graveyard) ────────────────────────────────────────
 
@@ -20,7 +20,10 @@ pub fn springing_tiger() -> CardDefinition {
         name: "Springing Tiger",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         static_abilities: vec![threshold_pump(2, 2, vec![])],
@@ -35,7 +38,10 @@ pub fn mystic_enforcer() -> CardDefinition {
         name: "Mystic Enforcer",
         cost: cost(&[generic(2), g(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Protection(Color::Black)],
@@ -82,7 +88,9 @@ fn threshold_pump(power: i32, toughness: i32, keywords: Vec<Keyword>) -> StaticA
     StaticAbility {
         description: "Threshold — gets +P/+T while seven or more cards are in your graveyard.",
         effect: StaticEffect::PumpSelfIf {
-            condition: Predicate::ThresholdActive { who: PlayerRef::You },
+            condition: Predicate::ThresholdActive {
+                who: PlayerRef::You,
+            },
             power,
             toughness,
             keywords,
@@ -134,7 +142,10 @@ pub fn snapsail_glider() -> CardDefinition {
         name: "Snapsail Glider",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         static_abilities: vec![metalcraft_pump(0, 0, vec![Keyword::Flying])],
@@ -150,9 +161,15 @@ pub fn dispatch() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::If {
-            cond: Predicate::MetalcraftActive { who: PlayerRef::You },
-            then: Box::new(Effect::Exile { what: Selector::Target(0) }),
-            else_: Box::new(Effect::Tap { what: Selector::Target(0) }),
+            cond: Predicate::MetalcraftActive {
+                who: PlayerRef::You,
+            },
+            then: Box::new(Effect::Exile {
+                what: Selector::Target(0),
+            }),
+            else_: Box::new(Effect::Tap {
+                what: Selector::Target(0),
+            }),
         },
         ..Default::default()
     }
@@ -162,7 +179,9 @@ fn metalcraft_pump(power: i32, toughness: i32, keywords: Vec<Keyword>) -> Static
     StaticAbility {
         description: "Metalcraft — gets +P/+T while you control three or more artifacts.",
         effect: StaticEffect::PumpSelfIf {
-            condition: Predicate::MetalcraftActive { who: PlayerRef::You },
+            condition: Predicate::MetalcraftActive {
+                who: PlayerRef::You,
+            },
             power,
             toughness,
             keywords,
@@ -182,7 +201,9 @@ pub fn savage_punch() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::If {
-                cond: Predicate::FerociousActive { who: PlayerRef::You },
+                cond: Predicate::FerociousActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::PumpPT {
                     what: Selector::Target(0),
                     power: Value::Const(2),
@@ -192,7 +213,10 @@ pub fn savage_punch() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             },
             Effect::Fight {
-                attacker: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                attacker: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
                 defender: Selector::TargetFiltered {
                     slot: 1,
                     filter: R::Creature.and(R::ControlledByOpponent),
@@ -221,7 +245,9 @@ pub fn sabertooth_outrider() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![on_attack(Effect::If {
-            cond: Predicate::FormidableActive { who: PlayerRef::You },
+            cond: Predicate::FormidableActive {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::GrantKeyword {
                 what: Selector::This,
                 keyword: Keyword::FirstStrike,
@@ -250,7 +276,9 @@ pub fn circle_of_elders() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            condition: Some(Predicate::FormidableActive { who: PlayerRef::You }),
+            condition: Some(Predicate::FormidableActive {
+                who: PlayerRef::You,
+            }),
             effect: Effect::AddMana {
                 who: PlayerRef::You,
                 pool: ManaPayload::Colorless(Value::Const(3)),
@@ -271,7 +299,10 @@ pub fn rakdos_pit_dragon() -> CardDefinition {
         name: "Rakdos Pit Dragon",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         activated_abilities: vec![
@@ -298,7 +329,9 @@ pub fn rakdos_pit_dragon() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Hellbent — has double strike while you have no cards in hand.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::HellbentActive { who: PlayerRef::You },
+                condition: Predicate::HellbentActive {
+                    who: PlayerRef::You,
+                },
                 power: 0,
                 toughness: 0,
                 keywords: vec![Keyword::DoubleStrike],
@@ -324,7 +357,9 @@ pub fn cutthroat_il_dal() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Hellbent — has shadow while you have no cards in hand.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::HellbentActive { who: PlayerRef::You },
+                condition: Predicate::HellbentActive {
+                    who: PlayerRef::You,
+                },
                 power: 0,
                 toughness: 0,
                 keywords: vec![Keyword::Shadow],
@@ -349,8 +384,14 @@ pub fn bring_low() -> CardDefinition {
                 what: Selector::Target(0),
                 filter: R::Creature.and(R::WithCounter(CounterType::PlusOnePlusOne)),
             },
-            then: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(5) }),
-            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) }),
+            then: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(5),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(3),
+            }),
         },
         ..Default::default()
     }
@@ -365,7 +406,10 @@ pub fn sarkhans_rage() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_any(), amount: Value::Const(5) },
+            Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(5),
+            },
             Effect::If {
                 cond: Predicate::Not(Box::new(Predicate::SelectorCountAtLeast {
                     sel: Selector::EachPermanent(

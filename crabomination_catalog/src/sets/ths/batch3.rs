@@ -4,15 +4,15 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
-    EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, StaticAbility, StaticEffect,
-    SelectionRequirement as R, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R,
+    StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
+use crate::effect::ManaPayload;
 use crate::effect::shortcut::{
     etb, heroic, monstrosity, on_attack, on_becomes_monstrous, target_any, target_filtered,
 };
-use crate::effect::{Duration, Effect, Predicate, PlayerRef, Selector, ZoneDest};
-use crate::effect::ManaPayload;
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::effect::{Duration, Effect, PlayerRef, Predicate, Selector, ZoneDest};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(
     name: &'static str,
@@ -26,7 +26,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: ct, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: ct,
+            ..Default::default()
+        },
         power: p,
         toughness: t,
         keywords: kw,
@@ -35,7 +38,13 @@ fn creature(
 }
 
 fn spell(name: &'static str, mana: ManaCost, ty: CardType, effect: Effect) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![ty], effect, ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![ty],
+        effect,
+        ..Default::default()
+    }
 }
 
 /// An enchantment creature with bestow granting `+p/+t` and `kw`.
@@ -62,7 +71,10 @@ fn bestow_creature(
 }
 
 fn scry(n: i32) -> Effect {
-    Effect::Scry { who: PlayerRef::You, amount: Value::Const(n) }
+    Effect::Scry {
+        who: PlayerRef::You,
+        amount: Value::Const(n),
+    }
 }
 
 fn counters_on_self(n: i32) -> Effect {
@@ -77,7 +89,14 @@ fn counters_on_self(n: i32) -> Effect {
 
 /// Silent Artisan — {3}{W}{W} 3/5 Giant.
 pub fn silent_artisan() -> CardDefinition {
-    creature("Silent Artisan", cost(&[generic(3), w(), w()]), 3, 5, vec![CreatureType::Giant], vec![])
+    creature(
+        "Silent Artisan",
+        cost(&[generic(3), w(), w()]),
+        3,
+        5,
+        vec![CreatureType::Giant],
+        vec![],
+    )
 }
 
 /// Setessan Griffin — {4}{W} 3/2 Griffin with flying. {2}{G}{G}: +2/+2 until
@@ -163,7 +182,10 @@ pub fn soldier_of_the_pantheon() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
                 .with_filter(Predicate::CastSpellMatches(R::Multicolored)),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..creature(
             "Soldier of the Pantheon",
@@ -264,8 +286,13 @@ pub fn ray_of_dissolution() -> CardDefinition {
         cost(&[generic(2), w()]),
         CardType::Instant,
         Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Enchantment) },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            Effect::Destroy {
+                what: target_filtered(R::Enchantment),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
         ]),
     )
 }
@@ -278,7 +305,9 @@ pub fn vanquish_the_foul() -> CardDefinition {
         cost(&[generic(5), w()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Creature.and(R::PowerAtLeast(4))) },
+            Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::PowerAtLeast(4))),
+            },
             scry(1),
         ]),
     )
@@ -330,8 +359,11 @@ pub fn vaporkin() -> CardDefinition {
 pub fn prescient_chimera() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellMatches(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))),
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellMatches(
+                    R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                ),
+            ),
             effect: scry(1),
         }],
         ..creature(
@@ -357,7 +389,9 @@ pub fn prognostic_sphinx() -> CardDefinition {
                     keyword: Keyword::Hexproof,
                     duration: Duration::EndOfTurn,
                 },
-                Effect::Tap { what: Selector::This },
+                Effect::Tap {
+                    what: Selector::This,
+                },
             ]),
             ..Default::default()
         }],
@@ -396,7 +430,9 @@ pub fn triton_fortune_hunter() -> CardDefinition {
 pub fn wavecrash_triton() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![heroic(Effect::Seq(vec![
-            Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+            Effect::Tap {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            },
             Effect::AddCounter {
                 what: Selector::Target(0),
                 kind: CounterType::Stun,
@@ -443,8 +479,14 @@ pub fn thassas_bounty() -> CardDefinition {
         cost(&[generic(5), u()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-            Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(3) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(3),
+            },
         ]),
     )
 }
@@ -473,7 +515,10 @@ pub fn stymied_hopes() -> CardDefinition {
 pub fn thassas_emissary() -> CardDefinition {
     let draw_on_damage = TriggeredAbility {
         event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        },
     };
     CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Creature],
@@ -501,9 +546,9 @@ pub fn thassas_emissary() -> CardDefinition {
 /// becomes monstrous, target land becomes an Island in addition to its types.
 pub fn sealock_monster() -> CardDefinition {
     CardDefinition {
-        keywords: vec![Keyword::CanAttackOnlyIfDefenderControls(Box::new(R::HasLandType(
-            LandType::Island,
-        )))],
+        keywords: vec![Keyword::CanAttackOnlyIfDefenderControls(Box::new(
+            R::HasLandType(LandType::Island),
+        ))],
         activated_abilities: vec![monstrosity(cost(&[generic(5), u(), u()]), 3)],
         triggered_abilities: vec![on_becomes_monstrous(Effect::GainLandType {
             what: target_filtered(R::Land),
@@ -529,7 +574,11 @@ pub fn meletis_charlatan() -> CardDefinition {
             mana_cost: cost(&[generic(2), u()]),
             tap_cost: true,
             effect: Effect::CopySpellMayChooseTargets {
-                what: target_filtered(R::IsSpellOnStack.and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))),
+                what: target_filtered(
+                    R::IsSpellOnStack.and(
+                        R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    ),
+                ),
                 count: Value::ONE,
             },
             ..Default::default()
@@ -565,7 +614,9 @@ pub fn returned_phalanx() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), u()]),
-            effect: Effect::AttackDespiteDefenderThisTurn { what: Selector::This },
+            effect: Effect::AttackDespiteDefenderThisTurn {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..creature(
@@ -585,7 +636,9 @@ pub fn tormented_hero() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "This creature enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         triggered_abilities: vec![heroic(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
@@ -679,7 +732,11 @@ pub fn erebos_s_emissary() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Creature],
         bestow: Some(cost(&[generic(5), b()])),
-        equipped_bonus: Some(EquipBonus { power: 3, toughness: 3, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 3,
+            ..Default::default()
+        }),
         activated_abilities: vec![ActivatedAbility {
             discard_cost: Some((R::Creature, 1)),
             effect: Effect::If {
@@ -708,7 +765,10 @@ pub fn nighthowler() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Creature],
         bestow: Some(cost(&[generic(2), b(), b()])),
-        dynamic_pt: Some(DynamicPt::CreatureCardsInAllGraveyards { base_p: 0, base_t: 0 }),
+        dynamic_pt: Some(DynamicPt::CreatureCardsInAllGraveyards {
+            base_p: 0,
+            base_t: 0,
+        }),
         equipped_bonus: Some(EquipBonus {
             scale: Some(EquipScale {
                 per_power: 1,
@@ -718,7 +778,14 @@ pub fn nighthowler() -> CardDefinition {
             }),
             ..Default::default()
         }),
-        ..creature("Nighthowler", cost(&[generic(1), b(), b()]), 0, 0, vec![CreatureType::Horror], vec![])
+        ..creature(
+            "Nighthowler",
+            cost(&[generic(1), b(), b()]),
+            0,
+            0,
+            vec![CreatureType::Horror],
+            vec![],
+        )
     }
 }
 
@@ -768,9 +835,18 @@ pub fn scourgemark() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
-        equipped_bonus: Some(EquipBonus { power: 1, ..Default::default() }),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -786,7 +862,10 @@ pub fn vipers_kiss() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: -1,
             toughness: -1,
@@ -831,7 +910,10 @@ pub fn firedrinker_satyr() -> CardDefinition {
                     toughness: Value::ZERO,
                     duration: Duration::EndOfTurn,
                 },
-                Effect::DealDamage { to: Selector::You, amount: Value::ONE },
+                Effect::DealDamage {
+                    to: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
             ..Default::default()
         }],
@@ -855,7 +937,14 @@ pub fn arena_athlete() -> CardDefinition {
             keyword: Keyword::CantBlock,
             duration: Duration::EndOfTurn,
         })],
-        ..creature("Arena Athlete", cost(&[generic(1), r()]), 2, 1, vec![CreatureType::Human], vec![])
+        ..creature(
+            "Arena Athlete",
+            cost(&[generic(1), r()]),
+            2,
+            1,
+            vec![CreatureType::Human],
+            vec![],
+        )
     }
 }
 
@@ -912,7 +1001,9 @@ pub fn flamespeaker_adept() -> CardDefinition {
 pub fn wild_celebrants() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::MayDo {
-            body: Box::new(Effect::Destroy { what: target_filtered(R::Artifact) }),
+            body: Box::new(Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            }),
             description: String::new(),
         })],
         ..creature(
@@ -934,7 +1025,9 @@ pub fn stoneshock_giant() -> CardDefinition {
         activated_abilities: vec![monstrosity(cost(&[generic(6), r(), r()]), 3)],
         triggered_abilities: vec![on_becomes_monstrous(Effect::GrantKeyword {
             what: Selector::EachPermanent(
-                R::Creature.and(R::ControlledByOpponent).and(R::Not(Box::new(R::HasKeyword(Keyword::Flying)))),
+                R::Creature
+                    .and(R::ControlledByOpponent)
+                    .and(R::Not(Box::new(R::HasKeyword(Keyword::Flying)))),
             ),
             keyword: Keyword::CantBlock,
             duration: Duration::EndOfTurn,
@@ -966,7 +1059,10 @@ pub fn titan_of_eternal_fire() -> CardDefinition {
                 ability: ActivatedAbility {
                     mana_cost: cost(&[r()]),
                     tap_cost: true,
-                    effect: Effect::DealDamage { to: target_any(), amount: Value::ONE },
+                    effect: Effect::DealDamage {
+                        to: target_any(),
+                        amount: Value::ONE,
+                    },
                     ..Default::default()
                 },
                 condition: None,
@@ -990,7 +1086,10 @@ pub fn spark_jolt() -> CardDefinition {
         cost(&[r()]),
         CardType::Instant,
         Effect::Seq(vec![
-            Effect::DealDamage { to: target_any(), amount: Value::ONE },
+            Effect::DealDamage {
+                to: target_any(),
+                amount: Value::ONE,
+            },
             scry(1),
         ]),
     )
@@ -1004,8 +1103,13 @@ pub fn rage_of_purphoros() -> CardDefinition {
         cost(&[generic(4), r()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::CantBeRegeneratedThisTurn { what: target_filtered(R::Creature) },
-            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) },
+            Effect::CantBeRegeneratedThisTurn {
+                what: target_filtered(R::Creature),
+            },
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(4),
+            },
             scry(1),
         ]),
     )
@@ -1019,7 +1123,9 @@ pub fn peak_eruption() -> CardDefinition {
         cost(&[generic(2), r()]),
         CardType::Sorcery,
         Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::HasLandType(LandType::Mountain)) },
+            Effect::Destroy {
+                what: target_filtered(R::HasLandType(LandType::Mountain)),
+            },
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                 amount: Value::Const(3),
@@ -1070,7 +1176,14 @@ pub fn satyr_hedonist() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..creature("Satyr Hedonist", cost(&[generic(1), g()]), 2, 1, vec![CreatureType::Satyr], vec![])
+        ..creature(
+            "Satyr Hedonist",
+            cost(&[generic(1), g()]),
+            2,
+            1,
+            vec![CreatureType::Satyr],
+            vec![],
+        )
     }
 }
 
@@ -1214,7 +1327,9 @@ pub fn artisans_sorrow() -> CardDefinition {
         cost(&[generic(3), g()]),
         CardType::Instant,
         Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact.or(R::Enchantment)),
+            },
             scry(2),
         ]),
     )
@@ -1302,7 +1417,10 @@ pub fn chronicler_of_heroes() -> CardDefinition {
                     ),
                     n: Value::ONE,
                 }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..creature(
             "Chronicler of Heroes",
@@ -1361,9 +1479,7 @@ pub fn pharikas_mender() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::MayDo {
             body: Box::new(Effect::Move {
-                what: target_filtered(
-                    R::InYourGraveyard.and(R::Creature.or(R::Enchantment)),
-                ),
+                what: target_filtered(R::InYourGraveyard.and(R::Creature.or(R::Enchantment))),
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
             description: String::new(),
@@ -1385,7 +1501,10 @@ pub fn horizon_chimera() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
-            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..creature(
             "Horizon Chimera",
@@ -1410,7 +1529,9 @@ pub fn destructive_revelry() -> CardDefinition {
                 to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                 amount: Value::Const(2),
             },
-            Effect::Destroy { what: target_filtered(R::Artifact.or(R::Enchantment)) },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact.or(R::Enchantment)),
+            },
         ]),
     )
 }

@@ -10,12 +10,15 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -47,8 +50,7 @@ pub fn quandrix_geometer() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::AddCounter {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
@@ -258,8 +260,7 @@ pub fn quandrix_wavecaster() -> CardDefinition {
                 description: "Put a +1/+1 counter on target creature you control?".into(),
                 body: Box::new(Effect::AddCounter {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
@@ -379,8 +380,10 @@ pub fn strixhaven_mage_hunter() -> CardDefinition {
                 count: Value::Const(1),
                 filter: SelectionRequirement::HasCardType(CardType::Land).negate(),
             },
-                    self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -503,8 +506,7 @@ pub fn silverquill_adjudicator() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::PumpPT {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
                 power: Value::Const(-3),
                 toughness: Value::Const(0),
@@ -718,8 +720,10 @@ pub fn quandrix_counterstudent() -> CardDefinition {
                     SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
                 ),
             },
-                    self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -1071,8 +1075,10 @@ pub fn strixhaven_banner() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::AnyOneColor(Value::Const(1)),
                 },
-                self_counter_cost_reduction: None, sac_other_filter: None,
-                tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             // {2}, {T}, Sacrifice this artifact: Draw a card.
@@ -1093,8 +1099,10 @@ pub fn strixhaven_banner() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(1),
                 },
-                self_counter_cost_reduction: None, sac_other_filter: None,
-                tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -1192,8 +1200,10 @@ pub fn strixhaven_pupil() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             ]),
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -1316,8 +1326,10 @@ pub fn strixhaven_crucible() -> CardDefinition {
                 to: Selector::You,
                 amount: Value::Const(1),
             },
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()

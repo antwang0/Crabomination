@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::{Effect, PlayerRef, Selector};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, generic, hybrid, r, w, Color};
+use crate::mana::{Color, b, cost, generic, hybrid, r, w};
 
 /// Slaughter Games — {2}{B}{R} Sorcery that can't be countered. Choose a
 /// nonland card name; exile every card with that name from target opponent's
@@ -33,7 +33,10 @@ pub fn guild_feud() -> CardDefinition {
         cost: cost(&[generic(5), r()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::GuildFeud,
         }],
         ..Default::default()
@@ -65,7 +68,10 @@ pub fn angel_of_serenity() -> CardDefinition {
         name: "Angel of Serenity",
         cost: cost(&[generic(4), w(), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 5,
         toughness: 6,
         keywords: vec![Keyword::Flying],
@@ -102,7 +108,10 @@ pub fn azors_elocutors() -> CardDefinition {
         toughness: 5,
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
                 effect: Effect::Seq(vec![
                     Effect::AddCounter {
                         what: Selector::This,
@@ -111,10 +120,15 @@ pub fn azors_elocutors() -> CardDefinition {
                     },
                     Effect::If {
                         cond: Predicate::ValueAtLeast(
-                            Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Filibuster },
+                            Value::CountersOn {
+                                what: Box::new(Selector::This),
+                                kind: CounterType::Filibuster,
+                            },
                             Value::Const(5),
                         ),
-                        then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                        then: Box::new(Effect::WinGame {
+                            who: PlayerRef::You,
+                        }),
                         else_: Box::new(Effect::Noop),
                     },
                 ]),
@@ -123,7 +137,10 @@ pub fn azors_elocutors() -> CardDefinition {
             // counters." Modeled on combat damage to the controller (the common
             // reset); noncombat damage is an approximation gap.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::ControllerDealtCombatDamage, EventScope::SelfSource),
+                event: EventSpec::new(
+                    EventKind::ControllerDealtCombatDamage,
+                    EventScope::SelfSource,
+                ),
                 effect: Effect::RemoveCounter {
                     what: Selector::This,
                     kind: CounterType::Filibuster,

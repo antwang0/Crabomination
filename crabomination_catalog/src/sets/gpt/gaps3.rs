@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{bloodthirst, etb, on_dies, target_any, target_filtered};
 use crate::effect::{Duration, Effect, OpeningHandEffect, PlayerRef, Selector};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// 1/1 white Spirit token with flying.
 fn spirit_token() -> TokenDefinition {
@@ -19,7 +19,10 @@ fn spirit_token() -> TokenDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
         keywords: vec![Keyword::Flying],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -38,13 +41,18 @@ pub fn graven_dominator() -> CardDefinition {
         name: "Graven Dominator",
         cost: cost(&[generic(4), crate::mana::w(), crate::mana::w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Gargoyle], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gargoyle],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
             etb(flatten.clone()),
-            on_dies(Effect::HauntCreature { body: Box::new(flatten) }),
+            on_dies(Effect::HauntCreature {
+                body: Box::new(flatten),
+            }),
         ],
         ..Default::default()
     }
@@ -62,7 +70,11 @@ pub fn seize_the_soul() -> CardDefinition {
                     .and(R::Not(Box::new(R::HasColor(Color::Black)))),
             ),
         },
-        Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: spirit_token() },
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: spirit_token(),
+        },
     ]);
     CardDefinition {
         name: "Seize the Soul",
@@ -70,7 +82,9 @@ pub fn seize_the_soul() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             body.clone(),
-            Effect::HauntCreature { body: Box::new(body) },
+            Effect::HauntCreature {
+                body: Box::new(body),
+            },
         ]),
         ..Default::default()
     }
@@ -96,7 +110,10 @@ pub fn leyline_of_lightning() -> CardDefinition {
                 else_: None,
             },
         }],
-        opening_hand: Some(OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
+        opening_hand: Some(OpeningHandEffect::StartInPlay {
+            tapped: false,
+            extra: Effect::Noop,
+        }),
         ..Default::default()
     }
 }
@@ -109,7 +126,10 @@ pub fn rabble_rouser() -> CardDefinition {
         name: "Rabble-Rouser",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin, CreatureType::Shaman], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![bloodthirst(1)],
@@ -137,7 +157,10 @@ pub fn borborygmos() -> CardDefinition {
         cost: cost(&[generic(3), r(), r(), g(), g()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![crate::card::Supertype::Legendary],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cyclops], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cyclops],
+            ..Default::default()
+        },
         power: 6,
         toughness: 7,
         keywords: vec![Keyword::Trample],
@@ -160,14 +183,20 @@ pub fn skarrgan_skybreaker() -> CardDefinition {
         name: "Skarrgan Skybreaker",
         cost: cost(&[generic(4), r(), r(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Giant, CreatureType::Shaman], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Shaman],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![bloodthirst(3)],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             sac_cost: true,
-            effect: Effect::DealDamageEqualToPower { source: Selector::This, target: target_any() },
+            effect: Effect::DealDamageEqualToPower {
+                source: Selector::This,
+                target: target_any(),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -181,7 +210,10 @@ fn sand_token() -> TokenDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sand], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sand],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -194,7 +226,10 @@ pub fn dune_brood_nephilim() -> CardDefinition {
         name: "Dune-Brood Nephilim",
         cost: cost(&[b(), r(), g(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nephilim], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nephilim],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
@@ -217,12 +252,18 @@ pub fn glint_eye_nephilim() -> CardDefinition {
         name: "Glint-Eye Nephilim",
         cost: cost(&[u(), b(), r(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Nephilim], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nephilim],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::TriggerEventAmount,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),

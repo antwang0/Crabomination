@@ -8,7 +8,8 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition, PlayerRef, ZoneDest, ZoneRef,
+    Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition, PlayerRef, ZoneDest,
+    ZoneRef,
 };
 use crate::game::effects::food_token;
 use crate::mana::{b, cost, g, generic, r, u, w};
@@ -23,7 +24,10 @@ pub fn pests_of_honor() -> CardDefinition {
         name: "Pests of Honor",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mouse], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
@@ -31,7 +35,9 @@ pub fn pests_of_honor() -> CardDefinition {
                 EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat),
                 EventScope::ActivePlayer,
             )
-            .with_filter(Predicate::CelebrationActive { who: PlayerRef::You }),
+            .with_filter(Predicate::CelebrationActive {
+                who: PlayerRef::You,
+            }),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -99,7 +105,10 @@ pub fn storyteller_pixie() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(Predicate::CastSpellIsAdventure),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -158,7 +167,10 @@ pub fn high_fae_negotiator() -> CardDefinition {
                     who: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::Const(3),
                 },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
             ]),
         }],
         ..Default::default()
@@ -192,7 +204,10 @@ pub fn fell_horseman() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Bottom },
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: LibraryPosition::Bottom,
+                },
             },
         }],
         ..Default::default()
@@ -239,7 +254,10 @@ pub fn intrepid_trufflesnout() -> CardDefinition {
         name: "Intrepid Trufflesnout",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         adventure: Some(Box::new(Adventure {
@@ -265,4 +283,3 @@ pub fn intrepid_trufflesnout() -> CardDefinition {
         ..Default::default()
     }
 }
-

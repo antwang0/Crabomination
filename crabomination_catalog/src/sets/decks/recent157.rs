@@ -9,7 +9,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, on_dies, on_you_attack, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, StaticEffect};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, hybrid, r, u, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u};
 
 /// Darkstar Augur — {2}{B} 2/3 Bat Warlock with flying and Offspring {B}. At
 /// the beginning of your upkeep, put the top card of your library into your
@@ -27,7 +27,10 @@ pub fn darkstar_augur() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Offspring(cost(&[b()]))],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::Seq(vec![
                 Effect::LoseLife {
                     who: Selector::You,
@@ -36,7 +39,10 @@ pub fn darkstar_augur() -> CardDefinition {
                         count: Value::ONE,
                     })),
                 },
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
         }],
         ..Default::default()
@@ -129,7 +135,9 @@ pub fn fecund_greenshell() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Creature.and(R::ToughnessGreaterThanPower),
                 }),
-            effect: Effect::RevealTopLandToBattlefieldElseHand { who: PlayerRef::You },
+            effect: Effect::RevealTopLandToBattlefieldElseHand {
+                who: PlayerRef::You,
+            },
         }],
         ..Default::default()
     }
@@ -157,7 +165,10 @@ pub fn hazardroot_herbalist() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::If {
-                cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::IsToken },
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: R::IsToken,
+                },
                 then: Box::new(Effect::GrantKeyword {
                     what: Selector::Target(0),
                     keyword: Keyword::Deathtouch,
@@ -323,7 +334,9 @@ pub fn waterspout_warden() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![on_you_attack(Effect::If {
-            cond: Predicate::AnotherCreatureEnteredThisTurn { who: PlayerRef::You },
+            cond: Predicate::AnotherCreatureEnteredThisTurn {
+                who: PlayerRef::You,
+            },
             then: Box::new(Effect::GrantKeyword {
                 what: Selector::This,
                 keyword: Keyword::Flying,

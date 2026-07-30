@@ -14,11 +14,20 @@ pub fn carom() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::RedirectNextDamage {
-                target: Selector::TargetFiltered { slot: 0, filter: R::Creature },
-                to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                target: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature,
+                },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 amount: Value::ONE,
             },
-            Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }

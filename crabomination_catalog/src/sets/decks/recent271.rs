@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value};
-use crate::mana::{b, cost, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, b, cost, generic, hybrid, r, u, w};
 
 /// Body Dropper — {B}{R} 2/2 Devil Warrior. Whenever you sacrifice another
 /// creature, put a +1/+1 counter on it. {B}{R}, Sacrifice another creature:
@@ -63,7 +63,10 @@ pub fn boon_of_safety() -> CardDefinition {
                 kind: CounterType::Shield,
                 amount: Value::ONE,
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
         ]),
         ..Default::default()
     }

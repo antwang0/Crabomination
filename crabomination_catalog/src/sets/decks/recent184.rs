@@ -4,9 +4,9 @@
 //! `crabomination/src/tests/recent184.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind,
-    EventScope, EventSpec, Keyword, SelectionRequirement as R, StaticAbility, StaticEffect,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes,
+    Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, flurry, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector};
@@ -19,7 +19,10 @@ fn mercenary_token() -> TokenDefinition {
         name: "Mercenary".to_string(),
         colors: vec![Color::Red],
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mercenary], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mercenary],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
@@ -87,7 +90,10 @@ pub fn hellspur_posse_boss() -> CardDefinition {
         toughness: 4,
         static_abilities: vec![StaticAbility {
             description: "Other outlaws you control have haste.",
-            effect: StaticEffect::GrantKeyword { applies_to: other_outlaws(), keyword: Keyword::Haste },
+            effect: StaticEffect::GrantKeyword {
+                applies_to: other_outlaws(),
+                keyword: Keyword::Haste,
+            },
         }],
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
@@ -120,7 +126,10 @@ pub fn kraum_violent_cacophony() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
             },
-            Effect::Draw { who: Selector::You, amount: Value::ONE },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         ]))],
         ..Default::default()
     }

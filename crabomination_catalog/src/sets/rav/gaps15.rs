@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect};
-use crate::mana::{cost, generic, r, Color};
+use crate::mana::{Color, cost, generic, r};
 
 /// Grifter's Blade — {3} Equipment with flash. As it enters, attach it to a
 /// creature you control. Equipped creature gets +1/+1. Equip {1}.
@@ -21,7 +21,11 @@ pub fn grifters_blade() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Flash, Keyword::Equip(cost(&[generic(1)]))],
-        equipped_bonus: Some(crate::card::EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::Attach {
             what: Selector::This,
             to: target_filtered(R::Creature.and(R::ControlledByYou)),
@@ -78,7 +82,10 @@ pub fn molten_sentry() -> CardDefinition {
         name: "Molten Sentry",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 2,
         toughness: 5,
         triggered_abilities: vec![etb(Effect::FlipCoin {

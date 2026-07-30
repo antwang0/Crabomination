@@ -5,9 +5,9 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
     EventSpec, Keyword, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, prowess};
 use crate::effect::PlayerRef;
-use crate::mana::{cost, u, w, generic};
+use crate::effect::shortcut::{etb, prowess};
+use crate::mana::{cost, generic, u, w};
 
 /// Peregrine Drake — {4}{U} 2/3 Drake with flying. ETB: untap up to five lands.
 pub fn peregrine_drake() -> CardDefinition {
@@ -15,7 +15,10 @@ pub fn peregrine_drake() -> CardDefinition {
         name: "Peregrine Drake",
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -34,7 +37,10 @@ pub fn cloud_elemental() -> CardDefinition {
         name: "Cloud Elemental",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
@@ -58,8 +64,15 @@ pub fn thought_courier() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
             ]),
             ..Default::default()
         }],
@@ -84,7 +97,10 @@ pub fn jhessian_thief() -> CardDefinition {
             prowess(),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             },
         ],
         ..Default::default()
@@ -97,7 +113,10 @@ pub fn sky_spirit() -> CardDefinition {
         name: "Sky Spirit",
         cost: cost(&[generic(1), w(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::FirstStrike],
@@ -112,13 +131,19 @@ pub fn cephalid_broker() -> CardDefinition {
         name: "Cephalid Broker",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Octopus], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Octopus],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::Const(2),
+                },
                 Effect::Discard {
                     who: Selector::Player(PlayerRef::Target(0)),
                     amount: Value::Const(2),
@@ -145,8 +170,14 @@ pub fn riverwise_augur() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-            Effect::PutOnLibraryFromHand { who: PlayerRef::You, count: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::PutOnLibraryFromHand {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+            },
         ]))],
         ..Default::default()
     }

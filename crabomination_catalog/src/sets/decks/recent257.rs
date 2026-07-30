@@ -31,8 +31,14 @@ pub fn alquist_proft_master_sleuth() -> CardDefinition {
             tap_cost: true,
             sac_other_filter: Some((R::HasArtifactSubtype(ArtifactSubtype::Clue), 1)),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::XFromCost },
-                Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::XFromCost,
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::XFromCost,
+                },
             ]),
             ..Default::default()
         }],

@@ -48,9 +48,14 @@ pub fn plunge_into_darkness() -> CardDefinition {
     let mode0 = Effect::SacrificeAnyNumber {
         who: PlayerRef::You,
         filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-        per_each: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+        per_each: Box::new(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(3),
+        }),
     };
-    let mode1 = Effect::PayLifeLookTake { who: PlayerRef::You };
+    let mode1 = Effect::PayLifeLookTake {
+        who: PlayerRef::You,
+    };
     CardDefinition {
         name: "Plunge into Darkness",
         cost: cost(&[generic(1), b()]),
@@ -98,9 +103,12 @@ pub fn serum_powder() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         opening_hand: Some(OpeningHandEffect::MulliganHelper),
@@ -122,7 +130,9 @@ pub fn spoils_of_the_vault() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::NameCard { what: Selector::This },
+            Effect::NameCard {
+                what: Selector::This,
+            },
             Effect::RevealUntilFind {
                 who: PlayerRef::You,
                 find: SelectionRequirement::NamedBySource,
@@ -175,8 +185,7 @@ pub fn thud() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::SacrificeAndRemember {
                 who: PlayerRef::You,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             },
             Effect::DealDamage {
                 to: Selector::Target(0),
@@ -202,8 +211,7 @@ pub fn inquisition_of_kozilek() -> CardDefinition {
         effect: Effect::DiscardChosen {
             from: Selector::Player(PlayerRef::EachOpponent),
             count: Value::Const(1),
-            filter: SelectionRequirement::Nonland
-                .and(SelectionRequirement::ManaValueAtMost(3)),
+            filter: SelectionRequirement::Nonland.and(SelectionRequirement::ManaValueAtMost(3)),
         },
         ..Default::default()
     }
@@ -264,8 +272,7 @@ pub fn ephemerate() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Exile {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
             },
             Effect::Move {
@@ -299,9 +306,19 @@ pub fn faithful_mending() -> CardDefinition {
         keywords: vec![Keyword::Flashback(flashback_cost)],
         // "You gain 2 life, draw two cards, then discard two cards."
         effect: Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(2),
+                random: false,
+            },
         ]),
         ..Default::default()
     }
@@ -327,9 +344,9 @@ pub fn force_of_negation() -> CardDefinition {
             not_your_turn_only: true,
             target_filter: None,
             condition: None,
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
+            exile_from_graveyard_count: 0,
+            return_to_hand: None,
+            sacrifice_permanents: None,
             effect_override: None,
             dash: false,
             blitz: false,
@@ -338,7 +355,8 @@ pub fn force_of_negation() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -357,10 +375,9 @@ pub fn goryos_vengeance() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary)),
-                ),
+                what: target_filtered(SelectionRequirement::Creature.and(
+                    SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary),
+                )),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -431,7 +448,10 @@ pub fn thoughtseize() -> CardDefinition {
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -462,10 +482,9 @@ pub fn consign_to_memory() -> CardDefinition {
             },
             // Mode 1: counter target legendary spell.
             Effect::CounterSpell {
-                what: target_filtered(
-                    SelectionRequirement::IsSpellOnStack
-                        .and(SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary)),
-                ),
+                what: target_filtered(SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary),
+                )),
             },
         ]),
         ..Default::default()
@@ -536,9 +555,9 @@ pub fn mystical_dispute() -> CardDefinition {
             not_your_turn_only: false,
             target_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
             condition: None,
-                    exile_from_graveyard_count: 0,
-                    return_to_hand: None,
-                    sacrifice_permanents: None,
+            exile_from_graveyard_count: 0,
+            return_to_hand: None,
+            sacrifice_permanents: None,
             effect_override: None,
             dash: false,
             blitz: false,
@@ -547,7 +566,8 @@ pub fn mystical_dispute() -> CardDefinition {
             emerge: None,
             impending: 0,
             offering: None,
-            warp: false,        }),
+            warp: false,
+        }),
         ..Default::default()
     }
 }
@@ -575,7 +595,9 @@ pub fn pest_control() -> CardDefinition {
                     Value::ManaValueOf(Box::new(Selector::TriggerSource)),
                     Value::ConvergedValue,
                 ),
-                then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                then: Box::new(Effect::Destroy {
+                    what: Selector::TriggerSource,
+                }),
                 else_: Box::new(Effect::Noop),
             }),
         },
@@ -611,7 +633,9 @@ pub fn wrath_of_the_skies() -> CardDefinition {
                         Value::XFromCost,
                     ),
                 ]),
-                then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                then: Box::new(Effect::Destroy {
+                    what: Selector::TriggerSource,
+                }),
                 else_: Box::new(Effect::Noop),
             }),
         },

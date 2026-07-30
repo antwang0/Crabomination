@@ -11,13 +11,19 @@ use crate::mana::{cost, generic, r};
 
 /// Enchantment/artifact that names a creature type at ETB and makes creature
 /// spells of that type cost `amount` less.
-fn incubator(name: &'static str, mana: &[crate::mana::ManaSymbol], types: Vec<CardType>,
-             amount: u32) -> CardDefinition {
+fn incubator(
+    name: &'static str,
+    mana: &[crate::mana::ManaSymbol],
+    types: Vec<CardType>,
+    amount: u32,
+) -> CardDefinition {
     CardDefinition {
         name,
         cost: cost(mana),
         card_types: types,
-        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        triggered_abilities: vec![etb(Effect::NameCreatureType {
+            what: Selector::This,
+        })],
         static_abilities: vec![StaticAbility {
             description: "Creature spells you cast of the chosen type cost less.",
             effect: StaticEffect::ChosenTypeSpellCostReduction { amount },
@@ -29,7 +35,12 @@ fn incubator(name: &'static str, mana: &[crate::mana::ManaSymbol], types: Vec<Ca
 /// Urza's Incubator — {3} Artifact. Choose a creature type. Creature spells of
 /// the chosen type cost {2} less to cast.
 pub fn urzas_incubator() -> CardDefinition {
-    incubator("Urza's Incubator", &[generic(3)], vec![CardType::Artifact], 2)
+    incubator(
+        "Urza's Incubator",
+        &[generic(3)],
+        vec![CardType::Artifact],
+        2,
+    )
 }
 
 /// Herald's Horn — {3} Artifact. Choose a creature type. Creatures you control

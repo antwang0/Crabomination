@@ -16,7 +16,10 @@ pub fn gigantosaurus() -> CardDefinition {
         name: "Gigantosaurus",
         cost: cost(&[g(), g(), g(), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
         power: 10,
         toughness: 10,
         ..Default::default()
@@ -36,11 +39,16 @@ pub fn cephalid_inkmage() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(3) })],
+        triggered_abilities: vec![etb(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(3),
+        })],
         static_abilities: vec![StaticAbility {
             description: "Threshold — can't be blocked while seven or more cards are in your graveyard.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::ThresholdActive { who: PlayerRef::You },
+                condition: Predicate::ThresholdActive {
+                    who: PlayerRef::You,
+                },
                 power: 0,
                 toughness: 0,
                 keywords: vec![Keyword::Unblockable],
@@ -61,12 +69,14 @@ pub fn dire_downdraft() -> CardDefinition {
         self_cost_reduction_if_target: Some((R::IsAttacking.or(R::Tapped), 1)),
         effect: Effect::Move {
             what: target_filtered(R::Creature),
-            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::OwnerChoice },
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOfMoved,
+                pos: LibraryPosition::OwnerChoice,
+            },
         },
         ..Default::default()
     }
 }
-
 
 /// Curator of Destinies — {4}{U}{U} 5/5 Sphinx. Can't be countered; flying. ETB:
 /// Fact or Fiction on the top five cards. (An opponent splits the reveal into a
@@ -76,11 +86,17 @@ pub fn curator_of_destinies() -> CardDefinition {
         name: "Curator of Destinies",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::CantBeCountered, Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::FactOrFiction { count: Value::Const(5), to_bottom: false })],
+        triggered_abilities: vec![etb(Effect::FactOrFiction {
+            count: Value::Const(5),
+            to_bottom: false,
+        })],
         ..Default::default()
     }
 }

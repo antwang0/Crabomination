@@ -14,7 +14,8 @@ use crate::mana::{b, cost, g, generic, r, u, w};
 /// top of your library revealed, casts instants and sorceries from there, and
 /// copies each one cast from the library.
 pub fn melek_izzet_paragon() -> CardDefinition {
-    let instant_or_sorcery = R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
+    let instant_or_sorcery =
+        R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery));
     CardDefinition {
         name: "Melek, Izzet Paragon",
         cost: cost(&[generic(4), u(), r()]),
@@ -34,15 +35,18 @@ pub fn melek_izzet_paragon() -> CardDefinition {
             StaticAbility {
                 description: "You may cast instant and sorcery spells from the top of your \
                               library.",
-                effect: StaticEffect::PlayFromLibraryTop { filter: instant_or_sorcery.clone() },
+                effect: StaticEffect::PlayFromLibraryTop {
+                    filter: instant_or_sorcery.clone(),
+                },
             },
         ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::All(vec![
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::All(vec![
                     Predicate::CastSpellMatches(instant_or_sorcery),
                     Predicate::CastSpellFromLibrary,
-                ])),
+                ]),
+            ),
             effect: Effect::CopySpellMayChooseTargets {
                 what: Selector::TriggerSource,
                 count: Value::ONE,
@@ -60,7 +64,9 @@ pub fn plasm_capture() -> CardDefinition {
         cost: cost(&[g(), g(), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+            Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack),
+            },
             Effect::AddManaAtNextMainPhase {
                 amount: Value::CounteredSpellManaValue,
                 any_color: true,
@@ -90,9 +96,7 @@ pub fn goblin_test_pilot() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::DealDamage {
-                to: Selector::RandomAmong(
-                    R::Creature.or(R::Player).or(R::Planeswalker),
-                ),
+                to: Selector::RandomAmong(R::Creature.or(R::Player).or(R::Planeswalker)),
                 amount: Value::Const(2),
             },
             ..Default::default()
@@ -114,7 +118,10 @@ pub fn catch_release() -> CardDefinition {
                 to: None,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::Untap {
+                what: Selector::Target(0),
+                up_to: None,
+            },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
@@ -126,14 +133,20 @@ pub fn catch_release() -> CardDefinition {
                 cost: cost(&[generic(4), r(), w()]),
                 card_types: vec![CardType::Sorcery],
                 effect: Effect::Seq(
-                    [R::Artifact, R::Creature, R::Enchantment, R::Land, R::Planeswalker]
-                        .into_iter()
-                        .map(|filter| Effect::Sacrifice {
-                            who: Selector::Player(crate::effect::PlayerRef::EachPlayer),
-                            count: Value::ONE,
-                            filter,
-                        })
-                        .collect(),
+                    [
+                        R::Artifact,
+                        R::Creature,
+                        R::Enchantment,
+                        R::Land,
+                        R::Planeswalker,
+                    ]
+                    .into_iter()
+                    .map(|filter| Effect::Sacrifice {
+                        who: Selector::Player(crate::effect::PlayerRef::EachPlayer),
+                        count: Value::ONE,
+                        filter,
+                    })
+                    .collect(),
                 ),
             },
             fuse: true,
@@ -183,11 +196,16 @@ pub fn flesh_blood() -> CardDefinition {
         // in the graveyard.
         effect: Effect::Seq(vec![
             Effect::AddCounter {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
             },
-            Effect::Exile { what: target_filtered(R::Creature.and(R::InGraveyard)) },
+            Effect::Exile {
+                what: target_filtered(R::Creature.and(R::InGraveyard)),
+            },
         ]),
         split: Some(Box::new(SplitCard {
             right: SplitHalf {
@@ -279,7 +297,9 @@ pub fn reap_intellect() -> CardDefinition {
                 link_to_source: true,
                 face_down: false,
             },
-            Effect::ExileSameNameAsTarget { what: Selector::CardExiledWithSource },
+            Effect::ExileSameNameAsTarget {
+                what: Selector::CardExiledWithSource,
+            },
         ]),
         ..Default::default()
     }

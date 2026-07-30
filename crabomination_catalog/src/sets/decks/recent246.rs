@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, investigate, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// 2/2 white and blue Detective creature token.
 fn detective_token() -> TokenDefinition {
@@ -16,7 +16,10 @@ fn detective_token() -> TokenDefinition {
         name: "Detective".into(),
         card_types: vec![CardType::Creature],
         colors: vec![Color::White, Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Detective], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Detective],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         ..Default::default()
@@ -40,7 +43,10 @@ pub fn rune_brand_juggler() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::OptionalTargets {
             min: 0,
             body: Box::new(Effect::Suspect {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
             }),
         })],
         activated_abilities: vec![ActivatedAbility {
@@ -129,15 +135,25 @@ pub fn convenient_target() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 1, ..Default::default() }),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            ..Default::default()
+        }),
         triggered_abilities: vec![etb(Effect::Suspect {
             what: Selector::AttachedTo(Box::new(Selector::This)),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), r()]),
             from_graveyard: true,
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -155,7 +171,10 @@ pub fn curious_inquiry() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
@@ -182,7 +201,10 @@ pub fn due_diligence() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 2,

@@ -6,7 +6,7 @@
 use crate::card::{CardDefinition, CardType, Keyword, SelectionRequirement};
 use crate::effect::shortcut::{deal, pump_target, target, target_filtered};
 use crate::effect::{Effect, LibraryPosition, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{Color, cost, g, generic, hybrid, r, u, w};
 
 /// Burn Trail — {3}{R} Sorcery. "Burn Trail deals 3 damage to any target.
 /// Conspire."
@@ -76,8 +76,15 @@ pub fn ghastly_discovery() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Conspire],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
         ]),
         ..Default::default()
     }
@@ -157,7 +164,10 @@ pub fn aethertow() -> CardDefinition {
             what: target_filtered(
                 SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
             ),
-            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOfMoved,
+                pos: LibraryPosition::Top,
+            },
         },
         ..Default::default()
     }
@@ -188,10 +198,16 @@ pub fn giantbaiting() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Conspire],
         effect: Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: giant },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: giant,
+            },
             Effect::DelayUntil {
                 kind: DelayedTriggerKind::NextEndStep,
-                body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),
+                body: Box::new(Effect::Exile {
+                    what: Selector::LastCreatedToken,
+                }),
             },
         ]),
         ..Default::default()

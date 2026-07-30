@@ -17,7 +17,7 @@ use crate::effect::shortcut::{
     magecraft_treasure, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, hybrid, r, u, Color};
+use crate::mana::{Color, cost, generic, hybrid, r, u};
 
 // ── Prismari Pledgemage ─────────────────────────────────────────────────────
 
@@ -28,7 +28,10 @@ use crate::mana::{cost, generic, hybrid, r, u, Color};
 pub fn prismari_pledgemage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pledgemage",
-        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+        cost: cost(&[
+            hybrid(Color::Blue, Color::Red),
+            hybrid(Color::Blue, Color::Red),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Orc, CreatureType::Wizard],
@@ -292,7 +295,10 @@ pub fn creative_outburst() -> CardDefinition {
             },
         ]),
         activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+            mana_cost: cost(&[
+                hybrid(Color::Blue, Color::Red),
+                hybrid(Color::Blue, Color::Red),
+            ]),
             from_hand: true,
             discard_self_cost: true,
             effect: Effect::CreateToken {
@@ -336,7 +342,11 @@ fn prismari_elemental_token() -> TokenDefinition {
 pub fn elemental_summoning() -> CardDefinition {
     CardDefinition {
         name: "Elemental Summoning",
-        cost: cost(&[generic(3), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+        cost: cost(&[
+            generic(3),
+            hybrid(Color::Blue, Color::Red),
+            hybrid(Color::Blue, Color::Red),
+        ]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
@@ -402,7 +412,6 @@ pub fn symmetry_sage() -> CardDefinition {
     }
 }
 
-
 // ── Prismari Pyrotechnician (batch 17) ──────────────────────────────────────
 
 /// Prismari Pyrotechnician — {1}{U}{R}, 2/2 Human Wizard.
@@ -426,9 +435,11 @@ pub fn prismari_pyrotechnician() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![magecraft(Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::HasCardType(CardType::Planeswalker))),
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
+            ),
             amount: Value::Const(1),
         })],
         ..Default::default()
@@ -459,8 +470,15 @@ pub fn prismari_looter() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
             ]),
         }],
         ..Default::default()
@@ -831,8 +849,7 @@ pub fn elemental_expressionist() -> CardDefinition {
             // instead" — death half (graveyard → exile redirect, EOT).
             Effect::ExileIfWouldDieThisTurn {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
             },
             // "When this creature is put into exile, create a 4/4 blue and
@@ -946,8 +963,7 @@ pub fn prismari_cascade_volley() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
                 amount: Value::Const(1),
             },
@@ -1090,8 +1106,7 @@ pub fn prismari_embershaper() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Tap {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
             },
             Effect::AddCounter {
@@ -1153,7 +1168,10 @@ pub fn prismari_mindwave() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::Discard {
                 who: Selector::You,
                 amount: Value::Const(1),
@@ -1223,7 +1241,10 @@ pub fn prismari_stormspire() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         }],
         ..Default::default()
     }
@@ -1254,8 +1275,7 @@ pub fn prismari_spellforger_b22() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 power: Value::Const(1),
                 toughness: Value::Const(0),
@@ -1288,8 +1308,7 @@ pub fn prismari_volleyfire() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                 ),
                 amount: Value::Const(4),
             },
@@ -1322,8 +1341,14 @@ pub fn prismari_spell_shaper() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -1342,7 +1367,10 @@ pub fn prismari_stormgaze() -> CardDefinition {
         cost: cost(&[generic(2), u(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::Discard {
                 who: Selector::You,
                 amount: Value::Const(1),
@@ -1512,10 +1540,7 @@ pub fn prismari_vorthos() -> CardDefinition {
                     random: false,
                 },
                 Effect::If {
-                    cond: Predicate::ValueAtLeast(
-                        Value::CardsDiscardedThisEffect,
-                        Value::Const(1),
-                    ),
+                    cond: Predicate::ValueAtLeast(Value::CardsDiscardedThisEffect, Value::Const(1)),
                     then: Box::new(Effect::DealDamage {
                         to: target_filtered(
                             SelectionRequirement::Creature
@@ -1888,7 +1913,6 @@ pub fn prismari_sparkbright() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Push (modern_decks) batch 24++: 1 more Prismari card ───────────────────
 
@@ -3207,10 +3231,7 @@ pub fn prismari_maestro() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::SelfSource,
-            ),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(2),
@@ -3286,7 +3307,10 @@ pub fn prismari_quickcast() -> CardDefinition {
                 ),
                 amount: Value::Const(2),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -3308,8 +3332,14 @@ pub fn prismari_starcaller() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -3337,7 +3367,6 @@ pub fn prismari_scryer() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Batch 42 (modern_decks) — Prismari expansion ────────────────────────────
 
@@ -3452,7 +3481,6 @@ pub fn prismari_soundsmith() -> CardDefinition {
     }
 }
 
-
 /// Prismari Pyroartist — {2}{R}, 2/3 Human Wizard.
 /// Synthesised Oracle: "Magecraft — Whenever you cast or copy an instant
 /// or sorcery spell, deal 1 damage to target creature or player." A
@@ -3470,9 +3498,7 @@ pub fn prismari_pyroartist() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![magecraft(Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::Player),
-            ),
+            to: target_filtered(SelectionRequirement::Creature.or(SelectionRequirement::Player)),
             amount: Value::Const(1),
         })],
         ..Default::default()
@@ -6530,7 +6556,10 @@ pub fn prismari_spellstrike_b132() -> CardDefinition {
                         .or(SelectionRequirement::Planeswalker),
                 ),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -7433,8 +7462,7 @@ pub fn prismari_sleetcaster_b146() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Tap {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
         })],
         ..Default::default()
@@ -7934,9 +7962,7 @@ pub fn prismari_inferno_b150() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::Player),
-            ),
+            to: target_filtered(SelectionRequirement::Creature.or(SelectionRequirement::Player)),
             amount: Value::Const(3),
         },
         ..Default::default()
@@ -8234,7 +8260,10 @@ pub fn prismari_stormbreaker_b154() -> CardDefinition {
                 ),
                 amount: Value::Const(2),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -8289,7 +8318,10 @@ pub fn prismari_combustion_b155() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             deal(2, target_filtered(SelectionRequirement::Creature)),
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -8322,8 +8354,15 @@ pub fn prismari_surge_b155() -> CardDefinition {
         cost: cost(&[generic(1), u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
         ]),
         ..Default::default()
     }
@@ -8397,11 +8436,14 @@ pub fn prismari_quickdraw_b155() -> CardDefinition {
         name: "Prismari Quickdraw (b155)",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Instant],
-        effect: deal(3, target_filtered(
-            SelectionRequirement::Creature
-                .or(SelectionRequirement::Player)
-                .or(SelectionRequirement::Planeswalker),
-        )),
+        effect: deal(
+            3,
+            target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+        ),
         ..Default::default()
     }
 }
@@ -8526,7 +8568,10 @@ pub fn prismari_tidepainter_b155() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![magecraft(Effect::MayDo {
             description: "Draw a card?".into(),
-            body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            body: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
         })],
         ..Default::default()
     }
@@ -8566,8 +8611,7 @@ pub fn prismari_forgewright_b155() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: Selector::EachPermanent(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
             amount: Value::Const(1),
         })],
@@ -8589,7 +8633,10 @@ pub fn prismari_tinkertinker_b155() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
             Effect::MayDo {
                 description: "Draw a card?".into(),
                 body: Box::new(Effect::Draw {
@@ -8647,12 +8694,18 @@ pub fn prismari_spellsign_b155() -> CardDefinition {
         cost: cost(&[generic(2), u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            deal(2, target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
-            )),
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            deal(
+                2,
+                target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+            ),
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -8839,7 +8892,10 @@ pub fn prismari_flickerflame_b158() -> CardDefinition {
                 ),
                 amount: Value::Const(3),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -8874,7 +8930,8 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
                 sac_other_filter: None,
-                tap_other_filter: None, from_hand: false,
+                tap_other_filter: None,
+                from_hand: false,
                 self_counter_cost_reduction: None,
                 ..Default::default()
             },
@@ -8884,8 +8941,15 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
                 ]),
                 once_per_turn: false,
                 sorcery_speed: false,
@@ -8896,7 +8960,8 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
                 sac_other_filter: None,
-                tap_other_filter: None, from_hand: false,
+                tap_other_filter: None,
+                from_hand: false,
                 self_counter_cost_reduction: None,
                 ..Default::default()
             },
@@ -8919,7 +8984,10 @@ pub fn prismari_brushflare_b160() -> CardDefinition {
                 amount: Value::Const(2),
                 to: Selector::Target(0),
             },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -9108,7 +9176,10 @@ pub fn prismari_voidshaper_b161() -> CardDefinition {
                 amount: Value::Const(1),
                 to: Selector::Target(0),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -9206,7 +9277,10 @@ pub fn prismari_stormbolt_b162() -> CardDefinition {
                 amount: Value::Const(3),
                 to: Selector::Target(0),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -9300,7 +9374,10 @@ pub fn prismari_stormcrash_b164() -> CardDefinition {
                 amount: Value::Const(4),
                 to: Selector::Target(0),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -9569,8 +9646,7 @@ pub fn prismari_inferno_b166() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: Selector::EachPermanent(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
             amount: Value::Const(2),
         },
@@ -9891,8 +9967,7 @@ pub fn prismari_sparkforge_b171() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
             amount: Value::Const(1),
         })],
@@ -10179,7 +10254,10 @@ pub fn prismari_stormwave_b191() -> CardDefinition {
                 count: Value::Const(1),
                 definition: treasure_token(),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
                 amount: Value::Const(2),
@@ -10210,8 +10288,8 @@ pub fn prismari_wavetamer_b191() -> CardDefinition {
 /// Prismari Tinkermage (b191) — {U}{R} 2/2 Human Artificer.
 /// ETB mint a Treasure.
 pub fn prismari_tinkermage_b191() -> CardDefinition {
-    use crate::game::effects::treasure_token;
     use crate::effect::shortcut::etb_mint_token;
+    use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Prismari Tinkermage (b191)",
         cost: cost(&[u(), r()]),
@@ -10287,7 +10365,10 @@ pub fn prismari_sparkforge_ii_b190() -> CardDefinition {
                 to: target_filtered(SelectionRequirement::Creature),
                 amount: Value::Const(2),
             },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -10318,8 +10399,8 @@ pub fn prismari_magmamancer_b189() -> CardDefinition {
 /// Prismari Treasurewright (b189) — {1}{U}{R} 2/3 Artificer.
 /// ETB mints a Treasure token + magecraft scry 1.
 pub fn prismari_treasurewright_b189() -> CardDefinition {
-    use crate::game::effects::treasure_token;
     use crate::effect::shortcut::etb_mint_token;
+    use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Prismari Treasurewright (b189)",
         cost: cost(&[generic(1), u(), r()]),
@@ -10330,10 +10411,7 @@ pub fn prismari_treasurewright_b189() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        triggered_abilities: vec![
-            etb_mint_token(treasure_token(), 1),
-            magecraft_scry(1),
-        ],
+        triggered_abilities: vec![etb_mint_token(treasure_token(), 1), magecraft_scry(1)],
         ..Default::default()
     }
 }
@@ -10455,7 +10533,10 @@ pub fn prismari_sparkforge_b187() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![
             magecraft_treasure(),
-            magecraft(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) }),
+            magecraft(Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            }),
         ],
         ..Default::default()
     }
@@ -10756,7 +10837,10 @@ pub fn prismari_cantrap_b193() -> CardDefinition {
         name: "Prismari Cantrap (b193)",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        },
         ..Default::default()
     }
 }
@@ -10794,8 +10878,14 @@ pub fn prismari_wavewright_b193() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -10978,7 +11068,10 @@ pub fn prismari_riverlord_b195() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
             Effect::DealDamage {
                 to: target_filtered(
                     SelectionRequirement::Creature
@@ -11066,7 +11159,10 @@ pub fn prismari_pinger_b196() -> CardDefinition {
                 ),
                 amount: Value::Const(1),
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -11243,7 +11339,10 @@ pub fn prismari_loot_b198() -> CardDefinition {
         cost: cost(&[u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::Discard {
                 who: Selector::You,
                 amount: Value::Const(1),
@@ -11412,7 +11511,13 @@ pub fn prismari_notebook_b200() -> CardDefinition {
         name: "Prismari Notebook (b200)",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) }, draw(1)]),
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(3),
+            },
+            draw(1),
+        ]),
         ..Default::default()
     }
 }
@@ -11422,14 +11527,17 @@ pub fn prismari_notebook_b200() -> CardDefinition {
 /// Prismari Stormcrash (b201) — {2}{U}{R} Instant.
 /// Deal 3 damage to any target and draw 1 card.
 pub fn prismari_stormcrash_b201() -> CardDefinition {
-    use crate::effect::shortcut::target_any;
     use crate::effect::shortcut::draw;
+    use crate::effect::shortcut::target_any;
     CardDefinition {
         name: "Prismari Stormcrash (b201)",
         cost: cost(&[generic(2), u(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+            Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(3),
+            },
             draw(1),
         ]),
         ..Default::default()
@@ -11483,7 +11591,10 @@ pub fn prismari_bolt_b202() -> CardDefinition {
         name: "Prismari Bolt (b202)",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+        effect: Effect::DealDamage {
+            to: target_any(),
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -11516,8 +11627,14 @@ pub fn prismari_spellcraft_b202() -> CardDefinition {
         cost: cost(&[generic(1), u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -11625,8 +11742,14 @@ pub fn prismari_surge_ii_b202() -> CardDefinition {
         cost: cost(&[generic(3), u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_any(), amount: Value::Const(4) },
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(4),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -11658,8 +11781,15 @@ pub fn prismari_spiketide_b202() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: true },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(2),
+                random: true,
+            },
         ]),
         ..Default::default()
     }
@@ -11692,8 +11822,15 @@ pub fn prismari_cantrip_b203() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: true },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: true,
+            },
         ]),
         ..Default::default()
     }
@@ -11718,7 +11855,10 @@ pub fn prismari_flame_b203() -> CardDefinition {
         name: "Prismari Flame (b203)",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(4) },
+        effect: Effect::DealDamage {
+            to: target_any(),
+            amount: Value::Const(4),
+        },
         ..Default::default()
     }
 }
@@ -11978,8 +12118,14 @@ pub fn prismari_windscholar_b206() -> CardDefinition {
         toughness: 3,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -12059,7 +12205,9 @@ pub fn prismari_goldsmith_b207() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![crate::effect::shortcut::etb(crate::effect::shortcut::mint_treasures(2))],
+        triggered_abilities: vec![crate::effect::shortcut::etb(
+            crate::effect::shortcut::mint_treasures(2),
+        )],
         ..Default::default()
     }
 }

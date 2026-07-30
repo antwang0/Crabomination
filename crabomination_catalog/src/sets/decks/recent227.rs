@@ -30,7 +30,10 @@ pub fn persuasive_interrogators() -> CardDefinition {
                         what: Selector::TriggerSource,
                         filter: R::HasArtifactSubtype(ArtifactSubtype::Clue),
                     }),
-                effect: Effect::AddPoison { who: each_opponent(), amount: Value::Const(2) },
+                effect: Effect::AddPoison {
+                    who: each_opponent(),
+                    amount: Value::Const(2),
+                },
             },
         ],
         ..Default::default()

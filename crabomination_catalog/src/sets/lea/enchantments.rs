@@ -58,7 +58,10 @@ pub fn stasis() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Players skip their untap steps.",
-            effect: StaticEffect::SkipStep { step: TurnStep::Untap, all_players: true },
+            effect: StaticEffect::SkipStep {
+                step: TurnStep::Untap,
+                all_players: true,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -94,7 +97,10 @@ pub fn animate_dead() -> CardDefinition {
                     slot: 0,
                     filter: SelectionRequirement::Creature,
                 },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         }],
         ..Default::default()

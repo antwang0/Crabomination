@@ -10,7 +10,7 @@ use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, Predicate, Selector, Value,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, w};
 
 /// Serra Redeemer — {3}{W}{W} 2/4 Angel Soldier. Flying. Whenever another
 /// creature you control with power 2 or less enters, put two +1/+1 counters on
@@ -48,7 +48,10 @@ pub fn serra_redeemer() -> CardDefinition {
 pub fn wandertale_mentor() -> CardDefinition {
     let tap_for = |c: Color| ActivatedAbility {
         tap_cost: true,
-        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![c]) },
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::Colors(vec![c]),
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -92,11 +95,18 @@ pub fn starseer_mentor() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::Any(vec![
-                    Predicate::PlayerGainedLifeThisTurn { who: PlayerRef::You },
-                    Predicate::PlayerLostLifeThisTurn { who: PlayerRef::You },
-                ])),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::Any(vec![
+                Predicate::PlayerGainedLifeThisTurn {
+                    who: PlayerRef::You,
+                },
+                Predicate::PlayerLostLifeThisTurn {
+                    who: PlayerRef::You,
+                },
+            ])),
             effect: Effect::Punisher {
                 // Each opponent chooses: the options run with the chooser as
                 // controller (`You` = that opponent), so they sac/discard their

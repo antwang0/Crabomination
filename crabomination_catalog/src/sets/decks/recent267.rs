@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, w};
 
 /// Akki Scrapchomper — {R} 1/1 Phyrexian Goblin. {1}{R}, {T}, Sacrifice an
 /// artifact or land: Draw a card.
@@ -29,7 +29,10 @@ pub fn akki_scrapchomper() -> CardDefinition {
             mana_cost: cost(&[generic(1), r()]),
             tap_cost: true,
             sac_other_filter: Some((R::Artifact.or(R::Land), 1)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -55,7 +58,9 @@ pub fn argothian_opportunist() -> CardDefinition {
                 count: Value::ONE,
                 definition: crate::game::effects::powerstone_token(),
             },
-            Effect::Tap { what: Selector::LastCreatedToken },
+            Effect::Tap {
+                what: Selector::LastCreatedToken,
+            },
         ]))],
         ..Default::default()
     }
@@ -103,7 +108,10 @@ pub fn gnawing_crescendo() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         keywords: vec![Keyword::CantBlock],
         ..Default::default()
     };
@@ -113,7 +121,10 @@ pub fn gnawing_crescendo() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
-                what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+                what: Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: R::Creature,
+                },
                 power: Value::Const(2),
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,

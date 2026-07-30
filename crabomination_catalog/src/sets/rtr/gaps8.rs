@@ -8,10 +8,8 @@ use crate::card::{
     Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{
-    Duration, ManaPayload, PlayerRef, Selector, StaticEffect, ZoneDest, ZoneRef,
-};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::effect::{Duration, ManaPayload, PlayerRef, Selector, StaticEffect, ZoneDest, ZoneRef};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Tower Drake — {2}{U} 2/1 Drake with flying. {W}: gets +0/+1 until end of turn.
 pub fn tower_drake() -> CardDefinition {
@@ -19,7 +17,10 @@ pub fn tower_drake() -> CardDefinition {
         name: "Tower Drake",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -44,11 +45,19 @@ pub fn paralyzing_grasp() -> CardDefinition {
         name: "Paralyzing Grasp",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         static_abilities: vec![StaticAbility {
             description: "Enchanted creature doesn't untap during its controller's untap step.",
-            effect: StaticEffect::PreventUntap { applies_to: Selector::AttachedTo(Box::new(Selector::This)) },
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
         }],
         ..Default::default()
     }
@@ -62,7 +71,9 @@ pub fn essence_backlash() -> CardDefinition {
         cost: cost(&[generic(2), u(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack.and(R::Creature)) },
+            Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack.and(R::Creature)),
+            },
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                 amount: Value::PowerOf(Box::new(Selector::Target(0))),
@@ -76,13 +87,18 @@ pub fn essence_backlash() -> CardDefinition {
 /// don't control. Overload {1}{U}{U}{R} (counter each spell you don't control).
 pub fn counterflux() -> CardDefinition {
     let overload = Effect::ForEach {
-        selector: Selector::EachMatching { zone: ZoneRef::Stack, filter: R::Any },
+        selector: Selector::EachMatching {
+            zone: ZoneRef::Stack,
+            filter: R::Any,
+        },
         body: Box::new(Effect::If {
             cond: Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: R::ControlledByOpponent,
             },
-            then: Box::new(Effect::CounterSpell { what: Selector::TriggerSource }),
+            then: Box::new(Effect::CounterSpell {
+                what: Selector::TriggerSource,
+            }),
             else_: Box::new(Effect::Noop),
         }),
     };
@@ -91,7 +107,9 @@ pub fn counterflux() -> CardDefinition {
         cost: cost(&[u(), u(), r()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::CantBeCountered],
-        effect: Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack.and(R::ControlledByOpponent)) },
+        effect: Effect::CounterSpell {
+            what: target_filtered(R::IsSpellOnStack.and(R::ControlledByOpponent)),
+        },
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[generic(1), u(), u(), r()]),
             effect_override: Some(overload),
@@ -109,7 +127,9 @@ pub fn destroy_the_evidence() -> CardDefinition {
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Land) },
+            Effect::Destroy {
+                what: target_filtered(R::Land),
+            },
             Effect::MillUntilLands {
                 who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                 lands: Value::ONE,
@@ -127,14 +147,20 @@ pub fn mercurial_chemister() -> CardDefinition {
         name: "Mercurial Chemister",
         cost: cost(&[generic(3), u(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Wizard], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[u()]),
                 tap_cost: true,
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -143,7 +169,9 @@ pub fn mercurial_chemister() -> CardDefinition {
                 effect: Effect::Seq(vec![
                     Effect::Move {
                         what: target_filtered(
-                            (R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))).and(R::InYourGraveyard),
+                            (R::HasCardType(CardType::Instant)
+                                .or(R::HasCardType(CardType::Sorcery)))
+                            .and(R::InYourGraveyard),
                         ),
                         to: ZoneDest::Exile,
                     },
@@ -169,7 +197,10 @@ pub fn rix_maadi_guildmage() -> CardDefinition {
         name: "Rix Maadi Guildmage",
         cost: cost(&[b(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Shaman], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![
@@ -187,7 +218,10 @@ pub fn rix_maadi_guildmage() -> CardDefinition {
             // "lost life this turn" restriction isn't a targeting filter yet.
             ActivatedAbility {
                 mana_cost: cost(&[b(), r()]),
-                effect: Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE },
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
         ],
@@ -205,7 +239,10 @@ pub fn grove_of_the_guardian() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -222,7 +259,10 @@ pub fn grove_of_the_guardian() -> CardDefinition {
                         toughness: 8,
                         card_types: vec![CardType::Creature],
                         colors: vec![Color::Green, Color::White],
-                        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Elemental],
+                            ..Default::default()
+                        },
                         keywords: vec![Keyword::Vigilance],
                         ..Default::default()
                     },

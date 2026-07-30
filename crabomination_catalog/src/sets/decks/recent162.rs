@@ -3,8 +3,8 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect,
-    Subtypes, TriggeredAbility, Value, WardCost, Zone,
+    EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
+    StaticEffect, Subtypes, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::shortcut::{on_attack, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef};
@@ -21,13 +21,22 @@ pub fn felling_blow() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::AddCounter {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
             },
             Effect::DealDamageEqualToPower {
-                source: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
-                target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) },
+                source: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
+                target: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                },
             },
         ]),
         ..Default::default()
@@ -43,7 +52,10 @@ pub fn inspiration_from_beyond() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(5), u(), u()]))],
         effect: Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             Effect::ReturnGraveyardCardsToHand {
                 filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
                 max: Value::ONE,
@@ -60,7 +72,10 @@ pub fn sower_of_chaos() -> CardDefinition {
         name: "Sower of Chaos",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Devil],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
@@ -90,8 +105,13 @@ pub fn searslicer_goblin() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::PlayerAttackedThisTurn {
+                who: PlayerRef::You,
+            }),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -109,7 +129,10 @@ fn goblin_token() -> crate::card::TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![crate::mana::Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -121,7 +144,10 @@ pub fn sire_of_seven_deaths() -> CardDefinition {
         name: "Sire of Seven Deaths",
         cost: cost(&[generic(7)]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
         power: 7,
         toughness: 7,
         keywords: vec![
@@ -170,17 +196,27 @@ pub fn slumbering_cerberus() -> CardDefinition {
         name: "Slumbering Cerberus",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         power: 4,
         toughness: 2,
         static_abilities: vec![StaticAbility {
             description: "This creature doesn't untap during your untap step.",
-            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::This,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
-                .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::ONE }),
-            effect: Effect::Untap { what: Selector::This, up_to: None },
+                .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                    at_least: Value::ONE,
+                }),
+            effect: Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            },
         }],
         ..Default::default()
     }
@@ -229,7 +265,10 @@ pub fn sphinx_of_forgotten_lore() -> CardDefinition {
         name: "Sphinx of Forgotten Lore",
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flash, Keyword::Flying],
@@ -311,7 +350,9 @@ pub fn luminous_rebuke() -> CardDefinition {
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Instant],
         self_cost_reduction_if_target: Some((R::Tapped, 3)),
-        effect: Effect::Destroy { what: target_filtered(R::Creature) },
+        effect: Effect::Destroy {
+            what: target_filtered(R::Creature),
+        },
         ..Default::default()
     }
 }

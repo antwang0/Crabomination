@@ -8,9 +8,9 @@ use crate::card::{
     TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{scavenge, target_filtered};
-use crate::game::TurnStep;
 use crate::effect::{Duration, Effect, PlayerRef, Selector};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::game::TurnStep;
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 /// Deadbridge Goliath — {2}{G}{G} 5/5 Insect. Scavenge {4}{G}{G}.
 pub fn deadbridge_goliath() -> CardDefinition {
@@ -18,7 +18,10 @@ pub fn deadbridge_goliath() -> CardDefinition {
         name: "Deadbridge Goliath",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         activated_abilities: vec![scavenge(cost(&[generic(4), g(), g()]))],
@@ -32,7 +35,10 @@ pub fn archweaver() -> CardDefinition {
         name: "Archweaver",
         cost: cost(&[generic(5), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Reach, Keyword::Trample],
@@ -47,7 +53,10 @@ pub fn lotleth_troll() -> CardDefinition {
         name: "Lotleth Troll",
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie, CreatureType::Troll], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Troll],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Trample],
@@ -63,7 +72,9 @@ pub fn lotleth_troll() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[b()]),
-                effect: Effect::Regenerate { what: Selector::This },
+                effect: Effect::Regenerate {
+                    what: Selector::This,
+                },
                 ..Default::default()
             },
         ],
@@ -76,9 +87,16 @@ pub fn lotleth_troll() -> CardDefinition {
 pub fn cryptborn_horror() -> CardDefinition {
     CardDefinition {
         name: "Cryptborn Horror",
-        cost: cost(&[generic(1), hybrid(Color::Black, Color::Red), hybrid(Color::Black, Color::Red)]),
+        cost: cost(&[
+            generic(1),
+            hybrid(Color::Black, Color::Red),
+            hybrid(Color::Black, Color::Red),
+        ]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
         power: 0,
         toughness: 0,
         keywords: vec![Keyword::Trample],
@@ -98,7 +116,10 @@ pub fn hellhole_flailer() -> CardDefinition {
         name: "Hellhole Flailer",
         cost: cost(&[generic(1), b(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ogre, CreatureType::Warrior], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ogre, CreatureType::Warrior],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Unleash],
@@ -118,19 +139,36 @@ pub fn hellhole_flailer() -> CardDefinition {
 
 /// A stat-drain Aura that also drains the enchanted creature's controller each
 /// upkeep (CR 702.6e aura-granted step trigger, keyed on the host controller).
-fn drain_aura(name: &'static str, mana: crate::mana::ManaCost, pt: (i32, i32), loss: i32) -> CardDefinition {
+fn drain_aura(
+    name: &'static str,
+    mana: crate::mana::ManaCost,
+    pt: (i32, i32),
+    loss: i32,
+) -> CardDefinition {
     CardDefinition {
         name,
         cost: mana,
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: pt.0,
             toughness: pt.1,
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
-                effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(loss) },
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(loss),
+                },
             }],
             ..Default::default()
         }),
@@ -146,14 +184,20 @@ pub fn soul_tithe() -> CardDefinition {
         name: "Soul Tithe",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         effect: Effect::Attach {
             what: Selector::This,
             to: target_filtered(R::Permanent.and(R::Nonland)),
         },
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
                 effect: Effect::SacrificeSourceUnlessPayManaValue,
             }],
             ..Default::default()
@@ -169,12 +213,21 @@ pub fn chronic_flooding() -> CardDefinition {
         name: "Chronic Flooding",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land),
+        },
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
-                effect: Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+                effect: Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
             }],
             ..Default::default()
         }),
@@ -201,8 +254,14 @@ fn granted_keyword_aura(
         name,
         cost: mana,
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: pt.0,
             toughness: pt.1,
@@ -224,13 +283,25 @@ fn granted_keyword_aura(
 /// Pursuit of Flight — {1}{R} Aura. Enchanted creature gets +2/+2 and has
 /// "{U}: This creature gains flying until end of turn."
 pub fn pursuit_of_flight() -> CardDefinition {
-    granted_keyword_aura("Pursuit of Flight", cost(&[generic(1), r()]), (2, 2), cost(&[u()]), Keyword::Flying)
+    granted_keyword_aura(
+        "Pursuit of Flight",
+        cost(&[generic(1), r()]),
+        (2, 2),
+        cost(&[u()]),
+        Keyword::Flying,
+    )
 }
 
 /// Deviant Glee — {B} Aura. Enchanted creature gets +2/+1 and has "{R}: This
 /// creature gains trample until end of turn."
 pub fn deviant_glee() -> CardDefinition {
-    granted_keyword_aura("Deviant Glee", cost(&[b()]), (2, 1), cost(&[r()]), Keyword::Trample)
+    granted_keyword_aura(
+        "Deviant Glee",
+        cost(&[b()]),
+        (2, 1),
+        cost(&[r()]),
+        Keyword::Trample,
+    )
 }
 
 /// Knightly Valor — {4}{W} Aura. ETB: create a 2/2 white Knight token with
@@ -240,8 +311,14 @@ pub fn knightly_valor() -> CardDefinition {
         name: "Knightly Valor",
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 2,
@@ -260,7 +337,10 @@ pub fn knightly_valor() -> CardDefinition {
                     keywords: vec![Keyword::Vigilance],
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::White],
-                    subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Knight],
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
             },

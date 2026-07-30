@@ -10,12 +10,17 @@
 use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump,
+    target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x, ManaCost};
+use crate::mana::{
+    Color, ManaCost, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x,
+};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -93,8 +98,10 @@ pub fn star_pupils_papers() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -132,8 +139,8 @@ fn snarl_land(
     use super::super::tap_add;
     use crate::card::{SelectionRequirement, TriggeredAbility};
     use crate::effect::{EventKind, EventScope, EventSpec};
-    let reveal_filter = SelectionRequirement::HasLandType(type_a)
-        .or(SelectionRequirement::HasLandType(type_b));
+    let reveal_filter =
+        SelectionRequirement::HasLandType(type_a).or(SelectionRequirement::HasLandType(type_b));
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
@@ -147,7 +154,9 @@ fn snarl_land(
             effect: Effect::IfRevealFromHand {
                 filter: reveal_filter,
                 then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap { what: Selector::This }),
+                else_: Box::new(Effect::Tap {
+                    what: Selector::This,
+                }),
             },
         }],
         ..Default::default()
@@ -268,9 +277,8 @@ pub fn dragons_approach() -> CardDefinition {
                         Effect::ExileResolvingSpell,
                         Effect::Search {
                             who: PlayerRef::You,
-                            filter: SelectionRequirement::Creature.and(
-                                SelectionRequirement::HasCreatureType(CreatureType::Dragon),
-                            ),
+                            filter: SelectionRequirement::Creature
+                                .and(SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
                             to: ZoneDest::Battlefield {
                                 controller: PlayerRef::You,
                                 tapped: false,
@@ -384,8 +392,13 @@ pub fn cram_session() -> CardDefinition {
         cost: cost(&[generic(1), hybrid(Color::Black, Color::Green)]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
-            Effect::Learn { who: PlayerRef::You },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -466,9 +479,8 @@ pub fn crux_of_fate() -> CardDefinition {
             // Mode 1: destroy each non-Dragon creature.
             Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(
-                        SelectionRequirement::HasCreatureType(CreatureType::Dragon).negate(),
-                    ),
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Dragon).negate()),
                 ),
                 body: Box::new(Effect::Destroy {
                     what: Selector::TriggerSource,
@@ -488,9 +500,9 @@ pub fn crux_of_fate() -> CardDefinition {
 /// rest on the bottom in a random order.`
 pub fn plargg_dean_of_chaos() -> CardDefinition {
     let nonleg_cheap = SelectionRequirement::Nonland
-        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasSupertype(
-            crate::card::Supertype::Legendary,
-        ))))
+        .and(SelectionRequirement::Not(Box::new(
+            SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary),
+        )))
         .and(SelectionRequirement::ManaValueAtMost(3));
     CardDefinition {
         name: "Plargg, Dean of Chaos",
@@ -508,7 +520,10 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 discard_cost: Some((SelectionRequirement::Any, 1)),
-                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
             // {4}{R}, {T}: reveal-until cheap nonlegendary nonland, cast it free.
@@ -528,8 +543,8 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
                         what: Selector::LastMoved,
                         source_zone: crate::card::Zone::Exile,
                         exile_after: false,
-                copy: false,
-            },
+                        copy: false,
+                    },
                 ]),
                 ..Default::default()
             },
@@ -610,7 +625,10 @@ pub fn pestilent_cauldron() -> CardDefinition {
                         of: None,
                         single: true,
                     },
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
                 ]),
                 ..Default::default()
             },
@@ -877,8 +895,14 @@ pub fn burst_lightning() -> CardDefinition {
         keywords: vec![Keyword::Kicker(cost(&[generic(4)]))],
         effect: Effect::If {
             cond: Predicate::SpellWasKicked,
-            then: Box::new(Effect::DealDamage { to: any_target(), amount: Value::Const(4) }),
-            else_: Box::new(Effect::DealDamage { to: any_target(), amount: Value::Const(2) }),
+            then: Box::new(Effect::DealDamage {
+                to: any_target(),
+                amount: Value::Const(4),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: any_target(),
+                amount: Value::Const(2),
+            }),
         },
         ..Default::default()
     }
@@ -1058,7 +1082,10 @@ pub fn stonebound_mentor() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         }],
         ..Default::default()
     }
@@ -1150,8 +1177,10 @@ pub fn manifold_key() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             // {T}: Untap target artifact.
@@ -1172,8 +1201,10 @@ pub fn manifold_key() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -1283,8 +1314,7 @@ pub fn settle_the_score() -> CardDefinition {
             },
             Effect::AddCounter {
                 what: Selector::EachPermanent(
-                    SelectionRequirement::Planeswalker
-                        .and(SelectionRequirement::ControlledByYou),
+                    SelectionRequirement::Planeswalker.and(SelectionRequirement::ControlledByYou),
                 ),
                 kind: CounterType::Loyalty,
                 amount: Value::Const(2),
@@ -1389,7 +1419,9 @@ pub fn divide_by_zero() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
-            Effect::Learn { who: PlayerRef::You },
+            Effect::Learn {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -1550,8 +1582,10 @@ pub fn pursuit_of_knowledge() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -1987,8 +2021,8 @@ pub fn snipe() -> CardDefinition {
 /// `CreatureDied/AnotherOfYours` gated on `Predicate::EntityMatches`
 /// for `HasCreatureType(Pest)`, +1/+1 EOT.
 pub fn witherbloom_pest_eater() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
     use super::shared::stx_pest_token;
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
     CardDefinition {
         name: "Witherbloom Pest Eater",
         cost: cost(&[generic(3), b(), g()]),

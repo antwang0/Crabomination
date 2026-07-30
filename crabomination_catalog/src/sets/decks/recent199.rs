@@ -3,7 +3,7 @@
 //! `tests/recent199.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, CounterType, EventKind, EventScope, EventSpec, Keyword,
+    CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
     Predicate, SelectionRequirement as R, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::etb;
@@ -19,7 +19,9 @@ pub fn growing_dread() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![
-            etb(Effect::ManifestDread { who: PlayerRef::You }),
+            etb(Effect::ManifestDread {
+                who: PlayerRef::You,
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::YourControl),
                 effect: Effect::AddCounter {
@@ -54,7 +56,10 @@ pub fn entity_tracker() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Enchantment,
                 }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }

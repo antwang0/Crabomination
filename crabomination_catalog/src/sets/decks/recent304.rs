@@ -2,7 +2,7 @@
 //! combat tricks, and dual-target removal. Tests in `recent_b/recent_304`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Keyword, Selector, SelectionRequirement as R, Subtypes,
+    CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R, Selector, Subtypes,
     Value,
 };
 use crate::effect::shortcut::{draw, target_filtered};
@@ -47,7 +47,10 @@ pub fn vision_skeins() -> CardDefinition {
         name: "Vision Skeins",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(2) },
+        effect: Effect::Draw {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::Const(2),
+        },
         ..Default::default()
     }
 }
@@ -74,8 +77,10 @@ pub fn psychotic_fury() -> CardDefinition {
 /// Might of the Nephilim — {1}{G} Instant. Target creature gets +2/+2 until end
 /// of turn for each of its colors.
 pub fn might_of_the_nephilim() -> CardDefinition {
-    let bonus =
-        Value::Times(Box::new(Value::Const(2)), Box::new(Value::ColorCountOf(Box::new(Selector::Target(0)))));
+    let bonus = Value::Times(
+        Box::new(Value::Const(2)),
+        Box::new(Value::ColorCountOf(Box::new(Selector::Target(0)))),
+    );
     CardDefinition {
         name: "Might of the Nephilim",
         cost: cost(&[generic(1), g()]),
@@ -98,8 +103,18 @@ pub fn stomp_and_howl() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: Selector::TargetFiltered { slot: 0, filter: R::Artifact } },
-            Effect::Destroy { what: Selector::TargetFiltered { slot: 1, filter: R::Enchantment } },
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Artifact,
+                },
+            },
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Enchantment,
+                },
+            },
         ]),
         ..Default::default()
     }

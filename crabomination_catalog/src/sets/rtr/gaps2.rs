@@ -9,7 +9,7 @@ use crate::card::{
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{etb, on_dies, scavenge, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Rubbleback Rhino — {4}{G} 3/4 Rhino with hexproof.
 pub fn rubbleback_rhino() -> CardDefinition {
@@ -17,7 +17,10 @@ pub fn rubbleback_rhino() -> CardDefinition {
         name: "Rubbleback Rhino",
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rhino], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rhino],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Hexproof],
@@ -31,11 +34,17 @@ pub fn runewing() -> CardDefinition {
         name: "Runewing",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![on_dies(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        triggered_abilities: vec![on_dies(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
         ..Default::default()
     }
 }
@@ -46,7 +55,10 @@ pub fn sunspire_griffin() -> CardDefinition {
         name: "Sunspire Griffin",
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin],
+            ..Default::default()
+        },
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -60,7 +72,10 @@ pub fn tenement_crasher() -> CardDefinition {
         name: "Tenement Crasher",
         cost: cost(&[generic(5), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Haste],
@@ -74,7 +89,10 @@ pub fn towering_indrik() -> CardDefinition {
         name: "Towering Indrik",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Reach],
@@ -88,7 +106,10 @@ pub fn skyline_predator() -> CardDefinition {
         name: "Skyline Predator",
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Flash, Keyword::Flying],
@@ -165,7 +186,10 @@ pub fn stonefare_crocodile() -> CardDefinition {
         name: "Stonefare Crocodile",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Crocodile], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Crocodile],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -195,7 +219,9 @@ pub fn selesnya_sentry() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(5), g()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -217,7 +243,10 @@ pub fn stealer_of_secrets() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..Default::default()
     }
@@ -232,7 +261,10 @@ fn bird_token() -> TokenDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
         keywords: vec![Keyword::Flying],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -244,7 +276,10 @@ pub fn seller_of_songbirds() -> CardDefinition {
         name: "Seller of Songbirds",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
         power: 1,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::CreateToken {
@@ -263,12 +298,17 @@ pub fn keening_apparition() -> CardDefinition {
         name: "Keening Apparition",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
-            effect: Effect::Destroy { what: target_filtered(R::Enchantment) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Enchantment),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -281,7 +321,10 @@ pub fn korozda_monitor() -> CardDefinition {
         name: "Korozda Monitor",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Trample],
@@ -296,7 +339,10 @@ pub fn sewer_shambler() -> CardDefinition {
         name: "Sewer Shambler",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Landwalk(LandType::Swamp)],
@@ -340,7 +386,10 @@ pub fn tavern_swindler() -> CardDefinition {
             life_cost: 3,
             effect: Effect::FlipCoin {
                 count: Value::ONE,
-                on_heads: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(6) }),
+                on_heads: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(6),
+                }),
                 on_tails: Box::new(Effect::Noop),
             },
             ..Default::default()

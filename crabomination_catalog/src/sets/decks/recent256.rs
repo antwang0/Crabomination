@@ -10,7 +10,7 @@ use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, StaticEffect,
     TriggeredAbility, Value,
 };
-use crate::mana::{b, cost, g, generic, w, Color};
+use crate::mana::{Color, b, cost, g, generic, w};
 
 /// Insidious Roots — {B}{G} Enchantment. Your creature tokens tap for any color.
 /// Whenever one or more creature cards leave your graveyard, create a 0/1 green

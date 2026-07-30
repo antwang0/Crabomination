@@ -2,8 +2,8 @@
 //! Treasure-attack Mercenary. Tests in `tests/recent_b/recent274.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword,
-    SelectionRequirement as R, Subtypes, Supertype, TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, SelectionRequirement as R,
+    Subtypes, Supertype, TriggeredAbility,
 };
 use crate::card::{ArtifactSubtype, EventKind, EventScope, EventSpec, Predicate};
 use crate::effect::shortcut::target_any;
@@ -20,10 +20,18 @@ pub fn emergent_haunting() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::NoSpellCastFromHandThisTurn { who: PlayerRef::You }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::NoSpellCastFromHandThisTurn {
+                who: PlayerRef::You,
+            }),
             effect: Effect::If {
-                cond: Predicate::EntityMatches { what: Selector::This, filter: R::Creature.negate() },
+                cond: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::Creature.negate(),
+                },
                 then: Box::new(Effect::Seq(vec![
                     Effect::AddCardTypeIndefinitely {
                         what: Selector::This,
@@ -52,7 +60,10 @@ pub fn emergent_haunting() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), u()]),
-            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -86,7 +97,10 @@ pub fn jolene_plundering_pugilist() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
             sac_other_filter: Some((R::HasArtifactSubtype(ArtifactSubtype::Treasure), 1)),
-            effect: Effect::DealDamage { to: target_any(), amount: Value::ONE },
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()

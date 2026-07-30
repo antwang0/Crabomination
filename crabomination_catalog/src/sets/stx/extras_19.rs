@@ -5,13 +5,13 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype, Predicate,
-    Selector, SelectionRequirement, StaticAbility, StaticEffect, Subtypes, Supertype,
+    EventScope, EventSpec, Keyword, LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype,
+    Predicate, SelectionRequirement, Selector, StaticAbility, StaticEffect, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::shortcut::{dies_gain_life, draw, etb, magecraft, target_filtered};
 use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 /// Emergent Sequence — {1}{G} Sorcery. Search your library for a basic land,
 /// put it onto the battlefield tapped, then shuffle. That land becomes a 0/0
@@ -26,7 +26,10 @@ pub fn emergent_sequence() -> CardDefinition {
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
             Effect::BecomeCreature {
                 what: Selector::LastMoved,
@@ -120,7 +123,11 @@ fn flamethrower_sonata() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
             draw(1),
             Effect::If {
                 cond: Predicate::SelectorExists(Selector::DiscardedThisResolution {
@@ -210,10 +217,16 @@ fn imbraham_dean_of_theory() -> CardDefinition {
             mana_cost: cost(&[x(), u(), u()]),
             tap_cost: true,
             effect: Effect::Seq(vec![
-                Effect::ExileTopWithCounters { count: Value::XFromCost, counter: CounterType::Study },
+                Effect::ExileTopWithCounters {
+                    count: Value::XFromCost,
+                    counter: CounterType::Study,
+                },
                 Effect::MayDo {
-                    description: "Put a study-countered card you own in exile into your hand.".into(),
-                    body: Box::new(Effect::ReturnFromExileWithCounter { counter: CounterType::Study }),
+                    description: "Put a study-countered card you own in exile into your hand."
+                        .into(),
+                    body: Box::new(Effect::ReturnFromExileWithCounter {
+                        counter: CounterType::Study,
+                    }),
                 },
             ]),
             ..Default::default()
@@ -234,7 +247,10 @@ pub fn kianne_dean_of_substance() -> CardDefinition {
         toughness: 0,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green, Color::Blue],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Fractal], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -251,17 +267,25 @@ pub fn kianne_dean_of_substance() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::StudyTopCard { counter: CounterType::Study },
+                effect: Effect::StudyTopCard {
+                    counter: CounterType::Study,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(4), g()]),
                 effect: Effect::Seq(vec![
-                    Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: fractal },
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: fractal,
+                    },
                     Effect::AddCounter {
                         what: Selector::LastCreatedToken,
                         kind: CounterType::PlusOnePlusOne,
-                        amount: Value::DistinctManaValuesInExileWithCounter { counter: CounterType::Study },
+                        amount: Value::DistinctManaValuesInExileWithCounter {
+                            counter: CounterType::Study,
+                        },
                     },
                 ]),
                 ..Default::default()
@@ -298,7 +322,8 @@ fn nassari_dean_of_expression() -> CardDefinition {
                     who: PlayerRef::EachOpponent,
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: true, pay_own_cost: false,
+                    pay_any_color: true,
+                    pay_own_cost: false,
                     uncast_penalty: None,
                 },
             },
@@ -334,7 +359,9 @@ pub fn uvilda_dean_of_perfection() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::HoneFromHand { count: Value::Const(3) },
+            effect: Effect::HoneFromHand {
+                count: Value::Const(3),
+            },
             ..Default::default()
         }],
         back_face: Some(Box::new(nassari_dean_of_expression())),
@@ -406,7 +433,8 @@ pub fn radiant_scrollwielder() -> CardDefinition {
                     duration: MayPlayDuration::EndOfThisTurn,
                     to_owner: false,
                     exile_after: true,
-                    pay_own_cost: false, any_color: false,
+                    pay_own_cost: false,
+                    any_color: false,
                 },
             ]),
         }],
@@ -423,7 +451,10 @@ fn valentin_pest_token() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black, Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Pest], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
         triggered_abilities: vec![dies_gain_life(1)],
         ..Default::default()
     }
@@ -433,9 +464,11 @@ fn valentin_pest_token() -> TokenDefinition {
 /// Whenever you gain life, you may pay {1}; if you do, put a +1/+1 counter on
 /// each creature you control and those creatures gain trample until end of turn.
 fn lisette_dean_of_the_root() -> CardDefinition {
-    let yours = || Selector::EachPermanent(
-        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-    );
+    let yours = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )
+    };
     CardDefinition {
         name: "Lisette, Dean of the Root",
         cost: cost(&[generic(2), g(), g()]),
@@ -532,7 +565,11 @@ fn lukka_wayward_bonder() -> CardDefinition {
                 effect: Effect::MayDo {
                     description: "Discard a card; draw one (two if it was a creature).".into(),
                     body: Box::new(Effect::Seq(vec![
-                        Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                        Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                            random: false,
+                        },
                         Effect::If {
                             cond: Predicate::ValueAtLeast(
                                 Value::CreatureCardsDiscardedThisEffect,
@@ -550,7 +587,10 @@ fn lukka_wayward_bonder() -> CardDefinition {
                 effect: Effect::Seq(vec![
                     Effect::Move {
                         what: target_filtered(SelectionRequirement::Creature),
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
                     },
                     Effect::GrantKeyword {
                         what: Selector::Target(0),
@@ -559,7 +599,9 @@ fn lukka_wayward_bonder() -> CardDefinition {
                     },
                     Effect::DelayUntil {
                         kind: DelayedTriggerKind::YourNextUpkeep,
-                        body: Box::new(Effect::Exile { what: Selector::Target(0) }),
+                        body: Box::new(Effect::Exile {
+                            what: Selector::Target(0),
+                        }),
                     },
                 ]),
                 ..Default::default()
@@ -571,11 +613,14 @@ fn lukka_wayward_bonder() -> CardDefinition {
                     name: "Lukka, Wayward Bonder".into(),
                     statics: vec![],
                     triggered: vec![TriggeredAbility {
-                        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                            .with_filter(Predicate::EntityMatches {
-                                what: Selector::TriggerSource,
-                                filter: SelectionRequirement::Creature,
-                            }),
+                        event: EventSpec::new(
+                            EventKind::EntersBattlefield,
+                            EventScope::YourControl,
+                        )
+                        .with_filter(Predicate::EntityMatches {
+                            what: Selector::TriggerSource,
+                            filter: SelectionRequirement::Creature,
+                        }),
                         effect: Effect::DealDamage {
                             to: target_filtered(
                                 SelectionRequirement::Creature
@@ -614,7 +659,10 @@ pub fn mila_crafty_companion() -> CardDefinition {
             // control" — planeswalker-attack-only scope (attacks on the
             // player don't fire it).
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerPlaneswalkerAttackedByOpponent),
+                event: EventSpec::new(
+                    EventKind::Attacks,
+                    EventScope::ControllerPlaneswalkerAttackedByOpponent,
+                ),
                 effect: Effect::AddCounter {
                     what: Selector::EachPermanent(
                         SelectionRequirement::Planeswalker
@@ -625,7 +673,10 @@ pub fn mila_crafty_companion() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::BecameTarget, EventScope::YourPermanentTargetedByOpponent),
+                event: EventSpec::new(
+                    EventKind::BecameTarget,
+                    EventScope::YourPermanentTargetedByOpponent,
+                ),
                 effect: Effect::MayDo {
                     description: "Draw a card.".into(),
                     body: Box::new(draw(1)),
@@ -683,7 +734,9 @@ fn will_scholar_of_frost() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -7,
-                effect: Effect::Exile { what: target_filtered(SelectionRequirement::Permanent) },
+                effect: Effect::Exile {
+                    what: target_filtered(SelectionRequirement::Permanent),
+                },
                 ..Default::default()
             },
         ],
@@ -734,7 +787,8 @@ pub fn rowan_scholar_of_sparks() -> CardDefinition {
                     name: "Rowan, Scholar of Sparks".into(),
                     statics: vec![],
                     triggered: vec![magecraft(Effect::MayPay {
-                        description: "Pay {2} to copy that spell (you may choose new targets).".into(),
+                        description: "Pay {2} to copy that spell (you may choose new targets)."
+                            .into(),
                         mana_cost: cost(&[generic(2)]),
                         body: Box::new(Effect::CopySpellMayChooseTargets {
                             what: Selector::TriggerSource,
@@ -764,7 +818,10 @@ fn awaken_the_blood_avatar() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         card_types: vec![CardType::Creature],
         colors: vec![Color::Black, Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar],
+            ..Default::default()
+        },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -788,7 +845,11 @@ fn awaken_the_blood_avatar() -> CardDefinition {
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature,
             },
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: avatar },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: avatar,
+            },
         ]),
         ..Default::default()
     }
@@ -909,7 +970,11 @@ pub fn codie_vociferous_codex() -> CardDefinition {
                 Effect::AddMana {
                     who: PlayerRef::You,
                     pool: ManaPayload::Colors(vec![
-                        Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                        Color::White,
+                        Color::Blue,
+                        Color::Black,
+                        Color::Red,
+                        Color::Green,
                     ]),
                 },
                 Effect::OnYourNextSpellCastThisTurn {
@@ -974,7 +1039,11 @@ fn journey_to_the_oracle() -> CardDefinition {
                     description: "Discard a card to return Journey to the Oracle to your hand?"
                         .into(),
                     body: Box::new(Effect::Seq(vec![
-                        Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                        Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                            random: false,
+                        },
                         Effect::ReturnResolvingSpellToHand,
                     ])),
                 }),
@@ -991,7 +1060,10 @@ fn journey_to_the_oracle() -> CardDefinition {
 /// // Journey to the Oracle.
 pub fn jadzi_oracle_of_arcavios() -> CardDefinition {
     use crate::card::Zone;
-    let top = || Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(1) };
+    let top = || Selector::TopOfLibrary {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+    };
     CardDefinition {
         name: "Jadzi, Oracle of Arcavios",
         cost: cost(&[generic(6), u(), u()]),
@@ -1005,14 +1077,23 @@ pub fn jadzi_oracle_of_arcavios() -> CardDefinition {
         toughness: 5,
         activated_abilities: vec![ActivatedAbility {
             discard_cost: Some((SelectionRequirement::Any, 1)),
-            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
             ..Default::default()
         }],
         triggered_abilities: vec![magecraft(Effect::If {
-            cond: Predicate::EntityMatches { what: top(), filter: SelectionRequirement::Land },
+            cond: Predicate::EntityMatches {
+                what: top(),
+                filter: SelectionRequirement::Land,
+            },
             then: Box::new(Effect::Move {
                 what: top(),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             }),
             else_: Box::new(Effect::MayPay {
                 description: "Pay {1} to cast the top card of your library?".into(),
@@ -1021,8 +1102,8 @@ pub fn jadzi_oracle_of_arcavios() -> CardDefinition {
                     what: top(),
                     source_zone: Zone::Library,
                     exile_after: false,
-                copy: false,
-            }),
+                    copy: false,
+                }),
                 else_: None,
             }),
         })],
@@ -1040,7 +1121,9 @@ fn revel_in_silence() -> CardDefinition {
         cost: cost(&[w(), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::SilencePlayersThisTurn { who: PlayerRef::EachOpponent },
+            Effect::SilencePlayersThisTurn {
+                who: PlayerRef::EachOpponent,
+            },
             Effect::ExileResolvingSpell,
         ]),
         ..Default::default()

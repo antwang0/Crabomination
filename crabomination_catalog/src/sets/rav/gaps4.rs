@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Effect, PlayerRef, Selector};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn token(
     name: &str,
@@ -24,7 +24,10 @@ fn token(
         keywords,
         card_types: vec![CardType::Creature],
         colors,
-        subtypes: Subtypes { creature_types: vec![ct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![ct],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -36,15 +39,24 @@ pub fn hunted_horror() -> CardDefinition {
         name: "Hunted Horror",
         cost: cost(&[b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(2),
-            definition: token("Centaur", 3, 3, vec![Color::Green], CreatureType::Centaur,
-                vec![Keyword::Protection(Color::Black)]),
+            definition: token(
+                "Centaur",
+                3,
+                3,
+                vec![Color::Green],
+                CreatureType::Centaur,
+                vec![Keyword::Protection(Color::Black)],
+            ),
         })],
         ..Default::default()
     }
@@ -57,14 +69,24 @@ pub fn hunted_phantasm() -> CardDefinition {
         name: "Hunted Phantasm",
         cost: cost(&[generic(1), u(), u()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 4,
         toughness: 6,
         keywords: vec![Keyword::Unblockable],
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(5),
-            definition: token("Goblin", 1, 1, vec![Color::Red], CreatureType::Goblin, vec![]),
+            definition: token(
+                "Goblin",
+                1,
+                1,
+                vec![Color::Red],
+                CreatureType::Goblin,
+                vec![],
+            ),
         })],
         ..Default::default()
     }
@@ -77,15 +99,24 @@ pub fn hunted_dragon() -> CardDefinition {
         name: "Hunted Dragon",
         cost: cost(&[generic(3), r(), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(3),
-            definition: token("Knight", 2, 2, vec![Color::White], CreatureType::Knight,
-                vec![Keyword::FirstStrike]),
+            definition: token(
+                "Knight",
+                2,
+                2,
+                vec![Color::White],
+                CreatureType::Knight,
+                vec![Keyword::FirstStrike],
+            ),
         })],
         ..Default::default()
     }
@@ -98,14 +129,24 @@ pub fn hunted_lammasu() -> CardDefinition {
         name: "Hunted Lammasu",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lammasu], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lammasu],
+            ..Default::default()
+        },
         power: 5,
         toughness: 5,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::ONE,
-            definition: token("Horror", 4, 4, vec![Color::Black], CreatureType::Horror, vec![]),
+            definition: token(
+                "Horror",
+                4,
+                4,
+                vec![Color::Black],
+                CreatureType::Horror,
+                vec![],
+            ),
         })],
         ..Default::default()
     }
@@ -127,12 +168,20 @@ pub fn hunted_troll() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::Target(0),
             count: Value::Const(4),
-            definition: token("Faerie", 1, 1, vec![Color::Blue], CreatureType::Faerie,
-                vec![Keyword::Flying]),
+            definition: token(
+                "Faerie",
+                1,
+                1,
+                vec![Color::Blue],
+                CreatureType::Faerie,
+                vec![Keyword::Flying],
+            ),
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[g()]),
-            effect: Effect::Regenerate { what: Selector::This },
+            effect: Effect::Regenerate {
+                what: Selector::This,
+            },
             ..Default::default()
         }],
         ..Default::default()

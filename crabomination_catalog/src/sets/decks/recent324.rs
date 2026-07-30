@@ -5,16 +5,21 @@
 use crate::card::{
     ActivatedAbility, AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CounterType,
     CreatureType, EnchantmentSubtype, EquipBonus, EquipScale, EventKind, EventScope, EventSpec,
-    Keyword, Predicate, Selector, SelectionRequirement as R, StaticAbility, Subtypes,
+    Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes,
     TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
 
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
 }
 
 fn enchantment(name: &'static str, mana: ManaCost) -> CardDefinition {
@@ -28,18 +33,16 @@ fn enchantment(name: &'static str, mana: ManaCost) -> CardDefinition {
 
 /// An Aura with `enchant` as its printed enchant filter and `bonus` as its
 /// continuous grant.
-fn aura(
-    name: &'static str,
-    mana: ManaCost,
-    enchant: R,
-    bonus: EquipBonus,
-) -> CardDefinition {
+fn aura(name: &'static str, mana: ManaCost, enchant: R, bonus: EquipBonus) -> CardDefinition {
     CardDefinition {
         subtypes: Subtypes {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(enchant) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(enchant),
+        },
         equipped_bonus: Some(bonus),
         ..enchantment(name, mana)
     }
@@ -76,15 +79,21 @@ fn quick_equipment(
 /// "At the beginning of your upkeep, [effect]."
 fn your_upkeep(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource)
-            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+        event: EventSpec::new(
+            EventKind::StepBegins(TurnStep::Upkeep),
+            EventScope::SelfSource,
+        )
+        .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
         effect,
     }
 }
 
 /// The WUBRG alternative cost shared by the Bringer cycle (CR 118.9).
 fn wubrg_alt() -> AlternativeCost {
-    AlternativeCost { mana_cost: cost(&[w(), u(), b(), r(), g()]), ..Default::default() }
+    AlternativeCost {
+        mana_cost: cost(&[w(), u(), b(), r(), g()]),
+        ..Default::default()
+    }
 }
 
 /// A Bringer: a 5/5 trampler castable for WUBRG with a "you may" upkeep payoff.
@@ -121,7 +130,10 @@ pub fn bringer_of_the_white_dawn() -> CardDefinition {
                 slot: 0,
                 filter: R::InYourGraveyard.and(R::Artifact),
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         "Return target artifact card from your graveyard to the battlefield?",
     )
@@ -132,7 +144,10 @@ pub fn bringer_of_the_blue_dawn() -> CardDefinition {
     bringer(
         "Bringer of the Blue Dawn",
         cost(&[generic(7), u(), u()]),
-        Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         "Draw two cards?",
     )
 }
@@ -143,11 +158,17 @@ pub fn bringer_of_the_black_dawn() -> CardDefinition {
         "Bringer of the Black Dawn",
         cost(&[generic(7), b(), b()]),
         Effect::Seq(vec![
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::Search {
                 who: PlayerRef::You,
                 filter: R::Any,
-                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: LibraryPosition::Top,
+                },
             },
         ]),
         "Pay 2 life to tutor a card to the top?",
@@ -160,7 +181,10 @@ pub fn bringer_of_the_red_dawn() -> CardDefinition {
         "Bringer of the Red Dawn",
         cost(&[generic(7), r(), r()]),
         Effect::Seq(vec![
-            Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+            Effect::Untap {
+                what: target_filtered(R::Creature),
+                up_to: None,
+            },
             Effect::GainControl {
                 what: Selector::Target(0),
                 to: None,
@@ -263,13 +287,17 @@ pub fn door_to_nothingness() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Enters tapped",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w(), w(), u(), u(), b(), b(), r(), r(), g(), g()]),
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::LoseGame { who: PlayerRef::Target(0) },
+            effect: Effect::LoseGame {
+                who: PlayerRef::Target(0),
+            },
             ..Default::default()
         }],
         ..artifact("Door to Nothingness", cost(&[generic(5)]))
@@ -286,7 +314,10 @@ pub fn clearwater_goblet() -> CardDefinition {
             description: "Gain life equal to the charge counters?".into(),
             body: Box::new(Effect::GainLife {
                 who: Selector::You,
-                amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Charge,
+                },
             }),
         })],
         ..artifact("Clearwater Goblet", cost(&[generic(5)]))
@@ -302,7 +333,10 @@ pub fn heliophial() -> CardDefinition {
             sac_cost: true,
             effect: Effect::DealDamage {
                 to: target_filtered(R::Creature.or(R::Player).or(R::Planeswalker)),
-                amount: Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Charge,
+                },
             },
             ..Default::default()
         }],
@@ -359,7 +393,10 @@ pub fn sparring_collar() -> CardDefinition {
         cost(&[generic(2)]),
         cost(&[r(), r()]),
         cost(&[generic(1)]),
-        EquipBonus { keywords: vec![Keyword::FirstStrike], ..Default::default() },
+        EquipBonus {
+            keywords: vec![Keyword::FirstStrike],
+            ..Default::default()
+        },
     )
 }
 
@@ -370,7 +407,12 @@ pub fn horned_helm() -> CardDefinition {
         cost(&[generic(2)]),
         cost(&[g(), g()]),
         cost(&[generic(1)]),
-        EquipBonus { power: 1, toughness: 1, keywords: vec![Keyword::Trample], ..Default::default() },
+        EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Trample],
+            ..Default::default()
+        },
     )
 }
 
@@ -381,7 +423,10 @@ pub fn neurok_stealthsuit() -> CardDefinition {
         cost(&[generic(2)]),
         cost(&[u(), u()]),
         cost(&[generic(1)]),
-        EquipBonus { keywords: vec![Keyword::Shroud], ..Default::default() },
+        EquipBonus {
+            keywords: vec![Keyword::Shroud],
+            ..Default::default()
+        },
     )
 }
 
@@ -415,7 +460,11 @@ pub fn ensouled_scimitar() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
-        equipped_bonus: Some(EquipBonus { power: 1, toughness: 5, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 5,
+            ..Default::default()
+        }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             effect: Effect::BecomeCreature {
@@ -465,7 +514,10 @@ pub fn salvaging_station() -> CardDefinition {
                         .and(R::Noncreature)
                         .and(R::ManaValueAtMost(1)),
                 },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             ..Default::default()
         }],
@@ -473,7 +525,10 @@ pub fn salvaging_station() -> CardDefinition {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
             effect: Effect::MayDo {
                 description: "Untap Salvaging Station?".into(),
-                body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                body: Box::new(Effect::Untap {
+                    what: Selector::This,
+                    up_to: None,
+                }),
             },
         }],
         ..artifact("Salvaging Station", cost(&[generic(6)]))
@@ -504,11 +559,17 @@ pub fn summoning_station() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentDied, EventScope::AnyPlayer).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Artifact },
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact,
+                },
             ),
             effect: Effect::MayDo {
                 description: "Untap Summoning Station?".into(),
-                body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                body: Box::new(Effect::Untap {
+                    what: Selector::This,
+                    up_to: None,
+                }),
             },
         }],
         ..artifact("Summoning Station", cost(&[generic(7)]))
@@ -521,31 +582,45 @@ pub fn staff_of_domination() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[generic(1)]),
-                effect: Effect::Untap { what: Selector::This, up_to: None },
+                effect: Effect::Untap {
+                    what: Selector::This,
+                    up_to: None,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
-                effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(3)]),
                 tap_cost: true,
-                effect: Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+                effect: Effect::Untap {
+                    what: target_filtered(R::Creature),
+                    up_to: None,
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(4)]),
                 tap_cost: true,
-                effect: Effect::Tap { what: target_filtered(R::Creature) },
+                effect: Effect::Tap {
+                    what: target_filtered(R::Creature),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(5)]),
                 tap_cost: true,
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
         ],
@@ -582,7 +657,9 @@ pub fn chimeric_coils() -> CardDefinition {
                     keywords: vec![],
                     duration: Duration::Permanent,
                 },
-                Effect::AtNextEndStep { body: Box::new(Effect::SacrificeSource) },
+                Effect::AtNextEndStep {
+                    body: Box::new(Effect::SacrificeSource),
+                },
             ]),
             ..Default::default()
         }],
@@ -594,8 +671,13 @@ pub fn chimeric_coils() -> CardDefinition {
 pub fn skullcage() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
-                .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(
+                PlayerRef::You,
+            )))),
             effect: Effect::If {
                 cond: Predicate::Any(vec![
                     Predicate::ValueEquals(
@@ -642,7 +724,10 @@ pub fn rite_of_passage() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealtDamage, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                },
             ),
             effect: Effect::AddCounter {
                 what: Selector::TriggerSource,
@@ -701,7 +786,11 @@ pub fn stasis_cocoon() -> CardDefinition {
         cost(&[generic(1), w()]),
         R::Artifact,
         EquipBonus {
-            keywords: vec![Keyword::CantAttack, Keyword::CantBlock, Keyword::CantActivateAbilities],
+            keywords: vec![
+                Keyword::CantAttack,
+                Keyword::CantBlock,
+                Keyword::CantActivateAbilities,
+            ],
             ..Default::default()
         },
     )
@@ -773,7 +862,9 @@ pub fn fold_into_aether() -> CardDefinition {
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::CounterSpell { what: Selector::Target(0) },
+            Effect::CounterSpell {
+                what: Selector::Target(0),
+            },
             Effect::PutFromHandOntoBattlefield {
                 who: PlayerRef::CounteredSpellController,
                 filter: R::Creature,
@@ -862,7 +953,10 @@ pub fn spectral_shift() -> CardDefinition {
 pub fn summoners_egg() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Egg], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Egg],
+            ..Default::default()
+        },
         power: 0,
         toughness: 4,
         triggered_abilities: vec![
@@ -876,5 +970,70 @@ pub fn summoners_egg() -> CardDefinition {
             crate::effect::shortcut::on_dies(Effect::RevealImprintDeployCreature),
         ],
         ..artifact("Summoner's Egg", cost(&[generic(4)]))
+    }
+}
+
+// ── Mirrodin's last four ──
+
+/// Liar's Pendulum — name a card and dare them to guess.
+pub fn liars_pendulum() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::LiarsPendulum,
+            ..Default::default()
+        }],
+        ..artifact("Liar's Pendulum", cost(&[generic(1)]))
+    }
+}
+
+/// Scythe of the Wretched — anything the equipped creature kills comes back
+/// wearing it.
+pub fn scythe_of_the_wretched() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::ReturnVictimAndAttachSelf,
+        }],
+        ..artifact("Scythe of the Wretched", cost(&[generic(2)]))
+    }
+}
+
+/// Shared Fate — nobody draws their own cards any more.
+pub fn shared_fate() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Draws become exiles off an opponent's library",
+            effect: StaticEffect::SharedFate,
+        }],
+        ..enchantment("Shared Fate", cost(&[generic(4), u()]))
+    }
+}
+
+/// Spellweaver Helix — imprint two sorceries; casting one copies the other.
+pub fn spellweaver_helix() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::ImprintFromGraveyard {
+                filter: R::HasCardType(CardType::Sorcery),
+                count: Value::Const(2),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer),
+                effect: Effect::SpellweaverCopy,
+            },
+        ],
+        ..artifact("Spellweaver Helix", cost(&[generic(3)]))
     }
 }

@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Kappa Tech-Wrecker — {1}{G} 1/3 Turtle Ninja. Ninjutsu {1}{G}. Enters with a
 /// deathtouch counter. Combat damage: may remove it to exile target artifact or
@@ -120,7 +120,8 @@ pub fn dokuchi_silencer() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::MayDiscard {
-                description: "Discard a creature card to destroy a creature or planeswalker?".into(),
+                description: "Discard a creature card to destroy a creature or planeswalker?"
+                    .into(),
                 count: Value::Const(1),
                 then: Box::new(Effect::Reflexive {
                     body: Box::new(Effect::Destroy {
@@ -144,16 +145,20 @@ pub fn kami_of_restless_shadows() -> CardDefinition {
         name: "Kami of Restless Shadows",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::ChooseMode(vec![
             Effect::ApplyToTargets {
                 max_targets: 1,
                 min_targets: 0,
-                filter: R::InYourGraveyard
-                    .and(R::Creature)
-                    .and(R::HasCreatureType(CreatureType::Ninja).or(R::HasCreatureType(CreatureType::Rogue))),
+                filter: R::InYourGraveyard.and(R::Creature).and(
+                    R::HasCreatureType(CreatureType::Ninja)
+                        .or(R::HasCreatureType(CreatureType::Rogue)),
+                ),
                 effect: Box::new(Effect::Move {
                     what: Selector::Target(0),
                     to: ZoneDest::Hand(PlayerRef::You),
@@ -161,7 +166,10 @@ pub fn kami_of_restless_shadows() -> CardDefinition {
             },
             Effect::Move {
                 what: target_filtered(R::InYourGraveyard.and(R::Creature)),
-                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: LibraryPosition::Top,
+                },
             },
         ]))],
         ..Default::default()
@@ -214,9 +222,17 @@ pub fn explosive_entry() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Destroy { what: Selector::TargetFiltered { slot: 0, filter: R::Artifact } },
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Artifact,
+                },
+            },
             Effect::AddCounter {
-                what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature,
+                },
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
@@ -274,19 +290,26 @@ pub fn kami_of_celebration() -> CardDefinition {
         name: "Kami of Celebration",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
-                    Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::IsModified },
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::IsModified,
+                    },
                 ),
                 effect: Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
-                    pay_any_color: false, pay_own_cost: false,
+                    pay_any_color: false,
+                    pay_own_cost: false,
                     uncast_penalty: None,
                 },
             },
@@ -319,7 +342,10 @@ pub fn blade_of_the_oni() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        keywords: vec![Keyword::Menace, Keyword::Reconfigure(cost(&[generic(2), b(), b()]))],
+        keywords: vec![
+            Keyword::Menace,
+            Keyword::Reconfigure(cost(&[generic(2), b(), b()])),
+        ],
         equipped_bonus: Some(EquipBonus {
             power: 0,
             toughness: 0,
@@ -340,13 +366,19 @@ pub fn scrapwork_mutt() -> CardDefinition {
         name: "Scrapwork Mutt",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::MayDiscard {
             description: "Discard a card to draw a card?".into(),
             count: Value::Const(1),
-            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            then: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
             else_: None,
         })],
         activated_abilities: vec![crate::effect::shortcut::unearth(cost(&[generic(1), r()]))],
@@ -362,7 +394,10 @@ pub fn towashi_guide_bot() -> CardDefinition {
         name: "Towashi Guide-Bot",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::AddCounter {
@@ -374,7 +409,10 @@ pub fn towashi_guide_bot() -> CardDefinition {
             mana_cost: cost(&[generic(4)]),
             tap_cost: true,
             cost_reduction_per: Some(R::Creature.and(R::ControlledByYou).and(R::IsModified)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -387,9 +425,7 @@ pub fn towashi_guide_bot() -> CardDefinition {
 pub fn naomi_pillar_of_order() -> CardDefinition {
     let make_token = Effect::If {
         cond: Predicate::All(vec![
-            Predicate::SelectorExists(Selector::EachPermanent(
-                R::Artifact.and(R::ControlledByYou),
-            )),
+            Predicate::SelectorExists(Selector::EachPermanent(R::Artifact.and(R::ControlledByYou))),
             Predicate::SelectorExists(Selector::EachPermanent(
                 R::Enchantment.and(R::ControlledByYou),
             )),
@@ -520,7 +556,10 @@ fn samurai_vigilance_token() -> TokenDefinition {
         toughness: 2,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Samurai], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Samurai],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Vigilance],
         ..Default::default()
     }

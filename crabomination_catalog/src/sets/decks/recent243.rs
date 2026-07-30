@@ -12,7 +12,7 @@ use crate::effect::{
     Selector, Value,
 };
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, Color};
+use crate::mana::{Color, b, cost, g, generic, r};
 
 /// The Chase Is On — {2}{R} Instant. Target creature gets +3/+0 and gains first
 /// strike until end of turn. Investigate.
@@ -82,7 +82,10 @@ pub fn red_herring() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
             mana_cost: cost(&[generic(2)]),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -107,9 +110,7 @@ pub fn vengeful_creeper() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
             effect: Effect::Destroy {
-                what: target_filtered(
-                    R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent),
-                ),
+                what: target_filtered(R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent)),
             },
         }],
         ..Default::default()
@@ -158,7 +159,10 @@ pub fn leering_onlooker() -> CardDefinition {
         name: "Leering Onlooker",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -205,8 +209,13 @@ pub fn tunnel_tipster() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
-                .with_filter(Predicate::FaceDownActivityThisTurn { who: PlayerRef::You }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::FaceDownActivityThisTurn {
+                who: PlayerRef::You,
+            }),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -233,21 +242,29 @@ pub fn gravestone_strider() -> CardDefinition {
         name: "Gravestone Strider",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         activated_abilities: vec![
             ActivatedAbility {
                 once_per_turn: true,
                 mana_cost: cost(&[generic(1)]),
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 from_graveyard: true,
                 exile_self_cost: true,
                 mana_cost: cost(&[generic(2)]),
-                effect: Effect::ExileTaggedWithSource { what: target_filtered(R::InGraveyard) },
+                effect: Effect::ExileTaggedWithSource {
+                    what: target_filtered(R::InGraveyard),
+                },
                 ..Default::default()
             },
         ],

@@ -19,7 +19,8 @@ fn kor_warrior() -> TokenDefinition {
         card_types: vec![CardType::Creature],
         colors: vec![crate::mana::Color::White],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Kor, CreatureType::Warrior], ..Default::default()
+            creature_types: vec![CreatureType::Kor, CreatureType::Warrior],
+            ..Default::default()
         },
         ..Default::default()
     }
@@ -35,25 +36,35 @@ pub fn squad_commander() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Kor, CreatureType::Warrior], ..Default::default()
+            creature_types: vec![CreatureType::Kor, CreatureType::Warrior],
+            ..Default::default()
         },
         power: 3,
         toughness: 3,
         triggered_abilities: vec![
             etb(Effect::CreateToken {
-                who: PlayerRef::You, count: Value::PartyCount, definition: kor_warrior(),
+                who: PlayerRef::You,
+                count: Value::PartyCount,
+                definition: kor_warrior(),
             }),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::BeginCombat),
+                    EventScope::ActivePlayer,
+                ),
                 effect: Effect::If {
                     cond: Predicate::ValueAtLeast(Value::PartyCount, Value::Const(4)),
                     then: Box::new(Effect::Seq(vec![
                         Effect::PumpPT {
-                            what: team(), power: Value::Const(1), toughness: Value::Const(0),
+                            what: team(),
+                            power: Value::Const(1),
+                            toughness: Value::Const(0),
                             duration: Duration::EndOfTurn,
                         },
                         Effect::GrantKeyword {
-                            what: team(), keyword: Keyword::Indestructible, duration: Duration::EndOfTurn,
+                            what: team(),
+                            keyword: Keyword::Indestructible,
+                            duration: Duration::EndOfTurn,
                         },
                     ])),
                     else_: Box::new(Effect::Noop),
@@ -72,7 +83,8 @@ pub fn kabira_outrider() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior], ..Default::default()
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
         },
         power: 3,
         toughness: 3,
@@ -97,8 +109,11 @@ pub fn tajuru_paragon() -> CardDefinition {
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![
-                CreatureType::Elf, CreatureType::Cleric, CreatureType::Rogue,
-                CreatureType::Warrior, CreatureType::Wizard,
+                CreatureType::Elf,
+                CreatureType::Cleric,
+                CreatureType::Rogue,
+                CreatureType::Warrior,
+                CreatureType::Wizard,
             ],
             ..Default::default()
         },

@@ -23,7 +23,10 @@ pub fn road_ruin() -> CardDefinition {
         effect: Effect::Search {
             who: PlayerRef::You,
             filter: R::IsBasicLand,
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: true,
+            },
         },
         split: Some(Box::new(SplitCard {
             right: SplitHalf {
@@ -50,7 +53,10 @@ pub fn ethersworn_sphinx() -> CardDefinition {
         name: "Ethersworn Sphinx",
         cost: cost(&[generic(7), w(), u()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sphinx],
+            ..Default::default()
+        },
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
@@ -69,8 +75,13 @@ pub fn blossoming_calm() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Rebound],
         effect: Effect::Seq(vec![
-            Effect::GainHexproofUntilYourNextTurn { who: PlayerRef::You },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainHexproofUntilYourNextTurn {
+                who: PlayerRef::You,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -88,7 +99,10 @@ pub fn foundry_helix() -> CardDefinition {
             count: 1,
         }],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { amount: Value::Const(4), to: target_any() },
+            Effect::DealDamage {
+                amount: Value::Const(4),
+                to: target_any(),
+            },
             Effect::If {
                 cond: Predicate::SacrificedWasArtifact,
                 then: Box::new(Effect::GainLife {
@@ -109,7 +123,10 @@ pub fn diamond_lion() -> CardDefinition {
         name: "Diamond Lion",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
@@ -161,7 +178,10 @@ pub fn mount_velus_manticore() -> CardDefinition {
         name: "Mount Velus Manticore",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Manticore], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Manticore],
+            ..Default::default()
+        },
         power: 3,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
@@ -227,7 +247,10 @@ pub fn altar_of_the_goyf() -> CardDefinition {
         name: "Altar of the Goyf",
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Kindred, CardType::Artifact],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lhurgoyf], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lhurgoyf],
+            ..Default::default()
+        },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
                 .with_filter(Predicate::AttackingAlone),

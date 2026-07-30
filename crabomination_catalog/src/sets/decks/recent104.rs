@@ -18,7 +18,10 @@ pub fn pulmonic_sliver() -> CardDefinition {
         name: "Pulmonic Sliver",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Sliver], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sliver],
+            ..Default::default()
+        },
         power: 3,
         toughness: 3,
         static_abilities: vec![
@@ -56,21 +59,27 @@ pub fn twilight_prophet() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Ascend { who: PlayerRef::You },
+                effect: Effect::Ascend {
+                    who: PlayerRef::You,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                     EventScope::YourControl,
                 ),
-                effect: Effect::Ascend { who: PlayerRef::You },
+                effect: Effect::Ascend {
+                    who: PlayerRef::You,
+                },
             },
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                     EventScope::YourControl,
                 )
-                .with_filter(Predicate::HasCityBlessing { who: PlayerRef::You }),
+                .with_filter(Predicate::HasCityBlessing {
+                    who: PlayerRef::You,
+                }),
                 effect: Effect::RevealTopToHandLoseMv {
                     who: PlayerRef::EachOpponent,
                     you_gain: true,
@@ -147,7 +156,10 @@ pub fn gilt_leaf_archdruid() -> CardDefinition {
                     CreatureType::Druid,
                 )),
             ),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_n_filter: Some((druids, 7)),

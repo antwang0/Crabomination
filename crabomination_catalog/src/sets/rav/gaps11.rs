@@ -4,8 +4,8 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, Predicate, SelectionRequirement as R, StaticAbility, Subtypes,
-    TriggeredAbility, Value,
+    Keyword, Predicate, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
+    Value,
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
@@ -51,7 +51,10 @@ pub fn spawnbroker() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Exchange control of two creatures?".into(),
             body: Box::new(Effect::ExchangeControl {
-                a: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                a: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
                 b: Selector::TargetFiltered {
                     slot: 1,
                     filter: R::Creature.and(R::ControlledByOpponent),
@@ -72,15 +75,24 @@ pub fn firemane_angel() -> CardDefinition {
         name: "Firemane Angel",
         cost: cost(&[generic(3), r(), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::FirstStrike],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
             effect: Effect::MayDo {
                 description: "Gain 1 life?".into(),
-                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -92,7 +104,10 @@ pub fn firemane_angel() -> CardDefinition {
             ])),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
             ..Default::default()
         }],
@@ -110,7 +125,10 @@ pub fn halcyon_glaze() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                },
             ),
             effect: Effect::BecomeCreature {
                 what: Selector::This,

@@ -5,9 +5,9 @@
 
 use super::shared::stx_pest_token;
 use crate::card::{
-    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType, Effect,
-    EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement, Selector, Subtypes,
-    TriggeredAbility, Value, Zone,
+    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
+    Effect, EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement, Selector,
+    Subtypes, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
     dies_drain, dies_mint_token, drain, enrage, etb, etb_drain, etb_gain_life, etb_mint_token,
@@ -15,7 +15,7 @@ use crate::effect::shortcut::{
     on_attack_gain_life, on_other_dies, on_other_dies_mint_token, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{cost, b, g, generic, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic};
 
 // ── Witherbloom Apprentice ──────────────────────────────────────────────────
 
@@ -234,11 +234,12 @@ pub fn witherbloom_vinemaster() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Pest),
-                }),
+                },
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -288,8 +289,7 @@ pub fn witherbloom_command() -> CardDefinition {
                         amount: Value::Const(3),
                     },
                     Effect::MayDo {
-                        description:
-                            "Return a land card from your graveyard to your hand".into(),
+                        description: "Return a land card from your graveyard to your hand".into(),
                         body: Box::new(Effect::Move {
                             what: Selector::one_of(Selector::CardsInZone {
                                 who: PlayerRef::You,
@@ -344,8 +344,7 @@ pub fn culling_ritual() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Nonland
-                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                    SelectionRequirement::Nonland.and(SelectionRequirement::ManaValueAtMost(2)),
                 ),
                 body: Box::new(Effect::Destroy {
                     what: Selector::TriggerSource,
@@ -383,7 +382,10 @@ pub fn rushed_rebirth() -> CardDefinition {
                     Box::new(SelectionRequirement::Creature),
                     Box::new(SelectionRequirement::ManaValueLessThanEventAmount),
                 ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             }),
             slot: 0,
         },
@@ -417,22 +419,28 @@ pub fn callous_bloodmage() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![crate::effect::shortcut::etb(
-            Effect::ChooseMode(vec![
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: pest,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::ChooseMode(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: pest,
+            },
+            Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
                 },
-                Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                    Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
-                ]),
-                // "Exile target player's graveyard." — EachOpponent stands
-                // in for the target slot (see doc comment).
-                Effect::ExilePlayerGraveyard { who: PlayerRef::EachOpponent },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
-        )],
+            // "Exile target player's graveyard." — EachOpponent stands
+            // in for the target slot (see doc comment).
+            Effect::ExilePlayerGraveyard {
+                who: PlayerRef::EachOpponent,
+            },
+        ]))],
         ..Default::default()
     }
 }
@@ -567,8 +575,8 @@ pub fn pest_cultivator() -> CardDefinition {
 /// each cast. Mirror of Eager First-Year (white) in {B}{G} — a sticky
 /// 1/3 wall that converts spells into combat math.
 pub fn withergrowth_apprentice() -> CardDefinition {
-    use crate::effect::shortcut::{magecraft, target_filtered};
     use crate::effect::Duration;
+    use crate::effect::shortcut::{magecraft, target_filtered};
     CardDefinition {
         name: "Withergrowth Apprentice",
         cost: cost(&[b(), g()]),
@@ -580,8 +588,9 @@ pub fn withergrowth_apprentice() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![magecraft(Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature
-                .and(SelectionRequirement::ControlledByYou)),
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
             power: Value::Const(1),
             toughness: Value::Const(1),
             duration: Duration::EndOfTurn,
@@ -605,8 +614,8 @@ pub fn withergrowth_apprentice() -> CardDefinition {
 /// + creature removal in the same sequence.
 pub fn witherbloom_pestkeeper() -> CardDefinition {
     use crate::card::ActivatedAbility;
-    use crate::effect::shortcut::target_filtered;
     use crate::effect::Duration;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Witherbloom Pestkeeper",
         cost: cost(&[generic(2), b()]),
@@ -647,8 +656,10 @@ pub fn witherbloom_pestkeeper() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -748,8 +759,8 @@ pub fn pest_swarm_inheritance() -> CardDefinition {
 /// Pestkeeper's sac outlet, Daemogoth Titan's attack-trigger sacrifice,
 /// or just trades into a problem creature.
 pub fn witherbloom_decayblossom() -> CardDefinition {
-    use crate::effect::shortcut::target_filtered;
     use crate::effect::Duration;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Witherbloom Decayblossom",
         cost: cost(&[generic(1), b()]),
@@ -1137,8 +1148,8 @@ pub fn witherbloom_grand_necromancer() -> CardDefinition {
 pub fn witherbloom_sapdrinker() -> CardDefinition {
     use crate::card::CounterType;
     let _ = CounterType::PlusOnePlusOne;
-    use crate::effect::shortcut::magecraft;
     use crate::effect::Duration;
+    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Witherbloom Sapdrinker",
         cost: cost(&[generic(1), b(), g()]),
@@ -1268,7 +1279,10 @@ pub fn pest_harvest() -> CardDefinition {
                 count: Value::Const(1),
                 definition: pest,
             },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -1425,7 +1439,10 @@ pub fn toxic_bloodletting() -> CardDefinition {
                 toughness: Value::Const(-2),
                 duration: crate::effect::Duration::EndOfTurn,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -1616,8 +1633,10 @@ pub fn witherbloom_pestbroker() -> CardDefinition {
                     duration: crate::effect::Duration::EndOfTurn,
                 },
             ]),
-                    self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![etb_drain(2)],
@@ -1917,7 +1936,6 @@ pub fn witherbloom_reaper_hand() -> CardDefinition {
     }
 }
 
-
 // ── Push (modern_decks) batch 24++: 1 more Witherbloom card ────────────────
 
 /// Witherbloom Tendril — {1}{B}{G}, instant.
@@ -2038,14 +2056,12 @@ pub fn witherbloom_toxicaster() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Deathtouch],
-        triggered_abilities: vec![
-            crate::effect::shortcut::magecraft(Effect::PumpPT {
-                what: Selector::This,
-                power: Value::Const(0),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
-            }),
-        ],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(0),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
         ..Default::default()
     }
 }
@@ -2129,11 +2145,12 @@ pub fn witherbloom_handburner() -> CardDefinition {
 /// floor + extra drain on every Pest exit creates a punishing tempo lock.
 pub fn pest_brood_mother() -> CardDefinition {
     let pest_death_drain = TriggeredAbility {
-        event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-            .with_filter(crate::effect::Predicate::EntityMatches {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+            crate::effect::Predicate::EntityMatches {
                 what: Selector::TriggerSource,
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Pest),
-            }),
+            },
+        ),
         effect: Effect::LoseLife {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
@@ -2245,8 +2262,8 @@ pub fn pest_outcast() -> CardDefinition {
 /// 2-mana lifelink body with magecraft removal — every IS cast can finish
 /// off a small attacker. Pairs with Witherbloom Apprentice's drain.
 pub fn witherbloom_drainscholar() -> CardDefinition {
-    use crate::effect::shortcut::magecraft;
     use crate::effect::Duration;
+    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Witherbloom Drainscholar",
         cost: cost(&[b(), g()]),
@@ -2816,8 +2833,10 @@ pub fn witherbloom_mireguide() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Colors(vec![Color::Black]),
                 },
-                self_counter_cost_reduction: None, sac_other_filter: None,
-                tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
             ActivatedAbility {
@@ -2837,8 +2856,10 @@ pub fn witherbloom_mireguide() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Colors(vec![Color::Green]),
                 },
-                self_counter_cost_reduction: None, sac_other_filter: None,
-                tap_other_filter: None, from_hand: false,
+                self_counter_cost_reduction: None,
+                sac_other_filter: None,
+                tap_other_filter: None,
+                from_hand: false,
                 ..Default::default()
             },
         ],
@@ -3194,10 +3215,7 @@ pub fn witherbloom_marshtender() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Reach],
-        triggered_abilities: vec![
-            etb_gain_life(1),
-            magecraft_gain_life(1),
-        ],
+        triggered_abilities: vec![etb_gain_life(1), magecraft_gain_life(1)],
         ..Default::default()
     }
 }
@@ -3336,8 +3354,10 @@ pub fn witherbloom_pestwarden() -> CardDefinition {
                 to: Selector::You,
                 amount: Value::Const(1),
             },
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![etb_drain(2)],
@@ -3540,10 +3560,7 @@ pub fn witherbloom_verdancer() -> CardDefinition {
         power: 2,
         toughness: 3,
         keywords: vec![Keyword::Reach],
-        triggered_abilities: vec![
-            etb_gain_life(1),
-            magecraft_gain_life(1),
-        ],
+        triggered_abilities: vec![etb_gain_life(1), magecraft_gain_life(1)],
         ..Default::default()
     }
 }
@@ -3748,10 +3765,7 @@ pub fn witherbloom_rootbinder() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        triggered_abilities: vec![
-            etb_gain_life(2),
-            magecraft_gain_life(1),
-        ],
+        triggered_abilities: vec![etb_gain_life(2), magecraft_gain_life(1)],
         ..Default::default()
     }
 }
@@ -4556,7 +4570,6 @@ pub fn witherbloom_vinetwister() -> CardDefinition {
     }
 }
 
-
 // ── Batch 48 (modern_decks) — Witherbloom expansion ─────────────────────────
 
 /// Witherbloom Pestcaller II — {2}{B}, 2/2 Human Warlock. Synthesised
@@ -5033,10 +5046,7 @@ pub fn witherbloom_lifescribe() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        triggered_abilities: vec![
-            etb_drain(1),
-            magecraft_gain_life(1),
-        ],
+        triggered_abilities: vec![etb_drain(1), magecraft_gain_life(1)],
         ..Default::default()
     }
 }
@@ -5384,8 +5394,10 @@ pub fn pest_conservator() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
             // Sacrifice a Pest you control as the activated ability's
             // first step; if no Pest is available the resolver no-ops the
             // sac and the draw still resolves (resolve-time picker vs
@@ -6371,10 +6383,7 @@ pub fn pest_roostkeeper() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        triggered_abilities: vec![
-            etb_mint_token(stx_pest_token(), 1),
-            magecraft_scry(1),
-        ],
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1), magecraft_scry(1)],
         ..Default::default()
     }
 }
@@ -6413,10 +6422,7 @@ pub fn witherbloom_vinepriest_b60() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
-        triggered_abilities: vec![
-            etb_drain(1),
-            magecraft_gain_life(1),
-        ],
+        triggered_abilities: vec![etb_drain(1), magecraft_gain_life(1)],
         ..Default::default()
     }
 }
@@ -6494,10 +6500,7 @@ pub fn pest_swarmleader() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::CreatureSacrificed,
-                EventScope::YourControl,
-            ),
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
             effect: Effect::LoseLife {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
@@ -6588,10 +6591,7 @@ pub fn pest_soulbinder() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::CreatureSacrificed,
-                EventScope::YourControl,
-            ),
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
             effect: Effect::Scry {
                 who: PlayerRef::You,
                 amount: Value::Const(1),
@@ -6644,10 +6644,7 @@ pub fn pest_soulkeeper() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::CreatureSacrificed,
-                EventScope::YourControl,
-            ),
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -6946,11 +6943,7 @@ pub fn pest_bannerer() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![magecraft_pump_each_creature_type(
-            CreatureType::Pest,
-            1,
-            0,
-        )],
+        triggered_abilities: vec![magecraft_pump_each_creature_type(CreatureType::Pest, 1, 0)],
         ..Default::default()
     }
 }
@@ -7861,7 +7854,9 @@ pub fn witherbloom_reaper_lord_b129() -> CardDefinition {
                 effect: StaticEffect::PumpPT {
                     applies_to: Selector::EachPermanent(
                         SelectionRequirement::Creature
-                            .and(SelectionRequirement::HasCreatureType(CreatureType::Skeleton))
+                            .and(SelectionRequirement::HasCreatureType(
+                                CreatureType::Skeleton,
+                            ))
                             .and(SelectionRequirement::ControlledByYou)
                             .and(SelectionRequirement::OtherThanSource),
                     ),
@@ -7874,7 +7869,9 @@ pub fn witherbloom_reaper_lord_b129() -> CardDefinition {
                 effect: StaticEffect::GrantKeyword {
                     applies_to: Selector::EachPermanent(
                         SelectionRequirement::Creature
-                            .and(SelectionRequirement::HasCreatureType(CreatureType::Skeleton))
+                            .and(SelectionRequirement::HasCreatureType(
+                                CreatureType::Skeleton,
+                            ))
                             .and(SelectionRequirement::ControlledByYou)
                             .and(SelectionRequirement::OtherThanSource),
                     ),
@@ -8559,8 +8556,14 @@ pub fn witherbloom_bonereader_b136() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Mill { who: Selector::You, amount: Value::Const(2) },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             ]),
         }],
         ..Default::default()
@@ -8729,10 +8732,7 @@ pub fn witherbloom_grimsage_b139() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        triggered_abilities: vec![
-            etb_mint_token(stx_pest_token(), 1),
-            dies_drain(2),
-        ],
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1), dies_drain(2)],
         ..Default::default()
     }
 }
@@ -9150,7 +9150,8 @@ pub fn witherbloom_cauldronist_b143() -> CardDefinition {
                     .and(SelectionRequirement::OtherThanSource),
                 1,
             )),
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             ..Default::default()
         }],
         ..Default::default()
@@ -10309,7 +10310,10 @@ pub fn witherbloom_boneharvester_b154() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 2), magecraft_drain_each_opp(1)],
+        triggered_abilities: vec![
+            etb_mint_token(stx_pest_token(), 2),
+            magecraft_drain_each_opp(1),
+        ],
         ..Default::default()
     }
 }
@@ -10338,7 +10342,7 @@ pub fn witherbloom_decaymage_b154() -> CardDefinition {
 /// CreatureDied/SelfSource → gain 2 life. Solid mid-curve aristocrat
 /// that pays you off twice (death-trigger + Pest body).
 pub fn pest_mawcap_b154() -> CardDefinition {
-    use crate::effect::shortcut::{dies_gain_life};
+    use crate::effect::shortcut::dies_gain_life;
     CardDefinition {
         name: "Pest Mawcap (b154)",
         cost: cost(&[generic(1), b(), g()]),
@@ -10467,11 +10471,9 @@ pub fn witherbloom_pestbinder_b154() -> CardDefinition {
             discard_cost: None,
             mana_cost: cost(&[generic(1), b()]),
             tap_cost: false,
-            sac_other_filter: Some((
-                SelectionRequirement::HasCreatureType(CreatureType::Pest),
-                1,
-            )),
-            tap_other_filter: None, from_hand: false,
+            sac_other_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Pest), 1)),
+            tap_other_filter: None,
+            from_hand: false,
             effect: Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(-2),
@@ -10517,7 +10519,10 @@ pub fn witherbloom_reborn_b154() -> CardDefinition {
                 zone: Zone::Graveyard,
                 filter: SelectionRequirement::Creature,
             },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
         ..Default::default()
     }
@@ -10577,8 +10582,7 @@ pub fn witherbloom_toxinbinder_b154() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::PumpPT {
             what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
             power: Value::Const(-3),
             toughness: Value::Const(-3),
@@ -10617,9 +10621,15 @@ pub fn witherbloom_stride_b154() -> CardDefinition {
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
             drain(1),
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -10755,7 +10765,10 @@ pub fn witherbloom_quagsong_b155() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             drain(2),
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -10805,7 +10818,10 @@ pub fn witherbloom_necromancer_b156() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             body: Box::new(Effect::Move {
                 what: Selector::TriggerSource,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             }),
             else_: None,
         })],
@@ -10904,8 +10920,14 @@ pub fn witherbloom_cultivator_b155() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]))],
         ..Default::default()
     }
@@ -10956,7 +10978,8 @@ pub fn witherbloom_sapling_b155() -> CardDefinition {
             condition: None,
             exile_other_filter: None,
             sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+            tap_other_filter: None,
+            from_hand: false,
             self_counter_cost_reduction: None,
             effect: Effect::AddCounter {
                 what: Selector::This,
@@ -11025,7 +11048,10 @@ pub fn witherbloom_tutor_b155() -> CardDefinition {
         cost: cost(&[generic(2), b(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Creature,
@@ -11657,7 +11683,10 @@ pub fn witherbloom_vinekeeper_b161() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -11928,11 +11957,13 @@ pub fn witherbloom_marshchoke_b164() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::PowerAtMost(3)),
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(3)),
                 ),
             },
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -11952,10 +11983,7 @@ pub fn witherbloom_pestcoach_b164() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![
-            etb(mint_pests(1)),
-            magecraft(drain(1)),
-        ],
+        triggered_abilities: vec![etb(mint_pests(1)), magecraft(drain(1))],
         ..Default::default()
     }
 }
@@ -12633,10 +12661,7 @@ pub fn witherbloom_lifeleech_b171() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::SelfSource,
-            ),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::LoseLife {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
@@ -12827,8 +12852,8 @@ pub fn pest_bramblebeast_b174() -> CardDefinition {
 /// Witherbloom Tracker (b174) — {1}{G} 2/1 Human Druid Reach.
 /// ETB: target creature gets -1/-1 EOT (functions as a small wither-style ping).
 pub fn witherbloom_tracker_b174() -> CardDefinition {
-    use crate::effect::shortcut::target_filtered;
     use crate::effect::Duration;
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Witherbloom Tracker (b174)",
         cost: cost(&[generic(1), g()]),
@@ -13550,10 +13575,7 @@ pub fn witherbloom_pestlord_ii_b192() -> CardDefinition {
         triggered_abilities: vec![
             etb_mint_token(stx_pest_token(), 1),
             TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::CreatureDied,
-                    EventScope::AnotherOfYours,
-                ),
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
                 effect: Effect::GainLife {
                     who: Selector::You,
                     amount: Value::Const(1),
@@ -13707,10 +13729,7 @@ pub fn witherbloom_pestsworn_b192() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        triggered_abilities: vec![
-            etb_mint_token(stx_pest_token(), 1),
-            dies_drain(1),
-        ],
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1), dies_drain(1)],
         ..Default::default()
     }
 }
@@ -13747,10 +13766,7 @@ pub fn witherbloom_cryptcaller_b192() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![
-            etb_drain(2),
-            magecraft_drain_each_opp(1),
-        ],
+        triggered_abilities: vec![etb_drain(2), magecraft_drain_each_opp(1)],
         ..Default::default()
     }
 }
@@ -14102,7 +14118,10 @@ pub fn witherbloom_lifeshare_b194() -> CardDefinition {
         name: "Witherbloom Lifeshare (b194)",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -14179,7 +14198,10 @@ pub fn witherbloom_pestrune_b195() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -14260,7 +14282,10 @@ pub fn witherbloom_soulkeeper_b196() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -14781,7 +14806,10 @@ pub fn witherbloom_sapdraw_b202() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             drain(2),
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -14802,11 +14830,12 @@ pub fn pest_devourer_b202() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Pest),
-                }),
+                },
+            ),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
@@ -14832,7 +14861,10 @@ pub fn witherbloom_vinepath_b202() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
             },
-            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
         ]),
         ..Default::default()
     }
@@ -15024,7 +15056,7 @@ pub fn witherbloom_verdance_b202() -> CardDefinition {
         supertypes: vec![],
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         ..Default::default()
     };
@@ -15583,10 +15615,7 @@ pub fn witherbloom_sapsiphon_b207() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::DealsCombatDamageToPlayer,
-                EventScope::SelfSource,
-            ),
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::GainLife {
                 who: Selector::You,
                 amount: Value::Const(2),

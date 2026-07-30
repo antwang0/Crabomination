@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::on_you_attack;
 use crate::effect::{Duration, Effect, PlayerRef, Selector, Value, ZoneRef};
-use crate::mana::{cost, g, generic, w, x, Color};
+use crate::mana::{Color, cost, g, generic, w, x};
 
 fn rabbit_1_1() -> TokenDefinition {
     TokenDefinition {
@@ -16,7 +16,10 @@ fn rabbit_1_1() -> TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::White],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rabbit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rabbit],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -73,7 +76,10 @@ pub fn for_the_common_good() -> CardDefinition {
             Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
-                source: Selector::TargetFiltered { slot: 0, filter: R::IsToken.and(R::ControlledByYou) },
+                source: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::IsToken.and(R::ControlledByYou),
+                },
                 extra_creature_types: vec![],
                 extra_card_types: vec![],
                 override_pt: None,
@@ -88,7 +94,10 @@ pub fn for_the_common_good() -> CardDefinition {
                 keyword: Keyword::Indestructible,
                 duration: Duration::UntilNextTurn,
             },
-            Effect::GainLife { who: Selector::You, amount: Value::count(your_tokens()) },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::count(your_tokens()),
+            },
         ]),
         ..Default::default()
     }

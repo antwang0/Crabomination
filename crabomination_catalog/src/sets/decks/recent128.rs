@@ -2,18 +2,15 @@
 //! Introduces `Predicate::CelebrationActive` (two nonland permanents entered
 //! this turn). Tests in `crabomination/src/tests/recent128.rs`.
 
+use super::woe_roles::{cursed_role, monster_role, young_hero_role};
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType,
-    EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector,
-    StaticAbility, StaticEffect, Subtypes, TriggeredAbility, Value, WardCost,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec,
+    Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes,
+    TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, PlayerRef};
 use crate::mana::{b, cost, g, generic, r, u, w};
-use super::woe_roles::{cursed_role, monster_role, young_hero_role};
-
-
-
 
 /// Armory Mice — {1}{W} 3/1 Mouse. Celebration — +0/+2 while two or more nonland
 /// permanents entered under your control this turn.
@@ -22,13 +19,18 @@ pub fn armory_mice() -> CardDefinition {
         name: "Armory Mice",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Mouse], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         static_abilities: vec![StaticAbility {
             description: "Celebration — Armory Mice gets +0/+2 as long as two or more nonland permanents entered under your control this turn.",
             effect: StaticEffect::PumpSelfIf {
-                condition: Predicate::CelebrationActive { who: PlayerRef::You },
+                condition: Predicate::CelebrationActive {
+                    who: PlayerRef::You,
+                },
                 power: 0,
                 toughness: 2,
                 keywords: vec![],
@@ -54,8 +56,13 @@ pub fn belligerent_of_the_ball() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer)
-                .with_filter(Predicate::CelebrationActive { who: PlayerRef::You }),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::CelebrationActive {
+                who: PlayerRef::You,
+            }),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: target_filtered(R::Creature.and(R::ControlledByYou)),
@@ -86,8 +93,14 @@ pub fn archive_dragon() -> CardDefinition {
         },
         power: 4,
         toughness: 6,
-        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
-        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))),
+        ],
+        triggered_abilities: vec![etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
         ..Default::default()
     }
 }
@@ -99,7 +112,10 @@ pub fn barrow_naughty() -> CardDefinition {
         name: "Barrow Naughty",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
@@ -164,9 +180,15 @@ pub fn cut_in() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) },
+            Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::Const(4),
+            },
             Effect::CreateTokenAttachedTo {
-                target: Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByYou) },
+                target: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
                 definition: young_hero_role(),
             },
         ]),
@@ -244,7 +266,10 @@ pub fn ego_drain() -> CardDefinition {
             },
             Effect::If {
                 cond: Predicate::Not(Box::new(controls_faerie)),
-                then: Box::new(Effect::ExileFromHand { who: Selector::You, amount: Value::ONE }),
+                then: Box::new(Effect::ExileFromHand {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
@@ -269,7 +294,9 @@ pub fn charging_hooligan() -> CardDefinition {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::PumpPT {
                 what: Selector::This,
-                power: Value::CountOf(Box::new(Selector::EachPermanent(R::Creature.and(R::IsAttacking)))),
+                power: Value::CountOf(Box::new(Selector::EachPermanent(
+                    R::Creature.and(R::IsAttacking),
+                ))),
                 toughness: Value::ZERO,
                 duration: Duration::EndOfTurn,
             },
@@ -277,4 +304,3 @@ pub fn charging_hooligan() -> CardDefinition {
         ..Default::default()
     }
 }
-

@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
-use crate::mana::{colored, cost, generic, Color};
+use crate::mana::{Color, colored, cost, generic};
 
 /// The 1/1 colorless Pilot the Roads lands mint — it saddles/crews as though
 /// its power were 2 greater (`StaticEffect::CrewSaddlePowerBonus`).
@@ -20,10 +20,16 @@ fn roads_pilot_token() -> TokenDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Pilot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pilot],
+            ..Default::default()
+        },
         static_abilities: vec![StaticAbility {
             description: "This token saddles Mounts and crews Vehicles as though its power were 2 greater.",
-            effect: StaticEffect::CrewSaddlePowerBonus { applies_to: Selector::This, amount: 2 },
+            effect: StaticEffect::CrewSaddlePowerBonus {
+                applies_to: Selector::This,
+                amount: 2,
+            },
         }],
         ..Default::default()
     }
@@ -48,7 +54,9 @@ fn roads_land(name: &'static str, color: Color) -> CardDefinition {
                     n: Value::ONE,
                 },
                 then: Box::new(Effect::Noop),
-                else_: Box::new(Effect::Tap { what: Selector::This }),
+                else_: Box::new(Effect::Tap {
+                    what: Selector::This,
+                }),
             },
         }],
         activated_abilities: vec![
@@ -130,7 +138,10 @@ fn thopter_token() -> TokenDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -144,15 +155,25 @@ pub fn racers_scoreboard() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         keywords: vec![Keyword::StartYourEngines],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::ONE,
+                random: false,
+            },
         ]))],
         static_abilities: vec![StaticAbility {
             description: "Max speed — spells you cast cost {1} less to cast.",
             effect: StaticEffect::CostReductionWhile {
                 filter: R::Any,
                 amount: 1,
-                condition: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
+                condition: Predicate::SpeedAtLeast {
+                    who: PlayerRef::You,
+                    speed: 4,
+                },
             },
         }],
         ..Default::default()
@@ -177,7 +198,10 @@ pub fn salvation_engine() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Other artifact creatures you control get +2/+2.",
             effect: StaticEffect::AnthemForFilter {
-                filter: R::Artifact.and(R::Creature).and(R::ControlledByYou).and(R::OtherThanSource),
+                filter: R::Artifact
+                    .and(R::Creature)
+                    .and(R::ControlledByYou)
+                    .and(R::OtherThanSource),
                 power: 2,
                 toughness: 2,
                 keywords: vec![],
@@ -190,7 +214,10 @@ pub fn salvation_engine() -> CardDefinition {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Move {
                 what: target_filtered(R::Artifact.and(R::InYourGraveyard)),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         }],
         ..Default::default()

@@ -34,12 +34,35 @@ pub fn baylen_the_haymaker() -> CardDefinition {
         power: 4,
         toughness: 3,
         activated_abilities: vec![
-            tap_tokens(2, Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) }),
-            tap_tokens(3, Effect::Draw { who: Selector::You, amount: Value::ONE }),
-            tap_tokens(4, Effect::Seq(vec![
-                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(3) },
-                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Trample, duration: Duration::EndOfTurn },
-            ])),
+            tap_tokens(
+                2,
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::ONE),
+                },
+            ),
+            tap_tokens(
+                3,
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+            ),
+            tap_tokens(
+                4,
+                Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(3),
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            ),
         ],
         ..Default::default()
     }
@@ -76,7 +99,10 @@ pub fn neighborhood_guardian() -> CardDefinition {
         name: "Neighborhood Guardian",
         cost: crate::mana::cost(&[crate::mana::generic(1), crate::mana::w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Unicorn],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
@@ -136,7 +162,9 @@ pub fn rubblebelt_braggart() -> CardDefinition {
             cond: Predicate::Not(Box::new(Predicate::SourceIsSuspected)),
             then: Box::new(Effect::MayDo {
                 description: "Suspect this creature?".into(),
-                body: Box::new(Effect::Suspect { what: Selector::This }),
+                body: Box::new(Effect::Suspect {
+                    what: Selector::This,
+                }),
             }),
             else_: Box::new(Effect::Noop),
         })],
@@ -152,12 +180,17 @@ pub fn gearbane_orangutan() -> CardDefinition {
         name: "Gearbane Orangutan",
         cost: crate::mana::cost(&[crate::mana::generic(2), crate::mana::r()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ape], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ape],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![etb(Effect::ChooseMode(vec![
-            Effect::Destroy { what: target_filtered(R::Artifact) },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            },
             Effect::MaySacrifice {
                 description: "Sacrifice an artifact for two +1/+1 counters?".into(),
                 filter: R::Artifact,

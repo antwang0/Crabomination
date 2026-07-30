@@ -3,11 +3,11 @@
 //! and the Eerie ability word). Tests in `crabomination/src/tests/recent28.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventScope, EventSpec, EventKind, Keyword,
+    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
     LandType, Predicate, SelectionRequirement, Selector, Subtypes, Value,
 };
-use crate::effect::shortcut::{on_attack, on_dies, target_filtered};
 use crate::effect::PlayerRef;
+use crate::effect::shortcut::{on_attack, on_dies, target_filtered};
 use crate::game::effects::treasure_token;
 use crate::mana::{b, cost, g, generic, r, u, w};
 
@@ -60,7 +60,10 @@ pub fn appendage_amalgam() -> CardDefinition {
         name: "Appendage Amalgam",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flash],
@@ -86,7 +89,10 @@ pub fn skullsnap_nuisance() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: eerie(Effect::Surveil { who: PlayerRef::You, amount: Value::ONE }),
+        triggered_abilities: eerie(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::ONE,
+        }),
         ..Default::default()
     }
 }
@@ -97,10 +103,16 @@ pub fn shepherding_spirits() -> CardDefinition {
         name: "Shepherding Spirits",
         cost: cost(&[generic(4), w(), w()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
         power: 4,
         toughness: 5,
-        keywords: vec![Keyword::Flying, Keyword::Landcycling(cost(&[generic(2)]), LandType::Plains)],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Plains),
+        ],
         ..Default::default()
     }
 }
@@ -111,10 +123,16 @@ pub fn slavering_branchsnapper() -> CardDefinition {
         name: "Slavering Branchsnapper",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
         power: 7,
         toughness: 6,
-        keywords: vec![Keyword::Trample, Keyword::Landcycling(cost(&[generic(2)]), LandType::Forest)],
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Forest),
+        ],
         ..Default::default()
     }
 }
@@ -126,7 +144,9 @@ pub fn seized_from_slumber() -> CardDefinition {
         name: "Seized from Slumber",
         cost: cost(&[generic(4), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Creature),
+        },
         self_cost_reduction_if_target: Some((SelectionRequirement::Tapped, 3)),
         ..Default::default()
     }
@@ -138,7 +158,9 @@ pub fn manifest_dread_spell() -> CardDefinition {
         name: "Manifest Dread",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ManifestDread { who: PlayerRef::You },
+        effect: Effect::ManifestDread {
+            who: PlayerRef::You,
+        },
         ..Default::default()
     }
 }
@@ -157,12 +179,15 @@ pub fn impossible_inferno() -> CardDefinition {
                 amount: Value::Const(6),
             },
             Effect::If {
-                cond: Predicate::DeliriumActive { who: PlayerRef::You },
+                cond: Predicate::DeliriumActive {
+                    who: PlayerRef::You,
+                },
                 then: Box::new(Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
                     count: Value::ONE,
                     duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
-                    pay_any_color: false, pay_own_cost: false,
+                    pay_any_color: false,
+                    pay_own_cost: false,
                     uncast_penalty: None,
                 }),
                 else_: Box::new(Effect::Noop),
@@ -180,9 +205,15 @@ pub fn break_down_the_door() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::Exile { what: target_filtered(SelectionRequirement::Artifact) },
-            Effect::Exile { what: target_filtered(SelectionRequirement::Enchantment) },
-            Effect::ManifestDread { who: PlayerRef::You },
+            Effect::Exile {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
+            Effect::Exile {
+                what: target_filtered(SelectionRequirement::Enchantment),
+            },
+            Effect::ManifestDread {
+                who: PlayerRef::You,
+            },
         ]),
         ..Default::default()
     }
@@ -196,13 +227,22 @@ pub fn found_footage() -> CardDefinition {
         name: "Found Footage",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Clue], ..Default::default() },
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Clue],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             sac_cost: true,
             effect: Effect::Seq(vec![
-                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             ]),
             ..Default::default()
         }],

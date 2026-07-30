@@ -3,17 +3,22 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, Selector, SelectionRequirement as R, Subtypes, TriggeredAbility, Value,
+    EventSpec, Keyword, SelectionRequirement as R, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{
     Duration, Effect, LibraryPosition, PlayerRef, Predicate, StaticAbility, StaticEffect, ZoneDest,
 };
-use crate::mana::{b, cost, generic, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, generic, r, u, w};
 
 /// A vanilla artifact shell.
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
 }
 
 /// The DST "Horn/Feather" cycle: {2} artifact, "whenever a player casts a
@@ -29,7 +34,10 @@ fn color_watch_horn(name: &'static str, color: Color) -> CardDefinition {
             ),
             effect: Effect::MayDo {
                 description: "gain 1 life".into(),
-                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
         ..artifact(name, cost(&[generic(2)]))
@@ -67,7 +75,10 @@ pub fn darksteel_pendant() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
-            effect: Effect::Scry { who: PlayerRef::You, amount: Value::ONE },
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..artifact("Darksteel Pendant", cost(&[generic(2)]))
@@ -134,7 +145,10 @@ pub fn arcane_spyglass() -> CardDefinition {
                 tap_cost: true,
                 sac_other_filter: Some((R::Land, 1)),
                 effect: Effect::Seq(vec![
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                     Effect::AddCounter {
                         what: Selector::This,
                         kind: CounterType::Charge,
@@ -157,7 +171,10 @@ pub fn arcane_spyglass() -> CardDefinition {
                         kind: CounterType::Charge,
                         amount: Value::Const(3),
                     },
-                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
                 ]),
                 ..Default::default()
             },
@@ -171,7 +188,10 @@ pub fn arcane_spyglass() -> CardDefinition {
 pub fn coretapper() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Myr],
+            ..Default::default()
+        },
         power: 1,
         toughness: 1,
         activated_abilities: vec![
@@ -203,7 +223,10 @@ pub fn coretapper() -> CardDefinition {
 pub fn drill_skimmer() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flying],
@@ -232,7 +255,10 @@ pub fn drill_skimmer() -> CardDefinition {
 pub fn dross_golem() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Fear],
@@ -291,7 +317,10 @@ pub fn chittering_rats() -> CardDefinition {
         name: "Chittering Rats",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Rat], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
@@ -346,12 +375,16 @@ pub fn carry_away() -> CardDefinition {
         },
         effect: Effect::Attach {
             what: Selector::This,
-            to: target_filtered(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Equipment)),
+            to: target_filtered(R::HasArtifactSubtype(
+                crate::card::ArtifactSubtype::Equipment,
+            )),
         },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Unattach { what: Selector::AttachedTo(Box::new(Selector::This)) },
+                Effect::Unattach {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                },
                 Effect::GainControl {
                     what: Selector::AttachedTo(Box::new(Selector::This)),
                     to: Some(PlayerRef::You),

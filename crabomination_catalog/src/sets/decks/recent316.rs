@@ -5,7 +5,7 @@
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
     DynamicPt, EquipBonus, EquipScale, EventKind, EventScope, EventSpec, Keyword, Predicate,
-    Selector, SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility,
+    SelectionRequirement as R, Selector, StaticAbility, Subtypes, Supertype, TriggeredAbility,
     Value,
 };
 use crate::effect::shortcut::{blocks, etb, target_any, target_filtered};
@@ -13,10 +13,15 @@ use crate::effect::{
     Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, PlayerStaticTarget, StaticEffect,
     ZoneDest,
 };
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
-    CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
 }
 
 fn creature(
@@ -31,7 +36,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -68,7 +76,11 @@ fn spell(name: &'static str, mana: ManaCost, sorcery: bool, effect: Effect) -> C
     CardDefinition {
         name,
         cost: mana,
-        card_types: vec![if sorcery { CardType::Sorcery } else { CardType::Instant }],
+        card_types: vec![if sorcery {
+            CardType::Sorcery
+        } else {
+            CardType::Instant
+        }],
         effect,
         ..Default::default()
     }
@@ -85,7 +97,14 @@ fn myr(name: &'static str, color: Color) -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..artifact_creature(name, cost(&[generic(2)]), 1, 1, vec![CreatureType::Myr], vec![])
+        ..artifact_creature(
+            name,
+            cost(&[generic(2)]),
+            1,
+            1,
+            vec![CreatureType::Myr],
+            vec![],
+        )
     }
 }
 
@@ -93,7 +112,9 @@ fn myr(name: &'static str, color: Color) -> CardDefinition {
 fn regenerate_self(mana: ManaCost) -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: mana,
-        effect: Effect::Regenerate { what: Selector::This },
+        effect: Effect::Regenerate {
+            what: Selector::This,
+        },
         ..Default::default()
     }
 }
@@ -114,7 +135,11 @@ fn slith_growth() -> TriggeredAbility {
 fn self_keyword_pump(mana: ManaCost, keyword: Keyword) -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: mana,
-        effect: Effect::GrantKeyword { what: Selector::This, keyword, duration: Duration::EndOfTurn },
+        effect: Effect::GrantKeyword {
+            what: Selector::This,
+            keyword,
+            duration: Duration::EndOfTurn,
+        },
         ..Default::default()
     }
 }
@@ -123,12 +148,26 @@ fn self_keyword_pump(mana: ManaCost, keyword: Keyword) -> ActivatedAbility {
 
 /// Alpha Myr — {2} 2/1 artifact creature.
 pub fn alpha_myr() -> CardDefinition {
-    artifact_creature("Alpha Myr", cost(&[generic(2)]), 2, 1, vec![CreatureType::Myr], vec![])
+    artifact_creature(
+        "Alpha Myr",
+        cost(&[generic(2)]),
+        2,
+        1,
+        vec![CreatureType::Myr],
+        vec![],
+    )
 }
 
 /// Omega Myr — {2} 1/2 artifact creature.
 pub fn omega_myr() -> CardDefinition {
-    artifact_creature("Omega Myr", cost(&[generic(2)]), 1, 2, vec![CreatureType::Myr], vec![])
+    artifact_creature(
+        "Omega Myr",
+        cost(&[generic(2)]),
+        1,
+        2,
+        vec![CreatureType::Myr],
+        vec![],
+    )
 }
 
 /// Copper Myr — {T}: Add {G}.
@@ -173,7 +212,14 @@ pub fn slith_bloodletter() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![slith_growth()],
         activated_abilities: vec![regenerate_self(cost(&[generic(1), b()]))],
-        ..creature("Slith Bloodletter", cost(&[b(), b()]), 1, 1, vec![CreatureType::Slith], vec![])
+        ..creature(
+            "Slith Bloodletter",
+            cost(&[b(), b()]),
+            1,
+            1,
+            vec![CreatureType::Slith],
+            vec![],
+        )
     }
 }
 
@@ -213,11 +259,21 @@ pub fn slith_strider() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             },
             slith_growth(),
         ],
-        ..creature("Slith Strider", cost(&[generic(1), u(), u()]), 1, 1, vec![CreatureType::Slith], vec![])
+        ..creature(
+            "Slith Strider",
+            cost(&[generic(1), u(), u()]),
+            1,
+            1,
+            vec![CreatureType::Slith],
+            vec![],
+        )
     }
 }
 
@@ -227,15 +283,32 @@ pub fn slith_strider() -> CardDefinition {
 pub fn cobalt_golem() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![self_keyword_pump(cost(&[generic(1), u()]), Keyword::Flying)],
-        ..artifact_creature("Cobalt Golem", cost(&[generic(4)]), 2, 3, vec![CreatureType::Golem], vec![])
+        ..artifact_creature(
+            "Cobalt Golem",
+            cost(&[generic(4)]),
+            2,
+            3,
+            vec![CreatureType::Golem],
+            vec![],
+        )
     }
 }
 
 /// Titanium Golem — {1}{W}: gains first strike until end of turn.
 pub fn titanium_golem() -> CardDefinition {
     CardDefinition {
-        activated_abilities: vec![self_keyword_pump(cost(&[generic(1), w()]), Keyword::FirstStrike)],
-        ..artifact_creature("Titanium Golem", cost(&[generic(5)]), 3, 3, vec![CreatureType::Golem], vec![])
+        activated_abilities: vec![self_keyword_pump(
+            cost(&[generic(1), w()]),
+            Keyword::FirstStrike,
+        )],
+        ..artifact_creature(
+            "Titanium Golem",
+            cost(&[generic(5)]),
+            3,
+            3,
+            vec![CreatureType::Golem],
+            vec![],
+        )
     }
 }
 
@@ -243,7 +316,14 @@ pub fn titanium_golem() -> CardDefinition {
 pub fn pewter_golem() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![regenerate_self(cost(&[generic(1), b()]))],
-        ..artifact_creature("Pewter Golem", cost(&[generic(5)]), 4, 2, vec![CreatureType::Golem], vec![])
+        ..artifact_creature(
+            "Pewter Golem",
+            cost(&[generic(5)]),
+            4,
+            2,
+            vec![CreatureType::Golem],
+            vec![],
+        )
     }
 }
 
@@ -260,7 +340,14 @@ pub fn hematite_golem() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..artifact_creature("Hematite Golem", cost(&[generic(4)]), 1, 4, vec![CreatureType::Golem], vec![])
+        ..artifact_creature(
+            "Hematite Golem",
+            cost(&[generic(4)]),
+            1,
+            4,
+            vec![CreatureType::Golem],
+            vec![],
+        )
     }
 }
 
@@ -271,7 +358,14 @@ pub fn grid_monitor() -> CardDefinition {
             description: "You can't cast creature spells.",
             effect: StaticEffect::ControllerCantCastCreatureSpells,
         }],
-        ..artifact_creature("Grid Monitor", cost(&[generic(4)]), 4, 6, vec![CreatureType::Construct], vec![])
+        ..artifact_creature(
+            "Grid Monitor",
+            cost(&[generic(4)]),
+            4,
+            6,
+            vec![CreatureType::Construct],
+            vec![],
+        )
     }
 }
 
@@ -314,7 +408,14 @@ pub fn soldier_replica() -> CardDefinition {
             },
             ..Default::default()
         }],
-        ..artifact_creature("Soldier Replica", cost(&[generic(3)]), 1, 3, vec![CreatureType::Soldier], vec![])
+        ..artifact_creature(
+            "Soldier Replica",
+            cost(&[generic(3)]),
+            1,
+            3,
+            vec![CreatureType::Soldier],
+            vec![],
+        )
     }
 }
 
@@ -324,10 +425,19 @@ pub fn goblin_replica() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), r()]),
             sac_cost: true,
-            effect: Effect::Destroy { what: target_filtered(R::Artifact) },
+            effect: Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            },
             ..Default::default()
         }],
-        ..artifact_creature("Goblin Replica", cost(&[generic(3)]), 2, 2, vec![CreatureType::Goblin], vec![])
+        ..artifact_creature(
+            "Goblin Replica",
+            cost(&[generic(3)]),
+            2,
+            2,
+            vec![CreatureType::Goblin],
+            vec![],
+        )
     }
 }
 
@@ -337,7 +447,14 @@ pub fn rustspore_ram() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Destroy {
             what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
         })],
-        ..artifact_creature("Rustspore Ram", cost(&[generic(4)]), 1, 3, vec![CreatureType::Sheep], vec![])
+        ..artifact_creature(
+            "Rustspore Ram",
+            cost(&[generic(4)]),
+            1,
+            3,
+            vec![CreatureType::Sheep],
+            vec![],
+        )
     }
 }
 
@@ -447,7 +564,10 @@ pub fn tel_jilad_archers() -> CardDefinition {
         2,
         4,
         vec![CreatureType::Elf, CreatureType::Archer],
-        vec![Keyword::ProtectionFromCardType(CardType::Artifact), Keyword::Reach],
+        vec![
+            Keyword::ProtectionFromCardType(CardType::Artifact),
+            Keyword::Reach,
+        ],
     )
 }
 
@@ -506,14 +626,18 @@ pub fn trolls_of_tel_jilad() -> CardDefinition {
 pub fn leonin_elder() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
-                .with_filter(Predicate::EntityMatches {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: R::Artifact,
-                }),
+                },
+            ),
             effect: Effect::MayDo {
                 description: "Gain 1 life".into(),
-                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+                body: Box::new(Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                }),
             },
         }],
         ..creature(
@@ -619,7 +743,10 @@ pub fn vedalken_archmage() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(Predicate::CastSpellMatches(R::Artifact)),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
         }],
         ..creature(
             "Vedalken Archmage",
@@ -639,10 +766,7 @@ pub fn viridian_joiner() -> CardDefinition {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::OfColor(
-                    Color::Green,
-                    Value::PowerOf(Box::new(Selector::This)),
-                ),
+                pool: ManaPayload::OfColor(Color::Green, Value::PowerOf(Box::new(Selector::This))),
             },
             ..Default::default()
         }],
@@ -662,7 +786,10 @@ pub fn psychic_membrane() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![blocks(Effect::MayDo {
             description: "Draw a card".into(),
-            body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            body: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            }),
         })],
         ..creature(
             "Psychic Membrane",
@@ -680,15 +807,26 @@ pub fn psychic_membrane() -> CardDefinition {
 /// Vulshok Battlegear — equipped creature gets +3/+3. Equip {3}.
 pub fn vulshok_battlegear() -> CardDefinition {
     CardDefinition {
-        equipped_bonus: Some(EquipBonus { power: 3, toughness: 3, ..Default::default() }),
-        ..equipment("Vulshok Battlegear", cost(&[generic(3)]), cost(&[generic(3)]))
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 3,
+            ..Default::default()
+        }),
+        ..equipment(
+            "Vulshok Battlegear",
+            cost(&[generic(3)]),
+            cost(&[generic(3)]),
+        )
     }
 }
 
 /// Slagwurm Armor — equipped creature gets +0/+6. Equip {3}.
 pub fn slagwurm_armor() -> CardDefinition {
     CardDefinition {
-        equipped_bonus: Some(EquipBonus { toughness: 6, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            toughness: 6,
+            ..Default::default()
+        }),
         ..equipment("Slagwurm Armor", cost(&[generic(1)]), cost(&[generic(3)]))
     }
 }
@@ -700,21 +838,33 @@ pub fn vorrac_battlehorns() -> CardDefinition {
             keywords: vec![Keyword::Trample, Keyword::CantBeBlockedByMoreThanOne],
             ..Default::default()
         }),
-        ..equipment("Vorrac Battlehorns", cost(&[generic(2)]), cost(&[generic(1)]))
+        ..equipment(
+            "Vorrac Battlehorns",
+            cost(&[generic(2)]),
+            cost(&[generic(1)]),
+        )
     }
 }
 
 /// Vulshok Gauntlets — +4/+2, but the equipped creature stops untapping.
 pub fn vulshok_gauntlets() -> CardDefinition {
     CardDefinition {
-        equipped_bonus: Some(EquipBonus { power: 4, toughness: 2, ..Default::default() }),
+        equipped_bonus: Some(EquipBonus {
+            power: 4,
+            toughness: 2,
+            ..Default::default()
+        }),
         static_abilities: vec![StaticAbility {
             description: "Equipped creature doesn't untap during its controller's untap step.",
             effect: StaticEffect::PreventUntap {
                 applies_to: Selector::AttachedTo(Box::new(Selector::This)),
             },
         }],
-        ..equipment("Vulshok Gauntlets", cost(&[generic(2)]), cost(&[generic(3)]))
+        ..equipment(
+            "Vulshok Gauntlets",
+            cost(&[generic(2)]),
+            cost(&[generic(3)]),
+        )
     }
 }
 
@@ -740,7 +890,10 @@ pub fn viridian_longbow() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             activated_abilities: vec![ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::DealDamage { to: target_any(), amount: Value::ONE },
+                effect: Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             }],
             ..Default::default()
@@ -772,7 +925,10 @@ pub fn tanglebloom() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
-            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..artifact("Tanglebloom", cost(&[generic(1)]))
@@ -803,7 +959,9 @@ pub fn krarks_thumb() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         static_abilities: vec![StaticAbility {
             description: "If you would flip a coin, instead flip two coins and ignore one.",
-            effect: StaticEffect::CoinFlipAdvantage { target: PlayerStaticTarget::Controller },
+            effect: StaticEffect::CoinFlipAdvantage {
+                target: PlayerStaticTarget::Controller,
+            },
         }],
         ..artifact("Krark's Thumb", cost(&[generic(2)]))
     }
@@ -858,7 +1016,9 @@ pub fn deconstruct() -> CardDefinition {
         cost(&[generic(2), g()]),
         true,
         Effect::Seq(vec![
-            Effect::Destroy { what: target_filtered(R::Artifact) },
+            Effect::Destroy {
+                what: target_filtered(R::Artifact),
+            },
             Effect::AddMana {
                 who: PlayerRef::You,
                 pool: ManaPayload::Colors(vec![Color::Green, Color::Green, Color::Green]),
@@ -877,7 +1037,10 @@ pub fn turn_to_dust() -> CardDefinition {
             Effect::Destroy {
                 what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
             },
-            Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Green]) },
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Green]),
+            },
         ]),
     )
 }

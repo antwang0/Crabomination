@@ -1,9 +1,7 @@
 //! Secrets of Strixhaven (SOS) — Instants.
 
 use super::creatures::inkling_token;
-use crate::card::{
-    CardDefinition, CardType, CounterType, Effect, Keyword, SelectionRequirement,
-};
+use crate::card::{CardDefinition, CardType, CounterType, Effect, Keyword, SelectionRequirement};
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value};
 use crate::mana::{b, cost, generic, w};
@@ -1003,7 +1001,7 @@ pub fn fractal_anomaly() -> CardDefinition {
 /// Mode 2 is a layer-7b base P/T rewrite via `Effect::SetBasePT`.
 /// Counters and +N/+M still stack on top per CR 613.7c-f.
 pub fn quandrix_charm() -> CardDefinition {
-    use crate::mana::{ManaCost, generic as gen_pip, g, u};
+    use crate::mana::{ManaCost, g, generic as gen_pip, u};
     let counter_cost = ManaCost {
         symbols: vec![gen_pip(2)],
     };
@@ -1149,8 +1147,7 @@ pub fn burrog_barrage() -> CardDefinition {
                 },
                 then: Box::new(Effect::PumpPT {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                     ),
                     power: Value::Const(1),
                     toughness: Value::Const(0),
@@ -1279,7 +1276,8 @@ pub fn suspend_aggression() -> CardDefinition {
                 duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
                 to_owner: true,
                 exile_after: false,
-                pay_own_cost: true, any_color: false,
+                pay_own_cost: true,
+                any_color: false,
             },
         ]),
         ..Default::default()
@@ -1335,7 +1333,6 @@ pub fn rabid_attack() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Additional Red ──────────────────────────────────────────────────────────
 
@@ -1394,7 +1391,6 @@ pub fn duel_tactics() -> CardDefinition {
         ..Default::default()
     }
 }
-
 
 // ── Additional Blue ─────────────────────────────────────────────────────────
 
@@ -1459,7 +1455,7 @@ pub fn homesickness() -> CardDefinition {
 /// green and blue Fractal with base power and toughness each equal to X plus 1."
 pub fn fractalize() -> CardDefinition {
     use crate::card::CreatureType;
-    use crate::mana::{u, x, Color};
+    use crate::mana::{Color, u, x};
     CardDefinition {
         name: "Fractalize",
         cost: cost(&[x(), u()]),

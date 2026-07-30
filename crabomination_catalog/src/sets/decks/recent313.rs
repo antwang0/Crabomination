@@ -3,14 +3,12 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, EquipBonus,
-    EventKind, EventScope, EventSpec, Keyword, LandType, Selector, SelectionRequirement as R,
+    EventKind, EventScope, EventSpec, Keyword, LandType, SelectionRequirement as R, Selector,
     StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb, on_attack, target_filtered};
-use crate::effect::{
-    Duration, Effect, LibraryPosition, PlayerRef, StaticEffect, ZoneDest,
-};
-use crate::mana::{b, cost, g, generic, r, u, w, Color, ManaCost};
+use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, StaticEffect, ZoneDest};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 fn creature(
     name: &'static str,
@@ -24,7 +22,10 @@ fn creature(
         name,
         cost: mana,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: types,
+            ..Default::default()
+        },
         power,
         toughness,
         keywords,
@@ -36,7 +37,11 @@ fn spell(name: &'static str, mana: ManaCost, sorcery: bool, effect: Effect) -> C
     CardDefinition {
         name,
         cost: mana,
-        card_types: vec![if sorcery { CardType::Sorcery } else { CardType::Instant }],
+        card_types: vec![if sorcery {
+            CardType::Sorcery
+        } else {
+            CardType::Instant
+        }],
         effect,
         ..Default::default()
     }
@@ -49,8 +54,12 @@ fn hard_removal(name: &'static str, mana: ManaCost, filter: R) -> CardDefinition
         mana,
         false,
         Effect::Seq(vec![
-            Effect::CantBeRegeneratedThisTurn { what: target_filtered(filter) },
-            Effect::Destroy { what: Selector::Target(0) },
+            Effect::CantBeRegeneratedThisTurn {
+                what: target_filtered(filter),
+            },
+            Effect::Destroy {
+                what: Selector::Target(0),
+            },
         ]),
     )
 }
@@ -116,8 +125,14 @@ pub fn second_sight() -> CardDefinition {
             cost(&[generic(2), u()]),
             false,
             Effect::ChooseMode(vec![
-                Effect::RearrangeTop { who: PlayerRef::Target(0), amount: Value::Const(5) },
-                Effect::RearrangeTop { who: PlayerRef::You, amount: Value::Const(5) },
+                Effect::RearrangeTop {
+                    who: PlayerRef::Target(0),
+                    amount: Value::Const(5),
+                },
+                Effect::RearrangeTop {
+                    who: PlayerRef::You,
+                    amount: Value::Const(5),
+                },
             ]),
         )
     }
@@ -132,11 +147,16 @@ pub fn reap_and_sow() -> CardDefinition {
             cost(&[generic(3), g()]),
             true,
             Effect::ChooseMode(vec![
-                Effect::Destroy { what: target_filtered(R::Land) },
+                Effect::Destroy {
+                    what: target_filtered(R::Land),
+                },
                 Effect::Search {
                     who: PlayerRef::You,
                     filter: R::Land,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
                 },
             ]),
         )
@@ -148,7 +168,10 @@ pub fn reap_and_sow() -> CardDefinition {
 pub fn pristine_angel() -> CardDefinition {
     let untapped_protection = |keyword: Keyword| StaticAbility {
         description: "While untapped, protection from artifacts and each color.",
-        effect: StaticEffect::SelfHasKeywordWhile { keyword, condition: R::Untapped },
+        effect: StaticEffect::SelfHasKeywordWhile {
+            keyword,
+            condition: R::Untapped,
+        },
     };
     CardDefinition {
         static_abilities: vec![
@@ -161,7 +184,10 @@ pub fn pristine_angel() -> CardDefinition {
         ],
         triggered_abilities: vec![crate::effect::shortcut::on_cast(Effect::MayDo {
             description: "Untap Pristine Angel".into(),
-            body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+            body: Box::new(Effect::Untap {
+                what: Selector::This,
+                up_to: None,
+            }),
         })],
         ..creature(
             "Pristine Angel",
@@ -179,7 +205,9 @@ pub fn pteron_ghost() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
-            effect: Effect::Regenerate { what: target_filtered(R::Artifact) },
+            effect: Effect::Regenerate {
+                what: target_filtered(R::Artifact),
+            },
             ..Default::default()
         }],
         ..creature(
@@ -198,7 +226,10 @@ pub fn pteron_ghost() -> CardDefinition {
 pub fn quicksilver_behemoth() -> CardDefinition {
     let bounce = || Effect::DelayUntil {
         kind: crate::effect::DelayedTriggerKind::EndOfCombat,
-        body: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) }),
+        body: Box::new(Effect::Move {
+            what: Selector::This,
+            to: ZoneDest::Hand(PlayerRef::You),
+        }),
     };
     CardDefinition {
         affinity_filter: Some(R::Artifact.and(R::ControlledByYou)),
@@ -273,13 +304,23 @@ pub fn screams_from_within() -> CardDefinition {
             enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        equipped_bonus: Some(EquipBonus { power: -1, toughness: -1, ..Default::default() }),
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: -1,
+            toughness: -1,
+            ..Default::default()
+        }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
             effect: Effect::Move {
                 what: Selector::This,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         }],
         ..Default::default()
@@ -297,7 +338,10 @@ pub fn psychic_overload() -> CardDefinition {
             enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Permanent) },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Permanent),
+        },
         triggered_abilities: vec![etb(Effect::Tap {
             what: Selector::AttachedTo(Box::new(Selector::This)),
         })],
@@ -314,7 +358,10 @@ pub fn psychic_overload() -> CardDefinition {
                     applies_to: Selector::AttachedTo(Box::new(Selector::This)),
                     ability: ActivatedAbility {
                         discard_cost: Some((R::Artifact, 2)),
-                        effect: Effect::Untap { what: Selector::This, up_to: None },
+                        effect: Effect::Untap {
+                            what: Selector::This,
+                            up_to: None,
+                        },
                         ..Default::default()
                     },
                     condition: None,
@@ -385,7 +432,9 @@ pub fn shunt() -> CardDefinition {
         "Shunt",
         cost(&[generic(1), r(), r()]),
         false,
-        Effect::ChangeSpellTarget { what: target_filtered(R::IsSpellOnStack) },
+        Effect::ChangeSpellTarget {
+            what: target_filtered(R::IsSpellOnStack),
+        },
     )
 }
 
@@ -407,7 +456,10 @@ pub fn savage_beating() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                 },
                 Effect::Seq(vec![
-                    Effect::Untap { what: Selector::EachPermanent(mine), up_to: None },
+                    Effect::Untap {
+                        what: Selector::EachPermanent(mine),
+                        up_to: None,
+                    },
                     Effect::AdditionalCombatPhase { count: Value::ONE },
                 ]),
             ]),
@@ -451,7 +503,10 @@ pub fn scrounge() -> CardDefinition {
         true,
         Effect::Move {
             what: target_filtered(R::Artifact.and(R::InOpponentGraveyard)),
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
         },
     )
 }

@@ -11,7 +11,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, target_any};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest};
 use crate::game::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, x, Color, SpendRestriction};
+use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u, w, x};
 
 /// The shared "Max speed — {N}, Exile this card from your graveyard: Draw a
 /// card" ability the DFT Surveyor cycle prints.
@@ -20,8 +20,14 @@ fn max_speed_gy_draw(mana: u32) -> ActivatedAbility {
         mana_cost: cost(&[generic(mana)]),
         from_graveyard: true,
         exile_self_cost: true,
-        condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
-        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        condition: Some(Predicate::SpeedAtLeast {
+            who: PlayerRef::You,
+            speed: 4,
+        }),
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        },
         ..Default::default()
     }
 }
@@ -109,17 +115,24 @@ pub fn ooze_patrol() -> CardDefinition {
         name: "Ooze Patrol",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze],
+            ..Default::default()
+        },
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::CardsInGraveyardMatching {
                     who: PlayerRef::You,
-                    filter: R::HasCardType(CardType::Artifact).or(R::HasCardType(CardType::Creature)),
+                    filter: R::HasCardType(CardType::Artifact)
+                        .or(R::HasCardType(CardType::Creature)),
                 },
             },
         ]))],
@@ -135,7 +148,10 @@ pub fn marketback_walker() -> CardDefinition {
         name: "Marketback Walker",
         cost: cost(&[x(), x()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
         power: 0,
         toughness: 0,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
@@ -218,7 +234,10 @@ pub fn hour_of_victory() -> CardDefinition {
             mana_cost: cost(&[generic(1), b()]),
             sac_cost: true,
             sorcery_speed: true,
-            condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+            condition: Some(Predicate::SpeedAtLeast {
+                who: PlayerRef::You,
+                speed: 4,
+            }),
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: R::Any,
@@ -288,7 +307,6 @@ pub fn adrenaline_jockey() -> CardDefinition {
     }
 }
 
-
 // ── DFT Speed lands ─────────────────────────────────────────────────────────
 
 /// Avishkar Raceway — Land. Start your engines! {T}: Add {C}. Max speed — {3},
@@ -301,15 +319,24 @@ pub fn avishkar_raceway() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(3)]),
                 tap_cost: true,
                 discard_cost: Some((R::Any, 1)),
-                condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
-                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+                condition: Some(Predicate::SpeedAtLeast {
+                    who: PlayerRef::You,
+                    speed: 4,
+                }),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
                 ..Default::default()
             },
         ],
@@ -327,13 +354,22 @@ pub fn muraganda_raceway() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::ONE) },
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
                 ..Default::default()
             },
             ActivatedAbility {
                 tap_cost: true,
-                condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
-                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(2)) },
+                condition: Some(Predicate::SpeedAtLeast {
+                    who: PlayerRef::You,
+                    speed: 4,
+                }),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(2)),
+                },
                 ..Default::default()
             },
         ],
@@ -350,12 +386,17 @@ pub fn night_market() -> CardDefinition {
         keywords: vec![Keyword::Cycling(cost(&[generic(3)]))],
         static_abilities: vec![StaticAbility {
             description: "This land enters tapped.",
-            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+            effect: StaticEffect::EntersTapped {
+                applies_to: Selector::This,
+            },
         }],
         triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::ChosenColorOfSource },
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::ChosenColorOfSource,
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -388,7 +429,11 @@ pub fn marshals_pathcruiser() -> CardDefinition {
             mana_cost: cost(&[w(), u(), b(), r(), g()]),
             exhaust: true,
             effect: Effect::Seq(vec![
-                Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Creature, until_eot: false },
+                Effect::AddCardTypeIndefinitely {
+                    what: Selector::This,
+                    card_type: CardType::Creature,
+                    until_eot: false,
+                },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -427,7 +472,10 @@ pub fn boommobile() -> CardDefinition {
             mana_cost: cost(&[x(), generic(2), r()]),
             exhaust: true,
             effect: Effect::Seq(vec![
-                Effect::DealDamage { to: target_any(), amount: Value::XFromCost },
+                Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::XFromCost,
+                },
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
@@ -451,7 +499,10 @@ pub fn howlsquad_heavy() -> CardDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -477,12 +528,22 @@ pub fn howlsquad_heavy() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
-            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: goblin() },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: goblin(),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+            condition: Some(Predicate::SpeedAtLeast {
+                who: PlayerRef::You,
+                speed: 4,
+            }),
             effect: Effect::AddMana {
                 who: PlayerRef::You,
                 pool: ManaPayload::OfColor(
@@ -520,8 +581,15 @@ pub fn boosted_sloop() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::YouAttack, EventScope::YourControl),
             effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::ONE },
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                    random: false,
+                },
             ]),
         }],
         ..Default::default()
@@ -569,11 +637,17 @@ pub fn wreckage_wickerfolk() -> CardDefinition {
         name: "Wreckage Wickerfolk",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Scarecrow], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Scarecrow],
+            ..Default::default()
+        },
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) })],
+        triggered_abilities: vec![etb(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
         ..Default::default()
     }
 }
@@ -616,8 +690,11 @@ pub fn veteran_beastrider() -> CardDefinition {
         power: 3,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer)
-                .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::ActivePlayer,
+            )
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
             effect: Effect::Untap {
                 what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                 up_to: None,
@@ -644,7 +721,10 @@ pub fn ticket_tortoise() -> CardDefinition {
         name: "Ticket Tortoise",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Turtle], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Turtle],
+            ..Default::default()
+        },
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Defender],
@@ -666,7 +746,10 @@ pub fn haunt_the_network() -> CardDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         keywords: vec![Keyword::Flying],
         ..Default::default()
     };
@@ -675,7 +758,11 @@ pub fn haunt_the_network() -> CardDefinition {
         cost: cost(&[generic(3), u(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: thopter },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: thopter,
+            },
             Effect::Drain {
                 from: Selector::Player(PlayerRef::Target(0)),
                 to: Selector::You,

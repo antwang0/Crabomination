@@ -4,15 +4,14 @@
 //! `crabomination/src/tests/recent30.rs`.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
-    Effect, EventKind, EventScope, EventSpec, ExileReturnZone, Keyword, Predicate,
-    SelectionRequirement, Selector, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
-    TriggeredAbility, Value,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Effect,
+    EventKind, EventScope, EventSpec, ExileReturnZone, Keyword, Predicate, SelectionRequirement,
+    Selector, StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{attacks_while_saddled, deal, etb, target_any, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 fn cycling(c: crate::mana::ManaCost) -> Keyword {
     Keyword::Cycling(c)
@@ -25,13 +24,19 @@ fn thopter_token() -> TokenDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
 
 fn vehicle(subs: Vec<ArtifactSubtype>) -> Subtypes {
-    Subtypes { artifact_subtypes: subs, ..Default::default() }
+    Subtypes {
+        artifact_subtypes: subs,
+        ..Default::default()
+    }
 }
 
 /// Burner Rocket — {1}{R} 3/1 Vehicle with flash. ETB: target creature you
@@ -112,10 +117,14 @@ pub fn carrion_cruiser() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Crew(1)],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             Effect::ReturnGraveyardCardsToHand {
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                filter: SelectionRequirement::Creature.or(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle),
+                ),
                 max: Value::ONE,
             },
         ]))],
@@ -202,7 +211,9 @@ pub fn district_mascot() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
             remove_counter_cost: Some((CounterType::PlusOnePlusOne, 2)),
-            effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
             ..Default::default()
         }],
         ..Default::default()
@@ -265,7 +276,10 @@ pub fn autarch_mammoth() -> CardDefinition {
         toughness: 3,
         card_types: vec![CardType::Creature],
         colors: vec![Color::Green],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Elephant], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
         ..Default::default()
     };
     let make = || Effect::CreateToken {
@@ -347,7 +361,10 @@ pub fn endrider_catalyzer() -> CardDefinition {
         keywords: vec![Keyword::StartYourEngines],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            condition: Some(Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
+            condition: Some(Predicate::SpeedAtLeast {
+                who: PlayerRef::You,
+                speed: 4,
+            }),
             effect: Effect::AddMana {
                 who: PlayerRef::You,
                 pool: ManaPayload::Colors(vec![Color::Red, Color::Red]),
@@ -388,12 +405,16 @@ pub fn collision_course() -> CardDefinition {
             deal_value(
                 Value::CountOf(Box::new(Selector::EachPermanent(
                     SelectionRequirement::Creature
-                        .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle))
+                        .or(SelectionRequirement::HasArtifactSubtype(
+                            ArtifactSubtype::Vehicle,
+                        ))
                         .and(SelectionRequirement::ControlledByYou),
                 ))),
                 target_filtered(SelectionRequirement::Creature),
             ),
-            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
         ]),
         ..Default::default()
     }
@@ -408,7 +429,10 @@ pub fn back_on_track() -> CardDefinition {
         power: 1,
         toughness: 1,
         card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Pilot], ..Default::default() },
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pilot],
+            ..Default::default()
+        },
         ..Default::default()
     };
     CardDefinition {
@@ -417,13 +441,19 @@ pub fn back_on_track() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
-                ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                what: target_filtered(SelectionRequirement::Creature.or(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle),
+                )),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
-            Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: pilot },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: pilot,
+            },
         ]),
         ..Default::default()
     }
@@ -459,10 +489,12 @@ pub fn dredgers_insight() -> CardDefinition {
                 event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
-                        filter: SelectionRequirement::Artifact
-                            .or(SelectionRequirement::Creature),
+                        filter: SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
                     }),
-                effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
             },
         ],
         ..Default::default()
@@ -483,7 +515,11 @@ pub fn dracosaur_auxiliary() -> CardDefinition {
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dinosaur, CreatureType::Dragon, CreatureType::Mount],
+            creature_types: vec![
+                CreatureType::Dinosaur,
+                CreatureType::Dragon,
+                CreatureType::Mount,
+            ],
             ..Default::default()
         },
         power: 4,
@@ -533,10 +569,19 @@ pub fn endrider_spikespitter() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach, Keyword::StartYourEngines],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::ActivePlayer,
+            ),
             effect: Effect::If {
-                cond: Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 },
-                then: Box::new(Effect::LookTopExileOneMayPlay { count: Value::ONE, who: PlayerRef::Target(0) }),
+                cond: Predicate::SpeedAtLeast {
+                    who: PlayerRef::You,
+                    speed: 4,
+                },
+                then: Box::new(Effect::LookTopExileOneMayPlay {
+                    count: Value::ONE,
+                    who: PlayerRef::Target(0),
+                }),
                 else_: Box::new(Effect::Noop),
             },
         }],
@@ -555,7 +600,10 @@ pub fn aether_syphon() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
-            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            },
             ..Default::default()
         }],
         ..Default::default()
