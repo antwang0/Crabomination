@@ -14465,6 +14465,9 @@ impl GameState {
         c.controller = new_ctrl;
         c.summoning_sick = true;
         c.echo_paid = false;
+        // CR 506.4 — a permanent is removed from combat when its controller
+        // changes, so a mid-combat steal stops it attacking or blocking.
+        self.remove_from_combat(id);
         Some(prev)
     }
 

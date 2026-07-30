@@ -75,6 +75,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::NoLifegain => (Color::srgba(0.34, 0.12, 0.12, 1.0), theme::TEXT_PRIMARY),
         // Combat-damage fog (CR 615.1) — a hazy slate grey.
         StatChipKind::Fog => (Color::srgba(0.30, 0.32, 0.34, 1.0), theme::TEXT_PRIMARY),
+        // Combat participation cap (CR 506.2 / 509.1b — Silent Arbiter) — the
+        // same steel as the other combat-restriction chips.
+        StatChipKind::CombatCap => (Color::srgba(0.24, 0.26, 0.34, 1.0), theme::TEXT_PRIMARY),
         // Revealed library top (CR 401.5 — Courser of Kruphix) — a library
         // parchment green so the public information reads at a glance.
         StatChipKind::TopCard => (Color::srgba(0.16, 0.30, 0.18, 1.0), theme::TEXT_PRIMARY),
@@ -162,6 +165,9 @@ pub(super) enum StatChipKind {
     Night,
     NoLifegain,
     Fog,
+    /// CR 506.2 / 509.1b — "no more than N creatures can attack/block each
+    /// combat" (Silent Arbiter).
+    CombatCap,
     TopCard,
     RevealedHand,
     Controlled,
@@ -1011,6 +1017,22 @@ pub fn update_player_stats_chips(
         // player's row, so combat won't surprise either seat.
         if cv.combat_damage_prevented_this_turn && p.seat == cv.active_player {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Fog, "🌫 fog".to_string());
+        }
+        // CR 506.2 / 509.1b — a global combat cap; surface it once, on the
+        // active player's row, so neither seat plans an illegal declaration.
+        if p.seat == cv.active_player {
+            let cap = match (cv.max_attackers_per_combat, cv.max_blockers_per_combat) {
+                (Some(a), Some(b)) if a == b => Some(format!("⚔ max {a} atk/blk")),
+                (a, b) => match (a, b) {
+                    (Some(a), None) => Some(format!("⚔ max {a} attackers")),
+                    (None, Some(b)) => Some(format!("⚔ max {b} blockers")),
+                    (Some(a), Some(b)) => Some(format!("⚔ max {a} atk / {b} blk")),
+                    (None, None) => None,
+                },
+            };
+            if let Some(label) = cap {
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::CombatCap, label);
+            }
         }
         // CR 615 — blanket damage immunity (Glacial Chasm) on the viewer.
         if p.damage_fully_prevented {

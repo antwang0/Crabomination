@@ -207,7 +207,7 @@ pub fn bringer_of_the_green_dawn() -> CardDefinition {
 pub fn fist_of_suns() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "You may pay {W}{U}{B}{R}{G} rather than a spell's mana cost".into(),
+            description: "You may pay {W}{U}{B}{R}{G} rather than a spell's mana cost",
             effect: StaticEffect::FiveColorAlternativeCost,
         }],
         ..artifact("Fist of Suns", cost(&[generic(3)]))
@@ -231,7 +231,7 @@ pub fn doubling_cube() -> CardDefinition {
 pub fn vedalken_orrery() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "You may cast spells as though they had flash".into(),
+            description: "You may cast spells as though they had flash",
             effect: StaticEffect::ControllerSpellsHaveFlash { filter: R::Any },
         }],
         ..artifact("Vedalken Orrery", cost(&[generic(4)]))
@@ -262,7 +262,7 @@ pub fn vedalken_shackles() -> CardDefinition {
 pub fn door_to_nothingness() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "Enters tapped".into(),
+            description: "Enters tapped",
             effect: StaticEffect::EntersTapped { applies_to: Selector::This },
         }],
         activated_abilities: vec![ActivatedAbility {

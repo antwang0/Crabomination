@@ -774,7 +774,7 @@ fn mephidross_vampire_types_and_grows_the_team() {
     g.step = TurnStep::DeclareBlockers;
     g.priority.player_with_priority = 1;
     g.declare_blockers(vec![(victim, bear)]).expect("block");
-    g.resolve_combat();
+    let _ = g.resolve_combat();
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }

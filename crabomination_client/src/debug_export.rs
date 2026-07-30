@@ -248,6 +248,8 @@ mod tests {
             damage_cant_be_prevented_this_turn: false,
             spend_mana_as_any_color: false,
             combat_damage_prevented_this_turn: false,
+            max_attackers_per_combat: None,
+            max_blockers_per_combat: None,
             day_night: None,
             combat_preview: None,
             castable_hand: vec![],

@@ -181,7 +181,7 @@ pub fn loxodon_anchorite() -> CardDefinition {
 pub fn nim_grotesque() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "Gets +1/+0 for each artifact you control".into(),
+            description: "Gets +1/+0 for each artifact you control",
             effect: StaticEffect::PumpSelfByControlledPermanents {
                 filter: R::Artifact,
                 per_power: 1,
@@ -203,7 +203,7 @@ pub fn nim_grotesque() -> CardDefinition {
 pub fn relentless_rats() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "Gets +1/+1 for each other Relentless Rats".into(),
+            description: "Gets +1/+1 for each other Relentless Rats",
             effect: StaticEffect::PumpSelfByValue {
                 amount: Value::CountOf(Box::new(Selector::EachPermanent(
                     R::Creature
@@ -555,14 +555,14 @@ pub fn mephidross_vampire() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![
             StaticAbility {
-                description: "Creatures you control are Vampires".into(),
+                description: "Creatures you control are Vampires",
                 effect: StaticEffect::AddCreatureTypeToMatching {
                     applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                     creature_type: CreatureType::Vampire,
                 },
             },
             StaticAbility {
-                description: "Your creatures grow when they damage a creature".into(),
+                description: "Your creatures grow when they damage a creature",
                 effect: StaticEffect::GrantTriggeredAbility {
                     filter: R::Creature.and(R::ControlledByYou),
                     ability: Box::new(TriggeredAbility {
@@ -596,7 +596,7 @@ pub fn raksha_golden_cub() -> CardDefinition {
         supertypes: vec![crate::card::Supertype::Legendary],
         static_abilities: vec![
             StaticAbility {
-                description: "While equipped, Cats you control get +2/+2".into(),
+                description: "While equipped, Cats you control get +2/+2",
                 effect: StaticEffect::AnthemForFilterIf {
                     filter: R::Creature
                         .and(R::ControlledByYou)
@@ -687,11 +687,11 @@ pub fn silent_arbiter() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![
             StaticAbility {
-                description: "No more than one creature can attack each combat".into(),
+                description: "No more than one creature can attack each combat",
                 effect: StaticEffect::MaxAttackersPerCombat(1),
             },
             StaticAbility {
-                description: "No more than one creature can block each combat".into(),
+                description: "No more than one creature can block each combat",
                 effect: StaticEffect::MaxBlockersPerCombat(1),
             },
         ],
@@ -739,7 +739,7 @@ pub fn myr_servitor() -> CardDefinition {
 pub fn battered_golem() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
-            description: "Doesn't untap during your untap step".into(),
+            description: "Doesn't untap during your untap step",
             effect: StaticEffect::PreventUntap { applies_to: Selector::This },
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -783,7 +783,7 @@ pub fn mycosynth_golem() -> CardDefinition {
     CardDefinition {
         affinity_filter: Some(R::Artifact),
         static_abilities: vec![StaticAbility {
-            description: "Your artifact creature spells have affinity for artifacts".into(),
+            description: "Your artifact creature spells have affinity for artifacts",
             effect: StaticEffect::GrantAffinityToSpells {
                 spell_filter: R::Artifact.and(R::Creature),
                 permanent_filter: R::Artifact,

@@ -4310,7 +4310,7 @@ pub fn handle_game_input(
         let attack = keyboard.just_pressed(KeyCode::KeyA) || btns.attack;
         if attack && cv.step == TurnStep::DeclareAttackers {
             use crabomination::game::{Attack, AttackTarget};
-            let attacks: Vec<Attack> = if !attacking.plan.is_empty() {
+            let mut attacks: Vec<Attack> = if !attacking.plan.is_empty() {
                 attacking
                     .plan
                     .iter()
@@ -4335,6 +4335,16 @@ pub fn handle_game_input(
                     })
                     .collect()
             };
+            // CR 506.2 — Silent Arbiter caps the combat; an over-sized batch
+            // is rejected outright, so keep the biggest attackers.
+            if let Some(cap) = cv.max_attackers_per_combat
+                && attacks.len() > cap as usize
+            {
+                attacks.sort_by_key(|a| {
+                    -cv.battlefield.iter().find(|c| c.id == a.attacker).map_or(0, |c| c.power)
+                });
+                attacks.truncate(cap as usize);
+            }
             attacking.clear();
             outbox.submit(GameAction::DeclareAttackers(attacks));
         }

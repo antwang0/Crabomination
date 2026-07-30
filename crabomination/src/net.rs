@@ -280,6 +280,14 @@ pub struct ClientView {
     /// combat won't deal damage this turn. `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub combat_damage_prevented_this_turn: bool,
+    /// CR 506.2 / 509.1b — the tightest "no more than N creatures can
+    /// attack/block each combat" cap in play (Silent Arbiter), or `None` when
+    /// combat participation is uncapped. Surfaced so the attack/block UI can
+    /// stop the viewer from assembling a declaration the engine would reject.
+    #[serde(default)]
+    pub max_attackers_per_combat: Option<u32>,
+    #[serde(default)]
+    pub max_blockers_per_combat: Option<u32>,
     /// CR 731 — the game's day/night designation: `None` = neither (the
     /// starting state), `Some(true)` = day, `Some(false)` = night. Surfaced
     /// so UIs can show a day/night indicator. `#[serde(default)]` for

@@ -575,6 +575,17 @@ impl Bot for RandomBot {
                         })
                         .map(|c| c.id)
                         .collect();
+                    // CR 506.2 — Silent Arbiter caps the whole combat. An
+                    // over-sized batch is rejected outright, so trim to the
+                    // cap keeping the biggest attackers.
+                    if let Some(cap) = state.combat_participation_cap(false)
+                        && attackers.len() > cap as usize
+                    {
+                        attackers.sort_by_key(|id| {
+                            -state.computed_permanent(*id).map(|cp| cp.power).unwrap_or(0)
+                        });
+                        attackers.truncate(cap as usize);
+                    }
                     // CR 508.0 — drop a lone attacker that can't attack alone
                     // (Militia Rallier): a single-attacker batch with
                     // CantAttackAlone would be rejected, costing the bot its
@@ -3683,7 +3694,24 @@ pub fn pick_blocks_for_test(state: &GameState, seat: usize) -> Vec<(CardId, Card
 fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // The heuristic probes block legality per blocker×attacker pair, each a
     // layer-aware check — share one gather across the whole scan.
-    state.with_frozen_layers(|state| pick_blocks_inner(state, seat))
+    let mut blocks = state.with_frozen_layers(|state| pick_blocks_inner(state, seat));
+    // CR 509.1b — Silent Arbiter caps the distinct blockers for the whole
+    // combat; an over-sized batch is rejected outright, so keep only the
+    // first `cap` blockers (the heuristic already ordered them best-first).
+    if let Some(cap) = state.combat_participation_cap(true) {
+        let mut kept: Vec<CardId> = state.block_map.keys().copied().collect();
+        blocks.retain(|(blocker, _)| {
+            if kept.contains(blocker) {
+                return true;
+            }
+            if kept.len() >= cap as usize {
+                return false;
+            }
+            kept.push(*blocker);
+            true
+        });
+    }
+    blocks
 }
 
 /// A creature the bot may legally declare as a blocker: `can_block()` only
@@ -6250,6 +6278,56 @@ mod tests {
             }
             other => panic!("expected DeclareAttackers, got {:?}", other),
         }
+    }
+
+    /// CR 506.2 — under Silent Arbiter the bot declares exactly one attacker
+    /// (the engine rejects any bigger batch outright).
+    #[test]
+    fn bot_respects_the_silent_arbiter_attack_cap() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.add_card_to_battlefield(0, catalog::silent_arbiter());
+        for _ in 0..3 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+        }
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0).expect("bot acts") {
+            GameAction::DeclareAttackers(a) => {
+                assert!(a.len() <= 1, "batch trimmed to the cap, got {}", a.len());
+                let mut g2 = g.clone();
+                g2.declare_attackers(a).expect("the trimmed batch is legal");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
+    }
+
+    /// CR 509.1b — the block planner honours the same cap.
+    #[test]
+    fn bot_respects_the_silent_arbiter_block_cap() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(1, catalog::silent_arbiter());
+        let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(atk);
+        for _ in 0..3 {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: atk,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let blocks = pick_blocks_for_test(&g, 1);
+        let distinct: std::collections::HashSet<_> = blocks.iter().map(|(b, _)| *b).collect();
+        assert!(distinct.len() <= 1, "block plan trimmed to the cap");
+        g.declare_blockers(blocks).expect("the trimmed plan is legal");
     }
 
     /// Under High Alert (team "attack as though no defender"), the bot declares
