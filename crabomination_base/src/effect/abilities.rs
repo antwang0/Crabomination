@@ -2334,6 +2334,13 @@ pub struct ActivatedAbility {
     /// name:"). The pre-flight picks a name with enough matching copies.
     #[serde(default)]
     pub discard_cost_same_name: bool,
+    /// When set with `discard_cost`, the discarded card's mana value must equal
+    /// the target's — the linked-X shape of "Discard a card with mana value X:
+    /// Counter target spell with mana value X" (Kozilek, the Great Distortion).
+    /// The pre-flight narrows the hand to that mana value, so an activation
+    /// with no matching card is rejected.
+    #[serde(default)]
+    pub discard_cost_matches_target_mv: bool,
     /// "Discard your hand" as an activation cost (Diamond Lion / Lion's Eye
     /// Diamond). The whole hand is discarded, firing discard triggers.
     #[serde(default)]

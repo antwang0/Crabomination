@@ -1553,15 +1553,26 @@ pub fn update_hint(
         return;
     }
     // Master Warcraft — someone took over this turn's declarations. Say who,
-    // and (when it's the viewer) that the only thing they can submit from here
-    // is the empty declaration: the pickers still only reach their own
-    // creatures.
+    // and (when it's the viewer) whose creatures they're picking from.
     if let Some(chooser) = cv.combat_chooser
         && matches!(cv.step, TurnStep::DeclareAttackers | TurnStep::DeclareBlockers)
     {
-        let what = if cv.step == TurnStep::DeclareAttackers { "attackers" } else { "blocks" };
+        let attacks = cv.step == TurnStep::DeclareAttackers;
+        let what = if attacks { "attackers" } else { "blocks" };
         let msg = if chooser == your_seat {
-            format!("You choose this turn's {what}. P = declare none.")
+            let whose = if attacks {
+                cv.active_player
+            } else {
+                default_attack_target_seat(cv)
+            };
+            if whose == your_seat {
+                format!("You choose this turn's {what}. P = declare none.")
+            } else {
+                format!(
+                    "You choose this turn's {what} — from {}'s creatures. P = declare none.",
+                    player_name(cv, whose)
+                )
+            }
         } else {
             format!("{} chooses this turn's {what}.", player_name(cv, chooser))
         };
@@ -2062,7 +2073,9 @@ fn default_attack_target_seat(cv: &crabomination::net::ClientView) -> usize {
         .iter()
         .filter(|p| !p.eliminated)
         .map(|p| p.seat)
-        .find(|s| *s != cv.your_seat)
+        // The attackers are the active player's, so the defender is anyone
+        // else — which is the viewer when a `combat_chooser` declares for them.
+        .find(|s| *s != cv.active_player)
         .unwrap_or(cv.your_seat)
 }
 
@@ -3243,7 +3256,7 @@ pub fn auto_advance_p0(
         // attacking is restricted.
         let any_attacker = cv.battlefield.iter().any(|c| c.attacking);
         let any_blocker = cv.battlefield.iter().any(|c| {
-            c.owner == your_seat
+            cv.may_declare_blocker(your_seat, c.owner)
                 && c.is_creature()
                 && !c.tapped
                 && !c.keywords.contains(&Keyword::Defender)
@@ -3500,15 +3513,13 @@ pub fn handle_game_input(
             if activate
                 && let Some((game_id, owner)) = hovered_bf.iter().next()
             {
-                if owner.0 == your_seat {
+                if cv.may_declare_blocker(your_seat, owner.0) {
                     let already_assigned = blocking.assignments.iter().any(|(b, _)| *b == game_id.0);
                     let is_creature = cv.battlefield.iter().any(|c| c.id == game_id.0 && c.is_creature());
                     if is_creature && !already_assigned {
                         blocking.selected_blocker = Some(game_id.0);
                     }
-                } else if owner.0 != your_seat
-                    && let Some(blocker_id) = blocking.selected_blocker
-                {
+                } else if let Some(blocker_id) = blocking.selected_blocker {
                     let is_attacker = cv.battlefield.iter().any(|c| c.id == game_id.0 && c.attacking);
                     if is_attacker {
                         blocking.assignments.push((blocker_id, game_id.0));
@@ -3558,7 +3569,7 @@ pub fn handle_game_input(
                 let mut consumed = false;
                 if let Some((game_id, owner)) = hovered_bf.iter().next() {
                     let bf = cv.battlefield.iter().find(|c| c.id == game_id.0);
-                    if owner.0 == your_seat {
+                    if cv.may_declare_attacker(your_seat, owner.0) {
                         let eligible = bf
                             .map(|c| {
                                 c.is_creature()
@@ -3595,7 +3606,7 @@ pub fn handle_game_input(
                 }
                 if !consumed
                     && let Some(zone) = hovered_target_zone.iter().next()
-                    && zone.0 != your_seat
+                    && zone.0 != cv.active_player
                     && attacking.set_target_for_last_added(AttackTarget::Player(zone.0))
                 {
                     consumed = true;
@@ -3608,7 +3619,7 @@ pub fn handle_game_input(
             // last-added attacker's defender. Mirrors the 3-D disc path
             // but always visible and easy to hit.
             if let Some(seat) = btns.player_chip
-                && seat != your_seat
+                && seat != cv.active_player
                 && attacking.set_target_for_last_added(
                     crabomination::game::AttackTarget::Player(seat),
                 )

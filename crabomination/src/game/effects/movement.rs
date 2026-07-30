@@ -1349,8 +1349,15 @@ impl GameState {
         }
         // Then exile.
         if let Some(pos) = self.exile.iter().position(|c| c.id == cid) {
-            let card = self.exile.remove(pos);
+            let mut card = self.exile.remove(pos);
             let owner = card.owner;
+            // CR 406.7 — re-exiling an exiled object doesn't change zones, but
+            // it becomes a *new* object that has just been exiled: the first
+            // exiler's linked abilities (CR 607) can no longer find it.
+            if matches!(resolved_dest, ZoneDest::Exile | ZoneDest::ExilePlotted) {
+                card.exiled_with = None;
+                card.exiled_by = None;
+            }
             // Fire Lord Zuko's gate — record exile→battlefield entries so a
             // "whenever a permanent you control enters from exile" trigger can
             // distinguish them from cast / reanimate-from-graveyard entries.

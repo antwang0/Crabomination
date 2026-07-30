@@ -2914,3 +2914,93 @@ fn hedron_alignment_wins_from_all_four_zones() {
     drain_stack(&mut g);
     assert_eq!(g.game_over, Some(Some(0)), "all four zones — you win");
 }
+
+/// Deceiver of Form turns your other creatures into the revealed creature card.
+#[test]
+fn deceiver_of_form_copies_the_revealed_creature() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let deceiver = g.add_card_to_battlefield(0, catalog::deceiver_of_form());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::eldrazi_devastator());
+    // Yes to the copy, no to bottoming the revealed card.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+    ]));
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let copied = g.computed_permanent(bear).expect("bear still there");
+    assert_eq!((copied.power, copied.toughness), (8, 9), "bear is an Eldrazi Devastator");
+    let src = g.computed_permanent(deceiver).expect("deceiver still there");
+    assert_eq!((src.power, src.toughness), (8, 8), "the source doesn't copy itself");
+}
+
+/// Kozilek's counter ability only pays with a hand card matching the target's
+/// mana value.
+#[test]
+fn kozilek_discards_a_matching_mana_value_to_counter() {
+    let mut g = two_player_game();
+    let koz = g.add_card_to_battlefield(0, catalog::kozilek_the_great_distortion());
+    g.clear_sickness(koz);
+    // A mana-value-2 spell on the stack.
+    let spell = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+
+    // A one-drop in hand can't pay for a mana-value-2 target.
+    let one_drop = g.add_card_to_hand(0, catalog::salvage_drone());
+    let act = || GameAction::ActivateAbility {
+        card_id: koz,
+        ability_index: 0,
+        target: Some(Target::Permanent(spell)),
+        additional_targets: vec![],
+        x_value: None,
+    };
+    assert!(g.perform_action(act()).is_err(), "mana value mismatch");
+
+    let two_drop = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.perform_action(act()).expect("activate with a matching discard");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == two_drop), "the 2-drop paid");
+    assert!(g.players[0].hand.iter().any(|c| c.id == one_drop), "the 1-drop stayed");
+    assert!(g.battlefield_find(spell).is_none(), "the spell was countered");
+}
+
+/// Kozilek's cast trigger refills your hand to seven.
+#[test]
+fn kozilek_cast_trigger_refills_to_seven() {
+    let mut g = two_player_game();
+    g.players[0].hand.clear();
+    for _ in 0..12 {
+        g.add_card_to_library(0, catalog::salvage_drone());
+    }
+    let koz = g.add_card_to_hand(0, catalog::kozilek_the_great_distortion());
+    g.players[0].mana_pool.add_colorless(10);
+    g.perform_action(GameAction::CastSpell {
+        card_id: koz, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 7, "drew up to seven");
+}
+
+/// CR 701.32 — a trigger-side support 2 spreads over two *other* creatures.
+#[test]
+fn cr_701_32_support_trigger_fills_both_target_slots() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cap = g.add_card_to_battlefield(0, catalog::relief_captain());
+    g.fire_self_etb_triggers(cap, 0);
+    drain_stack(&mut g);
+    use crabomination::card::CounterType;
+    let counters = |id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!((counters(a), counters(b)), (1, 1), "both other creatures got a counter");
+    assert_eq!(counters(cap), 0, "support skips the source");
+}

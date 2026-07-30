@@ -96,7 +96,7 @@ pub fn update_attack_all_visibility(
     }
     use crabomination::card::Keyword;
     let has_attackers = cv.battlefield.iter().any(|c| {
-        c.owner == your_seat
+        cv.may_declare_attacker(your_seat, c.owner)
             && c.is_creature()
             && !c.tapped
             && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))

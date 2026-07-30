@@ -12194,7 +12194,10 @@ impl GameState {
         primary: Option<Target>,
     ) -> Vec<Target> {
         let max = match eff {
-            Effect::ApplyToTargets { max_targets, .. } => *max_targets as usize,
+            Effect::ApplyToTargets { max_targets, .. }
+            // CR 701.32 — a trigger-side "support N" spreads over up to N
+            // *other* target creatures, not just the one auto-bound slot.
+            | Effect::SupportCounters { max_targets, .. } => *max_targets as usize,
             // Effects whose slots carry *distinct* per-slot filters (Kor
             // Outfitter's ETB `Attach { what: target Equipment, to: target
             // creature }`) can't be filled by the same-filter loop below —

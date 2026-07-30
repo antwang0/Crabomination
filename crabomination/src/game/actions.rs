@@ -11861,10 +11861,24 @@ impl GameState {
                     None => return Err(GameError::SelectionRequirementViolated),
                 }
             } else {
+                // CR 601.2b linked X — "discard a card with mana value X" where
+                // the same X gates the target (Kozilek, the Great Distortion).
+                let target_mv = if ability.discard_cost_matches_target_mv {
+                    match target.as_ref().and_then(|t| match t {
+                        Target::Permanent(id) => self.find_card_anywhere(*id),
+                        Target::Player(_) => None,
+                    }) {
+                        Some(c) => Some(c.definition.cost.cmc()),
+                        None => return Err(GameError::SelectionRequirementViolated),
+                    }
+                } else {
+                    None
+                };
                 let mut picks: Vec<(CardId, i32)> = self.players[p]
                     .hand
                     .iter()
                     .filter(|c| c.id != card_id)
+                    .filter(|c| target_mv.is_none_or(|mv| c.definition.cost.cmc() == mv))
                     .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                     .map(|c| (c.id, c.definition.cost.cmc() as i32))
                     .collect();

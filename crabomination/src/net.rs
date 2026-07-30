@@ -523,6 +523,19 @@ impl ClientView {
             None => self.active_player != seat,
         }
     }
+
+    /// May `seat` put `owner`'s creature into this turn's attack declaration?
+    /// Attackers always come from the **active player**, which with a
+    /// `combat_chooser` (Master Warcraft) isn't the declarer's own board.
+    pub fn may_declare_attacker(&self, seat: usize, owner: usize) -> bool {
+        self.declares_attacks(seat) && owner == self.active_player
+    }
+
+    /// May `seat` put `owner`'s creature into this turn's block declaration?
+    /// Blockers come from the defending players (everyone but the active one).
+    pub fn may_declare_blocker(&self, seat: usize, owner: usize) -> bool {
+        self.declares_blocks(seat) && owner != self.active_player
+    }
 }
 
 /// A projected combat-damage summary, computed from the currently

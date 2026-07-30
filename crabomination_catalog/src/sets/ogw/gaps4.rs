@@ -330,3 +330,101 @@ pub fn hedron_alignment() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Deceiver of Form — {6}{C} 8/8. Beginning of combat: reveal the top card;
+/// on a creature you may turn your other creatures into copies of it, then
+/// may bottom it.
+pub fn deceiver_of_form() -> CardDefinition {
+    use crate::effect::{EventKind, EventScope, EventSpec, LibraryPosition, TriggeredAbility, ZoneDest};
+    let top = || Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(1) };
+    CardDefinition {
+        name: "Deceiver of Form",
+        cost: cost(&[generic(6), crate::mana::colorless(1)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 8,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::RevealTopThenIf {
+                    who: PlayerRef::You,
+                    filter: R::Creature,
+                    then: Box::new(Effect::MayDo {
+                        description: "Have your other creatures become copies of it?".into(),
+                        body: Box::new(Effect::BecomeCopyOfFor {
+                            what: Selector::OtherCreaturesControlledByControllerOf(Box::new(
+                                Selector::This,
+                            )),
+                            source: top(),
+                            duration: Duration::EndOfTurn,
+                            non_legendary: false,
+                        }),
+                    }),
+                },
+                Effect::MayDo {
+                    description: "Put the revealed card on the bottom of your library?".into(),
+                    body: Box::new(Effect::Move {
+                        what: top(),
+                        to: ZoneDest::Library {
+                            who: PlayerRef::You,
+                            pos: LibraryPosition::Bottom,
+                        },
+                    }),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kozilek, the Great Distortion — {8}{C}{C} 12/12 menace. Cast trigger refills
+/// to seven; discard a card with mana value X to counter a spell with that X.
+pub fn kozilek_the_great_distortion() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Predicate};
+    use crate::effect::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Kozilek, the Great Distortion",
+        cost: cost(&[generic(8), crate::mana::colorless(1), crate::mana::colorless(1)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 12,
+        toughness: 12,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                filter: Some(Predicate::ValueAtMost(
+                    Value::HandSizeOf(PlayerRef::You),
+                    Value::Const(6),
+                )),
+                ..EventSpec::new(EventKind::SpellCast, EventScope::SelfSource)
+            },
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::NonNeg(Box::new(Value::Diff(
+                    Box::new(Value::Const(7)),
+                    Box::new(Value::HandSizeOf(PlayerRef::You)),
+                ))),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            discard_cost_matches_target_mv: true,
+            effect: Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

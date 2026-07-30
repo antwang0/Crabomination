@@ -19224,10 +19224,11 @@ impl GameState {
                 let src = self
                     .resolve_selector(source, ctx)
                     .into_iter()
-                    .find_map(|e| e.as_permanent_id());
+                    .find_map(|e| e.as_card_id());
                 // The copy source may be a battlefield permanent or a card
                 // in another zone (Shifting Woodland copies a graveyard
-                // permanent *card*).
+                // permanent *card*; Deceiver of Form copies the revealed
+                // top card of the library).
                 let src_def = src
                     .and_then(|id| self.find_card_anywhere(id))
                     .map(|c| c.definition.clone());
