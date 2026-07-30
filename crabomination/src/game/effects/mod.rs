@@ -1271,6 +1271,212 @@ impl GameState {
         true
     }
 
+    /// Myr Incubator — "search your library for any number of [filter] cards,
+    /// exile them, then create that many tokens. Then shuffle." Taking every
+    /// match is strictly best, so the pick isn't surfaced.
+    #[inline(never)]
+    fn search_exile_then_tokens(
+        &mut self,
+        filter: &crate::card::SelectionRequirement,
+        definition: &crate::card::TokenDefinition,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let p = ctx.controller;
+        if self.no_search_this_turn {
+            return Ok(());
+        }
+        let picks: Vec<CardId> = self.players[p]
+            .library
+            .iter()
+            .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+            .map(|c| c.id)
+            .collect();
+        for cid in &picks {
+            if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) {
+                let card = self.players[p].library.remove(pos);
+                self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+            }
+        }
+        self.shuffle_library(p, events);
+        if picks.is_empty() {
+            return Ok(());
+        }
+        self.run_effect(
+            &Effect::CreateToken {
+                who: PlayerRef::You,
+                count: crate::effect::Value::Const(picks.len() as i32),
+                definition: definition.clone(),
+            },
+            ctx,
+            events,
+        )
+    }
+
+    /// CR 500.8 — Fatespinner: the affected player picks which of draw step /
+    /// main phase / combat phase they skip for the rest of the turn. The
+    /// auto-decider takes the first mode (draw step).
+    #[inline(never)]
+    fn choose_step_to_skip(
+        &mut self,
+        who: &PlayerRef,
+        ctx: &EffectContext,
+    ) -> Result<(), GameError> {
+        use crate::decision::{Decision, DecisionAnswer};
+        let source = ctx.source.unwrap_or(CardId(0));
+        for p in self.resolve_players(who, ctx) {
+            let answer = self.decider.decide(&Decision::ChooseModes {
+                source,
+                num_modes: 3,
+                count: 1,
+                default: vec![0],
+                mode_texts: vec![
+                    "Skip your draw step".into(),
+                    "Skip your main phases".into(),
+                    "Skip your combat phase".into(),
+                ],
+            });
+            let pick = match answer {
+                DecisionAnswer::Modes(m) => m.first().copied().unwrap_or(0),
+                _ => 0,
+            };
+            let steps: &[TurnStep] = match pick {
+                1 => &[TurnStep::PreCombatMain, TurnStep::PostCombatMain],
+                2 => &[
+                    TurnStep::BeginCombat,
+                    TurnStep::DeclareAttackers,
+                    TurnStep::DeclareBlockers,
+                    TurnStep::CombatDamage,
+                    TurnStep::EndCombat,
+                ],
+                _ => &[TurnStep::Draw],
+            };
+            for st in steps {
+                self.skipped_steps_this_turn.push((p, *st));
+            }
+        }
+        Ok(())
+    }
+
+    /// Quicksilver Elemental — copy every activated ability off the target for
+    /// the duration. `Selector::This` inside a copied ability rebinds to the
+    /// source, which is the printed "use this creature's name instead".
+    #[inline(never)]
+    fn gain_all_activated_abilities_of(
+        &mut self,
+        what: &Selector,
+        duration: &crate::effect::Duration,
+        ctx: &EffectContext,
+    ) -> Result<(), GameError> {
+        let eot = matches!(
+            duration,
+            crate::effect::Duration::EndOfTurn | crate::effect::Duration::EndOfCombat
+        );
+        let Some(src) = ctx.source else { return Ok(()) };
+        let mut granted = Vec::new();
+        for ent in self.resolve_selector(what, ctx) {
+            let (EntityRef::Permanent(id) | EntityRef::Card(id)) = ent else { continue };
+            if let Some(c) = self.battlefield_find(id) {
+                granted.extend(c.definition.activated_abilities.iter().cloned());
+            }
+            granted.extend(self.granted_abilities_for(id));
+        }
+        if let Some(c) = self.battlefield_find_mut(src) {
+            if eot {
+                c.granted_activated_eot.extend(granted);
+            } else {
+                c.granted_activated_abilities.extend(granted);
+            }
+        }
+        Ok(())
+    }
+
+    /// Proteus Staff — bottom the creature, then dig its controller to the next
+    /// creature card and deploy it (the rest go to the bottom in order).
+    #[inline(never)]
+    fn bottom_then_reveal_until_creature(
+        &mut self,
+        what: &Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let targets: Vec<CardId> = self
+            .resolve_selector(what, ctx)
+            .into_iter()
+            .filter_map(|e| match e {
+                EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                _ => None,
+            })
+            .collect();
+        for id in targets {
+            let Some(owner) = self.battlefield_find(id).map(|c| c.owner) else { continue };
+            self.move_card_to(
+                id,
+                &ZoneDest::Library {
+                    who: PlayerRef::Seat(owner),
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
+                ctx,
+                events,
+            );
+            let mut passed: Vec<crate::card::CardInstance> = Vec::new();
+            let mut found = None;
+            while !self.players[owner].library.is_empty() {
+                let card = self.players[owner].library.remove(0);
+                if card.definition.is_creature() {
+                    found = Some(card);
+                    break;
+                }
+                passed.push(card);
+            }
+            for card in passed {
+                self.players[owner].library.push(card);
+            }
+            if let Some(card) = found {
+                self.place_card_in_dest(
+                    card,
+                    owner,
+                    &ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false },
+                    events,
+                );
+            }
+        }
+        Ok(())
+    }
+
+    /// Timesifter — each player exiles their top card; the greatest mana value
+    /// wins an extra turn. A tie re-runs among the tied players.
+    #[inline(never)]
+    fn exile_top_greatest_mv_extra_turn(
+        &mut self,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let mut live: Vec<usize> = (0..self.players.len()).collect();
+        while live.len() > 1 {
+            let mut best: Option<u32> = None;
+            let mut mvs: Vec<(usize, u32)> = Vec::new();
+            for &p in &live {
+                if self.players[p].library.is_empty() {
+                    continue;
+                }
+                let card = self.players[p].library.remove(0);
+                let mv = card.definition.cost.cmc();
+                self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+                best = Some(best.map_or(mv, |b: u32| b.max(mv)));
+                mvs.push((p, mv));
+            }
+            let Some(best) = best else { return Ok(()) };
+            live = mvs.into_iter().filter(|(_, mv)| *mv == best).map(|(p, _)| p).collect();
+            if live.is_empty() {
+                return Ok(());
+            }
+        }
+        if let Some(&winner) = live.first() {
+            self.players[winner].extra_turns = self.players[winner].extra_turns.saturating_add(1);
+        }
+        Ok(())
+    }
+
     fn run_effect(
         &mut self,
         effect: &Effect,
@@ -5106,18 +5312,18 @@ impl GameState {
                 Ok(())
             }
 
-            // CR 701.19 — "Look at [player]'s hand." The knowledge sticks, so
-            // the server view keeps showing it to the looker.
             Effect::LookAtHand { who } => {
-                let seats: Vec<usize> = self
+                for p in self
                     .resolve_selector(who, ctx)
                     .into_iter()
                     .filter_map(|e| match e {
                         EntityRef::Player(p) => Some(p),
                         _ => None,
                     })
-                    .collect();
-                for p in seats {
+                    .collect::<Vec<_>>()
+                {
+                    // CR 701.19 — the knowledge sticks, so the server view
+                    // keeps showing that hand to the looker.
                     if p != ctx.controller && !self.hands_revealed_to.contains(&(ctx.controller, p))
                     {
                         self.hands_revealed_to.push((ctx.controller, p));
@@ -5126,45 +5332,7 @@ impl GameState {
                 Ok(())
             }
 
-            // CR 500.8 — Fatespinner: the affected player picks which of draw
-            // step / main phase / combat phase they skip for the rest of the
-            // turn. The auto-decider takes the first mode (draw step).
-            Effect::ChooseStepToSkipThisTurn { who } => {
-                use crate::decision::{Decision, DecisionAnswer};
-                let source = ctx.source.unwrap_or(CardId(0));
-                for p in self.resolve_players(who, ctx) {
-                    let answer = self.decider.decide(&Decision::ChooseModes {
-                        source,
-                        num_modes: 3,
-                        count: 1,
-                        default: vec![0],
-                        mode_texts: vec![
-                            "Skip your draw step".into(),
-                            "Skip your main phases".into(),
-                            "Skip your combat phase".into(),
-                        ],
-                    });
-                    let pick = match answer {
-                        DecisionAnswer::Modes(m) => m.first().copied().unwrap_or(0),
-                        _ => 0,
-                    };
-                    let steps: &[TurnStep] = match pick {
-                        1 => &[TurnStep::PreCombatMain, TurnStep::PostCombatMain],
-                        2 => &[
-                            TurnStep::BeginCombat,
-                            TurnStep::DeclareAttackers,
-                            TurnStep::DeclareBlockers,
-                            TurnStep::CombatDamage,
-                            TurnStep::EndCombat,
-                        ],
-                        _ => &[TurnStep::Draw],
-                    };
-                    for st in steps {
-                        self.skipped_steps_this_turn.push((p, *st));
-                    }
-                }
-                Ok(())
-            }
+            Effect::ChooseStepToSkipThisTurn { who } => self.choose_step_to_skip(who, ctx),
 
             Effect::PutCardFromHandOnTopOfLibrary { who } => {
                 use crate::decision::{Decision, DecisionAnswer};
@@ -6137,6 +6305,51 @@ impl GameState {
                             };
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                        }
+                    }
+                    // Extraplanar Lens — "one mana of any type that land
+                    // produced": read the trigger subject's own basic types.
+                    ManaPayload::AnyTypeTriggerSourceProduces => {
+                        use crate::card::LandType;
+                        let subject = match ctx.trigger_source {
+                            Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => {
+                                self.battlefield_find(c)
+                            }
+                            _ => None,
+                        };
+                        let legal: Vec<Color> = subject
+                            .map(|land| {
+                                land.definition
+                                    .subtypes
+                                    .land_types
+                                    .iter()
+                                    .filter_map(|lt| match lt {
+                                        LandType::Plains => Some(Color::White),
+                                        LandType::Island => Some(Color::Blue),
+                                        LandType::Swamp => Some(Color::Black),
+                                        LandType::Mountain => Some(Color::Red),
+                                        LandType::Forest => Some(Color::Green),
+                                        _ => None,
+                                    })
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        match legal.first() {
+                            Some(&c) => {
+                                add_one(self, p, c);
+                                events.push(GameEvent::ManaAdded {
+                                    player: p,
+                                    color: c,
+                                    source: ctx.source,
+                                });
+                            }
+                            None => {
+                                self.players[p].mana_pool.add_colorless(mult);
+                                events.push(GameEvent::ColorlessManaAdded {
+                                    player: p,
+                                    source: ctx.source,
+                                });
+                            }
                         }
                     }
                     ManaPayload::AnyColors(v) => {
@@ -12598,41 +12811,9 @@ impl GameState {
                 Ok(())
             }
 
-            // "Search your library for any number of [filter] cards, exile
-            // them, then create that many tokens. Then shuffle." Taking every
-            // match is strictly best, so the pick isn't surfaced (Myr Incubator).
+            // Myr Incubator — see `search_exile_then_tokens`.
             Effect::SearchExileThenTokensPerCard { filter, definition } => {
-                
-                let p = ctx.controller;
-                if self.no_search_this_turn {
-                    return Ok(());
-                }
-                let picks: Vec<crate::card::CardId> = self.players[p]
-                    .library
-                    .iter()
-                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                    .map(|c| c.id)
-                    .collect();
-                for cid in &picks {
-                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) {
-                        let card = self.players[p].library.remove(pos);
-                        self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
-                    }
-                }
-                self.shuffle_library(p, events);
-                events.push(GameEvent::LibraryShuffled { player: p });
-                if picks.is_empty() {
-                    return Ok(());
-                }
-                self.run_effect(
-                    &Effect::CreateToken {
-                        who: PlayerRef::You,
-                        count: crate::effect::Value::Const(picks.len() as i32),
-                        definition: definition.clone(),
-                    },
-                    ctx,
-                    events,
-                )
+                self.search_exile_then_tokens(filter, definition, ctx, events)
             }
 
             Effect::SearchUpToN { who, filter, to, count } => {
@@ -19461,6 +19642,18 @@ impl GameState {
                     }
                 }
                 Ok(())
+            }
+
+            Effect::GainAllActivatedAbilitiesOf { what, duration } => {
+                self.gain_all_activated_abilities_of(what, duration, ctx)
+            }
+
+            Effect::BottomThenRevealUntilCreature { what } => {
+                self.bottom_then_reveal_until_creature(what, ctx, events)
+            }
+
+            Effect::ExileTopGreatestManaValueTakesExtraTurn => {
+                self.exile_top_greatest_mv_extra_turn(events)
             }
 
             Effect::GainActivatedAbility { what, ability, duration } => {

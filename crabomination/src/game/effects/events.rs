@@ -118,6 +118,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::CommittedCrime, GameEvent::CommittedCrime { .. }) => true,
         (EventKind::PlayerSearchedLibrary, GameEvent::PlayerSearchedLibrary { .. }) => true,
         (EventKind::LibraryShuffled, GameEvent::LibraryShuffled { .. }) => true,
+        (EventKind::TappedForMana, GameEvent::TappedForMana { .. }) => true,
         (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
@@ -661,7 +662,8 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         )),
         GameEvent::AttackerWentUnblocked { attacker } => Some(EntityRef::Permanent(*attacker)),
         GameEvent::LandPlayed { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
-        GameEvent::PermanentTapped { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::PermanentTapped { card_id, .. }
+        | GameEvent::TappedForMana { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         // CR 702.122/702.171 — bind `Selector::TriggerSource` to the crewed
         // Vehicle / saddled Mount ("that Mount or Vehicle gains …").
@@ -818,6 +820,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::PermanentSacrificed { card_id, .. }
         | GameEvent::CreatureLeftWithoutDying { card_id, .. }
         | GameEvent::PermanentTapped { card_id, .. }
+        | GameEvent::TappedForMana { card_id, .. }
         | GameEvent::PermanentUntapped { card_id }
         | GameEvent::PermanentPhasedIn { card_id }
         | GameEvent::Explored { card_id, .. }

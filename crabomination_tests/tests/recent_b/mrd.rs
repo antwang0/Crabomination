@@ -1908,3 +1908,114 @@ fn power_conduit_recycles_a_counter() {
     assert_eq!(g.battlefield_find(conduit).unwrap().counter_count(CounterType::Charge), 0);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+// ── Mirrodin gap batch 6 (`decks::recent321`) ──
+
+/// Extraplanar Lens doubles every land sharing the imprint's name.
+#[test]
+fn extraplanar_lens_doubles_the_imprinted_land_name() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(0, catalog::swamp());
+    let b = g.add_card_to_battlefield(0, catalog::swamp());
+    g.add_card_to_battlefield(0, catalog::plains());
+    let lens = g.add_card_to_hand(0, catalog::extraplanar_lens());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: lens, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.empty();
+    // Whichever Swamp survived the imprint still doubles.
+    let survivor = if g.battlefield_find(a).is_some() { a } else { b };
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: survivor, ability_index: 0, target: None, additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("tap the Swamp");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2, "the Swamp paid twice");
+}
+
+/// Quicksilver Fountain turns a flooded land into an Island.
+#[test]
+fn quicksilver_fountain_floods_a_land_into_an_island() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::quicksilver_fountain());
+    let mountain = g.add_card_to_battlefield(0, catalog::mountain());
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mountain).unwrap().counter_count(CounterType::Flood), 1);
+    assert!(
+        g.computed_permanent(mountain)
+            .unwrap()
+            .subtypes
+            .land_types
+            .contains(&crabomination::card::LandType::Island)
+    );
+}
+
+/// Timesifter awards the extra turn to the biggest exiled mana value.
+#[test]
+fn timesifter_awards_the_greatest_mana_value() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::timesifter());
+    g.add_card_to_library(0, catalog::reiver_demon());
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].extra_turns, 1);
+    assert_eq!(g.players[1].extra_turns, 0);
+}
+
+/// Proteus Staff bottoms a creature and digs up the next one.
+#[test]
+fn proteus_staff_swaps_a_creature_off_the_top() {
+    let mut g = main_phase();
+    let staff = g.add_card_to_battlefield(0, catalog::proteus_staff());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::plains());
+    g.add_card_to_library(1, catalog::reiver_demon());
+    g.clear_sickness(staff);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: staff, ability_index: 0, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Reiver Demon" && c.controller == 1)
+    );
+}
+
+/// Quicksilver Elemental borrows another creature's activated ability.
+#[test]
+fn quicksilver_elemental_borrows_activated_abilities() {
+    let mut g = main_phase();
+    let elem = g.add_card_to_battlefield(0, catalog::quicksilver_elemental());
+    let tower = g.add_card_to_battlefield(1, catalog::tower_of_eons());
+    let donor = g.add_card_to_battlefield(1, catalog::auriok_bladewarden());
+    g.clear_sickness(elem);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elem, ability_index: 0, target: Some(Target::Permanent(donor)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("borrow");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(elem).unwrap().granted_activated_eot.len(), 1);
+    // The borrowed {T} ability now resolves off the Elemental.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elem, ability_index: 1, target: Some(Target::Permanent(tower)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect_err("Tower isn't a creature");
+}

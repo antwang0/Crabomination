@@ -2794,6 +2794,16 @@ impl GameState {
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.named_card.as_deref())
                         .is_some_and(|n| n == card.definition.name),
+                    // Extraplanar Lens — "a land with the same name as the
+                    // exiled card".
+                    R::SameNameAsExiledWithSource => source.is_some_and(|sid| {
+                        self.exile
+                            .iter()
+                            .any(|c| {
+                                c.exiled_with == Some(sid)
+                                    && c.definition.name == card.definition.name
+                            })
+                    }),
                     // Mourner's Shield — "shares a color with the exiled card".
                     R::SharesColorWithExiledBySource => source.is_some_and(|sid| {
                         self.exile
@@ -2949,8 +2959,8 @@ impl GameState {
             R::ProducesColorless => card.definition.produces_colorless(),
             R::IsSnow => card.definition.is_snow(),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
-            // Needs the ability's source, which only the static walker carries.
-            R::SharesColorWithExiledBySource => false,
+            // Need the ability's source, which only the static walker carries.
+            R::SharesColorWithExiledBySource | R::SameNameAsExiledWithSource => false,
             // Glissa Sunseeker — "if its mana value is equal to the amount of
             // unspent mana you have".
             R::ManaValueEqualsYourUnspentMana => {

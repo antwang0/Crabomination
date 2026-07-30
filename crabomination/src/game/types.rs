@@ -1687,6 +1687,9 @@ pub enum GameEvent {
     /// CR 103.2c — a spell or ability caused `player` to shuffle their library
     /// (Psychogenic Probe). Game-setup shuffles don't emit it.
     LibraryShuffled { player: usize },
+    /// CR 605 — `card_id` was tapped to pay a mana ability's `{T}` cost
+    /// (Extraplanar Lens, War's Toll). The tapped permanent is the subject.
+    TappedForMana { card_id: CardId, player: usize },
     /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).
     CoinFlipWon { player: usize },
     /// CR 701.49 — `player` ventured into `room` of `dungeon`.

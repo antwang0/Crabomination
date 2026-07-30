@@ -204,6 +204,7 @@ impl Effect {
         }
         match self {
             Effect::Noop
+            | Effect::ExileTopGreatestManaValueTakesExtraTurn
             | Effect::ChooseStepToSkipThisTurn { .. }
             | Effect::SearchExileThenTokensPerCard { .. }
             | Effect::SearchAuraAttachToSource
@@ -664,7 +665,9 @@ impl Effect {
             Effect::RedirectSpellTargetToSelf { what } => sel_has_target(what),
             Effect::RedirectYourDamageToChosen { what }
             | Effect::RedirectYourCombatDamageToTarget { what }
-            | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_has_target(what),
+            | Effect::PreventAllDamageFromTargetThisTurn { what, .. }
+            | Effect::BottomThenRevealUntilCreature { what }
+            | Effect::GainAllActivatedAbilitiesOf { what, .. } => sel_has_target(what),
             Effect::AddManaKeptThisTurn { who, .. }
             | Effect::AddManaKeptThisTurnCount { who, .. } => player_has_target(who),
             Effect::AddManaEqualToPermanentCost { .. } => false,
@@ -674,6 +677,7 @@ impl Effect {
                     | ManaPayload::AnyOneColor(v)
                     | ManaPayload::AnyColors(v) => value_has_target(v),
                     ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => value_has_target(v),
+                    ManaPayload::AnyTypeTriggerSourceProduces => false,
                     ManaPayload::Restricted(inner, _)
                     | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner) => match inner.as_ref() {

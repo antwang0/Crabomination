@@ -1519,6 +1519,7 @@ fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::mana::ColorSet
         | ManaPayload::AnyColors(_)
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce
+        | ManaPayload::AnyTypeTriggerSourceProduces
         | ManaPayload::DevotionOfChosenColor => *set = crate::mana::ColorSet::all(),
         ManaPayload::Colorless(_) => {}
         // Could produce any single color the rock was set to — treat as

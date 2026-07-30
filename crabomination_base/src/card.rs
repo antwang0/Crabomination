@@ -466,6 +466,9 @@ pub enum CounterType {
     /// Tide counter — Ominous Seas accrues one on your first draw each turn;
     /// at four or more they're removed to mint an 8/8 Kraken.
     Tide,
+    /// CR 122 — a flood counter (Quicksilver Fountain: a land with one is an
+    /// Island).
+    Flood,
     /// Bounty counter — Chevill, Bane of Monsters marks an opponent's
     /// creature/planeswalker; when a bounty-countered creature dies, Chevill's
     /// controller draws and gains a life.
@@ -1534,6 +1537,9 @@ pub enum SelectionRequirement {
     /// The permanent's mana value ties the lowest among all nonland permanents
     /// on the battlefield (Culling Scales' "with the lowest mana value").
     LowestManaValueAmongNonland,
+    /// Has the same name as the card exiled with the ability's source
+    /// (Extraplanar Lens' imprint).
+    SameNameAsExiledWithSource,
     /// Shares a colour with the card exiled with the ability's source
     /// (Mourner's Shield's imprint).
     SharesColorWithExiledBySource,

@@ -1193,6 +1193,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::ImprintedCardColor
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce
+        | ManaPayload::AnyTypeTriggerSourceProduces
         | ManaPayload::AnyColorAmongLegendaries => true,
         ManaPayload::Colors(cs) => cs.len() > 1,
         ManaPayload::OfColors(cs, _) => cs.len() > 1,
@@ -1990,7 +1991,8 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             | ManaPayload::AnyColorOpponentCouldProduce
             | ManaPayload::AnyColorYouCouldProduce => true,
             // Color set depends on live board state — not auto-tapped.
-            ManaPayload::AnyColorAmongLegendaries => false,
+            ManaPayload::AnyColorAmongLegendaries
+            | ManaPayload::AnyTypeTriggerSourceProduces => false,
             // Devotion-scaled: it can make `color`, but only the controller
             // should choose to tap it (devotion may be 0). Not auto-tapped.
             ManaPayload::DevotionOfChosenColor => false,
@@ -12099,6 +12101,11 @@ impl GameState {
         // succeeded so a rolled-back activation never announces a tap.
         if ability.tap_cost {
             events.push(GameEvent::PermanentTapped { card_id, actor: None, as_attacker: false });
+            // CR 605 — a mana ability's tap is also a "tapped for mana" event
+            // (Extraplanar Lens), distinct from the plain tap above.
+            if is_mana_ability(&ability.effect) {
+                events.push(GameEvent::TappedForMana { card_id, player: p });
+            }
         }
         if ability.untap_self_cost {
             events.push(GameEvent::PermanentUntapped { card_id });

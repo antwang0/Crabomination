@@ -1825,6 +1825,9 @@ pub enum ManaPayload {
     /// controller's own permanents. Falls back to colorless if none.
     /// Star Compass.
     AnyColorYouCouldProduce,
+    /// Add one mana of any type the *trigger's subject* land produced
+    /// (Extraplanar Lens). Falls back to colorless if it produces nothing.
+    AnyTypeTriggerSourceProduces,
     /// Add one mana of any color among legendary creatures and planeswalkers
     /// you control (Mox Amber). The legal-color set is the union of those
     /// permanents' colors; produces nothing when empty.
@@ -2258,6 +2261,9 @@ pub enum EventKind {
     /// CR 103.2c — a spell or ability caused a player to shuffle their library.
     /// The shuffling player is the event subject (Psychogenic Probe).
     LibraryShuffled,
+    /// CR 605 — a permanent was tapped to pay a mana ability's `{T}` cost.
+    /// The tapped permanent is the event subject (Extraplanar Lens).
+    TappedForMana,
 }
 
 /// Whose events does this trigger listen for?
@@ -6264,6 +6270,19 @@ pub enum Effect {
     /// by `advance_turn`. Time Walk, Temporal Manipulation, Ral Zarek's
     /// -7 coin-flip emblem.
     TakeExtraTurn { who: PlayerRef, count: Value },
+    /// CR 701.35 — "Put target creature on the bottom of its owner's library.
+    /// That creature's controller reveals cards from the top of their library
+    /// until they reveal a creature card, puts it onto the battlefield, and
+    /// the rest on the bottom in any order." Proteus Staff.
+    BottomThenRevealUntilCreature { what: Selector },
+    /// "Each player exiles the top card of their library. The player who
+    /// exiled the card with the greatest mana value takes an extra turn after
+    /// this one." Ties re-run over the tied players (Timesifter).
+    ExileTopGreatestManaValueTakesExtraTurn,
+    /// "This creature gains all activated abilities of target creature until
+    /// end of turn" (Quicksilver Elemental) — the grants are stamped onto the
+    /// source's `granted_activated_eot`.
+    GainAllActivatedAbilitiesOf { what: Selector, duration: Duration },
     /// CR 500.8 — "That player skips each instance of the chosen step or phase
     /// this turn." The affected player picks draw step / main phase / combat
     /// phase (`Decision::ChooseModes`); the pick is turn-scoped. Fatespinner.
