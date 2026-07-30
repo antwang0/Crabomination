@@ -12316,6 +12316,14 @@ impl GameState {
         // resolves). Cards whose effect references self after sacrifice
         // (Greater Good's "draw cards equal to its power") need to
         // capture that data via `Effect::SacrificeAndRemember` instead.
+        // CR 702.6 — "Unattach this Equipment" as a cost (Sunforger): the
+        // source must be attached, and it detaches before the effect runs.
+        if ability.unattach_cost {
+            match self.battlefield.iter_mut().find(|c| c.id == card_id) {
+                Some(c) if c.attached_to.is_some() => c.attached_to = None,
+                _ => return Err(GameError::SelectionRequirementViolated),
+            }
+        }
         if ability.sac_cost {
             let is_creature = self
                 .battlefield_find(card_id)

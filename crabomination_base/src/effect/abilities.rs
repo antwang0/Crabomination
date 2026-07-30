@@ -2093,6 +2093,11 @@ pub struct ActivatedAbility {
     /// like Mind Stone (`{1}, {T}, Sacrifice this: Draw a card`),
     /// Cathar Commando, Greater Good, Zuran Orb, etc.
     pub sac_cost: bool,
+    /// CR 702.6 — "Unattach this Equipment" as an activation cost: the source
+    /// must currently be attached, and detaching it is part of the cost
+    /// (Sunforger). Paid alongside `sac_cost` in `activate_ability`.
+    #[serde(default)]
+    pub unattach_cost: bool,
     /// Optional gating predicate. When set, the activation is rejected
     /// before any cost is paid unless the predicate evaluates to true
     /// against the source/controller context. Used by activated abilities

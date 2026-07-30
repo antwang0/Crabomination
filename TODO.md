@@ -181,15 +181,23 @@ complete. Follow-ups:
 - **Tunnel Vision / the NameCard family auto-pick the densest name.** A
   `wants_ui` caster should be prompted for the name (the same residual as
   Petrified Hamlet's `NameCard`).
-- **GPT and DIS are complete; RAV is at 5.** Remaining, each blocked on real
-  machinery: **Breath of Fury** (sac the enchanted creature, re-attach the Aura,
-  untap the team, and append a combat phase), **Eye of the Storm** (exile every
-  I/S cast, then re-cast free copies of the whole pile), **Flickerform** (blink
-  the host *and* its Auras, re-attaching them at the next end step),
-  **Master Warcraft** (one player chooses another's attackers and blocks —
-  needs the declaration steps to accept an outside chooser), **Sunforger**
-  (an unattach-as-cost activation plus search-and-cast-free).
-  `scripts/set_gaps.py rav` is the live list.
+- **GPT and DIS are complete; RAV is at 1.** The only card left is **Master
+  Warcraft** — one player choosing another player's attackers *and* blocks
+  needs `declare_attackers` / `declare_blockers` to accept an outside chooser
+  and the priority loop to hand that seat the declaration, which today is
+  hard-wired to the active/defending player. `scripts/set_gaps.py rav` is the
+  live list.
+- **Breath of Fury re-attaches to the first legal creature.** The printed line
+  lets the controller choose which creature the Aura moves to.
+- **Sunforger's search auto-picks the priciest legal instant.** No prompt for a
+  `wants_ui` caster; the same residual as the other search-and-cast effects.
+- **Eye of the Storm skips copies.** A copy that would join the pile is
+  ignored (CR 707.10a — it would cease to exist off the stack anyway);
+  without that guard the free copies re-trigger forever.
+- **Flickerform's return isn't a choice.** Every Aura exiled this way comes
+  back attached; the printed "if you do" only gates on the host returning,
+  which is modeled, but an Aura that could no longer legally enchant the host
+  should stay in exile.
 
 ## Tier 4 — remaining SOS/SOA audit simplifications (2026-07)
 

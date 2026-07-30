@@ -11114,6 +11114,197 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SearchAndCastFree { filter } => {
+                // Sunforger. The search is the usual auto-pick (highest mana
+                // value among matches); the cast rides the free-cast helper.
+                let p = ctx.controller;
+                let pick = self.players[p]
+                    .library
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .max_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| c.id);
+                if let Some(cid) = pick {
+                    self.run_effect(
+                        &Effect::CastWithoutPayingImmediate {
+                            what: Selector::Target(0),
+                            source_zone: crate::card::Zone::Library,
+                            exile_after: false,
+                            copy: false,
+                        },
+                        &EffectContext { targets: vec![Target::Permanent(cid)], ..ctx.clone() },
+                        events,
+                    )?;
+                }
+                self.shuffle_library(p, events);
+                Ok(())
+            }
+
+            Effect::FlickerHostWithAuras => {
+                // Flickerform. Exile the host plus every Aura on it, then bring
+                // the host back at the next end step with the Auras re-attached.
+                use crate::game::types::{DelayedKind, DelayedTrigger};
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(host) = self.battlefield_find(src).and_then(|c| c.attached_to) else {
+                    return Ok(());
+                };
+                let auras: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.attached_to == Some(host) && c.definition.is_enchantment())
+                    .map(|c| c.id)
+                    .collect();
+                for cid in std::iter::once(host).chain(auras.iter().copied()) {
+                    self.move_card_to(cid, &crate::effect::ZoneDest::Exile, ctx, events);
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_with = Some(src);
+                    }
+                }
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source: src,
+                    kind: DelayedKind::NextEndStep,
+                    effect: Effect::ReturnLinkedExilesToBattlefieldAttached { host },
+                    target: None,
+                    bound_token: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
+            Effect::ReturnLinkedExilesToBattlefieldAttached { host } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let linked: Vec<CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src))
+                    .map(|c| c.id)
+                    .collect();
+                if !linked.contains(host) {
+                    return Ok(());
+                }
+                for cid in std::iter::once(*host).chain(linked.iter().copied().filter(|c| c != host))
+                {
+                    let owner = self.exile.iter().find(|c| c.id == cid).map(|c| c.owner);
+                    let Some(owner) = owner else { continue };
+                    self.move_card_to(
+                        cid,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::Seat(owner),
+                            tapped: false,
+                        },
+                        ctx,
+                        events,
+                    );
+                    if cid != *host
+                        && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid)
+                    {
+                        c.attached_to = Some(*host);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeEnchantedForExtraCombat => {
+                // Breath of Fury. "If you do" gates the untap + extra combat on
+                // the Aura finding a new host.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(host) = self.battlefield_find(src).and_then(|c| c.attached_to) else {
+                    return Ok(());
+                };
+                let seat = ctx.controller;
+                self.sacrifice_one(host, seat, events);
+                let Some(new_host) = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == seat && c.definition.is_creature() && c.id != host
+                    })
+                    .map(|c| c.id)
+                    .next()
+                else {
+                    return Ok(());
+                };
+                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == src) {
+                    c.attached_to = Some(new_host);
+                }
+                let mine: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                for cid in mine {
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                        c.tapped = false;
+                    }
+                }
+                self.additional_combat_phases = self.additional_combat_phases.saturating_add(1);
+                Ok(())
+            }
+
+            Effect::EyeOfTheStorm { what } => {
+                // Eye of the Storm. The triggering spell is exiled with the
+                // source, then its controller free-casts a copy of every card
+                // in the pile.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(spell) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id())
+                else {
+                    return Ok(());
+                };
+                // CR 707.10a — a copy ceases to exist off the stack, so it
+                // never joins the pile. Without this the free copies re-trigger
+                // and the pile grows without bound.
+                if self.stack.iter().any(|si| {
+                    matches!(si, StackItem::Spell { card, .. } if card.id == spell && card.is_token)
+                }) {
+                    return Ok(());
+                }
+                let caster = self
+                    .stack
+                    .iter()
+                    .find_map(|si| match si {
+                        StackItem::Spell { card, caster, .. } if card.id == spell => Some(*caster),
+                        _ => None,
+                    })
+                    .unwrap_or(ctx.controller);
+                // Lift the spell straight off the stack into exile (it's
+                // exiled as it resolves, not countered).
+                if let Some(pos) = self
+                    .stack
+                    .iter()
+                    .position(|si| matches!(si, StackItem::Spell { card, .. } if card.id == spell))
+                    && let StackItem::Spell { mut card, .. } = self.stack.remove(pos)
+                {
+                    card.exiled_with = Some(src);
+                    self.exile.push(*card);
+                    events.push(GameEvent::PermanentExiled { card_id: spell });
+                }
+                let pile: Vec<CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src))
+                    .map(|c| c.id)
+                    .collect();
+                let ctx = EffectContext { controller: caster, ..ctx.clone() };
+                for cid in pile {
+                    self.run_effect(
+                        &Effect::CastWithoutPayingImmediate {
+                            what: Selector::Target(0),
+                            source_zone: crate::card::Zone::Exile,
+                            exile_after: false,
+                            copy: true,
+                        },
+                        &EffectContext { targets: vec![Target::Permanent(cid)], ..ctx.clone() },
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::WarpWorld => {
                 // CR 701.20 — every player shuffles their permanents in, then
                 // reveals that many and redeploys in two waves so an Aura has

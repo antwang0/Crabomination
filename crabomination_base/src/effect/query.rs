@@ -801,10 +801,15 @@ impl Effect {
             Effect::MayReturnSharingPermanentType { with: what }
             | Effect::ChangeTargetOfAbility { what } => sel_has_target(what),
             Effect::WishToLibrary { .. }
+            | Effect::SearchAndCastFree { .. }
+            | Effect::FlickerHostWithAuras
+            | Effect::ReturnLinkedExilesToBattlefieldAttached { .. }
+            | Effect::SacrificeEnchantedForExtraCombat
             | Effect::WarpWorld
             | Effect::ReturnSelfDeployBlocker
             | Effect::TokenUnlessOpponentLetsYouDraw { .. } => false,
             Effect::CopySpellForEachOtherLegalCreature { what }
+            | Effect::EyeOfTheStorm { what }
             | Effect::SearchOpponentLibraryForSameName { what } => sel_has_target(what),
             Effect::ChooseColorForSelf => false,
             Effect::Populate { .. } => false,
@@ -1192,6 +1197,7 @@ impl Effect {
             Effect::MayReturnSharingPermanentType { with: what }
             | Effect::ChangeTargetOfAbility { what }
             | Effect::CopySpellForEachOtherLegalCreature { what }
+            | Effect::EyeOfTheStorm { what }
             | Effect::SearchOpponentLibraryForSameName { what } => sel_filter(what),
             Effect::RevealLibraryNamedCountPunish { who, .. }
             | Effect::AlternatingExileFromHand { who } => sel_filter(who),
@@ -2454,10 +2460,14 @@ impl Effect {
                 Effect::MayReturnSharingPermanentType { with: what }
                 | Effect::ChangeTargetOfAbility { what } => sel_find(what, slot),
                 Effect::WishToLibrary { .. }
+                | Effect::SearchAndCastFree { .. }
+                | Effect::FlickerHostWithAuras
+                | Effect::SacrificeEnchantedForExtraCombat
                 | Effect::WarpWorld
                 | Effect::ReturnSelfDeployBlocker
                 | Effect::TokenUnlessOpponentLetsYouDraw { .. } => None,
                 Effect::CopySpellForEachOtherLegalCreature { what }
+                | Effect::EyeOfTheStorm { what }
                 | Effect::SearchOpponentLibraryForSameName { what } => sel_find(what, slot),
                 Effect::ExileFromGraveyardBecomeCopy { what }
                 | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),

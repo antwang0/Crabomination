@@ -2937,3 +2937,124 @@ fn chorus_of_the_conclave_buys_counters_with_extra_mana() {
         "three extra mana, three counters"
     );
 }
+
+/// Flickerform blinks the host and its other Auras, restoring the attachments.
+#[test]
+fn flickerform_blinks_the_host_and_reattaches_auras() {
+    use crabomination::game::types::{Target, TurnStep};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let form = cast21(&mut g, 0, catalog::flickerform(), Some(Target::Permanent(bear)));
+    let other = cast21(&mut g, 0, catalog::pacifism(), Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(form).unwrap().attached_to, Some(bear));
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: form, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("blink");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the host is in exile");
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::PassPriority).expect("pass");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the host came back");
+    assert_eq!(
+        g.battlefield_find(other).and_then(|c| c.attached_to),
+        Some(bear),
+        "the other Aura came back attached"
+    );
+}
+
+/// Breath of Fury trades its host for an untap and an extra combat.
+#[test]
+fn breath_of_fury_buys_an_extra_combat() {
+    use crabomination::game::types::{Attack, AttackTarget, Target, TurnStep};
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spare = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.clear_sickness(host);
+    g.clear_sickness(spare);
+    let aura = cast21(&mut g, 0, catalog::breath_of_fury(), Some(Target::Permanent(host)));
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: host,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(host).is_none(), "the host was sacrificed");
+    assert_eq!(
+        g.battlefield_find(aura).and_then(|c| c.attached_to),
+        Some(spare),
+        "the Aura moved to another creature"
+    );
+    // The banked phase turns into a second declare-attackers step this turn.
+    let turn = g.turn_number;
+    let mut saw_second_combat = false;
+    for _ in 0..60 {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        if g.turn_number != turn {
+            break;
+        }
+        if g.step == TurnStep::DeclareAttackers {
+            saw_second_combat = true;
+            break;
+        }
+    }
+    assert!(saw_second_combat, "an extra combat phase followed");
+}
+
+/// Sunforger unattaches to fetch and free-cast a cheap red or white instant.
+#[test]
+fn sunforger_unattaches_to_cast_an_instant() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let forge = g.add_card_to_battlefield(0, catalog::sunforger());
+    g.battlefield_find_mut(forge).unwrap().attached_to = Some(bear);
+    g.players[0].library.clear();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forge, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("unattach and fetch");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(forge).unwrap().attached_to, None, "unattached as a cost");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "the Bolt was cast");
+    assert_eq!(g.players[1].life, 17);
+}
+
+/// Eye of the Storm banks each instant/sorcery and replays the whole pile.
+#[test]
+fn eye_of_the_storm_replays_its_exile_pile() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let eye = g.add_card_to_battlefield(0, catalog::eye_of_the_storm());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the Bolt");
+    drain_stack(&mut g);
+    assert!(
+        g.exile.iter().any(|c| c.id == bolt && c.exiled_with == Some(eye)),
+        "the original is banked under the Eye"
+    );
+    assert_eq!(g.players[1].life, 17, "a free copy resolved instead");
+}

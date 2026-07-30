@@ -4194,6 +4194,24 @@ pub enum Effect {
     /// Development — "create a 3/1 red Elemental token unless any opponent has
     /// you draw a card", `times` times. Each iteration asks an opponent.
     TokenUnlessOpponentLetsYouDraw { token: TokenDefinition, times: u32 },
+    /// Sunforger — search the controller's library for a card matching
+    /// `filter`, cast it without paying its mana cost, then shuffle.
+    SearchAndCastFree { filter: SelectionRequirement },
+    /// Flickerform — exile the source's host and every Aura attached to it,
+    /// then at the next end step return the host and re-attach the Auras.
+    FlickerHostWithAuras,
+    /// The delayed half of `FlickerHostWithAuras`: return every card stamped
+    /// `exiled_with = source` to the battlefield, re-attaching the Auras to
+    /// `host`. A no-op if the host itself isn't in the pile any more.
+    ReturnLinkedExilesToBattlefieldAttached { host: crate::card::CardId },
+    /// Breath of Fury — sacrifice the enchanted creature, attach the source to
+    /// another creature you control, and if that happened untap your creatures
+    /// and append an extra combat phase after this one.
+    SacrificeEnchantedForExtraCombat,
+    /// Eye of the Storm — exile the triggering instant/sorcery, then its
+    /// controller casts a free copy of every instant/sorcery exiled with the
+    /// source.
+    EyeOfTheStorm { what: Selector },
     /// Warp World — each player shuffles all permanents they own into their
     /// library, reveals that many cards, battlefields every artifact, creature
     /// and land, then every enchantment, and bottoms the rest.

@@ -171,3 +171,106 @@ pub fn chorus_of_the_conclave() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Flickerform — {1}{W} Aura. {2}{W}{W}: blink the enchanted creature and
+/// every Aura on it, all of it coming back at the next end step.
+pub fn flickerform() -> CardDefinition {
+    CardDefinition {
+        name: "Flickerform",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature),
+        },
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(2), w(), w()]),
+            effect: Effect::FlickerHostWithAuras,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Breath of Fury — {2}{R}{R} Aura on a creature you control. Its combat
+/// damage to a player buys another combat phase, at the cost of the creature.
+pub fn breath_of_fury() -> CardDefinition {
+    CardDefinition {
+        name: "Breath of Fury",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByYou)),
+        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::EnchantedBySource,
+            ),
+            effect: Effect::SacrificeEnchantedForExtraCombat,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sunforger — {3} Equipment. Equipped creature gets +4/+0; unattach it to
+/// fetch and cast a cheap red or white instant for free.
+pub fn sunforger() -> CardDefinition {
+    CardDefinition {
+        name: "Sunforger",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 4,
+            ..Default::default()
+        }),
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[r(), w()]),
+            unattach_cost: true,
+            effect: Effect::SearchAndCastFree {
+                filter: R::HasCardType(CardType::Instant)
+                    .and(R::HasColor(Color::Red).or(R::HasColor(Color::White)))
+                    .and(R::ManaValueAtMost(4)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eye of the Storm — {5}{U}{U} Enchantment. Every instant and sorcery cast is
+/// exiled under it, and its owner replays free copies of the whole pile.
+pub fn eye_of_the_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Eye of the Storm",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCardType(CardType::Instant)
+                        .or(R::HasCardType(CardType::Sorcery)),
+                },
+            ),
+            effect: Effect::EyeOfTheStorm {
+                what: Selector::TriggerSource,
+            },
+        }],
+        ..Default::default()
+    }
+}
