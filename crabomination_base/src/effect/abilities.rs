@@ -735,6 +735,9 @@ pub enum StaticEffect {
     /// checked at the cast site against the caster only (opponents are
     /// unaffected, unlike the global `NoncreatureSpellsCantBeCastIf`).
     ControllerCantCastNoncreatureSpells,
+    /// "You can't cast creature spells" (Grid Monitor). The creature-side
+    /// sibling of `ControllerCantCastNoncreatureSpells`.
+    ControllerCantCastCreatureSpells,
     /// "Noncreature spells with mana value `min_mana_value` or greater can't be
     /// cast" and (when `or_has_x`) "noncreature spells with {X} in their mana
     /// costs can't be cast." Global — locks every player while any permanent

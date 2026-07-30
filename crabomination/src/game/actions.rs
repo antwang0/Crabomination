@@ -5252,6 +5252,12 @@ impl GameState {
             return Err(GameError::CantCastNoncreature);
         }
 
+        // Grid Monitor — its controller can't cast creature spells.
+        if card.definition.is_creature() && self.player_cant_cast_creature_spells(p) {
+            self.players[p].hand.push(card);
+            return Err(GameError::CantCastNoncreature);
+        }
+
         // Validate convoke/improvise helpers up-front (before any state
         // mutation). Convoke taps untapped creatures (CR 702.52); Improvise
         // taps untapped artifacts (CR 702.126); each pays {1}.
@@ -8936,6 +8942,18 @@ impl GameState {
             c.controller == player
                 && c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, StaticEffect::ControllerCantCastNoncreatureSpells)
+                })
+        })
+    }
+
+    /// True while `player` controls a `ControllerCantCastCreatureSpells`
+    /// static (Grid Monitor).
+    pub(crate) fn player_cant_cast_creature_spells(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::ControllerCantCastCreatureSpells)
                 })
         })
     }
