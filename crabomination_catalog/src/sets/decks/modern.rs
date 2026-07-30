@@ -8126,8 +8126,8 @@ pub fn crabomination() -> CardDefinition {
             creature_types: vec![CreatureType::Crab, CreatureType::Horror],
             ..Default::default()
         },
-        power: 3,
-        toughness: 4,
+        power: 5,
+        toughness: 5,
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -12222,8 +12222,8 @@ pub fn ophiomancer() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Shaman],
             ..Default::default()
         },
-        power: 1,
-        toughness: 1,
+        power: 2,
+        toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
@@ -19328,8 +19328,8 @@ pub fn cloudgoat_ranger() -> CardDefinition {
             creature_types: vec![CreatureType::Giant],
             ..Default::default()
         },
-        power: 2,
-        toughness: 2,
+        power: 3,
+        toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -63937,8 +63937,8 @@ pub fn quartzwood_crasher() -> CardDefinition {
             creature_types: vec![CreatureType::Dinosaur, CreatureType::Beast],
             ..Default::default()
         },
-        power: 5,
-        toughness: 5,
+        power: 6,
+        toughness: 6,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),

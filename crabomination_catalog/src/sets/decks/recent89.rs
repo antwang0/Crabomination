@@ -67,8 +67,8 @@ pub fn crater_hellion() -> CardDefinition {
             creature_types: vec![CreatureType::Beast],
             ..Default::default()
         },
-        power: 5,
-        toughness: 5,
+        power: 6,
+        toughness: 6,
         keywords: vec![Keyword::Echo(cost(&[generic(4), r(), r()]))],
         triggered_abilities: vec![etb(Effect::ForEach {
             selector: Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),

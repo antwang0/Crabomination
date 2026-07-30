@@ -3745,7 +3745,7 @@ pub fn shambling_cieth() -> CardDefinition {
             ..Default::default()
         },
         power: 3,
-        toughness: 2,
+        toughness: 3,
         static_abilities: vec![StaticAbility {
             description: "Shambling Cie'th enters the battlefield tapped.",
             effect: StaticEffect::EntersTapped {

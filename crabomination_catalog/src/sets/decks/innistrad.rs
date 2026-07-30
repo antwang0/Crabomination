@@ -2047,8 +2047,8 @@ pub fn hamlet_vanguard() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Warrior],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
+        power: 1,
+        toughness: 1,
         keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
         enters_with_counters: Some((
             CounterType::PlusOnePlusOne,

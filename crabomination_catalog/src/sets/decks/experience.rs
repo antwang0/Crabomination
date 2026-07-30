@@ -205,8 +205,8 @@ pub fn kalemne_disciple_of_iroas() -> CardDefinition {
             creature_types: vec![CreatureType::Giant, CreatureType::Soldier],
             ..Default::default()
         },
-        power: 2,
-        toughness: 4,
+        power: 3,
+        toughness: 3,
         keywords: vec![Keyword::Vigilance],
         dynamic_pt: Some(DynamicPt::ControllerExperience {
             base_p: 2,

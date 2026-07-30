@@ -119,11 +119,17 @@ def face_for(card, name):
             return f
     return None
 
+# Scryfall spells a few creature types with punctuation the enum drops.
+TYPE_ALIAS = {"Assembly-Worker": "AssemblyWorker", "Time Lord": "TimeLord"}
+
 def creature_subtypes_ref(card, face=None):
     faces = [face] if face else (card.get("card_faces") or [])
     for tl in [f.get("type_line") for f in faces] + ([] if face else [card.get("type_line")]):
         if tl and "Creature" in tl and "—" in tl:
-            return set(tl.split("—", 1)[1].split("//")[0].split())
+            raw = tl.split("—", 1)[1].split("//")[0].strip()
+            for k, v in TYPE_ALIAS.items():
+                raw = raw.replace(k, v)
+            return set(raw.split())
     return None
 
 def ref_keywords(card, face=None):
@@ -141,6 +147,64 @@ def set_of(path):
     return rel.parts[0] if len(rel.parts) > 1 else rel.stem
 
 FUNC = re.compile(r"pub fn (\w+)\(\)\s*->\s*CardDefinition\s*\{")
+CTOR = re.compile(r"\b(CardDefinition|TokenDefinition)\s*\{")
+NAME = re.compile(r'name:\s*"((?:[^"\\]|\\.)*)"')
+
+def strip_token_literals(body):
+    """`body` with every balanced `TokenDefinition { … }` span blanked out.
+
+    Token literals carry their own name/power/toughness/subtypes/keywords; left
+    in place they shadow the card's own fields for every token-minting card.
+    """
+    out, i = [], 0
+    for m in re.finditer(r"\bTokenDefinition\s*\{", body):
+        if m.start() < i:
+            continue
+        out.append(body[i:m.start()])
+        j, d = m.end(), 1
+        while j < len(body) and d:
+            if body[j] == "{":
+                d += 1
+            elif body[j] == "}":
+                d -= 1
+            j += 1
+        i = j
+    out.append(body[i:])
+    return "".join(out)
+
+def own_field(body, field):
+    """Match for `field:` at the top level of the function's own
+    `CardDefinition { … }` literal.
+
+    A nested struct can carry the same key — `StaticAbility { PumpPT { power: 3
+    } }` shadows a card's printed `power:` — so the scan tracks brace depth from
+    the CardDefinition literal and only accepts depth-1 hits.
+    """
+    for cm in re.finditer(r"\bCardDefinition\s*\{", body):
+        depth, i = 1, cm.end()
+        while i < len(body) and depth:
+            ch = body[i]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            elif depth == 1:
+                m = re.compile(field).match(body, i)
+                if m:
+                    return m
+            i += 1
+    return None
+
+def card_def_name(body):
+    """First `name:` belonging to a CardDefinition, skipping token literals.
+
+    A card that mints a token defines the token first (Roxanne's Meteorite,
+    Crib Swap's Shapeshifter), so the naive "first name in the body" reads the
+    token's name and audits the wrong card.
+    """
+    return own_field(body, r'name:\s*"((?:[^"\\]|\\.)*)"')
 
 def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
@@ -150,7 +214,8 @@ def audit():
         text = src.read_text()
         for m in FUNC.finditer(text):
             nxt = FUNC.search(text, m.end()); body = text[m.end():nxt.start() if nxt else len(text)]
-            nm = re.search(r'name:\s*"((?:[^"\\]|\\.)*)"', body)
+            body = strip_token_literals(body)
+            nm = card_def_name(body)
             if not nm: continue
             card = CACHE_LC.get(nm.group(1).lower())
             if not card: continue
@@ -170,9 +235,11 @@ def audit():
                     if refs and all(norm(got) != norm(r) for r in refs):
                         d["cost"].append((tag, got, "|".join(refs)))
             # P/T
-            pm = re.search(r"power:\s*(-?\d+)", body); tm = re.search(r"toughness:\s*(-?\d+)", body)
+            pm = own_field(body, r"power:\s*(-?\d+)")
+            tm = own_field(body, r"toughness:\s*(-?\d+)")
             ref_pt = face if face is not None and face.get("power") is not None else card
-            if pm and tm and ref_pt.get("power") is not None:
+            numeric = lambda v: v is not None and re.fullmatch(r"-?\d+", str(v))
+            if pm and tm and numeric(ref_pt.get("power")) and numeric(ref_pt.get("toughness")):
                 if (pm.group(1), tm.group(1)) != (str(ref_pt["power"]), str(ref_pt["toughness"])):
                     d["pt"].append((tag, f"{pm.group(1)}/{tm.group(1)}", f"{ref_pt['power']}/{ref_pt['toughness']}"))
             # creature subtypes

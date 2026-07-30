@@ -6109,9 +6109,9 @@ mod recent {
     }
 
     #[test]
-    fn surging_sentinels_is_a_three_one_ripple_spirit() {
+    fn surging_sentinels_is_a_two_one_ripple_spirit() {
         let s = catalog::surging_sentinels();
-        assert_eq!((s.power, s.toughness), (3, 1));
+        assert_eq!((s.power, s.toughness), (2, 1));
         assert!(s.subtypes.creature_types.contains(&CreatureType::Spirit));
         assert_eq!(s.triggered_abilities.len(), 1, "carries the ripple trigger");
     }

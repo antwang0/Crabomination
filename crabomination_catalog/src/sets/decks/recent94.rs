@@ -157,8 +157,8 @@ pub fn wyleth_soul_of_steel() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Warrior],
             ..Default::default()
         },
-        power: 4,
-        toughness: 4,
+        power: 2,
+        toughness: 2,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![on_attack(Effect::Draw {
             who: Selector::You,

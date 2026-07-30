@@ -318,9 +318,9 @@ fn edge_rover_each_player_gets_a_lander() {
 fn cloudsculpt_technician_pumps_with_an_artifact() {
     let mut g = two_player_game();
     let tech = g.add_card_to_battlefield(0, catalog::cloudsculpt_technician());
-    assert_eq!(g.computed_permanent(tech).unwrap().power, 2, "no artifact → base power");
+    assert_eq!(g.computed_permanent(tech).unwrap().power, 1, "no artifact → base power");
     g.add_card_to_battlefield(0, catalog::memory_guardian()); // an artifact
-    assert_eq!(g.computed_permanent(tech).unwrap().power, 3, "controlling an artifact → +1/+0");
+    assert_eq!(g.computed_permanent(tech).unwrap().power, 2, "controlling an artifact → +1/+0");
 }
 
 /// Brightspear Zealot grows after you've cast two spells this turn.

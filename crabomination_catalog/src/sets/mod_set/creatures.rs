@@ -5381,7 +5381,7 @@ pub fn descendant_of_storms() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 2,
+        toughness: 1,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),

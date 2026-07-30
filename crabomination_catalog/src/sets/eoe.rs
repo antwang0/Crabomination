@@ -1294,8 +1294,8 @@ pub fn cloudsculpt_technician() -> CardDefinition {
             creature_types: vec![CreatureType::Jellyfish, CreatureType::Artificer],
             ..Default::default()
         },
-        power: 2,
-        toughness: 2,
+        power: 1,
+        toughness: 4,
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "As long as you control an artifact, this creature gets +1/+0.",
@@ -1328,7 +1328,7 @@ pub fn brightspear_zealot() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 2,
+        toughness: 4,
         keywords: vec![Keyword::Vigilance],
         static_abilities: vec![StaticAbility {
             description: "Gets +2/+0 as long as you've cast two or more spells this turn.",
@@ -1359,7 +1359,7 @@ pub fn eumidian_terrabotanist() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 1,
+        toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
@@ -1468,7 +1468,7 @@ pub fn exosuit_savior() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 3,
+        toughness: 2,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Move {
             what: target_filtered(

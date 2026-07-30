@@ -7957,7 +7957,7 @@ pub fn surging_sentinels() -> CardDefinition {
             creature_types: vec![CreatureType::Spirit],
             ..Default::default()
         },
-        power: 3,
+        power: 2,
         toughness: 1,
         triggered_abilities: vec![ripple(4)],
         ..Default::default()
@@ -8194,7 +8194,7 @@ pub fn viscera_dragger() -> CardDefinition {
             ..Default::default()
         },
         power: 3,
-        toughness: 2,
+        toughness: 3,
         activated_abilities: vec![unearth(cost(&[generic(1), b()]))],
         ..Default::default()
     }
@@ -8211,8 +8211,8 @@ pub fn skeletal_kathari() -> CardDefinition {
             creature_types: vec![CreatureType::Bird, CreatureType::Skeleton],
             ..Default::default()
         },
-        power: 2,
-        toughness: 1,
+        power: 3,
+        toughness: 2,
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![unearth(cost(&[generic(2), b()]))],
         ..Default::default()

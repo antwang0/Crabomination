@@ -89,8 +89,8 @@ pub fn vulturous_zombie() -> CardDefinition {
             creature_types: vec![CreatureType::Zombie],
             ..Default::default()
         },
-        power: 5,
-        toughness: 5,
+        power: 3,
+        toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(

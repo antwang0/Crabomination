@@ -2809,7 +2809,7 @@ pub fn abzan_devotee() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 2,
+        toughness: 1,
         activated_abilities: vec![
             devotee_mana(vec![Color::White, Color::Black, Color::Green]),
             ActivatedAbility {
@@ -2836,8 +2836,8 @@ pub fn temur_devotee() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Druid],
             ..Default::default()
         },
-        power: 2,
-        toughness: 2,
+        power: 3,
+        toughness: 3,
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![devotee_mana(vec![Color::Green, Color::Blue, Color::Red])],
         ..Default::default()
@@ -2859,7 +2859,7 @@ pub fn sultai_devotee() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 2,
+        toughness: 1,
         keywords: vec![Keyword::Deathtouch],
         activated_abilities: vec![devotee_mana(vec![Color::Black, Color::Green, Color::Blue])],
         ..Default::default()
@@ -3036,8 +3036,8 @@ pub fn kishla_trawlers() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Citizen],
             ..Default::default()
         },
-        power: 2,
-        toughness: 3,
+        power: 3,
+        toughness: 2,
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Exile a creature card from your graveyard to return an instant/sorcery?"
                 .into(),

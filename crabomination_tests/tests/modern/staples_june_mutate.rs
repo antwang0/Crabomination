@@ -3245,7 +3245,7 @@ fn quartzwood_crasher_makes_token_on_combat_damage() {
     drain_stack(&mut g);
     let token = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Dinosaur Beast");
     let token = token.expect("a Dinosaur Beast token was created");
-    assert_eq!(token.counter_count(CounterType::PlusOnePlusOne), 5, "X = 5 combat damage");
+    assert_eq!(token.counter_count(CounterType::PlusOnePlusOne), 6, "X = 6 combat damage");
 }
 
 /// CR 603.10: a stolen creature dying fires the *thief's* "a creature you

@@ -104,16 +104,24 @@ gaps. Follow-ups that came out of it:
   so Sensei Golden-Tail's grant doesn't feed Takeno).
 - **Kusari-Gama reads "defending player" as "the opponent".** Its splash hits
   the opponent's non-blocking creatures, which is exact at two players only.
-- **`audit_catalog_stats.py` now understands flip/DFC faces** (a back-face
-  definition is compared against its own `card_faces` entry, and the
-  parameterized `ProtectionFrom*` keywords map to Scryfall's plain
-  "Protection"), which took CHK from 20 flagged rows to 0 and surfaced four
-  real bugs — the Honden of Cleansing Fire / Life's Web / Night's Reach costs
-  and Battle-Mad Ronin's P/T + bushido rating, all fixed. **The rest of the
-  catalog is still dirty**: `decks` alone reports 43 cost / 38 P/T / 20 type /
-  40 keyword drifts, plus a long tail across `stx` (12 cost), `mod_set`,
-  `one`, `eoe`, `dis`, … Worth a dedicated sweep — run
-  `python3 scripts/audit_catalog_stats.py <set>` for the per-card detail.
+- **`audit_catalog_stats.py` reads the right object now.** Four fixes: a
+  flip/DFC back-face definition is compared against its own `card_faces` entry
+  (not the front's stats); nested `TokenDefinition { … }` literals are stripped
+  so a token's name/P/T/subtypes don't shadow the card's; every field is read
+  at the *top level* of the function's own `CardDefinition` literal, so a
+  `StaticAbility { PumpPT { power: 3 } }` no longer reads as printed power; and
+  the parameterized `ProtectionFrom*` keywords map to Scryfall's plain
+  "Protection" (plus a `Assembly-Worker` / `Time Lord` type alias). That took
+  the catalog-wide P/T column from ~120 rows of noise to a real list of 30,
+  **all now fixed**, along with the four CHK bugs the first pass exposed.
+- **Remaining catalog stat drift** (post-cleanup, all believed real): **43 cost
+  + 17 type + 35 keyword rows in `decks`**, 13 cost in `stx`, and a long tail
+  across `mod_set` / `one` / `dis` / `gpt` / `thb` / `mh3b` / … The cost column
+  is a mix of genuine misprints and deliberate `{X}` modelling (`March of
+  Otherworldly Light` is coded `{0}{W}` because X rides `x_value`), and some
+  type rows are deliberate party-synergy widenings, so this one wants a
+  card-by-card read rather than another mechanical sweep. Run
+  `python3 scripts/audit_catalog_stats.py <set>` for the detail.
 
 ## Noticed this run (modern_decks — Ravnica-block gap sweep)
 

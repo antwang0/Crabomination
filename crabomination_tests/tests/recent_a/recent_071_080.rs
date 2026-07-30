@@ -51,7 +51,7 @@ mod recent71 {
             card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
         }).expect("first activation");
         drain_stack(&mut g);
-        assert_eq!(g.computed_permanent(id).unwrap().power, 2, "1/1 → 2/1");
+        assert_eq!(g.computed_permanent(id).unwrap().power, 1, "0/1 → 1/1");
         // Second activation the same turn is illegal (once per turn).
         assert!(g.perform_action(GameAction::ActivateAbility {
             card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
@@ -86,7 +86,7 @@ mod recent71 {
         assert_eq!((catalog::ironroot_treefolk().power, catalog::ironroot_treefolk().toughness), (3, 5));
         assert_eq!((catalog::fire_elemental().power, catalog::fire_elemental().toughness), (5, 4));
         assert_eq!((catalog::dross_crocodile().power, catalog::dross_crocodile().toughness), (5, 1));
-        assert_eq!((catalog::durkwood_boars().power, catalog::durkwood_boars().toughness), (5, 5));
+        assert_eq!((catalog::durkwood_boars().power, catalog::durkwood_boars().toughness), (4, 4));
         assert!(catalog::wall_of_ice().keywords.contains(&Keyword::Defender));
         assert!(catalog::dross_crocodile().subtypes.creature_types.contains(&CreatureType::Zombie));
     }

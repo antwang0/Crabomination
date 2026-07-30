@@ -80,7 +80,7 @@ pub fn ingot_chewer() -> CardDefinition {
             ..Default::default()
         },
         power: 3,
-        toughness: 2,
+        toughness: 3,
         triggered_abilities: vec![etb(destroy_artifact_target())],
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[r()]),
@@ -127,7 +127,7 @@ pub fn viridian_zealot() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 2,
+        toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), g()]),
             sac_cost: true,
@@ -170,7 +170,7 @@ pub fn glowrider() -> CardDefinition {
             creature_types: vec![CreatureType::Cleric],
             ..Default::default()
         },
-        power: 1,
+        power: 2,
         toughness: 1,
         static_abilities: vec![StaticAbility {
             description: "Noncreature spells cost {1} more to cast.",

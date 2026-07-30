@@ -154,7 +154,7 @@ pub fn vampire_bats() -> CardDefinition {
             creature_types: vec![CreatureType::Bat],
             ..Default::default()
         },
-        power: 1,
+        power: 0,
         toughness: 1,
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
@@ -182,8 +182,8 @@ pub fn durkwood_boars() -> CardDefinition {
             creature_types: vec![CreatureType::Boar],
             ..Default::default()
         },
-        power: 5,
-        toughness: 5,
+        power: 4,
+        toughness: 4,
         ..Default::default()
     }
 }

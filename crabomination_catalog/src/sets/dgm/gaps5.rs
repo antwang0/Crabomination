@@ -168,8 +168,8 @@ pub fn lairwatch_giant() -> CardDefinition {
             creature_types: vec![CreatureType::Giant, CreatureType::Warrior],
             ..Default::default()
         },
-        power: 4,
-        toughness: 4,
+        power: 5,
+        toughness: 3,
         keywords: vec![Keyword::CanBlockAdditional(1)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BlocksNOrMore(2), EventScope::SelfSource),

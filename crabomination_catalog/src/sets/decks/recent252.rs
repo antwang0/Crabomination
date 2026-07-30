@@ -546,7 +546,7 @@ pub fn magnetic_snuffler() -> CardDefinition {
             ..Default::default()
         },
         power: 4,
-        toughness: 5,
+        toughness: 4,
         triggered_abilities: vec![
             etb(Effect::Seq(vec![
                 Effect::Move {
