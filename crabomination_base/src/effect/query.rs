@@ -801,6 +801,7 @@ impl Effect {
             Effect::MayReturnSharingPermanentType { with: what }
             | Effect::ChangeTargetOfAbility { what } => sel_has_target(what),
             Effect::WishToLibrary { .. }
+            | Effect::ChooseCombatThisTurn
             | Effect::SearchAndCastFree { .. }
             | Effect::FlickerHostWithAuras
             | Effect::ReturnLinkedExilesToBattlefieldAttached { .. }
@@ -2460,6 +2461,7 @@ impl Effect {
                 Effect::MayReturnSharingPermanentType { with: what }
                 | Effect::ChangeTargetOfAbility { what } => sel_find(what, slot),
                 Effect::WishToLibrary { .. }
+                | Effect::ChooseCombatThisTurn
                 | Effect::SearchAndCastFree { .. }
                 | Effect::FlickerHostWithAuras
                 | Effect::SacrificeEnchantedForExtraCombat

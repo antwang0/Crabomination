@@ -2707,6 +2707,7 @@ impl GameState {
         // CR 505.1b — discard any unconsumed additional combat phases so they
         // don't bleed into the next turn (e.g. the turn ended before combat).
         self.additional_combat_phases = 0;
+        self.combat_chooser_this_turn = None;
         self.additional_post_main_combats = 0;
         self.combat_phases_this_turn = 0;
         self.additional_end_steps = 0;

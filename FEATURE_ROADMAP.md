@@ -72,9 +72,9 @@ exercising each) was elided in a compaction pass; recover it from
   `StaticEffect::AllColorWordsBecomeChosen` (CR 612, four layer-3
   `ReplaceColorWord` rewrites over every permanent). Tests in
   `classic_sets/chk3`.
-- **Ravnica block: GPT and DIS complete, RAV at 1** (`sets::{rav::gaps21,
-  rav::gaps22, gpt::gaps9, dis::gaps9}`, 28 cards — only Master Warcraft is
-  left, blocked on an outside-chooser combat declaration). New:
+- **Ravnica block complete** — RAV, GPT and DIS all at zero `set_gaps.py`
+  gaps (`sets::{rav::gaps21, rav::gaps22, gpt::gaps9, dis::gaps9}`, 29 cards).
+  New:
   `Effect::{ExileHandLinked, ReturnLinkedExilesToHand, LookExileAnyNumberRestBack,
   ExileFromGraveyardBecomeCopy, ReturnSameNameFromAllGraveyards, PutTopOnBottom,
   MayReturnSharingPermanentType, LookAtHandCastFree, ChangeTargetOfAbility
@@ -84,6 +84,8 @@ exercising each) was elided in a compaction pass; recover it from
   FlickerHostWithAuras, ReturnLinkedExilesToBattlefieldAttached,
   SacrificeEnchantedForExtraCombat, EyeOfTheStorm}`;
   `ActivatedAbility.unattach_cost` (CR 702.6 — Sunforger);
+  `Effect::ChooseCombatThisTurn` + `GameState.combat_chooser_this_turn`
+  (CR 508.1 / 509.1 — Master Warcraft);
   `StaticEffect::{AnthemForColorSharedWithLibraryTop,
   OpponentsCantCastNamesExiledWithSource, CreatureSpellsMayPayExtraForCounters,
   YourISSpellsHaveReplicate, HasActivatedAbilitiesOfCounteredCreatures}`;

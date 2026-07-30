@@ -908,6 +908,11 @@ pub struct GameState {
     /// main. Reset at cleanup so it can't bleed into the next turn.
     #[serde(default)]
     pub additional_combat_phases: u32,
+    /// Master Warcraft (CR 508.1 / 509.1) — the seat that chooses this turn's
+    /// attackers and blocks in place of the active / defending player. Cleared
+    /// at cleanup. `None` for the overwhelming majority of turns.
+    #[serde(default)]
+    pub combat_chooser_this_turn: Option<usize>,
     /// CR 505.1b — combat phases banked by `AdditionalCombatPhaseAfterMain`
     /// (Relentless Assault): when the active player leaves a main phase with
     /// one banked, the turn enters Begin Combat instead of the next phase
@@ -1490,6 +1495,7 @@ impl Clone for GameState {
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
             additional_combat_phases: self.additional_combat_phases,
+            combat_chooser_this_turn: self.combat_chooser_this_turn,
             additional_post_main_combats: self.additional_post_main_combats,
             combat_phases_this_turn: self.combat_phases_this_turn,
             additional_end_steps: self.additional_end_steps,
@@ -1704,6 +1710,7 @@ impl GameState {
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
             additional_combat_phases: 0,
+            combat_chooser_this_turn: None,
             additional_post_main_combats: 0,
             combat_phases_this_turn: 0,
             additional_end_steps: 0,

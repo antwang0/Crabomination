@@ -111,6 +111,28 @@ impl GameState {
 
     // ── Declare attackers ─────────────────────────────────────────────────────
 
+    /// The attack list `chooser` picks when Master Warcraft has handed them
+    /// the declaration: every creature the active player controls that can
+    /// legally attack, aimed at the chooser's own opponent (the active player
+    /// is the one being made to swing).
+    fn chosen_attacks_for(&self, chooser: usize) -> Vec<Attack> {
+        let active = self.active_player_idx;
+        let foes = self.opponents_of(active);
+        let Some(&defender) = foes.iter().find(|o| **o != chooser).or(foes.first()) else {
+            return Vec::new();
+        };
+        self.battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == active
+                    && c.definition.is_creature()
+                    && !c.tapped
+                    && !c.summoning_sick
+            })
+            .map(|c| Attack { attacker: c.id, target: AttackTarget::Player(defender) })
+            .collect()
+    }
+
     pub fn declare_attackers(
         &mut self,
         attacks: Vec<Attack>,
@@ -122,6 +144,14 @@ impl GameState {
         if p != self.active_player_idx {
             return Err(GameError::NotYourPriority);
         }
+        // Master Warcraft — someone else chose this turn's attackers, so the
+        // submitted list is replaced by theirs. The chooser is an opponent of
+        // the attacking player in every printed case, and the headless policy
+        // is the hostile one: swing with everything able.
+        let attacks = match self.combat_chooser_this_turn {
+            Some(chooser) if chooser != p => self.chosen_attacks_for(chooser),
+            _ => attacks,
+        };
 
         // Validate every attack target up-front. The defender must be an
         // *opponent* — not self, not a teammate. `same_team` returns true
@@ -905,6 +935,13 @@ impl GameState {
         if self.step != TurnStep::DeclareBlockers {
             return Err(GameError::WrongStep { actual: self.step });
         }
+        // Master Warcraft's second half — the chooser decides the blocks. Its
+        // caster is the attacker, so the headless policy is to block with
+        // nothing.
+        let assignments = match self.combat_chooser_this_turn {
+            Some(chooser) if chooser == self.active_player_idx => Vec::new(),
+            _ => assignments,
+        };
 
         let computed = self.compute_battlefield();
         let cp_of = |id: CardId| computed.iter().find(|c| c.id == id);

@@ -11114,6 +11114,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseCombatThisTurn => {
+                self.combat_chooser_this_turn = Some(ctx.controller);
+                Ok(())
+            }
+
             Effect::SearchAndCastFree { filter } => {
                 // Sunforger. The search is the usual auto-pick (highest mana
                 // value among matches); the cast rides the free-cast helper.

@@ -3058,3 +3058,65 @@ fn eye_of_the_storm_replays_its_exile_pile() {
     );
     assert_eq!(g.players[1].life, 17, "a free copy resolved instead");
 }
+
+/// Master Warcraft hands the attack declaration to its caster: everything able
+/// swings, and the defender's blocks are thrown away.
+#[test]
+fn master_warcraft_chooses_the_attacks_and_the_blocks() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(0, catalog::serra_angel());
+    for id in [a, b, blocker] {
+        g.clear_sickness(id);
+    }
+    // Seat 0 casts it on seat 1's turn, before attackers.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::BeginCombat;
+    cast21(&mut g, 0, catalog::master_warcraft(), None);
+    assert_eq!(g.combat_chooser_this_turn, Some(0));
+
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.priority.player_with_priority = 1;
+    // Seat 1 tries to attack with one creature; the chooser's list wins.
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: a,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("declare");
+    assert_eq!(g.attacking.len(), 2, "the chooser swung with everything able");
+
+    let _ = blocker;
+}
+
+/// The other half: cast on your own turn, Master Warcraft throws away the
+/// defender's blocks.
+#[test]
+fn master_warcraft_discards_the_defenders_blocks() {
+    use crabomination::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.clear_sickness(attacker);
+    g.clear_sickness(blocker);
+    cast21(&mut g, 0, catalog::master_warcraft(), None);
+    assert_eq!(g.combat_chooser_this_turn, Some(0));
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]))
+        .expect("declare blockers");
+    assert!(g.block_map.is_empty(), "the chooser declined every block");
+}

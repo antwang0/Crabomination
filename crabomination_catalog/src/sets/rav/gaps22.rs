@@ -274,3 +274,22 @@ pub fn eye_of_the_storm() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Master Warcraft — {2}{R/W}{R/W} Instant, before attackers. You choose which
+/// creatures attack this turn and which creatures block and how.
+pub fn master_warcraft() -> CardDefinition {
+    let rw = || crate::mana::hybrid(Color::Red, Color::White);
+    CardDefinition {
+        name: "Master Warcraft",
+        cost: cost(&[generic(2), rw(), rw()]),
+        card_types: vec![CardType::Instant],
+        // "Cast only before attackers are declared" — everything up to and
+        // including the declare-attackers step's own priority window.
+        cast_condition: Some(Predicate::Any(vec![
+            Predicate::CurrentStepIs(crate::game::TurnStep::PreCombatMain),
+            Predicate::CurrentStepIs(crate::game::TurnStep::BeginCombat),
+        ])),
+        effect: Effect::ChooseCombatThisTurn,
+        ..Default::default()
+    }
+}

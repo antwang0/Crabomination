@@ -181,12 +181,13 @@ complete. Follow-ups:
 - **Tunnel Vision / the NameCard family auto-pick the densest name.** A
   `wants_ui` caster should be prompted for the name (the same residual as
   Petrified Hamlet's `NameCard`).
-- **GPT and DIS are complete; RAV is at 1.** The only card left is **Master
-  Warcraft** — one player choosing another player's attackers *and* blocks
-  needs `declare_attackers` / `declare_blockers` to accept an outside chooser
-  and the priority loop to hand that seat the declaration, which today is
-  hard-wired to the active/defending player. `scripts/set_gaps.py rav` is the
-  live list.
+- **The Ravnica block is complete** — RAV, GPT and DIS all report zero
+  `set_gaps.py` gaps.
+- **Master Warcraft's choice is a policy, not a prompt.** `GameState::
+  combat_chooser_this_turn` replaces the submitted declaration with the
+  chooser's, but the chooser's picks are the hostile defaults (swing with
+  everything able / decline every block) rather than a real prompt. A
+  `wants_ui` chooser should be handed the declaration.
 - **Breath of Fury re-attaches to the first legal creature.** The printed line
   lets the controller choose which creature the Aura moves to.
 - **Sunforger's search auto-picks the priciest legal instant.** No prompt for a

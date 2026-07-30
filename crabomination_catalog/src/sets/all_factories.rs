@@ -512,6 +512,7 @@ static CHK2: &[Factory] = &[
     super::dis::bound_determined,
     super::dis::odds_ends,
     super::dis::research_development,
+    super::rav::master_warcraft,
     super::rav::flickerform,
     super::rav::breath_of_fury,
     super::rav::sunforger,
