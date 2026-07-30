@@ -590,6 +590,10 @@ pub enum StaticEffect {
     /// game" (Platinum Angel). Consulted by the SBA loss checks,
     /// `lose_to_empty_draw`, and the win/lose one-shot effects.
     ControllerCantLoseGame,
+    /// CR 615 — "As long as this is untapped, if a creature would deal combat
+    /// damage to you, prevent N of that damage" (Thunderstaff). Shaves N off
+    /// each damaging creature's combat damage to the source's controller.
+    ReduceCombatDamageToControllerWhileUntapped(u32),
     /// CR 104.3d flip side — "You can't win the game and your opponents
     /// can't lose the game" (Abyssal Persecutor).
     ControllerCantWinGame,

@@ -2690,6 +2690,23 @@ impl GameState {
         }
     }
 
+    /// CR 615 — total per-creature combat-damage reduction `p` gets from
+    /// their untapped `ReduceCombatDamageToControllerWhileUntapped` permanents
+    /// (Thunderstaff). Applies once per damaging creature, not once per point.
+    fn combat_damage_shaved_for(&self, p: usize) -> u32 {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == p && !c.tapped)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|s| match s.effect {
+                crate::effect::StaticEffect::ReduceCombatDamageToControllerWhileUntapped(n) => {
+                    Some(n)
+                }
+                _ => None,
+            })
+            .sum()
+    }
+
     fn deal_combat_damage_to_target(
         &mut self,
         atk: &AttackerInfo,
@@ -2698,6 +2715,13 @@ impl GameState {
     ) {
         match atk.target {
             AttackTarget::Player(p) => {
+                // CR 615 — per-creature combat-damage shaving from an untapped
+                // permanent the defender controls (Thunderstaff).
+                let shave = self.combat_damage_shaved_for(p);
+                let amount = amount.saturating_sub(shave);
+                if amount == 0 && shave > 0 {
+                    return;
+                }
                 // CR 614 — Szadek: this attacker's combat damage to a player
                 // becomes that many +1/+1 counters on it, and the player mills
                 // that many instead of losing life.

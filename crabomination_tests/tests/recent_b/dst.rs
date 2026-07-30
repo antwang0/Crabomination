@@ -6,6 +6,24 @@ use crabomination::game::types::{GameAction, GameEvent, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
+/// Swing `attacker` (seat 1's) into seat 0 and run combat to end of combat.
+fn swing_at_seat_zero(g: &mut GameState, attacker: crabomination::card::CardId) {
+    use crabomination::game::types::{Attack, AttackTarget};
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
+    }
+    drain_stack(g);
+}
+
 fn main_phase() -> GameState {
     let mut g = two_player_game();
     g.active_player_idx = 0;
@@ -493,4 +511,238 @@ fn machinate_digs_per_artifact() {
     .expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 1, "one of the three looked at goes to hand");
+}
+
+// ── Darksteel completion batch 2 (`decks::recent312`) ──
+
+/// Thunderstaff shaves a point off each attacker while it's untapped.
+#[test]
+fn thunderstaff_shaves_combat_damage_while_untapped() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::thunderstaff());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    swing_at_seat_zero(&mut g, bear);
+    assert_eq!(g.players[0].life, 19, "2 power minus 1");
+}
+
+/// A tapped Thunderstaff shaves nothing.
+#[test]
+fn tapped_thunderstaff_shaves_nothing() {
+    let mut g = main_phase();
+    let staff = g.add_card_to_battlefield(0, catalog::thunderstaff());
+    g.battlefield_find_mut(staff).unwrap().tapped = true;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    swing_at_seat_zero(&mut g, bear);
+    assert_eq!(g.players[0].life, 18);
+}
+
+/// Neurok Transmuter's second mode strips the artifact type for the turn.
+#[test]
+fn neurok_transmuter_unmakes_an_artifact_creature() {
+    let mut g = main_phase();
+    let wizard = g.add_card_to_battlefield(0, catalog::neurok_transmuter());
+    g.battlefield_find_mut(wizard).unwrap().summoning_sick = false;
+    let myr = g.add_card_to_battlefield(1, catalog::coretapper());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wizard, ability_index: 1, target: Some(Target::Permanent(myr)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("strip the artifact type");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(myr).unwrap();
+    assert!(!cp.card_types.contains(&CardType::Artifact));
+    assert!(cp.colors.contains(&Color::Blue));
+}
+
+/// Chimeric Egg charges off opponents' nonartifact spells, then animates.
+#[test]
+fn chimeric_egg_charges_then_animates() {
+    let mut g = main_phase();
+    let egg = g.add_card_to_battlefield(0, catalog::chimeric_egg());
+    g.battlefield_find_mut(egg).unwrap().add_counters(CounterType::Charge, 2);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("opponent casts a nonartifact spell");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(egg).unwrap().counter_count(CounterType::Charge), 3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: egg, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("cash three charges");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(egg).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6));
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Talon of Pain banks a charge per damaging source and fires them back.
+#[test]
+fn talon_of_pain_banks_damage_then_burns() {
+    let mut g = main_phase();
+    let talon = g.add_card_to_battlefield(0, catalog::talon_of_pain());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("burn the opponent");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(talon).unwrap().counter_count(CounterType::Charge), 1);
+    g.battlefield_find_mut(talon).unwrap().add_counters(CounterType::Charge, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: talon, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: Some(2),
+    })
+    .expect("spend two charges");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 3 - 2);
+    // Its own shot at the opponent re-charges it (documented deviation from
+    // the printed "other than this artifact").
+    assert_eq!(g.battlefield_find(talon).unwrap().counter_count(CounterType::Charge), 1);
+}
+
+/// Test of Faith turns prevented damage into +1/+1 counters.
+#[test]
+fn test_of_faith_converts_prevented_damage_to_counters() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let test = g.add_card_to_hand(0, catalog::test_of_faith());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: test, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("bolt it");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).expect("the Bear lives");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+}
+
+/// Death Cloud bleeds both players for X across four clauses.
+#[test]
+fn death_cloud_hits_life_hand_creatures_and_lands() {
+    let mut g = main_phase();
+    for p in 0..2 {
+        g.add_card_to_hand(p, catalog::grizzly_bears());
+        g.add_card_to_battlefield(p, catalog::grizzly_bears());
+        g.add_card_to_battlefield(p, catalog::forest());
+    }
+    let cloud = g.add_card_to_hand(0, catalog::death_cloud());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cloud, target: None, additional_targets: vec![], mode: None, x_value: Some(1),
+    })
+    .expect("cast for X=1");
+    drain_stack(&mut g);
+    for p in 0..2 {
+        assert_eq!(g.players[p].life, 19, "player {p} lost 1");
+        assert_eq!(g.players[p].hand.len(), 0, "player {p} discarded");
+    }
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.is_creature()).count(), 0);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.is_land()).count(), 0);
+}
+
+/// Lich's Tomb keeps you alive but charges a permanent per point.
+#[test]
+fn lichs_tomb_trades_permanents_for_life() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::lichs_tomb());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    g.adjust_life_applied(0, -2);
+    g.dispatch_triggers_for_events(&[GameEvent::LifeLost { player: 0, amount: 2 }]);
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    assert_eq!(before - after, 2, "one permanent per point of life lost");
+}
+
+/// Heartseeker's unattach shot kills a creature and taps its host.
+#[test]
+fn heartseeker_unattaches_to_kill() {
+    let mut g = main_phase();
+    let kor = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blade = g.add_card_to_battlefield(0, catalog::heartseeker());
+    g.battlefield_find_mut(blade).unwrap().attached_to = Some(kor);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(kor).map(|c| (c.power, c.toughness)), Some((4, 3)));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: blade, ability_index: 0, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("fire the Heartseeker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    assert_eq!(g.battlefield_find(blade).unwrap().attached_to, None);
+}
+
+/// Pulse of the Fields comes back while you're behind on life.
+#[test]
+fn pulse_of_the_fields_rebuys_while_behind() {
+    let mut g = main_phase();
+    g.players[0].life = 10;
+    let pulse = g.add_card_to_hand(0, catalog::pulse_of_the_fields());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pulse, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 14);
+    assert!(g.players[0].hand.iter().any(|c| c.id == pulse), "still behind, so it bounces");
+}
+
+/// Drooling Ogre defects to whoever cast an artifact spell.
+#[test]
+fn drooling_ogre_defects_on_an_artifact_cast() {
+    let mut g = main_phase();
+    let ogre = g.add_card_to_battlefield(0, catalog::drooling_ogre());
+    let rock = g.add_card_to_hand(1, catalog::coretapper());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rock, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast an artifact");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ogre).unwrap().controller, 1);
+}
+
+/// Chromescale Drake keeps the artifacts it reveals and bins the rest.
+#[test]
+fn chromescale_drake_keeps_revealed_artifacts() {
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::coretapper());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::coretapper());
+    let drake = g.add_card_to_battlefield(0, catalog::chromescale_drake());
+    g.fire_self_etb_triggers(drake, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2, "both artifacts");
+    assert_eq!(g.players[0].graveyard.len(), 1, "the Bear is binned");
 }

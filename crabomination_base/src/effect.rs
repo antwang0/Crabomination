@@ -5845,6 +5845,11 @@ pub enum Effect {
         until_eot: bool,
     },
 
+    /// `what` LOSES the given card type until end of turn — the layer-4
+    /// subtractive sibling of `AddCardTypeIndefinitely` (Neurok Transmuter's
+    /// "isn't an artifact").
+    LoseCardTypeUntilEot { what: Selector, card_type: crate::card::CardType },
+
     /// Grant `what` an activated ability. `Duration::Permanent` anchors the
     /// grant to the permanent (`CardInstance.granted_activated_abilities`,
     /// cleared when it leaves the battlefield — Urza's Saga chapters I/II);
@@ -6381,6 +6386,11 @@ pub enum Effect {
     /// by the non-combat damage path; the shield expires at cleanup.
     /// Samite Healer, Healing Salve, Awe Strike-style effects.
     PreventNextDamage { target: Selector, amount: Value },
+    /// "Prevent the next N damage that would be dealt to `target` this turn.
+    /// For each 1 damage prevented this way, put a +1/+1 counter on it."
+    /// Test of Faith — the counter rider rides the shield
+    /// (`counters_on_target`).
+    PreventNextDamageWithCounters { target: Selector, amount: Value },
 
     /// "The next `amount` damage that would be dealt to `target` this turn is
     /// dealt to `to` instead." (CR 614.9 — Carom, Razia's redirect.) Pushes a

@@ -18242,15 +18242,19 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventNextDamage { target, amount } => {
+            Effect::PreventNextDamage { target, amount }
+            | Effect::PreventNextDamageWithCounters { target, amount } => {
                 // CR 615.7 — push a "prevent the next N damage to target"
                 // shield consumed by `apply_prevention_shields`.
+                let counters =
+                    matches!(effect, Effect::PreventNextDamageWithCounters { .. });
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n > 0 {
                     for s in self.prevention_targets(target, ctx) {
                         self.prevention_shields.push(crate::game::types::PreventionShield {
                             target: s,
                             remaining: Some(n),
+                            counters_on_target: counters,
                             ..Default::default()
                         });
                     }
@@ -18968,6 +18972,26 @@ impl GameState {
                             miracle: false,
                         });
                     }
+                }
+                Ok(())
+            }
+
+            Effect::LoseCardTypeUntilEot { what, card_type } => {
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+                };
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source: id,
+                        affected: AffectedPermanents::Specific(vec![id]),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::UntilEndOfTurn,
+                        modification: Modification::RemoveCardType(card_type.clone()),
+                    });
                 }
                 Ok(())
             }

@@ -15245,6 +15245,8 @@ fn static_effect_to_effects(
             // CR 104.3d — consulted at the loss/win sites, no layer effect.
             | StaticEffect::ControllerCantLoseGame
             | StaticEffect::ControllerCantWinGame
+            // CR 615 — read by the combat-damage-to-player path (Thunderstaff).
+            | StaticEffect::ReduceCombatDamageToControllerWhileUntapped(_)
             // Phyrexian Unlife — consulted at the loss SBA + damage funnels.
             | StaticEffect::ControllerDoesntLoseFromLife
             // Consulted at the damage-to-player life sites.

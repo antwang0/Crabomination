@@ -825,7 +825,8 @@ impl Effect {
             | Effect::StampMayPlaySurcharge { what, .. } => sel_has_target(what),
             Effect::GrantCastBackFromGraveyard { what } => sel_has_target(what),
             Effect::GainActivatedAbility { what, .. } => sel_has_target(what),
-            Effect::AddCardTypeIndefinitely { what, .. } => sel_has_target(what),
+            Effect::AddCardTypeIndefinitely { what, .. }
+            | Effect::LoseCardTypeUntilEot { what, .. } => sel_has_target(what),
             Effect::CastWithoutPayingImmediate { what, .. } => sel_has_target(what),
             Effect::RegisterParadigm | Effect::CastFreeParadigmCopy => false,
             Effect::Cascade { .. } => false,
@@ -958,6 +959,7 @@ impl Effect {
             Effect::PreventCombatDamageByTargetThisTurn { target } => sel_has_target(target),
             Effect::CantBlockSourceThisTurn { target } => sel_has_target(target),
             Effect::PreventNextDamage { target, amount }
+            | Effect::PreventNextDamageWithCounters { target, amount }
             | Effect::PreventNextDamageAndGainLife { target, amount } => {
                 sel_has_target(target) || value_has_target(amount)
             }
@@ -1283,6 +1285,7 @@ impl Effect {
             | Effect::GrantTriggeredAbility { what, .. }
             | Effect::GainActivatedAbility { what, .. }
             | Effect::AddCardTypeIndefinitely { what, .. }
+            | Effect::LoseCardTypeUntilEot { what, .. }
             | Effect::BecomeChosenColor { what, .. }
             | Effect::BecomeColor { what, .. }
             | Effect::BecomeCreatureType { what, .. }
@@ -2259,6 +2262,7 @@ impl Effect {
                     _ => None,
                 },
                 Effect::PreventNextDamage { target, .. }
+                | Effect::PreventNextDamageWithCounters { target, .. }
                 | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target }
                 | Effect::PreventAllDamageThisTurnWithCounters { target }
@@ -2432,6 +2436,7 @@ impl Effect {
                 | Effect::GrantTriggeredAbility { what, .. }
                 | Effect::GainActivatedAbility { what, .. }
                 | Effect::AddCardTypeIndefinitely { what, .. }
+                | Effect::LoseCardTypeUntilEot { what, .. }
                 | Effect::SetLoyalty { what, .. }
                 | Effect::GrantLoyaltyTwiceThisTurn { what }
                 | Effect::BecomeTreasure { what }
