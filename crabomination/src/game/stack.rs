@@ -2177,6 +2177,32 @@ impl GameState {
             .collect();
         let mut capped_untaps: std::collections::HashMap<(usize, usize), u32> =
             std::collections::HashMap::new();
+        // CR 502.1 — ask each `MayChooseNotToUntap` permanent's controller
+        // before the loop (which borrows the battlefield mutably).
+        let may_decline: std::collections::HashSet<crate::card::CardId> = {
+            let asking: Vec<(crate::card::CardId, usize, &'static str)> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.tapped
+                        && untappers.contains(&c.controller)
+                        && c.definition.keywords.contains(&crate::card::Keyword::MayChooseNotToUntap)
+                })
+                .map(|c| (c.id, c.controller, c.definition.name))
+                .collect();
+            let mut set = std::collections::HashSet::new();
+            for (id, _seat, name) in asking {
+                if let crate::decision::DecisionAnswer::Bool(true) =
+                    self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                        source: id,
+                        description: format!("Leave {name} tapped?"),
+                    })
+                {
+                    set.insert(id);
+                }
+            }
+            set
+        };
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
@@ -2220,6 +2246,15 @@ impl GameState {
                     matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
                         if card.counter_count(*kind) > 0)
                 }) {
+                    if active {
+                        card.summoning_sick = false;
+                    }
+                    continue;
+                }
+                // CR 502.1 — "you may choose not to untap this" (Hisoka's
+                // Guard). Asked as "leave tapped?", so a headless seat's
+                // default `false` untaps normally.
+                if card.tapped && may_decline.contains(&card.id) {
                     if active {
                         card.summoning_sick = false;
                     }
@@ -2995,6 +3030,21 @@ impl GameState {
                 }
             }
             self.temporary_control = kept;
+        }
+
+        // Same clause on the continuous-effect side (Hisoka's Guard's shroud
+        // grant): drop it once the granting source is untapped or gone.
+        if self
+            .continuous_effects
+            .iter()
+            .any(|e| e.duration == crate::game::layers::EffectDuration::WhileSourceTapped)
+        {
+            let still_tapped: std::collections::HashSet<CardId> =
+                self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect();
+            self.continuous_effects.retain(|e| {
+                e.duration != crate::game::layers::EffectDuration::WhileSourceTapped
+                    || still_tapped.contains(&e.source)
+            });
         }
 
         // CR 603.8 state trigger — "When you control no other [filter],

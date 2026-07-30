@@ -11,6 +11,7 @@ mod bng;
 mod bro;
 mod chk;
 mod chk2;
+mod chk3;
 mod dgm;
 mod eoe;
 mod fin;

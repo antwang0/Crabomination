@@ -45,6 +45,10 @@ pub enum EffectDuration {
     /// is registered outside a combat phase it falls through to the
     /// next combat phase's end-of-combat step.
     UntilEndOfCombat,
+    /// CR 611.2c — lasts while the source permanent stays tapped on the
+    /// battlefield (Hisoka's Guard). Swept alongside the `while_source_tapped`
+    /// control steals.
+    WhileSourceTapped,
     /// Indefinite (e.g. counters, "for as long as" effects).
     Indefinite,
 }

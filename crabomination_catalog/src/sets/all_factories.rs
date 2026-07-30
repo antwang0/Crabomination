@@ -503,6 +503,12 @@ static CHK: &[Factory] = &[
     super::chk::journeyers_kite,
 ];
 static CHK2: &[Factory] = &[
+    super::chk3::hisokas_guard,
+    super::chk3::mindblaze,
+    super::chk3::moonring_mirror,
+    super::chk3::reweave,
+    super::chk3::struggle_for_sanity,
+    super::chk3::swirl_the_mists,
     super::chk2::cloudcrest_lake,
     super::chk2::lantern_lit_graveyard,
     super::chk2::pinecrest_ridge,

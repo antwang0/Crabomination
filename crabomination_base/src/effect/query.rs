@@ -783,7 +783,12 @@ impl Effect {
             | Effect::AddCreatureTypes { what, .. }
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
-            | Effect::GrantProtectionFromChosenColor { what, .. } => sel_has_target(what),
+            | Effect::GrantProtectionFromChosenColor { what, .. }
+            | Effect::GrantKeywordWhileSourceTapped { what, .. }
+            | Effect::SacrificeThenRevealUntilSharedType { what } => sel_has_target(what),
+            Effect::RevealLibraryNamedCountPunish { who, .. }
+            | Effect::AlternatingExileFromHand { who } => sel_has_target(who),
+            Effect::ExileHandThenReclaimLinked => false,
             Effect::ChooseColorForSelf => false,
             Effect::Populate { .. } => false,
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
@@ -1158,8 +1163,12 @@ impl Effect {
             | Effect::GainControl { what, .. }
             | Effect::GainControlWhileSourceRemains { what }
             | Effect::GainControlWhileSourceTapped { what }
+            | Effect::GrantKeywordWhileSourceTapped { what, .. }
+            | Effect::SacrificeThenRevealUntilSharedType { what }
             | Effect::CounterAbilityAndDestroySource { what }
             | Effect::WeldArtifacts { what } => sel_filter(what),
+            Effect::RevealLibraryNamedCountPunish { who, .. }
+            | Effect::AlternatingExileFromHand { who } => sel_filter(who),
             // The target may be the moved object (`what`: Kor Outfitter's
             // "target Equipment") or the host (`to`: Maul's "attach this to
             // target creature"). Prefer whichever sub-selector carries slot 0.
@@ -2404,8 +2413,13 @@ impl Effect {
                 | Effect::GainControl { what, .. }
                 | Effect::GainControlWhileSourceRemains { what }
             | Effect::GainControlWhileSourceTapped { what }
+            | Effect::GrantKeywordWhileSourceTapped { what, .. }
+            | Effect::SacrificeThenRevealUntilSharedType { what }
             | Effect::CounterAbilityAndDestroySource { what }
                 | Effect::WeldArtifacts { what } => sel_find(what, slot),
+                Effect::RevealLibraryNamedCountPunish { who, .. }
+                | Effect::AlternatingExileFromHand { who } => sel_find(who, slot),
+                Effect::ExileHandThenReclaimLinked => None,
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::ExilePlayerGraveyard { who }
                 | Effect::ExileHand { who }

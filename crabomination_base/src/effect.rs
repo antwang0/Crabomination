@@ -4702,6 +4702,32 @@ pub enum Effect {
     /// sweep once the source untaps or leaves; while it holds something the
     /// source skips its own untap step ("you may choose not to untap").
     GainControlWhileSourceTapped { what: Selector },
+    /// CR 611.2c sibling — the resolved permanents gain `keyword` for as long
+    /// as the effect's source stays tapped on the battlefield (Hisoka's Guard's
+    /// shroud grant). Unwound by the same SBA sweep.
+    GrantKeywordWhileSourceTapped {
+        what: Selector,
+        keyword: crate::card::Keyword,
+    },
+    /// Mindblaze's back half — the controller picks a number greater than 0,
+    /// the resolved player reveals their library, and if it holds *exactly*
+    /// that many cards with the name a preceding `Effect::NameCard` stamped,
+    /// the source deals `damage` to them. That player shuffles either way.
+    RevealLibraryNamedCountPunish { who: Selector, damage: Value },
+    /// Moonring Mirror's upkeep — the controller may exile their whole hand
+    /// face down stamped `exiled_with = source`; if they do, every *other*
+    /// card they own already stamped that way returns to their hand.
+    ExileHandThenReclaimLinked,
+    /// Reweave — the resolved permanent's controller sacrifices it, then
+    /// reveals from the top of their library until a permanent card sharing a
+    /// card type with it turns up, puts that card onto the battlefield, and
+    /// shuffles.
+    SacrificeThenRevealUntilSharedType { what: Selector },
+    /// Struggle for Sanity — the resolved opponent reveals their hand, then
+    /// they and the controller alternate exiling one card each (they go first)
+    /// until the hand is empty. Their picks return to hand; the controller's
+    /// go to the graveyard.
+    AlternatingExileFromHand { who: Selector },
     /// "Double the amount of each type of unspent mana you have" (Doubling
     /// Cube) — every color and colorless pip in the controller's pool is
     /// duplicated, restrictions included.

@@ -15105,6 +15105,32 @@ fn static_effect_to_effects(
                     _ => vec![],
                 }
             }
+            // Swirl the Mists — one layer-3 rewrite per non-chosen color, over
+            // every permanent on the battlefield.
+            StaticEffect::AllColorWordsBecomeChosen => match card.chosen_color {
+                Some(to) => crate::mana::Color::ALL
+                    .iter()
+                    .filter(|c| **c != to)
+                    .map(|from| ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected: AffectedPermanents::All {
+                            controller: None,
+                            card_types: vec![],
+                            exclude_source: false,
+                            color: None,
+                            colorless: false,
+                            token: None,
+                            owned_by_controller: None,
+                        },
+                        layer: Layer::L3Text,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ReplaceColorWord(*from, to),
+                    })
+                    .collect(),
+                None => vec![],
+            },
             StaticEffect::LoseKeyword { applies_to, keyword } => {
                 match selector_to_affected(applies_to, card) {
                     Some(affected) => vec![ContinuousEffect {

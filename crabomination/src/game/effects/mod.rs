@@ -10561,6 +10561,241 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantKeywordWhileSourceTapped { what, keyword } => {
+                // CR 611.2c — the grant rides a layer-6 continuous effect with
+                // a `WhileSourceTapped` duration; the SBA sweep drops it when
+                // the source untaps or leaves.
+                let Some(src) = ctx.source else { return Ok(()) };
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(crate::game::layers::ContinuousEffect {
+                        timestamp: ts,
+                        source: src,
+                        affected: crate::game::layers::AffectedPermanents::Specific(vec![cid]),
+                        layer: crate::game::layers::Layer::L6Ability,
+                        sublayer: None,
+                        duration: crate::game::layers::EffectDuration::WhileSourceTapped,
+                        modification: crate::game::layers::Modification::AddKeyword(
+                            keyword.clone(),
+                        ),
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::RevealLibraryNamedCountPunish { who, damage } => {
+                // Mindblaze. The name comes off the preceding `Effect::NameCard`
+                // (which owns the UI suspend); the number is a plain
+                // `ChooseAmount` — a guessing seat can't see the library, so
+                // the headless fallback is a flat 1.
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(p) = self.resolve_selector(who, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Player(p) => Some(p),
+                    _ => None,
+                }) else {
+                    return Ok(());
+                };
+                let name = self
+                    .named_card_this_resolution
+                    .clone()
+                    .or_else(|| {
+                        ctx.source
+                            .and_then(|s| self.find_card_anywhere(s))
+                            .and_then(|c| c.named_card.clone())
+                    })
+                    .unwrap_or_default();
+                let guess = match self.decider.decide(&Decision::ChooseAmount {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Choose a number greater than 0".to_string(),
+                    max: 60,
+                }) {
+                    DecisionAnswer::Amount(n) if n > 0 => n as usize,
+                    _ => 1,
+                };
+                let actual = self.players[p]
+                    .library
+                    .iter()
+                    .filter(|c| c.definition.name == name)
+                    .count();
+                if !name.is_empty() && actual == guess {
+                    let amount = self.evaluate_value(damage, ctx).max(0) as u32;
+                    self.deal_damage_to_from(EntityRef::Player(p), amount, ctx.source, events);
+                }
+                self.shuffle_library(p, events);
+                Ok(())
+            }
+
+            Effect::ExileHandThenReclaimLinked => {
+                // Moonring Mirror's upkeep. "If you do" — declining leaves the
+                // stash alone; an empty hand still counts as doing it (CR
+                // 701.x: exiling zero cards succeeds).
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(src) = ctx.source else { return Ok(()) };
+                let p = ctx.controller;
+                let willing = match self.decider.decide(&Decision::OptionalTrigger {
+                    source: src,
+                    description: "Exile your hand to reclaim the cards under this?".to_string(),
+                }) {
+                    DecisionAnswer::Bool(b) => b,
+                    _ => false,
+                };
+                if !willing {
+                    return Ok(());
+                }
+                let hand: Vec<CardInstance> = std::mem::take(&mut *self.players[p].hand);
+                let fresh: Vec<CardId> = hand.iter().map(|c| c.id).collect();
+                for mut card in hand {
+                    card.exiled_with = Some(src);
+                    card.face_down = true;
+                    let cid = card.id;
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                }
+                let reclaim: Vec<CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| {
+                        c.exiled_with == Some(src) && c.owner == p && !fresh.contains(&c.id)
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                for cid in reclaim {
+                    if let Some(i) = self.exile.iter().position(|c| c.id == cid) {
+                        let mut card = self.exile.remove(i);
+                        card.face_down = false;
+                        card.exiled_with = None;
+                        self.players[p].hand.push(card);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeThenRevealUntilSharedType { what } => {
+                // Reweave. The shared-card-type filter is built from the
+                // sacrificed permanent's computed types, so an animated land
+                // or a Sarcomancy-style token matches on what it *is*.
+                use crate::effect::RevealMissDest;
+                let Some(cid) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let Some(seat) = self.battlefield_find(cid).map(|c| c.controller) else {
+                    return Ok(());
+                };
+                let types: Vec<CardType> = self
+                    .computed_permanent(cid)
+                    .map(|cp| cp.card_types.clone())
+                    .unwrap_or_else(|| {
+                        self.battlefield_find(cid)
+                            .map(|c| c.definition.card_types.clone())
+                            .unwrap_or_default()
+                    });
+                self.sacrifice_one(cid, seat, events);
+                let Some(find) = types
+                    .into_iter()
+                    .map(SelectionRequirement::HasCardType)
+                    .reduce(|a, b| a.or(b))
+                else {
+                    return Ok(());
+                };
+                self.run_effect(
+                    &Effect::RevealUntilFind {
+                        who: crate::effect::PlayerRef::Seat(seat),
+                        find,
+                        to: crate::effect::ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::Seat(seat),
+                            tapped: false,
+                        },
+                        cap: crate::effect::Value::Const(500),
+                        life_per_revealed: 0,
+                        miss_dest: RevealMissDest::ShuffleIntoLibrary,
+                    },
+                    ctx,
+                    events,
+                )
+            }
+
+            Effect::AlternatingExileFromHand { who } => {
+                // Struggle for Sanity. The victim picks first and keeps what
+                // they pick; the controller's picks are binned. Each side's
+                // pick uses `ChooseCards` so a scripted seat drives it; the
+                // headless heuristic keeps/bins by mana value.
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(p) = self.resolve_selector(who, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Player(p) => Some(p),
+                    _ => None,
+                }) else {
+                    return Ok(());
+                };
+                if p == ctx.controller {
+                    return Ok(());
+                }
+                if !self.hands_revealed_to.contains(&(ctx.controller, p)) {
+                    self.hands_revealed_to.push((ctx.controller, p));
+                }
+                let src = ctx.source.unwrap_or(CardId(0));
+                let mut keep: Vec<CardId> = Vec::new();
+                let mut bin: Vec<CardId> = Vec::new();
+                let mut victims_turn = true;
+                while !self.players[p].hand.is_empty() {
+                    let candidates: Vec<(CardId, String)> = self.players[p]
+                        .hand
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    // Headless default: whoever is picking takes the priciest
+                    // card left — the victim to save it, the controller to bin it.
+                    let fallback = self.players[p]
+                        .hand
+                        .iter()
+                        .max_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| c.id)
+                        .unwrap_or(candidates[0].0);
+                    let picked = match self.decider.decide(&Decision::ChooseCards {
+                        source: src,
+                        prompt: if victims_turn {
+                            "Exile a card to keep".to_string()
+                        } else {
+                            "Exile a card from the revealed hand".to_string()
+                        },
+                        candidates: candidates.clone(),
+                        min: 1,
+                        max: 1,
+                    }) {
+                        DecisionAnswer::Cards(ids) => ids
+                            .into_iter()
+                            .find(|id| candidates.iter().any(|(c, _)| c == id))
+                            .unwrap_or(fallback),
+                        _ => fallback,
+                    };
+                    if let Some(i) = self.players[p].hand.iter().position(|c| c.id == picked) {
+                        let card = self.players[p].hand.remove(i);
+                        let cid = card.id;
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                        if victims_turn { keep.push(cid) } else { bin.push(cid) }
+                    }
+                    victims_turn = !victims_turn;
+                }
+                for cid in keep {
+                    if let Some(i) = self.exile.iter().position(|c| c.id == cid) {
+                        let card = self.exile.remove(i);
+                        self.players[p].hand.push(card);
+                    }
+                }
+                for cid in bin {
+                    if let Some(i) = self.exile.iter().position(|c| c.id == cid) {
+                        let card = self.exile.remove(i);
+                        self.players[p].graveyard.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::DoubleUnspentMana => {
                 self.players[ctx.controller].mana_pool.double_all();
                 Ok(())

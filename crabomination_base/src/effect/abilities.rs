@@ -198,6 +198,12 @@ pub enum StaticEffect {
     /// read from the source's `chosen_color` ETB stamp (Ward Sliver). No-op
     /// until the choice is made.
     GrantProtectionFromChosenColor { applies_to: Selector },
+    /// CR 612 — "All instances of color words in the text of spells and
+    /// permanents are changed to the chosen color word" (Swirl the Mists).
+    /// Emits a layer-3 `ReplaceColorWord(other, chosen)` over every permanent
+    /// for each of the four other colors; inert until the source's
+    /// `chosen_color` is stamped.
+    AllColorWordsBecomeChosen,
     /// "Your opponents can't cast spells of the chosen color" — reads the
     /// source's `chosen_color` ETB stamp (Iona, Shield of Emeria). Gated at
     /// the cast dispatch.

@@ -315,6 +315,7 @@ pub mod bro;
 pub mod c21;
 pub mod chk;
 pub mod chk2;
+pub mod chk3;
 pub mod curses;
 pub mod decks;
 pub mod dgm;

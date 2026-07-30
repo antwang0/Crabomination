@@ -930,6 +930,10 @@ pub enum Keyword {
     /// "This doesn't untap during your untap step if it has a [kind] counter
     /// on it" (Steel Dromedary). Checked in `do_untap`.
     DoesntUntapWhileCounter(CounterType),
+    /// CR 502.1 — "You may choose not to untap this during your untap step"
+    /// (Hisoka's Guard). `do_untap` asks the controller; declining leaves it
+    /// tapped without cancelling the untap step for anything else.
+    MayChooseNotToUntap,
     /// CR 702.189 — Firebending N. "Whenever this creature attacks, add N {R};
     /// you don't lose this mana as steps and phases end (until end of combat)."
     Firebending(u32),
