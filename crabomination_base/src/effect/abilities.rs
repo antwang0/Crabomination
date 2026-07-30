@@ -2345,6 +2345,13 @@ pub struct ActivatedAbility {
     /// Diamond). The whole hand is discarded, firing discard triggers.
     #[serde(default)]
     pub discard_hand_cost: bool,
+    /// Process (Battle for Zendikar) as an activation cost: "Put `N` cards an
+    /// opponent owns from exile into that player's graveyard:". Unlike
+    /// `Effect::Process` (a resolution-time "you may"), this gates activation —
+    /// with too few eligible exile cards the ability can't be activated at all.
+    /// Cryptic Cruiser, Oracle of Dust, Void Attendant.
+    #[serde(default)]
+    pub process_cost: Option<u32>,
     /// "{N} less to activate for each `counter_type` counter on permanents
     /// matching the filter" (Deepwood Denizen — {1} less per +1/+1 counter
     /// on creatures you control). Generic-only reduction.

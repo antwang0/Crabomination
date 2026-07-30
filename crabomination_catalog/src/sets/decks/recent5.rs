@@ -150,6 +150,7 @@ pub fn misdirection() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             exile_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
             ..Default::default()
         }),

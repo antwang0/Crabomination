@@ -620,7 +620,8 @@ impl Effect {
             | Effect::RearrangeTop { who, amount } => {
                 player_has_target(who) || value_has_target(amount)
             }
-            Effect::LookPickToHand { who, count, .. } => {
+            Effect::LookPickToHand { who, count, .. }
+            | Effect::LookTopKeepMatchingOnTop { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::RevealTopTakeOnePerType { who, count } => {
@@ -646,7 +647,10 @@ impl Effect {
             Effect::Discover { n, .. } => value_has_target(n),
             Effect::Monstrosity { n } => value_has_target(n),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
-            Effect::MoveChosen { from, to, .. } => sel_has_target(from) || zonedest_has_target(to),
+            Effect::MoveChosen { from, to, .. }
+            | Effect::MoveWithinTotalManaValue { from, to, .. } => {
+                sel_has_target(from) || zonedest_has_target(to)
+            }
             Effect::Search { who, to, .. }
             | Effect::SearchLibraryOrGraveyard { who, to, .. } => {
                 player_has_target(who) || zonedest_has_target(to)

@@ -5759,6 +5759,82 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MoveWithinTotalManaValue { from, filter, cap, to } => {
+                // Cheapest-first greedy fill of the mana-value budget, so the
+                // number of cards returned is maximized (March from the Tomb).
+                let budget = self.evaluate_value(cap, ctx).max(0) as u32;
+                let mut candidates: Vec<(CardId, u32)> = self
+                    .resolve_selector(from, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .filter_map(|id| self.find_card_anywhere(id).map(|c| (id, c.definition.cost.cmc())))
+                    .filter(|(id, _)| {
+                        self.find_card_anywhere(*id).is_some_and(|c| {
+                            self.evaluate_requirement_on_card(filter, c, ctx.controller)
+                        })
+                    })
+                    .collect();
+                candidates.sort_by_key(|(_, mv)| *mv);
+                let mut spent = 0u32;
+                let picks: Vec<CardId> = candidates
+                    .into_iter()
+                    .filter(|(_, mv)| {
+                        if spent + mv <= budget {
+                            spent += mv;
+                            true
+                        } else {
+                            false
+                        }
+                    })
+                    .map(|(id, _)| id)
+                    .collect();
+                for id in picks {
+                    self.move_card_to(id, to, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::LookTopKeepMatchingOnTop { who, count, take, filter } => {
+                // Look at the top N, keep up to `take` matches on top (in
+                // library order), bottom the rest. Auto-takes the matches —
+                // there is no downside to revealing them.
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let take = self.evaluate_value(take, ctx).max(0) as usize;
+                let looked: Vec<CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                let mut kept = 0usize;
+                let (mut top, mut bottom) = (Vec::new(), Vec::new());
+                for id in looked {
+                    let matches = self.players[p]
+                        .library
+                        .iter()
+                        .find(|c| c.id == id)
+                        .is_some_and(|c| self.evaluate_requirement_on_card(filter, c, p));
+                    if matches && kept < take {
+                        kept += 1;
+                        top.push(id);
+                    } else {
+                        bottom.push(id);
+                    }
+                }
+                let mut moved: Vec<crate::card::CardInstance> = Vec::new();
+                for id in top.iter().chain(bottom.iter()) {
+                    if let Some(c) = Self::take_card(&mut self.players[p].library, *id) {
+                        moved.push(c);
+                    }
+                }
+                let bottom_start = top.len();
+                for (i, c) in moved.into_iter().enumerate() {
+                    if i < bottom_start {
+                        self.players[p].library.insert(i, c);
+                    } else {
+                        self.players[p].library.push(c);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Scry { who, amount }
             | Effect::Surveil { who, amount }
             | Effect::LookAtTop { who, amount }

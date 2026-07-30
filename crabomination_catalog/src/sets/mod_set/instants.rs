@@ -245,6 +245,7 @@ pub fn archive_trap() -> CardDefinition {
             amount: Value::Const(13),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             condition: Some(Predicate::SearchedLibraryThisTurn {
                 who: PlayerRef::EachOpponent,
             }),
@@ -422,6 +423,7 @@ pub fn daze() -> CardDefinition {
             extra_generic: None,
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             return_to_hand: Some((SelectionRequirement::HasLandType(LandType::Island), 1)),
             ..Default::default()
         }),
@@ -569,6 +571,7 @@ pub fn pyrokinesis() -> CardDefinition {
             max_targets: 4,
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: ManaCost::default(),
             life_cost: 0,
             exile_filter: Some(SelectionRequirement::HasColor(Color::Red)),
@@ -965,6 +968,7 @@ pub fn gush() -> CardDefinition {
             amount: Value::Const(2),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             return_to_hand: Some((SelectionRequirement::HasLandType(LandType::Island), 2)),
             ..Default::default()
         }),
@@ -1375,6 +1379,7 @@ pub fn force_of_vigor() -> CardDefinition {
             },
         ]),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             exile_filter: Some(SelectionRequirement::HasColor(Color::Green)),
             not_your_turn_only: true,
             ..Default::default()

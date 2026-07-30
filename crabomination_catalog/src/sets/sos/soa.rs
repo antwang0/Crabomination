@@ -149,6 +149,7 @@ pub fn winds_of_abandon() -> CardDefinition {
             },
         ]),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(4), w(), w()]),
             // Overload: "each creature you don't control".
             effect_override: Some(Effect::ForEach {

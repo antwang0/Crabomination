@@ -688,6 +688,7 @@ pub fn runeflare_trap() -> CardDefinition {
             ..Default::default()
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[r()]),
             condition: Some(Predicate::PlayerDrewAtLeastThisTurn {
                 who: PlayerRef::EachOpponent,

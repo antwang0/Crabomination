@@ -111,6 +111,7 @@ pub fn counterflux() -> CardDefinition {
             what: target_filtered(R::IsSpellOnStack.and(R::ControlledByOpponent)),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(1), u(), u(), r()]),
             effect_override: Some(overload),
             ..Default::default()

@@ -481,6 +481,7 @@ pub fn lunar_rejection() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: bounce_and_draw(wolf_or_werewolf),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(3), u()]),
             effect_override: Some(bounce_and_draw(SelectionRequirement::Creature)),
             ..Default::default()

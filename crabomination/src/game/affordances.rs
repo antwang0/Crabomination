@@ -262,13 +262,16 @@ impl GameState {
     /// CantAttack via `CardInstance::can_attack`.
     pub fn legal_attackers(&self, seat: usize) -> Vec<CardId> {
         if self.step != crate::TurnStep::DeclareAttackers
-            || self.active_player_idx != seat
+            || self.attack_declarer() != seat
             || self.player_with_priority() != seat
         {
             return Vec::new();
         }
+        // The declaration is always over the *active player's* creatures, even
+        // when a `combat_chooser` (Master Warcraft) submits it.
+        let owner = self.active_player_idx;
         // Per-candidate computed reads below — share one layer gather.
-        self.with_frozen_layers(|g| g.legal_attackers_inner(seat))
+        self.with_frozen_layers(|g| g.legal_attackers_inner(owner))
     }
 
     fn legal_attackers_inner(&self, seat: usize) -> Vec<CardId> {
@@ -365,16 +368,22 @@ impl GameState {
     /// legal-blocker highlight (roadmap Tier 8). Uses
     /// `can_block_any_computed_attacker` so flying / menace-style restrictions apply.
     pub fn legal_blockers(&self, seat: usize) -> Vec<CardId> {
-        if self.step != crate::TurnStep::DeclareBlockers || self.attacking().is_empty() {
+        if self.step != crate::TurnStep::DeclareBlockers
+            || self.attacking().is_empty()
+            || !self.may_declare_blocks(seat)
+        {
             return Vec::new();
         }
+        // Blockers come from the defending players — with a `combat_chooser`
+        // that isn't the declaring seat's own board.
+        let active = self.active_player_idx;
         // Share one layer gather across the scan, and compute each
         // attacker's view once instead of per blocker candidate.
         self.with_frozen_layers(|g| {
             let attackers = g.computed_attackers();
             g.battlefield
                 .iter()
-                .filter(|c| c.controller == seat && c.can_block())
+                .filter(|c| c.controller != active && c.can_block())
                 .filter(|c| g.can_block_any_computed_attacker(c.id, &attackers))
                 .map(|c| c.id)
                 .collect()

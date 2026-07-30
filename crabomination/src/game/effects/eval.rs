@@ -551,6 +551,18 @@ impl GameState {
                 }
             }
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
+            Value::RevealedForCostPower => self.revealed_for_cost_power.unwrap_or(0),
+            Value::GreatestManaValueAmongPermanents(who) => self
+                .resolve_player(who, ctx)
+                .map(|p| {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.controller == p)
+                        .map(|c| c.definition.cost.cmc() as i32)
+                        .max()
+                        .unwrap_or(0)
+                })
+                .unwrap_or(0),
             Value::SacrificedTotalPower => self.sacrificed_total_power,
             Value::SacrificedCount => self.sacrificed_count as i32,
             Value::TappedForCostPower => self.tapped_for_cost_power.unwrap_or(0),
@@ -2529,6 +2541,7 @@ impl GameState {
 
                     R::Warped => card.warped,
                     R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
+                    R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
                     R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
                     R::ProducesColorless => card.definition.produces_colorless(),
                     R::IsSnow => card.definition.is_snow(),
@@ -2926,6 +2939,7 @@ impl GameState {
             R::Not(inner) => !self.evaluate_requirement_on_card(inner, card, controller),
             R::ControlledByYou => card.controller == controller,
             R::ControlledByOpponent => !self.same_team(card.controller, controller),
+            R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
             R::PutIntoGraveyardFromBattlefieldThisTurn => {
                 self.graveyard_from_battlefield_this_turn.contains(&card.id)
             }

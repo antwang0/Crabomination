@@ -217,6 +217,7 @@ pub fn escape_detection() -> CardDefinition {
             },
         ]),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             return_to_hand: Some((
                 SelectionRequirement::Creature.and(SelectionRequirement::HasColor(Color::Blue)),
                 1,

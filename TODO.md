@@ -7658,26 +7658,29 @@ stalled games via `eval_material`.
   `Decision::PartitionPermanents`.
 - **CR coverage gaps.** `scripts/cr_coverage.py` → `CR_COVERAGE.md` maps CR
   section → conformance test; 75 numbered sections still have none (610 and 612
-  came off the list this run). The highest-value untested blocks left are 703
-  (turn-based actions), 404/406 (graveyard and exile), 501–513 (the individual
-  turn steps) and the 8xx multiplayer rules.
+  came off the list this run). 82 sections are covered, 65 still have none;
+  406/501/513 came off the list this run. The highest-value untested blocks
+  left are 403/407/408 (the remaining zones), 503/512 (the last turn steps),
+  714/717–721 (Sagas and the newer card types) and the 8xx multiplayer rules.
 
-## Noticed this run (modern_decks — RAV closure + OGW)
+## Noticed this run (modern_decks — OGW closure + BFZ)
 
-- **The human client can't build the *other* player's declaration.** With a
-  `combat_chooser` set (Master Warcraft) the chooser gets the declaration
-  window and can decline it, but the attacker/blocker pickers still filter to
-  `c.owner == your_seat`, so a chooser can't select the creatures they're
-  actually choosing for. Bots handle it (`forced_attacks` / no-blocks);
-  a human chooser is decline-only.
-- **`Effect::SupportCounters` auto-targets one creature.** A trigger-side
-  support N (Relief Captain, Gladehart Cavalry) binds a single slot when the
-  engine auto-targets, so the printed "up to N *other* target creatures" only
-  spreads fully on an explicit multi-target cast/activation.
-- **OGW's last two cards need one primitive each** (`set_gaps.py ogw`):
-  - **Deceiver of Form** — "creatures you control become copies of the revealed
-    card until end of turn" wants a mass `BecomeCopyOfFor` over a *revealed
-    library card* rather than a battlefield permanent.
-  - **Kozilek, the Great Distortion** — "discard a card with mana value X:
-    counter target spell with mana value X" needs a discard cost whose filter
-    is bound to the chosen target's MV.
+- **Zada, Hedron Grinder** (the last BFZ card beside Gruesome Slaughter) needs
+  a "copy a spell that targets only this creature, once per other creature it
+  could target, each copy retargeted" primitive. `CopySpellMayChooseTargets`
+  has the copy machinery; what's missing is the targets-only-me gate plus the
+  per-copy distinct retarget.
+- **Gruesome Slaughter** wants a one-shot `Effect` that grants an *activated*
+  ability for the turn — `StaticEffect::GrantActivatedAbility` only exists on
+  the static side.
+- **Lithomancer's Focus** ships as a plain +2/+2; "prevent all damage colorless
+  sources would deal to that creature" needs a prevention shield filtered by
+  the damage *source's* characteristics (the existing shields are per-source-id
+  or unconditional).
+- **Modal activated abilities pick mode 0.** `GameAction::ActivateAbility`
+  carries no `mode`, so an `Effect::ChooseMode` in an activated ability always
+  runs the first mode (Veteran Warleader is modeled as three abilities
+  instead). Loyalty and cast paths do plumb a mode.
+- **`Effect::MoveWithinTotalManaValue` auto-picks.** March from the Tomb takes
+  the cheapest matches first to maximize the count; the printed card lets the
+  caster choose which cards fit the budget.

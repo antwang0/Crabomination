@@ -83,6 +83,7 @@ pub fn wavesifter() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(investigate(2))],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[g(), u()]),
             evoke_sacrifice: true,
             ..Default::default()

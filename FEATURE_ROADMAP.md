@@ -1306,6 +1306,21 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   controller (Blood Speaker), `EventKind::TappedForMana` matches `SelfSource`
   (Forbidden Orchard), and a self-scoped `SkipNextUntap` rider no longer stops
   an ability being a mana ability (CR 605.1a — the CHK slow duals).
+- **Landfall / Rally / Awaken / Process (modern_decks — BFZ):** landfall now
+  keys on a land *entering* rather than a land being *played* —
+  `GameEvent::LandPlayed` gained a `played: bool` and is emitted from the
+  battlefield-entry chokepoint too, so a fetched or reanimated land triggers
+  Scythe Leopard and friends (the client log and the lands-played stat still
+  read `played`). `shortcut::landfall` / `rally` / `rally_grant` are the shared
+  trigger shapes. New primitives: `ActivatedAbility.process_cost` (Process as a
+  real activation cost — Cryptic Cruiser), `Effect::LookTopKeepMatchingOnTop`
+  (Fertile Thicket, Munda), `Effect::MoveWithinTotalManaValue` (March from the
+  Tomb), `AdditionalCastCost::RevealFromHand` +
+  `Value::RevealedForCostPower` (Titan's Presence),
+  `Value::GreatestManaValueAmongPermanents` (Ugin's Insight),
+  `SelectionRequirement::HasAwaken` (Halimar Tidecaller). Emblem
+  `AnthemForFilter` statics now reach the live anthem gather, so Gideon, Ally
+  of Zendikar's −4 actually pumps.
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an

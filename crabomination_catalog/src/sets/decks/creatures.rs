@@ -360,6 +360,7 @@ pub fn solitude() -> CardDefinition {
             },
         }],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: ManaCost::default(),
             life_cost: 0,
             exile_filter: Some(SelectionRequirement::HasColor(Color::White)),
@@ -409,6 +410,7 @@ pub fn grief() -> CardDefinition {
             },
         }],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: ManaCost::default(),
             exile_filter: Some(SelectionRequirement::HasColor(Color::Black)),
             evoke_sacrifice: true,
@@ -443,6 +445,7 @@ pub fn fury() -> CardDefinition {
             },
         }],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: ManaCost::default(),
             exile_filter: Some(SelectionRequirement::HasColor(Color::Red)),
             evoke_sacrifice: true,
@@ -477,6 +480,7 @@ pub fn subtlety() -> CardDefinition {
             },
         }],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: ManaCost::default(),
             exile_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
             evoke_sacrifice: true,
@@ -509,6 +513,7 @@ pub fn endurance() -> CardDefinition {
             },
         }],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: ManaCost::default(),
             exile_filter: Some(SelectionRequirement::HasColor(Color::Green)),
             evoke_sacrifice: true,

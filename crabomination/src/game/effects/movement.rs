@@ -1780,6 +1780,19 @@ impl GameState {
                 // CR 702.32 / 702.62 — Fading / Vanishing enter-with-counters.
                 self.apply_fading_vanishing_etb(cid, events);
                 events.push(GameEvent::PermanentEntered { card_id: cid });
+                // Landfall reads "whenever a land you control **enters**", not
+                // "whenever you play a land" — a fetched, reanimated or
+                // put-onto-the-battlefield land counts. `play_land` emits its
+                // own `LandPlayed`; this covers every other entry path.
+                if let Some(land) =
+                    self.battlefield.iter().find(|c| c.id == cid && c.definition.is_land())
+                {
+                    events.push(GameEvent::LandPlayed {
+                        player: land.controller,
+                        card_id: cid,
+                        played: false,
+                    });
+                }
                 // Fire self-source ETB triggers so reanimate / flicker /
                 // search-to-battlefield paths trigger creature ETBs the same
                 // way casting does. CR 603.3d — the trigger's controller is

@@ -234,6 +234,7 @@ pub fn dynacharge() -> CardDefinition {
             duration: Duration::EndOfTurn,
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(2), r()]),
             effect_override: Some(Effect::PumpPT {
                 what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
@@ -261,6 +262,7 @@ pub fn downsize() -> CardDefinition {
             duration: Duration::EndOfTurn,
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(2), u()]),
             effect_override: Some(Effect::PumpPT {
                 what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),

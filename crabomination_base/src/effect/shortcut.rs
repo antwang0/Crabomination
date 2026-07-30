@@ -198,6 +198,7 @@ pub fn awaken(
 ) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost {
         mana_cost,
+        awaken: true,
         effect_override: Some(Effect::Seq(vec![base_effect, animate_land(land_slot, n)])),
         ..Default::default()
     }
@@ -3185,4 +3186,39 @@ fn recover_subject_is_yours(another: bool) -> crate::effect::Predicate {
         filter = filter.and(SelectionRequirement::OtherThanSource);
     }
     crate::effect::Predicate::EntityMatches { what: Selector::TriggerSource, filter }
+}
+
+/// Landfall (Zendikar ability word): "whenever a land you control enters, …".
+/// `EventKind::LandPlayed` fires on any land entry, not only a land *play*.
+pub fn landfall(effect: Effect) -> TriggeredAbility {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+        effect,
+    }
+}
+
+/// Rally (BFZ ability word): "whenever this creature or another Ally you
+/// control enters, …".
+pub fn rally(effect: Effect) -> TriggeredAbility {
+    use crate::card::{CreatureType, EventKind, EventScope, EventSpec, Predicate};
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+            Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Ally),
+            },
+        ),
+        effect,
+    }
+}
+
+/// The Rally shape that grants a keyword to your creatures until end of turn
+/// (Kor Bladewhirl, Makindi Patrol, Ondu Champion, Lantern Scout, …).
+pub fn rally_grant(keyword: Keyword) -> TriggeredAbility {
+    rally(Effect::GrantKeyword {
+        what: each_your_creature(),
+        keyword,
+        duration: Duration::EndOfTurn,
+    })
 }

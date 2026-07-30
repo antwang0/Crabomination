@@ -1235,7 +1235,7 @@ mod recent69 {
         let id = g.add_card_to_battlefield(0, catalog::snapping_creeper());
         assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Vigilance));
         let land = g.add_card_to_battlefield(0, catalog::forest());
-        g.dispatch_triggers_for_events(&[GameEvent::LandPlayed { player: 0, card_id: land }]);
+        g.dispatch_triggers_for_events(&[GameEvent::LandPlayed { player: 0, card_id: land, played: true }]);
         drain_stack(&mut g);
         assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Vigilance),
             "landfall grants vigilance until end of turn");

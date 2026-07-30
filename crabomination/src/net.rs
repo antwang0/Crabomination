@@ -2189,7 +2189,13 @@ pub enum GameEventWire {
     /// row already narrates it, so this renders blank.
     FirstCardDrawnThisTurn { player: usize },
     CardDiscarded { player: usize, card_id: CardId },
-    LandPlayed { player: usize, card_id: CardId },
+    LandPlayed {
+        player: usize,
+        card_id: CardId,
+        /// False when the land entered without being played (fetch / reanimate).
+        #[serde(default = "crate::net::default_true")]
+        played: bool,
+    },
     /// `face` lets replays / spectator UIs distinguish a back-face MDFC
     /// cast (Back) from a normal hand cast (Front) and a flashback
     /// graveyard replay (Flashback). Defaults to `Front` on snapshots
@@ -2351,9 +2357,10 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 card_id: *card_id,
             },
-            GameEvent::LandPlayed { player, card_id } => GameEventWire::LandPlayed {
+            GameEvent::LandPlayed { player, card_id, played } => GameEventWire::LandPlayed {
                 player: *player,
                 card_id: *card_id,
+                played: *played,
             },
             GameEvent::SpellCast { player, card_id, face } => GameEventWire::SpellCast {
                 player: *player,
@@ -2691,7 +2698,10 @@ impl GameEventWire {
             E::CardDiscarded { player, card_id } => {
                 format!("{} discarded {}", pn(*player), name(*card_id))
             }
-            E::LandPlayed { player, card_id } => format!("{} played {}", pn(*player), name(*card_id)),
+            E::LandPlayed { player, card_id, played } => {
+                let verb = if *played { "played" } else { "put" };
+                format!("{} {verb} {}", pn(*player), name(*card_id))
+            }
             E::SpellCast { player, card_id, .. } => format!("{} cast {}", pn(*player), name(*card_id)),
             E::AbilityActivated { source, exhaust, adapt } => format!(
                 "{} {} activated",

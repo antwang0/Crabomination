@@ -12,6 +12,7 @@ pub fn force_of_will() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: counter_target_spell(),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: ManaCost::default(),
             life_cost: 1,
             exile_filter: Some(SelectionRequirement::HasColor(Color::Blue)),

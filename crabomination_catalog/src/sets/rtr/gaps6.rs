@@ -230,6 +230,7 @@ pub fn chemisters_trick() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: base(target_filtered(R::Creature.and(R::ControlledByOpponent))),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(3), u(), r()]),
             effect_override: Some(base(Selector::EachPermanent(
                 R::Creature.and(R::ControlledByOpponent),

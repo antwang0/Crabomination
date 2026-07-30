@@ -101,6 +101,7 @@ pub fn dragonshift() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: animate(target_filtered(R::Creature.and(R::ControlledByYou))),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(3), u(), u(), r(), r()]),
             effect_override: Some(animate(Selector::EachPermanent(
                 R::Creature.and(R::ControlledByYou),

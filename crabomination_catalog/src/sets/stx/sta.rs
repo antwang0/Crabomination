@@ -186,6 +186,7 @@ pub fn mizzixs_mastery() -> CardDefinition {
             free_cast(Selector::LastMoved),
         ]),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(5), r(), r(), r()]),
             // `ForEach` binds each graveyard card to `TriggerSource`; reference
             // it directly (not `LastMoved`, which accumulates across the loop).

@@ -108,6 +108,7 @@ pub fn asmoranomardicadaistinaculdacar() -> CardDefinition {
         power: 3,
         toughness: 3,
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[hybrid(Color::Black, Color::Red)]),
             condition: Some(Predicate::DiscardedThisTurn {
                 who: PlayerRef::You,

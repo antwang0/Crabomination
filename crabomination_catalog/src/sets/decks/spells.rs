@@ -337,6 +337,7 @@ pub fn force_of_negation() -> CardDefinition {
             what: target_filtered(SelectionRequirement::Noncreature),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: ManaCost::default(),
             life_cost: 0,
             exile_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
@@ -548,6 +549,7 @@ pub fn mystical_dispute() -> CardDefinition {
             extra_generic: None,
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[u()]),
             life_cost: 0,
             exile_filter: None,

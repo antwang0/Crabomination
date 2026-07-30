@@ -173,6 +173,7 @@ pub fn mizzium_mortars() -> CardDefinition {
             amount: Value::Const(4),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(3), r(), r(), r()]),
             life_cost: 0,
             exile_filter: None,
@@ -320,6 +321,7 @@ pub fn past_in_flames() -> CardDefinition {
             any_color: false,
         },
         alternative_cost: Some(crate::card::AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(4), r()]),
             life_cost: 0,
             exile_filter: None,
@@ -411,6 +413,7 @@ pub fn resurgent_belief() -> CardDefinition {
             },
         },
         alternative_cost: Some(crate::card::AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(4), w()]),
             life_cost: 0,
             exile_filter: None,
@@ -816,6 +819,7 @@ pub fn ingenious_mastery() -> CardDefinition {
             amount: Value::XFromCost,
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(2), u()]),
             effect_override: Some(Effect::Seq(vec![
                 Effect::Draw {

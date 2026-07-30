@@ -924,14 +924,15 @@ fn gladiolus_ramps_and_pumps_on_landfall() {
     drain_stack(&mut g);
     let lands1 = g.battlefield.iter().filter(|c| c.definition.is_land() && c.controller == 0).count();
     assert_eq!(lands1, lands0 + 1, "ETB put a land onto the battlefield");
-    // Landfall pumps the ally +2/+2 and grants trample.
+    // Landfall pumps the ally +2/+2 and grants trample — once for the land the
+    // ETB fetched (it *enters*, so it counts) and once for the land played.
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     let land = g.add_card_to_hand(0, catalog::plains());
     g.perform_action(GameAction::PlayLand(land)).expect("play land");
     drain_stack(&mut g);
     let cp = g.computed_permanent(ally).unwrap();
-    assert_eq!(cp.power, 4, "ally pumped +2/+2");
+    assert_eq!(cp.power, 6, "ally pumped +2/+2 per land that entered");
     assert!(cp.keywords.contains(&Keyword::Trample), "ally gained trample");
 }
 

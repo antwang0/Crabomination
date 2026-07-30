@@ -369,6 +369,7 @@ pub fn rise_and_shine() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: animate(target_filtered(filter.clone())),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(4), u(), u()]),
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(filter),

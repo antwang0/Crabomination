@@ -2467,6 +2467,7 @@ pub fn snuff_out() -> CardDefinition {
             ),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: ManaCost::default(),
             life_cost: 4,
             exile_filter: None,
@@ -3122,6 +3123,7 @@ pub fn fireblast() -> CardDefinition {
             amount: Value::Const(4),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             sacrifice_permanents: Some((SelectionRequirement::HasLandType(LandType::Mountain), 2)),
             ..Default::default()
         }),
@@ -3950,6 +3952,7 @@ pub fn cyclonic_rift() -> CardDefinition {
             to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(6), u()]),
             life_cost: 0,
             exile_filter: None,
@@ -6922,6 +6925,7 @@ pub fn rout() -> CardDefinition {
             }),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(5), w(), w()]),
             blitz: false,
             flash: true,
@@ -47845,6 +47849,7 @@ pub fn flare_of_denial() -> CardDefinition {
             what: Selector::Target(0),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             sacrifice_permanents: Some((
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::HasColor(Color::Blue))
@@ -47878,6 +47883,7 @@ pub fn nulldrifter() -> CardDefinition {
             amount: Value::Const(2),
         })],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(2), u()]),
             evoke_sacrifice: true,
             ..Default::default()
@@ -52610,6 +52616,7 @@ pub fn flare_of_duplication() -> CardDefinition {
             count: Value::Const(1),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             sacrifice_permanents: Some((
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::HasColor(Color::Red))
@@ -52640,6 +52647,7 @@ pub fn flare_of_malice() -> CardDefinition {
             by_power: false,
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             sacrifice_permanents: Some((
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::HasColor(Color::Black))
@@ -56249,6 +56257,7 @@ pub fn ravenous_trap() -> CardDefinition {
             who: PlayerRef::Target(0),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             condition: Some(Predicate::CardsToGraveyardThisTurnAtLeast {
                 who: PlayerRef::EachOpponent,
                 at_least: 3,
@@ -60203,6 +60212,7 @@ pub fn damn() -> CardDefinition {
             what: target_filtered(SelectionRequirement::Creature),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(2), w(), w()]),
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(SelectionRequirement::Creature),
@@ -60280,6 +60290,7 @@ pub fn harbinger_of_the_tides() -> CardDefinition {
             }),
         })],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(2), u(), u()]),
             flash: true,
             ..Default::default()

@@ -1520,6 +1520,7 @@ pub fn fangs_of_kalonia() -> CardDefinition {
             },
         ]),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(4), g(), g()]),
             effect_override: Some(Effect::Seq(vec![
                 Effect::AddCounter {

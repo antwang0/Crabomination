@@ -1149,6 +1149,7 @@ pub fn blustersquall() -> CardDefinition {
             ),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(3), u()]),
             life_cost: 0,
             exile_filter: None,
@@ -1198,6 +1199,7 @@ pub fn electrickery() -> CardDefinition {
             amount: Value::Const(1),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(1), r()]),
             life_cost: 0,
             exile_filter: None,
@@ -1258,6 +1260,7 @@ pub fn teleportal() -> CardDefinition {
             },
         ]),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(3), u(), r()]),
             life_cost: 0,
             exile_filter: None,
@@ -1320,6 +1323,7 @@ pub fn street_spasm() -> CardDefinition {
             amount: Value::XFromCost,
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[crate::mana::x(), crate::mana::x(), r(), r()]),
             life_cost: 0,
             exile_filter: None,

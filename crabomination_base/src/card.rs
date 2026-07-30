@@ -1577,6 +1577,8 @@ pub enum SelectionRequirement {
     /// (floating) mana — Glissa Sunseeker.
     ManaValueEqualsYourUnspentMana,
     IsBasicLand,
+    /// CR 702.113 — the card has an Awaken alternative cost (Halimar Tidecaller).
+    HasAwaken,
     /// True for a land that is **not** basic (CR 305.6) — i.e. a land card
     /// lacking the Basic supertype. Powers Thalia, Heretic Cathar's
     /// "nonbasic lands … enter the battlefield tapped" clause and any
@@ -3079,6 +3081,11 @@ pub enum AdditionalCastCost {
         filter: SelectionRequirement,
         pay: u32,
     },
+    /// "As an additional cost to cast this spell, reveal a [filter] card from
+    /// your hand." The card stays in hand; its power is stamped for the body to
+    /// read via `Value::RevealedForCostPower` (Titan's Presence). Announcing is
+    /// gated on having a match.
+    RevealFromHand { filter: SelectionRequirement },
     /// "As an additional cost to cast this spell, put a card an opponent
     /// owns from exile into that player's graveyard." (Process — Processor
     /// Assault.)
@@ -3579,6 +3586,10 @@ pub struct AlternativeCost {
     /// True for evoke costs — the resulting permanent is sacrificed on ETB
     /// (after its ETB triggers fire).
     pub evoke_sacrifice: bool,
+    /// CR 702.113 — this alternative cost is Awaken, so the card matches
+    /// `SelectionRequirement::HasAwaken` (Halimar Tidecaller).
+    #[serde(default)]
+    pub awaken: bool,
     /// True if this alt cost is only legal on a turn that isn't the caster's
     /// (Force of Negation, Foundation Breaker, Force of Vigor, etc.). The
     /// engine rejects the alt cast when the caster *is* the active player.

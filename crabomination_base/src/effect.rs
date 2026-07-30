@@ -412,6 +412,9 @@ pub enum Value {
     /// The greatest mana value among cards in `who`'s graveyard (Wick's Patrol's
     /// `-X/-X` where X is the greatest MV in your graveyard). 0 if empty.
     GreatestManaValueInGraveyard(PlayerRef),
+    /// The greatest mana value among permanents `who` controls (Ugin's Insight's
+    /// "scry X"). 0 with no permanents.
+    GreatestManaValueAmongPermanents(PlayerRef),
     Const(i32),
     /// Number of entities the selector resolves to.
     CountOf(Box<Selector>),
@@ -609,6 +612,9 @@ pub enum Value {
     /// Power of the most recently sacrificed creature this resolution
     /// (set by `Effect::SacrificeAndRemember`). Used by Thud / Greater
     /// Gargadon-style sacrifice + damage spells.
+    /// The power of the card revealed to pay this cast's
+    /// `AdditionalCastCost::RevealFromHand` (Titan's Presence). 0 with no reveal.
+    RevealedForCostPower,
     SacrificedPower,
     /// Summed power of every permanent sacrificed this resolution — the
     /// "total power of the sacrificed creatures" wording (Soulblast).
@@ -3279,6 +3285,16 @@ pub enum Effect {
     /// any order — all stay on top, none bottomed (Index, Spire Owl, Sage
     /// Owl). Distinct from Scry, which may bottom cards.
     RearrangeTop { who: PlayerRef, amount: Value },
+    /// "Look at the top `count` cards of your library. You may reveal up to
+    /// `take` cards matching `filter` from among them, then put those on top of
+    /// your library and the rest on the bottom in any order." Fertile Thicket
+    /// (up to one basic land), Munda, Ambush Leader (any number of Allies).
+    LookTopKeepMatchingOnTop {
+        who: PlayerRef,
+        count: Value,
+        take: Value,
+        filter: SelectionRequirement,
+    },
     /// CR 701.31 — *monstrosity N*. If the source isn't already monstrous,
     /// put N +1/+1 counters on it and it becomes monstrous (emitting
     /// `GameEvent::BecameMonstrous`). Once monstrous, this is a no-op.
@@ -3785,6 +3801,16 @@ pub enum Effect {
     /// resolved set (Bind to Life's "a creature card from AMONG the milled
     /// seven" — `from: LastMoved`, filter Creature). Divergent Equation,
     /// Pull from the Grave, Return to the Ranks, Emeritus of Ideation.
+    /// "Return any number of target [filter] cards with total mana value `cap`
+    /// or less from `from` to `to`" (March from the Tomb). Takes the cheapest
+    /// matches first until the next one would break the budget, so the count is
+    /// maximized. No-op when nothing matches.
+    MoveWithinTotalManaValue {
+        from: Selector,
+        filter: SelectionRequirement,
+        cap: Value,
+        to: ZoneDest,
+    },
     MoveChosen {
         from: Selector,
         #[serde(default)]

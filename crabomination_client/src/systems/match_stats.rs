@@ -98,7 +98,7 @@ pub fn track_match_stats(events: Res<LatestServerEvents>, mut stats: ResMut<Matc
             GameEventWire::LifeLost { player, amount } => {
                 *stats.life_lost.entry(*player).or_default() += amount;
             }
-            GameEventWire::LandPlayed { player, .. } => {
+            GameEventWire::LandPlayed { player, played: true, .. } => {
                 *stats.lands_played.entry(*player).or_default() += 1;
             }
             GameEventWire::CardDiscarded { player, .. } => {

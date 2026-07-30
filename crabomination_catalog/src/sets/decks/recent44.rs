@@ -83,6 +83,7 @@ pub fn ingot_chewer() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(destroy_artifact_target())],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[r()]),
             evoke_sacrifice: true,
             ..Default::default()

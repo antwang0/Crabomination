@@ -3892,6 +3892,7 @@ pub fn growth_chamber_guardian() -> CardDefinition {
 pub fn rix_maadi_reveler() -> CardDefinition {
     CardDefinition {
         alternative_cost: Some(crate::card::AlternativeCost {
+            awaken: false,
             marks_kicked: true,
             ..spectacle(cost(&[generic(2), b(), r()]))
         }),
@@ -3936,6 +3937,7 @@ pub fn rix_maadi_reveler() -> CardDefinition {
 pub fn rafter_demon() -> CardDefinition {
     CardDefinition {
         alternative_cost: Some(crate::card::AlternativeCost {
+            awaken: false,
             marks_kicked: true,
             ..spectacle(cost(&[generic(3), b(), r()]))
         }),

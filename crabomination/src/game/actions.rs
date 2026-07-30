@@ -2290,7 +2290,7 @@ impl GameState {
             self.saga_enter_advance(card_id);
         }
         Ok(vec![
-            GameEvent::LandPlayed { player: p, card_id },
+            GameEvent::LandPlayed { player: p, card_id, played: true },
             GameEvent::PermanentEntered { card_id },
         ])
     }
@@ -6278,6 +6278,11 @@ impl GameState {
             // spell's cost (`extra_cost_for_spell`) and mana payment
             // enforces it.
             A::RevealFromHandOrPay { .. } => true,
+            // A mandatory reveal needs a matching card in hand.
+            A::RevealFromHand { filter } => self.players[p]
+                .hand
+                .iter()
+                .any(|c| self.evaluate_requirement_on_card(filter, c, p)),
             A::SacrificeOrPay { .. } => true,
             A::ExileFromGraveyardOrPay { .. } => true,
             A::ProcessExile => self
@@ -6591,6 +6596,16 @@ impl GameState {
                 // Knowledge-only when a matching card is in hand; the pay
                 // half was already folded into the cost.
                 A::RevealFromHandOrPay { .. } => {}
+                // The revealed card stays in hand; stamp its power for the
+                // body (Titan's Presence). Reveal the biggest match.
+                A::RevealFromHand { filter } => {
+                    self.revealed_for_cost_power = self.players[p]
+                        .hand
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                        .map(|c| c.definition.power)
+                        .max();
+                }
                 A::ExileFromGraveyardOrPay { filter, count, .. } => {
                     // With enough matching graveyard cards the exile half is
                     // paid (reusing the ExileFromGraveyard machinery);
@@ -11892,6 +11907,27 @@ impl GameState {
             Vec::new()
         };
 
+        // Pre-flight process gate: "Put N cards an opponent owns from exile
+        // into that player's graveyard:" is a real cost, so too few eligible
+        // exile cards means the ability can't be activated (Cryptic Cruiser).
+        let process_picks: Vec<CardId> = match ability.process_cost {
+            Some(count) => {
+                let opponents = self.opponents_of(p);
+                let picks: Vec<CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| opponents.contains(&c.owner))
+                    .map(|c| c.id)
+                    .take(count as usize)
+                    .collect();
+                if picks.len() < count as usize {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                picks
+            }
+            None => Vec::new(),
+        };
+
         // Pre-flight exile-a-spell-you-control gate (CR 602.5b "Exile [a
         // spell] you control:"). Find the top-most matching spell the
         // activator controls on the stack; it leaves without resolving.
@@ -12591,6 +12627,14 @@ impl GameState {
         // Fauna Shaman's "Discard a creature card:" cost runs here.
         for cid in discard_picks {
             self.discard_card(p, cid, &mut events);
+        }
+
+        // Process-as-cost: the pre-flight-picked exile cards go to their
+        // owners' graveyards (CR 614.6 hate redirects still apply).
+        for cid in process_picks {
+            if let Some(card) = Self::take_card(&mut self.exile, cid) {
+                self.route_to_graveyard(card, &mut events);
+            }
         }
 
         // Discard-your-hand-as-cost (Diamond Lion / Lion's Eye Diamond).

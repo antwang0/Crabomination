@@ -148,6 +148,7 @@ pub fn break_the_ice() -> CardDefinition {
             what: target_filtered(filter.clone()),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(4), b(), b()]),
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(filter),

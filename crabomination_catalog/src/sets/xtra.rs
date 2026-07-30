@@ -96,6 +96,7 @@ pub fn part_the_waterveil() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: extra_turn_body(),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(6), u(), u()]),
             target_filter: Some(own_land.clone()),
             effect_override: Some(Effect::Seq(vec![

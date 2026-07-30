@@ -143,6 +143,7 @@ pub fn vandalblast() -> CardDefinition {
             ),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(4), r()]),
             life_cost: 0,
             exile_filter: None,

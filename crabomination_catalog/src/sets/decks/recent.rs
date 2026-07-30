@@ -5087,6 +5087,7 @@ pub fn mizzium_skin() -> CardDefinition {
             },
         ]),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(3), u()]),
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(

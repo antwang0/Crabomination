@@ -67,6 +67,7 @@ pub fn salvage_titan() -> CardDefinition {
         power: 6,
         toughness: 4,
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: ManaCost::default(),
             sacrifice_permanents: Some((SelectionRequirement::Artifact, 3)),
             ..Default::default()
@@ -101,6 +102,7 @@ pub fn qasali_ambusher() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Reach],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: ManaCost::default(),
             flash: true,
             condition: Some(Predicate::All(vec![

@@ -1610,7 +1610,11 @@ pub enum GameEvent {
     /// more cards, …" payoffs (Magmakin Artillerist) via
     /// `Value::TriggerEventAmount`.
     DiscardedBatch { player: usize, count: u32 },
-    LandPlayed { player: usize, card_id: CardId },
+    /// A land entered the battlefield under `player`'s control. `played` is
+    /// true only for an actual land play (CR 305.1); a fetched / reanimated /
+    /// put-onto-the-battlefield land enters with `played: false`. Landfall
+    /// ("whenever a land you control enters") fires on both.
+    LandPlayed { player: usize, card_id: CardId, played: bool },
     /// `face` distinguishes front-face / back-face / flashback casts.
     /// Defaults to `Front` for the typical hand cast; back-face MDFC
     /// casts and flashback graveyard replays carry the right tag so

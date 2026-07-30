@@ -70,6 +70,7 @@ pub fn weapon_surge() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: body(target_filtered(R::Creature.and(R::ControlledByYou))),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(1), r()]),
             effect_override: Some(body(Selector::EachPermanent(
                 R::Creature.and(R::ControlledByYou),

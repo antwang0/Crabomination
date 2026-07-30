@@ -231,6 +231,7 @@ pub fn devastating_mastery() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: sweep(),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(2), w(), w()]),
             effect_override: Some(Effect::Seq(vec![
                 Effect::PlayerReturnsPermanentsToHand {

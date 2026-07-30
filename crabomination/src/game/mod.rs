@@ -415,6 +415,10 @@ pub struct GameState {
     /// read by `Value::SacrificedPower` (e.g. Thud). Reset between
     /// independent spell/ability resolutions.
     pub(crate) sacrificed_power: Option<i32>,
+    /// Power of the card revealed to pay an `AdditionalCastCost::RevealFromHand`
+    /// on the resolving spell (Titan's Presence). Read by
+    /// `Value::RevealedForCostPower`.
+    pub(crate) revealed_for_cost_power: Option<i32>,
     /// Summed power of EVERY permanent sacrificed to pay this resolution's
     /// costs (Soulblast's "total power of the sacrificed creatures"), where
     /// `sacrificed_power` holds only the first.
@@ -1420,6 +1424,7 @@ impl Clone for GameState {
             delayed_triggers: self.delayed_triggers.clone(),
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
+            revealed_for_cost_power: self.revealed_for_cost_power,
             sacrificed_total_power: self.sacrificed_total_power,
             sacrificed_count: self.sacrificed_count,
             sacrificed_was_artifact: self.sacrificed_was_artifact,
@@ -1635,6 +1640,7 @@ impl GameState {
             delayed_triggers: Vec::new(),
             attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
+            revealed_for_cost_power: None,
             sacrificed_total_power: 0,
             sacrificed_count: 0,
             sacrificed_was_artifact: None,
@@ -6699,7 +6705,49 @@ impl GameState {
         // and/or grants keywords to the controller's (or each opponent's)
         // permanents matching a printed filter. Balthier and Fran (Vehicles),
         // Ardyn, the Usurper (Demons).
-        for card in &self.battlefield {
+        // CR 114 — emblems have no battlefield object, so synthesize one per
+        // emblem carrying an anthem static (Gideon, Ally of Zendikar's −4) and
+        // walk them alongside the real permanents. Their effects last
+        // indefinitely rather than while-on-battlefield.
+        let emblem_anthems: Vec<CardInstance> = self
+            .players
+            .iter()
+            .enumerate()
+            .flat_map(|(seat, player)| {
+                player.emblems.iter().enumerate().filter_map(move |(ei, emblem)| {
+                    let statics: Vec<crate::card::StaticAbility> = emblem
+                        .statics
+                        .iter()
+                        .filter(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::AnthemForFilter { .. }
+                                    | crate::effect::StaticEffect::AnthemForFilterIf { .. }
+                            )
+                        })
+                        .cloned()
+                        .collect();
+                    if statics.is_empty() {
+                        return None;
+                    }
+                    let def = crate::card::CardDefinition {
+                        name: "Emblem",
+                        static_abilities: statics,
+                        ..Default::default()
+                    };
+                    let sid = CardId(u32::MAX - (seat as u32 * 256 + ei as u32));
+                    let mut synth = CardInstance::new(sid, def, seat);
+                    synth.controller = seat;
+                    Some(synth)
+                })
+            })
+            .collect();
+        for card in self.battlefield.iter().chain(emblem_anthems.iter()) {
+            let source_duration = if emblem_anthems.iter().any(|e| e.id == card.id) {
+                EffectDuration::Indefinite
+            } else {
+                EffectDuration::WhileSourceOnBattlefield
+            };
             for sa in &card.definition.static_abilities {
                 // `AnthemForFilterIf` shares this gather; its predicate gate is
                 // re-evaluated here so the anthem switches off live.
@@ -6780,7 +6828,7 @@ impl GameState {
                             affected: affected.clone(),
                             layer: Layer::L7PowerTough,
                             sublayer: Some(PtSublayer::Modify),
-                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            duration: source_duration.clone(),
                             modification: Modification::ModifyPowerToughness(*power, *toughness),
                         });
                     }
@@ -6791,7 +6839,7 @@ impl GameState {
                             affected: affected.clone(),
                             layer: Layer::L6Ability,
                             sublayer: None,
-                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            duration: source_duration.clone(),
                             modification: Modification::AddKeyword(kw.clone()),
                         });
                     }

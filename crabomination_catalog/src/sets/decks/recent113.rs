@@ -314,6 +314,7 @@ pub fn vesperlark() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(1), w()]),
             evoke_sacrifice: true,
             ..Default::default()
@@ -740,6 +741,7 @@ pub fn treetop_ambusher() -> CardDefinition {
         power: 2,
         toughness: 1,
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(1), g()]),
             dash: true,
             ..Default::default()

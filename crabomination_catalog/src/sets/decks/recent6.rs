@@ -542,6 +542,7 @@ pub fn spawn_of_mayhem() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Trample],
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(1), b(), b()]),
             condition: Some(Predicate::PlayerLostLifeThisTurn {
                 who: PlayerRef::EachOpponent,

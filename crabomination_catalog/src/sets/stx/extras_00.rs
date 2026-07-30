@@ -165,6 +165,7 @@ pub fn baleful_mastery() -> CardDefinition {
             ),
         },
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(1), b()]),
             life_cost: 0,
             exile_filter: None,
@@ -1775,6 +1776,7 @@ pub fn verdant_mastery() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: base(),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(3), g()]),
             effect_override: Some(alt),
             ..Default::default()
@@ -2466,6 +2468,7 @@ pub fn fervent_mastery() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(base()),
         alternative_cost: Some(AlternativeCost {
+            awaken: false,
             mana_cost: cost(&[generic(2), r(), r()]),
             effect_override: Some(Effect::Seq(alt_effect)),
             ..Default::default()
