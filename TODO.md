@@ -7678,6 +7678,11 @@ stalled games via `eval_material`.
   carries no `mode`, so an `Effect::ChooseMode` in an activated ability always
   runs the first mode (Veteran Warleader is modeled as three abilities
   instead). Loyalty and cast paths do plumb a mode.
+- **Worldwake is half-done** (`set_gaps.py wwk` 88 → 43). What's left clusters
+  on three primitives: the Trap alternative cost ("if [an opponent did X] this
+  turn, you may pay [cheap cost] instead"), "prevent the next N damage from a
+  source of your choice", and the WWK manlands' activate-only-once-per-turn
+  animation riders.
 - **`Effect::MoveWithinTotalManaValue` auto-picks.** March from the Tomb takes
   the cheapest matches first to maximize the count; the printed card lets the
   caster choose which cards fit the budget.

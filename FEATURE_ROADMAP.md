@@ -1322,7 +1322,9 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `Effect::CopyForEachOtherTargetableCreature` (Zada, Hedron Grinder — a spell
   targeting only the source is copied once per other creature it could target).
   Emblem `AnthemForFilter` statics now reach the live anthem gather, so Gideon,
-  Ally of Zendikar's −4 actually pumps.
+  Ally of Zendikar's −4 actually pumps. Worldwake (`sets::wwk`, 88 → 43 gaps)
+  rides the same landfall/Rally shapes plus the existing Multikicker and
+  `Effect::SwitchPT` / `BecomeCreature` (the Zendikon land animations).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an
