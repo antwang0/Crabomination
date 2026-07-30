@@ -83,6 +83,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Wither => "Wither",
         Keyword::Toxic(_) => "Toxic",
         Keyword::Modular(_) => "Modular",
+        Keyword::Sunburst => "Sunburst",
         Keyword::Poisonous(_) => "Poisonous",
         Keyword::Compleated => "Compleated",
         Keyword::Changeling => "Changeling",

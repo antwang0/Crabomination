@@ -8399,7 +8399,7 @@ pub fn etched_oracle() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Wizard], ..Default::default() },
         power: 0,
         toughness: 0,
-        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
+        keywords: vec![Keyword::Sunburst],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             remove_counter_cost: Some((CounterType::PlusOnePlusOne, 4)),
@@ -8422,8 +8422,7 @@ pub fn skyreach_manta() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Fish], ..Default::default() },
         power: 0,
         toughness: 0,
-        keywords: vec![Keyword::Flying],
-        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
+        keywords: vec![Keyword::Flying, Keyword::Sunburst],
         ..Default::default()
     }
 }

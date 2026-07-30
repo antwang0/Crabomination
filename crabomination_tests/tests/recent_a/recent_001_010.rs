@@ -3086,12 +3086,12 @@ mod recent {
         assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3, "3 colors → 3 counters");
     }
 
-    /// Skyreach Manta has flying and Sunburst counters.
+    /// Skyreach Manta has flying and Sunburst (CR 702.44).
     #[test]
     fn skyreach_manta_flying_sunburst() {
         let d = catalog::skyreach_manta();
         assert!(d.keywords.contains(&Keyword::Flying));
-        assert!(d.enters_with_counters.is_some(), "Sunburst counter spec present");
+        assert!(d.keywords.contains(&Keyword::Sunburst));
     }
 
     /// Phyrexian Digester and Blackcleave Goblin both carry infect.

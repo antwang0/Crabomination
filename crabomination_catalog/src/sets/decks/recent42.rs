@@ -61,7 +61,7 @@ pub fn engineered_explosives() -> CardDefinition {
         name: "Engineered Explosives",
         cost: cost(&[x()]),
         card_types: vec![CardType::Artifact],
-        enters_with_counters: Some((CounterType::Charge, Value::ConvergedValue)),
+        keywords: vec![Keyword::Sunburst],
         activated_abilities: vec![charge_bomb_detonate(2)],
         ..Default::default()
     }

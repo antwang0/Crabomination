@@ -86,6 +86,8 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // Modular N — the counters it carries (and hands off on death) are a
         // real board read.
         Modular(_) => "Mod",
+        // Sunburst — the counters it lands with are a board read.
+        Sunburst => "Sun",
         // Prowess — a noncreature spell can swing this creature's combat math,
         // so an opponent should weigh the controller's open cards before blocking.
         Prowess => "Prw",

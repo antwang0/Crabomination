@@ -103,12 +103,23 @@ mod recent42 {
         assert!(g.battlefield_find(bomb).is_none(), "bomb sacrificed itself");
     }
 
+    /// Two distinct colors of mana → two charge counters (CR 702.44).
     #[test]
     fn engineered_explosives_enters_with_sunburst_counters() {
-        // Two distinct colors of mana → two charge counters (ConvergedValue).
+        let mut g = two_player_game();
+        g.step = crabomination::game::types::TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let bomb = g.add_card_to_hand(0, catalog::engineered_explosives());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+        g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+        g.perform_action(crabomination::game::types::GameAction::CastSpell {
+            card_id: bomb, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+        })
+        .expect("cast for X=2 with two colors");
+        drain_stack(&mut g);
         assert_eq!(
-            catalog::engineered_explosives().enters_with_counters.unwrap().0,
-            CounterType::Charge
+            g.battlefield_find(bomb).unwrap().counter_count(CounterType::Charge),
+            2
         );
     }
 

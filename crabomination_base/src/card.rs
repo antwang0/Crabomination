@@ -701,6 +701,10 @@ pub enum Keyword {
     /// same combat-damage poison rider as Toxic (the wording differs but the
     /// effect is identical), so it folds into the same combat path.
     Poisonous(u32),
+    /// Sunburst (CR 702.44) — "this enters with a +1/+1 counter on it for
+    /// each color of mana spent to cast it" (a charge counter instead if it
+    /// isn't entering as a creature). The count is the cast's converge value.
+    Sunburst,
     /// Modular N (CR 702.43) — a marker keyword. The enters-with-N-counters
     /// half rides `enters_with_counters` and the death trigger rides
     /// `shortcut::modular_dies()`; the keyword makes "creature with modular"

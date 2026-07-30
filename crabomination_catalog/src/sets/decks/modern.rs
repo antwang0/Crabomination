@@ -8156,25 +8156,13 @@ pub fn cruel_somnophage() -> CardDefinition {
 /// Pentad Prism — {2} Artifact. Sunburst (enters with one charge counter
 /// for each color of mana spent on its cost). Remove a charge counter:
 /// Add one mana of any color.
-///
-/// Sunburst reads `Value::ConvergedValue` (distinct colors of mana spent),
-/// threaded from the cast onto the ETB trigger. Each activation removes a
-/// counter to add a mana of any color (Gemstone-Mine cost-as-resolution);
-/// an empty counter pool fails the removal and the ability fizzles.
 pub fn pentad_prism() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
     CardDefinition {
         name: "Pentad Prism",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::Charge,
-                amount: Value::ConvergedValue,
-            },
-        }],
+        keywords: vec![Keyword::Sunburst],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -56049,7 +56037,7 @@ pub fn suntouched_myr() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
         power: 0,
         toughness: 0,
-        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
+        keywords: vec![Keyword::Sunburst],
         ..Default::default()
     }
 }

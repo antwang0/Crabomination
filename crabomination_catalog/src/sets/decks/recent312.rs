@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_attack, target_any, target_filtered};
 use crate::effect::{
-    Duration, Effect, PlayerRef, Predicate, StaticAbility, StaticEffect, ZoneDest,
+    Duration, Effect, PlayerRef, Predicate, StaticAbility, StaticEffect,
 };
 use crate::mana::{b, cost, g, generic, r, u, w, x, Color, ManaCost};
 
@@ -731,4 +731,64 @@ pub fn pulse_of_the_forge() -> CardDefinition {
             pulse_rebuy(Predicate::PlayerHasLessLifeThanOpponent { who: PlayerRef::You }),
         ]),
     )
+}
+
+// ── Sunburst (CR 702.44) — the Fifth Dawn artifact creatures ──
+
+/// Sawtooth Thresher — Sunburst. Remove two +1/+1 counters: +4/+4 until end
+/// of turn.
+pub fn sawtooth_thresher() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Sunburst],
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 2)),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(4),
+                toughness: Value::Const(4),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..artifact("Sawtooth Thresher", cost(&[generic(6)]))
+    }
+}
+
+/// Arcbound Wanderer — Modular—Sunburst: it enters with a +1/+1 counter per
+/// color of mana spent and hands them off when it dies. `Modular(0)` is the
+/// marker; the counter count comes from Sunburst (CR 702.44c).
+pub fn arcbound_wanderer() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        keywords: vec![Keyword::Sunburst, Keyword::Modular(0)],
+        triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
+        ..artifact("Arcbound Wanderer", cost(&[generic(6)]))
+    }
+}
+
+/// Solarion — Sunburst. {T}: double the number of +1/+1 counters on it.
+pub fn solarion() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        keywords: vec![Keyword::Sunburst],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            },
+            ..Default::default()
+        }],
+        ..artifact("Solarion", cost(&[generic(7)]))
+    }
 }

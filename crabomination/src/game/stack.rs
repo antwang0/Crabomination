@@ -1148,6 +1148,24 @@ impl GameState {
                             counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
                         }
                     }
+                    // CR 702.44 — Sunburst: one counter per color of mana
+                    // spent (a +1/+1 counter when it enters as a creature, a
+                    // charge counter otherwise). The cast's converge count is
+                    // exactly "colors of mana spent".
+                    if converged_value > 0
+                        && self.battlefield.iter().any(|c| {
+                            c.id == card_id
+                                && c.definition.keywords.contains(&crate::card::Keyword::Sunburst)
+                        })
+                    {
+                        let kind = if is_creature_resolve {
+                            crate::card::CounterType::PlusOnePlusOne
+                        } else {
+                            crate::card::CounterType::Charge
+                        };
+                        counter_specs
+                            .push((kind, crate::effect::Value::Const(converged_value as i32)));
+                    }
                     // CR 122.1 — Solemnity drops enters-with-counters.
                     if self.counters_locked() { counter_specs.clear(); }
                     for (kind, value) in counter_specs {
@@ -2907,6 +2925,26 @@ impl GameState {
             }
         }
 
+        // CR 704.8 — a permanent that leaves the battlefield during this
+        // sweep reports last-known information from the state *before* any of
+        // the sweep's actions ran. Snapshot the ±1/±1 counts here, ahead of the
+        // 122.3 annihilation, so Persist/Undying read the pre-sweep pile
+        // (Young Wolf with a +1/+1 counter that takes three -1/-1 counters
+        // dies for good).
+        let pre_sba_pm_counters: std::collections::HashMap<CardId, (u32, u32)> = self
+            .battlefield
+            .iter()
+            .map(|c| {
+                (
+                    c.id,
+                    (
+                        c.counter_count(crate::card::CounterType::MinusOneMinusOne),
+                        c.counter_count(crate::card::CounterType::PlusOnePlusOne),
+                    ),
+                )
+            })
+            .collect();
+
         // +1/+1 and -1/-1 counters cancel each other out (CR 122.3 — the
         // SBA removes `N` of each kind, where `N` is the smaller count).
         for card in &mut self.battlefield {
@@ -3308,8 +3346,11 @@ impl GameState {
                         .collect();
                     let has_persist = c.definition.keywords.contains(&Keyword::Persist);
                     let has_undying = c.definition.keywords.contains(&Keyword::Undying);
-                    let minus = c.counter_count(crate::card::CounterType::MinusOneMinusOne);
-                    let plus = c.counter_count(crate::card::CounterType::PlusOnePlusOne);
+                    // CR 704.8 — read the pre-sweep pile, not the post-122.3 one.
+                    let (minus, plus) = pre_sba_pm_counters.get(&c.id).copied().unwrap_or((
+                        c.counter_count(crate::card::CounterType::MinusOneMinusOne),
+                        c.counter_count(crate::card::CounterType::PlusOnePlusOne),
+                    ));
                     (
                         triggers,
                         has_persist,
