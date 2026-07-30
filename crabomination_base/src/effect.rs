@@ -4202,9 +4202,6 @@ pub enum Effect {
     /// Development — "create a 3/1 red Elemental token unless any opponent has
     /// you draw a card", `times` times. Each iteration asks an opponent.
     TokenUnlessOpponentLetsYouDraw { token: TokenDefinition, times: u32 },
-    /// Master Warcraft — the controller chooses this turn's attackers and
-    /// blocks in place of the players who normally would (CR 508.1 / 509.1).
-    ChooseCombatThisTurn,
     /// Sunforger — search the controller's library for a card matching
     /// `filter`, cast it without paying its mana cost, then shuffle.
     SearchAndCastFree { filter: SelectionRequirement },
