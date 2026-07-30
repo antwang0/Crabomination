@@ -1932,6 +1932,10 @@ pub enum StaticEffect {
     /// each untapping player untaps at most one nonbasic land (the rest stay
     /// tapped). Global — applies to every player, not just the controller.
     MaxOneNonbasicLandUntap,
+    /// CR 502.3 — "Players can't untap more than one artifact during their
+    /// untap steps" (Imi Statue). The artifact sibling of
+    /// `MaxOneNonbasicLandUntap`; global, consulted by `do_untap`.
+    MaxOneArtifactUntap,
     /// CR 121.2a — "If a player would draw a card, that player skips that draw
     /// instead" (Possessed Portal). Global draw replacement consulted in
     /// `draw_one`.

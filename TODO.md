@@ -55,8 +55,13 @@ gaps. Follow-ups that came out of it:
   slot 0 filled — `auto_extra_distinct_slot_targets` bails on it because
   `distinct_target_count` is `Some`. Worth splitting the divide-effect check
   from the independent-slot check.
-- **Next set gaps:** Kamigawa block is the biggest remaining chunk —
-  `set_gaps.py chk` 77, `bok` 112, `sok` 131.
+- **Next set gaps:** Kamigawa block is the biggest remaining chunk. CHK's
+  first gap batch (`decks::recent325`, 40 cards) took `set_gaps.py chk`
+  77 → 37; `bok` 112 and `sok` 131 are untouched. The CHK remainder is mostly
+  one-primitive rares — Reweave / Petals of Insight / Reverse the Sands /
+  Struggle for Sanity / Moonring Mirror / Uba Mask (a draw→exile replacement
+  the `SharedFate` hook can be generalized for), Swirl the Mists (a global
+  colour-word rewrite), Godo's extra combat phase, Konda's Banner.
 - **`run_effect`'s stack frame is load-bearing.** `Effect::SearchUpToN`
   recurses once per pick (Grozoth chains 20), so any fat new `run_effect` arm
   can overflow a test thread's stack. New non-trivial arms now go in

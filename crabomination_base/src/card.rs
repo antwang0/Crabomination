@@ -3759,6 +3759,7 @@ impl CardDefinition {
             enchantment: self.is_enchantment(),
             multicolored: self.printed_colors().len() >= 2,
             planeswalker: self.is_planeswalker(),
+            legendary: self.supertypes.contains(&Supertype::Legendary),
         }
     }
 

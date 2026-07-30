@@ -15646,6 +15646,8 @@ fn static_effect_to_effects(
             // MaxOneNonbasicLandUntap (Winter Moon) — consulted by `do_untap`;
             // no layer effect.
             | StaticEffect::MaxOneNonbasicLandUntap
+            // Imi Statue — consulted by `do_untap`; no layer effect.
+            | StaticEffect::MaxOneArtifactUntap
             // Silent Arbiter's combat caps — consulted by `declare_attackers` /
             // `declare_blockers`; no layer effect.
             | StaticEffect::MaxAttackersPerCombat(_)

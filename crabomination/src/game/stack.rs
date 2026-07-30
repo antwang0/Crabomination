@@ -2159,6 +2159,16 @@ impl GameState {
         });
         let mut nonbasic_untapped: std::collections::HashMap<usize, u32> =
             std::collections::HashMap::new();
+        // CR 502.3 — Imi Statue: "Players can't untap more than one artifact
+        // during their untap steps."
+        let cap_artifact_untap = self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::MaxOneArtifactUntap))
+        });
+        let mut artifacts_untapped: std::collections::HashMap<usize, u32> =
+            std::collections::HashMap::new();
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
@@ -2235,6 +2245,17 @@ impl GameState {
                     && !card.definition.is_basic()
                 {
                     let n = nonbasic_untapped.entry(card.controller).or_insert(0);
+                    if *n >= 1 {
+                        if active {
+                            card.summoning_sick = false;
+                        }
+                        continue;
+                    }
+                    *n += 1;
+                }
+                // CR 502.3 — Imi Statue's artifact cap, same shape.
+                if cap_artifact_untap && card.tapped && card.definition.is_artifact() {
+                    let n = artifacts_untapped.entry(card.controller).or_insert(0);
                     if *n >= 1 {
                         if active {
                             card.summoning_sick = false;

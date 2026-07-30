@@ -447,6 +447,9 @@ pub enum SpendRestriction {
     MulticoloredSpell,
     /// "Spend this mana only to cast planeswalker spells." (Interplanar Beacon.)
     PlaneswalkerSpellsOnly,
+    /// "Spend this mana only to cast legendary spells." (Untaidake, the Cloud
+    /// Keeper.)
+    LegendarySpell,
     /// "If that mana is spent on a creature spell, it gains haste until end of
     /// turn." (Generator Servant.) Unrestricted spend; funding a creature
     /// stamps the pending-haste rider like `InstantSorceryUncounterable`.
@@ -486,6 +489,7 @@ impl SpendRestriction {
             SpendRestriction::EnchantmentSpell => kind.enchantment,
             SpendRestriction::MulticoloredSpell => kind.multicolored,
             SpendRestriction::PlaneswalkerSpellsOnly => kind.planeswalker,
+            SpendRestriction::LegendarySpell => kind.legendary,
             SpendRestriction::CreatureHaste => true,
         }
     }
@@ -544,6 +548,8 @@ pub struct SpellKind {
     /// Casting a planeswalker spell (Interplanar Beacon's "spend this mana only
     /// to cast planeswalker spells").
     pub planeswalker: bool,
+    /// Casting a legendary spell (Untaidake, the Cloud Keeper).
+    pub legendary: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.

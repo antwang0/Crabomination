@@ -55,6 +55,14 @@ exercising each) was elided in a compaction pass; recover it from
   change removes a permanent from combat) and CR 603.10a (a *static-granted*
   "when this dies" ability now fires from the death LKI snapshot — Endless
   Whispers). Tests in `recent_b/{fdn5,mrd}`, `core_rules/cr_recent44`.
+- **Champions of Kamigawa opened** (`decks::recent325`, 40 cards —
+  `set_gaps.py chk` 77 → 37): the Myojin cycle (divinity counters), the
+  slow-dual land cycle, Forbidden Orchard, Untaidake / Hall of the Bandit
+  Lord, Azami, Dosan, both Inames, Sachi, Shisato, The Unspeakable, Night of
+  Souls' Betrayal, Mana Seism, Devouring Rage, Imi Statue, Orochi Hatchery,
+  Tenza, Hankyu. New: `StaticEffect::MaxOneArtifactUntap` (CR 502.3 — Imi
+  Statue) and `SpendRestriction::LegendarySpell` + `SpellKind.legendary`
+  (Untaidake). Tests in `classic_sets/chk::gaps1`.
 - **Darksteel (DST) complete** (`set_gaps.py dst` at zero). The primitives that
   closure added: `GameEvent::DamageDealt.from_card` +
   `EventScope::YourOtherSourceDamagedOpponent` (the printed "other than this

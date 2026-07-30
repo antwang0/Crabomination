@@ -415,3 +415,317 @@ fn sacrifice_activated_abilities() {
         assert_eq!(g.players[1].hand.len(), 0, "target player discarded their card");
     }
 }
+
+// ── CHK gap batch 1 (`decks::recent325`) ──
+
+mod gaps1 {
+    use crabomination::card::{CounterType, Keyword};
+    use crabomination::catalog;
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    use crabomination::game::*;
+    use crabomination::mana::Color;
+
+    fn main_phase() -> GameState {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g
+    }
+
+    /// The slow-dual cycle taps for colourless freely, or for colour at the
+    /// cost of its next untap.
+    #[test]
+    fn slow_duals_trade_an_untap_for_colour() {
+        for def in [
+            catalog::cloudcrest_lake(),
+            catalog::lantern_lit_graveyard(),
+            catalog::pinecrest_ridge(),
+            catalog::tranquil_garden(),
+            catalog::waterveil_cavern(),
+        ] {
+            let name = def.name;
+            let mut g = main_phase();
+            let land = g.add_card_to_battlefield(0, def);
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: land, ability_index: 1, target: None, additional_targets: vec![],
+                x_value: None,
+            })
+            .expect("colour tap");
+            drain_stack(&mut g);
+            assert_eq!(g.players[0].mana_pool.total(), 1, "{name}");
+            g.do_untap();
+            assert!(g.battlefield_find(land).unwrap().tapped, "{name} skipped its untap");
+        }
+    }
+
+    /// Forbidden Orchard pays out any colour and gifts them a Spirit.
+    #[test]
+    fn forbidden_orchard_gifts_a_spirit() {
+        let mut g = main_phase();
+        let land = g.add_card_to_battlefield(0, catalog::forbidden_orchard());
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: land, ability_index: 0, target: Some(Target::Player(1)),
+            additional_targets: vec![], x_value: None,
+        })
+        .expect("tap");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.total(), 1);
+        assert_eq!(
+            g.battlefield.iter().filter(|c| c.definition.name == "Spirit" && c.controller == 1).count(),
+            1
+        );
+    }
+
+    /// Untaidake's mana only pays for legendary spells.
+    #[test]
+    fn untaidake_mana_is_legendary_only() {
+        let mut g = main_phase();
+        let land = g.add_card_to_battlefield(0, catalog::untaidake_the_cloud_keeper());
+        g.battlefield_find_mut(land).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: land, ability_index: 0, target: None, additional_targets: vec![],
+            x_value: None,
+        })
+        .expect("tap for two");
+        assert_eq!(g.players[0].life, 18);
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        assert!(
+            g.perform_action(GameAction::CastSpell {
+                card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+            })
+            .is_err(),
+            "a nonlegendary spell can't be paid for"
+        );
+    }
+
+    /// A Myojin cast from hand is indestructible until it spends its counter.
+    #[test]
+    fn myojin_is_indestructible_until_it_fires() {
+        let mut g = main_phase();
+        let myojin = g.add_card_to_hand(0, catalog::myojin_of_cleansing_fire());
+        let bystander = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::White, 3);
+        g.players[0].mana_pool.add_colorless(5);
+        g.perform_action(GameAction::CastSpell {
+            card_id: myojin, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(myojin).unwrap().counter_count(CounterType::Divinity), 1);
+        assert!(
+            g.computed_permanent(myojin).unwrap().keywords.contains(&Keyword::Indestructible)
+        );
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: myojin, ability_index: 0, target: None, additional_targets: vec![],
+            x_value: None,
+        })
+        .expect("wrath");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(bystander).is_none(), "everything else died");
+        assert!(g.battlefield_find(myojin).is_some(), "the Myojin survives its own wrath");
+    }
+
+    /// A Myojin that didn't come from hand gets no divinity counter.
+    #[test]
+    fn myojin_reanimated_has_no_divinity_counter() {
+        let mut g = main_phase();
+        let myojin = g.add_card_to_battlefield(0, catalog::myojin_of_seeing_winds());
+        assert_eq!(g.battlefield_find(myojin).unwrap().counter_count(CounterType::Divinity), 0);
+        assert!(
+            !g.computed_permanent(myojin).unwrap().keywords.contains(&Keyword::Indestructible)
+        );
+    }
+
+    /// Azami taps your Wizards for cards.
+    #[test]
+    fn azami_taps_wizards_for_cards() {
+        let mut g = main_phase();
+        let azami = g.add_card_to_battlefield(0, catalog::azami_lady_of_scrolls());
+        let wizard = g.add_card_to_battlefield(0, catalog::azami_lady_of_scrolls());
+        g.clear_sickness(wizard);
+        g.add_card_to_library(0, catalog::forest());
+        let before = g.players[0].hand.len();
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: azami, ability_index: 0, target: None, additional_targets: vec![],
+            x_value: None,
+        })
+        .expect("draw");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), before + 1);
+        assert!(g.battlefield_find(wizard).unwrap().tapped);
+    }
+
+    /// Night of Souls' Betrayal shrinks the whole board.
+    #[test]
+    fn night_of_souls_betrayal_shrinks_everyone() {
+        let mut g = main_phase();
+        g.add_card_to_battlefield(0, catalog::night_of_souls_betrayal());
+        let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        for id in [mine, theirs] {
+            let cp = g.computed_permanent(id).unwrap();
+            assert_eq!((cp.power, cp.toughness), (1, 1));
+        }
+    }
+
+    /// Mana Seism converts sacrificed lands into colourless mana.
+    #[test]
+    fn mana_seism_cashes_in_lands() {
+        let mut g = main_phase();
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, catalog::forest());
+        }
+        let spell = g.add_card_to_hand(0, catalog::mana_seism());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.total(), 3);
+        assert_eq!(g.battlefield.iter().filter(|c| c.definition.is_land()).count(), 0);
+    }
+
+    /// Devouring Rage adds +3/+0 per Spirit fed to it.
+    #[test]
+    fn devouring_rage_scales_with_spirits() {
+        let mut g = main_phase();
+        let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, catalog::ore_gorger());
+        }
+        let spell = g.add_card_to_hand(0, catalog::devouring_rage());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell, target: Some(Target::Permanent(target)), additional_targets: vec![],
+            mode: None, x_value: Some(2),
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(target).unwrap().power, 2 + 3 + 6);
+    }
+
+    /// Thoughtbind only answers cheap spells.
+    #[test]
+    fn thoughtbind_caps_at_mana_value_four() {
+        let mut g = main_phase();
+        let big = g.add_card_to_hand(1, catalog::myojin_of_seeing_winds());
+        g.players[1].mana_pool.add(Color::Blue, 3);
+        g.players[1].mana_pool.add_colorless(7);
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("cast the fatty");
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let bind = g.add_card_to_hand(0, catalog::thoughtbind());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        assert!(
+            g.perform_action(GameAction::CastSpell {
+                card_id: bind, target: Some(Target::Permanent(big)), additional_targets: vec![],
+                mode: None, x_value: None,
+            })
+            .is_err(),
+            "mana value 10 is out of range"
+        );
+    }
+
+    /// Imi Statue caps each player's artifact untaps at one.
+    #[test]
+    fn imi_statue_caps_artifact_untaps() {
+        let mut g = main_phase();
+        g.add_card_to_battlefield(0, catalog::imi_statue());
+        let a = g.add_card_to_battlefield(0, catalog::hair_strung_koto());
+        let b = g.add_card_to_battlefield(0, catalog::honor_worn_shaku());
+        for id in [a, b] {
+            g.battlefield_find_mut(id).unwrap().tapped = true;
+        }
+        g.do_untap();
+        let untapped = [a, b].iter().filter(|id| !g.battlefield_find(**id).unwrap().tapped).count();
+        assert_eq!(untapped, 1, "only one artifact untapped");
+    }
+
+    /// Orochi Hatchery hatches a Snake per charge counter.
+    #[test]
+    fn orochi_hatchery_hatches_per_counter() {
+        let mut g = main_phase();
+        let hatch = g.add_card_to_hand(0, catalog::orochi_hatchery());
+        g.players[0].mana_pool.add_colorless(4);
+        g.perform_action(GameAction::CastSpell {
+            card_id: hatch, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+        })
+        .expect("cast for X=2");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(hatch).unwrap().counter_count(CounterType::Charge), 2);
+        g.clear_sickness(hatch);
+        g.players[0].mana_pool.add_colorless(5);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: hatch, ability_index: 0, target: None, additional_targets: vec![],
+            x_value: None,
+        })
+        .expect("hatch");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Snake").count(), 2);
+    }
+
+    /// Tenza is bigger on a legend and tramples in red.
+    #[test]
+    fn tenza_scales_with_the_host() {
+        let mut g = main_phase();
+        let tenza = g.add_card_to_battlefield(0, catalog::tenza_godos_maul());
+        let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::Equip { equipment: tenza, target: plain }).expect("equip");
+        assert_eq!(g.computed_permanent(plain).unwrap().power, 3, "+1/+1 on a plain green bear");
+        let legend = g.add_card_to_battlefield(0, catalog::azami_lady_of_scrolls());
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::Equip { equipment: tenza, target: legend }).expect("re-equip");
+        assert_eq!(g.computed_permanent(legend).unwrap().power, 3, "0/2 + 1 + 2 legendary");
+    }
+
+    /// Sachi tops up Snakes and turns Shamans into mana sources.
+    #[test]
+    fn sachi_pumps_snakes_and_taps_shamans() {
+        let mut g = main_phase();
+        let sachi = g.add_card_to_battlefield(0, catalog::sachi_daughter_of_seshiro());
+        g.clear_sickness(sachi);
+        // Sachi is herself a Shaman, so she taps for {G}{G}; the anthem
+        // excludes her.
+        assert_eq!(g.computed_permanent(sachi).unwrap().toughness, 3);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: sachi, ability_index: 0, target: None, additional_targets: vec![],
+            x_value: None,
+        })
+        .expect("tap for GG");
+        assert_eq!(g.players[0].mana_pool.total(), 2);
+    }
+
+    /// Ragged Veins bleeds the host's controller for every point it takes.
+    #[test]
+    fn ragged_veins_mirrors_damage_to_life() {
+        let mut g = main_phase();
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let aura = g.add_card_to_hand(0, catalog::ragged_veins());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+            mode: None, x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        let mut evs = Vec::new();
+        g.deal_damage_to_from(
+            crabomination::game::effects::EntityRef::Permanent(bear), 1, None, &mut evs,
+        );
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, 19);
+    }
+}
