@@ -249,11 +249,9 @@ fn carry_away_steals_the_equipment() {
 fn arcbound_overseer_pumps_every_modular_creature() {
     let mut g = main_phase();
     g.step = TurnStep::Upkeep;
-    let overseer = g.add_card_to_battlefield(0, catalog::arcbound_overseer());
-    let worker = g.add_card_to_battlefield(0, catalog::arcbound_worker());
+    let overseer = g.add_card_to_battlefield_with_counters(0, catalog::arcbound_overseer());
+    let worker = g.add_card_to_battlefield_with_counters(0, catalog::arcbound_worker());
     let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.battlefield_find_mut(overseer).unwrap().add_counters(CounterType::PlusOnePlusOne, 6);
-    g.battlefield_find_mut(worker).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     assert!(g.computed_permanent(worker).unwrap().keywords.contains(&Keyword::Modular(1)));
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
@@ -266,8 +264,8 @@ fn arcbound_overseer_pumps_every_modular_creature() {
 #[test]
 fn arcbound_crusher_grows_on_another_artifact() {
     let mut g = main_phase();
-    let crusher = g.add_card_to_battlefield(0, catalog::arcbound_crusher());
-    g.battlefield_find_mut(crusher).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let crusher = g.add_card_to_battlefield_with_counters(0, catalog::arcbound_crusher());
+    assert_eq!(g.battlefield_find(crusher).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     let other = g.add_card_to_battlefield(1, catalog::coretapper());
     g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: other }]);
     drain_stack(&mut g);
@@ -278,8 +276,7 @@ fn arcbound_crusher_grows_on_another_artifact() {
 #[test]
 fn arcbound_reclaimer_tucks_an_artifact_from_the_graveyard() {
     let mut g = main_phase();
-    let reclaimer = g.add_card_to_battlefield(0, catalog::arcbound_reclaimer());
-    g.battlefield_find_mut(reclaimer).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let reclaimer = g.add_card_to_battlefield_with_counters(0, catalog::arcbound_reclaimer());
     let buried = g.add_card_to_graveyard(0, catalog::coretapper());
     g.perform_action(GameAction::ActivateAbility {
         card_id: reclaimer, ability_index: 0, target: Some(Target::Permanent(buried)),
@@ -309,8 +306,8 @@ fn emissary_of_despair_drains_per_artifact() {
 #[test]
 fn karstoderm_sheds_a_counter_per_artifact() {
     let mut g = main_phase();
-    let beast = g.add_card_to_battlefield(0, catalog::karstoderm());
-    g.battlefield_find_mut(beast).unwrap().add_counters(CounterType::PlusOnePlusOne, 5);
+    let beast = g.add_card_to_battlefield_with_counters(0, catalog::karstoderm());
+    assert_eq!(g.battlefield_find(beast).unwrap().counter_count(CounterType::PlusOnePlusOne), 5);
     let art = g.add_card_to_battlefield(1, catalog::coretapper());
     g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: art }]);
     drain_stack(&mut g);

@@ -910,10 +910,10 @@ factory doc comment:
 - **Gemini Engine's Twin has fixed P/T.** `TokenDefinition.dynamic_pt` is
   evaluated in the token's own context, so "equal to this creature's power"
   can't read the minting Engine.
-- **`add_card_to_battlefield` skips `enters_with_counters`.** Every test that
-  wants a modular/sunburst body has to add the counters by hand. A
-  `put_onto_battlefield` test helper that runs the CR 614.12 replacement would
-  remove a recurring footgun.
+- ✅ ~~**`add_card_to_battlefield` skips `enters_with_counters`.**~~ — shipped
+  as `GameState::add_card_to_battlefield_with_counters`, which applies the
+  printed CR 614.12 spec (constant and board-count values; cast-scoped X /
+  converge still evaluate against an empty context).
 
 ## Noticed this run (OTJ gap batch, `decks::recent309`)
 

@@ -61,8 +61,8 @@ fn cr_702_43a_modular_enters_with_its_counters() {
 #[test]
 fn cr_702_43a_modular_death_moves_all_its_counters() {
     let mut g = main_phase();
-    let worker = g.add_card_to_battlefield(0, catalog::arcbound_worker());
-    g.battlefield_find_mut(worker).unwrap().add_counters(CounterType::PlusOnePlusOne, 4);
+    let worker = g.add_card_to_battlefield_with_counters(0, catalog::arcbound_worker());
+    g.battlefield_find_mut(worker).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
     let heir = g.add_card_to_battlefield(0, catalog::coretapper());
     g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
         crabomination::decision::DecisionAnswer::Bool(true),
@@ -78,16 +78,16 @@ fn cr_702_43a_modular_death_moves_all_its_counters() {
 #[test]
 fn cr_702_43b_modular_filter_is_value_agnostic() {
     let mut g = main_phase();
-    let one = g.add_card_to_battlefield(0, catalog::arcbound_worker());
-    let six = g.add_card_to_battlefield(0, catalog::arcbound_overseer());
+    let one = g.add_card_to_battlefield_with_counters(0, catalog::arcbound_worker());
+    let six = g.add_card_to_battlefield_with_counters(0, catalog::arcbound_overseer());
     for id in [one, six] {
         assert!(g.computed_permanent(id).unwrap().keywords.iter().any(|k| matches!(k, Keyword::Modular(_))));
     }
     g.step = TurnStep::Upkeep;
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(one).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
-    assert_eq!(g.battlefield_find(six).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(one).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.battlefield_find(six).unwrap().counter_count(CounterType::PlusOnePlusOne), 7);
 }
 
 // ── CR 702.44 — Sunburst ──

@@ -7807,6 +7807,33 @@ impl GameState {
         id
     }
 
+    /// `add_card_to_battlefield` plus the printed CR 614.12
+    /// "enters with N counters" replacement (test fixture). The plain
+    /// constructor deliberately skips every entry replacement, which leaves a
+    /// printed 0/0 body (the modular / Sunburst cycles, Hangarback Walker)
+    /// on the battlefield as a 0/0 waiting to die. Cast-scoped counts (X,
+    /// converge) evaluate against an empty context, so this covers the
+    /// constant and board-count specs only.
+    pub fn add_card_to_battlefield_with_counters(
+        &mut self,
+        player_idx: usize,
+        def: CardDefinition,
+    ) -> CardId {
+        let spec = def.enters_with_counters.clone();
+        let id = self.add_card_to_battlefield(player_idx, def);
+        if let Some((kind, value)) = spec {
+            let ctx = crate::game::effects::EffectContext::for_ability(id, player_idx, None);
+            let n = self.evaluate_value(&value, &ctx).max(0) as u32;
+            if n > 0
+                && !self.counters_locked()
+                && let Some(c) = self.battlefield_find_mut(id)
+            {
+                c.add_counters(kind, n);
+            }
+        }
+        id
+    }
+
     /// Drop a token onto the battlefield directly (test fixture). Mirrors
     /// `add_card_to_battlefield` but uses `CardInstance::new_token` so the
     /// `is_token` flag is set — required for SBA path 704.5d (tokens not on
