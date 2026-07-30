@@ -1541,7 +1541,7 @@ pub fn prismari_painter() -> CardDefinition {
 pub fn lorehold_archivist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Archivist",
-        cost: cost(&[generic(1), r(), w(), generic(2), r(), w()]),
+        cost: cost(&[generic(1), r(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dwarf, CreatureType::Artificer],

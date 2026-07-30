@@ -64,11 +64,7 @@ pub fn inkling_summoning() -> CardDefinition {
     let inkling = stx_inkling_token();
     CardDefinition {
         name: "Inkling Summoning",
-        cost: cost(&[
-            generic(2),
-            hybrid(Color::White, Color::Black),
-            hybrid(Color::White, Color::Black),
-        ]),
+        cost: cost(&[generic(1), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],

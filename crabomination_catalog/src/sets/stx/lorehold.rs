@@ -42,7 +42,7 @@ pub use crabomination_base::tokens::lorehold_spirit_token;
 pub fn lorehold_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Apprentice",
-        cost: cost(&[generic(1), r()]),
+        cost: cost(&[r(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -307,7 +307,7 @@ pub fn lorehold_excavation() -> CardDefinition {
     };
     CardDefinition {
         name: "Lorehold Excavation",
-        cost: cost(&[generic(1), hybrid(Color::Red, Color::White)]),
+        cost: cost(&[r(), w()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -14090,11 +14090,7 @@ pub fn lorehold_vanguard_b174() -> CardDefinition {
 pub fn returned_pastcaller() -> CardDefinition {
     CardDefinition {
         name: "Returned Pastcaller",
-        cost: cost(&[
-            generic(3),
-            hybrid(Color::Red, Color::White),
-            hybrid(Color::Red, Color::White),
-        ]),
+        cost: cost(&[generic(3), r(), hybrid(Color::Red, Color::White), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],

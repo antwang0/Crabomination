@@ -48,7 +48,7 @@ use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 pub fn square_up() -> CardDefinition {
     CardDefinition {
         name: "Square Up",
-        cost: cost(&[hybrid(Color::Green, Color::Blue)]),
+        cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue)]),
         card_types: vec![CardType::Instant],
         effect: Effect::SetBasePT {
             what: target_filtered(SelectionRequirement::Creature),
@@ -107,7 +107,7 @@ pub fn brilliant_plan() -> CardDefinition {
 pub fn fortifying_draught() -> CardDefinition {
     CardDefinition {
         name: "Fortifying Draught",
-        cost: cost(&[generic(2), g()]),
+        cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::GainLife {
@@ -169,7 +169,7 @@ pub fn guiding_voice() -> CardDefinition {
 pub fn expanded_anatomy() -> CardDefinition {
     CardDefinition {
         name: "Expanded Anatomy",
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[generic(3)]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],

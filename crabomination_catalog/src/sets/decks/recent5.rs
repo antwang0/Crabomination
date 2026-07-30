@@ -506,7 +506,7 @@ pub fn skrelv_defector_mite() -> CardDefinition {
 pub fn souls_majesty() -> CardDefinition {
     CardDefinition {
         name: "Soul's Majesty",
-        cost: cost(&[generic(3), g(), g()]),
+        cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Draw {
             who: Selector::You,
@@ -525,7 +525,7 @@ pub fn souls_majesty() -> CardDefinition {
 pub fn momentous_fall() -> CardDefinition {
     CardDefinition {
         name: "Momentous Fall",
-        cost: cost(&[generic(1), g(), g()]),
+        cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::SacrificeAndRemember {

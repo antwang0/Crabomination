@@ -5931,6 +5931,7 @@ mod recent {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
         let might = g.add_card_to_hand(0, catalog::surging_might());
         g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(2);
         cast_at(&mut g, might, Target::Permanent(bear));
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
@@ -9401,7 +9402,7 @@ mod recent5 {
         let hand = g.players[0].hand.len();
         let life = g.players[0].life;
         g.players[0].mana_pool.add(Color::Green, 2);
-        g.players[0].mana_pool.add_colorless(1);
+        g.players[0].mana_pool.add_colorless(2);
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![titan])]));
         g.perform_action(GameAction::CastSpell {
             card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,

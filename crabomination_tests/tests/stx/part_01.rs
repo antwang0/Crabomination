@@ -1022,7 +1022,8 @@ fn square_up_sets_target_creature_base_pt_to_four_four() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 base
 
     let id = g.add_card_to_hand(0, catalog::square_up());
-    g.players[0].mana_pool.add(Color::Green, 1); // {G/U} hybrid
+    g.players[0].mana_pool.add(Color::Green, 1); // {1}{G/U}
+    g.players[0].mana_pool.add_colorless(1);
 
     let hand_before = g.players[0].hand.len();
 
@@ -1031,7 +1032,7 @@ fn square_up_sets_target_creature_base_pt_to_four_four() {
         additional_targets: vec![],
         mode: None, x_value: None,
     })
-    .expect("Square Up castable for {G/U}");
+    .expect("Square Up castable for {1}{G/U}");
     drain_stack(&mut g);
 
     let computed = g.computed_permanent(bear).expect("Bear still present");
@@ -1053,7 +1054,8 @@ fn square_up_layers_under_plus_one_counters() {
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
 
     let id = g.add_card_to_hand(0, catalog::square_up());
-    g.players[0].mana_pool.add(Color::Blue, 1); // {G/U} hybrid — blue side
+    g.players[0].mana_pool.add(Color::Blue, 1); // {1}{G/U} — blue side
+    g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)),
@@ -4185,8 +4187,7 @@ fn teach_by_example_copies_your_next_instant_this_turn() {
     let p1_life_before = g.players[1].life;
 
     let teach = g.add_card_to_hand(0, catalog::teach_by_example());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 2);
     g.perform_action(GameAction::CastSpell {
         card_id: teach,
         target: None,
@@ -4194,7 +4195,7 @@ fn teach_by_example_copies_your_next_instant_this_turn() {
         mode: None,
         x_value: None,
     })
-    .expect("Teach by Example castable for {1}{U/R}");
+    .expect("Teach by Example castable for {U/R}{U/R}");
     drain_stack(&mut g);
 
     // Now the next instant this turn gets copied.
@@ -5181,7 +5182,7 @@ fn selfless_glyphweaver_back_deadly_vanity_one_survivor_destroy_rest() {
     for _ in 0..2 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
     let id = g.add_card_to_hand(0, catalog::selfless_glyphweaver());
     g.players[0].mana_pool.add(Color::Black, 3);
-    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add_colorless(5);
 
     g.perform_action(GameAction::CastSpellBack {
         card_id: id,
@@ -5190,7 +5191,7 @@ fn selfless_glyphweaver_back_deadly_vanity_one_survivor_destroy_rest() {
         mode: None,
         x_value: None,
     })
-    .expect("Deadly Vanity (back face) castable for {4}{B}{B}{B}");
+    .expect("Deadly Vanity (back face) castable for {5}{B}{B}{B}");
     drain_stack(&mut g);
 
     let creatures: Vec<_> = g.battlefield.iter()

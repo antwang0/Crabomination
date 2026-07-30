@@ -114,13 +114,15 @@ gaps. Follow-ups that came out of it:
   "Protection" (plus a `Assembly-Worker` / `Time Lord` type alias). That took
   the catalog-wide P/T column from ~120 rows of noise to a real list of 30,
   **all now fixed**, along with the four CHK bugs the first pass exposed.
-- **Remaining catalog stat drift** (post-cleanup, all believed real): **43 cost
-  + 17 type + 35 keyword rows in `decks`**, 13 cost in `stx`, and a long tail
-  across `mod_set` / `one` / `dis` / `gpt` / `thb` / `mh3b` / … The cost column
-  is a mix of genuine misprints and deliberate `{X}` modelling (`March of
-  Otherworldly Light` is coded `{0}{W}` because X rides `x_value`), and some
-  type rows are deliberate party-synergy widenings, so this one wants a
-  card-by-card read rather than another mechanical sweep. Run
+- **Remaining catalog stat drift**: the cost column is down to **6 rows**, all
+  deliberate `{X}` modelling (Lunar Frenzy, Form a Posse, March of Otherworldly
+  Light, Primal Might, Bond of Agony, Overrule are coded without an `x()` pip
+  because X rides the cast's `x_value`) — either teach the audit to accept that
+  shape or move the six onto `x()`. Still open: **17 type + 35 keyword rows in
+  `decks`** plus a small tail (`mod_set` 1+6, `one` 5+1, `dis` 3, `mh3b` 2, …).
+  Some type rows are deliberate party-synergy widenings (Stonework Packbeast,
+  Tajuru Paragon carry every party class for the party tests), so this column
+  wants a card-by-card read rather than another mechanical sweep. Run
   `python3 scripts/audit_catalog_stats.py <set>` for the detail.
 
 ## Noticed this run (modern_decks — Ravnica-block gap sweep)

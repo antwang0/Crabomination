@@ -9,7 +9,7 @@ use crate::card::{
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{ActivatedAbility, PlayerRef};
 use crate::game::types::TurnStep;
-use crate::mana::{cost, g, generic, r, u, w};
+use crate::mana::{Color, cost, g, generic, hybrid, r, u, w};
 
 fn etb(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
@@ -29,7 +29,7 @@ fn destroy_artifact_target() -> Effect {
 pub fn energy_flux() -> CardDefinition {
     CardDefinition {
         name: "Energy Flux",
-        cost: cost(&[generic(1), u()]),
+        cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "All artifacts have \"At the beginning of your upkeep, sacrifice this artifact unless you pay {2}.\"",
@@ -96,7 +96,7 @@ pub fn ingot_chewer() -> CardDefinition {
 pub fn manglehorn() -> CardDefinition {
     CardDefinition {
         name: "Manglehorn",
-        cost: cost(&[generic(1), g(), g()]),
+        cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Beast],
@@ -120,7 +120,7 @@ pub fn manglehorn() -> CardDefinition {
 pub fn viridian_zealot() -> CardDefinition {
     CardDefinition {
         name: "Viridian Zealot",
-        cost: cost(&[generic(1), g()]),
+        cost: cost(&[g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
@@ -145,7 +145,7 @@ pub fn viridian_zealot() -> CardDefinition {
 pub fn sundering_growth() -> CardDefinition {
     CardDefinition {
         name: "Sundering Growth",
-        cost: cost(&[generic(1), w()]),
+        cost: cost(&[hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White)]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Destroy {
@@ -163,7 +163,7 @@ pub fn sundering_growth() -> CardDefinition {
 pub fn glowrider() -> CardDefinition {
     CardDefinition {
         name: "Glowrider",
-        cost: cost(&[generic(1), w()]),
+        cost: cost(&[generic(2), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -188,7 +188,7 @@ pub fn glowrider() -> CardDefinition {
 pub fn harsh_mentor() -> CardDefinition {
     CardDefinition {
         name: "Harsh Mentor",
-        cost: cost(&[generic(1), w()]),
+        cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],

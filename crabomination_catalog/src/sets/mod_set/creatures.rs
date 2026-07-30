@@ -5374,7 +5374,7 @@ pub fn descendant_of_storms() -> CardDefinition {
     };
     CardDefinition {
         name: "Descendant of Storms",
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -9364,7 +9364,7 @@ pub fn birgi_god_of_storytelling() -> CardDefinition {
     use crate::mana::Color;
     let harnfel = CardDefinition {
         name: "Harnfel, Horn of Bounty",
-        cost: cost(&[generic(5), r()]),
+        cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Artifact],
         supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![TriggeredAbility {

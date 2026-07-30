@@ -83,7 +83,7 @@ pub fn corpse_blockade() -> CardDefinition {
 pub fn vulturous_zombie() -> CardDefinition {
     CardDefinition {
         name: "Vulturous Zombie",
-        cost: cost(&[generic(4), b(), g()]),
+        cost: cost(&[generic(3), b(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie],

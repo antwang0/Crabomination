@@ -150,7 +150,7 @@ pub fn reyav_master_smith() -> CardDefinition {
 pub fn wyleth_soul_of_steel() -> CardDefinition {
     CardDefinition {
         name: "Wyleth, Soul of Steel",
-        cost: cost(&[generic(2), r(), w()]),
+        cost: cost(&[generic(1), r(), w()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
@@ -338,7 +338,7 @@ pub fn akiri_line_slinger() -> CardDefinition {
 pub fn rograkh_son_of_rohgahh() -> CardDefinition {
     CardDefinition {
         name: "Rograkh, Son of Rohgahh",
-        cost: cost(&[]),
+        cost: cost(&[generic(0)]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {

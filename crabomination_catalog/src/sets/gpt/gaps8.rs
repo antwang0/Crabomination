@@ -328,7 +328,7 @@ pub fn sword_of_the_paruns() -> CardDefinition {
 pub fn predatory_focus() -> CardDefinition {
     CardDefinition {
         name: "Predatory Focus",
-        cost: cost(&[generic(3), g()]),
+        cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::GrantKeyword {
             what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),

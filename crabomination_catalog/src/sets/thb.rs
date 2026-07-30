@@ -2997,7 +2997,7 @@ pub fn dreadful_apathy() -> CardDefinition {
 pub fn sea_gods_scorn() -> CardDefinition {
     CardDefinition {
         name: "Sea God's Scorn",
-        cost: cost(&[generic(3), u()]),
+        cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Instant],
         affinity_filter: Some(
             SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
@@ -3020,7 +3020,7 @@ pub fn sea_gods_scorn() -> CardDefinition {
 pub fn wrap_in_flames() -> CardDefinition {
     CardDefinition {
         name: "Wrap in Flames",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ApplyToTargets {
             max_targets: 3,

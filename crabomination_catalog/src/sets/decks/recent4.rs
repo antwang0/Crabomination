@@ -12,7 +12,7 @@ use crate::effect::shortcut::target_filtered;
 use crate::effect::{
     DelayedTriggerKind, Duration, LibraryPosition, PlayerRef, StaticEffect, ZoneDest,
 };
-use crate::mana::{Color, b, cost, g, generic, u, w, x};
+use crate::mana::{Color, b, cost, g, generic, hybrid, u, w, x};
 
 /// Ritual of Soot — {2}{B}{B} Sorcery. Destroy all creatures with mana value
 /// 3 or less.
@@ -768,7 +768,7 @@ pub fn magmaquake() -> CardDefinition {
 pub fn pit_fight() -> CardDefinition {
     CardDefinition {
         name: "Pit Fight",
-        cost: cost(&[generic(1), g()]),
+        cost: cost(&[generic(1), hybrid(Color::Red, Color::Green)]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Fight {
             attacker: Selector::TargetFiltered {

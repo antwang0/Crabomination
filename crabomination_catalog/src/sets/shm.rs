@@ -26,7 +26,7 @@ pub fn burn_trail() -> CardDefinition {
 pub fn barkshell_blessing() -> CardDefinition {
     CardDefinition {
         name: "Barkshell Blessing",
-        cost: cost(&[g()]),
+        cost: cost(&[hybrid(Color::Green, Color::White)]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Conspire],
         effect: pump_target(2, 2),

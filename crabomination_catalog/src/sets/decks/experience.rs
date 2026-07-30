@@ -111,7 +111,7 @@ fn daxos_spirit_token() -> TokenDefinition {
 pub fn daxos_the_returned() -> CardDefinition {
     CardDefinition {
         name: "Daxos the Returned",
-        cost: cost(&[generic(2), w(), b()]),
+        cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Enchantment, CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
@@ -198,7 +198,7 @@ pub fn meren_of_clan_nel_toth() -> CardDefinition {
 pub fn kalemne_disciple_of_iroas() -> CardDefinition {
     CardDefinition {
         name: "Kalemne, Disciple of Iroas",
-        cost: cost(&[generic(3), w(), w()]),
+        cost: cost(&[generic(2), r(), w()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {

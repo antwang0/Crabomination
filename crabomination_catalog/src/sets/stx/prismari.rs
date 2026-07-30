@@ -371,7 +371,7 @@ pub fn elemental_summoning() -> CardDefinition {
 pub fn teach_by_example() -> CardDefinition {
     CardDefinition {
         name: "Teach by Example",
-        cost: cost(&[generic(1), hybrid(Color::Blue, Color::Red)]),
+        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
         card_types: vec![CardType::Instant],
         effect: Effect::OnYourNextInstantSorceryThisTurn {
             body: Box::new(Effect::CopySpellMayChooseTargets {
@@ -836,7 +836,7 @@ pub fn prismari_alchemist() -> CardDefinition {
 pub fn elemental_expressionist() -> CardDefinition {
     CardDefinition {
         name: "Elemental Expressionist",
-        cost: cost(&[generic(3), u(), r()]),
+        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Orc, CreatureType::Wizard],

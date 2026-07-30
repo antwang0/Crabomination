@@ -8119,7 +8119,7 @@ pub fn crabomination() -> CardDefinition {
     use crate::card::Supertype as Sup;
     CardDefinition {
         name: "Crabomination",
-        cost: cost(&[generic(2), u(), b()]),
+        cost: cost(&[generic(4), b(), b()]),
         supertypes: vec![Sup::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -17513,7 +17513,7 @@ pub fn wing_splicer() -> CardDefinition {
 pub fn rejuvenate() -> CardDefinition {
     CardDefinition {
         name: "Rejuvenate",
-        cost: cost(&[generic(2), g()]),
+        cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::GainLife {
             who: Selector::You,
@@ -19790,7 +19790,7 @@ pub fn omnath_locus_of_rage() -> CardDefinition {
     };
     CardDefinition {
         name: "Omnath, Locus of Rage",
-        cost: cost(&[generic(3), r(), g()]),
+        cost: cost(&[generic(3), r(), r(), g(), g()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -63379,7 +63379,7 @@ pub fn honor_the_god_pharaoh() -> CardDefinition {
 pub fn flame_spill() -> CardDefinition {
     CardDefinition {
         name: "Flame Spill",
-        cost: cost(&[generic(4), r()]),
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageExcessToController {
             to: target_filtered(SelectionRequirement::Creature),
@@ -63931,7 +63931,7 @@ pub fn luminous_broodmoth() -> CardDefinition {
 pub fn quartzwood_crasher() -> CardDefinition {
     CardDefinition {
         name: "Quartzwood Crasher",
-        cost: cost(&[generic(3), r(), g()]),
+        cost: cost(&[generic(2), r(), r(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dinosaur, CreatureType::Beast],
@@ -64364,7 +64364,7 @@ pub fn ominous_seas() -> CardDefinition {
 pub fn extinction_event() -> CardDefinition {
     CardDefinition {
         name: "Extinction Event",
-        cost: cost(&[generic(4), b()]),
+        cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseN {
             picks: vec![0],

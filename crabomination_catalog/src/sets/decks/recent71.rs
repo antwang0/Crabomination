@@ -48,7 +48,7 @@ pub fn rukh_egg() -> CardDefinition {
     };
     CardDefinition {
         name: "Rukh Egg",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Bird],
@@ -82,7 +82,7 @@ pub fn sabertooth_tiger() -> CardDefinition {
 pub fn ironroot_treefolk() -> CardDefinition {
     CardDefinition {
         name: "Ironroot Treefolk",
-        cost: cost(&[generic(3), g()]),
+        cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Treefolk],
@@ -114,7 +114,7 @@ pub fn fire_elemental() -> CardDefinition {
 pub fn dross_crocodile() -> CardDefinition {
     CardDefinition {
         name: "Dross Crocodile",
-        cost: cost(&[generic(5), b()]),
+        cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie, CreatureType::Crocodile],
@@ -130,7 +130,7 @@ pub fn dross_crocodile() -> CardDefinition {
 pub fn segovian_leviathan() -> CardDefinition {
     CardDefinition {
         name: "Segovian Leviathan",
-        cost: cost(&[generic(3), u()]),
+        cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Leviathan],
@@ -148,7 +148,7 @@ pub fn segovian_leviathan() -> CardDefinition {
 pub fn vampire_bats() -> CardDefinition {
     CardDefinition {
         name: "Vampire Bats",
-        cost: cost(&[generic(1), b()]),
+        cost: cost(&[b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Bat],
@@ -192,7 +192,7 @@ pub fn durkwood_boars() -> CardDefinition {
 pub fn wall_of_spears() -> CardDefinition {
     CardDefinition {
         name: "Wall of Spears",
-        cost: cost(&[generic(2)]),
+        cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Wall],

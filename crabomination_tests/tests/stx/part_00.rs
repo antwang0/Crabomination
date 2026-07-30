@@ -729,15 +729,14 @@ fn body_of_research_creates_fractal_with_counters_from_library() {
         g.add_card_to_library(0, catalog::island());
     }
     let id = g.add_card_to_hand(0, catalog::body_of_research());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add(Color::Blue, 3);
     let lib_before = g.players[0].library.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Body of Research castable for {4}{G}{U}");
+    .expect("Body of Research castable for {G}{G}{G}{U}{U}{U}");
     drain_stack(&mut g);
 
     let fractal = g.battlefield.iter()

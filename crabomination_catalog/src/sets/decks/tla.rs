@@ -5744,7 +5744,7 @@ pub fn appa_steadfast_guardian() -> CardDefinition {
 pub fn redirect_lightning() -> CardDefinition {
     CardDefinition {
         name: "Redirect Lightning",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
         subtypes: lesson(),
         effect: Effect::ChooseNewTargetsForSpell {

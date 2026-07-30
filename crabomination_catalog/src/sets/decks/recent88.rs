@@ -13,7 +13,7 @@ use crate::mana::{cost, g, generic, r, x};
 pub fn searing_wind() -> CardDefinition {
     CardDefinition {
         name: "Searing Wind",
-        cost: cost(&[generic(4), r(), r()]),
+        cost: cost(&[generic(8), r()]),
         card_types: vec![CardType::Sorcery],
         effect: deal(5, target()),
         ..Default::default()
@@ -60,7 +60,7 @@ pub fn jagged_lightning() -> CardDefinition {
 pub fn rain_of_embers() -> CardDefinition {
     CardDefinition {
         name: "Rain of Embers",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
@@ -82,7 +82,7 @@ pub fn thunderfoot_baloth() -> CardDefinition {
         || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource));
     CardDefinition {
         name: "Thunderfoot Baloth",
-        cost: cost(&[generic(3), g(), g()]),
+        cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Beast],

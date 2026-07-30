@@ -227,7 +227,7 @@ pub fn devastating_mastery() -> CardDefinition {
     };
     CardDefinition {
         name: "Devastating Mastery",
-        cost: cost(&[generic(4), w(), w()]),
+        cost: cost(&[generic(2), w(), w(), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: sweep(),
         alternative_cost: Some(AlternativeCost {
@@ -622,7 +622,7 @@ pub fn selfless_glyphweaver() -> CardDefinition {
     let cre_or_pw = SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker);
     let deadly_vanity = CardDefinition {
         name: "Deadly Vanity",
-        cost: cost(&[generic(4), b(), b(), b()]),
+        cost: cost(&[generic(5), b(), b(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             // Slot 0: the chosen survivor. The ForEach body is a Noop —

@@ -808,7 +808,7 @@ pub fn marang_river_skeleton() -> CardDefinition {
 pub fn mox_jasper() -> CardDefinition {
     CardDefinition {
         name: "Mox Jasper",
-        cost: cost(&[]),
+        cost: cost(&[generic(0)]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {

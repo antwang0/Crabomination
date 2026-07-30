@@ -1740,13 +1740,12 @@ fn crabomination_etb_mills_each_opponent_three_cards() {
     let lib_before = g.players[1].library.len();
     let yard_before = g.players[1].graveyard.len();
     let id = g.add_card_to_hand(0, catalog::crabomination());
-    g.players[0].mana_pool.add_colorless(2);
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Black, 2);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Crabomination castable for {2}{U}{B}");
+    }).expect("Crabomination castable for {4}{B}{B}");
     drain_stack(&mut g);
 
     assert_eq!(g.players[1].library.len(), lib_before - 3,

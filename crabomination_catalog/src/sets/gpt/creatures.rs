@@ -60,7 +60,7 @@ pub fn absolver_thrull() -> CardDefinition {
     };
     CardDefinition {
         name: "Absolver Thrull",
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Thrull],

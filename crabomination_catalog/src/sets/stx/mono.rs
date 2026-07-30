@@ -224,7 +224,7 @@ pub fn body_of_research() -> CardDefinition {
     };
     CardDefinition {
         name: "Body of Research",
-        cost: cost(&[generic(4), g(), u()]),
+        cost: cost(&[g(), g(), g(), u(), u(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::CreateToken {

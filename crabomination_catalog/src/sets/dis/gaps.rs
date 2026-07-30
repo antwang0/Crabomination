@@ -12,7 +12,7 @@ use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, PlayerStaticTarget, StaticEffect, ZoneDest,
 };
 use crate::game::TurnStep;
-use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u, w, x};
+use crate::mana::{Color, SpendRestriction, b, cost, g, generic, hybrid, r, u, w, x};
 
 use super::super::tap_add_colorless;
 
@@ -90,7 +90,7 @@ pub fn blessing_of_the_nephilim() -> CardDefinition {
 pub fn riot_spikes() -> CardDefinition {
     CardDefinition {
         name: "Riot Spikes",
-        cost: cost(&[b()]), // {B/R} — modeled with the black pip
+        cost: cost(&[hybrid(Color::Black, Color::Red)]), // {B/R} — modeled with the black pip
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
@@ -1024,7 +1024,7 @@ pub fn plumes_of_peace() -> CardDefinition {
 pub fn avatar_of_discord() -> CardDefinition {
     CardDefinition {
         name: "Avatar of Discord",
-        cost: cost(&[b(), b(), b()]), // {B/R}×3 — modeled with black pips
+        cost: cost(&[hybrid(Color::Black, Color::Red), hybrid(Color::Black, Color::Red), hybrid(Color::Black, Color::Red)]), // {B/R}×3 — modeled with black pips
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Avatar],
@@ -1237,7 +1237,7 @@ pub fn brain_pry() -> CardDefinition {
 pub fn biomantic_mastery() -> CardDefinition {
     CardDefinition {
         name: "Biomantic Mastery",
-        cost: cost(&[generic(4), g(), g(), g()]), // {G/U}{G/U}{G/U} — green pips
+        cost: cost(&[generic(4), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]), // {G/U}{G/U}{G/U} — green pips
         card_types: vec![CardType::Sorcery],
         effect: Effect::Draw {
             who: Selector::You,

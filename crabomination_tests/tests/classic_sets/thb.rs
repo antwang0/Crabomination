@@ -1853,8 +1853,8 @@ fn sea_gods_scorn_bounces_up_to_three() {
     let c2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let c3 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::sea_gods_scorn());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::CastSpell {
         card_id: spell,
         target: Some(Target::Permanent(c1)),
@@ -1862,7 +1862,7 @@ fn sea_gods_scorn_bounces_up_to_three() {
         mode: None,
         x_value: None,
     })
-    .expect("cast {3}{U} bouncing three creatures");
+    .expect("cast {4}{U}{U} bouncing three creatures");
     drain_stack(&mut g);
     assert!(g.battlefield_find(c1).is_none(), "first creature returned");
     assert!(g.battlefield_find(c2).is_none(), "second creature returned");
@@ -1878,9 +1878,9 @@ fn sea_gods_scorn_affinity_reduces_cost() {
     g.add_card_to_battlefield(0, catalog::dreadful_apathy());
     let c1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::sea_gods_scorn());
-    // Two enchantments → {3} becomes {1}; pay {1}{U}.
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    // Two enchantments → {4} becomes {2}; pay {2}{U}{U}.
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: spell,
         target: Some(Target::Permanent(c1)),
@@ -1888,7 +1888,7 @@ fn sea_gods_scorn_affinity_reduces_cost() {
         mode: None,
         x_value: None,
     })
-    .expect("cast at the reduced {1}{U}");
+    .expect("cast at the reduced {2}{U}{U}");
     drain_stack(&mut g);
     assert!(g.battlefield_find(c1).is_none(), "creature returned");
 }
@@ -1902,7 +1902,7 @@ fn wrap_in_flames_pings_and_locks_blocking() {
     let c2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::wrap_in_flames());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
         card_id: spell,
         target: Some(Target::Permanent(c1)),
@@ -1910,7 +1910,7 @@ fn wrap_in_flames_pings_and_locks_blocking() {
         mode: None,
         x_value: None,
     })
-    .expect("cast {2}{R}");
+    .expect("cast {3}{R}");
     drain_stack(&mut g);
     // 2/2 bears each take 1 damage (survive) and gain CantBlock.
     let dmg = g.battlefield_find(c1).expect("bear survives").damage;

@@ -7925,7 +7925,7 @@ pub fn surging_might() -> CardDefinition {
     use crate::effect::shortcut::{ripple, target_filtered};
     CardDefinition {
         name: "Surging Might",
-        cost: cost(&[g()]),
+        cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
@@ -7951,7 +7951,7 @@ pub fn surging_sentinels() -> CardDefinition {
     use crate::effect::shortcut::ripple;
     CardDefinition {
         name: "Surging Sentinels",
-        cost: cost(&[generic(3), w()]),
+        cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -8159,7 +8159,7 @@ pub fn run_amok() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Run Amok",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
@@ -8187,7 +8187,7 @@ pub fn viscera_dragger() -> CardDefinition {
     use crate::effect::shortcut::unearth;
     CardDefinition {
         name: "Viscera Dragger",
-        cost: cost(&[generic(4), b()]),
+        cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie, CreatureType::Warrior],
@@ -8205,7 +8205,7 @@ pub fn skeletal_kathari() -> CardDefinition {
     use crate::effect::shortcut::unearth;
     CardDefinition {
         name: "Skeletal Kathari",
-        cost: cost(&[generic(3), b()]),
+        cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Bird, CreatureType::Skeleton],
@@ -13224,7 +13224,7 @@ pub fn scorching_dragonfire() -> CardDefinition {
 pub fn slaying_fire() -> CardDefinition {
     CardDefinition {
         name: "Slaying Fire",
-        cost: cost(&[generic(1), r(), r()]),
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: Selector::Target(0),

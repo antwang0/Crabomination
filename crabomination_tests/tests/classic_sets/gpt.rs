@@ -1610,7 +1610,7 @@ fn predatory_focus_assigns_damage_past_blockers() {
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let focus = g.add_card_to_hand(0, catalog::predatory_focus());
     g.step = TurnStep::PreCombatMain;
-    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Green, 2);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
         card_id: focus, target: None, additional_targets: vec![], mode: None, x_value: None,
