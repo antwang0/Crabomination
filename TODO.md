@@ -160,10 +160,6 @@ complete. Follow-ups:
   anthem evaluates its `Predicate` with an ability context anchored on the
   source, so predicates that need a per-affected-permanent subject (rather
   than the anthem's own source) can't be expressed yet.
-- ✅ ~~**War's Toll's land trigger fires on any tap**~~ — `EventKind::
-  TappedForMana` ships (emitted from the mana-ability `{T}` payment;
-  Extraplanar Lens rides it). War's Toll itself still keys on the plain tap:
-  swap its `EventKind::Tapped` for the new kind.
 - **Rakdos Riteknife's granted line lives on the Equipment.** The printed
   ability is granted to the equipped creature; `equipped_bonus.
   activated_abilities` has no way to name the granting Equipment from the
@@ -183,11 +179,6 @@ complete. Follow-ups:
   Petrified Hamlet's `NameCard`).
 - **The Ravnica block is complete** — RAV, GPT and DIS all report zero
   `set_gaps.py` gaps.
-- **Master Warcraft's choice is a policy, not a prompt.** `GameState::
-  combat_chooser_this_turn` replaces the submitted declaration with the
-  chooser's, but the chooser's picks are the hostile defaults (swing with
-  everything able / decline every block) rather than a real prompt. A
-  `wants_ui` chooser should be handed the declaration.
 - **Breath of Fury re-attaches to the first legal creature.** The printed line
   lets the controller choose which creature the Aura moves to.
 - **Sunforger's search auto-picks the priciest legal instant.** No prompt for a
@@ -7652,11 +7643,6 @@ stalled games via `eval_material`.
 
 ## Noticed this run (modern_decks BNG completion + enchant-player)
 
-- **`Effect::ApplyToTargets` isn't collected on the activated-ability path.**
-  A cast surfaces every slot filter and accepts `additional_targets`; an
-  activation rejects with `SelectionRequirementViolated`. Champion of Stray
-  Souls works around it with a resolution-time `MoveChosen`. Fixing it unlocks
-  faithful "X target …" activations generally.
 - ✅ ~~**`EventKind::YourInstantOrSorceryDealtDamage` doesn't carry the
   victim**~~ — shipped as a sibling event,
   `YourInstantOrSorceryDealtDamageToPlayer`, which fires once per damaged
@@ -7675,3 +7661,30 @@ stalled games via `eval_material`.
   came off the list this run). The highest-value untested blocks left are 703
   (turn-based actions), 404/406 (graveyard and exile), 501–513 (the individual
   turn steps) and the 8xx multiplayer rules.
+
+## Noticed this run (modern_decks — RAV closure + OGW)
+
+- **The human client can't build the *other* player's declaration.** With a
+  `combat_chooser` set (Master Warcraft) the chooser gets the declaration
+  window and can decline it, but the attacker/blocker pickers still filter to
+  `c.owner == your_seat`, so a chooser can't select the creatures they're
+  actually choosing for. Bots handle it (`forced_attacks` / no-blocks);
+  a human chooser is decline-only.
+- **`Effect::SupportCounters` auto-targets one creature.** A trigger-side
+  support N (Relief Captain, Gladehart Cavalry) binds a single slot when the
+  engine auto-targets, so the printed "up to N *other* target creatures" only
+  spreads fully on an explicit multi-target cast/activation.
+- **OGW's last four cards need one primitive each** (`set_gaps.py ogw`):
+  - **Deceiver of Form** — "creatures you control become copies of the revealed
+    card until end of turn" wants a mass `BecomeCopyOfFor` over a *revealed
+    library card* rather than a battlefield permanent.
+  - **Endbringer** — "untap this during each other player's untap step" has no
+    static (the existing untap statics only *prevent* untapping).
+  - **Hedron Alignment** — the alternate win wants a "a card with this name is
+    in exile, hand, graveyard, and on the battlefield" predicate.
+  - **Kozilek, the Great Distortion** — "discard a card with mana value X:
+    counter target spell with mana value X" needs a discard cost whose filter
+    is bound to the chosen target's MV.
+  - **Dazzling Reflection** — "the next time that creature would deal damage
+    this turn, prevent it" is a prevention shield keyed on the *dealer*;
+    `prevention_shields` are keyed on the recipient.

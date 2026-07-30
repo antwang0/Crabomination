@@ -72,9 +72,24 @@ exercising each) was elided in a compaction pass; recover it from
   `StaticEffect::AllColorWordsBecomeChosen` (CR 612, four layer-3
   `ReplaceColorWord` rewrites over every permanent). Tests in
   `classic_sets/chk3`.
-- **Ravnica block complete** — RAV, GPT and DIS all at zero `set_gaps.py`
-  gaps (`sets::{rav::gaps21, rav::gaps22, gpt::gaps9, dis::gaps9}`, 29 cards).
-  New:
+- **Ravnica block complete** (`set_gaps.py {rav,gpt,dis}` all at zero). RAV's
+  last card, Master Warcraft, shipped with `GameState.combat_chooser` +
+  `Effect::ChooseCombatThisTurn`: both declaration steps hand priority to an
+  outside chooser, `declare_attackers`/`declare_blockers` gate their submitter
+  on it, `CardDefinition.cast_only_before_attackers` enforces the printed
+  timing, and `ClientView.declares_attacks`/`declares_blocks` drive every
+  client combat gate.
+- **Oath of the Gatewatch: 74 of 78 gap cards ship** (`sets::ogw::gaps{,2,3,4}`)
+  — Cohort (via `tap_other_filter`), support, surge, the Oaths, Chandra
+  Flamecaller, and the devoid shell. New engine:
+  `Effect::EachDealsDamageEqualToPower` (Nissa's Judgment),
+  `SpendRestriction::DevoidSpellsOnly` + `SpellKind.devoid` (Corrupted
+  Crossroads), `StaticEffect::PlaneswalkersEnterWithExtraLoyalty` (Oath of
+  Gideon), `Predicate::PlaneswalkerEnteredThisTurn` +
+  `Player.planeswalkers_entered_this_turn` (Oath of Chandra), and
+  `EquipScale.count_sharing_type_with_host` (Stoneforge Masterwork).
+  Block modules: `sets::{rav::gaps21, rav::gaps22, gpt::gaps9, dis::gaps9}`
+  (29 cards). Primitives from that sweep:
   `Effect::{ExileHandLinked, ReturnLinkedExilesToHand, LookExileAnyNumberRestBack,
   ExileFromGraveyardBecomeCopy, ReturnSameNameFromAllGraveyards, PutTopOnBottom,
   MayReturnSharingPermanentType, LookAtHandCastFree, ChangeTargetOfAbility
@@ -84,8 +99,6 @@ exercising each) was elided in a compaction pass; recover it from
   FlickerHostWithAuras, ReturnLinkedExilesToBattlefieldAttached,
   SacrificeEnchantedForExtraCombat, EyeOfTheStorm}`;
   `ActivatedAbility.unattach_cost` (CR 702.6 — Sunforger);
-  `Effect::ChooseCombatThisTurn` + `GameState.combat_chooser_this_turn`
-  (CR 508.1 / 509.1 — Master Warcraft);
   `StaticEffect::{AnthemForColorSharedWithLibraryTop,
   OpponentsCantCastNamesExiledWithSource, CreatureSpellsMayPayExtraForCounters,
   YourISSpellsHaveReplicate, HasActivatedAbilitiesOfCounteredCreatures}`;

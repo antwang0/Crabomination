@@ -2075,6 +2075,9 @@ impl GameState {
             Predicate::ArtifactEnteredThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].artifacts_entered_this_turn > 0),
+            Predicate::PlaneswalkerEnteredThisTurn { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].planeswalkers_entered_this_turn > 0),
             Predicate::CreatureEnteredThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| !self.players[p].creatures_entered_this_turn.is_empty()),

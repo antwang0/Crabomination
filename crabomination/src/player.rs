@@ -224,6 +224,11 @@ pub struct Player {
     /// active player's turn boundary.
     #[serde(default)]
     pub artifacts_entered_this_turn: u32,
+    /// Count of planeswalkers that entered under this player's control this
+    /// turn — the `Predicate::PlaneswalkerEnteredThisTurn` gate (Oath of
+    /// Chandra). Reset at the active player's turn boundary.
+    #[serde(default)]
+    pub planeswalkers_entered_this_turn: u32,
     /// CR 702.176-era **Celebration** (WOE) — count of nonland permanents that
     /// entered under this player's control this turn. Gates "if two or more
     /// nonland permanents entered … this turn" (`Predicate::CelebrationActive`
@@ -800,6 +805,7 @@ impl Player {
             creatures_entered_this_turn: Vec::new(),
             creatures_entered_last_turn: Vec::new(),
             artifacts_entered_this_turn: 0,
+            planeswalkers_entered_this_turn: 0,
             nonland_permanents_entered_this_turn: 0,
             mounts_vehicles_entered_this_turn: 0,
             multicolored_spells_cast_this_turn: 0,

@@ -2916,11 +2916,26 @@ impl GameState {
         let Some(ec) = self.battlefield.iter().find(|c| c.id == entering) else {
             return vec![];
         };
+        // Oath of Gideon's loyalty rider is the one spec that applies to a
+        // non-creature entrant, so it's collected before the creature gate.
+        let mut pw_specs = vec![];
+        if ec.definition.is_planeswalker() {
+            for src in &self.battlefield {
+                if src.controller != controller || src.id == entering {
+                    continue;
+                }
+                for sa in &src.definition.static_abilities {
+                    if let StaticEffect::PlaneswalkersEnterWithExtraLoyalty { amount } = sa.effect {
+                        pw_specs.push((crate::card::CounterType::Loyalty, amount));
+                    }
+                }
+            }
+        }
         if !ec.definition.is_creature() {
-            return vec![];
+            return pw_specs;
         }
         let entering_types = ec.definition.subtypes.creature_types.clone();
-        let mut specs = vec![];
+        let mut specs = pw_specs;
         for src in &self.battlefield {
             if src.controller != controller || src.id == entering {
                 continue;
@@ -5202,6 +5217,33 @@ impl GameState {
                                 .count() as i32
                         })
                         .unwrap_or(0)
+                } else if scale.count_sharing_type_with_host {
+                    // "+1/+1 for each other creature you control that shares a
+                    // creature type with it" (Stoneforge Masterwork).
+                    let host = self.battlefield.iter().find(|c| c.id == target);
+                    let host_types = host
+                        .map(|c| c.definition.subtypes.creature_types.clone())
+                        .unwrap_or_default();
+                    let host_changeling = host.is_some_and(|c| {
+                        c.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                    });
+                    self.battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.id != target
+                                && Some(c.controller) == host_controller
+                                && c.definition.is_creature()
+                                && (host_changeling
+                                    || c.definition
+                                        .keywords
+                                        .contains(&crate::card::Keyword::Changeling)
+                                    || c.definition
+                                        .subtypes
+                                        .creature_types
+                                        .iter()
+                                        .any(|t| host_types.contains(t)))
+                        })
+                        .count() as i32
                 } else if scale.count_host_colors {
                     // "+1/+1 for each of the host's colors" (Blessing of the
                     // Nephilim) — read the host's printed colors.
@@ -10680,12 +10722,22 @@ impl GameState {
                     // timestamps so static-vs-spell ordering is coherent.
                     let ts = self.next_timestamp();
                     let mut face_down_ctrl = None;
+                    let mut pw_ctrl = None;
                     if let Some(c) = self.battlefield_find_mut(*card_id) {
                         c.entered_turn = Some(turn);
                         c.battlefield_timestamp = ts;
                         if c.face_down {
                             face_down_ctrl = Some(c.controller);
                         }
+                        if c.definition.is_planeswalker() {
+                            pw_ctrl = Some(c.controller);
+                        }
+                    }
+                    // "If a planeswalker entered under your control this turn"
+                    // (Oath of Chandra) — counted on the one path every entry
+                    // takes.
+                    if let Some(p) = pw_ctrl {
+                        self.players[p].planeswalkers_entered_this_turn += 1;
                     }
                     // CR 708 — track "a permanent entered face down under your
                     // control this turn" (Oblivious Bookworm).
@@ -15567,6 +15619,9 @@ fn static_effect_to_effects(
             // EtbTriggerTax — read at ETB trigger push time by
             // `apply_etb_trigger_tax` (Strict Proctor); no layer effect.
             | StaticEffect::EtbTriggerTax { .. }
+            // PlaneswalkersEnterWithExtraLoyalty — read at ETB-counter time by
+            // `chosen_type_etb_counter_specs` (Oath of Gideon); no layer effect.
+            | StaticEffect::PlaneswalkersEnterWithExtraLoyalty { .. }
             // PlayerCannotGainLife — projected onto Player.cannot_gain_life
             // each recompute by apply_player_statics; no layer effect.
             | StaticEffect::PlayerCannotGainLife { .. }

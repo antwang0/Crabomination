@@ -3980,6 +3980,30 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachDealsDamageEqualToPower { dealers, target } => {
+                let Some(tgt) = self
+                    .resolve_selector(target, ctx)
+                    .into_iter()
+                    .find(|e| matches!(e, EntityRef::Permanent(_) | EntityRef::Player(_)))
+                else {
+                    return Ok(());
+                };
+                let dealer_ids: Vec<CardId> = self
+                    .resolve_selector(dealers, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .collect();
+                for id in dealer_ids {
+                    let power = self.computed_permanent(id).map(|cp| cp.power).unwrap_or(0);
+                    if power > 0 {
+                        self.deal_damage_to_from(tgt, power as u32, Some(id), events);
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::DealDamageEqualToPower { source, target } => {
                 // `as_card_id` so a dead `TriggerSource` (now in a graveyard,
                 // not on the battlefield) still resolves — its power is read

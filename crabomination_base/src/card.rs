@@ -3323,6 +3323,11 @@ pub struct EquipScale {
     /// creature cards in all graveyards"), rather than just the controller's.
     #[serde(default)]
     pub count_all_graveyards: Option<SelectionRequirement>,
+    /// When true, the count is the number of *other* creatures the host's
+    /// controller controls that share a creature type with the host
+    /// (Stoneforge Masterwork). Changelings share every type (CR 702.73a).
+    #[serde(default)]
+    pub count_sharing_type_with_host: bool,
     /// When true, the count is the number of colors of the attached host itself
     /// (Blessing of the Nephilim — "+1/+1 for each of its colors"), rather than
     /// any board/graveyard count.
@@ -3794,6 +3799,7 @@ impl CardDefinition {
             casting_nonartifact_spell: !self.is_artifact(),
             activating_ability: false,
             lesson: self.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson),
+            devoid: self.keywords.contains(&Keyword::Devoid),
             equipment: self.is_equipment(),
             colorless: self.printed_colors().is_empty(),
             mana_value: self.cost.cmc(),

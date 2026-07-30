@@ -1651,6 +1651,9 @@ pub enum Predicate {
     /// "If an artifact entered the battlefield under `who`'s control this turn"
     /// (Akal Pakal). Reads `Player.artifacts_entered_this_turn`.
     ArtifactEnteredThisTurn { who: PlayerRef },
+    /// "If a planeswalker entered the battlefield under `who`'s control this
+    /// turn" (Oath of Chandra). Reads `Player.planeswalkers_entered_this_turn`.
+    PlaneswalkerEnteredThisTurn { who: PlayerRef },
     /// "If a creature entered the battlefield under `who`'s control this turn"
     /// (Zhalfirin Decoy's activation gate, Bellowing Elk's static). Reads
     /// `Player.creatures_entered_this_turn`.
@@ -2903,6 +2906,11 @@ pub enum Effect {
         targets: Selector,
         each_opponent: bool,
     },
+    /// Each permanent `dealers` resolves to deals damage equal to its power
+    /// to the single entity `target` resolves to (Nissa's Judgment). The
+    /// many-sources mirror of `DealDamageEqualToPowerToEach`; each hit
+    /// carries its own dealer so lifelink/deathtouch apply per source.
+    EachDealsDamageEqualToPower { dealers: Selector, target: Selector },
     /// CR 701.12 — Exchange control of the two permanents the selectors
     /// resolve to (one each). A permanent control swap (Vedalken Plotter,
     /// Aura Thief, Switcheroo). If either selector resolves to no permanent

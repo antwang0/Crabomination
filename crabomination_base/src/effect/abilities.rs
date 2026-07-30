@@ -1531,6 +1531,10 @@ pub enum StaticEffect {
     /// `chosen_type_etb_counter_specs`; the source's live power (layers applied)
     /// sets the count, so a pumped Biomancer grants more.
     OtherCreaturesEnterWithCountersEqualToSourcePower { kind: CounterType },
+    /// "Each planeswalker you control enters with an additional `amount`
+    /// loyalty counters on it" (Oath of Gideon). Read alongside the
+    /// creature-scoped enters-with statics in `chosen_type_etb_counter_specs`.
+    PlaneswalkersEnterWithExtraLoyalty { amount: u32 },
     /// Strict Proctor — "Whenever a permanent entering causes a
     /// triggered ability to trigger, counter that ability unless its
     /// controller pays {amount}." Read at ETB-trigger dispatch time

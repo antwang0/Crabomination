@@ -1137,8 +1137,12 @@ impl GameState {
                         }
                     }
                     // Metallic Mimic-style chosen-type ETB counters (any matching
-                    // creature entry the caster controls).
-                    if is_creature_resolve {
+                    // creature entry the caster controls) — plus Oath of
+                    // Gideon's loyalty rider, which is the planeswalker case
+                    // the same collector serves.
+                    if is_creature_resolve || self.battlefield.iter().any(|c| {
+                        c.id == card_id && c.definition.is_planeswalker()
+                    }) {
                         for (kind, n) in self.chosen_type_etb_counter_specs(card_id, caster) {
                             counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
                         }
@@ -2803,6 +2807,7 @@ impl GameState {
         for pl in &mut self.players {
             pl.creatures_entered_last_turn = std::mem::take(&mut pl.creatures_entered_this_turn);
             pl.artifacts_entered_this_turn = 0;
+            pl.planeswalkers_entered_this_turn = 0;
             pl.nonland_permanents_entered_this_turn = 0;
             pl.mounts_vehicles_entered_this_turn = 0;
         }

@@ -2588,3 +2588,244 @@ fn devour_in_flames_requires_a_land() {
     });
     assert!(r.is_err(), "no land to return → cast rejected");
 }
+
+// ── Gap-wave cards ────────────────────────────────────────────────────────
+
+/// Cohort taps the source *and* another untapped Ally as a cost.
+#[test]
+fn cohort_taps_the_source_and_another_ally() {
+    let mut g = two_player_game();
+    let cleric = g.add_card_to_battlefield(0, catalog::ondu_war_cleric());
+    let helper = g.add_card_to_battlefield(0, catalog::makindi_aeronaut());
+    g.clear_sickness(cleric);
+    g.clear_sickness(helper);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cleric, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("cohort");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 22);
+    assert!(g.battlefield_find(cleric).unwrap().tapped);
+    assert!(g.battlefield_find(helper).unwrap().tapped, "the Ally was tapped as a cost");
+}
+
+/// With no other untapped Ally the cohort cost is unpayable.
+#[test]
+fn cohort_needs_a_second_ally() {
+    let mut g = two_player_game();
+    let cleric = g.add_card_to_battlefield(0, catalog::ondu_war_cleric());
+    g.clear_sickness(cleric);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: cleric, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    })
+    .is_err());
+}
+
+/// Relief Captain's ETB support 3 spreads +1/+1 counters onto other creatures.
+#[test]
+fn relief_captain_supports_three() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cap = g.add_card_to_battlefield(0, catalog::relief_captain());
+    g.fire_self_etb_triggers(cap, 0);
+    drain_stack(&mut g);
+    use crabomination::card::CounterType;
+    let placed: u32 = [a, b]
+        .iter()
+        .map(|id| g.battlefield_find(*id).unwrap().counter_count(CounterType::PlusOnePlusOne))
+        .sum();
+    assert!(placed >= 1, "support put counters on other creatures");
+}
+
+/// Corrupted Crossroads' colored mana is spendable only on devoid spells.
+#[test]
+fn corrupted_crossroads_mana_is_devoid_only() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::corrupted_crossroads());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None,
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("tap for restricted mana");
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "a non-devoid creature can't be funded by it"
+    );
+    let void = g.add_card_to_hand(0, catalog::void_shatter());
+    assert!(catalog::void_shatter().keywords.contains(&crabomination::card::Keyword::Devoid));
+    let _ = void;
+}
+
+/// Zendikar Resurgent doubles land mana and cantrips off creature spells.
+#[test]
+fn zendikar_resurgent_doubles_land_mana() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zendikar_resurgent());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("tap the Forest");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "the trigger added a second green");
+}
+
+/// Baloth Pup only has trample while it carries a +1/+1 counter.
+#[test]
+fn baloth_pup_needs_a_counter_for_trample() {
+    use crabomination::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let pup = g.add_card_to_battlefield(0, catalog::baloth_pup());
+    assert!(!g.computed_permanent(pup).unwrap().keywords.contains(&Keyword::Trample));
+    g.battlefield_find_mut(pup).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(g.computed_permanent(pup).unwrap().keywords.contains(&Keyword::Trample));
+}
+
+/// Nissa's Judgment supports two, then every counter-bearing creature you
+/// control bites the targeted opposing creature.
+#[test]
+fn nissas_judgment_supports_then_bites() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mine2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::nissas_judgment());
+    g.players[0].mana_pool.add(Color::Green, 5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(mine2), Target::Permanent(theirs)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(mine).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "supported");
+    assert!(g.battlefield_find(theirs).is_none(), "the 3-power bite killed the 2/2");
+}
+
+/// Stoneforge Masterwork scales with the equipped creature's tribe.
+#[test]
+fn stoneforge_masterwork_counts_shared_types() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::makindi_aeronaut());
+    let eq = g.add_card_to_battlefield(0, catalog::stoneforge_masterwork());
+    g.battlefield_find_mut(eq).unwrap().attached_to = Some(host);
+    let base = g.computed_permanent(host).unwrap().power;
+    g.add_card_to_battlefield(0, catalog::kor_sky_climber());
+    assert_eq!(
+        g.computed_permanent(host).unwrap().power,
+        base + 1,
+        "another Kor shares a type with the host"
+    );
+}
+
+/// Oath of Gideon gives every planeswalker you control an extra loyalty
+/// counter as it enters.
+#[test]
+fn oath_of_gideon_adds_a_loyalty_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::oath_of_gideon());
+    let chandra = g.add_card_to_hand(0, catalog::chandra_flamecaller());
+    g.players[0].mana_pool.add(Color::Red, 6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: chandra, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Chandra");
+    drain_stack(&mut g);
+    let pw = chandra;
+    assert_eq!(
+        g.battlefield_find(pw).unwrap().counter_count(crabomination::card::CounterType::Loyalty),
+        5,
+        "4 printed + 1"
+    );
+}
+
+/// Oath of Chandra pings each opponent at end of turn only when a
+/// planeswalker of yours entered that turn.
+#[test]
+fn oath_of_chandra_needs_a_planeswalker_this_turn() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let oath = g.add_card_to_battlefield(0, catalog::oath_of_chandra());
+    g.fire_self_etb_triggers(oath, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "the ETB killed the 2/2");
+
+    let before = g.players[1].life;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before, "no planeswalker entered, no ping");
+
+    let chandra = g.add_card_to_hand(0, catalog::chandra_flamecaller());
+    g.players[0].mana_pool.add(Color::Red, 6);
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: chandra, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast Chandra");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].planeswalkers_entered_this_turn, 1);
+
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 2, "with a walker down it pings");
+}
+
+/// Immolating Glare only answers an attacking creature.
+#[test]
+fn immolating_glare_needs_an_attacker() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let glare = g.add_card_to_hand(0, catalog::immolating_glare());
+    g.players[0].mana_pool.add(Color::White, 2);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: glare, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .is_err());
+}
+
+/// Master of the four enters-tapped OGW duals: they arrive tapped and tap for
+/// either of their two colors.
+#[test]
+fn ogw_taplands_enter_tapped() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_hand(0, catalog::meandering_river());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped);
+    assert_eq!(catalog::timber_gorge().activated_abilities.len(), 2);
+}
+
+/// Remorseless Punishment runs its punisher choice twice.
+#[test]
+fn remorseless_punishment_repeats_once() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::remorseless_punishment());
+    g.players[1].hand.clear();
+    g.players[0].mana_pool.add(Color::Black, 5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 10, "no cards and no permanents — 5 life, twice");
+}

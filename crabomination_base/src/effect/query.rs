@@ -562,6 +562,9 @@ impl Effect {
             Effect::DealDamageEqualToPowerToEach { source, targets, .. } => {
                 sel_has_target(source) || sel_has_target(targets)
             }
+            Effect::EachDealsDamageEqualToPower { dealers, target } => {
+                sel_has_target(dealers) || sel_has_target(target)
+            }
             Effect::ExchangeControl { a, b } => sel_has_target(a) || sel_has_target(b),
             Effect::RedirectNextDamage { target, to, .. } => {
                 sel_has_target(target) || sel_has_target(to)
@@ -1129,6 +1132,7 @@ impl Effect {
             // The chosen creature (`source`) is the targeted object; the
             // per-creature/opponent recipients are not targeted.
             Effect::DealDamageEqualToPowerToEach { source, .. } => sel_filter(source),
+            Effect::EachDealsDamageEqualToPower { target, .. } => sel_filter(target),
             // The targeted side may be `b` when `a` is the source itself
             // (Volatile Stormdrake exchanges `This` with a targeted creature).
             Effect::ExchangeControl { a, b } => sel_filter(a).or_else(|| sel_filter(b)),
@@ -1693,7 +1697,8 @@ impl Effect {
             | Effect::CounterSpellExileNameLock { .. } => "counter target spell".into(),
             Effect::Fight { .. } => "fight".into(),
             Effect::DealDamageEqualToPower { .. } => "deal damage equal to power".into(),
-            Effect::DealDamageEqualToPowerToEach { .. } => {
+            Effect::DealDamageEqualToPowerToEach { .. }
+            | Effect::EachDealsDamageEqualToPower { .. } => {
                 "deal damage equal to power to each".into()
             }
             Effect::ExchangeControl { .. } | Effect::ExchangeControlChoosing { .. } => {
@@ -2042,6 +2047,7 @@ impl Effect {
             | Effect::ExchangeControlChoosing { .. }
             | Effect::DealDamageEqualToPower { .. }
             | Effect::DealDamageEqualToPowerToEach { .. }
+            | Effect::EachDealsDamageEqualToPower { .. }
             | Effect::Fight { .. } => false,
             // Compound effects: defer to whichever child first surfaces a
             // primary-target filter — the auto-target heuristic's slot 0
@@ -2376,6 +2382,9 @@ impl Effect {
                 Effect::DealDamageEqualToPowerToEach { source, targets, .. } => {
                     sel_find(source, slot).or_else(|| sel_find(targets, slot))
                 }
+                Effect::EachDealsDamageEqualToPower { dealers, target } => {
+                    sel_find(dealers, slot).or_else(|| sel_find(target, slot))
+                }
                 Effect::ExchangeControl { a, b } => {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }
@@ -2625,9 +2634,8 @@ impl Effect {
                 Effect::PlayersMayAccept { otherwise, .. } => {
                     eff_find(otherwise, slot, mode, kicked)
                 }
-                Effect::Punisher { options, otherwise, .. } => options
-                    .iter()
-                    .find_map(|e| eff_find(e, slot, mode, kicked))
+                Effect::Punisher { chooser, options, otherwise } => sel_find(chooser, slot)
+                    .or_else(|| options.iter().find_map(|e| eff_find(e, slot, mode, kicked)))
                     .or_else(|| eff_find(otherwise, slot, mode, kicked)),
                 Effect::NthResolutionThisTurn { branches } => branches
                     .iter()
