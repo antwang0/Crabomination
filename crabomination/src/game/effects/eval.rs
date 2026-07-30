@@ -551,6 +551,7 @@ impl GameState {
                 }
             }
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
+            Value::SacrificedTotalPower => self.sacrificed_total_power,
             Value::SacrificedCount => self.sacrificed_count as i32,
             Value::TappedForCostPower => self.tapped_for_cost_power.unwrap_or(0),
             Value::SacrificedToughness => self.sacrificed_toughness.unwrap_or(0),
@@ -2831,6 +2832,32 @@ impl GameState {
                                     .any(|c| colors.contains(c))
                             })
                     }),
+                    // Konda's Banner — "creatures that share a color / a
+                    // creature type with equipped creature". Read off printed
+                    // characteristics: this filter is evaluated *inside* the
+                    // layer gather, so consulting the computed view would
+                    // recurse.
+                    R::SharesColorWithAttachedHost | R::SharesCreatureTypeWithAttachedHost => {
+                        let by_color = matches!(req, R::SharesColorWithAttachedHost);
+                        source
+                            .and_then(|sid| self.battlefield_find(sid))
+                            .and_then(|src| src.attached_to)
+                            .and_then(|host| self.battlefield_find(host))
+                            .is_some_and(|host| {
+                                if by_color {
+                                    let hc = host.definition.printed_colors();
+                                    card.definition.printed_colors().iter().any(|c| hc.contains(c))
+                                } else {
+                                    host.definition
+                                        .subtypes
+                                        .creature_types
+                                        .iter()
+                                        .any(|t| {
+                                            card.definition.subtypes.creature_types.contains(t)
+                                        })
+                                }
+                            })
+                    }
                     // Zone-agnostic atoms (spell/enchantment subtype, token
                     // flags, …) the battlefield walker doesn't special-case
                     // are evaluated against the located card. Keeps the two
@@ -2975,7 +3002,10 @@ impl GameState {
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
             // Need the ability's source or the live trigger context, which
             // only the static walker carries.
-            R::SharesColorWithExiledBySource | R::SameNameAsExiledWithSource => false,
+            R::SharesColorWithExiledBySource
+            | R::SameNameAsExiledWithSource
+            | R::SharesColorWithAttachedHost
+            | R::SharesCreatureTypeWithAttachedHost => false,
             // Glissa Sunseeker — "if its mana value is equal to the amount of
             // unspent mana you have".
             R::ManaValueEqualsYourUnspentMana => {

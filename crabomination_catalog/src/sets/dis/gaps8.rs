@@ -15,9 +15,8 @@ use crate::mana::{b, cost, generic, r, w};
 /// War's Toll — {3}{R} Enchantment. Whenever an opponent taps a land for mana,
 /// tap all lands they control; and their creatures attack each combat if able.
 ///
-/// Two approximations: the trigger fires on any land tap (not just a tap for
-/// mana), and the printed attack clause only bites once one of their creatures
-/// attacks — here it's an unconditional attack requirement.
+/// Approximation: the printed attack clause only bites once one of their
+/// creatures attacks — here it's an unconditional attack requirement.
 pub fn wars_toll() -> CardDefinition {
     CardDefinition {
         name: "War's Toll",
@@ -31,6 +30,7 @@ pub fn wars_toll() -> CardDefinition {
                 toughness: 0,
                 keywords: vec![Keyword::MustAttack],
                 opponents: true,
+                all_players: false,
                 only_your_turn: false,
                 scale_by_counters_on_self: None,
             },
@@ -41,11 +41,13 @@ pub fn wars_toll() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: R::Land,
                 }),
-                exclude_attacker_taps: true,
-                ..EventSpec::new(EventKind::Tapped, EventScope::OpponentControl)
+                ..EventSpec::new(EventKind::TappedForMana, EventScope::OpponentControl)
             },
             effect: Effect::Tap {
-                what: Selector::EachPermanent(R::Land.and(R::ControlledByOpponent)),
+                what: Selector::ControlledBy {
+                    who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                    filter: R::Land,
+                },
             },
         }],
         ..Default::default()

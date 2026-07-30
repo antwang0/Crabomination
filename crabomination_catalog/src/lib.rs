@@ -52,6 +52,7 @@ pub use sets::bng3::*;
 pub use sets::bro::*;
 pub use sets::c21::*;
 pub use sets::chk::*;
+pub use sets::chk2::*;
 pub use sets::curses::*;
 pub use sets::decks::*;
 pub use sets::dgm::*;

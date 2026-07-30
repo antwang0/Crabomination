@@ -2148,26 +2148,34 @@ impl GameState {
         // on the battlefield.
         let on_battlefield: std::collections::HashSet<crate::card::CardId> =
             self.battlefield.iter().map(|c| c.id).collect();
-        // CR 502.3 — Winter Moon: "Players can't untap more than one nonbasic
-        // land during their untap steps." Cap each untapping player's nonbasic
-        // land untaps at one; the rest stay tapped.
-        let cap_nonbasic_untap = self.battlefield.iter().any(|c| {
-            c.definition
-                .static_abilities
-                .iter()
-                .any(|sa| matches!(sa.effect, StaticEffect::MaxOneNonbasicLandUntap))
-        });
-        let mut nonbasic_untapped: std::collections::HashMap<usize, u32> =
-            std::collections::HashMap::new();
-        // CR 502.3 — Imi Statue: "Players can't untap more than one artifact
-        // during their untap steps."
-        let cap_artifact_untap = self.battlefield.iter().any(|c| {
-            c.definition
-                .static_abilities
-                .iter()
-                .any(|sa| matches!(sa.effect, StaticEffect::MaxOneArtifactUntap))
-        });
-        let mut artifacts_untapped: std::collections::HashMap<usize, u32> =
+        // CR 502.3 — "Players can't untap more than one [filter] during their
+        // untap steps" (Winter Moon, Imi Statue). Pre-resolve each cap's
+        // matching permanents (the untap loop below borrows the battlefield
+        // mutably), then let each player untap at most one per cap.
+        let untap_caps: Vec<std::collections::HashSet<crate::card::CardId>> = self
+            .battlefield
+            .iter()
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match &sa.effect {
+                StaticEffect::MaxOneUntapPerStep { filter } => Some(filter),
+                _ => None,
+            })
+            .map(|filter| {
+                self.battlefield
+                    .iter()
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            c.controller,
+                            None,
+                        )
+                    })
+                    .map(|c| c.id)
+                    .collect()
+            })
+            .collect();
+        let mut capped_untaps: std::collections::HashMap<(usize, usize), u32> =
             std::collections::HashMap::new();
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
@@ -2237,25 +2245,12 @@ impl GameState {
                     }
                     card.untap_locked_while_present = None;
                 }
-                // CR 502.3 — Winter Moon nonbasic-land cap. A tapped nonbasic
-                // land beyond the first this player untaps stays tapped.
-                if cap_nonbasic_untap
-                    && card.tapped
-                    && card.definition.is_land()
-                    && !card.definition.is_basic()
+                // CR 502.3 — a tapped permanent beyond the first this player
+                // untaps under any active cap stays tapped.
+                if card.tapped
+                    && let Some(i) = untap_caps.iter().position(|s| s.contains(&card.id))
                 {
-                    let n = nonbasic_untapped.entry(card.controller).or_insert(0);
-                    if *n >= 1 {
-                        if active {
-                            card.summoning_sick = false;
-                        }
-                        continue;
-                    }
-                    *n += 1;
-                }
-                // CR 502.3 — Imi Statue's artifact cap, same shape.
-                if cap_artifact_untap && card.tapped && card.definition.is_artifact() {
-                    let n = artifacts_untapped.entry(card.controller).or_insert(0);
+                    let n = capped_untaps.entry((i, card.controller)).or_insert(0);
                     if *n >= 1 {
                         if active {
                             card.summoning_sick = false;
@@ -3798,7 +3793,17 @@ impl GameState {
                 let is_still_legal = self
                     .battlefield
                     .iter()
-                    .any(|b| b.id == attached && b.definition.is_creature());
+                    .any(|b| b.id == attached && b.definition.is_creature())
+                    // CR 301.5c — the printed "only to a [filter]" restriction
+                    // is checked continuously (Konda's Banner).
+                    && c.definition.attach_only_filter.as_ref().is_none_or(|f| {
+                        self.evaluate_requirement_static(
+                            f,
+                            &Target::Permanent(attached),
+                            c.controller,
+                            Some(c.id),
+                        )
+                    });
                 if !is_still_legal { Some(c.id) } else { None }
             })
             .collect();

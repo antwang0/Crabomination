@@ -239,6 +239,7 @@ pub fn infiltrators_magemark() -> CardDefinition {
                     Keyword::Defender,
                 )))],
                 opponents: false,
+                all_players: false,
                 only_your_turn: false,
                 scale_by_counters_on_self: None,
             },
@@ -349,14 +350,15 @@ pub fn tibor_and_lumia() -> CardDefinition {
 /// Earth Surge — {3}{G} Enchantment. Each land gets +2/+2 as long as it's a
 /// creature.
 pub fn earth_surge() -> CardDefinition {
-    let anthem = |opponents| StaticAbility {
+    let anthem = StaticAbility {
         description: "Each land gets +2/+2 as long as it's a creature.",
         effect: StaticEffect::AnthemForFilter {
             filter: R::Land.and(R::Creature),
             power: 2,
             toughness: 2,
             keywords: vec![],
-            opponents,
+            opponents: false,
+            all_players: true,
             only_your_turn: false,
             scale_by_counters_on_self: None,
         },
@@ -365,7 +367,7 @@ pub fn earth_surge() -> CardDefinition {
         name: "Earth Surge",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Enchantment],
-        static_abilities: vec![anthem(false), anthem(true)],
+        static_abilities: vec![anthem],
         ..Default::default()
     }
 }
@@ -373,14 +375,15 @@ pub fn earth_surge() -> CardDefinition {
 /// Leyline of the Meek — {2}{W}{W} Enchantment. If in your opening hand, you may
 /// begin with it in play. Creature tokens get +1/+1.
 pub fn leyline_of_the_meek() -> CardDefinition {
-    let anthem = |opponents| StaticAbility {
+    let anthem = StaticAbility {
         description: "Creature tokens get +1/+1.",
         effect: StaticEffect::AnthemForFilter {
             filter: R::Creature.and(R::IsToken),
             power: 1,
             toughness: 1,
             keywords: vec![],
-            opponents,
+            opponents: false,
+            all_players: true,
             only_your_turn: false,
             scale_by_counters_on_self: None,
         },
@@ -389,7 +392,7 @@ pub fn leyline_of_the_meek() -> CardDefinition {
         name: "Leyline of the Meek",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Enchantment],
-        static_abilities: vec![anthem(false), anthem(true)],
+        static_abilities: vec![anthem],
         opening_hand: Some(OpeningHandEffect::StartInPlay {
             tapped: false,
             extra: Effect::Noop,

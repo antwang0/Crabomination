@@ -1238,6 +1238,22 @@ exercising each) was elided in a compaction pass; recover it from
   `Value::{OtherCreaturesOfTypeEnteredThisTurn, DistinctPowersAmongCreatures\
 Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   ("creatures you control but don't own" — Laughing Jasper Flint).
+- **Kamigawa CHK primitives (`sets::chk2`):** `Selector::AttachmentGranting`
+  (CR 702.6e — a granted line naming its granting Aura/Equipment; Hankyu's aim
+  counters), `StaticEffect::MaxOneUntapPerStep { filter }` (CR 502.3, generalizes
+  the old `MaxOneNonbasicLandUntap` — Winter Moon + Imi Statue),
+  `StaticEffect::PlayersCastOnlyOnOwnTurn` (CR 601 — Dosan, symmetric),
+  `StaticEffect::PreventAllCombatDamageToAttached` (General's Kabuto),
+  `StaticEffect::PumpPerBushido` (CR 702.44 — Takeno; per-permanent magnitude),
+  `AnthemForFilter.all_players` (an anthem with no controller scoping),
+  `SelectionRequirement::SharesColor/CreatureTypeWithAttachedHost` (Konda's
+  Banner), `CardDefinition.attach_only_filter` (CR 301.5c, gates equip *and* the
+  704.5n unattach sweep), `SpendRestriction::LegendarySpellsOnly` (Untaidake),
+  `AdditionalCastCost::SacrificeAll` + `Value::SacrificedTotalPower` (Soulblast).
+  `EventScope::FromYourGraveyard` now matches object events by the subject's
+  controller (Blood Speaker), `EventKind::TappedForMana` matches `SelfSource`
+  (Forbidden Orchard), and a self-scoped `SkipNextUntap` rider no longer stops
+  an ability being a mana ability (CR 605.1a — the CHK slow duals).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an

@@ -338,6 +338,7 @@ pub fn gruul_war_chant() -> CardDefinition {
                 toughness: 0,
                 keywords: vec![Keyword::Menace],
                 opponents: false,
+                all_players: false,
                 only_your_turn: false,
                 scale_by_counters_on_self: None,
             },

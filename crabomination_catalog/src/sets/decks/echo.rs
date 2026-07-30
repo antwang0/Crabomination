@@ -92,22 +92,19 @@ pub fn deranged_hermit() -> CardDefinition {
             definition: squirrel,
         }),
     );
-    // "Squirrel creatures get +1/+1" is global — one anthem per side.
-    def.static_abilities = [false, true]
-        .into_iter()
-        .map(|opponents| crate::card::StaticAbility {
-            description: "Squirrel creatures get +1/+1.",
-            effect: StaticEffect::AnthemForFilter {
-                filter: R::HasCreatureType(CreatureType::Squirrel),
-                power: 1,
-                toughness: 1,
-                keywords: vec![],
-                opponents,
-                only_your_turn: false,
-                scale_by_counters_on_self: None,
-            },
-        })
-        .collect();
+    def.static_abilities = vec![crate::card::StaticAbility {
+        description: "Squirrel creatures get +1/+1.",
+        effect: StaticEffect::AnthemForFilter {
+            filter: R::HasCreatureType(CreatureType::Squirrel),
+            power: 1,
+            toughness: 1,
+            keywords: vec![],
+            opponents: false,
+            all_players: true,
+            only_your_turn: false,
+            scale_by_counters_on_self: None,
+        },
+    }];
     def
 }
 

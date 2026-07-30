@@ -152,6 +152,7 @@ pub fn bruse_tarl_roving_rancher() -> CardDefinition {
                 toughness: 0,
                 keywords: vec![Keyword::DoubleStrike],
                 opponents: false,
+                all_players: false,
                 only_your_turn: false,
                 scale_by_counters_on_self: None,
             },

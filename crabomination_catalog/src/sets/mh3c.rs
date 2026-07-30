@@ -1306,7 +1306,9 @@ pub fn winter_moon() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         static_abilities: vec![StaticAbility {
             description: "Players can't untap more than one nonbasic land during their untap steps.",
-            effect: StaticEffect::MaxOneNonbasicLandUntap,
+            effect: StaticEffect::MaxOneUntapPerStep {
+                filter: R::IsNonbasicLand,
+            },
         }],
         ..Default::default()
     }

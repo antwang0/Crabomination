@@ -10,6 +10,7 @@ mod blight;
 mod bng;
 mod bro;
 mod chk;
+mod chk2;
 mod dgm;
 mod eoe;
 mod fin;

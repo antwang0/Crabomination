@@ -44,9 +44,15 @@ static AKH: &[Factory] = &[
     super::akh::open_fire,
     super::akh::gideons_reproach,
 ];
-static ALL: &[Factory] = &[super::all::force_of_will];
-static AP: &[Factory] = &[super::ap::gaeas_skyfolk];
-static ARN: &[Factory] = &[super::arn::juzam_djinn];
+static ALL: &[Factory] = &[
+    super::all::force_of_will,
+];
+static AP: &[Factory] = &[
+    super::ap::gaeas_skyfolk,
+];
+static ARN: &[Factory] = &[
+    super::arn::juzam_djinn,
+];
 static BNG: &[Factory] = &[
     super::bng::akroan_skyguard,
     super::bng::chorus_of_the_tides,
@@ -495,6 +501,74 @@ static CHK: &[Factory] = &[
     super::chk::gale_force,
     super::chk::heartbeat_of_spring,
     super::chk::journeyers_kite,
+];
+static CHK2: &[Factory] = &[
+    super::chk2::cloudcrest_lake,
+    super::chk2::lantern_lit_graveyard,
+    super::chk2::pinecrest_ridge,
+    super::chk2::tranquil_garden,
+    super::chk2::waterveil_cavern,
+    super::chk2::hall_of_the_bandit_lord,
+    super::chk2::untaidake_the_cloud_keeper,
+    super::chk2::forbidden_orchard,
+    super::chk2::myojin_of_cleansing_fire,
+    super::chk2::myojin_of_infinite_rage,
+    super::chk2::myojin_of_seeing_winds,
+    super::chk2::myojin_of_lifes_web,
+    super::chk2::azami_lady_of_scrolls,
+    super::chk2::ben_ben_akki_hermit,
+    super::chk2::dosan_the_falling_leaf,
+    super::chk2::hisoka_minamo_sensei,
+    super::chk2::iname_death_aspect,
+    super::chk2::iname_life_aspect,
+    super::chk2::sachi_daughter_of_seshiro,
+    super::chk2::shisato_whispering_hunter,
+    super::chk2::takeno_samurai_general,
+    super::chk2::the_unspeakable,
+    super::chk2::uyo_silent_prophet,
+    super::chk2::godo_bandit_warlord,
+    super::chk2::sensei_golden_tail,
+    super::chk2::shimatsu_the_bloodcloaked,
+    super::chk2::hikari_twilight_guardian,
+    super::chk2::aura_of_dominion,
+    super::chk2::field_of_reality,
+    super::chk2::midnight_covenant,
+    super::chk2::oni_possession,
+    super::chk2::ragged_veins,
+    super::chk2::generals_kabuto,
+    super::chk2::hankyu,
+    super::chk2::kondas_banner,
+    super::chk2::tenza_godos_maul,
+    super::chk2::honor_worn_shaku,
+    super::chk2::hair_strung_koto,
+    super::chk2::imi_statue,
+    super::chk2::orochi_hatchery,
+    super::chk2::night_dealings,
+    super::chk2::night_of_souls_betrayal,
+    super::chk2::blood_rites,
+    super::chk2::natures_will,
+    super::chk2::vassals_duty,
+    super::chk2::blood_speaker,
+    super::chk2::bloodthirsty_ogre,
+    super::chk2::pious_kitsune,
+    super::chk2::ore_gorger,
+    super::chk2::rootrunner,
+    super::chk2::eight_and_a_half_tails,
+    super::chk2::candles_glow,
+    super::chk2::cranial_extraction,
+    super::chk2::devouring_rage,
+    super::chk2::feast_of_worms,
+    super::chk2::hisokas_defiance,
+    super::chk2::thoughtbind,
+    super::chk2::sideswipe,
+    super::chk2::mana_seism,
+    super::chk2::reverse_the_sands,
+    super::chk2::soulblast,
+    super::chk2::tide_of_war,
+    super::chk2::junkyo_bell,
+    super::chk2::kusari_gama,
+    super::chk2::oathkeeper_takenos_daisho,
+    super::chk2::shell_of_the_last_kappa,
 ];
 static CURSES: &[Factory] = &[
     super::curses::psychic_possession,
@@ -6401,46 +6475,6 @@ static DECKS: &[Factory] = &[
     super::decks::scythe_of_the_wretched,
     super::decks::shared_fate,
     super::decks::spellweaver_helix,
-    super::decks::cloudcrest_lake,
-    super::decks::lantern_lit_graveyard,
-    super::decks::pinecrest_ridge,
-    super::decks::tranquil_garden,
-    super::decks::waterveil_cavern,
-    super::decks::forbidden_orchard,
-    super::decks::hall_of_the_bandit_lord,
-    super::decks::untaidake_the_cloud_keeper,
-    super::decks::myojin_of_cleansing_fire,
-    super::decks::myojin_of_infinite_rage,
-    super::decks::myojin_of_lifes_web,
-    super::decks::myojin_of_seeing_winds,
-    super::decks::azami_lady_of_scrolls,
-    super::decks::dosan_the_falling_leaf,
-    super::decks::iname_death_aspect,
-    super::decks::iname_life_aspect,
-    super::decks::sachi_daughter_of_seshiro,
-    super::decks::shisato_whispering_hunter,
-    super::decks::the_unspeakable,
-    super::decks::ore_gorger,
-    super::decks::rootrunner,
-    super::decks::pious_kitsune,
-    super::decks::thoughtbind,
-    super::decks::hisokas_defiance,
-    super::decks::cranial_extraction,
-    super::decks::mana_seism,
-    super::decks::devouring_rage,
-    super::decks::sideswipe,
-    super::decks::night_of_souls_betrayal,
-    super::decks::blood_rites,
-    super::decks::natures_will,
-    super::decks::midnight_covenant,
-    super::decks::oni_possession,
-    super::decks::ragged_veins,
-    super::decks::imi_statue,
-    super::decks::hair_strung_koto,
-    super::decks::honor_worn_shaku,
-    super::decks::orochi_hatchery,
-    super::decks::tenza_godos_maul,
-    super::decks::hankyu,
     super::decks::endless_cockroaches,
     super::decks::poison_tip_archer,
     super::decks::altar_of_dementia,
@@ -8172,7 +8206,9 @@ static EOE: &[Factory] = &[
     super::eoe::devastating_onslaught,
     super::eoe::unravel,
 ];
-static FEM: &[Factory] = &[super::fem::hymn_to_tourach];
+static FEM: &[Factory] = &[
+    super::fem::hymn_to_tourach,
+];
 static FIN: &[Factory] = &[
     super::fin::iron_giant,
     super::fin::sazhs_chocobo,
@@ -8587,7 +8623,10 @@ static GTC11: &[Factory] = &[
     super::gtc11::deathpact_angel,
     super::gtc11::voidwalk,
 ];
-static GTC12: &[Factory] = &[super::gtc12::clan_defiance, super::gtc12::domri_rade];
+static GTC12: &[Factory] = &[
+    super::gtc12::clan_defiance,
+    super::gtc12::domri_rade,
+];
 static GTC13: &[Factory] = &[
     super::gtc13::undercity_plague,
     super::gtc13::thrull_parasite,
@@ -8742,8 +8781,13 @@ static GTC9: &[Factory] = &[
     super::gtc9::murder_investigation,
     super::gtc9::dying_wish,
 ];
-static ICE: &[Factory] = &[super::ice::brainstorm];
-static INV: &[Factory] = &[super::inv::terminate, super::inv::opt];
+static ICE: &[Factory] = &[
+    super::ice::brainstorm,
+];
+static INV: &[Factory] = &[
+    super::inv::terminate,
+    super::inv::opt,
+];
 static JOU: &[Factory] = &[
     super::jou::oreskos_swiftclaw,
     super::jou::pensive_minotaur,
@@ -8881,7 +8925,9 @@ static JOU3: &[Factory] = &[
     super::jou3::stormchaser_chimera,
     super::jou3::ajani_mentor_of_heroes,
 ];
-static KHM: &[Factory] = &[super::khm::dragonkin_berserker];
+static KHM: &[Factory] = &[
+    super::khm::dragonkin_berserker,
+];
 static KLD: &[Factory] = &[
     super::kld::attune_with_aether,
     super::kld::rogue_refiner,
@@ -9250,7 +9296,9 @@ static LEA: &[Factory] = &[
     super::lea::demonic_tutor,
     super::lea::wheel_of_fortune,
 ];
-static M11: &[Factory] = &[super::m11::preordain];
+static M11: &[Factory] = &[
+    super::m11::preordain,
+];
 static M15: &[Factory] = &[
     super::m15::triplicate_spirits,
     super::m15::ephemeral_shields,
@@ -10558,8 +10606,12 @@ static ONE: &[Factory] = &[
     super::one::rhuk_hexgold_nabber,
     super::one::ria_ivor_bane_of_bladehold,
 ];
-static PC2: &[Factory] = &[super::pc2::baleful_strix];
-static POR: &[Factory] = &[super::por::shock];
+static PC2: &[Factory] = &[
+    super::pc2::baleful_strix,
+];
+static POR: &[Factory] = &[
+    super::por::shock,
+];
 static RAV: &[Factory] = &[
     super::rav::boros_swiftblade,
     super::rav::courier_hawk,
@@ -16008,7 +16060,9 @@ static THS: &[Factory] = &[
     super::ths::agent_of_horizons,
     super::ths::nykthos_shrine_to_nyx,
 ];
-static TMP: &[Factory] = &[super::tmp::reanimate];
+static TMP: &[Factory] = &[
+    super::tmp::reanimate,
+];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,
     super::war::naga_eternal,
@@ -16254,6 +16308,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("bro", BRO),
     ("c21", C21),
     ("chk", CHK),
+    ("chk2", CHK2),
     ("curses", CURSES),
     ("decks", DECKS),
     ("dgm", DGM),
@@ -16324,7 +16379,5 @@ pub fn per_set_card_factories() -> &'static [(&'static str, &'static [Factory])]
 
 /// Every zero-arg card factory exposed under `sets::*`.
 pub fn all_catalog_card_factories() -> impl Iterator<Item = Factory> {
-    per_set_card_factories()
-        .iter()
-        .flat_map(|(_, fs)| fs.iter().copied())
+    per_set_card_factories().iter().flat_map(|(_, fs)| fs.iter().copied())
 }

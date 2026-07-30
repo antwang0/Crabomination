@@ -113,6 +113,9 @@ fn is_mana_ability(effect: &Effect) -> bool {
             // Incidental non-targeting self-counter (Twitching Doll's "put a
             // nest counter on this creature") — CR 605.1a rider, no stack use.
             Effect::AddCounter { what: crate::effect::Selector::This, .. } => true,
+            // "This land doesn't untap during your next untap step" (the CHK
+            // slow duals) — another non-targeting CR 605.1a rider.
+            Effect::SkipNextUntap { what: crate::effect::Selector::This } => true,
             // CR 605.1a/603.7 — a reflexive "when you do" rider triggers OFF
             // the mana ability; it goes on the stack itself but doesn't stop
             // the ability being a mana ability (Rubble Rouser's "Add {R}.
@@ -5716,11 +5719,35 @@ impl GameState {
         // picked the count as the cast's X — concretize into the shared
         // SacrificePermanent payment path.
         for c in additional_costs.iter_mut() {
-            if let crate::card::AdditionalCastCost::SacrificeAnyNumber { filter } = c {
-                *c = crate::card::AdditionalCastCost::SacrificePermanent {
-                    filter: filter.clone(),
-                    count: x_value.unwrap_or(0),
-                };
+            match c {
+                crate::card::AdditionalCastCost::SacrificeAnyNumber { filter } => {
+                    *c = crate::card::AdditionalCastCost::SacrificePermanent {
+                        filter: filter.clone(),
+                        count: x_value.unwrap_or(0),
+                    };
+                }
+                // "Sacrifice all [filter] you control" (Soulblast) — the count
+                // is whatever the caster has right now.
+                crate::card::AdditionalCastCost::SacrificeAll { filter } => {
+                    let count = self
+                        .battlefield
+                        .iter()
+                        .filter(|b| {
+                            b.controller == p
+                                && self.evaluate_requirement_static(
+                                    filter,
+                                    &Target::Permanent(b.id),
+                                    p,
+                                    None,
+                                )
+                        })
+                        .count() as u32;
+                    *c = crate::card::AdditionalCastCost::SacrificePermanent {
+                        filter: filter.clone(),
+                        count,
+                    };
+                }
+                _ => {}
             }
         }
         if !additional_costs.is_empty() && !self.additional_costs_payable(p, &additional_costs) {
@@ -5996,6 +6023,7 @@ impl GameState {
                 let def = std::sync::Arc::make_mut(&mut card.definition);
                 def.effect = Effect::WithSacrificedPt {
                     power: pw,
+                    total_power: self.sacrificed_total_power,
                     toughness: tough,
                     count: self.sacrificed_count,
                     mana_value: mv,
@@ -6143,7 +6171,7 @@ impl GameState {
             // "Sacrifice one or more" — zero is a legal choice, so the cost
             // is always payable (the cast pipeline concretizes it into a
             // counted SacrificePermanent before payment).
-            A::SacrificeAnyNumber { .. } => true,
+            A::SacrificeAnyNumber { .. } | A::SacrificeAll { .. } => true,
             A::Discard { count, filter } => {
                 self.players[p]
                     .hand
@@ -6303,7 +6331,7 @@ impl GameState {
             match cost {
                 // Concretized into SacrificePermanent before payment; a raw
                 // instance here (flashback path etc.) means count 0 — no-op.
-                A::SacrificeAnyNumber { .. } => {}
+                A::SacrificeAnyNumber { .. } | A::SacrificeAll { .. } => {}
                 A::SacrificePermanent { filter, count } => {
                     // Honor the player's explicit pick(s) when present and
                     // valid; auto-pick the `count` cheapest matching permanents
@@ -6372,6 +6400,8 @@ impl GameState {
                             .collect()
                     };
                     self.sacrificed_count = chosen.len() as u32;
+                    self.sacrificed_total_power =
+                        chosen.iter().map(|c| c.1 as i32).sum();
                     for (idx, (id, power, is_creature, tough, mv, is_artifact, is_vehicle, colors)) in
                         chosen.into_iter().enumerate()
                     {
@@ -12625,6 +12655,7 @@ impl GameState {
             let effect = match cost_sac_pt {
                 Some((power, toughness)) => Effect::WithSacrificedPt {
                     power,
+                    total_power: power,
                     toughness,
                     count: 1,
                     mana_value: cost_sac_mv,
@@ -12657,6 +12688,7 @@ impl GameState {
             let mut queued_effect = match cost_sac_pt {
                 Some((power, toughness)) => Effect::WithSacrificedPt {
                     power,
+                    total_power: power,
                     toughness,
                     count: 1,
                     mana_value: cost_sac_mv,

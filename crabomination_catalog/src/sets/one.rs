@@ -5001,6 +5001,7 @@ pub fn mite_overseer() -> CardDefinition {
                 toughness: 0,
                 keywords: vec![Keyword::FirstStrike],
                 opponents: false,
+                all_players: false,
                 only_your_turn: true,
                 scale_by_counters_on_self: None,
             },

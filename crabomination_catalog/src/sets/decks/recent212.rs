@@ -198,6 +198,7 @@ pub fn crossway_troublemakers() -> CardDefinition {
                 toughness: 0,
                 keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
                 opponents: false,
+                all_players: false,
                 only_your_turn: false,
                 scale_by_counters_on_self: None,
             },

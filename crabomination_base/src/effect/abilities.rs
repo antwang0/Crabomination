@@ -975,6 +975,9 @@ pub enum StaticEffect {
     /// the permanent) unless combat damage can't be prevented this turn (615.12).
     /// Fog Bank, Guard Gomazoa.
     PreventAllCombatDamageToThis,
+    /// The attached-host sibling: "prevent all combat damage that would be
+    /// dealt to equipped creature" (General's Kabuto).
+    PreventAllCombatDamageToAttached,
     /// "Prevent all damage that would be dealt to this permanent" — the
     /// combat+noncombat superset of `PreventAllCombatDamageToThis`, consulted
     /// on both damage funnels. Wrap in `WhileYourTurn` for turn-gated
@@ -1340,6 +1343,11 @@ pub enum StaticEffect {
         keywords: Vec<Keyword>,
         #[serde(default)]
         opponents: bool,
+        /// "[filter] get +P/+T" with no controller scoping at all — every
+        /// seat's matching permanents are pumped (Konda's Banner). Overrides
+        /// `opponents`. Defaults false for snapshot back-compat.
+        #[serde(default)]
+        all_players: bool,
         /// "During your turn, [filter] you control have …" — the anthem only
         /// applies while its controller is the active player (Yuna, Hope of
         /// Spira). Defaults false (always on) for snapshot back-compat.
@@ -1351,6 +1359,10 @@ pub enum StaticEffect {
         #[serde(default)]
         scale_by_counters_on_self: Option<crate::card::CounterType>,
     },
+    /// CR 702.44 — "each other Samurai you control gets +1/+1 for each point of
+    /// bushido it has" (Takeno, Samurai General). Each matching creature is
+    /// pumped by its own bushido rating, so the modifier varies per permanent.
+    PumpPerBushido { filter: SelectionRequirement },
     /// Condition-gated sibling of `AnthemForFilter`: "as long as [condition],
     /// [filter] you control get +P/+T and have [keywords]" (Sword of the
     /// Paruns' tapped/untapped halves). The predicate is evaluated against the
@@ -1927,15 +1939,13 @@ pub enum StaticEffect {
     /// untaps on every untap step its controller doesn't already untap on.
     /// Consulted by `do_untap` alongside `UntapSelfEachUntapStep`.
     UntapAttachedEachUntapStep,
-    /// CR 502.3 — "Players can't untap more than one nonbasic land during their
-    /// untap steps." Winter Moon / Mana Web-style lock. Consulted by `do_untap`:
-    /// each untapping player untaps at most one nonbasic land (the rest stay
-    /// tapped). Global — applies to every player, not just the controller.
-    MaxOneNonbasicLandUntap,
-    /// CR 502.3 — "Players can't untap more than one artifact during their
-    /// untap steps" (Imi Statue). The artifact sibling of
-    /// `MaxOneNonbasicLandUntap`; global, consulted by `do_untap`.
-    MaxOneArtifactUntap,
+    /// CR 502.3 — "Players can't untap more than one `filter` during their
+    /// untap steps." Winter Moon (nonbasic lands) / Imi Statue (artifacts).
+    /// Consulted by `do_untap`: each untapping player untaps at most one
+    /// matching permanent, the rest stay tapped. Global — applies to every
+    /// player, not just the controller. Multiple copies each cap their own
+    /// filter independently.
+    MaxOneUntapPerStep { filter: SelectionRequirement },
     /// CR 121.2a — "If a player would draw a card, that player skips that draw
     /// instead" (Possessed Portal). Global draw replacement consulted in
     /// `draw_one`.
@@ -1997,6 +2007,10 @@ pub enum StaticEffect {
     /// "Your opponents can't cast spells during your turn." Voice of
     /// Victory. Gated at the cast-action dispatch.
     OpponentsCantCastDuringYourTurn,
+    /// CR 601 — "Players can cast spells only during their own turns." Dosan
+    /// the Falling Leaf. Symmetric: gated at the cast dispatch for *every*
+    /// seat that isn't the active player, including the static's controller.
+    PlayersCastOnlyOnOwnTurn,
     /// "During your turn, your opponents can't cast spells or activate
     /// abilities of artifacts, creatures, or enchantments." Grand Abolisher.
     /// Blocks both the cast dispatch (like `OpponentsCantCastDuringYourTurn`)

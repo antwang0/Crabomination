@@ -89,6 +89,7 @@ fn cr_611_2c_during_your_turn_anthem_turn_gated() {
                     toughness: 2,
                     keywords: vec![],
                     opponents: false,
+                    all_players: false,
                     only_your_turn: true,
                     scale_by_counters_on_self: None,
                 },

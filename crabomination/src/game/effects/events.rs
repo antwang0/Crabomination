@@ -278,6 +278,11 @@ pub(crate) fn event_matches_spec(
             event,
             GameEvent::PermanentTapped { card_id, .. } if *card_id == source.id
         ) || matches!(
+            // CR 605 — "Whenever you tap this land for mana" (Forbidden
+            // Orchard). Source must equal the tapped source.
+            event,
+            GameEvent::TappedForMana { card_id, .. } if *card_id == source.id
+        ) || matches!(
             // "Whenever this Equipment becomes attached" (Blade of Shared
             // Souls). Source must equal the moved attachment.
             event,
@@ -392,7 +397,16 @@ pub(crate) fn event_matches_spec(
                 });
             subject_controller == Some(source.controller)
         }
+        // The card sits in a graveyard; the event still has to be "yours".
+        // Player-actor events carry the seat directly; object events (a
+        // permanent entering — Blood Speaker) fall back to the subject's
+        // controller.
         EventScope::FromYourGraveyard => event_actor(state, event)
+            .or_else(|| {
+                event_card(event)
+                    .and_then(|cid| state.battlefield_find(cid))
+                    .map(|c| c.controller)
+            })
             .is_some_and(|p| p == source.owner),
         EventScope::YourSourceDamagedOpponent => matches!(
             event,

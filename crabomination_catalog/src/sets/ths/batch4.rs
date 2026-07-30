@@ -283,6 +283,7 @@ pub fn rageblood_shaman() -> CardDefinition {
                 toughness: 1,
                 keywords: vec![Keyword::Trample],
                 opponents: false,
+                all_players: false,
                 only_your_turn: false,
                 scale_by_counters_on_self: None,
             },

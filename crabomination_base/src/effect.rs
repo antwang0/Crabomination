@@ -274,6 +274,12 @@ pub enum Selector {
     AttachedTo(Box<Selector>),
     /// All permanents attached to `anchor`.
     AttachedToMe(Box<Selector>),
+    /// CR 702.6e — the Aura/Equipment attached to the source that granted the
+    /// ability now resolving, for granted lines that name their granter
+    /// ("{T}: Put an aim counter on Hankyu" — Hankyu, Rakdos Riteknife).
+    /// Resolves to the attachments on the source that grant abilities; two
+    /// granters on one host are indistinguishable, so all of them match.
+    AttachmentGranting,
     /// One legal object chosen uniformly at random from the battlefield
     /// permanents and players matching `filter` — "any target chosen at
     /// random" (Goblin Test Pilot). Resolves to nothing when the pool is
@@ -604,6 +610,9 @@ pub enum Value {
     /// (set by `Effect::SacrificeAndRemember`). Used by Thud / Greater
     /// Gargadon-style sacrifice + damage spells.
     SacrificedPower,
+    /// Summed power of every permanent sacrificed this resolution — the
+    /// "total power of the sacrificed creatures" wording (Soulblast).
+    SacrificedTotalPower,
     /// How many permanents the cast's additional cost (or the current
     /// resolution) sacrificed — "for each creature sacrificed this way"
     /// (Vicious Betrayal). Reads `GameState.sacrificed_count`.
@@ -1789,6 +1798,9 @@ pub enum CounteredSpellZone {
     /// CR 702.170 — exile and mark plotted, so its owner may cast it for free
     /// as a sorcery on a later turn (Aven Interrupter).
     ExilePlotted,
+    /// Exile stamped `exiled_with` = the countering source, so the source can
+    /// name what it took later (Shell of the Last Kappa).
+    ExileWithSource,
 }
 
 /// What mana to add to a pool.
@@ -5857,6 +5869,9 @@ pub enum Effect {
     /// `activate_ability`; not meant for card definitions.
     WithSacrificedPt {
         power: i32,
+        /// Summed power of every permanent sacrificed to the cost (Soulblast).
+        #[serde(default)]
+        total_power: i32,
         toughness: i32,
         /// How many permanents the cost sacrificed (Vicious Betrayal's "for
         /// each creature sacrificed this way" — `Value::SacrificedCount`).

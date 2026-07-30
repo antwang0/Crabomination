@@ -415,6 +415,10 @@ pub struct GameState {
     /// read by `Value::SacrificedPower` (e.g. Thud). Reset between
     /// independent spell/ability resolutions.
     pub(crate) sacrificed_power: Option<i32>,
+    /// Summed power of EVERY permanent sacrificed to pay this resolution's
+    /// costs (Soulblast's "total power of the sacrificed creatures"), where
+    /// `sacrificed_power` holds only the first.
+    pub(crate) sacrificed_total_power: i32,
     /// Transient: how many permanents the current cost payment / resolution
     /// sacrificed. Read by `Value::SacrificedCount` ("for each creature
     /// sacrificed this way" — Vicious Betrayal). Reset with the siblings.
@@ -1411,6 +1415,7 @@ impl Clone for GameState {
             delayed_triggers: self.delayed_triggers.clone(),
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
+            sacrificed_total_power: self.sacrificed_total_power,
             sacrificed_count: self.sacrificed_count,
             sacrificed_was_artifact: self.sacrificed_was_artifact,
             sacrificed_was_outlaw: self.sacrificed_was_outlaw,
@@ -1624,6 +1629,7 @@ impl GameState {
             delayed_triggers: Vec::new(),
             attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
+            sacrificed_total_power: 0,
             sacrificed_count: 0,
             sacrificed_was_artifact: None,
             sacrificed_was_outlaw: None,
@@ -3636,6 +3642,12 @@ impl GameState {
                 matches!(sa.effect, StaticEffect::PreventAllCombatDamageToThis)
                     || self.self_static_prevents_all_damage_active(&sa.effect, c.controller)
             })
+        }) || self.battlefield.iter().any(|eq| {
+            // General's Kabuto — the Equipment carries the prevention for its host.
+            eq.attached_to == Some(tgt)
+                && eq.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::PreventAllCombatDamageToAttached)
+                })
         })
     }
 
@@ -6486,6 +6498,45 @@ impl GameState {
                 }
             }
         }
+        // CR 702.44 — "each other Samurai you control gets +1/+1 for each point
+        // of bushido it has" (Takeno). Per-permanent magnitude, so each match
+        // gets its own pinned effect.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::PumpPerBushido { filter } = &sa.effect else {
+                    continue;
+                };
+                for other in &self.battlefield {
+                    // Printed bushido only — this runs inside the layer gather,
+                    // so the computed view isn't available yet.
+                    let Some(n) = other.definition.keywords.iter().find_map(|k| match k {
+                        crate::card::Keyword::Bushido(n) => Some(*n as i32),
+                        _ => None,
+                    }) else {
+                        continue;
+                    };
+                    if n == 0
+                        || !self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::types::Target::Permanent(other.id),
+                            card.controller,
+                            Some(card.id),
+                        )
+                    {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![other.id]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(n, n),
+                    });
+                }
+            }
+        }
         // Chosen-type tribal anthem (`StaticEffect::AnthemForChosenType`) —
         // pumps the controller's creatures of the type named at the source's
         // ETB (`CardInstance.chosen_creature_type`). Adaptive Automaton,
@@ -6603,13 +6654,13 @@ impl GameState {
             for sa in &card.definition.static_abilities {
                 // `AnthemForFilterIf` shares this gather; its predicate gate is
                 // re-evaluated here so the anthem switches off live.
-                let (filter, power, toughness, keywords, opponents, only_your_turn,
+                let (filter, power, toughness, keywords, opponents, all_players, only_your_turn,
                      scale_by_counters_on_self) = match &sa.effect {
                     crate::effect::StaticEffect::AnthemForFilter {
-                        filter, power, toughness, keywords, opponents, only_your_turn,
-                        scale_by_counters_on_self,
-                    } => (filter, power, toughness, keywords, opponents, only_your_turn,
-                          scale_by_counters_on_self),
+                        filter, power, toughness, keywords, opponents, all_players,
+                        only_your_turn, scale_by_counters_on_self,
+                    } => (filter, power, toughness, keywords, opponents, all_players,
+                          only_your_turn, scale_by_counters_on_self),
                     crate::effect::StaticEffect::AnthemForFilterIf {
                         filter, power, toughness, keywords, condition,
                     } => {
@@ -6619,7 +6670,7 @@ impl GameState {
                         if !self.evaluate_predicate(condition, &ctx) {
                             continue;
                         }
-                        (filter, power, toughness, keywords, &false, &false, &None)
+                        (filter, power, toughness, keywords, &false, &false, &false, &None)
                     }
                     _ => continue,
                 };
@@ -6634,7 +6685,9 @@ impl GameState {
                     None => 1,
                 };
                 let (power, toughness) = (&(power * scale), &(toughness * scale));
-                let seats: Vec<usize> = if *opponents {
+                let seats: Vec<usize> = if *all_players {
+                    (0..self.players.len()).collect()
+                } else if *opponents {
                     self.opponents_of(card.controller)
                 } else {
                     vec![card.controller]
@@ -8740,10 +8793,20 @@ impl GameState {
             }
         }
         // Voice of Victory — the active player's opponents can't cast spells
-        // during that player's turn.
+        // during that player's turn. Dosan the Falling Leaf is the symmetric
+        // sibling: nobody casts off-turn, whoever controls it.
         if action.is_cast() {
             let caster = self.priority.player_with_priority;
             let active = self.active_player_idx;
+            if caster != active
+                && self.battlefield.iter().any(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, crate::effect::StaticEffect::PlayersCastOnlyOnOwnTurn)
+                    })
+                })
+            {
+                return Err(GameError::SilencedThisTurn);
+            }
             let locked = caster != active
                 && !self.same_team(caster, active)
                 && self.battlefield.iter().any(|c| {
@@ -10013,6 +10076,17 @@ impl GameState {
             && self
                 .computed_permanent(target)
                 .is_some_and(|c| c.keywords.contains(&crate::card::Keyword::CantBeEquipped))
+        {
+            return Err(GameError::InvalidTarget);
+        }
+        // CR 301.5c — "can be attached only to a [filter]" (Konda's Banner).
+        if let Some(f) = &self.battlefield[equip_pos].definition.attach_only_filter
+            && !self.evaluate_requirement_static(
+                f,
+                &crate::game::types::Target::Permanent(target),
+                p,
+                Some(equipment),
+            )
         {
             return Err(GameError::InvalidTarget);
         }
@@ -15291,6 +15365,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleDamageDealt
             | StaticEffect::HalveDamageDealt
             | StaticEffect::PreventAllCombatDamageToThis
+            | StaticEffect::PreventAllCombatDamageToAttached
             | StaticEffect::PreventAllDamageToThis
             | StaticEffect::PreventAllCombatDamageToThisFromBlockers
             // Prevention statics read at damage time in
@@ -15526,6 +15601,7 @@ fn static_effect_to_effects(
             // (opponents / predicate eval); resolved in `gather_continuous_effects`.
             | StaticEffect::AnthemForFilter { .. }
             | StaticEffect::AnthemForFilterIf { .. }
+            | StaticEffect::PumpPerBushido { .. }
             | StaticEffect::SelfBasePtFromValue { .. }
             | StaticEffect::SelfHasKeywordIf { .. }
             | StaticEffect::SelfIsCreatureIf { .. }
@@ -15643,11 +15719,9 @@ fn static_effect_to_effects(
             // UntapAttachedEachUntapStep (Urban Burgeoning) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::UntapAttachedEachUntapStep
-            // MaxOneNonbasicLandUntap (Winter Moon) — consulted by `do_untap`;
-            // no layer effect.
-            | StaticEffect::MaxOneNonbasicLandUntap
-            // Imi Statue — consulted by `do_untap`; no layer effect.
-            | StaticEffect::MaxOneArtifactUntap
+            // MaxOneUntapPerStep (Winter Moon, Imi Statue) — consulted by
+            // `do_untap`; no layer effect.
+            | StaticEffect::MaxOneUntapPerStep { .. }
             // Silent Arbiter's combat caps — consulted by `declare_attackers` /
             // `declare_blockers`; no layer effect.
             | StaticEffect::MaxAttackersPerCombat(_)
@@ -15786,6 +15860,9 @@ fn static_effect_to_effects(
             | StaticEffect::TaxOpponentSpellsTargeting { .. }
             | StaticEffect::TaxOpponentSpellsTargetingThis { .. }
             | StaticEffect::OpponentsCantCastDuringYourTurn
+            // PlayersCastOnlyOnOwnTurn (Dosan) — consulted at the cast
+            // dispatch; no layer effect.
+            | StaticEffect::PlayersCastOnlyOnOwnTurn
             | StaticEffect::OpponentsCantActDuringYourTurn
             // Void Winnower — cast gate + block-legality gate; no layer effect.
             | StaticEffect::OpponentsCantCastEvenMv

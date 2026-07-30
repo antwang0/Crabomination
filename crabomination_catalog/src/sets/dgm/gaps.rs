@@ -91,6 +91,7 @@ pub fn exava_rakdos_blood_witch() -> CardDefinition {
                 toughness: 0,
                 keywords: vec![Keyword::Haste],
                 opponents: false,
+                all_players: false,
                 only_your_turn: false,
                 scale_by_counters_on_self: None,
             },

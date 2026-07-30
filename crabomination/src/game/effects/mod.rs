@@ -985,6 +985,7 @@ impl GameState {
         // Reset sacrificed-power / sacrificed-toughness / sacrificed-mana-value
         // scratch for this independent resolution.
         self.sacrificed_power = None;
+        self.sacrificed_total_power = 0;
         self.sacrificed_count = 0;
         self.sacrificed_toughness = None;
         self.sacrificed_mana_value = None;
@@ -11279,6 +11280,11 @@ impl GameState {
                             CounteredSpellZone::Exile => {
                                 self.exile.push(*card);
                             }
+                            CounteredSpellZone::ExileWithSource => {
+                                let mut c = *card;
+                                c.exiled_with = ctx.source;
+                                self.exile.push(c);
+                            }
                             CounteredSpellZone::ExilePlotted => {
                                 let cid = card.id;
                                 self.exile.push(*card);
@@ -12980,26 +12986,27 @@ impl GameState {
 
             Effect::SearchUpToN { who, filter, to, count } => {
                 let n = self.evaluate_value(count, ctx).max(0);
-                if n == 0 { return Ok(()); }
-                // Run one Search; chain the remaining picks as the suspend
-                // continuation (or run them inline under AutoDecider). The
-                // single-Search arm already handles tax/limit/zone routing.
-                let one = Effect::Search { who: who.clone(), filter: filter.clone(), to: to.clone() };
-                let rest = Effect::SearchUpToN {
-                    who: who.clone(),
-                    filter: filter.clone(),
-                    to: to.clone(),
-                    count: crate::effect::Value::Const(n - 1),
-                };
-                self.run_effect(&one, ctx, events)?;
-                // If the single Search suspended (wants_ui), splice the
-                // remaining picks after it; otherwise loop inline.
-                if let Some((d, p, tail)) = self.suspend_signal.take() {
-                    let chained = Effect::Seq(vec![tail, rest]);
-                    self.suspend_signal = Some((d, p, chained));
-                    return Ok(());
+                // Iterate rather than recurse: Grozoth chains 20 picks and
+                // `run_effect`'s frame is fat enough that recursion overflows a
+                // test thread's stack.
+                let one =
+                    Effect::Search { who: who.clone(), filter: filter.clone(), to: to.clone() };
+                for done in 0..n {
+                    self.run_effect(&one, ctx, events)?;
+                    // A `wants_ui` pick suspends: splice the outstanding picks
+                    // in after the suspend's own continuation and hand back.
+                    if let Some((d, p, tail)) = self.suspend_signal.take() {
+                        let rest = Effect::SearchUpToN {
+                            who: who.clone(),
+                            filter: filter.clone(),
+                            to: to.clone(),
+                            count: crate::effect::Value::Const(n - done - 1),
+                        };
+                        self.suspend_signal = Some((d, p, Effect::Seq(vec![tail, rest])));
+                        return Ok(());
+                    }
                 }
-                self.run_effect(&rest, ctx, events)
+                Ok(())
             }
 
             e @ (Effect::Search { .. }
@@ -16607,8 +16614,17 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::WithSacrificedPt { power, toughness, count, mana_value, card, body } => {
+            Effect::WithSacrificedPt {
+                power,
+                total_power,
+                toughness,
+                count,
+                mana_value,
+                card,
+                body,
+            } => {
                 self.sacrificed_power = Some(*power);
+                self.sacrificed_total_power = *total_power;
                 self.sacrificed_toughness = Some(*toughness);
                 self.sacrificed_count = *count;
                 self.sacrificed_mana_value = Some(*mana_value);
@@ -21944,6 +21960,20 @@ impl GameState {
                         .map(EntityRef::Permanent)
                 })
                 .collect(),
+
+            Selector::AttachmentGranting => {
+                let Some(host) = ctx.source else { return vec![] };
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.attached_to == Some(host))
+                    .filter(|c| {
+                        c.definition.equipped_bonus.as_ref().is_some_and(|b| {
+                            !b.activated_abilities.is_empty() || !b.triggered_abilities.is_empty()
+                        })
+                    })
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
 
             Selector::AttachedToMe(inner) => {
                 let anchors: Vec<CardId> = self

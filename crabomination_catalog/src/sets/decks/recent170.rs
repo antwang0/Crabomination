@@ -206,6 +206,7 @@ pub fn salvation_engine() -> CardDefinition {
                 toughness: 2,
                 keywords: vec![],
                 opponents: false,
+                all_players: false,
                 only_your_turn: false,
                 scale_by_counters_on_self: None,
             },

@@ -515,6 +515,17 @@ pub enum CounterType {
     /// Divinity counter — the Myojin cycle enters with one if cast from hand;
     /// it grants indestructibility and fuels a one-shot activated ability.
     Divinity,
+    /// Devotion counter — Pious Kitsune's upkeep tally / Bloodthirsty Ogre's
+    /// -X/-X fuel (CHK).
+    Devotion,
+    /// Aim counter — Hankyu banks one per activation and spends the lot as
+    /// damage (CHK).
+    Aim,
+    /// Theft counter — Night Dealings banks one per point of damage its
+    /// controller's sources deal; remove X to tutor a mana-value-X card.
+    Theft,
+    /// Training counter — Sensei Golden-Tail's sorcery-speed bushido grant.
+    Training,
     /// Fellowship counter — Banner of Kinship enters with one per chosen-type
     /// creature; the chosen type gets +1/+1 per counter.
     Fellowship,
@@ -1552,6 +1563,12 @@ pub enum SelectionRequirement {
     /// Shares a colour with the card exiled with the ability's source
     /// (Mourner's Shield's imprint).
     SharesColorWithExiledBySource,
+    /// Shares a colour with the permanent the ability's source is attached to
+    /// (Konda's Banner). False when the source is unattached.
+    SharesColorWithAttachedHost,
+    /// Shares a creature type with the permanent the ability's source is
+    /// attached to (Konda's Banner). Changeling hosts share with everything.
+    SharesCreatureTypeWithAttachedHost,
     /// The permanent's mana value equals the evaluating player's unspent
     /// (floating) mana — Glissa Sunseeker.
     ManaValueEqualsYourUnspentMana,
@@ -2529,6 +2546,11 @@ pub struct CardDefinition {
     /// regular `Keyword::Equip` cost. Defaults to `None`.
     #[serde(default)]
     pub equip_token_cost: Option<crate::mana::ManaCost>,
+    /// CR 301.5c — "This Equipment can be attached only to a [filter]"
+    /// (Konda's Banner). Gates `equip` and the CR 704.5n unattach sweep, so a
+    /// host that stops matching sheds the Equipment.
+    #[serde(default)]
+    pub attach_only_filter: Option<SelectionRequirement>,
     /// "When you cast this spell, copy it X times" where X is the cast's
     /// `x_value` — the Storm-family cast-time copy rider driven by a
     /// caster-chosen count (Plumb the Forbidden's "when you sacrifice a
@@ -2980,6 +3002,10 @@ pub enum AdditionalCastCost {
     /// this into `SacrificePermanent { count: x }` before payment, so
     /// downstream payment/trigger machinery is shared.
     SacrificeAnyNumber { filter: SelectionRequirement },
+    /// "As an additional cost to cast this spell, sacrifice all [filter]"
+    /// (Soulblast). Concretized to a `SacrificePermanent` of the live count at
+    /// cast time.
+    SacrificeAll { filter: SelectionRequirement },
     /// "As an additional cost, discard N card(s)." When `filter` is set, the
     /// discard is restricted to matching cards ("discard a land card" —
     /// Magmatic Insight); `None` allows any card (Big Score, Illuminate
