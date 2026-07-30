@@ -6685,6 +6685,11 @@ impl GameState {
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_game_turn += 1;
+        // Per-turn cast-name log (Grim Reminder's "cast a spell this turn with
+        // the same name").
+        self.players[p]
+            .spell_names_cast_this_turn
+            .push(card.definition.name.to_string());
         // "First noncreature spell of a turn" tally (Nullstone Gargoyle). An
         // Adventure/Omen half cast is a noncreature spell regardless of the
         // card's front face.

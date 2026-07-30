@@ -2019,3 +2019,64 @@ fn quicksilver_elemental_borrows_activated_abilities() {
     })
     .expect_err("Tower isn't a creature");
 }
+
+/// Mindslaver hands the wheel over for its target's next turn.
+#[test]
+fn mindslaver_takes_the_next_turn() {
+    let mut g = main_phase();
+    let slaver = g.add_card_to_battlefield(0, catalog::mindslaver());
+    g.clear_sickness(slaver);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: slaver, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(slaver).is_none(), "sacrificed as a cost");
+    assert_eq!(g.pending_player_control, vec![(1, 0)]);
+}
+
+/// Confusion in the Ranks swaps the entering permanent with a shared type.
+#[test]
+fn confusion_in_the_ranks_swaps_on_entry() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::confusion_in_the_ranks());
+    let theirs = g.add_card_to_battlefield(1, catalog::reiver_demon());
+    let mine = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mine, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0);
+}
+
+/// Grim Reminder only hits an opponent who cast the named card this turn.
+#[test]
+fn grim_reminder_punishes_the_matching_caster() {
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let their_bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: their_bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("they bolt us");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    let reminder = g.add_card_to_hand(0, catalog::grim_reminder());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: reminder, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 14, "6 for the Bolt they cast");
+}

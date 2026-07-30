@@ -462,6 +462,7 @@ impl GameState {
                     pl.noncreature_spells_cast_this_game_turn = 0;
                     pl.nonartifact_spells_cast_this_game_turn = 0;
                     pl.multicolored_spells_cast_this_turn = 0;
+                    pl.spell_names_cast_this_turn.clear();
                     pl.spells_cast_from_hand_this_turn = 0;
                     pl.oil_activity_this_turn = false;
                     pl.channel_life_for_mana = false;

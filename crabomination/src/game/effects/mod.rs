@@ -1477,6 +1477,101 @@ impl GameState {
         Ok(())
     }
 
+    /// Confusion in the Ranks — the entering permanent's controller picks a
+    /// permanent another player controls sharing a card type with it, and the
+    /// two swap. The auto-picker takes the highest mana value.
+    #[inline(never)]
+    fn exchange_control_with_shared_type(
+        &mut self,
+        what: &Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(subject) = self
+            .resolve_selector(what, ctx)
+            .into_iter()
+            .find_map(|e| match e {
+                EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                _ => None,
+            })
+        else {
+            return Ok(());
+        };
+        let Some((owner_seat, types)) = self
+            .battlefield_find(subject)
+            .map(|c| (c.controller, c.definition.card_types.clone()))
+        else {
+            return Ok(());
+        };
+        let partner = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.id != subject
+                    && c.controller != owner_seat
+                    && c.definition.card_types.iter().any(|t| types.contains(t))
+            })
+            .max_by_key(|c| c.definition.cost.cmc())
+            .map(|c| c.id);
+        let Some(partner) = partner else { return Ok(()) };
+        self.run_effect(
+            &Effect::ExchangeControl {
+                a: Selector::Target(0),
+                b: Selector::Target(1),
+            },
+            &EffectContext {
+                targets: vec![Target::Permanent(subject), Target::Permanent(partner)],
+                ..ctx.clone()
+            },
+            events,
+        )
+    }
+
+    /// Grim Reminder — reveal a nonland card from your library; every opponent
+    /// who cast a spell with that name this turn pays for it.
+    #[inline(never)]
+    fn search_reveal_punish_same_name(
+        &mut self,
+        amount: &crate::effect::Value,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let p = ctx.controller;
+        if self.no_search_this_turn {
+            return Ok(());
+        }
+        // Reveal the name most likely to matter: one an opponent already cast.
+        let cast_names: Vec<String> = (0..self.players.len())
+            .filter(|o| !self.same_team(*o, p))
+            .flat_map(|o| self.players[o].spell_names_cast_this_turn.clone())
+            .collect();
+        let picked = self.players[p]
+            .library
+            .iter()
+            .filter(|c| !c.definition.is_land())
+            .max_by_key(|c| cast_names.iter().filter(|n| *n == c.definition.name).count())
+            .map(|c| c.definition.name.to_string());
+        self.shuffle_library(p, events);
+        let Some(name) = picked else { return Ok(()) };
+        let n = self.evaluate_value(amount, ctx).max(0);
+        for o in 0..self.players.len() {
+            if self.same_team(o, p) {
+                continue;
+            }
+            if self.players[o].spell_names_cast_this_turn.contains(&name) {
+                self.run_effect(
+                    &Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Seat(o)),
+                        amount: crate::effect::Value::Const(n),
+                    },
+                    ctx,
+                    events,
+                )?;
+            }
+        }
+        Ok(())
+    }
+
     fn run_effect(
         &mut self,
         effect: &Effect,
@@ -5333,6 +5428,14 @@ impl GameState {
             }
 
             Effect::ChooseStepToSkipThisTurn { who } => self.choose_step_to_skip(who, ctx),
+
+            Effect::ExchangeControlWithSharedType { what } => {
+                self.exchange_control_with_shared_type(what, ctx, events)
+            }
+
+            Effect::SearchRevealPunishSameNameCasters { amount } => {
+                self.search_reveal_punish_same_name(amount, ctx, events)
+            }
 
             // CR 723.1 — "You control target player during that player's next
             // turn." A later entry for the same seat overwrites (723.1a).

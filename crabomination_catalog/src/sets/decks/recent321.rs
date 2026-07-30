@@ -9,7 +9,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect};
 use crate::game::TurnStep;
-use crate::mana::{cost, generic, u, ManaCost};
+use crate::mana::{b, cost, generic, r, u, ManaCost};
 
 fn artifact(name: &'static str, mana: ManaCost) -> CardDefinition {
     CardDefinition { name, cost: mana, card_types: vec![CardType::Artifact], ..Default::default() }
@@ -151,5 +151,46 @@ pub fn mindslaver() -> CardDefinition {
             ..Default::default()
         }],
         ..artifact("Mindslaver", cost(&[generic(6)]))
+    }
+}
+
+/// Confusion in the Ranks — every artifact, creature or enchantment that
+/// enters swaps places with something sharing a card type.
+pub fn confusion_in_the_ranks() -> CardDefinition {
+    CardDefinition {
+        name: "Confusion in the Ranks",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact.or(R::Creature).or(R::Enchantment),
+                }),
+            effect: Effect::ExchangeControlWithSharedType { what: Selector::TriggerSource },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Grim Reminder — punishes an opponent for casting the card you name, and
+/// climbs back out of the graveyard on your upkeep.
+pub fn grim_reminder() -> CardDefinition {
+    CardDefinition {
+        name: "Grim Reminder",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::SearchRevealPunishSameNameCasters { amount: Value::Const(6) },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b(), b()]),
+            from_graveyard: true,
+            condition: Some(Predicate::CurrentStepIs(TurnStep::Upkeep)),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
     }
 }

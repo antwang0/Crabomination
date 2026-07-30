@@ -2959,7 +2959,8 @@ impl GameState {
             R::ProducesColorless => card.definition.produces_colorless(),
             R::IsSnow => card.definition.is_snow(),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
-            // Need the ability's source, which only the static walker carries.
+            // Need the ability's source or the live trigger context, which
+            // only the static walker carries.
             R::SharesColorWithExiledBySource | R::SameNameAsExiledWithSource => false,
             // Glissa Sunseeker — "if its mana value is equal to the amount of
             // unspent mana you have".

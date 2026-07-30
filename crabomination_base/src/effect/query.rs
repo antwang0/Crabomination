@@ -204,6 +204,7 @@ impl Effect {
         }
         match self {
             Effect::Noop
+            | Effect::SearchRevealPunishSameNameCasters { .. }
             | Effect::ExileTopGreatestManaValueTakesExtraTurn
             | Effect::ChooseStepToSkipThisTurn { .. }
             | Effect::SearchExileThenTokensPerCard { .. }
@@ -667,6 +668,7 @@ impl Effect {
             | Effect::RedirectYourCombatDamageToTarget { what }
             | Effect::PreventAllDamageFromTargetThisTurn { what, .. }
             | Effect::BottomThenRevealUntilCreature { what }
+            | Effect::ExchangeControlWithSharedType { what }
             | Effect::GainAllActivatedAbilitiesOf { what, .. } => sel_has_target(what),
             Effect::AddManaKeptThisTurn { who, .. }
             | Effect::AddManaKeptThisTurnCount { who, .. } => player_has_target(who),

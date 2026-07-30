@@ -605,6 +605,10 @@ pub struct Player {
     /// to 0 for snapshot back-compat.
     #[serde(default)]
     pub skip_turns: u32,
+    /// Names of the spells this player has cast this turn (Grim Reminder).
+    /// Cleared at untap.
+    #[serde(default)]
+    pub spell_names_cast_this_turn: Vec<String>,
     /// CR 502.3 — number of this player's upcoming untap steps to skip
     /// (Yosei, the Morning Star; Frost Titan-style locks). Decremented when
     /// their untap step would run; while > 0 their permanents don't untap.
@@ -874,6 +878,7 @@ impl Player {
             cant_lose_this_turn: false,
             damage_floor_this_turn: false,
             attack_tax_until_your_turn: 0,
+            spell_names_cast_this_turn: Vec::new(),
             skip_turns: 0,
             skip_next_untap_step: 0,
             skip_next_combat: 0,

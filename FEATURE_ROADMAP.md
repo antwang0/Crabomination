@@ -16,6 +16,26 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Mirrodin (MRD) closed to 4 cards** (`set_gaps.py mrd`: 70 → 4). The
+  primitives that closure added: `GameEvent`/`EventKind::{LibraryShuffled,
+  TappedForMana}` (CR 103.2c / 605) behind a central
+  `GameState::shuffle_library`; `Effect::{LookAtHand, ChooseStepToSkipThisTurn,
+  ControlPlayerNextTurn, SearchExileThenTokensPerCard,
+  BottomThenRevealUntilCreature, ExileTopGreatestManaValueTakesExtraTurn,
+  GainAllActivatedAbilitiesOf, ExchangeControlWithSharedType,
+  SearchRevealPunishSameNameCasters}`; `StaticEffect::{
+  SpellTaxPerControllerPermanent, NoncreatureArtifactsAreCreatures,
+  ProtectionFromExiledWithCardTypes}`;
+  `Keyword::{CantAttackOrBlockUnlessPayPerCounter,
+  CantBeBlockedIfDefenderControls}`; `CardDefinition::{
+  entwine_additional_cost, equip_life_cost}`;
+  `ActivatedAbility::exile_top_cost` (and its `condition` now sees the paid X);
+  `EquipScale::count_host_attachments`; `ManaPayload::
+  AnyTypeTriggerSourceProduces`; `PlayerRef::LowestLife`; `CounterType::Flood`.
+  CR 723 player control ships end-to-end (state, `acting_seat_for`, server
+  action routing, `PlayerView.controlled_by`); a hand you've looked at stays
+  visible via `GameState.hands_revealed_to` and a client HUD chip. Tests in
+  `recent_b/mrd`, `core_rules/cr_recent43`.
 - **Darksteel (DST) complete** (`set_gaps.py dst` at zero). The primitives that
   closure added: `GameEvent::DamageDealt.from_card` +
   `EventScope::YourOtherSourceDamagedOpponent` (the printed "other than this

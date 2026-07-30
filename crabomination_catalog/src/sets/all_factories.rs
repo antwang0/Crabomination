@@ -6281,6 +6281,8 @@ static DECKS: &[Factory] = &[
     super::decks::proteus_staff,
     super::decks::quicksilver_elemental,
     super::decks::mindslaver,
+    super::decks::confusion_in_the_ranks,
+    super::decks::grim_reminder,
     super::decks::endless_cockroaches,
     super::decks::poison_tip_archer,
     super::decks::altar_of_dementia,

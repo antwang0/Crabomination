@@ -23,6 +23,46 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
+## Noticed this run (modern_decks — Mirrodin closure)
+
+- **Remaining Mirrodin (MRD) gaps — 4 cards, one primitive each.**
+  `scripts/set_gaps.py mrd` is the live list (70 → 4 this run).
+  - **Scythe of the Wretched** — attempted and reverted. A `CreatureDied`
+    trigger printed on the Equipment never produced a battlefield return: the
+    trigger doesn't reach the resolver (or `Selector::TriggerSource` can't be
+    re-homed from the graveyard) when the source is a noncreature artifact.
+    Diagnose the dispatch path before retrying. It also wants
+    `Selector::AttachmentGranting` (see the Rakdos Riteknife note below) so
+    the re-attach can name the Equipment from a granted trigger.
+  - **Shared Fate** — needs a *draw replacement* ("if a player would draw,
+    they exile the top card of an opponent's library instead") plus a
+    play-from-that-exile grant. The engine has `ExileTopAndGrantMayPlay` for
+    the second half; the first half has no hook.
+  - **Spellweaver Helix** — imprint *two* targets from a single graveyard,
+    then a cast-trigger that copies "the other" one and offers a free cast.
+    Needs a two-card imprint link plus an "other exiled-with card" selector.
+  - **Liar's Pendulum** — name a card, then an *opponent* guesses whether it's
+    in your hand. Needs a per-seat guess decision (`Decision::Guess`), which
+    would also serve Master of Predicaments.
+- **`run_effect`'s stack frame is load-bearing.** `Effect::SearchUpToN`
+  recurses once per pick (Grozoth chains 20), so any fat new `run_effect` arm
+  can overflow a test thread's stack. New non-trivial arms now go in
+  `#[inline(never)]` helpers; consider making `SearchUpToN` iterative on the
+  non-suspending path so the ceiling stops mattering.
+- **CR 723 player control is state + routing only.** `acting_seat_for` lets
+  the controller send actions for the controlled seat and CR 723.4 shares the
+  hand, but the *client* still renders from its own seat — it shows the
+  "⛓ seat N" chip without switching its action UI to the controlled board.
+  Word of Command / Opposition Agent's limited-duration control (CR 723.2) is
+  not modeled.
+- **Quicksilver Elemental drops its colour-relaxation rider.** "Spend blue as
+  though it were any colour to pay this creature's activation costs" needs a
+  source-scoped payment relaxation; the engine only has the table-wide
+  `PlayersMaySpendManaAsAnyColor` (Mycosynth Lattice).
+- **`Effect::SearchExileThenTokensPerCard` auto-takes every match** (Myr
+  Incubator). Correct for a rational player, but a `wants_ui` seat gets no
+  pick.
+
 ## Noticed this run (modern_decks — Ravnica-block gap sweep)
 
 - **Divided-damage abilities and the UI cursor.** `Effect::DealDamageDivided`
@@ -34,9 +74,10 @@ Items are grouped by area and roughly ordered by impact within each group.
   anthem evaluates its `Predicate` with an ability context anchored on the
   source, so predicates that need a per-affected-permanent subject (rather
   than the anthem's own source) can't be expressed yet.
-- **War's Toll's land trigger fires on any tap**, not just a tap for mana —
-  there is no `EventKind::TappedForMana`. Adding one would also let
-  "whenever a player taps a land for mana" cards be exact.
+- ✅ ~~**War's Toll's land trigger fires on any tap**~~ — `EventKind::
+  TappedForMana` ships (emitted from the mana-ability `{T}` payment;
+  Extraplanar Lens rides it). War's Toll itself still keys on the plain tap:
+  swap its `EventKind::Tapped` for the new kind.
 - **Rakdos Riteknife's granted line lives on the Equipment.** The printed
   ability is granted to the equipped creature; `equipped_bonus.
   activated_abilities` has no way to name the granting Equipment from the

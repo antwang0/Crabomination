@@ -6283,6 +6283,15 @@ pub enum Effect {
     /// end of turn" (Quicksilver Elemental) — the grants are stamped onto the
     /// source's `granted_activated_eot`.
     GainAllActivatedAbilitiesOf { what: Selector, duration: Duration },
+    /// CR 701.12 — "Its controller chooses target permanent another player
+    /// controls that shares a card type with it. Exchange control of those
+    /// permanents." (Confusion in the Ranks.) The partner is picked as the
+    /// effect resolves; the auto-picker takes the highest mana value.
+    ExchangeControlWithSharedType { what: Selector },
+    /// "Search your library for a nonland card and reveal it. Each opponent who
+    /// cast a spell this turn with the same name as that card loses `amount`
+    /// life. Then shuffle." (Grim Reminder.)
+    SearchRevealPunishSameNameCasters { amount: Value },
     /// CR 723.1 — "You control target player during that player's next turn."
     /// Registers a pending control entry consumed when that player actually
     /// takes a turn (Mindslaver).
