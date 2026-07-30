@@ -1935,6 +1935,36 @@ impl GameState {
         if card.counter_count(CounterType::Stun) > 0 {
             return true;
         }
+        // Every other reason `do_untap` skips a permanent, so the client's
+        // "won't untap" badge tells the same story the untap step will.
+        if card.skip_next_untap
+            || card.definition.keywords.iter().any(|k| {
+                matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
+                    if card.counter_count(*kind) > 0)
+            })
+            || card
+                .untap_locked_by
+                .is_some_and(|src| self.battlefield_find(src).is_some_and(|s| s.tapped))
+            || card
+                .untap_locked_while_present
+                .is_some_and(|src| self.battlefield_find(src).is_some())
+            // Vedalken Shackles / Entrancing Lyre keep *themselves* down while
+            // the lock they installed still holds.
+            || self
+                .temporary_control
+                .iter()
+                .any(|tc| tc.while_source_tapped && tc.source == Some(card_id))
+        {
+            return true;
+        }
+        // Turn-scoped player locks (Bontu's Last Reckoning, Blinding Beam).
+        let pl = &self.players[card.controller];
+        if (pl.lands_dont_untap_next_untap > 0 && card.definition.is_land())
+            || (pl.creatures_dont_untap_next_untap > 0 && card.definition.is_creature())
+            || pl.skip_next_untap_step > 0
+        {
+            return true;
+        }
         self.battlefield.iter().any(|c| {
             c.definition.static_abilities.iter().any(|sa| match &sa.effect {
                 StaticEffect::PreventUntap { applies_to: Selector::This } => c.id == card_id,

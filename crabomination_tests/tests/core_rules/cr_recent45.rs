@@ -270,3 +270,29 @@ fn cr_722_4_preparation_card_is_one_creature_card_in_every_zone() {
     );
     let _ = Keyword::Flying;
 }
+
+/// CR 502.3 — the view's "won't untap" flag covers every reason `do_untap`
+/// would skip a permanent, not just `PreventUntap` statics and stun counters.
+#[test]
+fn cr_502_3_wont_untap_flag_covers_every_skip_reason() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::waterveil_cavern());
+    assert!(!g.untap_prevented_by_static(land), "nothing holding it yet");
+    // The slow dual's coloured tap sets `skip_next_untap`.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("tap for coloured mana");
+    drain_stack(&mut g);
+    assert!(g.untap_prevented_by_static(land), "the one-shot skip is surfaced");
+
+    // A turn-scoped player lock covers the controller's lands too.
+    let mut g2 = two_player_game();
+    let plain = g2.add_card_to_battlefield(0, catalog::forest());
+    g2.players[0].lands_dont_untap_next_untap = 1;
+    assert!(g2.untap_prevented_by_static(plain));
+}

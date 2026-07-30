@@ -227,6 +227,10 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // "Doesn't untap while it has a [kind] counter" (Steel Dromedary) — a
         // board read: the creature stays tapped until the counter comes off.
         DoesntUntapWhileCounter(_) => "NoUntap",
+        // CR 502.3 — "you may choose not to untap this" (Hisoka's Guard,
+        // Vedalken Shackles). Distinct from NoUntap: nothing is stopping it,
+        // its controller gets a choice each untap step.
+        MayChooseNotToUntap => "MayHold",
         // Start your engines! (CR 702.179) — flags that this permanent feeds the
         // speed mechanic and carries "Max speed —" abilities that come online
         // once its controller reaches speed 4.
@@ -689,6 +693,11 @@ mod tests {
             "protection-from-card-type names the dodged type",
         );
         assert_eq!(keyword_strip(&[Keyword::CantAttackAlone]), "Pack");
+        assert_eq!(
+            keyword_strip(&[Keyword::MayChooseNotToUntap]),
+            "MayHold",
+            "the choice reads differently from a hard untap lock",
+        );
         assert_eq!(keyword_strip(&[Keyword::CantAttackOrBlockAlone]), "Pack");
         assert_eq!(
             keyword_strip(&[Keyword::DoesntUntapWhileCounter(

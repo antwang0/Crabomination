@@ -336,10 +336,39 @@ fn run_lobby_server(
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum Transport {
     Tcp,
     Ws,
+}
+
+/// The full HTTP 503 a WS connection refused before the upgrade receives.
+/// Split out from the write so the wire format is unit-testable.
+fn ws_refusal_response(reason: &slots::SlotRefusal) -> String {
+    let detail = match reason {
+        slots::SlotRefusal::GlobalCapReached => "server at capacity",
+        slots::SlotRefusal::PerIpCapReached => "too many connections from this address",
+    };
+    let body = format!("{detail}\n");
+    format!(
+        "HTTP/1.1 503 Service Unavailable\r\n\
+         Content-Type: text/plain\r\n\
+         Content-Length: {}\r\n\
+         Retry-After: 15\r\n\
+         Connection: close\r\n\r\n{body}",
+        body.len(),
+    )
+}
+
+/// Best-effort 503 for a refused WS peer, so a browser client can distinguish
+/// "server full" from "unreachable". Errors are ignored — the peer is being
+/// dropped either way.
+fn refuse_ws_handshake(stream: &TcpStream, reason: slots::SlotRefusal) {
+    use std::io::Write;
+    let mut s = stream;
+    let _ = s.set_write_timeout(Some(Duration::from_secs(2)));
+    let _ = s.write_all(ws_refusal_response(&reason).as_bytes());
+    let _ = s.flush();
 }
 
 /// Admit one accepted connection to the lobby: acquire a slot, wrap the
@@ -368,6 +397,15 @@ fn admit_lobby_conn(
                 s.current, s.peak, s.refused_global, s.refused_per_ip,
                 occ = s.occupancy_pct(), rate = s.refusal_rate_pct(), ips = s.distinct_ips, max = s.max_per_ip, pmax = s.peak_per_ip,
             );
+            // A refused WS connection hasn't been upgraded yet, so it's still
+            // a plain HTTP exchange: answer 503 with `Retry-After` instead of
+            // a bare RST, which a browser reports as "connection failed" with
+            // no way to tell a full server from an unreachable one. A refused
+            // TCP peer gets the shutdown it always did (that transport has no
+            // pre-handshake framing to carry a reason).
+            if transport == Transport::Ws {
+                refuse_ws_handshake(&stream, reason);
+            }
             let _ = stream.shutdown(std::net::Shutdown::Both);
             return true;
         }
@@ -516,6 +554,27 @@ mod tests {
     use crabomination::server::LossReason;
     use std::env;
     use std::net::IpAddr;
+
+    /// A refused WS peer gets a well-formed 503 with a retry hint, not a
+    /// bare RST.
+    #[test]
+    fn ws_refusal_is_a_well_formed_503() {
+        for (reason, detail) in [
+            (SlotRefusal::GlobalCapReached, "server at capacity"),
+            (SlotRefusal::PerIpCapReached, "too many connections"),
+        ] {
+            let r = ws_refusal_response(&reason);
+            assert!(r.starts_with("HTTP/1.1 503 Service Unavailable\r\n"), "{r}");
+            assert!(r.contains("Retry-After: 15\r\n"), "{r}");
+            assert!(r.contains("Connection: close\r\n"), "{r}");
+            let (head, body) = r.split_once("\r\n\r\n").expect("header/body split");
+            assert!(body.contains(detail), "{r}");
+            assert!(
+                head.contains(&format!("Content-Length: {}", body.len())),
+                "declared length matches the body: {r}"
+            );
+        }
+    }
 
     #[test]
     fn win_kind_buckets_reconcile_with_wins() {
