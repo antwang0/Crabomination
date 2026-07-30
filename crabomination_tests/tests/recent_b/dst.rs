@@ -746,3 +746,122 @@ fn chromescale_drake_keeps_revealed_artifacts() {
     assert_eq!(g.players[0].hand.len(), 2, "both artifacts");
     assert_eq!(g.players[0].graveyard.len(), 1, "the Bear is binned");
 }
+
+// ── Darksteel completion batch 3 (`decks::recent313`) ──
+
+/// Pristine Angel's protection suite is live only while it's untapped.
+#[test]
+fn pristine_angel_loses_protection_when_tapped() {
+    let mut g = main_phase();
+    let angel = g.add_card_to_battlefield(0, catalog::pristine_angel());
+    let pro_red = Keyword::Protection(Color::Red);
+    assert!(g.computed_permanent(angel).unwrap().keywords.contains(&pro_red));
+    assert!(g
+        .computed_permanent(angel)
+        .unwrap()
+        .keywords
+        .contains(&Keyword::ProtectionFromCardType(CardType::Artifact)));
+    g.battlefield_find_mut(angel).unwrap().tapped = true;
+    assert!(!g.computed_permanent(angel).unwrap().keywords.contains(&pro_red));
+}
+
+/// Screams from Within crawls back out of the graveyard when its host dies.
+#[test]
+fn screams_from_within_returns_when_the_host_dies() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::screams_from_within());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("enchant the Bear");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).map(|c| (c.power, c.toughness)), Some((1, 1)));
+    let mut events = vec![];
+    g.destroy_permanent(bear, false, &mut events);
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Screams from Within"),
+        "the Aura returns from the graveyard",
+    );
+}
+
+/// Roaring Slagwurm locks down every artifact when it swings.
+#[test]
+fn roaring_slagwurm_taps_all_artifacts_on_attack() {
+    let mut g = main_phase();
+    let wurm = g.add_card_to_battlefield(0, catalog::roaring_slagwurm());
+    let mine = g.add_card_to_battlefield(0, catalog::coretapper());
+    let theirs = g.add_card_to_battlefield(1, catalog::coretapper());
+    g.clear_sickness(wurm);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![crabomination::game::types::Attack {
+        attacker: wurm,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }])
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).unwrap().tapped);
+    assert!(g.battlefield_find(theirs).unwrap().tapped);
+}
+
+/// Psychic Overload taps its host, locks the untap step, and sells an escape.
+#[test]
+fn psychic_overload_locks_and_sells_an_escape() {
+    let mut g = main_phase();
+    let rock = g.add_card_to_battlefield(1, catalog::coretapper());
+    let aura = g.add_card_to_hand(0, catalog::psychic_overload());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(rock)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("enchant it");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).unwrap().tapped, "the ETB taps it");
+    assert!(g.untap_prevented_by_static(rock), "and it stays down");
+}
+
+/// Oxidize and Purge both blank regeneration before they destroy.
+#[test]
+fn oxidize_and_purge_beat_regeneration() {
+    for (def, victim) in [
+        (catalog::oxidize(), catalog::coretapper()),
+        (catalog::purge(), catalog::coretapper()),
+    ] {
+        let mut g = main_phase();
+        let target = g.add_card_to_battlefield(1, victim);
+        g.battlefield_find_mut(target).unwrap().regeneration_shields = 1;
+        let spell = g.add_card_to_hand(0, def);
+        for c in [Color::Green, Color::White] {
+            g.players[0].mana_pool.add(c, 1);
+        }
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell, target: Some(Target::Permanent(target)), additional_targets: vec![],
+            mode: None, x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(target).is_none(), "the shield doesn't save it");
+    }
+}
+
+/// Shield of Kaldra blankets the whole Kaldra set in indestructible.
+#[test]
+fn shield_of_kaldra_protects_its_siblings() {
+    let mut g = main_phase();
+    let shield = g.add_card_to_battlefield(0, catalog::shield_of_kaldra());
+    assert!(g
+        .computed_permanent(shield)
+        .unwrap()
+        .keywords
+        .contains(&Keyword::Indestructible));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(shield).unwrap().attached_to = Some(bear);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible));
+}
