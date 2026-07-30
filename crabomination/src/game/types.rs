@@ -1684,6 +1684,9 @@ pub enum GameEvent {
     CommittedCrime { player: usize },
     /// CR 701.19 — `player` searched their own library.
     PlayerSearchedLibrary { player: usize },
+    /// CR 103.2c — a spell or ability caused `player` to shuffle their library
+    /// (Psychogenic Probe). Game-setup shuffles don't emit it.
+    LibraryShuffled { player: usize },
     /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).
     CoinFlipWon { player: usize },
     /// CR 701.49 — `player` ventured into `room` of `dungeon`.

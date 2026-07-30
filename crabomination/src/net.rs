@@ -2178,6 +2178,8 @@ pub enum GameEventWire {
     CommittedCrime { player: usize },
     /// Wire mirror of `GameEvent::PlayerSearchedLibrary` (CR 701.19).
     PlayerSearchedLibrary { player: usize },
+    /// Wire mirror of `GameEvent::LibraryShuffled` (CR 103.2c).
+    LibraryShuffled { player: usize },
     /// Wire mirror of `GameEvent::CoinFlipWon` (CR 705.1).
     CoinFlipWon { player: usize },
     /// Wire mirror of `GameEvent::DungeonRoomEntered` (CR 701.49).
@@ -2366,6 +2368,9 @@ impl From<&GameEvent> for GameEventWire {
             },
             GameEvent::PlayerSearchedLibrary { player } => {
                 GameEventWire::PlayerSearchedLibrary { player: *player }
+            }
+            GameEvent::LibraryShuffled { player } => {
+                GameEventWire::LibraryShuffled { player: *player }
             }
             GameEvent::CommittedCrime { player } => {
                 GameEventWire::CommittedCrime { player: *player }
@@ -2674,6 +2679,7 @@ impl GameEventWire {
             E::DiscardedBatch { .. } => String::new(),
             E::CommittedCrime { player } => format!("{} committed a crime", pn(*player)),
             E::PlayerSearchedLibrary { player } => format!("{} searched their library", pn(*player)),
+            E::LibraryShuffled { player } => format!("{} shuffled their library", pn(*player)),
             E::CoinFlipWon { player } => format!("{} won a coin flip", pn(*player)),
             E::DungeonRoomEntered { player, dungeon, room } => {
                 format!("{} ventures into {room} ({dungeon})", pn(*player))

@@ -80,6 +80,9 @@ pub enum PlayerRef {
     /// this covers noncombat damage too — Belltower Sphinx's "that source's
     /// controller mills that many."
     LastDamagerControllerOf(Box<Selector>),
+    /// The player with the lowest life total, ties broken by the resolving
+    /// controller's choice (auto-picks the earliest seat). Loxodon Peacekeeper.
+    LowestLife,
 }
 
 /// Which players a player-targeted static effect affects. The static
@@ -2246,6 +2249,9 @@ pub enum EventKind {
     /// per search, whether or not a card was found. Matched to
     /// `GameEvent::PlayerSearchedLibrary`.
     PlayerSearchedLibrary,
+    /// CR 103.2c — a spell or ability caused a player to shuffle their library.
+    /// The shuffling player is the event subject (Psychogenic Probe).
+    LibraryShuffled,
 }
 
 /// Whose events does this trigger listen for?
@@ -3714,6 +3720,13 @@ pub enum Effect {
     /// routes to `picker`'s seat, not the library's owner (Hide // Seek's
     /// "search target opponent's library ... exile that card").
     SearchPickedBy { who: PlayerRef, picker: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
+    /// CR 701.19 — "Search your library for any number of [`filter`] cards,
+    /// exile them, then create that many tokens. Then shuffle." (Myr
+    /// Incubator.) The auto-picker takes every match.
+    SearchExileThenTokensPerCard {
+        filter: SelectionRequirement,
+        definition: crate::card::TokenDefinition,
+    },
     /// CR 701.52 — `who` seeks `count` cards matching `filter`: the engine
     /// randomly chooses among the matching cards in their library (no
     /// player choice) and moves each to `to`, then no shuffle is needed

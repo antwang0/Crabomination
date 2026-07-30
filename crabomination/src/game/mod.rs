@@ -4314,13 +4314,13 @@ impl GameState {
         // (countered, or fizzled on an illegal target) shuffles into its
         // owner's library instead.
         if card.omen_casting {
-            use rand::seq::SliceRandom;
+            
             let owner = card.owner;
             card.omen_casting = false;
             card.spliced_effects.clear();
             card.counters.clear();
             self.players[owner].library.push(card);
-            self.players[owner].library.shuffle(&mut rand::rng());
+            self.shuffle_library(owner, events);
             return false;
         }
         // CR 702.47e — splice changes are lost when the spell leaves the stack.
@@ -9285,7 +9285,7 @@ impl GameState {
 
     fn landcycle_card(&mut self, card_id: crate::card::CardId) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Keyword;
-        use rand::seq::SliceRandom;
+        
         let seat = self.player_with_priority();
         let (cycling_cost, filter) = self.players[seat]
             .hand
@@ -9367,7 +9367,7 @@ impl GameState {
                 &mut events,
             );
         }
-        self.players[seat].library.shuffle(&mut rand::rng());
+        self.shuffle_library(seat, &mut events);
         Ok(events)
     }
 
@@ -9383,7 +9383,7 @@ impl GameState {
     /// Mirror itself is among the shuffled permanents, so it is consumed.
     pub(crate) fn apply_loss_reset(&mut self, p: usize) -> bool {
         use crate::effect::StaticEffect;
-        use rand::seq::SliceRandom;
+        
         let has = self.battlefield.iter().any(|c| {
             c.controller == p
                 && c.definition
@@ -9418,8 +9418,8 @@ impl GameState {
             card.attached_to = None;
         }
         self.players[p].library.extend(into_library);
-        self.players[p].library.shuffle(&mut rand::rng());
         let mut events = Vec::new();
+        self.shuffle_library(p, &mut events);
         for _ in 0..7 {
             self.draw_one(p, &mut events);
         }
@@ -9807,12 +9807,18 @@ impl GameState {
         if energy_cost > 0 && self.players[p].energy < energy_cost {
             return Err(GameError::InsufficientEnergy);
         }
+        // "Equip—Pay 3 life" (Nightmare Lash): same up-front gate as energy.
+        let life_cost = self.battlefield[equip_pos].definition.equip_life_cost;
+        if life_cost > 0 && self.players[p].life <= life_cost as i32 {
+            return Err(GameError::InsufficientLife);
+        }
         // Pay the equip cost from the floated mana pool.
         self.players[p]
             .mana_pool
             .pay(&equip_cost)
             .map_err(GameError::Mana)?;
         self.spend_energy(p, energy_cost);
+        self.pay_life_cost(p, life_cost);
         // Attach.
         self.battlefield[equip_pos].attached_to = Some(target);
         Ok(vec![GameEvent::AttachmentMoved {
@@ -12107,6 +12113,15 @@ impl GameState {
         }
     }
 
+    /// CR 103.2c — shuffle `seat`'s library because a spell or ability said so,
+    /// emitting the `LibraryShuffled` event that "whenever a player shuffles"
+    /// triggers key on (Psychogenic Probe). Game-setup shuffles bypass this.
+    pub(crate) fn shuffle_library(&mut self, seat: usize, events: &mut Vec<GameEvent>) {
+        use rand::seq::SliceRandom;
+        self.players[seat].library.shuffle(&mut rand::rng());
+        events.push(GameEvent::LibraryShuffled { player: seat });
+    }
+
     fn shuffle_hand_to_library(&mut self, seat: usize) {
         use rand::seq::SliceRandom;
         let hand = std::mem::take(&mut *self.players[seat].hand);
@@ -12849,8 +12864,7 @@ impl GameState {
                 // searches, and a later link's shuffle would bury the cards
                 // an earlier link already placed on top.
                 if !matches!(to, crate::effect::ZoneDest::Library { .. }) {
-                    use rand::seq::SliceRandom;
-                    self.players[player].library.shuffle(&mut rand::rng());
+                    self.shuffle_library(player, &mut events);
                 }
                 if let Some(card_id) = chosen_id
                     && eligible.as_ref().is_none_or(|e| e.contains(card_id))
@@ -13392,11 +13406,11 @@ impl GameState {
                 Ok(events)
             }
             PendingEffectState::NameExileAllZonesPending { who } => {
-                use rand::seq::SliceRandom;
+                
                 let DecisionAnswer::NamedCard(name) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                let events = vec![];
+                let mut events = vec![];
                 if !name.is_empty() {
                     for zone in ["gy", "hand", "lib"] {
                         let ids: Vec<CardId> = match zone {
@@ -13421,7 +13435,7 @@ impl GameState {
                     }
                 }
                 // That player shuffles (searched their library — CR 701.19).
-                self.players[who].library.shuffle(&mut rand::rng());
+                self.shuffle_library(who, &mut events);
                 Ok(events)
             }
             PendingEffectState::NameDiscardOneOrDrawPending { who, namer } => {
@@ -14016,10 +14030,9 @@ impl GameState {
         // it to its owner's library and shuffle instead of the graveyard.
         if self.shuffle_resolving_spell_into_library {
             self.shuffle_resolving_spell_into_library = false;
-            use rand::seq::SliceRandom;
             let owner = card.owner;
             self.players[owner].library.push(card);
-            self.players[owner].library.shuffle(&mut rand::rng());
+            self.shuffle_library(owner, &mut events);
             return Ok(events);
         }
         // Approach of the Second Sun — "put this card into its owner's
@@ -14989,6 +15002,7 @@ fn static_effect_to_effects(
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
             | StaticEffect::AdditionalCost { .. }
             | StaticEffect::OpponentSpellsCostMore { .. }
+            | StaticEffect::SpellTaxPerControllerPermanent { .. }
             // Tithe Taker — read at `extra_cost_for_spell` /
             // `effective_ability_mana_cost`; no continuous-layer effect.
             | StaticEffect::OpponentActivityCostsMoreOnYourTurn { .. }

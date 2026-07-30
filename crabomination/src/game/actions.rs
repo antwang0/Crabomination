@@ -378,6 +378,20 @@ pub fn extra_cost_for_spell(
                         tax += amount;
                     }
                 }
+                // Hum of the Radix: a matching spell costs {1} more for each
+                // matching permanent its OWN controller controls.
+                StaticEffect::SpellTaxPerControllerPermanent { spell_filter, count_filter }
+                    if state.evaluate_requirement_on_card(spell_filter, card, caster) =>
+                {
+                    tax += state
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == caster
+                                && state.evaluate_requirement_on_card(count_filter, c, caster)
+                        })
+                        .count() as u32;
+                }
                 // Sphinx of New Prahv: opponents' spells targeting the Sphinx
                 // itself cost {amount} more.
                 StaticEffect::TaxOpponentSpellsTargetingThis { amount }
@@ -5194,8 +5208,11 @@ impl GameState {
         // cost below.
         let spree_modes = self.pending_spree_modes.take().unwrap_or_default();
         card.spree_modes = spree_modes.clone();
-        // CR 702.41 — opt-in Entwine; only sticks when the card has it.
-        let entwine = entwine && card.definition.has_entwine().is_some();
+        // CR 702.41 — opt-in Entwine; only sticks when the card has it (either
+        // a mana cost or a non-mana one — "Entwine—Sacrifice two lands").
+        let entwine = entwine
+            && (card.definition.has_entwine().is_some()
+                || card.definition.entwine_additional_cost.is_some());
         card.entwined = entwine;
         // CR 702.165 — opt-in Gift; only sticks when the card has it. The
         // promised gift carries no mana cost, so nothing folds into the cost.
@@ -5626,6 +5643,10 @@ impl GameState {
         // so an unpayable spell reverts to hand before any mana is spent;
         // the costs themselves are paid after the mana cost succeeds.
         let mut additional_costs = card.definition.additional_cast_cost.clone();
+        // CR 702.41b — an entwined cast also pays the non-mana entwine cost.
+        if entwine && let Some(ec) = &card.definition.entwine_additional_cost {
+            additional_costs.push(ec.clone());
+        }
         // CR 702.32b — a paid action kicker ("Kicker—Sacrifice an artifact")
         // is an additional cost of the kicked cast.
         if kicked && let Some(kc) = &card.definition.kicker_action_cost {

@@ -450,6 +450,14 @@ pub enum StaticEffect {
     /// `TaxOpponentSpellsTargeting`: the tax applies only when the chosen
     /// target is the source permanent itself. Read in `extra_cost_for_spell`.
     TaxOpponentSpellsTargetingThis { amount: u32 },
+    /// "Each [`spell_filter`] spell costs {1} more to cast for each
+    /// [`count_filter`] its controller controls" (Hum of the Radix). The tax
+    /// scales off the *caster's* board, not the source's, and applies to every
+    /// player. Read in `extra_cost_for_spell`.
+    SpellTaxPerControllerPermanent {
+        spell_filter: SelectionRequirement,
+        count_filter: SelectionRequirement,
+    },
     /// Card-intrinsic "This spell costs {X} less to cast, where X is the
     /// greatest power among creatures you control" (The Great Henge). Read by
     /// `cost_reduction_for_spell` off the *spell being cast* (not battlefield

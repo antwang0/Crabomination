@@ -1523,6 +1523,9 @@ pub enum SelectionRequirement {
     /// CR 702.185 — the permanent was cast for its warp cost (its `warped` flag
     /// is set). Backs Full Bore's "if it was cast for its warp cost" rider.
     Warped,
+    /// The permanent's mana value ties the lowest among all nonland permanents
+    /// on the battlefield (Culling Scales' "with the lowest mana value").
+    LowestManaValueAmongNonland,
     IsBasicLand,
     /// True for a land that is **not** basic (CR 305.6) — i.e. a land card
     /// lacking the Basic supertype. Powers Thalia, Heretic Cathar's
@@ -2481,6 +2484,10 @@ pub struct CardDefinition {
     /// energy pool during `equip`. Defaults to 0 via `#[serde(default)]`.
     #[serde(default)]
     pub equip_energy_cost: u32,
+    /// Additional life paid to equip, on top of `Keyword::Equip`'s mana.
+    /// "Equip—Pay 3 life" (Nightmare Lash). Defaults to 0.
+    #[serde(default)]
+    pub equip_life_cost: u32,
     /// Cheaper alternate equip cost usable when the equip target is a
     /// creature *token* — "Equip creature token {1}" (Team Pennant, the
     /// STX mascot-equipment cycle). Consulted in `equip` before the
@@ -2516,6 +2523,11 @@ pub struct CardDefinition {
     /// Defaults to empty via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub additional_cast_cost: Vec<AdditionalCastCost>,
+    /// CR 702.41 — a non-mana Entwine cost ("Entwine—Sacrifice two lands" —
+    /// Solar Tide, Betrayal of Flesh). Paid as an additional cost of an
+    /// entwined cast, alongside (or instead of) `Keyword::Entwine`'s mana.
+    #[serde(default)]
+    pub entwine_additional_cost: Option<AdditionalCastCost>,
     /// "This spell costs {N} more to cast if it targets a [filter]" —
     /// Vanish into Eternity. Read by `extra_cost_for_spell` off the chosen
     /// target at cast time.

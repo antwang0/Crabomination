@@ -1229,8 +1229,8 @@ impl GameState {
         for cid in from_gy {
             self.note_left_graveyard(owner, cid, events);
         }
-        use rand::seq::SliceRandom;
-        self.players[owner].library.shuffle(&mut rand::rng());
+        
+        self.shuffle_library(owner, events);
     }
 
     pub fn move_card_to(
@@ -1556,10 +1556,8 @@ impl GameState {
                         // sending to bottom), which exposed deterministic
                         // ordering across cards that semantically should
                         // randomize.
-                        use rand::seq::SliceRandom;
-                        let mut rng = rand::rng();
                         self.players[p].library.push(card);
-                        self.players[p].library.shuffle(&mut rng);
+                        self.shuffle_library(p, events);
                     }
                     LibraryPosition::FromTop(n) => {
                         // CR 401.7: "If a player is instructed to put a

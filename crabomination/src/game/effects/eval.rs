@@ -2910,6 +2910,16 @@ impl GameState {
             R::ProducesColorless => card.definition.produces_colorless(),
             R::IsSnow => card.definition.is_snow(),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
+            // CR — "with the lowest mana value" among nonland permanents; a tie
+            // leaves every tied permanent legal (Culling Scales).
+            R::LowestManaValueAmongNonland => {
+                !card.definition.is_land()
+                    && self
+                        .battlefield
+                        .iter()
+                        .filter(|c| !c.definition.is_land())
+                        .all(|c| c.definition.cost.cmc() >= card.definition.cost.cmc())
+            }
             R::ManaValueAtMostDevotion(color) => {
                 card.definition.cost.cmc() <= self.devotion_to(controller, &[*color]).max(0) as u32
             }

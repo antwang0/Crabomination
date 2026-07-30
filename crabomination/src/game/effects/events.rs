@@ -117,6 +117,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::Expend, GameEvent::Expended { .. }) => true,
         (EventKind::CommittedCrime, GameEvent::CommittedCrime { .. }) => true,
         (EventKind::PlayerSearchedLibrary, GameEvent::PlayerSearchedLibrary { .. }) => true,
+        (EventKind::LibraryShuffled, GameEvent::LibraryShuffled { .. }) => true,
         (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
@@ -590,6 +591,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::RingTempted { player, .. }
         | GameEvent::CommittedCrime { player }
         | GameEvent::PlayerSearchedLibrary { player }
+        | GameEvent::LibraryShuffled { player }
         | GameEvent::DungeonRoomEntered { player, .. }
         | GameEvent::DungeonCompleted { player }
         | GameEvent::TurnStarted { player, .. } => Some(*player),
@@ -713,6 +715,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::DiceRolled { player, .. }
         | GameEvent::CommittedCrime { player }
         | GameEvent::PlayerSearchedLibrary { player }
+        | GameEvent::LibraryShuffled { player }
         | GameEvent::ColorlessManaAdded { player, .. }
         | GameEvent::DungeonCompleted { player }
         | GameEvent::PoisonAdded { player, .. } => Some(EntityRef::Player(*player)),

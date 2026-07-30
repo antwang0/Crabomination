@@ -1207,3 +1207,358 @@ fn relic_bane_bleeds_the_artifacts_controller() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18);
 }
+
+// ── Mirrodin gap batch 4 (`decks::recent319`) ──
+
+/// Tower of Fortunes draws four for {8}.
+#[test]
+fn tower_of_fortunes_draws_four() {
+    let mut g = main_phase();
+    let tower = g.add_card_to_battlefield(0, catalog::tower_of_fortunes());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.players[0].mana_pool.add_colorless(8);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tower, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 4);
+}
+
+/// Clockwork Condor enters as a 3/3 and sheds a counter at end of combat.
+#[test]
+fn clockwork_condor_sheds_a_counter_after_attacking() {
+    let mut g = main_phase();
+    let condor = g.add_card_to_hand(0, catalog::clockwork_condor());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: condor, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(condor).unwrap().power, 3);
+    swing(&mut g, condor);
+    assert_eq!(g.computed_permanent(condor).unwrap().power, 2, "one counter came off");
+}
+
+/// Banshee's Blade grows by a charge counter each time its host connects.
+#[test]
+fn banshees_blade_charges_on_combat_damage() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blade = g.add_card_to_battlefield(0, catalog::banshees_blade());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: blade, target: bear }).expect("equip");
+    swing(&mut g, bear);
+    assert_eq!(g.battlefield_find(blade).unwrap().counter_count(CounterType::Charge), 1);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 per charge counter");
+}
+
+/// Nightmare Lash equips for 3 life and scales off Swamps.
+#[test]
+fn nightmare_lash_equips_for_life() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let lash = g.add_card_to_battlefield(0, catalog::nightmare_lash());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    g.perform_action(GameAction::Equip { equipment: lash, target: bear }).expect("equip");
+    assert_eq!(g.players[0].life, 17);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "+1/+1 per Swamp");
+}
+
+/// Worldslayer wipes everything but itself on connect.
+#[test]
+fn worldslayer_wipes_the_board() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let slayer = g.add_card_to_battlefield(0, catalog::worldslayer());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::Equip { equipment: slayer, target: bear }).expect("equip");
+    swing(&mut g, bear);
+    assert!(g.battlefield_find(victim).is_none());
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(slayer).is_some(), "the Equipment survives");
+}
+
+/// Disarm strips every Equipment off a creature.
+#[test]
+fn disarm_unattaches_equipment() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blade = g.add_card_to_battlefield(0, catalog::banshees_blade());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: blade, target: bear }).expect("equip");
+    let spell = g.add_card_to_hand(1, catalog::disarm());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blade).unwrap().attached_to.is_none());
+}
+
+/// Solar Tide's entwine cost is two sacrificed lands, and both halves run.
+#[test]
+fn solar_tide_entwines_by_sacrificing_lands() {
+    let mut g = main_phase();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let big = g.add_card_to_battlefield(1, catalog::loxodon_peacekeeper());
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::plains());
+    }
+    let spell = g.add_card_to_hand(0, catalog::solar_tide());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpellEntwine {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("entwine");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(small).is_none());
+    assert!(g.battlefield_find(big).is_none());
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.is_land()).count(), 0, "lands paid");
+}
+
+/// Forge Armor turns the sacrificed artifact's mana value into counters.
+#[test]
+fn forge_armor_counts_the_sacrificed_mana_value() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::worldslayer());
+    let spell = g.add_card_to_hand(0, catalog::forge_armor());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 5);
+}
+
+/// Hum of the Radix taxes an artifact spell per artifact its caster controls.
+#[test]
+fn hum_of_the_radix_taxes_the_casters_own_board() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::hum_of_the_radix());
+    g.add_card_to_battlefield(0, catalog::tanglebloom());
+    g.add_card_to_battlefield(0, catalog::tanglebloom());
+    let rock = g.add_card_to_hand(0, catalog::tanglebloom());
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: rock, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "{{1}} printed + {{2}} tax needs three"
+    );
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rock, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("three mana pays it");
+}
+
+/// Myr Incubator exiles the artifacts in your library for a Myr apiece.
+#[test]
+fn myr_incubator_mints_a_myr_per_exiled_artifact() {
+    let mut g = main_phase();
+    let inc = g.add_card_to_battlefield(0, catalog::myr_incubator());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::tanglebloom());
+    }
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: inc, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Myr").count(), 3);
+    assert_eq!(g.players[0].library.len(), 1, "only the Bears is left");
+}
+
+/// Culling Scales targets only the cheapest nonland permanent.
+#[test]
+fn culling_scales_hits_the_lowest_mana_value() {
+    let mut g = main_phase();
+    let scales = g.add_card_to_battlefield(0, catalog::culling_scales());
+    let cheap = g.add_card_to_battlefield(1, catalog::ornithopter());
+    let dear = g.add_card_to_battlefield(1, catalog::reiver_demon());
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cheap).is_none());
+    assert!(g.battlefield_find(dear).is_some());
+    assert!(g.battlefield_find(scales).is_some());
+}
+
+/// Loxodon Peacekeeper defects to whoever is lowest on life.
+#[test]
+fn loxodon_peacekeeper_joins_the_losing_side() {
+    let mut g = main_phase();
+    let ele = g.add_card_to_battlefield(0, catalog::loxodon_peacekeeper());
+    g.players[1].life = 5;
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ele).unwrap().controller, 1);
+}
+
+/// Vulshok Battlemaster hoovers up every Equipment on the battlefield.
+#[test]
+fn vulshok_battlemaster_attaches_all_equipment() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::banshees_blade());
+    let theirs = g.add_card_to_battlefield(1, catalog::worldslayer());
+    let master = g.add_card_to_hand(0, catalog::vulshok_battlemaster());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: master, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).unwrap().attached_to, Some(master));
+    assert_eq!(g.battlefield_find(theirs).unwrap().attached_to, Some(master));
+}
+
+/// Sun Droplet banks the damage you take and trades it back for life.
+#[test]
+fn sun_droplet_banks_damage_then_returns_life() {
+    let mut g = main_phase();
+    let droplet = g.add_card_to_battlefield(0, catalog::sun_droplet());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("bolt them");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(droplet).unwrap().counter_count(CounterType::Charge), 3);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "3 taken, 1 back");
+    assert_eq!(g.battlefield_find(droplet).unwrap().counter_count(CounterType::Charge), 2);
+}
+
+/// Pentavus turns its counters into fliers and back.
+#[test]
+fn pentavus_trades_counters_for_pentavites() {
+    let mut g = main_phase();
+    let pent = g.add_card_to_hand(0, catalog::pentavus());
+    g.players[0].mana_pool.add_colorless(9);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pent, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pent, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("mint");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pent).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Pentavite").count(), 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pent, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+    })
+    .expect("eat it");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pent).unwrap().counter_count(CounterType::PlusOnePlusOne), 5);
+}
+
+/// Reiver Demon sweeps only when it was cast from hand.
+#[test]
+fn reiver_demon_sweeps_on_a_hand_cast() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let robot = g.add_card_to_battlefield(1, catalog::ornithopter());
+    let demon = g.add_card_to_hand(0, catalog::reiver_demon());
+    g.players[0].mana_pool.add(Color::Black, 4);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: demon, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "green creature dies");
+    assert!(g.battlefield_find(robot).is_some(), "artifact creature survives");
+    assert!(g.battlefield_find(demon).is_some());
+}
+
+/// Living Hive mints an Insect for each point of combat damage.
+#[test]
+fn living_hive_mints_insects_on_connect() {
+    let mut g = main_phase();
+    let hive = g.add_card_to_battlefield(0, catalog::living_hive());
+    swing(&mut g, hive);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Insect").count(), 6);
+}
+
+/// Auriok Bladewarden lends its own power to another creature.
+#[test]
+fn auriok_bladewarden_lends_its_power() {
+    let mut g = main_phase();
+    let ward = g.add_card_to_battlefield(0, catalog::auriok_bladewarden());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(ward);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ward, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+}
+
+/// Vermiculos swells whenever any artifact enters.
+#[test]
+fn vermiculos_swells_on_an_artifact_etb() {
+    let mut g = main_phase();
+    let worm = g.add_card_to_battlefield(0, catalog::vermiculos());
+    let rock = g.add_card_to_hand(0, catalog::tanglebloom());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rock, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(worm).unwrap().power, 5);
+}
+
+/// Temporal Cascade's entwined cast resets and refills both hands.
+#[test]
+fn temporal_cascade_entwines_reset_and_refill() {
+    let mut g = main_phase();
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::temporal_cascade());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpellEntwine {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("entwine");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 7);
+    assert_eq!(g.players[1].hand.len(), 7);
+}

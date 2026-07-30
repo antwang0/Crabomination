@@ -1526,7 +1526,7 @@ impl GameState {
                         self.players[p].library.push(card);
                     }
                 }
-                self.players[p].library.shuffle(&mut rand::rng());
+                self.shuffle_library(p, events);
                 // Reveal that many; permanents enter (non-Aura first), rest
                 // bottoms in random order.
                 let revealed: Vec<crate::card::CardId> =
@@ -1640,7 +1640,7 @@ impl GameState {
 
             Effect::SignalTheClans => {
                 use rand::seq::IndexedRandom;
-                use rand::seq::SliceRandom;
+                
                 let p = ctx.controller;
                 // Reveal the three best distinct-named creature cards. Group by
                 // name, keep the highest-MV representative of each, then take
@@ -1671,14 +1671,14 @@ impl GameState {
                     self.players[p].hand.push(card);
                     events.push(GameEvent::CardDrawn { player: p, card_id: chosen });
                 }
-                self.players[p].library.shuffle(&mut rand::rng());
+                self.shuffle_library(p, events);
                 Ok(())
             }
 
             Effect::UnexpectedResults => {
-                use rand::seq::SliceRandom;
+                
                 let p = ctx.controller;
-                self.players[p].library.shuffle(&mut rand::rng());
+                self.shuffle_library(p, events);
                 let Some(top) = self.players[p].library.first() else { return Ok(()); };
                 let is_land = top.definition.card_types.contains(&crate::card::CardType::Land);
                 let top_sel = Selector::TopOfLibrary {
@@ -5008,7 +5008,7 @@ impl GameState {
             }
 
             Effect::NameCardRevealUntilThenBin { who } => {
-                use rand::seq::SliceRandom;
+                
                 // The namer picks the densest name in the victim's library, so
                 // an auto seat's Tunnel Vision actually hits something.
                 let Some(victim) = self.resolve_players(who, ctx).first().copied() else {
@@ -5033,7 +5033,7 @@ impl GameState {
                             self.players[victim].send_to_graveyard(card);
                         }
                     }
-                    None => self.players[victim].library.shuffle(&mut rand::rng()),
+                    None => self.shuffle_library(victim, events),
                 }
                 Ok(())
             }
@@ -7333,8 +7333,8 @@ impl GameState {
                 };
                 self.move_card_to(src, &dest, ctx, events);
                 if count < *threshold {
-                    use rand::seq::SliceRandom;
-                    self.players[ctx.controller].library.shuffle(&mut rand::rng());
+                    
+                    self.shuffle_library(ctx.controller, events);
                 }
                 Ok(())
             }
@@ -7551,7 +7551,7 @@ impl GameState {
             Effect::SearchLibraryCreaturesUpToTotalManaValue { max_total } => {
                 
                 use crate::effect::ZoneDest;
-                use rand::seq::SliceRandom;
+                
                 let p = ctx.controller;
                 let cap = self.evaluate_value(max_total, ctx).max(0);
                 let candidates: Vec<(CardId, String)> = self.players[p]
@@ -7597,7 +7597,7 @@ impl GameState {
                         );
                     }
                 }
-                self.players[p].library.shuffle(&mut rand::rng());
+                self.shuffle_library(p, events);
                 Ok(())
             }
 
@@ -10701,7 +10701,7 @@ impl GameState {
                 // graveyard / hand / library, shuffle, and draw per
                 // hand-exile. The countered copy itself lands in the
                 // graveyard first, so the sweep exiles it too.
-                use rand::seq::SliceRandom;
+                
                 let targets = self.resolve_selector(what, ctx);
                 let mut to_remove: Vec<usize> = Vec::new();
                 for t in &targets {
@@ -10750,7 +10750,7 @@ impl GameState {
                         }
                         // That player shuffles (searched their library —
                         // CR 701.19), then draws per hand-exile.
-                        self.players[owner].library.shuffle(&mut rand::rng());
+                        self.shuffle_library(owner, events);
                         for _ in 0..hand_exiled {
                             if !self.draw_one(owner, events) {
                                 self.lose_to_empty_draw(owner);
@@ -12538,6 +12538,43 @@ impl GameState {
                 Ok(())
             }
 
+            // "Search your library for any number of [filter] cards, exile
+            // them, then create that many tokens. Then shuffle." Taking every
+            // match is strictly best, so the pick isn't surfaced (Myr Incubator).
+            Effect::SearchExileThenTokensPerCard { filter, definition } => {
+                
+                let p = ctx.controller;
+                if self.no_search_this_turn {
+                    return Ok(());
+                }
+                let picks: Vec<crate::card::CardId> = self.players[p]
+                    .library
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| c.id)
+                    .collect();
+                for cid in &picks {
+                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) {
+                        let card = self.players[p].library.remove(pos);
+                        self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+                    }
+                }
+                self.shuffle_library(p, events);
+                events.push(GameEvent::LibraryShuffled { player: p });
+                if picks.is_empty() {
+                    return Ok(());
+                }
+                self.run_effect(
+                    &Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: crate::effect::Value::Const(picks.len() as i32),
+                        definition: definition.clone(),
+                    },
+                    ctx,
+                    events,
+                )
+            }
+
             Effect::SearchUpToN { who, filter, to, count } => {
                 let n = self.evaluate_value(count, ctx).max(0);
                 if n == 0 { return Ok(()); }
@@ -13022,8 +13059,8 @@ impl GameState {
                 }
                 self.players[p].searched_library_this_turn = true;
                 if picked.is_empty() {
-                    use rand::seq::SliceRandom;
-                    self.players[p].library.shuffle(&mut rand::rng());
+                    
+                    self.shuffle_library(p, events);
                     return Ok(());
                 }
                 // The opponent splits the revealed pile.
@@ -13062,8 +13099,8 @@ impl GameState {
                     self.move_card_to(id, dest, ctx, events);
                 }
                 {
-                    use rand::seq::SliceRandom;
-                    self.players[p].library.shuffle(&mut rand::rng());
+                    
+                    self.shuffle_library(p, events);
                 }
                 Ok(())
             }
@@ -13808,8 +13845,8 @@ impl GameState {
                     };
                     self.move_card_to(id, &dest, ctx, events);
                 }
-                use rand::seq::SliceRandom;
-                self.players[opp].library.shuffle(&mut rand::rng());
+                
+                self.shuffle_library(opp, events);
                 Ok(())
             }
 
@@ -14081,7 +14118,7 @@ impl GameState {
             }
 
             Effect::IsperiaReveal => {
-                use rand::seq::SliceRandom;
+                
                 let Some(opp) = self.resolve_player(&PlayerRef::DefendingPlayer, ctx)
                     .or_else(|| (0..self.players.len()).find(|s| !self.same_team(*s, ctx.controller)))
                 else { return Ok(()) };
@@ -14103,7 +14140,7 @@ impl GameState {
                         && let Some(card) = Self::take_card(&mut self.players[ctx.controller].library, id) {
                         self.players[ctx.controller].hand.push(card);
                     }
-                    self.players[ctx.controller].library.shuffle(&mut rand::rng());
+                    self.shuffle_library(ctx.controller, events);
                 }
                 Ok(())
             }
@@ -14186,7 +14223,7 @@ impl GameState {
             }
 
             Effect::InfernalTutor => {
-                use rand::seq::SliceRandom;
+                
                 let p = ctx.controller;
                 // Hellbent (empty hand) → tutor any card; else tutor a copy of
                 // a revealed hand card (auto-pick one that has a library match).
@@ -14206,7 +14243,7 @@ impl GameState {
                     && let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                     self.players[p].hand.push(card);
                 }
-                self.players[p].library.shuffle(&mut rand::rng());
+                self.shuffle_library(p, events);
                 Ok(())
             }
 
@@ -14338,8 +14375,8 @@ impl GameState {
             Effect::MillDeployCreaturesUntilEndStep { amount } => {
                 let p = ctx.controller;
                 {
-                    use rand::seq::SliceRandom;
-                    self.players[p].library.shuffle(&mut rand::rng());
+                    
+                    self.shuffle_library(p, events);
                 }
                 let n = self.mill_count_for(p, self.evaluate_value(amount, ctx).max(0) as usize);
                 let mut milled = Vec::new();
@@ -14760,17 +14797,17 @@ impl GameState {
             }
 
             Effect::ShuffleGraveyardIntoLibrary { who } => {
-                use rand::seq::SliceRandom;
+                
                 if let Some(p) = self.resolve_player(who, ctx) {
                     let cards = std::mem::take(&mut *self.players[p].graveyard);
                     self.players[p].library.extend(cards);
-                    self.players[p].library.shuffle(&mut rand::rng());
+                    self.shuffle_library(p, events);
                 }
                 Ok(())
             }
 
             Effect::ShuffleFilteredGraveyardIntoLibraryGainLife { who, filter } => {
-                use rand::seq::SliceRandom;
+                
                 if let Some(p) = self.resolve_player(who, ctx) {
                     let gy = std::mem::take(&mut *self.players[p].graveyard);
                     let (matched, kept): (Vec<_>, Vec<_>) = gy
@@ -14779,7 +14816,7 @@ impl GameState {
                     let moved = matched.len() as i32;
                     self.players[p].graveyard = kept.into();
                     self.players[p].library.extend(matched);
-                    self.players[p].library.shuffle(&mut rand::rng());
+                    self.shuffle_library(p, events);
                     if moved > 0 {
                         let applied = self.adjust_life_applied(p, moved);
                         if applied > 0 {
@@ -14793,13 +14830,13 @@ impl GameState {
             }
 
             Effect::ShuffleHandAndGraveyardIntoLibrary { who } => {
-                use rand::seq::SliceRandom;
+                
                 for p in self.resolve_players(who, ctx) {
                     let hand = std::mem::take(&mut *self.players[p].hand);
                     let gy = std::mem::take(&mut *self.players[p].graveyard);
                     self.players[p].library.extend(hand);
                     self.players[p].library.extend(gy);
-                    self.players[p].library.shuffle(&mut rand::rng());
+                    self.shuffle_library(p, events);
                 }
                 Ok(())
             }
@@ -14834,12 +14871,12 @@ impl GameState {
             }
 
             Effect::ShuffleHandsDrawSame { who } => {
-                use rand::seq::SliceRandom;
+                
                 for p in self.resolve_players(who, ctx) {
                     let hand = std::mem::take(&mut *self.players[p].hand);
                     let n = hand.len() as u32;
                     self.players[p].library.extend(hand);
-                    self.players[p].library.shuffle(&mut rand::rng());
+                    self.shuffle_library(p, events);
                     for _ in 0..n {
                         self.draw_one(p, events);
                     }
@@ -14861,9 +14898,9 @@ impl GameState {
             }
 
             Effect::ShuffleLibrary { who } => {
-                use rand::seq::SliceRandom;
+                
                 if let Some(p) = self.resolve_player(who, ctx) {
-                    self.players[p].library.shuffle(&mut rand::rng());
+                    self.shuffle_library(p, events);
                 }
                 Ok(())
             }
@@ -15198,7 +15235,7 @@ impl GameState {
 
             Effect::CatchUpBasicLands => {
                 use crate::card::Supertype;
-                use rand::seq::SliceRandom;
+                
                 let n = self.players.len();
                 let land_counts: Vec<usize> = (0..n)
                     .map(|p| {
@@ -15234,7 +15271,7 @@ impl GameState {
                         );
                     }
                     // Searching a library always shuffles it (CR 701.19c).
-                    self.players[p].library.shuffle(&mut rand::rng());
+                    self.shuffle_library(p, events);
                 }
                 Ok(())
             }
@@ -17214,8 +17251,8 @@ impl GameState {
                     self.players[p].library.extend(bottom_random);
                 }
                 if matches!(miss_dest, crate::effect::RevealMissDest::ShuffleIntoLibrary) {
-                    use rand::seq::SliceRandom;
-                    self.players[p].library.shuffle(&mut rand::rng());
+                    
+                    self.shuffle_library(p, events);
                 }
                 // Lose 1 life per revealed card (Spoils of the Vault rider).
                 let life = (revealed as u32).saturating_mul(*life_per_revealed);
@@ -18770,8 +18807,8 @@ impl GameState {
                     }
                 }
                 if searched_library {
-                    use rand::seq::SliceRandom;
-                    self.players[p].library.shuffle(&mut rand::rng());
+                    
+                    self.shuffle_library(p, events);
                 }
                 Ok(())
             }
@@ -21538,6 +21575,8 @@ impl GameState {
             PlayerRef::You => Some(ctx.controller),
             PlayerRef::Seat(p) => Some(*p),
             PlayerRef::ActivePlayer => Some(self.active_player_idx),
+            // Ties go to the earliest seat (stands in for "you choose one").
+            PlayerRef::LowestLife => (0..self.players.len()).min_by_key(|p| self.players[*p].life),
             PlayerRef::Triggerer => ctx.trigger_source.and_then(|e| match e {
                 EntityRef::Player(p) => Some(p),
                 // A card trigger-source (e.g. a SpellCast trigger) resolves to
