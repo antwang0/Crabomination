@@ -9930,6 +9930,14 @@ impl GameState {
         if !target_ok {
             return Err(GameError::InvalidTarget);
         }
+        // CR 702.6c — "this creature can't be equipped" (Goblin Brawler).
+        if fortify.is_none()
+            && self
+                .computed_permanent(target)
+                .is_some_and(|c| c.keywords.contains(&crate::card::Keyword::CantBeEquipped))
+        {
+            return Err(GameError::InvalidTarget);
+        }
         // CR 702.16f — a creature can't be equipped by an Equipment whose
         // color it has protection from.
         if self.is_protected_from(equipment, target) {

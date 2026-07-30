@@ -25,6 +25,12 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (modern_decks — Mirrodin closure)
 
+- **Fifth Dawn (5DN) is the next block gap:** `scripts/set_gaps.py 5dn` was at
+  120 before this run's first batch (`decks::recent322`, 24 cards). The
+  remaining rares mostly want one primitive each — the Bringer cycle
+  (five-colour alternative cost), Door to Nothingness, Fist of Suns, Sunburst
+  breadth, Salvaging Station, Vedalken Orrery.
+
 - **Remaining Mirrodin (MRD) gaps — 4 cards, one primitive each.**
   `scripts/set_gaps.py mrd` is the live list (70 → 4 this run).
   - **Scythe of the Wretched** — attempted and reverted. A `CreatureDied`
