@@ -2075,6 +2075,21 @@ impl GameState {
             Predicate::ArtifactEnteredThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].artifacts_entered_this_turn > 0),
+            Predicate::OwnsSourceNamedCardInEveryZone { who } => {
+                let (Some(seat), Some(src)) = (self.resolve_player(who, ctx), ctx.source) else {
+                    return false;
+                };
+                let Some(name) = self.find_card_anywhere(src).map(|c| c.definition.name) else {
+                    return false;
+                };
+                let owned = |c: &crate::card::CardInstance| {
+                    c.owner == seat && c.definition.name == name
+                };
+                self.exile.iter().any(owned)
+                    && self.players[seat].hand.iter().any(owned)
+                    && self.players[seat].graveyard.iter().any(owned)
+                    && self.battlefield.iter().any(owned)
+            }
             Predicate::PlaneswalkerEnteredThisTurn { who } => self
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].planeswalkers_entered_this_turn > 0),

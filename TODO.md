@@ -7674,12 +7674,10 @@ stalled games via `eval_material`.
   support N (Relief Captain, Gladehart Cavalry) binds a single slot when the
   engine auto-targets, so the printed "up to N *other* target creatures" only
   spreads fully on an explicit multi-target cast/activation.
-- **OGW's last three cards need one primitive each** (`set_gaps.py ogw`):
+- **OGW's last two cards need one primitive each** (`set_gaps.py ogw`):
   - **Deceiver of Form** — "creatures you control become copies of the revealed
     card until end of turn" wants a mass `BecomeCopyOfFor` over a *revealed
     library card* rather than a battlefield permanent.
-  - **Hedron Alignment** — the alternate win wants a "a card with this name is
-    in exile, hand, graveyard, and on the battlefield" predicate.
   - **Kozilek, the Great Distortion** — "discard a card with mana value X:
     counter target spell with mana value X" needs a discard cost whose filter
     is bound to the chosen target's MV.

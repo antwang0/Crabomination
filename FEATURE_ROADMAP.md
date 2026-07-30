@@ -79,7 +79,7 @@ exercising each) was elided in a compaction pass; recover it from
   on it, `CardDefinition.cast_only_before_attackers` enforces the printed
   timing, and `ClientView.declares_attacks`/`declares_blocks` drive every
   client combat gate.
-- **Oath of the Gatewatch: 75 of 78 gap cards ship** (`sets::ogw::gaps{,2,3,4}`)
+- **Oath of the Gatewatch: 76 of 78 gap cards ship** (`sets::ogw::gaps{,2,3,4}`)
   — Cohort (via `tap_other_filter`), support, surge, the Oaths, Chandra
   Flamecaller, and the devoid shell. New engine:
   `Effect::EachDealsDamageEqualToPower` (Nissa's Judgment),
@@ -88,7 +88,9 @@ exercising each) was elided in a compaction pass; recover it from
   Gideon), `Predicate::PlaneswalkerEnteredThisTurn` +
   `Player.planeswalkers_entered_this_turn` (Oath of Chandra), and
   `EquipScale.count_sharing_type_with_host` (Stoneforge Masterwork), and
-  `StaticEffect::UntapSelfEachOtherUntapStep` (CR 502.3 — Endbringer).
+  `StaticEffect::UntapSelfEachOtherUntapStep` (CR 502.3 — Endbringer), and
+  `Predicate::OwnsSourceNamedCardInEveryZone` (Hedron Alignment's alternate
+  win).
   Block modules: `sets::{rav::gaps21, rav::gaps22, gpt::gaps9, dis::gaps9}`
   (29 cards). Primitives from that sweep:
   `Effect::{ExileHandLinked, ReturnLinkedExilesToHand, LookExileAnyNumberRestBack,

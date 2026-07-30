@@ -1651,6 +1651,10 @@ pub enum Predicate {
     /// "If an artifact entered the battlefield under `who`'s control this turn"
     /// (Akal Pakal). Reads `Player.artifacts_entered_this_turn`.
     ArtifactEnteredThisTurn { who: PlayerRef },
+    /// Hedron Alignment — "you own a card with this source's name in exile, in
+    /// your hand, in your graveyard, and on the battlefield". Checks all four
+    /// zones for a card sharing the source's name and owned by `who`.
+    OwnsSourceNamedCardInEveryZone { who: PlayerRef },
     /// "If a planeswalker entered the battlefield under `who`'s control this
     /// turn" (Oath of Chandra). Reads `Player.planeswalkers_entered_this_turn`.
     PlaneswalkerEnteredThisTurn { who: PlayerRef },

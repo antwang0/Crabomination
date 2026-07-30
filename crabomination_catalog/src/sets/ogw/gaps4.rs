@@ -294,3 +294,39 @@ pub fn dimensional_infiltrator() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hedron Alignment — {2}{U} Enchantment with hexproof. Reveal your hand at
+/// upkeep to win if you own a Hedron Alignment in all four zones. {1}{U}: Scry 1.
+pub fn hedron_alignment() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Predicate};
+    use crate::effect::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Hedron Alignment",
+        cost: cost(&[generic(2), crate::mana::u()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Hexproof],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::MayDo {
+                description: "Reveal your hand to check the Hedron Alignment?".into(),
+                body: Box::new(Effect::If {
+                    cond: Predicate::OwnsSourceNamedCardInEveryZone { who: PlayerRef::You },
+                    then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), crate::mana::u()]),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

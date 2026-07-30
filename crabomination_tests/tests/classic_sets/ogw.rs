@@ -2890,3 +2890,27 @@ fn dimensional_infiltrator_bounces_off_a_land() {
     assert!(g.exile.iter().any(|c| c.id == land), "the top card was exiled");
     assert!(g.battlefield_find(inf).is_none(), "it went back to hand off the land");
 }
+
+/// Hedron Alignment wins only with a copy in all four zones.
+#[test]
+fn hedron_alignment_wins_from_all_four_zones() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bf = g.add_card_to_battlefield(0, catalog::hedron_alignment());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(!g.is_game_over(), "battlefield copy alone doesn't win");
+
+    g.add_card_to_hand(0, catalog::hedron_alignment());
+    let gy_id = g.next_id();
+    let ex_id = g.next_id();
+    let mk = |id| crabomination::card::CardInstance::new(id, catalog::hedron_alignment(), 0);
+    g.players[0].graveyard.push(mk(gy_id));
+    g.exile.push(mk(ex_id));
+    let _ = bf;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.game_over, Some(Some(0)), "all four zones — you win");
+}

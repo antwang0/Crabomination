@@ -10427,6 +10427,7 @@ static OGW: &[Factory] = &[
     super::ogw::endbringer,
     super::ogw::dazzling_reflection,
     super::ogw::dimensional_infiltrator,
+    super::ogw::hedron_alignment,
     super::ogw::murderous_compulsion,
     super::ogw::roil_spout,
     super::ogw::coastal_discovery,
