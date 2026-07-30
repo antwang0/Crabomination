@@ -1535,6 +1535,11 @@ pub enum StaticEffect {
     /// loyalty counters on it" (Oath of Gideon). Read alongside the
     /// creature-scoped enters-with statics in `chosen_type_etb_counter_specs`.
     PlaneswalkersEnterWithExtraLoyalty { amount: u32 },
+    /// CR 502.3 — "Untap this permanent during each other player's untap
+    /// step" (Endbringer). The self-scoped sibling of
+    /// `UntapYoursEachUntapStepFiltered`: only the source untaps, and only on
+    /// an untap step that isn't its controller's.
+    UntapSelfEachOtherUntapStep,
     /// Strict Proctor — "Whenever a permanent entering causes a
     /// triggered ability to trigger, counter that ability unless its
     /// controller pays {amount}." Read at ETB-trigger dispatch time

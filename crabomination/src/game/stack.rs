@@ -2088,6 +2088,17 @@ impl GameState {
                 })
                 .collect();
             let mut set = std::collections::HashSet::new();
+            // Endbringer — "untap this during each other player's untap step".
+            for c in &self.battlefield {
+                if c.controller != p
+                    && c.definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(sa.effect, StaticEffect::UntapSelfEachOtherUntapStep))
+                {
+                    set.insert(c.id);
+                }
+            }
             for (seat, req) in &filters {
                 for c in &self.battlefield {
                     if c.controller == *seat

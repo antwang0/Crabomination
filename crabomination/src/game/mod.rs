@@ -15619,6 +15619,9 @@ fn static_effect_to_effects(
             // EtbTriggerTax — read at ETB trigger push time by
             // `apply_etb_trigger_tax` (Strict Proctor); no layer effect.
             | StaticEffect::EtbTriggerTax { .. }
+            // UntapSelfEachOtherUntapStep — read by `do_untap` (Endbringer);
+            // no layer effect.
+            | StaticEffect::UntapSelfEachOtherUntapStep
             // PlaneswalkersEnterWithExtraLoyalty — read at ETB-counter time by
             // `chosen_type_etb_counter_specs` (Oath of Gideon); no layer effect.
             | StaticEffect::PlaneswalkersEnterWithExtraLoyalty { .. }

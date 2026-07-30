@@ -173,3 +173,124 @@ pub fn stoneforge_masterwork() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Endbringer — {5}{C} 5/5 Eldrazi. Untaps on every other player's untap step
+/// and carries three colorless-fed tap abilities.
+pub fn endbringer() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility};
+    use crate::effect::{shortcut::target_any, StaticEffect};
+    let c1 = || cost(&[crate::mana::colorless(1)]);
+    CardDefinition {
+        name: "Endbringer",
+        cost: cost(&[generic(5), crate::mana::colorless(1)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        static_abilities: vec![StaticAbility {
+            description: "Untap this creature during each other player's untap step.",
+            effect: StaticEffect::UntapSelfEachOtherUntapStep,
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: crate::effect::shortcut::deal(1, target_any()),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: c1(),
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: target_filtered(R::Creature),
+                        keyword: Keyword::CantAttack,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::CantBlock,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[crate::mana::colorless(2)]),
+                tap_cost: true,
+                effect: crate::effect::shortcut::draw(1),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dazzling Reflection — {1}{W} Instant. Gain life equal to target creature's
+/// power and blank the next damage it would deal this turn.
+pub fn dazzling_reflection() -> CardDefinition {
+    CardDefinition {
+        name: "Dazzling Reflection",
+        cost: cost(&[generic(1), crate::mana::w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::PowerOf(Box::new(target_filtered(R::Creature))),
+            },
+            Effect::PreventAllDamageFromTargetThisTurn {
+                what: Selector::Target(0),
+                gain_life: false,
+                next_instance_only: true,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dimensional Infiltrator — {1}{U} 2/1 Eldrazi. Devoid, flash, flying;
+/// {1}{C} mills an opponent's top card into exile and bounces itself off a land.
+pub fn dimensional_infiltrator() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Dimensional Infiltrator",
+        cost: cost(&[generic(1), crate::mana::u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Devoid, Keyword::Flash, Keyword::Flying],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(1), crate::mana::colorless(1)]),
+            effect: Effect::Seq(vec![
+                Effect::ExileTopOfLibrary {
+                    who: target_filtered(R::OpponentPlayer),
+                    amount: Value::Const(1),
+                    link_to_source: false,
+                    face_down: false,
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::LastMoved,
+                        filter: R::Land,
+                    },
+                    then: Box::new(Effect::MayDo {
+                        description: "Return this creature to your hand?".into(),
+                        body: Box::new(Effect::Move {
+                            what: Selector::This,
+                            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+                        }),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

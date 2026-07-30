@@ -2829,3 +2829,64 @@ fn remorseless_punishment_repeats_once() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 10, "no cards and no permanents — 5 life, twice");
 }
+
+/// Endbringer untaps on the opponent's untap step, not just its controller's.
+#[test]
+fn endbringer_untaps_on_every_other_untap_step() {
+    let mut g = two_player_game();
+    let eb = g.add_card_to_battlefield(0, catalog::endbringer());
+    g.battlefield_find_mut(eb).unwrap().tapped = true;
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(!g.battlefield_find(eb).unwrap().tapped, "untapped on seat 1's untap step");
+}
+
+/// Dazzling Reflection gains life equal to the creature's power and eats the
+/// next damage that creature would deal.
+#[test]
+fn dazzling_reflection_gains_life_and_blanks_one_hit() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::dazzling_reflection());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 22, "gained the bear's power");
+    let before = g.players[0].life;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(0),
+        2,
+        Some(bear),
+        &mut evs,
+    );
+    assert_eq!(g.players[0].life, before, "the shield ate the hit");
+}
+
+/// Dimensional Infiltrator exiles an opponent's top card and bounces itself
+/// when that card is a land.
+#[test]
+fn dimensional_infiltrator_bounces_off_a_land() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let inf = g.add_card_to_battlefield(0, catalog::dimensional_infiltrator());
+    g.clear_sickness(inf);
+    g.players[1].library.clear();
+    let land = g.add_card_to_library(1, catalog::forest());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: inf, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == land), "the top card was exiled");
+    assert!(g.battlefield_find(inf).is_none(), "it went back to hand off the land");
+}
