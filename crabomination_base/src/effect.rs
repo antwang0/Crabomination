@@ -4289,6 +4289,10 @@ pub enum Effect {
     /// (Bontu's Last Reckoning). Adds one charge to
     /// `Player.lands_dont_untap_next_untap`; non-land permanents untap normally.
     LandsDontUntapNextUntapStep { who: Selector },
+    /// CR 502.3 — "Creatures don't untap during `who`'s next untap step"
+    /// (Blinding Beam). The creature-side sibling of
+    /// `LandsDontUntapNextUntapStep`; consumed in `do_untap`.
+    CreaturesDontUntapNextUntapStep { who: Selector },
     /// Each permanent picked by `what` becomes a single color of the
     /// controller's choice for `duration` (CR 105 / layer 5 SetColors).
     /// Wild Mongrel ("becomes the color of your choice until end of turn").

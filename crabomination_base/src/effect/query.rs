@@ -756,7 +756,8 @@ impl Effect {
             Effect::LoseKeywordThisTurn { what, .. } => sel_has_target(what),
             Effect::SkipNextUntap { what } => sel_has_target(what),
             Effect::SkipPlayerUntapStep { player } => player_has_target(player),
-            Effect::LandsDontUntapNextUntapStep { who } => sel_has_target(who),
+            Effect::LandsDontUntapNextUntapStep { who }
+            | Effect::CreaturesDontUntapNextUntapStep { who } => sel_has_target(who),
             Effect::SacrificeAllMatching { who, .. } => sel_has_target(who),
             Effect::LivingDeath => false,
             Effect::SacrificeOthersThenReanimate => false,

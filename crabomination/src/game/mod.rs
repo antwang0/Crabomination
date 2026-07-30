@@ -6790,6 +6790,14 @@ impl GameState {
                     }).count() as i32;
                     (base_p + n, base_t + n)
                 }
+                crate::card::DynamicPt::BasePlusOpponentsUntappedPermanents { base_p, base_t } => {
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| !self.same_team(c.controller, card.controller) && !c.tapped)
+                        .count() as i32;
+                    (base_p + n, base_t + n)
+                }
                 crate::card::DynamicPt::LandsControlled { base } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller && c.definition.is_land()
@@ -15466,6 +15474,8 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerCantWinGame
             // CR 615 — read by the combat-damage-to-player path (Thunderstaff).
             | StaticEffect::ReduceCombatDamageToControllerWhileUntapped(_)
+            // Consulted in `apply_prevention_shields` (Sphere of Purity).
+            | StaticEffect::ReduceDamageToControllerFromSource { .. }
             // Phyrexian Unlife — consulted at the loss SBA + damage funnels.
             | StaticEffect::ControllerDoesntLoseFromLife
             // Consulted at the damage-to-player life sites.

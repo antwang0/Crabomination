@@ -882,13 +882,9 @@ blocked on a primitive shipped with that primitive. Mirrodin is at 96 (was
 - **Mirrodin remainder, grouped by the primitive each still wants:**
   - **Non-mana Entwine costs.** `Keyword::Entwine` only carries a `ManaCost`,
     so "Entwine—Sacrifice two/three lands" can't be expressed: Solar Tide,
-    Betrayal of Flesh. (Journey of Discovery, Roar of the Kha, Wail of the Nim,
-    Dream's Grip, Blinding Beam, Incite War and One Dozen Eyes have mana
-    entwine costs and are only waiting on their mode bodies.)
-  - **Artifact-source damage reduction.** "If an artifact would deal damage to
-    you, prevent 1 of that damage" (Sphere of Purity) needs a
-    source-filtered flat reduction; the existing reduction statics are
-    recipient- or colour-scoped.
+    Betrayal of Flesh. (The seven mana-entwine modals all ship.)
+  - **Non-mana Equip costs.** `Keyword::Equip` is likewise mana-only, so
+    "Equip—Pay 3 life" (Nightmare Lash) has no home.
   - **Imprint payoffs beyond keyword theft.** Mirror Golem (protection from
     each of the exiled card's card types), Mourner's Shield (colour-matched
     prevention), Extraplanar Lens (name-matched land doubling), Soul Foundry

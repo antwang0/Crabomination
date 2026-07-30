@@ -594,6 +594,10 @@ pub enum StaticEffect {
     /// damage to you, prevent N of that damage" (Thunderstaff). Shaves N off
     /// each damaging creature's combat damage to the source's controller.
     ReduceCombatDamageToControllerWhileUntapped(u32),
+    /// CR 615.10 — "If a [filter] source would deal damage to you, prevent
+    /// `amount` of that damage" (Sphere of Purity). Applies separately to each
+    /// damage event, combat or not, and only to damage aimed at the controller.
+    ReduceDamageToControllerFromSource { filter: SelectionRequirement, amount: u32 },
     /// CR 104.3d flip side — "You can't win the game and your opponents
     /// can't lose the game" (Abyssal Persecutor).
     ControllerCantWinGame,

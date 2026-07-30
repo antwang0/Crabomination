@@ -884,3 +884,326 @@ fn leveler_exiles_your_library() {
     let cp = g.computed_permanent(leveler).unwrap();
     assert_eq!((cp.power, cp.toughness), (10, 10));
 }
+
+// ── Mirrodin gap batch 3 (`decks::recent318`) ──
+
+/// Dream's Grip taps on mode 0 and untaps on mode 1.
+#[test]
+fn dreams_grip_taps_or_untaps() {
+    let mut g = main_phase();
+    let rock = g.add_card_to_battlefield(1, catalog::tanglebloom());
+    let spell = g.add_card_to_hand(0, catalog::dreams_grip());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(rock)), additional_targets: vec![],
+        mode: Some(0), x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).unwrap().tapped);
+}
+
+/// Blinding Beam's second mode locks a player's next untap step.
+#[test]
+fn blinding_beam_locks_the_next_untap_step() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::blinding_beam());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: Some(1), x_value: None,
+    })
+    .expect("cast mode 1");
+    drain_stack(&mut g);
+    g.active_player_idx = 1;
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    assert!(g.battlefield_find(bear).unwrap().tapped, "their creatures skipped the untap");
+}
+
+/// Roar of the Kha's entwined cast fires both halves.
+#[test]
+fn roar_of_the_kha_entwines_both_modes() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::roar_of_the_kha());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellEntwine {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("entwine");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "pumped");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "and untapped");
+}
+
+/// One Dozen Eyes mints five Insects on mode 1.
+#[test]
+fn one_dozen_eyes_mints_five_insects() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(0, catalog::one_dozen_eyes());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Insect").count(), 5);
+}
+
+/// Wail of the Nim's burn half hits every creature and every player.
+#[test]
+fn wail_of_the_nim_pings_the_board() {
+    let mut g = main_phase();
+    let thopter = g.add_card_to_battlefield(1, catalog::ornithopter());
+    let fragile = g.add_card_to_battlefield(1, catalog::nim_replica());
+    let spell = g.add_card_to_hand(0, catalog::wail_of_the_nim());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(thopter).is_some(), "a 0/2 shrugs off 1");
+    assert!(g.battlefield_find(fragile).is_none(), "a 3/1 doesn't");
+    assert_eq!(g.players[0].life, 19);
+    assert_eq!(g.players[1].life, 19);
+}
+
+/// Journey of Discovery's second mode banks two extra land drops.
+#[test]
+fn journey_of_discovery_grants_land_drops() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(0, catalog::journey_of_discovery());
+    let before = g.players[0].extra_land_plays;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].extra_land_plays, before + 2);
+}
+
+/// Bosh flings an artifact's mana value at anything.
+#[test]
+fn bosh_flings_the_sacrificed_mana_value() {
+    let mut g = main_phase();
+    let bosh = g.add_card_to_battlefield(0, catalog::bosh_iron_golem());
+    let fodder = g.add_card_to_battlefield(0, catalog::vulshok_battlegear());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bosh, ability_index: 0, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("fling");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none());
+    assert_eq!(g.players[1].life, 17, "Battlegear is MV 3");
+}
+
+/// Copperhoof Vorrac counts every untapped permanent across the table.
+#[test]
+fn copperhoof_vorrac_counts_opposing_untapped() {
+    let mut g = main_phase();
+    let vorrac = g.add_card_to_battlefield(0, catalog::copperhoof_vorrac());
+    let cp = g.computed_permanent(vorrac).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    let a = g.add_card_to_battlefield(1, catalog::tanglebloom());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cp = g.computed_permanent(vorrac).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    g.battlefield_find_mut(a).unwrap().tapped = true;
+    let cp = g.computed_permanent(vorrac).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "a tapped permanent stops counting");
+}
+
+/// Rust Elemental feeds on an artifact when it can.
+#[test]
+fn rust_elemental_eats_an_artifact() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::rust_elemental());
+    let fodder = g.add_card_to_battlefield(0, catalog::tanglebloom());
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "it ate the rock");
+    assert_eq!(g.players[0].life, 20);
+}
+
+/// With nothing to eat, Rust Elemental taps and takes 4 off you.
+#[test]
+fn rust_elemental_bleeds_when_it_cant_eat() {
+    let mut g = main_phase();
+    let elemental = g.add_card_to_battlefield(0, catalog::rust_elemental());
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elemental).unwrap().tapped);
+    assert_eq!(g.players[0].life, 16);
+}
+
+/// Sphere of Purity shaves a point off every artifact's damage.
+#[test]
+fn sphere_of_purity_shaves_artifact_damage() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::sphere_of_purity());
+    let shard = g.add_card_to_battlefield(1, catalog::granite_shard());
+    g.clear_sickness(shard);
+    g.players[1].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shard, ability_index: 0, target: Some(Target::Player(0)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the single point is shaved off");
+}
+
+/// Flayed Nim drains for the damage it deals to a creature.
+#[test]
+fn flayed_nim_drains_on_creature_damage() {
+    let mut g = main_phase();
+    let nim = g.add_card_to_battlefield(0, catalog::flayed_nim());
+    let blocker = g.add_card_to_battlefield(1, catalog::plated_slagwurm());
+    g.clear_sickness(nim);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: nim, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, nim)])).expect("block");
+    while g.step != TurnStep::EndCombat {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, 18, "2 damage to their Wurm drains them for 2");
+}
+
+/// Wurmskin Forger spreads three counters on entry.
+#[test]
+fn wurmskin_forger_spreads_three_counters() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let forger = g.add_card_to_hand(0, catalog::wurmskin_forger());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: forger, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let placed: u32 = [bear, forger]
+        .iter()
+        .filter_map(|id| g.battlefield_find(*id))
+        .map(|c| c.counter_count(CounterType::PlusOnePlusOne))
+        .sum();
+    assert_eq!(placed, 3);
+}
+
+/// Taj-Nar Swordsmith fetches an Equipment for the X it paid.
+#[test]
+fn taj_nar_swordsmith_fetches_equipment() {
+    let mut g = main_phase();
+    g.players[0].library.clear();
+    let gear = g.add_card_to_library(0, catalog::vulshok_battlegear());
+    let smith = g.add_card_to_hand(0, catalog::taj_nar_swordsmith());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Amount(3),
+        crabomination::decision::DecisionAnswer::Search(Some(gear)),
+    ]));
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: smith, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(gear).map(|c| c.controller), Some(0));
+}
+
+/// Tangleroot refunds green to whoever cast the creature.
+#[test]
+fn tangleroot_refunds_each_creature_cast() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::tangleroot());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("they cast a creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].mana_pool.amount(Color::Green), 1, "the refund goes to the caster");
+}
+
+/// Goblin Dirigible stays tapped unless you pay the toll.
+#[test]
+fn goblin_dirigible_needs_the_toll() {
+    let mut g = main_phase();
+    let dirigible = g.add_card_to_battlefield(0, catalog::goblin_dirigible());
+    g.battlefield_find_mut(dirigible).unwrap().tapped = true;
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dirigible).unwrap().tapped, "no toll, no untap");
+}
+
+/// Dross Scorpion untaps an artifact off any artifact creature death.
+#[test]
+fn dross_scorpion_untaps_on_artifact_death() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::dross_scorpion());
+    let rock = g.add_card_to_battlefield(0, catalog::tanglebloom());
+    g.battlefield_find_mut(rock).unwrap().tapped = true;
+    let myr = g.add_card_to_battlefield(1, catalog::alpha_myr());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+        crabomination::decision::DecisionAnswer::Target(Target::Permanent(rock)),
+    ]));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(myr)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("kill the Myr");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(rock).unwrap().tapped);
+}
+
+/// Relic Bane bleeds the enchanted artifact's controller each upkeep.
+#[test]
+fn relic_bane_bleeds_the_artifacts_controller() {
+    let mut g = main_phase();
+    let rock = g.add_card_to_battlefield(1, catalog::tanglebloom());
+    let bane = g.add_card_to_hand(0, catalog::relic_bane());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bane, target: Some(Target::Permanent(rock)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.active_player_idx = 1;
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+}

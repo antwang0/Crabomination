@@ -168,9 +168,47 @@ impl GameState {
             }
             return 0;
         }
+        // CR 615.10 — "if a [filter] source would deal damage to you, prevent
+        // N of that damage" (Sphere of Purity). Per-event, controller-scoped.
+        let mut amount = amount;
+        if let (EntityRef::Player(p), Some(src)) = (ent, source) {
+            let shaved: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .filter_map(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::ReduceDamageToControllerFromSource {
+                        filter,
+                        amount,
+                    } => Some((filter.clone(), *amount)),
+                    _ => None,
+                })
+                .filter(|(filter, _)| {
+                    self.evaluate_requirement_static(
+                        filter,
+                        &crate::game::types::Target::Permanent(src),
+                        p,
+                        Some(src),
+                    )
+                })
+                .map(|(_, n)| n)
+                .sum();
+            let soaked = shaved.min(amount);
+            if soaked > 0 {
+                events.push(GameEvent::DamagePrevented {
+                    amount: soaked,
+                    to_player: Some(p),
+                    to_card: None,
+                });
+                amount -= soaked;
+                if amount == 0 {
+                    return 0;
+                }
+            }
+        }
         // CR 702.64 — Absorb N on the damaged creature prevents N of this
         // event's damage per instance (each instance applies separately).
-        let mut amount = amount;
         if let EntityRef::Permanent(cid) = ent {
             let absorbed: u32 = self
                 .computed_permanent(cid)

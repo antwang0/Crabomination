@@ -621,6 +621,11 @@ pub struct Player {
     /// untap step runs; non-land permanents untap normally. `#[serde(default)]`.
     #[serde(default)]
     pub lands_dont_untap_next_untap: u32,
+    /// CR 502.3 sibling of `lands_dont_untap_next_untap` for creatures
+    /// (Blinding Beam's "creatures don't untap during target player's next
+    /// untap step"). Decremented and applied in `do_untap`.
+    #[serde(default)]
+    pub creatures_dont_untap_next_untap: u32,
     /// CR 702.189 — red mana added by Firebending this combat that survives
     /// step/phase mana emptying ("you don't lose this mana as steps and phases
     /// end"). Re-seeded into the pool by `empty_mana_pools`; cleared at end of
@@ -873,6 +878,7 @@ impl Player {
             skip_next_untap_step: 0,
             skip_next_combat: 0,
             lands_dont_untap_next_untap: 0,
+            creatures_dont_untap_next_untap: 0,
             firebending_kept_red: 0,
             extra_turns: 0,
             epic_spells: Vec::new(),

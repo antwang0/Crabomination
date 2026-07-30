@@ -3268,6 +3268,9 @@ pub enum DynamicPt {
         base_t: i32,
         filter: Box<SelectionRequirement>,
     },
+    /// `base_p`/`base_t` plus one for each untapped permanent the controller's
+    /// *opponents* control (Copperhoof Vorrac).
+    BasePlusOpponentsUntappedPermanents { base_p: i32, base_t: i32 },
     /// Power = N, toughness = N+1 where N is the count of distinct card
     /// types across every player's graveyard. Tarmogoyf, Cosmogoyf.
     DistinctTypesInAllGraveyards,

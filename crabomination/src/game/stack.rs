@@ -1997,6 +1997,14 @@ impl GameState {
         } else {
             false
         };
+        // Blinding Beam — the active player's creatures skip this untap.
+        let active_creatures_skip_untap =
+            if self.players[p].creatures_dont_untap_next_untap > 0 {
+                self.players[p].creatures_dont_untap_next_untap -= 1;
+                true
+            } else {
+                false
+            };
         let untappers: Vec<usize> = {
             let mut u = if active_skips_untap { vec![] } else { vec![p] };
             for c in &self.battlefield {
@@ -2098,6 +2106,14 @@ impl GameState {
             if active_lands_skip_untap {
                 for c in &self.battlefield {
                     if c.controller == p && c.definition.is_land() {
+                        blocked.insert(c.id);
+                    }
+                }
+            }
+            // Blinding Beam — block the active player's creatures.
+            if active_creatures_skip_untap {
+                for c in &self.battlefield {
+                    if c.controller == p && c.definition.is_creature() {
                         blocked.insert(c.id);
                     }
                 }

@@ -8546,6 +8546,16 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CreaturesDontUntapNextUntapStep { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].creatures_dont_untap_next_untap =
+                            self.players[p].creatures_dont_untap_next_untap.saturating_add(1);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReturnSelfAsEnchantment => {
                 use crate::card::CardType;
                 let Some(src) = ctx.source else { return Ok(()); };
