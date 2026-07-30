@@ -25,6 +25,10 @@ use crate::mana::{Color, SpendRestriction};
 /// Lightweight reference to one or more players.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PlayerRef {
+    /// The controller of the spell this resolution just countered (Fold into
+    /// Aether's "its controller may put a creature card …"). Resolves to
+    /// `GameState.countered_spell_controller`, stamped by the counter path.
+    CounteredSpellController,
     /// The controller of the ability/spell.
     You,
     /// A specific chosen target slot (must resolve to a player).
@@ -3546,6 +3550,19 @@ pub enum Effect {
     /// onto the battlefield under your control. That creature is a Nightmare
     /// in addition to its other types." Ashiok, Nightmare Weaver −X.
     PutExiledCreatureOntoBattlefield { mv: Value },
+    /// Imprint payoff: turn the card exiled face down with this source face up
+    /// and, if it's a creature card, put it onto the battlefield under the
+    /// source's controller (Summoner's Egg). Non-creature cards stay exiled
+    /// face up.
+    RevealImprintDeployCreature,
+    /// "Target opponent reveals their hand. You may copy an instant or sorcery
+    /// card in it. If you do, you may cast the copy without paying its mana
+    /// cost." Reversal of Fortune.
+    ReversalOfFortune,
+    /// "Each player sacrifices a permanent of their choice unless they discard
+    /// a card" (Possessed Portal's end step). Each player is asked in APNAP
+    /// order; the auto-picker discards when it can.
+    EachPlayerSacrificesUnlessDiscards,
     /// "Target opponent reveals the top `count` cards of their library. You
     /// may put a nonland permanent card with mana value `count` or less from
     /// among them onto the battlefield under your control. Then that player
@@ -5047,6 +5064,10 @@ pub enum Effect {
     /// topmost `StackItem::Trigger` whose `source` matches. Used by
     /// Consign to Memory.
     CounterAbility { what: Selector },
+    /// "Counter target activated ability from an artifact source and destroy
+    /// that artifact if it's on the battlefield" (Ouphe Vandals) — the
+    /// `CounterAbility` sibling that also kills the source.
+    CounterAbilityAndDestroySource { what: Selector },
     /// Counter target spell, activated ability, or triggered ability (Voidslime).
     /// The one selector may resolve to a stack spell (matched by card id) or an
     /// ability's source (matched like `CounterAbility`); whichever kind the

@@ -1118,3 +1118,188 @@ fn nim_grotesque_counts_your_artifacts() {
     let cp = g.computed_permanent(nim).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 6));
 }
+
+// ── The Fifth Dawn remainder ──
+
+/// All Suns' Dawn returns one card per colour and exiles itself.
+#[test]
+fn all_suns_dawn_returns_one_per_colour_then_exiles() {
+    let mut g = main_phase();
+    for def in [
+        catalog::skyhunter_prowler(),
+        catalog::plasma_elemental(),
+        catalog::nim_grotesque(),
+        catalog::lightning_bolt(),
+        catalog::grizzly_bears(),
+    ] {
+        g.add_card_to_graveyard(0, def);
+    }
+    let ids: Vec<_> = g.players[0].graveyard.iter().map(|c| c.id).collect();
+    let spell = g.add_card_to_hand(0, catalog::all_suns_dawn());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(ids[0])),
+        additional_targets: ids[1..].iter().map(|i| Target::Permanent(*i)).collect(),
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    for id in &ids {
+        assert!(g.players[0].hand.iter().any(|c| c.id == *id), "one card of each colour");
+    }
+    assert!(g.exile.iter().any(|c| c.id == spell), "exiles itself");
+}
+
+/// Endless Whispers hands every dead creature to an opponent at the end step.
+#[test]
+fn endless_whispers_reanimates_under_an_opponent() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::endless_whispers());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.destroy_permanent(bear, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.controller), Some(1));
+}
+
+/// Fold into Aether counters a spell and offers its caster a free creature.
+#[test]
+fn fold_into_aether_gives_the_caster_a_creature() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let freebie = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("bolt");
+    g.priority.player_with_priority = 0;
+    let fold = g.add_card_to_hand(0, catalog::fold_into_aether());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fold, target: Some(Target::Permanent(bolt)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("fold");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the bolt was countered");
+    assert_eq!(g.battlefield_find(freebie).map(|c| c.controller), Some(1));
+}
+
+/// Ouphe Vandals counters an artifact's ability and kills the artifact.
+#[test]
+fn ouphe_vandals_counters_and_destroys() {
+    let mut g = main_phase();
+    let ouphe = g.add_card_to_battlefield(0, catalog::ouphe_vandals());
+    let station = g.add_card_to_battlefield(1, catalog::summoning_station());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: station, ability_index: 0, target: None, additional_targets: vec![],
+        x_value: None,
+    })
+    .expect("mint a Pincher");
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ouphe, ability_index: 0, target: Some(Target::Permanent(station)),
+        additional_targets: vec![], x_value: None,
+    })
+    .expect("counter it");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(station).is_none(), "the source died too");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Pincher").count(), 0);
+}
+
+/// Possessed Portal turns off every draw.
+#[test]
+fn possessed_portal_skips_draws() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::possessed_portal());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    let mut evs = Vec::new();
+    assert!(!g.draw_one(0, &mut evs), "the draw is skipped");
+    assert_eq!(g.players[0].hand.len(), before);
+}
+
+/// Possessed Portal's end step costs each player a card or a permanent.
+#[test]
+fn possessed_portal_taxes_each_end_step() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::possessed_portal());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "no card to pitch, so it sacrificed");
+}
+
+/// Reversal of Fortune copies an instant out of their hand and casts it free.
+#[test]
+fn reversal_of_fortune_casts_their_spell() {
+    let mut g = main_phase();
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let spell = g.add_card_to_hand(0, catalog::reversal_of_fortune());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 1, "the original stays in hand");
+    assert_eq!(g.players[1].life, 17, "the free copy resolved");
+}
+
+/// Spectral Shift rewrites a basic land type on a permanent (CR 612).
+#[test]
+fn spectral_shift_rewrites_a_land_type() {
+    let mut g = main_phase();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let shift = g.add_card_to_hand(0, catalog::spectral_shift());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Color(Color::Green), // replace "Forest"...
+        crabomination::decision::DecisionAnswer::Color(Color::Blue),  // ...with "Island"
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: shift, target: Some(Target::Permanent(forest)), additional_targets: vec![],
+        mode: Some(0), x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let types = g.computed_permanent(forest).unwrap().subtypes.land_types;
+    assert!(!types.contains(&crabomination::card::LandType::Forest), "the type was replaced");
+}
+
+/// Summoner's Egg hatches the creature it imprinted.
+#[test]
+fn summoners_egg_hatches_its_imprint() {
+    let mut g = main_phase();
+    let hidden = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let egg = g.add_card_to_hand(0, catalog::summoners_egg());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: egg, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == hidden), "imprinted face down");
+    let mut evs = Vec::new();
+    g.destroy_permanent(egg, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(hidden).map(|c| c.controller), Some(0));
+}

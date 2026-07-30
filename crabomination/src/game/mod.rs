@@ -705,6 +705,11 @@ pub struct GameState {
     /// `countered_spell_mana_spent`, read by `Value::CounteredSpellManaValue`.
     #[serde(default)]
     pub countered_spell_mana_value: u32,
+    /// The controller (caster) of the spell most recently countered during the
+    /// current resolution. Read by `PlayerRef::CounteredSpellController` (Fold
+    /// into Aether's "its controller may put a creature card …").
+    #[serde(default)]
+    pub countered_spell_controller: Option<usize>,
     /// Transient: seats that sacrificed at least one permanent during the
     /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
@@ -1452,6 +1457,7 @@ impl Clone for GameState {
             damaged_this_resolution: self.damaged_this_resolution.clone(),
             countered_spell_mana_spent: self.countered_spell_mana_spent,
             countered_spell_mana_value: self.countered_spell_mana_value,
+            countered_spell_controller: self.countered_spell_controller,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
@@ -1664,6 +1670,7 @@ impl GameState {
             damaged_this_resolution: Vec::new(),
             countered_spell_mana_spent: 0,
             countered_spell_mana_value: 0,
+            countered_spell_controller: None,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             named_card_this_resolution: None,
             pending_cast_face: CastFace::Front,
@@ -1964,6 +1971,29 @@ impl GameState {
             let charges = card.counter_count(crate::card::CounterType::Charge);
             for band in card.definition.station.iter().filter(|b| charges >= b.min) {
                 out.extend(band.triggers.iter().cloned());
+            }
+        }
+        out
+    }
+
+    /// The static-granted triggered abilities a permanent carried at the
+    /// moment it left the battlefield. Same walk as
+    /// `statics_granted_triggers_for`, but the grant filter is evaluated
+    /// against the death LKI snapshot (the card is no longer on the
+    /// battlefield, so a `Target::Permanent` lookup would miss).
+    pub(crate) fn statics_granted_dying_triggers(
+        &self,
+        snap: &CardInstance,
+    ) -> Vec<crate::card::TriggeredAbility> {
+        let mut out = Vec::new();
+        for src in &self.battlefield {
+            for sa in &src.definition.static_abilities {
+                if let crate::effect::StaticEffect::GrantTriggeredAbility { filter, ability } =
+                    &sa.effect
+                    && self.evaluate_requirement_on_card(filter, snap, src.controller)
+                {
+                    out.push((**ability).clone());
+                }
             }
         }
         out
@@ -9623,6 +9653,16 @@ impl GameState {
         if self.draw_cap_for(p).is_some_and(|cap| self.players[p].cards_drawn_this_turn >= cap) {
             return false;
         }
+        // CR 614 — Possessed Portal: "If a player would draw a card, that
+        // player skips that draw instead."
+        if self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::PlayersSkipDraws))
+        }) {
+            return false;
+        }
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
         }
@@ -11012,7 +11052,17 @@ impl GameState {
         // (Other SelfSource trigger kinds — die/leave — are handled via their
         // own dedicated paths, so this is scoped to DealtDamage only.)
         for snap in self.died_card_snapshots.values() {
-            for ta in &snap.definition.triggered_abilities {
+            // CR 603.10a — a leaves-the-battlefield ability granted by a static
+            // (Endless Whispers' "each creature has 'when this dies …'") looks
+            // back in time, so gather the grants against the death snapshot.
+            let granted = self.statics_granted_dying_triggers(snap);
+            let all = snap
+                .definition
+                .triggered_abilities
+                .iter()
+                .map(|t| (t, false))
+                .chain(granted.iter().map(|t| (t, true)));
+            for (ta, is_granted) in all {
                 // SelfSource `DealtDamage` (Enrage on lethal damage) and
                 // `PermanentSacrificed`/`CreatureSacrificed` ("when you
                 // sacrifice this") all fire from LKI — the source has left
@@ -11022,7 +11072,16 @@ impl GameState {
                     crate::effect::EventKind::DealtDamage
                         | crate::effect::EventKind::PermanentSacrificed
                         | crate::effect::EventKind::CreatureSacrificed
-                ) && ta.event.scope == crate::effect::EventScope::SelfSource;
+                ) && ta.event.scope == crate::effect::EventScope::SelfSource
+                    // A *granted* "when this dies" also needs the LKI path; the
+                    // printed one already fires through the battlefield walk.
+                    || is_granted
+                        && matches!(
+                            ta.event.kind,
+                            crate::effect::EventKind::CreatureDied
+                                | crate::effect::EventKind::PermanentDied
+                        )
+                        && ta.event.scope == crate::effect::EventScope::SelfSource;
                 // "When enchanted permanent dies or is exiled" on a leaving Aura
                 // (Minion's Return, Kaya's Ghostform) — the snapshot is the
                 // orphaned Aura, scope keys on the departed host recorded in
@@ -15574,6 +15633,8 @@ fn static_effect_to_effects(
             // Fist of Suns — consulted by `effective_alternative_cost` at cast
             // time; no layer effect.
             | StaticEffect::FiveColorAlternativeCost
+            // Possessed Portal — consulted by `draw_one`; no layer effect.
+            | StaticEffect::PlayersSkipDraws
             // CounterAmplifierOncePerTurn (Cursed Wombat) — consulted in the
             // `Effect::AddCounter` +1/+1 path; no layer effect.
             | StaticEffect::CounterAmplifierOncePerTurn

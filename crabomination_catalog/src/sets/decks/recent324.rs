@@ -706,3 +706,175 @@ pub fn stasis_cocoon() -> CardDefinition {
         },
     )
 }
+
+// ── The Fifth Dawn remainder ──
+
+/// All Suns' Dawn — one card of each colour back from your graveyard.
+pub fn all_suns_dawn() -> CardDefinition {
+    use crate::mana::Color;
+    let slot = |i: u8, color: Color| Effect::Move {
+        what: Selector::TargetFiltered {
+            slot: i,
+            filter: R::InYourGraveyard.and(R::HasColor(color)),
+        },
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
+    CardDefinition {
+        name: "All Suns' Dawn",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Sorcery],
+        exile_on_resolve: true,
+        effect: Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Seq(vec![
+                slot(0, Color::White),
+                slot(1, Color::Blue),
+                slot(2, Color::Black),
+                slot(3, Color::Red),
+                slot(4, Color::Green),
+            ])),
+        },
+        ..Default::default()
+    }
+}
+
+/// Endless Whispers — every creature that dies comes back under an opponent's
+/// control at the next end step. (The printed "choose target opponent" picks
+/// the first opponent rather than being targeted.)
+pub fn endless_whispers() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Each creature returns under an opponent's control when it dies",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Creature,
+                ability: Box::new(crate::effect::shortcut::on_dies(
+                    Effect::DelayUntilWithCapture {
+                        kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                        capture: Selector::TriggerSource,
+                        body: Box::new(Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::EachOpponent,
+                                tapped: false,
+                            },
+                        }),
+                    },
+                )),
+            },
+        }],
+        ..enchantment("Endless Whispers", cost(&[generic(2), b(), b()]))
+    }
+}
+
+/// Fold into Aether — a counter that hands its victim a free creature.
+pub fn fold_into_aether() -> CardDefinition {
+    CardDefinition {
+        name: "Fold into Aether",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell { what: Selector::Target(0) },
+            Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::CounteredSpellController,
+                filter: R::Creature,
+                count: Value::ONE,
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ouphe Vandals — trades itself for an artifact's ability and the artifact.
+pub fn ouphe_vandals() -> CardDefinition {
+    CardDefinition {
+        name: "Ouphe Vandals",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ouphe, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            sac_cost: true,
+            effect: Effect::CounterAbilityAndDestroySource {
+                what: target_filtered(R::Artifact.and(R::HasAbilityOnStack)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Possessed Portal — nobody draws, and every end step costs a card.
+pub fn possessed_portal() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Players skip their draws",
+            effect: StaticEffect::PlayersSkipDraws,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
+            effect: Effect::EachPlayerSacrificesUnlessDiscards,
+        }],
+        ..artifact("Possessed Portal", cost(&[generic(8)]))
+    }
+}
+
+/// Reversal of Fortune — cast a copy of the best spell in their hand.
+pub fn reversal_of_fortune() -> CardDefinition {
+    CardDefinition {
+        name: "Reversal of Fortune",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ReversalOfFortune,
+        ..Default::default()
+    }
+}
+
+/// Spectral Shift — rewrite a basic land type or a colour word, or both.
+pub fn spectral_shift() -> CardDefinition {
+    CardDefinition {
+        name: "Spectral Shift",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Entwine(cost(&[generic(2)]))],
+        effect: Effect::ChooseMode(vec![
+            Effect::ReplaceBasicLandType {
+                what: target_filtered(R::Permanent),
+                duration: Duration::Permanent,
+            },
+            Effect::ReplaceColorWord {
+                what: target_filtered(R::Permanent),
+                duration: Duration::Permanent,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Summoner's Egg — imprints a card and hatches it when it dies.
+pub fn summoners_egg() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Egg], ..Default::default() },
+        power: 0,
+        toughness: 4,
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::ExileChosenFromHand {
+                from: Selector::You,
+                count: Value::ONE,
+                filter: R::Any,
+                link_to_source: true,
+                face_down: true,
+            }),
+            crate::effect::shortcut::on_dies(Effect::RevealImprintDeployCreature),
+        ],
+        ..artifact("Summoner's Egg", cost(&[generic(4)]))
+    }
+}

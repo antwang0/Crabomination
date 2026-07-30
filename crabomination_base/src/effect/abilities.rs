@@ -1932,6 +1932,10 @@ pub enum StaticEffect {
     /// each untapping player untaps at most one nonbasic land (the rest stay
     /// tapped). Global — applies to every player, not just the controller.
     MaxOneNonbasicLandUntap,
+    /// CR 121.2a — "If a player would draw a card, that player skips that draw
+    /// instead" (Possessed Portal). Global draw replacement consulted in
+    /// `draw_one`.
+    PlayersSkipDraws,
     /// CR 506.2 — "No more than N creatures can attack each combat" (Silent
     /// Arbiter). Global; enforced in `declare_attackers` against the whole
     /// declared batch.

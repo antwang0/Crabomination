@@ -1016,6 +1016,7 @@ impl GameState {
         self.damage_dealt_this_resolution = 0;
         self.damaged_this_resolution.clear();
         self.countered_spell_mana_spent = 0;
+        self.countered_spell_controller = None;
         self.countered_spell_mana_value = 0;
         self.players_sacrificed_this_resolution.clear();
         self.named_card_this_resolution = None;
@@ -8003,8 +8004,9 @@ impl GameState {
                     .collect();
                 let mut countered = 0u32;
                 for pos in to_remove.into_iter().rev() {
-                    if let StackItem::Spell { card, mana_spent, .. } = self.stack.remove(pos) {
+                    if let StackItem::Spell { card, mana_spent, caster, .. } = self.stack.remove(pos) {
                         self.countered_spell_mana_spent = mana_spent;
+                        self.countered_spell_controller = Some(caster);
                         self.countered_spell_mana_value = card.definition.cost.cmc();
                         self.countered_spell_off_stack(*card, events);
                         countered += 1;
@@ -11100,10 +11102,13 @@ impl GameState {
                 }
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
                 for pos in to_remove {
-                    if let StackItem::Spell { card, mana_spent, .. } = self.stack.remove(pos) {
+                    if let StackItem::Spell { card, mana_spent, caster, .. } = self.stack.remove(pos)
+                    {
                         // Mana Sculpt — record the countered spell's paid
-                        // mana for `Value::CounteredSpellManaSpent`.
+                        // mana for `Value::CounteredSpellManaSpent`; Fold into
+                        // Aether reads the caster.
                         self.countered_spell_mana_spent = mana_spent;
+                        self.countered_spell_controller = Some(caster);
                         self.countered_spell_mana_value = card.definition.cost.cmc();
                         self.countered_spell_off_stack(*card, events);
                     }
@@ -11133,8 +11138,9 @@ impl GameState {
                 }
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
                 for pos in to_remove {
-                    if let StackItem::Spell { card, mana_spent, .. } = self.stack.remove(pos) {
+                    if let StackItem::Spell { card, mana_spent, caster, .. } = self.stack.remove(pos) {
                         self.countered_spell_mana_spent = mana_spent;
+                        self.countered_spell_controller = Some(caster);
                         self.countered_spell_mana_value = card.definition.cost.cmc();
                         let name = card.definition.name;
                         let owner = card.owner;
@@ -11741,6 +11747,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CounterAbilityAndDestroySource { what } => {
+                // Ouphe Vandals — counter the targeted permanent's topmost
+                // ability on the stack, then destroy that permanent.
+                self.run_effect(&Effect::CounterAbility { what: what.clone() }, ctx, events)?;
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.destroy_permanent(cid, false, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CounterSpellOrAbility { what } => {
                 // Voidslime: the target is either a stack spell (matched by card
                 // id) or an ability (matched by its source). Try the spell first,
@@ -11755,8 +11773,9 @@ impl GameState {
                         si,
                         StackItem::Spell { card, uncounterable: false, .. } if card.id == cid
                     )) {
-                        if let StackItem::Spell { card, mana_spent, .. } = self.stack.remove(pos) {
+                        if let StackItem::Spell { card, mana_spent, caster, .. } = self.stack.remove(pos) {
                             self.countered_spell_mana_spent = mana_spent;
+                            self.countered_spell_controller = Some(caster);
                         self.countered_spell_mana_value = card.definition.cost.cmc();
                             self.countered_spell_off_stack(*card, events);
                         }
@@ -14182,6 +14201,107 @@ impl GameState {
                         }
                     }
                 }
+                Ok(())
+            }
+
+            Effect::RevealImprintDeployCreature => {
+                // Summoner's Egg — turn the face-down imprinted card face up;
+                // a creature card enters under the source's controller.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let pick = self
+                    .exile
+                    .iter()
+                    .find(|c| c.exiled_with == Some(src) && c.face_down)
+                    .map(|c| (c.id, c.definition.is_creature()));
+                let Some((id, is_creature)) = pick else { return Ok(()) };
+                if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
+                    c.face_down = false;
+                }
+                if is_creature {
+                    let dest = ZoneDest::Battlefield {
+                        controller: crate::effect::PlayerRef::Seat(ctx.controller),
+                        tapped: false,
+                    };
+                    self.move_card_to(id, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerSacrificesUnlessDiscards => {
+                // Possessed Portal — each player discards a card, or
+                // sacrifices a permanent of their choice if they don't.
+                for p in self.apnap_sort((0..self.players.len()).collect()) {
+                    let sub = EffectContext { controller: p, ..ctx.clone() };
+                    self.run_effect(
+                        &Effect::MayDiscard {
+                            description: "Discard a card, or sacrifice a permanent?".into(),
+                            count: crate::card::Value::ONE,
+                            then: Box::new(Effect::Noop),
+                            else_: Some(Box::new(Effect::Sacrifice {
+                                who: Selector::Player(crate::effect::PlayerRef::You),
+                                count: crate::card::Value::ONE,
+                                filter: crate::card::SelectionRequirement::Permanent,
+                            })),
+                        },
+                        &sub,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
+            Effect::ReversalOfFortune => {
+                // Target opponent reveals their hand; you may copy an instant
+                // or sorcery card in it and cast the copy for free. The copy
+                // is minted into exile so the original stays in hand.
+                let Some(victim) = ctx
+                    .targets
+                    .first()
+                    .and_then(|t| match t {
+                        Target::Player(p) => Some(*p),
+                        _ => None,
+                    })
+                    .or_else(|| self.resolve_player(&crate::effect::PlayerRef::Target(0), ctx))
+                else {
+                    return Ok(());
+                };
+                if !self.hands_revealed_to.contains(&(ctx.controller, victim)) {
+                    self.hands_revealed_to.push((ctx.controller, victim));
+                }
+                let Some(src) = self.players[victim]
+                    .hand
+                    .iter()
+                    .find(|c| c.definition.is_instant() || c.definition.is_sorcery())
+                    .cloned()
+                else {
+                    return Ok(());
+                };
+                let mut copy = src.clone();
+                copy.id = self.next_id();
+                copy.owner = ctx.controller;
+                copy.controller = ctx.controller;
+                copy.is_token = true;
+                copy.exiled_with = ctx.source;
+                let copy_id = copy.id;
+                self.exile.push(copy);
+                self.run_effect(
+                    &Effect::CastWithoutPayingImmediate {
+                        what: Selector::Take {
+                            inner: Box::new(Selector::CardsInZone {
+                                who: crate::effect::PlayerRef::Seat(ctx.controller),
+                                zone: crate::card::Zone::Exile,
+                                filter: crate::card::SelectionRequirement::ExiledWithSource,
+                            }),
+                            count: Box::new(crate::card::Value::ONE),
+                        },
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                    },
+                    ctx,
+                    events,
+                )?;
+                self.exile.retain(|c| c.id != copy_id || c.definition.is_land());
                 Ok(())
             }
 
@@ -21974,6 +22094,7 @@ impl GameState {
             PlayerRef::You => Some(ctx.controller),
             PlayerRef::Seat(p) => Some(*p),
             PlayerRef::ActivePlayer => Some(self.active_player_idx),
+            PlayerRef::CounteredSpellController => self.countered_spell_controller,
             // Ties go to the earliest seat (stands in for "you choose one").
             PlayerRef::LowestLife => (0..self.players.len()).min_by_key(|p| self.players[*p].life),
             PlayerRef::Triggerer => ctx.trigger_source.and_then(|e| match e {
