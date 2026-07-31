@@ -9950,6 +9950,20 @@ impl GameState {
     /// caller is responsible for the resulting loss SBA. Pushes
     /// `CardDrawn` for a normal draw, or `CardMilled` ×N +
     /// `CardLeftGraveyard` for a dredge.
+    /// CR 121.2a — true while `p` controls an *active*
+    /// `StaticEffect::MayReplaceDrawWithTutor` (Archmage Ascension at six
+    /// quest counters). Peeled through the gating wrappers by `active_static`.
+    fn player_may_tutor_instead_of_drawing(&self, p: usize) -> bool {
+        self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    self.active_static(&sa.effect, c),
+                    Some(crate::effect::StaticEffect::MayReplaceDrawWithTutor)
+                )
+            })
+        })
+    }
+
     pub fn draw_one(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
         // CR 121.2b — a per-turn draw cap applies to *individual* card draws,
         // so it gates every draw source, not just `Effect::Draw`'s count.
@@ -10005,6 +10019,37 @@ impl GameState {
         }
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
+        }
+        // CR 121.2a — Archmage Ascension: "you may instead search your library
+        // for a card, put that card into your hand, then shuffle." Optional and
+        // controller-scoped, so it reads through the counter/turn gates.
+        if self.player_may_tutor_instead_of_drawing(p) {
+            use crate::decision::{Decision, DecisionAnswer};
+            let yes = matches!(
+                self.decider.decide(&Decision::OptionalTrigger {
+                    source: crate::card::CardId(0),
+                    description: "Search your library for a card instead of drawing?".to_string(),
+                }),
+                DecisionAnswer::Bool(true)
+            );
+            if yes && !self.players[p].library.is_empty() {
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    crate::card::CardId(0),
+                    p,
+                    None,
+                );
+                if let Ok(mut evs) = self.resolve_effect(
+                    &crate::effect::Effect::Search {
+                        who: crate::effect::PlayerRef::Seat(p),
+                        filter: crate::card::SelectionRequirement::Any,
+                        to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(p)),
+                    },
+                    &ctx,
+                ) {
+                    events.append(&mut evs);
+                }
+                return true;
+            }
         }
         // CR 614 — Notion Thief: redirect an opponent's draw (except the
         // turn-based first draw of their draw step) to the thief's controller.
@@ -16106,6 +16151,9 @@ fn static_effect_to_effects(
             | StaticEffect::FiveColorAlternativeCost
             // Possessed Portal / Shared Fate — consulted by `draw_one`; no
             // layer effect.
+            // MayReplaceDrawWithTutor — a draw replacement consulted in
+            // `draw_one`; no layer effect.
+            | StaticEffect::MayReplaceDrawWithTutor
             | StaticEffect::PlayersSkipDraws
             | StaticEffect::SharedFate
             // Uba Mask — consulted by `draw_one`; no layer effect.

@@ -276,6 +276,11 @@ pub enum StaticEffect {
         #[serde(default)]
         exclude_self: bool,
     },
+    /// CR 121.2a — "If you would draw a card, you may instead search your
+    /// library for a card, put that card into your hand, then shuffle."
+    /// A controller-scoped, optional draw replacement (Archmage Ascension,
+    /// usually behind `WhileCountersAtLeast`).
+    MayReplaceDrawWithTutor,
     /// "[applies_to] you control get +per/+per for each Equipment attached to
     /// *this creature*" (Armament Master). The attachment-scaled sibling of
     /// `PumpTeamByControlledPermanents`, which counts board-wide instead.

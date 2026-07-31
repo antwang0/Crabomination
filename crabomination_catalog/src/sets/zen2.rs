@@ -2006,3 +2006,77 @@ pub fn emeria_the_sky_ruin() -> CardDefinition {
         ..super::wwk::tapped_etb_land("Emeria, the Sky Ruin", Color::White, Effect::Noop)
     }
 }
+
+// ── The Ascensions ──────────────────────────────────────────────────────────
+
+/// The Ascension quest trigger: "At the beginning of each end step, if
+/// [condition], you may put a quest counter on this enchantment."
+fn ascension_quest(condition: Predicate) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(
+            EventKind::StepBegins(crate::game::types::TurnStep::End),
+            EventScope::AnyPlayer,
+        )
+        .with_filter(condition),
+        effect: Effect::MayDo {
+            description: "Put a quest counter on this enchantment".into(),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Quest,
+                amount: Value::Const(1),
+            }),
+        },
+    }
+}
+
+/// Archmage Ascension — {2}{U} Enchantment. Quest counters off drawing two;
+/// at six, your draws become tutors.
+pub fn archmage_ascension() -> CardDefinition {
+    CardDefinition {
+        name: "Archmage Ascension",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![ascension_quest(Predicate::PlayerDrewAtLeastThisTurn {
+            who: PlayerRef::You,
+            n: 2,
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "With six quest counters, you may search instead of drawing",
+            effect: StaticEffect::WhileCountersAtLeast {
+                kind: CounterType::Quest,
+                n: 6,
+                inner: Box::new(StaticEffect::MayReplaceDrawWithTutor),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bloodchief Ascension — {B} Enchantment. Quest counters off an opponent
+/// bleeding; at three, every card into their graveyard drains 2.
+pub fn bloodchief_ascension() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodchief Ascension",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            ascension_quest(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::OpponentControl)
+                    .with_filter(Predicate::SourceHasCountersAtLeast {
+                        counter: CounterType::Quest,
+                        n: 3,
+                    }),
+                effect: Effect::MayDo {
+                    description: "That player loses 2 life and you gain 2".into(),
+                    body: Box::new(Effect::Drain {
+                        from: Selector::Player(PlayerRef::EachOpponent),
+                        to: Selector::You,
+                        amount: Value::Const(2),
+                    }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

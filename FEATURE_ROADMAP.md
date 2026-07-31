@@ -1322,7 +1322,7 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `Effect::CopyForEachOtherTargetableCreature` (Zada, Hedron Grinder — a spell
   targeting only the source is copied once per other creature it could target).
   Emblem `AnthemForFilter` statics now reach the live anthem gather, so Gideon,
-  Ally of Zendikar's −4 actually pumps. **Zendikar (ZEN) 150 → 56 gaps** (`sets::zen2`, 94 cards): the seven
+  Ally of Zendikar's −4 actually pumps. **Zendikar (ZEN) 150 → 54 gaps** (`sets::zen2`, 96 cards): the seven
   board-state Traps, the Rally Allies, the landfall commons, the kicker
   creatures/spells, the Refuge land cycle and the small statics. New:
   `Predicate::{DamagedByCreaturesThisTurnAtLeast, LandsEnteredThisTurnAtLeast}`

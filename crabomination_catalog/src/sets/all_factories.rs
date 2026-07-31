@@ -10506,6 +10506,8 @@ static OGW: &[Factory] = &[
     super::wwk::bazaar_trader,
     super::wwk::claws_of_valakut,
     super::wwk::canopy_cover,
+    super::zen2::archmage_ascension,
+    super::zen2::bloodchief_ascension,
     super::zen2::blade_of_the_bloodchief,
     super::zen2::grappling_hook,
     super::zen2::explorers_scope,

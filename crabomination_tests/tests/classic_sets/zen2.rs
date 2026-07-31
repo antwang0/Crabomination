@@ -772,3 +772,53 @@ fn living_tsunami_wants_a_land_back() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(tsu).is_none(), "declining sacrifices it");
 }
+
+/// Archmage Ascension banks a quest counter for drawing two, and at six turns
+/// each draw into a tutor (CR 121.2a).
+#[test]
+fn archmage_ascension_replaces_draws_at_six() {
+    let mut g = two_player_game();
+    always_yes(&mut g);
+    let asc = g.add_card_to_battlefield(0, catalog::archmage_ascension());
+    g.players[0].cards_drawn_this_turn = 2;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(asc).unwrap().counter_count(CounterType::Quest), 1);
+
+    // Below six the draw is a normal draw off the top.
+    g.players[0].library.clear();
+    let top = g.add_card_to_library(0, catalog::island());
+    let deep = g.add_card_to_library(0, catalog::lightning_bolt());
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    assert!(g.players[0].hand.iter().any(|c| c.id == top), "drew off the top");
+
+    // At six, the search takes the card the decider picks.
+    g.battlefield_find_mut(asc).unwrap().add_counters(CounterType::Quest, 5);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(deep)),
+    ]));
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    assert!(g.players[0].hand.iter().any(|c| c.id == deep), "tutored from deeper in the deck");
+}
+
+/// Bloodchief Ascension only drains once it has three quest counters.
+#[test]
+fn bloodchief_ascension_drains_at_three() {
+    let drained = |counters: u32| {
+        let mut g = two_player_game();
+        always_yes(&mut g);
+        let asc = g.add_card_to_battlefield(0, catalog::bloodchief_ascension());
+        g.battlefield_find_mut(asc).unwrap().add_counters(CounterType::Quest, counters);
+        let card = g.add_card_to_hand(1, catalog::lightning_bolt());
+        let mut ev = vec![];
+        g.discard_card(1, card, &mut ev);
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+        g.players[1].life
+    };
+    assert_eq!(drained(2), 20, "two counters isn't enough");
+    assert_eq!(drained(3), 18, "three drains 2");
+}

@@ -7711,9 +7711,8 @@ stalled games via `eval_material`.
   permanent under your control was destroyed this turn by a spell or ability an
   opponent controlled" wants a per-turn flag stamped where the destroying
   effect's controller is known; the generic destroy funnel doesn't carry it.
-- **56 ZEN gap cards remain**, clustered on: the quest-counter enchantments with
-  bespoke payoffs (Archmage Ascension's draw replacement, Bloodchief Ascension),
-  the three planeswalkers (Chandra Ablaze, Nissa Revane, Sorin Markov), the
+- **54 ZEN gap cards remain**, clustered on: the three planeswalkers
+  (Chandra Ablaze, Nissa Revane, Sorin Markov), the
   eon-counter / extra-turn lands (Magosi), Roil Elemental's landfall theft,
   Eternity Vessel's life-total set, and Obsidian Fireheart's persistent
   blaze-counter grant.
