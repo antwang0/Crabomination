@@ -86,7 +86,7 @@ fn darksteel_brute_animates_into_a_beast() {
     let brute = g.add_card_to_battlefield(0, catalog::darksteel_brute());
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: brute, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: brute, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("animate");
     drain_stack(&mut g);
@@ -110,7 +110,7 @@ fn arcane_spyglass_charges_then_cashes_in() {
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
             card_id: glass, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac a land to draw");
         drain_stack(&mut g);
@@ -118,7 +118,7 @@ fn arcane_spyglass_charges_then_cashes_in() {
     assert_eq!(g.battlefield_find(glass).unwrap().counter_count(CounterType::Charge), 3);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: glass, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: glass, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("remove three charges");
     drain_stack(&mut g);
@@ -134,7 +134,7 @@ fn coretapper_sacrifices_for_two_charges() {
     let target = g.add_card_to_battlefield(0, catalog::arcane_spyglass());
     g.perform_action(GameAction::ActivateAbility {
         card_id: myr, ability_index: 1, target: Some(Target::Permanent(target)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sacrifice for two");
     drain_stack(&mut g);
@@ -280,7 +280,7 @@ fn arcbound_reclaimer_tucks_an_artifact_from_the_graveyard() {
     let buried = g.add_card_to_graveyard(0, catalog::coretapper());
     g.perform_action(GameAction::ActivateAbility {
         card_id: reclaimer, ability_index: 0, target: Some(Target::Permanent(buried)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("remove a counter");
     drain_stack(&mut g);
@@ -397,7 +397,7 @@ fn myr_landshaper_grant_expires_at_end_of_turn() {
     let land = g.add_card_to_battlefield(0, catalog::forest());
     g.perform_action(GameAction::ActivateAbility {
         card_id: myr, ability_index: 0, target: Some(Target::Permanent(land)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("animate the land's type line");
     drain_stack(&mut g);
@@ -426,7 +426,7 @@ fn spawning_pit_banks_charges_for_a_spawn() {
         g.add_card_to_battlefield(0, catalog::grizzly_bears());
         g.perform_action(GameAction::ActivateAbility {
             card_id: pit, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sacrifice a creature");
         drain_stack(&mut g);
@@ -434,7 +434,7 @@ fn spawning_pit_banks_charges_for_a_spawn() {
     assert_eq!(g.battlefield_find(pit).unwrap().counter_count(CounterType::Charge), 2);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pit, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: pit, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("cash in two charges");
     drain_stack(&mut g);
@@ -451,7 +451,7 @@ fn leonin_bola_taps_and_unattaches() {
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: bola, ability_index: 0, target: Some(Target::Permanent(victim)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("tap the host, unattach, tap a creature");
     drain_stack(&mut g);
@@ -543,7 +543,7 @@ fn neurok_transmuter_unmakes_an_artifact_creature() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: wizard, ability_index: 1, target: Some(Target::Permanent(myr)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("strip the artifact type");
     drain_stack(&mut g);
@@ -571,7 +571,7 @@ fn chimeric_egg_charges_then_animates() {
     assert_eq!(g.battlefield_find(egg).unwrap().counter_count(CounterType::Charge), 3);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: egg, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: egg, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("cash three charges");
     drain_stack(&mut g);
@@ -598,7 +598,7 @@ fn talon_of_pain_banks_damage_then_burns() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: talon, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: Some(2),
+        additional_targets: vec![], x_value: Some(2), mode: None,
     })
     .expect("spend two charges");
     drain_stack(&mut g);
@@ -688,7 +688,7 @@ fn heartseeker_unattaches_to_kill() {
     assert_eq!(g.computed_permanent(kor).map(|c| (c.power, c.toughness)), Some((4, 3)));
     g.perform_action(GameAction::ActivateAbility {
         card_id: blade, ability_index: 0, target: Some(Target::Permanent(victim)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("fire the Heartseeker");
     drain_stack(&mut g);
@@ -995,7 +995,7 @@ fn auriok_siege_sled_forbids_only_its_own_block() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: sled, ability_index: 1, target: Some(Target::Permanent(blocker)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("forbid the block");
     drain_stack(&mut g);
@@ -1026,7 +1026,7 @@ fn synod_artificer_taps_x_artifacts() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: artificer, ability_index: 0, target: Some(Target::Permanent(a)),
-        additional_targets: vec![Target::Permanent(b)], x_value: Some(2),
+        additional_targets: vec![Target::Permanent(b)], x_value: Some(2), mode: None,
     })
     .expect("tap two");
     drain_stack(&mut g);
@@ -1045,7 +1045,7 @@ fn synod_artificer_rejects_too_few_targets() {
     assert!(
         g.perform_action(GameAction::ActivateAbility {
             card_id: artificer, ability_index: 0, target: Some(Target::Permanent(a)),
-            additional_targets: vec![], x_value: Some(2),
+            additional_targets: vec![], x_value: Some(2), mode: None,
         })
         .is_err(),
         "X = 2 needs two targets",
@@ -1066,7 +1066,7 @@ fn thought_dissector_steals_an_artifact_and_sacrifices_itself() {
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: dissector, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: Some(3),
+        additional_targets: vec![], x_value: Some(3), mode: None,
     })
     .expect("dig three");
     drain_stack(&mut g);
@@ -1085,7 +1085,7 @@ fn thought_dissector_survives_finding_nothing() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: dissector, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: Some(1),
+        additional_targets: vec![], x_value: Some(1), mode: None,
     })
     .expect("dig one");
     drain_stack(&mut g);
@@ -1255,7 +1255,7 @@ fn death_mask_duplicant_gains_imprinted_keywords() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: dup, ability_index: 0, target: Some(Target::Permanent(flier)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("imprint the Angel");
     drain_stack(&mut g);
@@ -1274,7 +1274,7 @@ fn panoptic_mirror_recasts_the_imprinted_spell_for_free() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: mirror, ability_index: 0, target: None, additional_targets: vec![],
-        x_value: Some(1),
+        x_value: Some(1), mode: None,
     })
     .expect("imprint a 1-drop instant");
     drain_stack(&mut g);

@@ -430,7 +430,7 @@ mod recent22 {
         // Exhaust — {3}: +1/+1 counter + arm the next-Lesson copy.
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: jj, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: jj, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate exhaust");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(jj).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
@@ -578,7 +578,7 @@ mod recent23 {
             ability_index: 0,
             target: Some(Target::Permanent(bill)),
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate sac-a-Food grant");
         drain_stack(&mut g);
@@ -659,7 +659,7 @@ mod recent23 {
             ability_index: 0,
             target: Some(Target::Permanent(bear)),
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Bear Trap");
         drain_stack(&mut g);
@@ -806,7 +806,7 @@ mod recent23 {
             ability_index: 0,
             target: Some(Target::Permanent(target)),
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Aetherjacket");
         drain_stack(&mut g);
@@ -1177,7 +1177,7 @@ mod recent24 {
         ready(&mut g);
         let ds = g.battlefield.iter().find(|c| c.definition.name == "Diversion Specialist").unwrap().id;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: ds, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: ds, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate Diversion Specialist");
         drain_stack(&mut g);
@@ -1348,7 +1348,7 @@ mod recent24 {
         ready(&mut g);
         g.perform_action(GameAction::ActivateAbility {
             card_id: fungus, ability_index: 0, target: Some(Target::Permanent(art)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate Insidious Fungus (mode 0)");
         drain_stack(&mut g);
@@ -1652,7 +1652,7 @@ mod recent24 {
         ready(&mut g);
         g.perform_action(GameAction::ActivateAbility {
             card_id: dm, ability_index: 0, target: Some(Target::Permanent(veh)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(&mut g);
@@ -1667,7 +1667,7 @@ mod recent24 {
         let dp = g.add_card_to_graveyard(0, catalog::deathless_pilot());
         ready(&mut g);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: dp, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: dp, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate gy ability");
         drain_stack(&mut g);
@@ -1778,7 +1778,7 @@ mod recent24 {
         g.priority.player_with_priority = 0;
         let hand_before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: tg, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: tg, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate loot");
         drain_stack(&mut g);
@@ -1798,7 +1798,7 @@ mod recent24 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: wd, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: wd, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate surveil");
         drain_stack(&mut g);
@@ -1817,7 +1817,7 @@ mod recent24 {
         g.priority.player_with_priority = 0;
         let gy_before = g.players[0].graveyard.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: mt, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: mt, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate mill");
         drain_stack(&mut g);
@@ -1837,7 +1837,7 @@ mod recent24 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: sc, ability_index: 0, target: Some(Target::Permanent(foe)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate ping");
         drain_stack(&mut g);
@@ -2104,7 +2104,7 @@ mod recent24 {
         g.clear_sickness(saw);
         ready(&mut g);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: saw, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: saw, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate Sawblade sac ability");
         drain_stack(&mut g);
@@ -2216,7 +2216,7 @@ mod recent24 {
         for _ in 0..2 {
             g.battlefield_find_mut(doll).unwrap().tapped = false;
             g.perform_action(GameAction::ActivateAbility {
-                card_id: doll, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+                card_id: doll, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
             })
             .expect("mana + nest counter");
         }
@@ -2224,7 +2224,7 @@ mod recent24 {
         // Sacrifice ability: make a Spider per counter (2).
         g.battlefield_find_mut(doll).unwrap().tapped = false;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: doll, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+            card_id: doll, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("sacrifice for Spiders");
         drain_stack(&mut g);
@@ -2292,7 +2292,7 @@ mod recent24 {
         ready(&mut g);
         g.perform_action(GameAction::ActivateAbility {
             card_id: rp, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate Ragged Playmate");
         drain_stack(&mut g);
@@ -2381,7 +2381,7 @@ mod recent24 {
         ready(&mut g);
         let (foe_life, hand) = (g.players[1].life, g.players[0].hand.len());
         g.perform_action(GameAction::ActivateAbility {
-            card_id: sr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: sr, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate Soulrager");
         drain_stack(&mut g);
@@ -2523,7 +2523,7 @@ mod recent24 {
         g.clear_sickness(gb);
         ready(&mut g);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: gb, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: gb, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate Glimmer Bairn");
         drain_stack(&mut g);
@@ -2825,7 +2825,7 @@ mod recent26 {
         g.priority.player_with_priority = 0;
         g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: de, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: de, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate exhaust");
         drain_stack(&mut g);
         assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "ally got haste");
@@ -2833,7 +2833,7 @@ mod recent26 {
         // Exhaust: can't activate the same ability twice.
         g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
         let again = g.perform_action(GameAction::ActivateAbility {
-            card_id: de, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: de, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         });
         assert!(again.is_err(), "exhaust ability is one-shot");
     }
@@ -2849,7 +2849,7 @@ mod recent26 {
         g.players[0].mana_pool.add_colorless(2);
         g.players[0].mana_pool.add(crabomination::mana::Color::Green, 2);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: ae, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: ae, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate exhaust");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(ae).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 2);
@@ -2880,7 +2880,7 @@ mod recent26 {
         g.players[0].mana_pool.add_colorless(2);
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: rr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: rr, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         assert!(g.battlefield_find(land).is_none(), "land sacrificed");
@@ -2900,7 +2900,7 @@ mod recent26 {
         g.players[0].mana_pool.add_colorless(4);
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: bv, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: bv, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "took a permanent into hand");
@@ -3097,7 +3097,7 @@ mod recent27 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: coeurl, ability_index: 0,
-            target: Some(crabomination::game::types::Target::Permanent(victim)), additional_targets: vec![], x_value: None,
+            target: Some(crabomination::game::types::Target::Permanent(victim)), additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Coeurl");
         drain_stack(&mut g);
         assert!(g.battlefield_find(victim).unwrap().tapped, "target creature tapped");
@@ -3115,7 +3115,7 @@ mod recent27 {
         g.priority.player_with_priority = 0;
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: ahriman, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: ahriman, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Ahriman");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card off the sacrifice");
@@ -3171,7 +3171,7 @@ mod recent27 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: elder, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: elder, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Warren Elder");
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(buddy).unwrap().power, 3, "buddy pumped to 3");
@@ -3244,7 +3244,7 @@ mod recent27 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: gard, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: gard, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap for mana");
         assert!(g.players[0].mana_pool.total() >= 1, "added a mana");
     }
@@ -3449,7 +3449,7 @@ mod recent28 {
         g.players[0].mana_pool.add_colorless(2);
         let hand_before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: clue, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: clue, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
@@ -3553,7 +3553,7 @@ mod recent29 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(&mut g);
@@ -3573,7 +3573,7 @@ mod recent29 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(&mut g);
@@ -3693,7 +3693,7 @@ mod recent29 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("tap for mana");
         assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "added two green");
@@ -3932,7 +3932,7 @@ mod recent30 {
         g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
         ready(&mut g);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: ox, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: ox, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("sac ability");
         drain_stack(&mut g);
@@ -3956,13 +3956,13 @@ mod recent30 {
         let er = g.add_card_to_battlefield(0, catalog::elvish_refueler());
         ready(&mut g);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: er, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: er, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("first exhaust");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(er).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
         let second = g.perform_action(GameAction::ActivateAbility {
-            card_id: er, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: er, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         });
         assert!(second.is_err(), "exhaust can be used only once");
     }
@@ -3977,7 +3977,7 @@ mod recent30 {
         assert!(g.computed_permanent(ec).unwrap().keywords.contains(&Keyword::StartYourEngines));
         ready(&mut g);
         let res = g.perform_action(GameAction::ActivateAbility {
-            card_id: ec, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: ec, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         });
         assert!(res.is_err(), "max-speed ability is illegal below speed 4");
     }
@@ -4045,7 +4045,7 @@ mod recent30 {
         ready(&mut g);
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: asy, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: asy, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("draw ability");
         drain_stack(&mut g);

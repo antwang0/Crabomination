@@ -49,7 +49,7 @@ fn legion_extruder_etb_pings_and_makes_golems() {
     g.players[0].mana_pool.add_colorless(2);
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("golem ability");
     drain_stack(&mut g);
     assert!(g.battlefield_find(scrap).is_none(), "sacrificed the other artifact");
@@ -100,7 +100,7 @@ fn landscape_cycle_taps_for_colorless_and_fetches_a_basic() {
         g.clear_sickness(land);
         // Ability 0: {T}: Add {C}.
         g.perform_action(GameAction::ActivateAbility {
-            card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("taps for {C}");
         drain_stack(&mut g);
         assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "colorless produced");
@@ -111,7 +111,7 @@ fn landscape_cycle_taps_for_colorless_and_fetches_a_basic() {
         let land2 = g.add_card_to_battlefield(0, factory());
         g.clear_sickness(land2);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: land2, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: land2, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("sac-fetch");
         drain_stack(&mut g);
         assert!(g.battlefield.iter().any(|c| c.id == target_basic && c.tapped),
@@ -129,7 +129,7 @@ fn enduring_vitality_grants_mana_and_returns_as_enchantment() {
     // Granted "{T}: Add one mana of any color" (index 0 on the bear).
     let before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bear, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: bear, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("granted mana ability");
     assert_eq!(g.players[0].mana_pool.total() - before, 1, "creature tapped for a mana");
     // Dies (Bolt the 3/3) → returns as a noncreature enchantment.
@@ -179,7 +179,7 @@ fn broodspinner_etb_surveils_and_sac_makes_insects_per_gy_type() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac for Insects");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).is_none(), "Broodspinner sacrificed itself");
@@ -199,7 +199,7 @@ fn trenchpost_mills_one_per_locus_you_control() {
     g.players[0].mana_pool.add_colorless(3);
     let lib_before = g.players[1].library.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: src, ability_index: 1, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: src, ability_index: 1, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Trenchpost {3},{T} mills");
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.len(), lib_before - 3, "milled one card per Locus controlled");
@@ -278,7 +278,7 @@ fn baloth_prime_enters_tapped_with_stun_and_sac_land_untaps() {
     let _ = land;
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac a land for 2 life");
     drain_stack(&mut g);
     let c = g.battlefield_find(id).unwrap();
@@ -373,7 +373,7 @@ fn springleaf_parade_makes_x_changelings_that_tap_for_mana() {
     g.clear_sickness(tok);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tok, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: tok, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("token mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "token taps for a color");
@@ -404,7 +404,7 @@ fn shorikai_draws_two_discards_one_and_makes_a_pilot() {
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Shorikai activates");
     drain_stack(&mut g);
     // Net hand: +2 draw, -1 discard = +1.
@@ -880,7 +880,7 @@ fn lion_sash_exiles_permanent_card_grows_and_scales_equipped() {
     let gy = g.add_card_to_graveyard(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sash, ability_index: 0, target: Some(Target::Permanent(gy)), additional_targets: Vec::new(), x_value: None,
+        card_id: sash, ability_index: 0, target: Some(Target::Permanent(gy)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate exile ability");
     drain_stack(&mut g);
     // Card exiled, Lion Sash grew a +1/+1 counter (now 2/2).
@@ -1013,7 +1013,7 @@ fn power_depot_enters_tapped_and_fixes_mana() {
     // spend-restricted to artifact spells / artifact abilities.
     g.battlefield_find_mut(id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: Some(0),
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: Some(0), mode: None,
     }).expect("tap for any color");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "restricted artifact-only pip");
@@ -1028,7 +1028,7 @@ fn power_depot_mana_spends_only_on_artifacts() {
         DecisionAnswer::Color(Color::Green),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for restricted mana");
 
     // Can't fund a creature spell…
@@ -1174,7 +1174,7 @@ fn umezawas_jitte_charges_on_combat_damage_then_shrinks() {
     // Spend a charge counter to shrink an opponent's creature.
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: jitte, ability_index: 1, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
+        card_id: jitte, ability_index: 1, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate -1/-1");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(jitte).unwrap().counter_count(CounterType::Charge), 1,
@@ -1330,7 +1330,7 @@ fn soulbond_deadeye_navigator_grants_flicker_to_partner() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bear, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: bear, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("flicker the partner");
     drain_stack(&mut g);
     // It re-enters the battlefield (a Grizzly Bears is still in play).
@@ -1367,7 +1367,7 @@ fn goblin_banneret_pump_ability() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(id).unwrap().power, 3, "1/1 → 3/1");
@@ -1617,7 +1617,7 @@ fn pia_and_kiran_make_two_thopters_and_sac_for_damage() {
     g.players[0].mana_pool.add_colorless(2);
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pk, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: pk, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate sac-for-damage");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 2, "sac an artifact deals 2 to any target");
@@ -1754,7 +1754,7 @@ fn glen_elendra_counters_noncreature_spell() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: glen, ability_index: 0, target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None,
+        card_id: glen, ability_index: 0, target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac to counter");
     drain_stack(&mut g);
     // Persist returns Glen Elendra with a -1/-1 counter.
@@ -1981,7 +1981,7 @@ fn goblin_cratermaker_pings_a_creature() {
     let target = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: crater, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+        card_id: crater, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac for mode 1 (2 damage)");
     drain_stack(&mut g);
     assert!(g.battlefield_find(target).is_none(), "2 damage kills the 2/2");
@@ -2024,7 +2024,7 @@ fn spikeshot_elder_pings_for_its_power() {
     g.players[0].mana_pool.add_colorless(1);
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: elder, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: elder, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("ping any target");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 3, "deals damage equal to its power");
@@ -2147,7 +2147,7 @@ fn mardu_hateblade_grants_deathtouch() {
     let id = g.add_card_to_battlefield(0, catalog::mardu_hateblade());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("grant deathtouch");
     drain_stack(&mut g);
     assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Deathtouch));

@@ -461,6 +461,14 @@ pub enum GameAction {
         /// other X-cost activated abilities.
         #[serde(default)]
         x_value: Option<u32>,
+        /// CR 601.2b — the mode chosen for a modal activated ability
+        /// (`Effect::ChooseMode` at the top of its body). `None` lets the
+        /// engine pick: a UI seat defers to the client's resolution-time
+        /// modal, a bot asks its decider. A submitted mode is authoritative
+        /// and also drives per-slot target validation, which is the only way
+        /// a UI seat can pick a mode whose body takes a target.
+        #[serde(default)]
+        mode: Option<usize>,
     },
     /// CR 701.67 — activate an ability whose cost includes "Waterbend {N}",
     /// tapping each artifact/creature in `helpers` for {1} of the generic

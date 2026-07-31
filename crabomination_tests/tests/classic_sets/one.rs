@@ -36,7 +36,7 @@ fn incubate_then_transform_to_n_over_n() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: inc_id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: inc_id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("transform the Incubator");
     drain_stack(&mut g);
     let back = g.computed_permanent(inc_id).unwrap();
@@ -117,7 +117,7 @@ fn compleated_huntmaster_sac_incubates() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hunt, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: hunt, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Compleated Huntmaster");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
@@ -175,14 +175,14 @@ fn sinew_dancer_corrupted_ability_gated() {
     // No poison → the {W} Corrupted ability (index 1) is rejected.
     let err = g.perform_action(GameAction::ActivateAbility {
         card_id: dancer, ability_index: 1,
-        target: Some(Target::Permanent(foe)), additional_targets: vec![], x_value: None,
+        target: Some(Target::Permanent(foe)), additional_targets: vec![], x_value: None, mode: None,
     });
     assert!(err.is_err(), "Corrupted ability blocked below 3 poison");
     // Grant Corrupted and retry — now it taps the target.
     g.players[1].poison_counters = 3;
     g.perform_action(GameAction::ActivateAbility {
         card_id: dancer, ability_index: 1,
-        target: Some(Target::Permanent(foe)), additional_targets: vec![], x_value: None,
+        target: Some(Target::Permanent(foe)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("Corrupted ability activatable at 3 poison");
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).unwrap().tapped, "target creature tapped");
@@ -247,7 +247,7 @@ fn fleshless_gladiator_corrupted_graveyard_return() {
     g.priority.player_with_priority = 0;
     let life0 = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: glad, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: glad, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate from graveyard");
     drain_stack(&mut g);
     let back = g.battlefield_find(glad).expect("returned to battlefield");
@@ -390,7 +390,7 @@ fn cutthroat_centurion_sac_pump() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cent, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: cent, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Cutthroat Centurion");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
@@ -596,7 +596,7 @@ fn zealot_pings_opponent() {
     g.priority.player_with_priority = 0;
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: z, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+        card_id: z, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Zealot");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 2);
@@ -627,7 +627,7 @@ fn migloz_spends_oil_to_pump() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: migloz, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: migloz, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("pump ability");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(migloz).unwrap().power, 6, "4 + 2");
@@ -683,7 +683,7 @@ fn ichor_drinker_gy_incubates() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate from graveyard");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Incubator"), "incubated 2");
@@ -859,7 +859,7 @@ fn sawblade_scamp_oil_then_ping() {
     g.priority.player_with_priority = 0;
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: scamp, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: scamp, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("ping ability");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 1, "dealt 1 to the opponent");
@@ -1011,7 +1011,7 @@ fn axiom_engraver_loots_on_oil() {
     g.add_card_to_library(0, catalog::forest());
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ax, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ax, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("loot");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand, "discard 1 + draw 1");
@@ -1073,7 +1073,7 @@ fn armored_scrapgorger_eats_graveyards() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gorger, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: gorger, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == snack), "graveyard card eaten");
@@ -1108,7 +1108,7 @@ fn bladed_ambassador_goes_indestructible() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: amb, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: amb, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.computed_permanent(amb).unwrap().keywords.contains(&Keyword::Indestructible));
@@ -1154,7 +1154,7 @@ fn atmosphere_surgeon_banks_and_spends_oil() {
     assert_eq!(g.battlefield_find(surgeon).unwrap().counter_count(CounterType::Oil), 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: surgeon, ability_index: 0, target: Some(Target::Permanent(surgeon)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("spend oil");
     drain_stack(&mut g);
     assert!(g.computed_permanent(surgeon).unwrap().keywords.contains(&Keyword::Flying));
@@ -1316,7 +1316,7 @@ fn tekuthal_ability_removes_any_kind_counters() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tek, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: tek, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Tekuthal");
     drain_stack(&mut g);
     let bear_c = g.battlefield_find(bear).unwrap();
@@ -1397,7 +1397,7 @@ fn melira_exile_watches_artifact_death() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: mel, ability_index: 0,
-        target: Some(Target::Permanent(relic)), additional_targets: vec![], x_value: None,
+        target: Some(Target::Permanent(relic)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Melira");
     drain_stack(&mut g);
     assert!(g.battlefield_find(mel).is_none(), "Melira exiled as a cost");
@@ -1810,7 +1810,7 @@ fn sphere_land_taps_and_sacs() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac to draw");
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_none(), "sacrificed");
@@ -1831,7 +1831,7 @@ fn dross_skullbomb_modes() {
     let hand0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: bomb, ability_index: 1,
-        target: Some(Target::Permanent(gy_bear)), additional_targets: vec![], x_value: None,
+        target: Some(Target::Permanent(gy_bear)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("sorcery-speed mode at main");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 2, "creature card returned + drew");
@@ -2052,7 +2052,7 @@ fn serum_sovereign_oil_to_draw() {
     g.priority.player_with_priority = 0;
     let hand0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ss, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ss, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).unwrap();
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 1);
@@ -2081,11 +2081,11 @@ fn tablet_of_compleation_gates() {
     g.priority.player_with_priority = 0;
     // {T}: Add {C} requires 2+ oil — rejected fresh.
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: tab, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: tab, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).is_err(), "colorless tap gated below 2 oil");
     if let Some(c) = g.battlefield_find_mut(tab) { c.add_counters(CounterType::Oil, 2); }
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tab, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: tab, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("2 oil unlocks {T}: Add {C}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
@@ -2195,7 +2195,7 @@ fn vat_of_rebirth_reanimates() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vat, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None,
+        card_id: vat, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None, mode: None,
     }).unwrap();
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == dead), "creature reanimated");
@@ -2254,7 +2254,7 @@ fn plague_nurse_toxic_boost() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: nurse, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: nurse, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).unwrap();
     drain_stack(&mut g);
     g.step = TurnStep::DeclareAttackers;
@@ -2309,7 +2309,7 @@ fn myr_convert_life_for_mana() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: myr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: myr, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).unwrap();
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 18, "paid 2 life");
@@ -2342,7 +2342,7 @@ fn rustvine_cultivator_untaps_land() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: rv, ability_index: 1, target: Some(Target::Permanent(land)), additional_targets: vec![], x_value: None,
+        card_id: rv, ability_index: 1, target: Some(Target::Permanent(land)), additional_targets: vec![], x_value: None, mode: None,
     }).unwrap();
     drain_stack(&mut g);
     assert!(!g.battlefield_find(land).unwrap().tapped, "land untapped");
@@ -2449,7 +2449,7 @@ fn glistener_seer_scry() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: seer, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: seer, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).unwrap();
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(seer).unwrap().counter_count(CounterType::Oil), 2);
@@ -2663,7 +2663,7 @@ fn chittering_skitterling_corrupted_sac_draw() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     let act = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
-        card_id: rat, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: rat, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     });
     assert!(act(&mut g).is_err(), "no poison → Corrupted gate rejects");
     g.players[1].poison_counters = 3;
@@ -2685,7 +2685,7 @@ fn filigree_sylex_destroys_matching_mv() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sylex, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: sylex, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac-nuke");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bears).is_none(), "MV 2 destroyed at 2 oil");
@@ -2708,7 +2708,7 @@ fn tamiyos_logbook_discounted_draw() {
     g.priority.player_with_priority = 0;
     let hand0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: book, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: book, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("discounted activation");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew");
@@ -2726,14 +2726,14 @@ fn staff_of_compleation_life_paid_modes() {
     let life = g.players[0].life;
     let hand0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: staff, ability_index: 3, target: None, additional_targets: vec![], x_value: None,
+        card_id: staff, ability_index: 3, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("pay 4 life: draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life - 4);
     assert_eq!(g.players[0].hand.len(), hand0 + 1);
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: staff, ability_index: 4, target: None, additional_targets: vec![], x_value: None,
+        card_id: staff, ability_index: 4, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("{5}: untap");
     drain_stack(&mut g);
     assert!(!g.battlefield_find(staff).unwrap().tapped, "untapped");
@@ -2789,7 +2789,7 @@ fn geth_anthem_and_reanimate() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: geth, ability_index: 0, target: Some(Target::Permanent(dead)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("reanimate");
     drain_stack(&mut g);
     let angel = g.battlefield.iter().find(|c| c.definition.name == "Serra Angel")
@@ -2852,14 +2852,14 @@ fn mirrex_any_color_gate() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("entered this turn → any color");
     assert_eq!(g.players[0].mana_pool.total(), 1);
     // Next turn the gate closes.
     let land2 = g.add_card_to_battlefield(0, catalog::mirrex());
     g.battlefield_find_mut(land2).unwrap().entered_turn = None;
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: land2, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: land2, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).is_err(), "stale Mirrex can't tap for color");
 }
 
@@ -2875,7 +2875,7 @@ fn monumental_facade_oil_transfer() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: facade, ability_index: 1, target: Some(Target::Permanent(golem)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("move oil");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(facade).unwrap().counter_count(CounterType::Oil), 1);
@@ -2893,7 +2893,7 @@ fn seedcore_corrupted_pump() {
     g.priority.player_with_priority = 0;
     let act = |g: &mut GameState, tgt| g.perform_action(GameAction::ActivateAbility {
         card_id: land, ability_index: 2, target: Some(Target::Permanent(tgt)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     });
     assert!(act(&mut g, mono).is_err(), "no poison → rejected");
     g.players[1].poison_counters = 3;
@@ -2942,7 +2942,7 @@ fn transplant_theorist_loot_and_bottom() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: theorist, ability_index: 0, target: Some(Target::Permanent(dead)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("bottom it");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.is_empty(), "graveyard emptied");
@@ -2958,14 +2958,14 @@ fn phyrexian_atlas_corrupted_tap_drain() {
     g.priority.player_with_priority = 0;
     let life1 = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: atlas, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: atlas, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1, "no poison → no drain");
     g.players[1].poison_counters = 3;
     g.battlefield_find_mut(atlas).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: atlas, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: atlas, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap again");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1 - 1, "corrupted tap drains 1");
@@ -2983,7 +2983,7 @@ fn slobad_sacrifices_for_scaled_mana() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: slobad, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: slobad, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac artifact for mana");
     assert!(g.players[0].mana_pool.restricted_total() >= 1, "got scaled restricted red mana");
 }
@@ -3042,7 +3042,7 @@ fn tyvar_grants_ability_haste() {
     g.priority.player_with_priority = 0;
     let act = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
         card_id: dancer, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     });
     assert!(act(&mut g).is_err(), "sick creature can't tap-activate (CR 602.5g)");
     g.add_card_to_battlefield(0, catalog::tyvar_jubilant_brawler());
@@ -3113,7 +3113,7 @@ fn serum_core_chimera_oil_loop() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::ActivateAbility {
         card_id: chimera, ability_index: 0, target: Some(Target::Permanent(victim)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("remove three oil");
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "3 damage killed the drake");
@@ -3720,7 +3720,7 @@ fn churning_reservoir_oil_gate() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     let act = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
-        card_id: res, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: res, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     });
     assert!(act(&mut g).is_err(), "no oil activity yet");
     // Remove an oil counter from a permanent you control.
@@ -3805,7 +3805,7 @@ fn mycosynth_gardens_copies_artifact() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: land, ability_index: 2, target: Some(Target::Permanent(ring)),
-        additional_targets: vec![], x_value: Some(1),
+        additional_targets: vec![], x_value: Some(1), mode: None,
     }).expect("become a copy");
     drain_stack(&mut g);
     let cp = g.computed_permanent(land).unwrap();
@@ -3821,7 +3821,7 @@ fn mirran_safehouse_borrows_land_abilities() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: house, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: house, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap like a Mountain");
     assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Red), 1);
 }
@@ -3835,7 +3835,7 @@ fn monument_to_perfection_transformation() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     let act = |g: &mut GameState| g.perform_action(GameAction::ActivateAbility {
-        card_id: mon, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: mon, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     });
     assert!(act(&mut g).is_err(), "too few land names");
     for f in [catalog::plains, catalog::island, catalog::swamp, catalog::mountain,

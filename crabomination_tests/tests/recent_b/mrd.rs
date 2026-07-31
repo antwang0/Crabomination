@@ -45,7 +45,7 @@ fn myr_cycle_taps_for_its_color() {
         g.clear_sickness(myr);
         g.perform_action(GameAction::ActivateAbility {
             card_id: myr, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("tap for mana");
         assert_eq!(g.players[0].mana_pool.amount(color), 1, "{color:?}");
@@ -92,7 +92,7 @@ fn cobalt_golem_buys_flying() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: golem, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: golem, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -233,7 +233,7 @@ fn viridian_longbow_grants_a_ping() {
     g.perform_action(GameAction::Equip { equipment: bow, target: bear }).expect("equip");
     g.perform_action(GameAction::ActivateAbility {
         card_id: bear, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("ping");
     drain_stack(&mut g);
@@ -248,7 +248,7 @@ fn viridian_joiner_taps_for_its_power() {
     g.clear_sickness(joiner);
     g.battlefield_find_mut(joiner).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: joiner, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: joiner, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("tap");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 3);
@@ -300,7 +300,7 @@ fn wizard_replica_counters_unless_paid() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: replica, ability_index: 0, target: Some(Target::Permanent(bolt)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sac the Replica");
     drain_stack(&mut g);
@@ -446,14 +446,14 @@ fn tel_jilad_chosen_has_protection_from_artifacts() {
     assert!(
         g.perform_action(GameAction::ActivateAbility {
             card_id: tower, ability_index: 0, target: Some(Target::Permanent(elf)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .is_err(),
         "an artifact source can't target it",
     );
     g.perform_action(GameAction::ActivateAbility {
         card_id: tower, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("but an ordinary creature is fine");
 }
@@ -477,7 +477,7 @@ fn tel_jilad_stylus_bottoms_your_permanent() {
     g.clear_sickness(stylus);
     g.perform_action(GameAction::ActivateAbility {
         card_id: stylus, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -523,7 +523,7 @@ fn nim_shambler_regenerates_by_sacrifice() {
     let chump = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: shambler, ability_index: 0, target: None, additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("sacrifice the Bear");
     drain_stack(&mut g);
@@ -552,7 +552,7 @@ fn granite_shard_fires_off_either_cost() {
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: shard, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("{3} half");
     drain_stack(&mut g);
@@ -561,7 +561,7 @@ fn granite_shard_fires_off_either_cost() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: shard, ability_index: 1, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("{R} half");
     drain_stack(&mut g);
@@ -586,7 +586,7 @@ fn serum_tank_charges_then_draws() {
     g.players[0].mana_pool.add_colorless(3);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tank, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: tank, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("cash in");
     drain_stack(&mut g);
@@ -663,7 +663,7 @@ fn megatog_eats_an_artifact_for_a_pump() {
     let tog = g.add_card_to_battlefield(0, catalog::megatog());
     let rock = g.add_card_to_battlefield(0, catalog::tanglebloom());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tog, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: tog, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("eat the rock");
     drain_stack(&mut g);
@@ -685,7 +685,7 @@ fn krark_clan_shaman_spares_fliers() {
     let _ = ground;
     let grounded = g.add_card_to_battlefield(1, catalog::nim_replica());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: shaman, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: shaman, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sweep");
     drain_stack(&mut g);
@@ -1005,7 +1005,7 @@ fn bosh_flings_the_sacrificed_mana_value() {
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: bosh, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("fling");
     drain_stack(&mut g);
@@ -1065,7 +1065,7 @@ fn sphere_of_purity_shaves_artifact_damage() {
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
         card_id: shard, ability_index: 0, target: Some(Target::Player(0)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("ping");
     drain_stack(&mut g);
@@ -1222,7 +1222,7 @@ fn tower_of_fortunes_draws_four() {
     g.players[0].mana_pool.add_colorless(8);
     let before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tower, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: tower, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -1380,7 +1380,7 @@ fn myr_incubator_mints_a_myr_per_exiled_artifact() {
     g.add_card_to_library(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: inc, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: inc, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -1470,14 +1470,14 @@ fn pentavus_trades_counters_for_pentavites() {
     .expect("cast");
     drain_stack(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pent, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: pent, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("mint");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(pent).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Pentavite").count(), 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pent, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: pent, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("eat it");
     drain_stack(&mut g);
@@ -1521,7 +1521,7 @@ fn auriok_bladewarden_lends_its_power() {
     g.clear_sickness(ward);
     g.perform_action(GameAction::ActivateAbility {
         card_id: ward, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -1619,7 +1619,7 @@ fn arc_slogger_exiles_ten_to_burn() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: slogger, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -1710,7 +1710,7 @@ fn glissa_sunseeker_matches_unspent_mana() {
     assert!(
         g.perform_action(GameAction::ActivateAbility {
             card_id: glissa, ability_index: 0, target: Some(Target::Permanent(rock)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .is_err(),
         "two open mana doesn't match a {{1}} artifact"
@@ -1718,7 +1718,7 @@ fn glissa_sunseeker_matches_unspent_mana() {
     g.players[0].mana_pool.spend_generic(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: glissa, ability_index: 0, target: Some(Target::Permanent(rock)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("one open mana matches");
     drain_stack(&mut g);
@@ -1803,7 +1803,7 @@ fn soul_foundry_copies_the_imprinted_creature() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: foundry, ability_index: 0, target: None, additional_targets: vec![],
-        x_value: Some(2),
+        x_value: Some(2), mode: None,
     })
     .expect("stamp a copy");
     drain_stack(&mut g);
@@ -1885,7 +1885,7 @@ fn lumengrid_augur_untaps_on_an_artifact_discard() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: augur, ability_index: 0, target: Some(Target::Player(0)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -1902,7 +1902,7 @@ fn power_conduit_recycles_a_counter() {
     g.clear_sickness(conduit);
     g.perform_action(GameAction::ActivateAbility {
         card_id: conduit, ability_index: 1, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -1934,7 +1934,7 @@ fn extraplanar_lens_doubles_the_imprinted_land_name() {
     let survivor = if g.battlefield_find(a).is_some() { a } else { b };
     g.perform_action(GameAction::ActivateAbility {
         card_id: survivor, ability_index: 0, target: None, additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap the Swamp");
     drain_stack(&mut g);
@@ -1987,7 +1987,7 @@ fn proteus_staff_swaps_a_creature_off_the_top() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: staff, ability_index: 0, target: Some(Target::Permanent(victim)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -2008,7 +2008,7 @@ fn quicksilver_elemental_borrows_activated_abilities() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: elem, ability_index: 0, target: Some(Target::Permanent(donor)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("borrow");
     drain_stack(&mut g);
@@ -2016,7 +2016,7 @@ fn quicksilver_elemental_borrows_activated_abilities() {
     // The borrowed {T} ability now resolves off the Elemental.
     g.perform_action(GameAction::ActivateAbility {
         card_id: elem, ability_index: 1, target: Some(Target::Permanent(tower)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect_err("Tower isn't a creature");
 }
@@ -2030,7 +2030,7 @@ fn mindslaver_takes_the_next_turn() {
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
         card_id: slaver, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -2096,7 +2096,7 @@ fn liars_pendulum_draws_on_a_wrong_guess() {
     let before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: pendulum, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);

@@ -185,7 +185,7 @@ fn ui_player_partial_tap_then_manual_generic_completes_cast() {
     // Player taps the 4 Mountains for the generic (holding the Island).
     for m in &mountains {
         g.perform_action(GameAction::ActivateAbility {
-            card_id: *m, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: *m, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("tap a Mountain for mana");
     }

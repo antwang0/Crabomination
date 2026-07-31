@@ -35,7 +35,7 @@ fn ordruun_commando_prevents_damage_to_itself() {
     // Stack two 1-damage shields (prevent 2 total).
     for _ in 0..2 {
         g.perform_action(GameAction::ActivateAbility {
-            card_id: cmd, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: cmd, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("shield");
         drain_stack(&mut g);
     }
@@ -59,7 +59,7 @@ fn feral_animist_doubles_its_own_power() {
     g.clear_sickness(fa);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fa, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: fa, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(fa).unwrap().power, 4, "2/1 gets +2/+0 (X = its power)");
@@ -189,7 +189,7 @@ fn root_kin_ally_taps_two_to_pump() {
     g.clear_sickness(ally);
     // tap_n_filter auto-taps two untapped creatures you control as the cost.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ally, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ally, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap two, pump");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(ally).unwrap().power, 5, "3/3 + 2/2");
@@ -225,7 +225,7 @@ fn wojek_embermage_radiance_pings() {
     let white = g.add_card_to_battlefield(1, catalog::serra_angel()); // white
     g.perform_action(GameAction::ActivateAbility {
         card_id: mage, ability_index: 0, target: Some(Target::Permanent(g1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("ping");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(g1).unwrap().damage, 1, "subject took 1");

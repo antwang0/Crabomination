@@ -1626,7 +1626,7 @@ fn witherbloom_sapsprite_b171_sac_drains_two() {
     let p0_life = g.players[0].life;
     let p1_life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activatable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).is_none(), "sapsprite sacrificed");

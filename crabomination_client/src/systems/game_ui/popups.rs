@@ -23,6 +23,9 @@ pub struct AbilityMenu;
 pub struct AbilityMenuItem {
     pub card_id: CardId,
     pub ability_index: usize,
+    /// CR 601.2b — the mode this entry activates, for a modal ability whose
+    /// menu is expanded one row per mode. `None` for the non-modal majority.
+    pub mode: Option<usize>,
 }
 
 /// The "Cast <prepare spell>" entry on a prepared creature's menu
@@ -60,15 +63,29 @@ pub fn spawn_ability_menu(
     // be activated by the permanent's controller, so grey it out in their own
     // menu just like a once-per-turn ability that's already been used.
     let viewer_controls = pv.controller == cv.your_seat;
-    let abilities: Vec<(usize, String, bool)> = pv.abilities.iter()
-        .map(|a| {
-            let blocked_opp = a.opponents_only && viewer_controls;
-            let label = if a.once_per_turn_used {
-                format!("{}: {} (used)", a.cost_label, a.effect_label)
+    // CR 601.2b — a modal ability gets one row per mode, so the click already
+    // carries the choice (the engine's resolution-time modal can't run for a
+    // mode that takes a target).
+    let abilities: Vec<(usize, Option<usize>, String, bool)> = pv.abilities.iter()
+        .flat_map(|a| {
+            let blocked = (a.opponents_only && viewer_controls) || a.once_per_turn_used;
+            let suffix = if a.once_per_turn_used { " (used)" } else { "" };
+            if a.modes.len() > 1 {
+                a.modes
+                    .iter()
+                    .enumerate()
+                    .map(|(m, text)| {
+                        (a.index, Some(m), format!("{}: {}{}", a.cost_label, text, suffix), blocked)
+                    })
+                    .collect::<Vec<_>>()
             } else {
-                format!("{}: {}", a.cost_label, a.effect_label)
-            };
-            (a.index, label, a.once_per_turn_used || blocked_opp)
+                vec![(
+                    a.index,
+                    None,
+                    format!("{}: {}{}", a.cost_label, a.effect_label, suffix),
+                    blocked,
+                )]
+            }
         })
         .collect();
     // SOS Prepare — a prepared preparation card the viewer controls
@@ -112,7 +129,7 @@ pub fn spawn_ability_menu(
                 ui_fonts.tf(13.0),
                 TextColor(theme::ACCENT_BLUE),
             ));
-            for (ability_index, label, used) in abilities {
+            for (ability_index, mode, label, used) in abilities {
                 let bg = if used {
                     // Darkened background for once-per-turn abilities
                     // already activated this turn — clicks still go
@@ -134,7 +151,7 @@ pub fn spawn_ability_menu(
                         ..default()
                     },
                     BackgroundColor(bg),
-                    AbilityMenuItem { card_id, ability_index },
+                    AbilityMenuItem { card_id, ability_index, mode },
                 ))
                 .with_children(|b| {
                     b.spawn((
@@ -215,6 +232,7 @@ pub fn handle_ability_menu(
             targeting.pending_card_id = None;
             targeting.pending_ability_source = Some(item.card_id);
             targeting.pending_ability_index = Some(item.ability_index);
+            targeting.pending_ability_mode = item.mode;
         } else if let Some(ob) = &outbox {
             ob.submit(GameAction::ActivateAbility {
                 card_id: item.card_id,
@@ -222,6 +240,7 @@ pub fn handle_ability_menu(
                 target: None,
                 additional_targets: Vec::new(),
                 x_value: None,
+                mode: item.mode,
             });
         }
 

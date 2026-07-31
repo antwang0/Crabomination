@@ -222,7 +222,7 @@ mod recent195 {
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
             card_id: trawler, ability_index: 0, target: Some(Target::Permanent(bolt)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("tuck");
         drain_stack(&mut g);
         assert_eq!(g.players[0].library.last().map(|c| c.id), Some(bolt), "bolt on the bottom");
@@ -693,7 +693,7 @@ mod recent202 {
         // Activate the {4} animate ability (index 1).
         g.perform_action(GameAction::ActivateAbility {
             card_id: land, ability_index: 1, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("animate Soulstone Sanctuary");
         drain_stack(&mut g);
@@ -1001,7 +1001,7 @@ mod recent205 {
         g.players[0].mana_pool.add_colorless(1);
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
         g.perform_action(GameAction::ActivateAbility {
-            card_id: keys, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: keys, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Keys");
         drain_stack(&mut g);
         assert!(g.players[0].hand.iter().any(|c| c.id == forest), "basic land fetched to hand");
@@ -1331,7 +1331,7 @@ mod recent207 {
         g.players[0].mana_pool.add_colorless(3);
         let h = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: m, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: m, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), h + 2);
@@ -1378,7 +1378,7 @@ mod recent207 {
         g.players[0].mana_pool.add_colorless(2);
         let (l0, l1) = (g.players[0].life, g.players[1].life);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: n, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: n, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, l1 - 1);

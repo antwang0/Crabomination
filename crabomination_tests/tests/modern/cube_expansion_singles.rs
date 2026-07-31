@@ -91,7 +91,7 @@ fn keen_eyed_curator_exiles_graveyard_cards_and_buffs_at_four_types() {
         for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
         g.players[0].mana_pool.add_colorless(20);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: Some(Target::Permanent(card)), additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: 0, target: Some(Target::Permanent(card)), additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("exile a graveyard card");
         drain_stack(&mut g);
         assert!(g.exile.iter().any(|c| c.id == card), "card {i} is exiled");
@@ -416,7 +416,7 @@ fn parallax_nexus_enters_with_counters_and_forces_discard() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("Parallax Nexus activation should work");
     drain_stack(&mut g);
@@ -593,7 +593,7 @@ fn basking_rootwalla_pump_once_per_turn() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("Rootwalla pump activates");
     drain_stack(&mut g);
@@ -616,7 +616,7 @@ fn blazing_rootwalla_madness_zero_and_pump() {
     g.players[0].mana_pool.add_colorless(1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: rw, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: rw, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("pump activates");
     drain_stack(&mut g);
     let pumped = g.computed_permanent(rw).unwrap();

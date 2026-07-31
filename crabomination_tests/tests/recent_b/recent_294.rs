@@ -25,7 +25,7 @@ fn simic_ragworm_untaps_itself() {
     g.battlefield_find_mut(worm).unwrap().tapped = true;
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: worm, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: worm, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("untap");
     drain_stack(&mut g);
     assert!(!g.battlefield_find(worm).unwrap().tapped, "Ragworm untapped itself");
@@ -42,11 +42,11 @@ fn sporeback_troll_regenerates_a_counter_bearer() {
     flood(&mut g);
     assert!(g.perform_action(GameAction::ActivateAbility {
         card_id: troll, ability_index: 0, target: Some(Target::Permanent(bare)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).is_err(), "a creature with no +1/+1 counter can't be targeted");
     g.perform_action(GameAction::ActivateAbility {
         card_id: troll, ability_index: 0, target: Some(Target::Permanent(troll)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("the graft creature carries counters — a legal target");
     drain_stack(&mut g);
     assert!(g.battlefield_find(troll).unwrap().regeneration_shields > 0, "regen shield up");
@@ -62,7 +62,7 @@ fn silhana_starfletcher_taps_for_the_chosen_color() {
     drain_stack(&mut g);
     g.clear_sickness(fletcher);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fletcher, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: fletcher, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "added the chosen blue mana");
 }
@@ -106,13 +106,13 @@ fn skeletal_vampire_broods_bats_and_regenerates() {
     flood(&mut g);
     // {3}{B}{B}, Sacrifice a Bat: make two more Bats (net +1 Bat).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vamp, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: vamp, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("bat-for-bats");
     drain_stack(&mut g);
     assert_eq!(count_tokens(&g, "Bat"), 3, "sacked one Bat, minted two");
     // Sacrifice a Bat: regenerate.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vamp, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: vamp, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("regen");
     drain_stack(&mut g);
     assert!(g.battlefield_find(vamp).unwrap().regeneration_shields > 0, "regen shield up");
@@ -135,7 +135,7 @@ fn divebomber_griffin_snipes_an_attacker() {
     g.priority.player_with_priority = 0; // the defender responds
     g.perform_action(GameAction::ActivateAbility {
         card_id: griffin, ability_index: 0, target: Some(Target::Permanent(attacker)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("dive");
     drain_stack(&mut g);
     assert!(g.battlefield_find(attacker).is_none(), "3 damage killed the 2/2 attacker");
@@ -152,7 +152,7 @@ fn scorched_rusalka_pings_a_player() {
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: rusalka, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("ping");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "a creature was sacrificed");
@@ -197,11 +197,11 @@ fn elvish_skysweeper_downs_a_flyer() {
     // A non-flyer isn't a legal target.
     assert!(g.perform_action(GameAction::ActivateAbility {
         card_id: sweeper, ability_index: 0, target: Some(Target::Permanent(ground)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).is_err(), "only flyers can be targeted");
     g.perform_action(GameAction::ActivateAbility {
         card_id: sweeper, ability_index: 0, target: Some(Target::Permanent(flyer)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("shoot down the flyer");
     drain_stack(&mut g);
     assert!(g.battlefield_find(flyer).is_none(), "the flyer was destroyed");

@@ -40,7 +40,7 @@ fn urzas_bauble_draws_at_next_upkeep() {
     g.add_card_to_library(0, catalog::forest());
     let bauble = g.add_card_to_battlefield(0, catalog::urzas_bauble());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bauble, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: bauble, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate bauble");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bauble).is_none(), "bauble sacrificed");
@@ -58,7 +58,7 @@ fn codex_shredder_mills_and_regrows() {
     g.add_card_to_library(1, catalog::forest());
     let shredder = g.add_card_to_battlefield(0, catalog::codex_shredder());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: shredder, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: shredder, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("mill ability");
     drain_stack(&mut g);
     assert_eq!(g.players[1].graveyard.len(), 1, "opponent milled one");
@@ -67,7 +67,7 @@ fn codex_shredder_mills_and_regrows() {
     g.battlefield_find_mut(shredder).unwrap().tapped = false;
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: shredder, ability_index: 1, target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None,
+        card_id: shredder, ability_index: 1, target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regrow ability");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "card returned to hand");
@@ -314,7 +314,7 @@ fn goblin_charbelcher_damage_doubles_on_mountain() {
     let belcher = g.add_card_to_battlefield(0, catalog::goblin_charbelcher());
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: belcher, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: belcher, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("belch");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 16, "2 nonland × 2 (Mountain) = 4");
@@ -551,7 +551,7 @@ fn sterling_grove_shroud_and_tutor() {
     g.add_card_to_library(0, catalog::leyline_of_the_void());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: grove, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: grove, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tutor");
     drain_stack(&mut g);
     assert!(g.battlefield_find(grove).is_none(), "grove sacrificed");
@@ -614,7 +614,7 @@ fn floodpits_drowner_stuns_then_shuffles_both_away() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fish_id, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+        card_id: fish_id, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("shuffle ability");
     drain_stack(&mut g);
     assert!(g.players[1].library.iter().any(|c| c.id == bear), "bear shuffled in");
@@ -1326,7 +1326,7 @@ fn sneaking_guide_grants_unblockable() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: guide, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
@@ -1369,7 +1369,7 @@ fn sunken_citadel_restricted_mana_is_land_abilities_only() {
     let land = g.add_card_to_battlefield(0, catalog::sunken_citadel());
     g.battlefield_find_mut(land).unwrap().chosen_color = Some(crabomination::mana::Color::Red);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).unwrap();
     let pool = &mut g.players[0].mana_pool;
     assert_eq!(pool.restricted_total(), 2, "two restricted red");
@@ -1611,7 +1611,7 @@ fn student_of_warfare_levels_up() {
     for _ in 0..2 {
         g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: student, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: student, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
     }
@@ -1627,7 +1627,7 @@ fn student_of_warfare_levels_up() {
     g.step = TurnStep::DeclareBlockers;
     g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: student, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: student, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err());
 }
 
@@ -1796,14 +1796,14 @@ fn karn_great_creator_locks_animates_and_wishes() {
     g.step = TurnStep::PreCombatMain;
     g.active_player_idx = 1;
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: rock, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: rock, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "opponent's artifact ability locked");
     // Our own artifacts are fine.
     let mine = g.add_card_to_battlefield(0, catalog::mind_stone());
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mine, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: mine, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("own rock still works");
     // +1: animate the opponent's rock (MV 2) into a 2/2 until next turn.
     g.perform_action(GameAction::ActivateLoyaltyAbility {
@@ -1951,7 +1951,7 @@ fn landscape_and_verge_cycle_completion() {
     ]));
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: scape, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: scape, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).unwrap();
     drain_stack(&mut g);
     let fetched = g.battlefield_find(swamp).expect("Swamp fetched");
@@ -1960,11 +1960,11 @@ fn landscape_and_verge_cycle_completion() {
     // Verge: the gated color needs a Forest or Island in play.
     let verge = g.add_card_to_battlefield(0, catalog::willowrush_verge());
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: verge, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: verge, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "no Forest/Island yet");
     g.add_card_to_battlefield(0, catalog::forest());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: verge, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: verge, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("gated {G} with a Forest in play");
     assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Green), 1);
 }

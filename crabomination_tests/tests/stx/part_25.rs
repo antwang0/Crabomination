@@ -944,7 +944,7 @@ fn zimone_quandrix_prodigy_puts_land_and_scales_draw() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![land])]));
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("Zimone land-drop ability");
     drain_stack(&mut g);
@@ -961,7 +961,7 @@ fn zimone_quandrix_prodigy_puts_land_and_scales_draw() {
     g.players[0].mana_pool.add_colorless(4);
     let before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("Zimone draw ability");
     drain_stack(&mut g);
@@ -1009,7 +1009,7 @@ fn unwilling_ingredient_exiles_from_graveyard_to_draw_and_lose_one() {
     let life_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: ingredient, ability_index: 0, target: None,
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("{2}{B}, exile from graveyard: draw 1, lose 1");
     drain_stack(&mut g);
@@ -1088,7 +1088,7 @@ fn opposition_taps_a_creature_to_tap_a_permanent() {
     let opp_id = g.battlefield.iter().find(|c| c.definition.name == "Opposition").unwrap().id;
     g.perform_action(GameAction::ActivateAbility {
         card_id: opp_id, ability_index: 0,
-        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Opposition activates by tapping a creature");
     drain_stack(&mut g);
     assert!(g.battlefield_find(tapper).unwrap().tapped, "creature tapped to pay cost");
@@ -1112,7 +1112,7 @@ fn opposition_ui_activator_chooses_creature_to_tap() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: opp, ability_index: 0,
-        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("activation suspends for the tap-cost choice");
 

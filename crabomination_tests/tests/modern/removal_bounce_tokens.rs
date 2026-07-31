@@ -19,7 +19,7 @@ fn talisman_of_conviction_taps_for_red_costing_one_life() {
     g.clear_sickness(id);
     let life_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).expect("red tap succeeds");
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("red tap succeeds");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
     assert_eq!(g.players[0].life, life_before - 1,
@@ -33,7 +33,7 @@ fn talisman_of_creativity_taps_for_blue_or_red_costing_one_life() {
     let id = g.add_card_to_battlefield(0, catalog::talisman_of_creativity());
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None }).expect("red tap succeeds");
+        card_id: id, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("red tap succeeds");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
     assert_eq!(g.players[0].life, 19,
@@ -47,7 +47,7 @@ fn talisman_of_curiosity_taps_for_green_costing_one_life() {
     let id = g.add_card_to_battlefield(0, catalog::talisman_of_curiosity());
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).expect("green tap succeeds");
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("green tap succeeds");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
     assert_eq!(g.players[0].life, 19);
@@ -1036,7 +1036,7 @@ fn spikeshot_goblin_pings_for_its_power() {
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("ping");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(victim).unwrap().damage, 1, "deals damage equal to its power (1)");
@@ -1158,7 +1158,7 @@ fn vampire_hexmage_sacrifices_to_strip_counters() {
     g.battlefield_find_mut(target).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
     g.battlefield_find_mut(target).unwrap().add_counters(CounterType::Charge, 3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hexmage, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+        card_id: hexmage, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sacrifice to remove counters");
     drain_stack(&mut g);
     let t = g.battlefield_find(target).unwrap();
@@ -1176,7 +1176,7 @@ fn plagued_rusalka_sacrifices_a_creature_to_shrink() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: rusalka, ability_index: 0, target: Some(Target::Permanent(victim)),
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     }).expect("sac a creature for -1/-1");
     drain_stack(&mut g);
     // Fodder (or the Rusalka) sacrificed; the 2/1 victim shrinks to 1/0 and dies.

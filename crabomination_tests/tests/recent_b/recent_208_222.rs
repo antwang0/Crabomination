@@ -81,7 +81,7 @@ mod recent208 {
         g.players[0].mana_pool.add_colorless(8);
         g.perform_action(GameAction::ActivateAbility {
             card_id: inv, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
@@ -143,7 +143,7 @@ mod recent209 {
         g.add_card_to_graveyard(0, catalog::grizzly_bears());
         let lib_before = g.players[0].library.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: cane, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: cane, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate Feldon's Cane");
         drain_stack(&mut g);
         assert!(g.players[0].graveyard.is_empty(), "graveyard emptied");
@@ -198,7 +198,7 @@ mod recent209 {
         g.players[0].mana_pool.add(Color::White, 2);
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: jazal, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: jazal, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("pump");
         drain_stack(&mut g);
         // Two attackers → +2/+2. Grizzly Bears 2/2 → 4/4.
@@ -599,7 +599,7 @@ mod recent212 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: smug, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("grant unblockable");
         drain_stack(&mut g);
         assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
@@ -677,7 +677,7 @@ mod recent212 {
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::ActivateAbility {
             card_id: leonin, ability_index: 0, target: Some(Target::Permanent(cat)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("pump the attacking Cat");
         drain_stack(&mut g);
         let v = g.computed_permanent(cat).unwrap();
@@ -725,7 +725,7 @@ mod recent213 {
         g.players[0].mana_pool.add(Color::Green, 2);
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: hydra, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: hydra, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("pump by power");
         drain_stack(&mut g);
         let v = g.computed_permanent(hydra).unwrap();
@@ -779,7 +779,7 @@ mod recent213 {
         ]));
         g.perform_action(GameAction::ActivateAbility {
             card_id: field, ability_index: 1, target: Some(Target::Permanent(target_land)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate Demolition Field");
         drain_stack(&mut g);
         assert!(g.battlefield_find(target_land).is_none(), "opponent's nonbasic land destroyed");
@@ -798,7 +798,7 @@ mod recent213 {
         g.players[0].mana_pool.add_colorless(7);
         g.perform_action(GameAction::ActivateAbility {
             card_id: bomb, ability_index: 0, target: Some(Target::Permanent(victim)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("detonate the Firebomb");
         drain_stack(&mut g);
         assert!(g.battlefield_find(victim).is_none(), "target permanent destroyed");
@@ -885,14 +885,14 @@ mod recent214 {
         g.step = TurnStep::PreCombatMain;
         let before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: arcanis, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: arcanis, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("draw three");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), before + 3, "drew three cards");
         g.players[0].mana_pool.add(Color::Blue, 2);
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: arcanis, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: arcanis, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("bounce self");
         drain_stack(&mut g);
         assert!(g.battlefield_find(arcanis).is_none(), "Arcanis left the battlefield");
@@ -947,7 +947,7 @@ mod recent214 {
         g.players[0].mana_pool.add(Color::Black, 2);
         g.players[0].mana_pool.add_colorless(4);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: shambler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: shambler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate from graveyard");
         drain_stack(&mut g);
         assert!(g.exile.iter().any(|c| c.id == shambler), "exiled as a cost");
@@ -1152,7 +1152,7 @@ mod recent214 {
         g.clear_sickness(pred);
         g.perform_action(GameAction::ActivateAbility {
             card_id: pred, ability_index: 0,
-            target: Some(Target::Permanent(fodder)), additional_targets: Vec::new(), x_value: None,
+            target: Some(Target::Permanent(fodder)), additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("sac another creature");
         drain_stack(&mut g);
         let cp = g.computed_permanent(pred).expect("predator alive");
@@ -1209,7 +1209,7 @@ mod recent215 {
         g.players[0].mana_pool.add_colorless(3);
         let hand_before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: lib, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: lib, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("transform");
         drain_stack(&mut g);
         let v = g.computed_permanent(lib).unwrap();
@@ -1219,7 +1219,7 @@ mod recent215 {
         g.players[0].mana_pool.add(Color::Green, 1);
         g.players[0].mana_pool.add_colorless(3);
         assert!(g.perform_action(GameAction::ActivateAbility {
-            card_id: lib, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: lib, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).is_err(), "activate only once");
     }
 
@@ -1235,7 +1235,7 @@ mod recent215 {
         let life_before = g.players[0].life;
         // The scry ability adds the fourth page counter → exile + gain 4 life.
         g.perform_action(GameAction::ActivateAbility {
-            card_id: tome, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: tome, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("scry ability");
         drain_stack(&mut g);
         assert!(g.exile.iter().any(|c| c.id == tome), "exiled at 4 page counters");
@@ -1280,7 +1280,7 @@ mod recent215 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: lathril, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: lathril, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("tap ten elves");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, 10, "opponent lost 10");
@@ -1299,7 +1299,7 @@ mod recent215 {
         g.players[0].mana_pool.add_colorless(1);
         let life = g.players[0].life;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: ayli, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: ayli, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("sacrifice for life");
         drain_stack(&mut g);
         assert_eq!(g.players[0].life, life + 2, "gained 2 (bear toughness)");
@@ -1508,7 +1508,7 @@ mod recent217 {
         // Mana ability (index 0 = red) produces {R}.
         g.clear_sickness(mentor);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: mentor, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: mentor, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("tap for red");
         assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "added one red mana");
     }
@@ -1552,7 +1552,7 @@ mod recent218 {
         g.priority.player_with_priority = 0;
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: baylen, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: baylen, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("tap three tokens: draw");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
@@ -1677,7 +1677,7 @@ mod recent219 {
         g.players[0].mana_pool.add_colorless(1);
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: caves, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: caves, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("sac to draw with five lands");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
@@ -1709,7 +1709,7 @@ mod recent219 {
         let drakes = |g: &GameState| g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Drake").count();
         assert_eq!(drakes(&g), 0);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: hatcher, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: hatcher, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("remove three incubation counters");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(hatcher).unwrap().counter_count(CounterType::Incubation), 0, "counters spent");
@@ -1743,7 +1743,7 @@ mod recent219 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("remove divinity: each opponent discards their hand");
         drain_stack(&mut g);
         assert_eq!(g.players[1].hand.len(), 0, "opponent hand emptied");
@@ -1784,7 +1784,7 @@ mod recent220 {
         g.players[0].mana_pool.add_colorless(2);
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: pantry, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: pantry, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("remove a supply counter to draw");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
@@ -1815,7 +1815,7 @@ mod recent220 {
         g.priority.player_with_priority = 0;
         assert!(!g.computed_permanent(tumbler).unwrap().card_types.contains(&CardType::Creature), "starts as a non-creature Vehicle");
         g.perform_action(GameAction::ActivateAbility {
-            card_id: tumbler, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: tumbler, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("tap two tokens to animate");
         drain_stack(&mut g);
         assert!(g.computed_permanent(tumbler).unwrap().card_types.contains(&CardType::Creature), "now an artifact creature");
@@ -1833,12 +1833,12 @@ mod recent220 {
         g.priority.player_with_priority = 0;
         // Not yet: fewer than three cards have left the graveyard.
         assert!(g.perform_action(GameAction::ActivateAbility {
-            card_id: overseer, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: overseer, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).is_err(), "gated until three cards leave the graveyard");
         g.players[0].cards_left_graveyard_this_turn = 3;
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: overseer, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: overseer, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("now activatable");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");

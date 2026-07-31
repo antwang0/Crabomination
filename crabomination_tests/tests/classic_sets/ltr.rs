@@ -299,7 +299,7 @@ fn wose_pathfinder_pumps_another() {
     g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
         card_id: wose, ability_index: 1, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate pump");
     drain_stack(&mut g);
     let cp = g.compute_battlefield();
@@ -354,7 +354,7 @@ fn wizards_rockets_sac_for_mana_draws() {
     g.add_card_to_library(0, catalog::forest());
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: rockets, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: rockets, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate mana ability");
     drain_stack(&mut g);
     assert!(g.battlefield_find(rockets).is_none(), "sacrificed");
@@ -492,7 +492,7 @@ fn westfold_rider_destroys_enchantment() {
     let ench = g.add_card_to_battlefield(1, catalog::pacifism());
     g.perform_action(GameAction::ActivateAbility {
         card_id: rider, ability_index: 0, target: Some(Target::Permanent(ench)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate sac ability");
     drain_stack(&mut g);
     assert!(g.battlefield_find(rider).is_none(), "Rider sacrificed");
@@ -730,7 +730,7 @@ fn shire_terrace_fetches_basic() {
     let forest = g.add_card_to_library(0, catalog::forest());
     // Mana ability: tap for {C}.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: land, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for C");
     assert_eq!(g.players[0].mana_pool.total(), 1, "added one colorless");
     // Untap so the sac-fetch can tap it.
@@ -738,7 +738,7 @@ fn shire_terrace_fetches_basic() {
     g.players[0].mana_pool.add_colorless(1);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac-fetch");
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_none(), "Shire Terrace sacrificed");
@@ -876,7 +876,7 @@ fn samwise_food_and_recursion() {
     assert_eq!(food_count, 3, "three Foods present");
     g.perform_action(GameAction::ActivateAbility {
         card_id: sam, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Samwise");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "bear back in hand");
@@ -894,7 +894,7 @@ fn mirror_of_galadriel_cost_reduction() {
     g.players[0].mana_pool.add_colorless(4);
     let before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mirror, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: mirror, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate mirror at reduced cost");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), before + 1, "drew a card");
@@ -1107,7 +1107,7 @@ fn stern_marshal_pumps() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: marshal, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     let cp = g.compute_battlefield();
@@ -1183,7 +1183,7 @@ fn mushroom_watchdogs_sac_food_grows() {
     let dog = g.add_card_to_battlefield(0, catalog::mushroom_watchdogs());
     g.add_token_to_battlefield(0, &crabomination_base::tokens::food_token());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dog, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: dog, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     let cp = g.compute_battlefield();
@@ -1208,7 +1208,7 @@ fn gollums_bite_shrinks_then_gy_tempts() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gy_id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: gy_id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("gy activate");
     drain_stack(&mut g);
     assert_eq!(g.players[0].ring_temptations, 1, "graveyard ability tempts");
@@ -1228,7 +1228,7 @@ fn lembas_etb_draw_and_sac_life() {
     g.players[0].mana_pool.add_colorless(2);
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lem, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: lem, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac for life");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 3, "gained 3 life");

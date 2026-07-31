@@ -245,7 +245,7 @@ impl GameState {
                     ability_index: idx,
                     target,
                     additional_targets: Vec::new(),
-                    x_value: None,
+                    x_value: None, mode: None,
                 })
             });
             if any {

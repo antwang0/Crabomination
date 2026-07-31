@@ -134,6 +134,10 @@ pub struct TargetingState {
     /// When targeting for an activated ability rather than a spell.
     pub pending_ability_source: Option<CardId>,
     pub pending_ability_index: Option<usize>,
+    /// CR 601.2b — the mode picked for a modal activated ability before its
+    /// targeting session opened, submitted with the eventual
+    /// `GameAction::ActivateAbility`. `None` for non-modal abilities.
+    pub pending_ability_mode: Option<usize>,
     /// When `true`, the pending target picks resolve through
     /// `GameAction::CastSpellBack` instead of `CastSpell` — used for
     /// non-land MDFCs being played via their back face. The flag is

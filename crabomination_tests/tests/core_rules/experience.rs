@@ -88,7 +88,7 @@ fn daxos_makes_experience_sized_spirit() {
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
         card_id: daxos, ability_index: 0, target: None, additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     }).expect("Daxos token ability");
     drain_stack(&mut g);
     let spirit = g.battlefield.iter().find(|c| c.definition.name == "Spirit").expect("Spirit minted");

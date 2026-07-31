@@ -39,7 +39,7 @@ mod recent51 {
         g.players[0].mana_pool.add(Color::Black, 1);
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: sm, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: sm, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("loot ability");
         drain_stack(&mut g);
         assert_eq!(g.players[0].library.len(), lib0 - 1, "drew off the sacrifice");
@@ -135,7 +135,7 @@ mod recent52 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: hawker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: hawker, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap for restricted mana");
         // Two mana in pool ({C}{U}), but it can't pay for a creature spell.
         let bear = g.add_card_to_hand(0, catalog::grizzly_bears()); // {1}{G}
@@ -218,7 +218,7 @@ mod recent52 {
         g.players[0].mana_pool.add_colorless(1);
         let lib = g.players[0].library.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: bauble, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: bauble, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("sac to draw");
         drain_stack(&mut g);
         assert_eq!(g.players[0].library.len(), lib - 1, "drew");
@@ -238,7 +238,7 @@ mod recent52 {
         g.players[0].mana_pool.add(Color::Green, 2);
         g.players[0].mana_pool.add_colorless(4);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: loot, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: loot, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("dig");
         drain_stack(&mut g);
         assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"), "creature put onto battlefield");
@@ -633,7 +633,7 @@ mod recent53 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: init, ability_index: 0, target: Some(Target::Permanent(ench)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activates by removing two counters from among creatures");
         drain_stack(&mut g);
         assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
@@ -1082,7 +1082,7 @@ mod recent53 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: forest, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: forest, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap forest for mana");
         assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "monarch got an extra mana");
     }
@@ -1115,7 +1115,7 @@ mod recent53 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: valiant, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate double-strike pump");
         drain_stack(&mut g);
         let cp = g.compute_battlefield();
@@ -1298,7 +1298,7 @@ mod recent54 {
             ability_index: 0,
             target: Some(Target::Permanent(mine)),
             additional_targets: vec![Target::Permanent(foe)],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("fight");
         drain_stack(&mut g);
@@ -1347,7 +1347,7 @@ mod recent54 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: sage, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: sage, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("mana ability");
         assert_eq!(g.players[0].mana_pool.total(), 2, "{{T}}: two counters → two green mana");
@@ -1627,7 +1627,7 @@ mod recent55 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: intruder, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: intruder, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("sac an artifact for +2/+2");
         drain_stack(&mut g);
@@ -1826,7 +1826,7 @@ mod recent56 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: guard, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: guard, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("sac the bodyguard");
         drain_stack(&mut g);
         assert!(g.battlefield_find(guard).is_none(), "bodyguard sacrificed");
@@ -2385,7 +2385,7 @@ mod recent60 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(&mut g);
@@ -2449,7 +2449,7 @@ mod recent60 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(&mut g);

@@ -378,7 +378,7 @@ fn sakura_tribe_elder_sacrifices_for_a_basic() {
     ]));
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: elder, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Sakura-Tribe Elder activates");
+        card_id: elder, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Sakura-Tribe Elder activates");
     drain_stack(&mut g);
 
     assert!(g.players[0].graveyard.iter().any(|c| c.id == elder),
@@ -485,7 +485,7 @@ fn elvish_mystic_taps_for_green() {
     let pool_before = g.players[0].mana_pool.total();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mystic, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Elvish Mystic activates");
+        card_id: mystic, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Elvish Mystic activates");
     drain_stack(&mut g);
 
     assert!(g.battlefield.iter().any(|c| c.id == mystic && c.tapped),
@@ -908,7 +908,7 @@ fn wild_mongrel_pumps_via_discard() {
     ]));
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mongrel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Wild Mongrel activates");
+        card_id: mongrel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Wild Mongrel activates");
     drain_stack(&mut g);
 
     let view = g.battlefield.iter().find(|c| c.id == mongrel)
@@ -962,7 +962,7 @@ fn cloudpost_mana_scales_with_locus_count() {
     let id = g.add_card_to_battlefield(0, catalog::cloudpost());
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).unwrap();
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap();
     assert_eq!(g.players[0].mana_pool.total(), 2,
         "Cloudpost adds {{C}} per Locus you control");
 }
@@ -975,7 +975,7 @@ fn glimmerpost_taps_for_colorless_after_untap() {
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     let total_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Glimmerpost mana ability");
     assert_eq!(g.players[0].mana_pool.total(), total_before + 1,
         "Glimmerpost taps for {{C}}");
@@ -992,7 +992,7 @@ fn cloudpost_etbs_tapped_and_taps_for_colorless() {
     // Untap and verify mana ability.
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).unwrap();
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap();
     assert_eq!(g.players[0].mana_pool.total(), 1,
         "Cloudpost taps for one colorless");
 }
@@ -1064,7 +1064,7 @@ fn lotus_field_taps_for_three_of_one_color() {
     let id = g.add_card_to_battlefield(0, catalog::lotus_field());
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Lotus Field mana ability");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Lotus Field mana ability");
     // ManaPayload::AnyOneColor with Const(3) deposits 3 mana in a single color.
     assert_eq!(g.players[0].mana_pool.total(), 3,
         "Lotus Field should add 3 mana of one color");
@@ -1082,7 +1082,7 @@ fn evolving_wilds_sacrifices_to_search_basic() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(plains_id))]));
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wilds_id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Evolving Wilds search ability");
+        card_id: wilds_id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Evolving Wilds search ability");
     drain_stack(&mut g);
 
     // Wilds was sacrificed to its own cost; Plains is on the battlefield tapped.
@@ -1116,7 +1116,7 @@ fn drossforge_bridge_taps_for_black_or_red() {
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     // Ability 0 = {T}: Add {B}.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).unwrap();
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap();
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "first ability adds black");
 }
 
@@ -1125,7 +1125,7 @@ fn coalition_relic_taps_for_one_mana_of_any_color() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::coalition_relic());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Coalition Relic's mana ability");
     // AnyOneColor — pool gains 1 mana of *some* color.
     assert_eq!(g.players[0].mana_pool.total(), 1);
@@ -1137,7 +1137,7 @@ fn coalition_relic_taps_to_add_charge_counter() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::coalition_relic());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Coalition Relic's charge-counter ability");
     drain_stack(&mut g);
     let relic = g.battlefield_find(id).expect("relic still on battlefield");
@@ -1210,7 +1210,7 @@ fn ghost_vacuum_exiles_target_card_from_graveyard() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vac, ability_index: 0, target: Some(Target::Permanent(bear_id)), additional_targets: Vec::new(), x_value: None })
+        card_id: vac, ability_index: 0, target: Some(Target::Permanent(bear_id)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Ghost Vacuum activated for {{2}}, {{T}}");
     drain_stack(&mut g);
 

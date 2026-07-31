@@ -11,14 +11,14 @@ macro_rules! act {
     ($g:ident, $id:expr, $idx:expr, $tgt:expr) => {{
         $g.perform_action(GameAction::ActivateAbility {
             card_id: $id, ability_index: $idx, target: $tgt,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate ability");
         drain_stack(&mut $g);
     }};
     ($g:ident, $id:expr, $idx:expr, $tgt:expr, x = $x:expr) => {{
         $g.perform_action(GameAction::ActivateAbility {
             card_id: $id, ability_index: $idx, target: $tgt,
-            additional_targets: Vec::new(), x_value: Some($x),
+            additional_targets: Vec::new(), x_value: Some($x), mode: None,
         }).expect("activate ability");
         drain_stack(&mut $g);
     }};
@@ -207,7 +207,7 @@ fn simple_activated_abilities() {
         g.players[0].mana_pool.add_colorless(colorless);
         g.perform_action(GameAction::ActivateAbility {
             card_id: src, ability_index: 0, target: tgt.map(Target::Permanent),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect(name);
         drain_stack(&mut g);
         g.check_state_based_actions();
@@ -449,7 +449,7 @@ mod gaps1 {
             let land = g.add_card_to_battlefield(0, def);
             g.perform_action(GameAction::ActivateAbility {
                 card_id: land, ability_index: 1, target: None, additional_targets: vec![],
-                x_value: None,
+                x_value: None, mode: None,
             })
             .expect("colour tap");
             drain_stack(&mut g);
@@ -466,7 +466,7 @@ mod gaps1 {
         let land = g.add_card_to_battlefield(0, catalog::forbidden_orchard());
         g.perform_action(GameAction::ActivateAbility {
             card_id: land, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("tap");
         drain_stack(&mut g);
@@ -485,7 +485,7 @@ mod gaps1 {
         g.battlefield_find_mut(land).unwrap().tapped = false;
         g.perform_action(GameAction::ActivateAbility {
             card_id: land, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("tap for two");
         assert_eq!(g.players[0].life, 18);
@@ -518,7 +518,7 @@ mod gaps1 {
         );
         g.perform_action(GameAction::ActivateAbility {
             card_id: myojin, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("wrath");
         drain_stack(&mut g);
@@ -548,7 +548,7 @@ mod gaps1 {
         let before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
             card_id: azami, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("draw");
         drain_stack(&mut g);
@@ -667,7 +667,7 @@ mod gaps1 {
         g.players[0].mana_pool.add_colorless(5);
         g.perform_action(GameAction::ActivateAbility {
             card_id: hatch, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("hatch");
         drain_stack(&mut g);
@@ -700,7 +700,7 @@ mod gaps1 {
         assert_eq!(g.computed_permanent(sachi).unwrap().toughness, 3);
         g.perform_action(GameAction::ActivateAbility {
             card_id: sachi, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("tap for GG");
         assert_eq!(g.players[0].mana_pool.total(), 2);

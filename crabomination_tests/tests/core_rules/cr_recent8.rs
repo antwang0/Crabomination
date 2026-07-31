@@ -25,7 +25,7 @@ fn cr_122_1c_shield_counter_survives_kill_suit_destroy() {
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate Kill-Suit Cultist");
     drain_stack(&mut g);

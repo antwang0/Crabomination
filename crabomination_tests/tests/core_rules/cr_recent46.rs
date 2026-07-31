@@ -54,7 +54,7 @@ fn cr_602_2b_activated_ability_fills_every_target_slot() {
         ability_index: 0,
         target: Some(Target::Permanent(a)),
         additional_targets: vec![Target::Permanent(b)],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("both slots accepted");
     drain_stack(&mut g);
@@ -78,7 +78,7 @@ fn cr_602_2b_activation_rejects_a_missing_required_slot() {
             ability_index: 0,
             target: Some(Target::Permanent(a)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         }),
         Err(GameError::SelectionRequirementViolated)
     ));

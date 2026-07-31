@@ -15,7 +15,7 @@ fn chitterspitter_acorn_anthem() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.clear_sickness(spitter);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: spitter, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: spitter, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("token");
     drain_stack(&mut g);
     let squirrel = g.battlefield.iter().find(|c| c.definition.name == "Squirrel").unwrap().id;
@@ -178,7 +178,7 @@ fn wrens_run_hydra_x_and_reinforce() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: second, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: Some(2),
+        additional_targets: vec![], x_value: Some(2), mode: None,
     }).expect("reinforce");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
@@ -196,7 +196,7 @@ fn ghost_lit_drifter_flying() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: drifter, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant flying");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));

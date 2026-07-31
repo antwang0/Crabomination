@@ -83,7 +83,7 @@ fn clock_of_omens_untaps_with_two_helpers() {
     }
     g.perform_action(GameAction::ActivateAbility {
         card_id: clock, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -98,13 +98,13 @@ fn gemstone_array_banks_and_returns_colored_mana() {
     let array = g.add_card_to_battlefield(0, catalog::gemstone_array());
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: array, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: array, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("bank");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(array).unwrap().counter_count(CounterType::Charge), 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: array, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: array, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("spend");
     drain_stack(&mut g);
@@ -205,7 +205,7 @@ fn composite_golem_makes_five_colors() {
     let mut g = main_phase();
     let golem = g.add_card_to_battlefield(0, catalog::composite_golem());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: golem, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: golem, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sac");
     drain_stack(&mut g);
@@ -232,7 +232,7 @@ fn fleshgrafter_discards_an_artifact_to_pump() {
     g.add_card_to_hand(0, catalog::tanglebloom());
     g.perform_action(GameAction::ActivateAbility {
         card_id: grafter, ability_index: 0, target: None, additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -256,7 +256,7 @@ fn dawns_reflection_triples_the_land() {
     drain_stack(&mut g);
     g.players[0].mana_pool.empty();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: forest, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: forest, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("tap");
     assert_eq!(g.players[0].mana_pool.total(), 3);
@@ -365,7 +365,7 @@ fn baton_of_courage_spends_sunburst_counters() {
     assert_eq!(g.battlefield_find(baton).unwrap().counter_count(CounterType::Charge), 3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: baton, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("pump");
     drain_stack(&mut g);
@@ -491,7 +491,7 @@ fn vedalken_shackles_releases_when_it_untaps() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: shackles, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("steal");
     drain_stack(&mut g);
@@ -509,7 +509,7 @@ fn doubling_cube_doubles_the_pool() {
     g.players[0].mana_pool.add(Color::Green, 4);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cube, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: cube, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -567,7 +567,7 @@ fn ion_storm_spends_a_charge_or_plus_one_counter() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: storm, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -837,7 +837,7 @@ fn heliophial_burns_for_its_charge_counters() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: phial, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("fire");
     drain_stack(&mut g);
@@ -852,7 +852,7 @@ fn infused_arrows_shrinks_by_x() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: arrows, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: Some(2),
+        additional_targets: vec![], x_value: Some(2), mode: None,
     })
     .expect("fire");
     drain_stack(&mut g);
@@ -880,7 +880,7 @@ fn sparring_collar_attaches_for_its_colored_cost() {
     g.players[0].mana_pool.add(Color::Red, 2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: collar, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("attach");
     drain_stack(&mut g);
@@ -895,7 +895,7 @@ fn chimeric_coils_becomes_an_x_x() {
     let coils = g.add_card_to_battlefield(0, catalog::chimeric_coils());
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: coils, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(3),
+        card_id: coils, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(3), mode: None,
     })
     .expect("animate");
     drain_stack(&mut g);
@@ -948,7 +948,7 @@ fn avarice_totem_swaps_control() {
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
         card_id: totem, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("swap");
     drain_stack(&mut g);
@@ -991,7 +991,7 @@ fn stasis_cocoon_locks_the_artifact() {
     assert!(
         g.perform_action(GameAction::ActivateAbility {
             card_id: station, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .is_err(),
         "the Pincher ability is locked off"
@@ -1007,7 +1007,7 @@ fn sylvok_explorer_reads_the_opposing_lands() {
     g.clear_sickness(explorer);
     g.perform_action(GameAction::ActivateAbility {
         card_id: explorer, ability_index: 0, target: None, additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.total(), 1);
@@ -1022,7 +1022,7 @@ fn joiner_adept_fixes_your_lands() {
     g.clear_sickness(forest);
     g.perform_action(GameAction::ActivateAbility {
         card_id: forest, ability_index: 1, target: None, additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("the granted any-color ability");
     assert_eq!(g.players[0].mana_pool.total(), 1);
@@ -1100,7 +1100,7 @@ fn door_to_nothingness_kills_a_player() {
     }
     g.perform_action(GameAction::ActivateAbility {
         card_id: door, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -1205,14 +1205,14 @@ fn ouphe_vandals_counters_and_destroys() {
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
         card_id: station, ability_index: 0, target: None, additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("mint a Pincher");
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: ouphe, ability_index: 0, target: Some(Target::Permanent(station)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("counter it");
     drain_stack(&mut g);

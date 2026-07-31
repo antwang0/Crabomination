@@ -170,7 +170,7 @@ mod recent179 {
             ability_index: 0,
             target: Some(Target::Player(1)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate drain");
         drain_stack(&mut g);
@@ -265,7 +265,7 @@ mod recent179 {
             ability_index: 0,
             target: Some(Target::Permanent(fodder)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate sac-to-draw");
         drain_stack(&mut g);
@@ -281,7 +281,7 @@ mod recent179 {
             ability_index: 1,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate drain");
         drain_stack(&mut g);
@@ -307,7 +307,7 @@ mod recent179 {
             ability_index: 0,
             target: Some(Target::Permanent(ghoul)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate graveyard-cast grant");
         drain_stack(&mut g);
@@ -452,7 +452,7 @@ mod recent180 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Possessed Goat");
         drain_stack(&mut g);
@@ -467,7 +467,7 @@ mod recent180 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         });
         assert!(second.is_err(), "cannot activate a second time");
     }
@@ -896,7 +896,7 @@ mod recent185 {
                 ability_index: 0,
                 target: None,
                 additional_targets: vec![],
-                x_value: None,
+                x_value: None, mode: None,
             })
             .is_err(),
             "threshold not met → activation rejected",
@@ -909,7 +909,7 @@ mod recent185 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Thought Shucker");
         drain_stack(&mut g);
@@ -925,7 +925,7 @@ mod recent185 {
                 ability_index: 0,
                 target: None,
                 additional_targets: vec![],
-                x_value: None,
+                x_value: None, mode: None,
             })
             .is_err(),
             "activate only once",
@@ -1461,7 +1461,7 @@ mod recent189 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Raucous Entertainer");
         drain_stack(&mut g);
@@ -1580,7 +1580,7 @@ mod recent190 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Redrock Sentinel");
         drain_stack(&mut g);

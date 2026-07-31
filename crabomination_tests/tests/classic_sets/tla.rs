@@ -224,7 +224,7 @@ fn water_tribe_captain_pumps_team() {
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cap, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: cap, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate {5}");
     drain_stack(&mut g);
     let v = g.compute_battlefield();
@@ -242,7 +242,7 @@ fn earth_kingdom_protectors_grants_indestructible() {
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
         card_id: prot, ability_index: 0, target: Some(Target::Permanent(ally)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("sacrifice to grant indestructible");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == prot), "Protectors sacrificed");
@@ -508,14 +508,14 @@ fn raucous_audience_conditional_mana() {
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ra, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ra, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "just {{G}}");
     // Untap, add a power-4 creature, tap again → {G}{G}.
     g.battlefield_find_mut(ra).unwrap().tapped = false;
     g.add_card_to_battlefield(0, catalog::shivan_dragon()); // 5/5
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ra, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ra, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana again");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 3, "1 + 2 = 3 green");
 }
@@ -677,7 +677,7 @@ fn fire_sages_grows_with_counter() {
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fs, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: fs, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(fs).unwrap();
@@ -916,7 +916,7 @@ fn professor_zei_returns_instant_from_graveyard() {
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
         card_id: zei, ability_index: 1, target: Some(Target::Permanent(bolt)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("return I/S");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "instant back in hand");
@@ -952,7 +952,7 @@ fn tla_sac_land_taps_and_cracks() {
     g.step = TurnStep::PreCombatMain;
     // Mana ability 0 → white.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: land, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for W");
     assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
     // Untap, then crack it: {4}, {T}, Sacrifice → draw.
@@ -960,7 +960,7 @@ fn tla_sac_land_taps_and_cracks() {
     g.players[0].mana_pool.add_colorless(4);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+        card_id: land, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("crack for a card");
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_none(), "land sacrificed");
@@ -1259,7 +1259,7 @@ fn sparring_dummy_mills_for_land() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sd, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: sd, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "land to hand");
@@ -1367,7 +1367,7 @@ fn rebellious_captives_exhaust_once() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: rc, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: rc, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("first activation");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(rc).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 2,
@@ -1375,7 +1375,7 @@ fn rebellious_captives_exhaust_once() {
     // Second activation is illegal — Exhaust is once per game.
     g.players[0].mana_pool.add_colorless(6);
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: rc, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: rc, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).is_err(), "Exhaust can't fire twice");
 }
 
@@ -1390,7 +1390,7 @@ fn mai_exhaust_grants_double_strike() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mai, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: mai, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.computed_permanent(mai).unwrap().keywords.contains(&Keyword::DoubleStrike),
@@ -1407,7 +1407,7 @@ fn rough_rhino_exhaust_pumps_and_tramples() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(8);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: rr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: rr, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(rr).unwrap();
@@ -1430,7 +1430,7 @@ fn path_to_redemption_locks_then_exiles() {
         "enchanted creature can't attack");
     // Sacrifice the Aura to exile the creature and make an Ally.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: aura, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: aura, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate sac ability");
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).is_none(), "creature exiled");
@@ -1611,7 +1611,7 @@ fn the_lion_turtle_gains_and_ramps() {
         crabomination::decision::DecisionAnswer::Color(crabomination::mana::Color::Blue),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lt, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: lt, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     assert!(g.players[0].mana_pool.amount(crabomination::mana::Color::Blue) >= 1, "added a blue");
 }
@@ -1686,7 +1686,7 @@ fn vindictive_warden_pings_opponents() {
     g.players[0].mana_pool.add_colorless(3);
     let before = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vw, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: vw, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, before - 1, "1 damage to the opponent");
@@ -1776,7 +1776,7 @@ fn zuko_exiled_prince_impulses() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: zuko, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: zuko, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.len(), lib0 - 1, "top card left the library");
@@ -2076,7 +2076,7 @@ fn waterbending_scroll_island_discount() {
     g.players[0].mana_pool.add_colorless(4); // {6} - 2 Islands = {4}
     let hand0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: scroll, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: scroll, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate at the discounted cost");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew after the Island discount");
@@ -2137,7 +2137,7 @@ fn benders_waterskin_taps_for_any_color() {
         crabomination::decision::DecisionAnswer::Color(crabomination::mana::Color::Blue),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skin, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: skin, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     assert!(g.players[0].mana_pool.amount(crabomination::mana::Color::Blue) >= 1, "added blue");
 }
@@ -2364,7 +2364,7 @@ fn barrels_of_blasting_jelly_burns() {
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
         card_id: barrels, ability_index: 1, target: Some(Target::Permanent(foe)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate sac-burn");
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).is_none(), "5 damage kills the 4/4");
@@ -2430,7 +2430,7 @@ fn fire_nation_palace_grants_firebending() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: pal, ability_index: 1, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant firebending");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Firebending(4)),
@@ -2450,7 +2450,7 @@ fn ba_sing_se_earthbends_a_land() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: bss, ability_index: 1, target: Some(Target::Permanent(target_land)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("earthbend ability");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target_land).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 2,
@@ -2488,7 +2488,7 @@ fn realm_of_koh_makes_spirit() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: realm, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: realm, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("make Spirit");
     drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Spirit"), 1, "minted a Spirit");
@@ -2519,7 +2519,7 @@ fn agna_qela_loots() {
     g.players[0].mana_pool.add_colorless(2);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("loot");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand, "drew 1, discarded 1 (net unchanged)");
@@ -2562,7 +2562,7 @@ fn rumble_arena_scries_and_taps() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ra, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ra, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for C");
     assert!(g.players[0].mana_pool.colorless_amount() >= 1, "added colorless");
 }
@@ -2577,7 +2577,7 @@ fn hakoda_sacrifice_buffs_team() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hakoda, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: hakoda, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sacrifice Hakoda");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
@@ -2688,7 +2688,7 @@ fn bitter_work_exhaust_earthbends() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: bw, ability_index: 0,
         target: Some(crabomination::game::types::Target::Permanent(land)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("earthbend");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(land).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 4,
@@ -3022,7 +3022,7 @@ fn joo_dee_copies_then_sacrifices() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: jd, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: jd, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Joo Dee");
     drain_stack(&mut g);
     // Token minted then preferentially sacrificed → one Joo Dee left, and the
@@ -3050,7 +3050,7 @@ fn white_lotus_tile_mana_scales_with_tribe() {
         crabomination::decision::DecisionAnswer::Color(crabomination::mana::Color::Green),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tile, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: tile, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Green), 3,
         "X = 3 (the Ally tribe; Human also 2, Warrior 2)");
@@ -3109,7 +3109,7 @@ fn war_balloon_animates_at_three_fire() {
     for _ in 0..3 {
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: wb, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: wb, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("add fire counter");
         drain_stack(&mut g);
     }

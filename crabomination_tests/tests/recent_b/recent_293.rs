@@ -77,7 +77,7 @@ fn muddle_transmutes_for_a_same_mv_card() {
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: muddle, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: muddle, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("transmute");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == target), "MV-2 card fetched");
@@ -264,7 +264,7 @@ fn novijen_sages_grafts_and_draws() {
     flood(&mut g);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sages, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: sages, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("remove two counters, draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
@@ -301,7 +301,7 @@ fn ghost_council_blinks_and_retriggers_drain() {
     let (foe, me) = (g.players[1].life, g.players[0].life);
     g.perform_action(GameAction::ActivateAbility {
         card_id: council, ability_index: 0, target: None,
-        additional_targets: vec![Target::Permanent(fodder)], x_value: None,
+        additional_targets: vec![Target::Permanent(fodder)], x_value: None, mode: None,
     }).expect("sac to blink");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "the fodder creature was sacrificed");
@@ -369,7 +369,7 @@ fn vedalken_entrancer_mills_two() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: entrancer, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("mill");
     drain_stack(&mut g);
     assert_eq!(g.players[1].graveyard.len(), 2, "milled two cards");
@@ -381,7 +381,7 @@ fn beacon_hawk_firebreathes_toughness() {
     let hawk = g.add_card_to_battlefield(0, catalog::beacon_hawk());
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hawk, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: hawk, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     let p = g.computed_permanent(hawk).unwrap();

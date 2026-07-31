@@ -2365,12 +2365,8 @@ Warp / Void / Lander / **Station** shipped (see the rules-audit rows). Still ope
 
 Deliberately deferred this run (cards/features that need engine work beyond
 existing primitives):
-- **Modal activated abilities — mode selection via `GameAction::ActivateAbility`.**
-  `pick_trigger_mode` picks the mode at push time (deferred to UI players for
-  `wants_ui`), but `ActivateAbility` carries no `mode` field, so scripted/test
-  callers can't force a specific mode — they get the decider's pick (mode 0).
-  Phoenix Down's second mode (exile a Skeleton/Spirit/Zombie) is therefore only
-  reachable interactively. Add a `mode: Option<usize>` to `ActivateAbility`.
+- ✅ ~~**Modal activated abilities — mode selection via
+  `GameAction::ActivateAbility`.**~~ — the action carries `mode` end to end.
 - **Ethersworn Canonist** — "one *nonartifact* spell per turn" needs a
   per-player nonartifact-spell counter (the existing `OneSpellPerTurn` static
   counts every spell). Add a filtered variant + tracker.
@@ -7674,10 +7670,12 @@ stalled games via `eval_material`.
   sources would deal to that creature" needs a prevention shield filtered by
   the damage *source's* characteristics (the existing shields are per-source-id
   or unconditional).
-- **Modal activated abilities pick mode 0.** `GameAction::ActivateAbility`
-  carries no `mode`, so an `Effect::ChooseMode` in an activated ability always
-  runs the first mode (Veteran Warleader is modeled as three abilities
-  instead). Loyalty and cast paths do plumb a mode.
+- ✅ ~~**Modal activated abilities pick mode 0.**~~ —
+  `GameAction::ActivateAbility` now carries a `mode`; a submitted mode is
+  authoritative and drives per-slot target validation, the server view lists
+  each mode's short text (`AbilityView.modes`), and the client's ability menu
+  expands a modal ability into one row per mode. Loyalty abilities still
+  auto-pick their extra targets.
 - ✅ ~~**Worldwake is half-done**~~ — `set_gaps.py wwk` is at zero (`sets::wwk2`).
 - **`Effect::MoveWithinTotalManaValue` auto-picks.** March from the Tomb takes
   the cheapest matches first to maximize the count; the printed card lets the

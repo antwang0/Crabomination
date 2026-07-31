@@ -523,7 +523,7 @@ fn mardu_devotee_taps_for_one_of_three_colors() {
     g.clear_sickness(dev);
     g.players[0].mana_pool.add_colorless(1); // pay the {1}
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dev, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: dev, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate mana ability");
     drain_stack(&mut g);
     let pool = &g.players[0].mana_pool;
@@ -652,7 +652,7 @@ fn hardened_tactician_sacs_token_to_draw() {
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tac, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: tac, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate sac-token draw");
     drain_stack(&mut g);
     assert!(g.battlefield_find(tok).is_none(), "the token was sacrificed");
@@ -787,7 +787,7 @@ fn salt_road_patrol_outlast_adds_counter() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: patrol, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: patrol, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Outlast");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(patrol).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
@@ -971,7 +971,7 @@ fn naga_fleshcrafter_renew_adds_counter() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: naga, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Renew");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
@@ -1025,7 +1025,7 @@ fn omenpath_to_naya_taps_and_vanishes() {
         "time counters are seeded on ETB, not here in the fixture");
     let before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap Omenpath for mana");
     assert_eq!(g.players[0].mana_pool.total(), before + 1, "added a mana");
 }
@@ -1039,7 +1039,7 @@ fn marang_river_skeleton_regenerates() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate regenerate");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(skel).unwrap().regeneration_shields, 1,
@@ -1055,14 +1055,14 @@ fn mox_jasper_taps_only_with_a_dragon() {
     g.priority.player_with_priority = 0;
     // No Dragon yet — activation is rejected.
     let r = g.perform_action(GameAction::ActivateAbility {
-        card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     });
     assert!(r.is_err(), "Mox Jasper can't tap without a Dragon");
     // Add a Dragon → activation succeeds and floats a mana.
     g.add_card_to_battlefield(0, catalog::bloomvine_regent()); // 4/5 Dragon
     let before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("taps for mana with a Dragon out");
     assert_eq!(g.players[0].mana_pool.total(), before + 1, "added one mana");
 }
@@ -1085,7 +1085,7 @@ fn sage_of_the_fang_renew_doubles_counters() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: sage, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Renew from the graveyard");
     drain_stack(&mut g);
     // 2 existing + 1 added = 3, doubled = 6.
@@ -1288,7 +1288,7 @@ fn stadium_headliner_sac_pings_for_board_count() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: head, ability_index: 0, target: Some(Target::Permanent(victim)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac Stadium Headliner");
     drain_stack(&mut g);
     // Headliner is sacrificed as a cost, leaving 2 creatures → 2 damage kills the 2/2.
@@ -1308,7 +1308,7 @@ fn champion_of_dusan_renew_grants_trample() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: champ, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Renew from graveyard");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
@@ -1330,7 +1330,7 @@ fn sagu_pummeler_renew_grants_reach() {
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
         card_id: sagu, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Renew from graveyard");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
@@ -1355,7 +1355,7 @@ fn adorned_crocodile_dies_into_token_then_renews() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: croc, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Renew from graveyard");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
@@ -1376,7 +1376,7 @@ fn lasyd_prowler_renew_scales_with_lands_in_graveyard() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: lasyd, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Renew from graveyard");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
@@ -1423,7 +1423,7 @@ fn jeskai_devotee_flurry_and_mana() {
     g.players[0].mana_pool.add_colorless(1);
     let before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dev, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: dev, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("mana ability");
     assert_eq!(g.players[0].mana_pool.total(), before, "spent one, added one => net unchanged");
 }
@@ -1554,7 +1554,7 @@ fn agent_of_kotis_renew_two_counters() {
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: agent, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Renew");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
@@ -1572,7 +1572,7 @@ fn alchemists_assistant_renew_grants_lifelink() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: a, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Renew");
     drain_stack(&mut g);
     assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Lifelink));
@@ -1590,7 +1590,7 @@ fn qarsi_revenant_renew_grants_three_keywords() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: q, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Renew");
     drain_stack(&mut g);
     let kw = g.computed_permanent(target).unwrap().keywords;
@@ -1881,7 +1881,7 @@ fn undergrowth_leopard_sacs_to_destroy_artifact() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: leopard, ability_index: 0,
-        target: Some(Target::Permanent(mox)), additional_targets: vec![], x_value: None,
+        target: Some(Target::Permanent(mox)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate sac ability");
     drain_stack(&mut g);
     assert!(g.battlefield_find(mox).is_none(), "artifact destroyed");
@@ -2151,7 +2151,7 @@ fn mardu_monument_sac_mints_three_warriors() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: mon, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Mardu Monument sac");
     drain_stack(&mut g);
     let warriors = g.battlefield.iter()
@@ -2171,7 +2171,7 @@ fn abzan_devotee_returns_from_graveyard() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: dev, ability_index: 1, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate graveyard recur");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dev), "Devotee back in hand");
@@ -2186,14 +2186,14 @@ fn temur_devotee_mana_ability_once_per_turn() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: dev, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("first activation");
     // Total mana after spending 1 and adding 1 = still 2.
     assert_eq!(g.players[0].mana_pool.total(), 2);
     // Second activation is illegal (once each turn).
     let second = g.perform_action(GameAction::ActivateAbility {
         card_id: dev, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     });
     assert!(second.is_err(), "mana ability is once each turn");
 }
@@ -2308,7 +2308,7 @@ fn krotiq_nestguard_can_attack_after_ability() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: krotiq, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate ignore-defender");
     drain_stack(&mut g);
     g.step = TurnStep::DeclareAttackers;

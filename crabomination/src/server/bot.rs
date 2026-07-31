@@ -1668,7 +1668,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         };
         if GameState::would_accept_on(&probe, action.clone()) {
             return action;
@@ -1686,7 +1686,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             ability_index: idx,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         };
         if GameState::would_accept_on(&probe, action.clone()) {
             return action;
@@ -2384,7 +2384,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
                 (None, vec![])
             };
             let action = GameAction::ActivateAbility {
-                card_id: c.id, ability_index: idx, target, additional_targets, x_value: None,
+                card_id: c.id, ability_index: idx, target, additional_targets, x_value: None, mode: None,
             };
             if GameState::would_accept_on(&probe, action.clone()) {
                 castable.push(action);
@@ -2803,7 +2803,7 @@ fn pick_token_maker(state: &GameState, seat: usize) -> Option<GameAction> {
                 ability_index: idx,
                 target: None,
                 additional_targets: Vec::new(),
-                x_value: None,
+                x_value: None, mode: None,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);
@@ -2852,7 +2852,7 @@ fn pick_self_pump_counter(state: &GameState, seat: usize) -> Option<GameAction> 
                 ability_index: idx,
                 target: None,
                 additional_targets: Vec::new(),
-                x_value: None,
+                x_value: None, mode: None,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);
@@ -2957,7 +2957,7 @@ fn pick_reach_burn(state: &GameState, seat: usize) -> Option<GameAction> {
                 ability_index: idx,
                 target: None,
                 additional_targets: Vec::new(),
-                x_value: None,
+                x_value: None, mode: None,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);
@@ -3014,7 +3014,7 @@ fn pick_team_pump(state: &GameState, seat: usize) -> Option<GameAction> {
                 ability_index: idx,
                 target: None,
                 additional_targets: Vec::new(),
-                x_value: None,
+                x_value: None, mode: None,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);
@@ -3044,7 +3044,7 @@ fn pick_card_draw_ability(state: &GameState, seat: usize) -> Option<GameAction> 
                 ability_index: idx,
                 target: None,
                 additional_targets: Vec::new(),
-                x_value: None,
+                x_value: None, mode: None,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);
@@ -3096,7 +3096,7 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
                     ability_index: idx,
                     target: Some(crate::game::Target::Player(opp)),
                     additional_targets: Vec::new(),
-                    x_value: None,
+                    x_value: None, mode: None,
                 };
                 if state.would_accept(action.clone()) {
                     return Some(action);
@@ -3149,7 +3149,7 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
                     ability_index: idx,
                     target: Some(crate::game::Target::Permanent(*foe)),
                     additional_targets: Vec::new(),
-                    x_value: None,
+                    x_value: None, mode: None,
                 };
                 if state.would_accept(action.clone()) {
                     return Some(action);
@@ -3183,7 +3183,7 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
                     ability_index: idx,
                     target: Some(crate::game::Target::Permanent(*walker)),
                     additional_targets: Vec::new(),
-                    x_value: None,
+                    x_value: None, mode: None,
                 };
                 if state.would_accept(action.clone()) {
                     return Some(action);
@@ -3233,7 +3233,7 @@ fn pick_removal_sacrifice(state: &GameState, seat: usize) -> Option<GameAction> 
                     ability_index: idx,
                     target: Some(crate::game::Target::Permanent(*foe)),
                     additional_targets: Vec::new(),
-                    x_value: None,
+                    x_value: None, mode: None,
                 };
                 if state.would_accept(action.clone()) {
                     return Some(action);
@@ -3286,7 +3286,7 @@ fn pick_graveyard_recursion(state: &GameState, seat: usize) -> Option<GameAction
                     ability_index: idx,
                     target,
                     additional_targets: Vec::new(),
-                    x_value: None,
+                    x_value: None, mode: None,
                 };
                 if state.would_accept(action.clone()) {
                     return Some(action);
@@ -3353,7 +3353,7 @@ fn pick_battlefield_reanimate(state: &GameState, seat: usize) -> Option<GameActi
                 ability_index: idx,
                 target,
                 additional_targets: Vec::new(),
-                x_value: None,
+                x_value: None, mode: None,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);
@@ -3391,7 +3391,7 @@ fn pick_crack_lander(state: &GameState, seat: usize) -> Option<GameAction> {
                 ability_index: idx,
                 target: None,
                 additional_targets: Vec::new(),
-                x_value: None,
+                x_value: None, mode: None,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);
@@ -3434,7 +3434,7 @@ fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
                 ability_index: idx,
                 target: None,
                 additional_targets: Vec::new(),
-                x_value: None,
+                x_value: None, mode: None,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);
@@ -3663,7 +3663,7 @@ fn pick_attach_ability(state: &GameState, seat: usize) -> Option<GameAction> {
                 ability_index: idx,
                 target: Some(crate::game::Target::Permanent(equip.id)),
                 additional_targets: vec![crate::game::Target::Permanent(wearer)],
-                x_value: None,
+                x_value: None, mode: None,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);

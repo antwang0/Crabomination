@@ -3682,7 +3682,7 @@ pub fn handle_game_input(
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
-                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), additional_targets: Vec::new(), x_value: None });
+                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), additional_targets: Vec::new(), x_value: None, mode: targeting.pending_ability_mode });
                             cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
@@ -3736,7 +3736,7 @@ pub fn handle_game_input(
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
-                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), additional_targets: Vec::new(), x_value: None });
+                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), additional_targets: Vec::new(), x_value: None, mode: targeting.pending_ability_mode });
                             cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
@@ -3807,6 +3807,7 @@ pub fn handle_game_input(
                             target: Some(target),
                             additional_targets: Vec::new(),
                             x_value: None,
+                            mode: targeting.pending_ability_mode,
                         });
                         cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
@@ -3891,7 +3892,7 @@ pub fn handle_game_input(
                             ability_index: 0,
                             target: None,
                             additional_targets: vec![],
-                            x_value: None,
+                            x_value: None, mode: None,
                         });
                     } else if k.has_alternative_cost && k.alt_cost_available {
                         r.alt_cast.pending = Some(card_id);
@@ -4276,7 +4277,7 @@ pub fn handle_game_input(
                         ability_index: mana_abilities[0].index,
                         target: None,
                         additional_targets: Vec::new(),
-                        x_value: None,
+                        x_value: None, mode: None,
                     });
                 }
                 n if n > 1 => {
@@ -4473,6 +4474,7 @@ fn cancel_targeting(
     targeting.pending_card_id = None;
     targeting.pending_ability_source = None;
     targeting.pending_ability_index = None;
+    targeting.pending_ability_mode = None;
     targeting.back_face_pending = false;
     targeting.pending_decision_target = false;
     targeting.pending_mode = None;

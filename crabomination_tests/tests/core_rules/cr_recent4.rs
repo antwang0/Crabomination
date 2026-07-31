@@ -73,7 +73,7 @@ fn cr_122_5_moving_counters_is_not_doubled_by_doubling_season() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: gm, ability_index: 0, target: Some(Target::Permanent(src)),
-        additional_targets: vec![Target::Permanent(dst)], x_value: None,
+        additional_targets: vec![Target::Permanent(dst)], x_value: None, mode: None,
     }).expect("move counter");
     drain_stack(&mut g);
     assert_eq!(

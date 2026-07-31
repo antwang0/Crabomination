@@ -929,7 +929,7 @@ fn tasigur_activated_ability_mills() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: tasigur, ability_index: 0, target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     }).expect("Tasigur ability activates for {2}{G}");
     drain_stack(&mut g);
 
@@ -952,7 +952,7 @@ fn tasigur_activated_ability_hybrid_pip_payable_with_blue() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tasigur, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: tasigur, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Tasigur ability activates for {2}{U} via the hybrid pip");
     drain_stack(&mut g);
     assert!(g.players[0].library.len() <= lib_before - 2);
@@ -1186,7 +1186,7 @@ fn scavenging_ooze_gains_counter_and_life() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("Scavenging Ooze ability activates");
     drain_stack(&mut g);
@@ -1278,7 +1278,7 @@ fn magda_sacrifices_five_treasures_to_tutor_a_dragon() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(dragon))]));
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: magda, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: magda, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Magda's five-Treasure tutor activates");
     drain_stack(&mut g);
 
@@ -1303,7 +1303,7 @@ fn magda_cannot_tutor_without_five_treasures() {
     }, &ctx).unwrap();
     g.add_card_to_library(0, catalog::balefire_dragon());
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: magda, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: magda, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "four Treasures isn't enough to pay the sacrifice cost");
 }
 
@@ -1442,7 +1442,7 @@ fn bloodtithe_harvester_sacs_blood_to_deal_two_damage() {
         ability_index: 0,
         target: Some(Target::Player(1)),
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("{1}, Sacrifice a Blood: 2 damage activates");
     drain_stack(&mut g);
@@ -1466,7 +1466,7 @@ fn bloodtithe_harvester_cannot_activate_without_a_blood() {
         ability_index: 0,
         target: Some(Target::Player(1)),
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     });
     assert!(res.is_err(), "no Blood to sacrifice → activation rejected");
 }
@@ -1488,7 +1488,7 @@ fn tireless_tracker_gains_counter_when_a_clue_is_sacrificed() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("Clue sacrifices for {2}");
     drain_stack(&mut g);
@@ -1555,7 +1555,7 @@ fn sylvan_safekeeper_cannot_activate_without_a_forest() {
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     });
     assert!(res.is_err(), "no Forest to sacrifice → activation rejected");
     use crabomination::card::Keyword;
@@ -1572,7 +1572,7 @@ fn zuran_orb_cannot_activate_without_a_land() {
     let life_before = g.players[0].life;
     // No land to sacrifice → activation rejected pre-resolution.
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: orb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None });
+        card_id: orb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(res.is_err(), "no land to sacrifice → activation rejected");
     assert_eq!(g.players[0].life, life_before, "no life gained when cost unpayable");
 }
@@ -1751,7 +1751,7 @@ fn regen_shield_replaces_destroy() {
     g.players[0].mana_pool.add(Color::Black, 1);
     // Stamp a regeneration shield via the {B}: Regenerate ability.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regenerate activates");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(skel).unwrap().regeneration_shields, 1);
@@ -1784,7 +1784,7 @@ fn regen_shield_replaces_lethal_combat_damage() {
     g.players[1].mana_pool.add(Color::Black, 1);
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regenerate");
     drain_stack(&mut g);
 
@@ -1812,7 +1812,7 @@ fn regen_does_not_save_zero_toughness() {
     g.clear_sickness(skel);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regenerate");
     drain_stack(&mut g);
     // Drop toughness to 0 with two -1/-1 counters.
@@ -1831,7 +1831,7 @@ fn regen_shield_expires_at_cleanup() {
     g.clear_sickness(skel);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regenerate");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(skel).unwrap().regeneration_shields, 1);
@@ -1855,7 +1855,7 @@ fn terminate_ignores_regeneration_shield() {
     g.clear_sickness(skel);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regenerate activates");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(skel).unwrap().regeneration_shields, 1,
@@ -1887,7 +1887,7 @@ fn plain_destroy_still_honors_regeneration_shield() {
     g.clear_sickness(skel);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regenerate activates");
     drain_stack(&mut g);
 
@@ -2058,7 +2058,7 @@ fn wall_of_bone_regenerates_from_combat() {
     g.players[1].mana_pool.add(Color::Black, 1);
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wall, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: wall, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regenerate");
     drain_stack(&mut g);
     g.active_player_idx = 0;
@@ -2084,7 +2084,7 @@ fn will_o_the_wisp_regenerates_from_destroy() {
     g.clear_sickness(wisp);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wisp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: wisp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regenerate");
     drain_stack(&mut g);
     // Opponent destroys it.
@@ -2118,7 +2118,7 @@ fn zopandrel_activation_sacs_two_creatures_and_adds_indestructible_counter() {
     g.players[0].mana_pool.add(Color::Green, 2);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: zop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: zop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Zopandrel activation: {G}{G} + sac two creatures");
     drain_stack(&mut g);
 
@@ -2155,7 +2155,7 @@ fn zopandrel_activation_rejected_without_two_other_creatures() {
     g.players[0].mana_pool.add(Color::Green, 2);
 
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: zop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: zop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     });
     assert!(res.is_err(), "activation rejected without two other creatures to sac");
 }
@@ -2254,7 +2254,7 @@ fn relic_of_progenitus_exiles_opponent_graveyard() {
     let relic = g.add_card_to_battlefield(0, catalog::relic_of_progenitus());
     g.clear_sickness(relic);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: relic, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: relic, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("Relic {T}: exile a card from each opponent's graveyard");
     drain_stack(&mut g);

@@ -230,7 +230,7 @@ fn cr_615_7_chosen_color_prevention_prompts_a_ui_seat() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: avacyn, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate the creature-prevention half");
     drain_stack(&mut g);

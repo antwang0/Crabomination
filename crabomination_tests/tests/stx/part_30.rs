@@ -192,7 +192,7 @@ fn codie_activation_ramps_and_impulses_on_next_spell() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: codie, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: codie, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Codie");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 5, "added WUBRG");
@@ -315,7 +315,7 @@ fn flamescroll_celebrant_pings_opponent_activations() {
     g.priority.player_with_priority = 1;
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: forest, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: forest, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for mana");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 20, "mana ability exempt");
@@ -324,7 +324,7 @@ fn flamescroll_celebrant_pings_opponent_activations() {
     g.players[1].mana_pool.add(Color::Red, 1);
     g.players[1].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: opp_fc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: opp_fc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 19, "non-mana activation pinged");

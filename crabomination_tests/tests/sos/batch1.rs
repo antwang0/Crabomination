@@ -41,7 +41,7 @@ fn shattered_acolyte_sac_destroys_artifact() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: acolyte,
         ability_index: 0,
-        target: Some(Target::Permanent(mind_stone)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(mind_stone)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Shattered Acolyte sac-and-destroy castable");
     drain_stack(&mut g);
 
@@ -1546,7 +1546,7 @@ fn hardened_academic_discard_grants_lifelink_eot() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: academic,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Discard ability should activate");
     drain_stack(&mut g);
 

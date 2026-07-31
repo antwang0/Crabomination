@@ -308,7 +308,7 @@ mod recent12 {
         g.players[0].mana_pool.add_colorless(1);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: balan, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: balan, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("attach all Equipment");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(e1).unwrap().attached_to, Some(balan));
@@ -364,7 +364,7 @@ mod recent13 {
         g.players[0].mana_pool.add_colorless(1);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: shadow, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: shadow, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("pump");
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(shadow).unwrap().power, 3);
@@ -458,7 +458,7 @@ mod recent13 {
         g.players[0].mana_pool.add_colorless(2);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+            card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("animate");
         drain_stack(&mut g);
         let cp = g.computed_permanent(land).unwrap();
@@ -608,7 +608,7 @@ mod recent16 {
         let life = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: pile, ability_index: 0,
-            target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+            target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Aeolipile");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, life - 2);
@@ -626,7 +626,7 @@ mod recent16 {
         g.priority.player_with_priority = 0;
         let hand_before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: vault, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: vault, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Vault");
         drain_stack(&mut g);
         assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
@@ -877,7 +877,7 @@ mod recent17 {
         let blade = g.add_card_to_battlefield(0, catalog::seasoned_hallowblade());
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: blade, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: blade, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Hallowblade");
         drain_stack(&mut g);
         assert!(g.computed_permanent(blade).unwrap().keywords.contains(&Keyword::Indestructible));
@@ -894,7 +894,7 @@ mod recent17 {
         g.priority.player_with_priority = 0;
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: dryad, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: dryad, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Greenseeker");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "top land went to hand");
@@ -921,7 +921,7 @@ mod recent17 {
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
             card_id: claws, ability_index: 1, target: Some(Target::Permanent(victim)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate sac ability");
         drain_stack(&mut g);
         assert!(g.battlefield_find(claws).is_none(), "sacrificed");
@@ -1079,7 +1079,7 @@ mod recent18 {
         let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
         g.perform_action(GameAction::ActivateAbility {
             card_id: crier, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Sky Crier");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), h0 + 1, "you drew");
@@ -1095,7 +1095,7 @@ mod recent18 {
         g.priority.player_with_priority = 0;
         let life = g.players[0].life;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap Soulmender");
         drain_stack(&mut g);
         assert_eq!(g.players[0].life, life + 1);
@@ -1223,7 +1223,7 @@ mod recent18 {
         g.priority.player_with_priority = 0;
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("loot with Kitsa");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand, "drew one, discarded one — net zero");
@@ -1251,14 +1251,14 @@ mod recent18 {
         g.players[0].mana_pool.add_colorless(2);
         assert!(g.perform_action(GameAction::ActivateAbility {
             card_id: kitsa, ability_index: 1, target: Some(Target::Permanent(bolt)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).is_err(), "power 1 — activation rejected");
         // At power 3 the copy fires: the bolt hits twice.
         g.battlefield_find_mut(kitsa).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
         let life1 = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: kitsa, ability_index: 1, target: Some(Target::Permanent(bolt)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("copy the bolt");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, life1 - 6, "original + copy resolved");
@@ -1294,7 +1294,7 @@ mod recent19 {
         g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: gar, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: gar, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("pump toughness");
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(gar).unwrap().toughness, 3, "+0/+1");
@@ -1314,7 +1314,7 @@ mod recent19 {
         let gy = g.players[1].graveyard.len();
         g.perform_action(GameAction::ActivateAbility {
             card_id: colony, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Coral Colony");
         drain_stack(&mut g);
         assert_eq!(g.players[1].graveyard.len(), gy + 2, "milled 2 for two defenders");
@@ -1430,7 +1430,7 @@ mod recent20 {
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac three Treasures");
         drain_stack(&mut g);
@@ -1558,7 +1558,7 @@ mod recent20 {
             ability_index: 0,
             target: Some(Target::Permanent(bear)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(&mut g);
@@ -1579,7 +1579,7 @@ mod recent20 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(&mut g);

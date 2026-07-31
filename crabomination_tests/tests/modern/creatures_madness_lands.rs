@@ -55,7 +55,7 @@ fn putrid_imp_discard_grants_menace_eot() {
     let to_pitch = g.add_card_to_hand(0, catalog::lightning_bolt());
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: imp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: imp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Putrid Imp discard ability activates");
     drain_stack(&mut g);
 
@@ -545,7 +545,7 @@ fn activated_ability_keeps_floating_mana_when_player_declines() {
 
     // Regenerate ({1}{G}): the {1} could come from the float or a Forest.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gorilla, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: gorilla, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("activation suspends for the float-spend confirmation");
     let pd = g.pending_decision.as_ref().expect("a float-spend confirmation is pending");
@@ -649,7 +649,7 @@ fn karakas_taps_for_white() {
     let id = g.add_card_to_battlefield(0, catalog::karakas());
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Karakas's mana ability should activate");
 
     assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
@@ -666,7 +666,7 @@ fn karakas_bounces_legendary_creature() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: kara,
         ability_index: 1,
-        target: Some(Target::Permanent(atraxa)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(atraxa)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Karakas bounce ability should activate against a legendary");
     drain_stack(&mut g);
 
@@ -946,7 +946,7 @@ fn fanatical_firebrand_taps_and_sacs_to_ping_any_target() {
     g.clear_sickness(fb); // (has Haste anyway)
     let life_before = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fb, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: fb, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("firebrand ability activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life_before - 1, "deals 1 to target player");
@@ -1009,7 +1009,7 @@ fn leyline_of_sanctity_blocks_targeted_ability() {
     let err = g.perform_action(GameAction::ActivateAbility {
         card_id: tim,
         ability_index: 0,
-        target: Some(Target::Player(0)), additional_targets: Vec::new(), x_value: None });
+        target: Some(Target::Player(0)), additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(err.is_err(),
         "Tim's targeted ability should be rejected against Leyline-protected player; got: {err:?}");
 }
@@ -1757,7 +1757,7 @@ fn three_tree_mascot_taps_for_any_color() {
     assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Changeling));
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate the mana ability");
     assert!(g.players[0].mana_pool.total() >= 1, "produced a mana of any color");
 }

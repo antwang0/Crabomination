@@ -17,7 +17,7 @@ fn ashnods_altar_sacrifices_a_creature_for_two_colorless() {
     let altar = g.add_card_to_battlefield(0, catalog::ashnods_altar());
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: altar, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: altar, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("altar activates by sacrificing a creature");
     assert!(!g.battlefield.iter().any(|c| c.id == fodder), "fodder sacrificed");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "added two colorless");
@@ -36,7 +36,7 @@ fn ashnods_altar_ui_activator_chooses_creature_to_sacrifice() {
     let kept = g.add_card_to_battlefield(0, catalog::grizzly_bears());
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: altar, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: altar, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("activation suspends for the sacrifice choice");
 
@@ -143,7 +143,7 @@ fn ravenous_baloth_sacs_a_beast_for_four_life() {
     let beast = g.add_card_to_battlefield(0, catalog::obstinate_baloth()); // a Beast
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: baloth, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: baloth, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sacrifice a Beast to gain life");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == beast), "Beast sacrificed");
@@ -188,7 +188,7 @@ fn pyre_charger_firebreathing_pumps_power() {
     let pc = g.add_card_to_battlefield(0, catalog::pyre_charger());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: pc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("firebreathing activates");
     drain_stack(&mut g);
     let cp = g.computed_permanent(pc).unwrap();
@@ -256,7 +256,7 @@ fn blinking_spirit_returns_itself_to_hand_for_zero() {
     let id = g.add_card_to_battlefield(0, catalog::blinking_spirit());
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{0}: return to hand");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).is_none(), "left the battlefield");
@@ -423,14 +423,14 @@ fn icatian_javelineers_pings_once_then_runs_dry() {
     g.battlefield_find_mut(jav).unwrap().add_counters(CounterType::Charge, 1);
     g.clear_sickness(jav);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: jav, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: jav, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("ping for 1");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 19, "dealt 1 to the opponent");
     // Untap it so the only blocker to re-activation is the missing counter.
     g.battlefield_find_mut(jav).unwrap().tapped = false;
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: jav, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: jav, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "can't ping again with no counter");
 }
 
@@ -488,7 +488,7 @@ fn spiketail_hatchling_counters_unless_paid() {
     g.priority.player_with_priority = 0;
     let spike = g.add_card_to_battlefield(0, catalog::spiketail_hatchling());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: spike, ability_index: 0, target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None,
+        card_id: spike, ability_index: 0, target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sacrifice Spiketail to counter");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 20, "bolt countered (controller couldn't pay)");
@@ -505,7 +505,7 @@ fn icy_manipulator_taps_a_target() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: icy, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+        card_id: icy, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Icy Manipulator taps a target");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).unwrap().tapped, "the target creature is tapped");
@@ -517,7 +517,7 @@ fn basalt_monolith_makes_three_and_needs_three_to_untap() {
     let m = g.add_card_to_battlefield(0, catalog::basalt_monolith());
     g.clear_sickness(m);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: m, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: m, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for {C}{C}{C}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 3, "three colorless");
@@ -527,7 +527,7 @@ fn basalt_monolith_makes_three_and_needs_three_to_untap() {
     // Pay {3} to untap.
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: m, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: m, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("pay 3 to untap");
     drain_stack(&mut g);
     assert!(!g.battlefield_find(m).unwrap().tapped, "untapped after paying three");
@@ -580,7 +580,7 @@ fn torch_courier_sacrifices_to_grant_haste() {
     let tc = g.add_card_to_battlefield(0, catalog::torch_courier());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tc, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+        card_id: tc, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sacrifice Torch Courier for haste");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().all(|c| c.id != tc), "Torch Courier was sacrificed");
@@ -833,11 +833,11 @@ fn goblin_bomb_detonates_at_five_fuse() {
     // Under five counters, the payoff can't be activated.
     g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Fuse, 4);
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None }).is_err(),
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None , mode: None}).is_err(),
         "four fuse counters is not enough to detonate");
     g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Fuse, 1); // → 5
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None })
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None , mode: None})
         .expect("detonates at five fuse counters");
     drain_stack(&mut g);
     assert!(g.players[1].life <= 0, "Goblin Bomb deals 20 to the target player");
@@ -894,7 +894,7 @@ fn meteorite_etb_pings_and_taps_for_any_color() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18, "ETB deals 2 to any target");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("mana ability");
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "{{T}}: add one mana of any color");
 }
@@ -922,11 +922,11 @@ fn hammer_of_bogardan_recurs_from_graveyard_at_upkeep() {
     for _ in 0..3 { g.players[0].mana_pool.add(Color::Red, 1); }
     g.players[0].mana_pool.add_colorless(2);
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: hammer, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).is_err(),
+        card_id: hammer, ability_index: 0, target: None, additional_targets: vec![], x_value: None , mode: None}).is_err(),
         "recur is upkeep-only");
     g.step = TurnStep::Upkeep;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hammer, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("recur at upkeep");
+        card_id: hammer, ability_index: 0, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("recur at upkeep");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == hammer), "Hammer returns to hand");
 }
@@ -937,7 +937,7 @@ fn stalking_stones_animates_into_a_3_3() {
     let id = g.add_card_to_battlefield(0, catalog::stalking_stones());
     g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None }).expect("animate for {6}");
+        card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("animate for {6}");
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
     assert!(cp.card_types.contains(&CardType::Creature), "becomes a creature");
@@ -972,7 +972,7 @@ fn fire_diamond_enters_tapped_then_taps_for_red() {
     assert!(g.battlefield_find(id).unwrap().tapped, "Diamond enters tapped");
     g.battlefield_find_mut(id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("tap for red");
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("tap for red");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "{{T}}: add {{R}}");
 }
@@ -982,7 +982,7 @@ fn pristine_talisman_taps_for_colorless_and_gains_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::pristine_talisman());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("tap");
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("tap");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "adds one colorless mana");
     assert_eq!(g.players[0].life, 21, "and you gain 1 life");
@@ -994,7 +994,7 @@ fn sunbeam_spellbomb_gains_five_life() {
     let id = g.add_card_to_battlefield(0, catalog::sunbeam_spellbomb());
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("gain-life mode");
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("gain-life mode");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 25, "{{W}}, Sac: gain 5 life");
     assert!(!g.battlefield.iter().any(|c| c.id == id), "Sunbeam Spellbomb is sacrificed");
@@ -1008,7 +1008,7 @@ fn necrogen_spellbomb_makes_target_discard() {
     let before = g.players[1].hand.len();
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None })
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None , mode: None})
         .expect("discard mode");
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), before - 1, "target player discards a card");
@@ -1021,7 +1021,7 @@ fn elixir_of_immortality_recycles_graveyard() {
     g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("recycle");
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("recycle");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 25, "gain 5 life");
     assert!(g.players[0].graveyard.is_empty(), "graveyard shuffled into library");
@@ -1035,7 +1035,7 @@ fn crystal_shard_bounces_unpaid_creature() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Blue, 1); // {U},{T} mode (index 1)
     g.perform_action(GameAction::ActivateAbility {
-        card_id: shard, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None })
+        card_id: shard, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None , mode: None})
         .expect("bounce mode");
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == bear),
@@ -1049,7 +1049,7 @@ fn erratic_portal_bounces_unpaid_creature() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: portal, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None })
+        card_id: portal, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None , mode: None})
         .expect("bounce");
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == bear),

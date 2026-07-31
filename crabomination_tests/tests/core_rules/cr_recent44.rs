@@ -151,7 +151,7 @@ fn cr_110_5c_status_persists_through_the_untap_step() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: shackles, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("steal");
     drain_stack(&mut g);

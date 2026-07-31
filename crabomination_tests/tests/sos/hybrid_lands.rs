@@ -484,7 +484,7 @@ fn assert_school_land(def_fn: fn() -> crabomination::card::CardDefinition, a: Co
     // Mana ability 0 → color a.
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("first color mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(a), 1, "ability 0 taps for color a");
@@ -492,7 +492,7 @@ fn assert_school_land(def_fn: fn() -> crabomination::card::CardDefinition, a: Co
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     g.players[0].mana_pool = crabomination::mana::ManaPool::default();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("second color mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(b), 1, "ability 1 taps for color b");
@@ -750,7 +750,7 @@ fn cauldron_activation_reanimates_and_sac_fires_death_drain() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: cauldron,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Cauldron reanimation activatable");
     drain_stack(&mut g);
 
@@ -775,7 +775,7 @@ fn berta_activation_creates_fractal_token() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: berta,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: Some(2) })
+        target: None, additional_targets: Vec::new(), x_value: Some(2) , mode: None})
     .expect("Berta token ability activatable");
     drain_stack(&mut g);
 
@@ -876,7 +876,7 @@ fn spirit_guide_activates_from_hand() {
     let guide = g.add_card_to_hand(0, catalog::elvish_spirit_guide());
     g.perform_action(GameAction::ActivateAbility {
         card_id: guide, ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("guide's mana ability usable from hand");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "{{G}} floats");
     assert!(g.exile.iter().any(|c| c.id == guide), "guide exiled as its cost");
@@ -1628,7 +1628,7 @@ fn nita_sacrifices_another_and_cast_pays_own_cost() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: nita, ability_index: 0,
         target: Some(crabomination::game::types::Target::Permanent(bolt_id)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("Nita activation");
     drain_stack(&mut g);
@@ -1664,7 +1664,7 @@ fn visionarys_dance_discard_ability_activates_from_hand() {
     // Pick the bolt to hand (SearchLibrary decision).
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(top))]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vd, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: vd, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("from-hand activation");
     drain_stack(&mut g);
@@ -1853,7 +1853,7 @@ fn great_hall_animates_permanently_with_magecraft_pump() {
     let hall = g.add_card_to_battlefield(0, catalog::great_hall_of_the_biblioplex());
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hall, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+        card_id: hall, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("{5} animation");
     drain_stack(&mut g);
@@ -1864,7 +1864,7 @@ fn great_hall_animates_permanently_with_magecraft_pump() {
     // Second activation is gated off ("if this land isn't a creature").
     g.players[0].mana_pool.add_colorless(5);
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: hall, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+        card_id: hall, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None,
     });
     assert!(err.is_err(), "already a creature — condition fails");
     // Granted magecraft: casting an instant pumps it +1/+0 EOT.
@@ -1907,11 +1907,11 @@ fn petrified_hamlet_name_lockout_and_land_grant() {
     g.priority.player_with_priority = 1;
     g.players[1].mana_pool.add_colorless(5);
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: hall, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+        card_id: hall, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None,
     });
     assert!(err.is_err(), "non-mana activation locked by the chosen name");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hall, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: hall, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("mana abilities are exempt from the lockout");
     // Grant: OUR land with the chosen name gained "{T}: Add {C}" — its
@@ -1919,7 +1919,7 @@ fn petrified_hamlet_name_lockout_and_land_grant() {
     g.priority.player_with_priority = 0;
     let before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ours, ability_index: 3, target: None, additional_targets: vec![], x_value: None,
+        card_id: ours, ability_index: 3, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("granted {T}: Add {C} on the named land");
     assert_eq!(g.players[0].mana_pool.total(), before + 1, "granted mana ability produced {{C}}");

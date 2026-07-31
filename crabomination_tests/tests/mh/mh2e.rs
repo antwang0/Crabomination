@@ -28,7 +28,7 @@ fn activate(g: &mut GameState, id: crabomination::card::CardId, idx: usize, targ
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: idx, target, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: idx, target, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(g);
@@ -77,7 +77,7 @@ fn breyas_apprentice_pump_mode() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate with the ETB Thopter as fodder");
     drain_stack(&mut g);

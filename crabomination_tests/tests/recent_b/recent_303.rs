@@ -13,7 +13,7 @@ fn verdant_eidolon_sacs_for_three_mana() {
     g.clear_sickness(e);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: e, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: e, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac for mana");
     drain_stack(&mut g);
     assert!(g.battlefield_find(e).is_none(), "sacrificed as a cost");
@@ -29,7 +29,7 @@ fn entropic_eidolon_drains_a_target() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: e, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac to drain");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, foe - 1, "target lost 1");
@@ -67,14 +67,14 @@ fn ragamuffyn_only_draws_while_hellbent() {
     let held = g.add_card_to_hand(0, catalog::grizzly_bears());
     let blocked = g.perform_action(GameAction::ActivateAbility {
         card_id: rag, ability_index: 0, target: None,
-        additional_targets: vec![Target::Permanent(fodder)], x_value: None,
+        additional_targets: vec![Target::Permanent(fodder)], x_value: None, mode: None,
     });
     assert!(blocked.is_err(), "can't activate with a card in hand");
     // Empty the hand and try again.
     g.players[0].hand.retain(|c| c.id != held);
     g.perform_action(GameAction::ActivateAbility {
         card_id: rag, ability_index: 0, target: None,
-        additional_targets: vec![Target::Permanent(fodder)], x_value: None,
+        additional_targets: vec![Target::Permanent(fodder)], x_value: None, mode: None,
     }).expect("draws while hellbent");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed the fodder");
@@ -95,7 +95,7 @@ fn soulsworn_jury_counters_a_creature_spell() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: jury, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("counter the creature");
     drain_stack(&mut g);
     assert!(g.battlefield_find(jury).is_none(), "Jury sacrificed");
@@ -134,7 +134,7 @@ fn minister_of_impediments_taps_a_creature() {
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: mi, ability_index: 0, target: Some(Target::Permanent(foe)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap the creature");
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped");

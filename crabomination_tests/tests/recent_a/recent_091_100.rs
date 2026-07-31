@@ -41,7 +41,7 @@ mod recent91 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: kykar, ability_index: 0, target: None, additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         }).expect("sac Spirit for red");
         drain_stack(&mut g);
         assert!(g.battlefield_find(spirit).is_none(), "Spirit sacrificed");
@@ -134,7 +134,7 @@ mod recent91 {
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
             card_id: mage, ability_index: 0, target: Some(Target::Permanent(bolt)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("copy the bolt");
         drain_stack(&mut g);
         // The bolt + its copy each deal 3; the copy may pick a new target, so
@@ -177,7 +177,7 @@ mod recent92 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: v, ability_index: 0, target: None, additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         }).expect("tap for mana");
         assert_eq!(g.players[0].mana_pool.total(), 2, "added two mana");
     }
@@ -228,7 +228,7 @@ mod recent92 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: niv, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("ping");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, 19, "dealt 1 to the opponent");
@@ -313,7 +313,7 @@ mod recent93 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: colossus, ability_index: 0, target: Some(Target::Permanent(foe)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("tap a Wizard to bounce");
         drain_stack(&mut g);
         assert!(g.battlefield_find(foe).is_none(), "the enemy creature was bounced");
@@ -463,7 +463,7 @@ mod recent94 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: kazuul, ability_index: 0, target: Some(Target::Permanent(axe)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("attach the Equipment");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(axe).unwrap().attached_to, Some(kazuul), "axe now on Kazuul");
@@ -704,7 +704,7 @@ mod recent95 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: bot, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: bot, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("tap for {C}");
         // The {C} is spend-restricted (artifacts/abilities only), so it lands in the
         // restricted pool rather than `total()`; the tap confirms the ability fired.
@@ -806,7 +806,7 @@ mod recent96 {
         // The Channel ability is the from-hand activated ability (index 0).
         g.perform_action(GameAction::ActivateAbility {
             card_id: boar, ability_index: 0, target: Some(crabomination::game::types::Target::Permanent(bear)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("channel the Boar");
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
@@ -828,7 +828,7 @@ mod recent96 {
         g.step = TurnStep::PreCombatMain;
         let hand_before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: ronin, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: ronin, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("channel: draw");
         drain_stack(&mut g);
         // −1 (Ronin discarded) +1 (drew) = net 0, and the Ronin is in the graveyard.
@@ -849,7 +849,7 @@ mod recent96 {
         // The blue Channel is the second from-hand ability (index 1).
         g.perform_action(GameAction::ActivateAbility {
             card_id: turtle, ability_index: 1, target: Some(crabomination::game::types::Target::Permanent(foe)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("channel: bounce");
         drain_stack(&mut g);
         assert!(g.battlefield_find(foe).is_none(), "bounced");
@@ -1193,7 +1193,7 @@ mod recent97 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Moonsnare mana ability");
         assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "produced colorless mana");
@@ -1351,7 +1351,7 @@ mod recent98 {
             ability_index: 0,
             target: Some(Target::Permanent(target)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Bearer of Memory");
         drain_stack(&mut g);
@@ -1564,7 +1564,7 @@ mod recent100 {
             ability_index: 0,
             target: Some(Target::Permanent(flyer)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("channel Bamboo Grove Archer");
         drain_stack(&mut g);
@@ -1695,7 +1695,7 @@ mod recent100 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Scrapyard Steelbreaker");
         drain_stack(&mut g);

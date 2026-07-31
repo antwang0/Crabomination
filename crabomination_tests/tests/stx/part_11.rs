@@ -1145,7 +1145,7 @@ fn pest_conservator_sac_a_pest_draws() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Conservator activatable");
+        card_id: pc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Conservator activatable");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == pest),
         "Pest should be sacrificed");

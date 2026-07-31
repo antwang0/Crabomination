@@ -810,7 +810,7 @@ fn witherbloom_cauldronist_b143_sac_a_creature_drains_two() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     }).expect("Cauldronist activation");
     drain_stack(&mut g);
     // Fodder sac'd, drain 2 resolved

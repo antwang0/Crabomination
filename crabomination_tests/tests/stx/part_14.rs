@@ -431,7 +431,7 @@ fn table_sac_other_activated_payoffs() {
         let p_before = g.battlefield_find(src).unwrap().power() as i64;
         g.perform_action(GameAction::ActivateAbility {
             card_id: src, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activation");
         drain_stack(&mut g);
         assert!(g.battlefield_find(fodder).is_none(), "{cname}: fodder sacrificed");
@@ -679,7 +679,7 @@ fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: mavinda, ability_index: 0,
-        target: Some(crabomination::game::types::Target::Permanent(bolt_id)), additional_targets: Vec::new(), x_value: None }).expect("Mavinda activation (printed {0})");
+        target: Some(crabomination::game::types::Target::Permanent(bolt_id)), additional_targets: Vec::new(), x_value: None , mode: None}).expect("Mavinda activation (printed {0})");
     drain_stack(&mut g);
 
     let exiled = g.exile.iter().find(|c| c.id == bolt_id)
@@ -700,7 +700,7 @@ fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
     g.players[0].graveyard.push(bolt2);
     let result = g.perform_action(GameAction::ActivateAbility {
         card_id: mavinda, ability_index: 0,
-        target: Some(crabomination::game::types::Target::Permanent(bolt2_id)), additional_targets: Vec::new(), x_value: None });
+        target: Some(crabomination::game::types::Target::Permanent(bolt2_id)), additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(result.is_err(),
         "Second Mavinda activation in same turn should be rejected (once-per-turn)");
 }
@@ -1376,7 +1376,7 @@ fn fractal_hatchling_b119_grows_via_activated_ability() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     }).expect("activation");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne),
@@ -1506,7 +1506,7 @@ fn witherbloom_cultivator_b120_rejects_activation_without_fodder() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     });
     assert!(result.is_err(), "Activation rejected with no fodder");
     // Mana not consumed — clean rejection.
@@ -1526,7 +1526,7 @@ fn witherbloom_bloodgrafter_b122_grows_on_sacrifice() {
     g.players[0].mana_pool.add(Color::Black, 1);
     let p_before = g.battlefield_find(bg).unwrap().power();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cult, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: cult, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Cultcaller activation");
     drain_stack(&mut g);
     let p_after = g.battlefield_find(bg).expect("Bloodgrafter alive").power();
@@ -1589,7 +1589,7 @@ fn pest_brewmaster_b122_gains_life_on_other_pest_death() {
     let l_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: bone, ability_index: 0,
-        target: Some(Target::Permanent(opp)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(opp)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Bonechanter activation");
     drain_stack(&mut g);
     // A Pest token died: Brewmaster's payoff (+1 life) + the token's
@@ -1747,7 +1747,7 @@ fn mavinda_surcharge_applies_unless_targeting_own_creature() {
     g.players[0].graveyard.push(gg);
     g.perform_action(GameAction::ActivateAbility {
         card_id: mavinda, ability_index: 0,
-        target: Some(Target::Permanent(gg_id)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(gg_id)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Mavinda activation");
     drain_stack(&mut g);
     g.players[0].mana_pool.add(Color::Green, 1);
@@ -1770,7 +1770,7 @@ fn mavinda_surcharge_applies_unless_targeting_own_creature() {
     g.players[0].graveyard.push(gg);
     g.perform_action(GameAction::ActivateAbility {
         card_id: mavinda, ability_index: 0,
-        target: Some(Target::Permanent(gg_id)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(gg_id)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Mavinda activation");
     drain_stack(&mut g);
     g.players[0].mana_pool.add(Color::Green, 1);

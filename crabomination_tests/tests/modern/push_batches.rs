@@ -23,7 +23,7 @@ fn rofellos_taps_for_one_green_per_forest() {
     }
     let pool_before = g.players[0].mana_pool.amount(Color::Green);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: rofellos, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: rofellos, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Rofellos's mana ability should activate");
     let pool_after = g.players[0].mana_pool.amount(Color::Green);
     assert_eq!(
@@ -40,7 +40,7 @@ fn rofellos_taps_for_zero_with_no_forests() {
     g.clear_sickness(rofellos);
     let pool_before = g.players[0].mana_pool.amount(Color::Green);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: rofellos, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: rofellos, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Rofellos's mana ability should still activate");
     let pool_after = g.players[0].mana_pool.amount(Color::Green);
     assert_eq!(pool_after - pool_before, 0, "0 Forests → 0 green");
@@ -301,7 +301,7 @@ fn wall_of_roots_taps_for_green_with_pump_cost() {
     g.clear_sickness(wall);
     let pool_before = g.players[0].mana_pool.amount(Color::Green);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wall, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: wall, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Wall of Roots activation should resolve");
     drain_stack(&mut g);
     let pool_after = g.players[0].mana_pool.amount(Color::Green);
@@ -349,7 +349,7 @@ fn phyrexian_reclamation_returns_creature_for_one_b_two_life() {
     let life_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: rec, ability_index: 0,
-        target: Some(crabomination::game::types::Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None })
+        target: Some(crabomination::game::types::Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Reclamation should activate for {1}{B} + 2 life");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before - 2, "2 life paid as cost");
@@ -372,7 +372,7 @@ fn pernicious_deed_destroys_low_cmc_permanents() {
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: deed, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: Some(2) })
+        card_id: deed, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: Some(2) , mode: None})
     .expect("Deed should activate for {2}, sac");
     drain_stack(&mut g);
     // Cheap (1-cmc) and mid (2-cmc) die; 6-cmc survives.
@@ -702,7 +702,7 @@ fn yavimaya_elder_sac_draws_a_card() {
     let hand_before = g.players[0].hand.len();
     // Sac-cost activated draw ability.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: elder, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: elder, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Yavimaya Elder's sac-draw should activate");
     drain_stack(&mut g);
     // Hand gains the drawn card; Elder leaves play. Note: the dies-
@@ -1407,7 +1407,7 @@ fn elvish_archdruid_lord_and_mana() {
     assert_eq!(a.power, 2);
     // Mana: {T}: Add {G} for each Elf you control (2 Elves).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: archdruid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: archdruid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for elf mana");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 2, "two green from two Elves");
@@ -1463,12 +1463,12 @@ fn magus_of_the_mirror_exchanges_life_during_upkeep_only() {
     // Outside upkeep (main phase): the activation is rejected by the gate.
     g.step = TurnStep::PreCombatMain;
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).is_err(),
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).is_err(),
         "can't activate outside your upkeep");
     // During the controller's upkeep: exchange goes through (and sacrifices Magus).
     g.step = TurnStep::Upkeep;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("activatable during upkeep");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 20, "P0 took P1's 20");
@@ -1799,7 +1799,7 @@ fn wall_of_blood_pays_life_to_pump() {
     let id = g.add_card_to_battlefield(0, catalog::wall_of_blood());
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("pump");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("pump");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(id).unwrap().power(), 1, "0/2 → 1/3");
     assert_eq!(g.players[0].life, life - 1, "paid 1 life");
@@ -1816,13 +1816,13 @@ fn disrupting_scepter_discards_only_on_your_turn() {
     g.active_player_idx = 1;
     g.players[0].mana_pool.add_colorless(3);
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None }).is_err(),
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None}).is_err(),
         "can't activate on the opponent's turn");
     // Your turn → opponent discards.
     g.active_player_idx = 0;
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("activatable on your turn");
     drain_stack(&mut g);
     assert!(g.players[1].hand.is_empty(), "opponent discarded their card");
@@ -1997,7 +1997,7 @@ fn nessian_asp_monstrosity_adds_counters() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: asp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: asp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("monstrosity activatable");
     drain_stack(&mut g);
     let c = g.battlefield_find(asp).unwrap();
@@ -2687,7 +2687,7 @@ fn stillmoon_cavalier_grants_flying_eot() {
     g.clear_sickness(cav);
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cav, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: cav, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Stillmoon {W}: flying");
     drain_stack(&mut g);
     let c = g.battlefield_find(cav).expect("Stillmoon alive");
@@ -2709,7 +2709,7 @@ fn stillmoon_cavalier_has_double_protection_and_pumps() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cav, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: cav, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Stillmoon {W/B}{W/B}: +1/+0");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(cav).unwrap().power, 3, "+1/+0 applied");
@@ -2771,7 +2771,7 @@ fn wishclaw_talisman_searches_and_consumes_a_charge_counter() {
     ]));
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wishclaw, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: wishclaw, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Wishclaw activatable");
     drain_stack(&mut g);
 
@@ -3110,7 +3110,7 @@ fn lonis_sacrifices_x_clues_to_steal_a_permanent() {
     g.players[1].add_to_library_top(stone, catalog::mind_stone());
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lonis, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: Some(2),
+        card_id: lonis, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: Some(2), mode: None,
     })
     .expect("{T}, Sacrifice 2 Clues activates");
     drain_stack(&mut g);
@@ -3131,7 +3131,7 @@ fn lonis_x_exceeding_clues_is_rejected() {
     g.clear_sickness(lonis);
     assert!(
         g.perform_action(GameAction::ActivateAbility {
-            card_id: lonis, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: Some(1),
+            card_id: lonis, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: Some(1), mode: None,
         })
         .is_err(),
         "can't sacrifice more Clues than you control"
@@ -3191,7 +3191,7 @@ fn map_token_sacrifices_to_explore_a_creature() {
     g.players[0].mana_pool.add_colorless(1);
     g.step = TurnStep::PreCombatMain; // sorcery speed
     g.perform_action(GameAction::ActivateAbility {
-        card_id: map, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+        card_id: map, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Map's sac-to-explore activates");
     drain_stack(&mut g);
     // The Map is gone (sacrificed) and the bear explored a nonland → +1/+1.
@@ -3337,7 +3337,7 @@ fn helix_pinnacle_x_activation_adds_charge_counters() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: Some(5),
+        x_value: Some(5), mode: None,
     }).expect("Helix Pinnacle X=5 activation");
     drain_stack(&mut g);
     let c = g.battlefield_find(hp).expect("on bf");
@@ -3356,7 +3356,7 @@ fn helix_pinnacle_counter_cap_at_100() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: Some(150),
+        x_value: Some(150), mode: None,
     }).expect("Helix Pinnacle X=150 activation");
     drain_stack(&mut g);
     let c = g.battlefield_find(hp).expect("on bf");

@@ -319,7 +319,7 @@ fn lotus_petal_taps_and_sacs_for_any_one_color() {
     g.clear_sickness(petal);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: petal, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: petal, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Lotus Petal activates");
     drain_stack(&mut g);
 
@@ -348,7 +348,7 @@ fn tormods_crypt_exiles_opponent_graveyard() {
     g.clear_sickness(crypt);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: crypt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: crypt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Tormod's Crypt activates");
     drain_stack(&mut g);
 
@@ -372,7 +372,7 @@ fn mishras_bauble_sacs_and_registers_delayed_draw() {
 
     let delayed_before = g.delayed_triggers.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bauble, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: bauble, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Mishra's Bauble activates");
     drain_stack(&mut g);
 
@@ -420,7 +420,7 @@ fn qasali_pridemage_sacs_to_destroy_artifact() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pride,
         ability_index: 0,
-        target: Some(Target::Permanent(opp_artifact)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(opp_artifact)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Qasali Pridemage activates");
     drain_stack(&mut g);
 
@@ -503,7 +503,7 @@ fn greater_good_sacrifices_creature_and_draws_power() {
     let library_before = g.players[0].library.len();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gg, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: gg, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Greater Good activates");
     drain_stack(&mut g);
 
@@ -693,7 +693,7 @@ fn heliod_sun_crowned_grants_lifelink_until_end_of_turn() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: heliod,
         ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Heliod's lifelink-grant activates for {1}{W}");
     drain_stack(&mut g);
 
@@ -1067,7 +1067,7 @@ fn goblin_bombardment_sacrifices_creature_and_deals_one_damage() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: bomb,
         ability_index: 0,
-        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Goblin Bombardment activates");
     drain_stack(&mut g);
 
@@ -1092,7 +1092,7 @@ fn wasteland_destroys_nonbasic_land() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: waste,
         ability_index: 1,
-        target: Some(Target::Permanent(dual)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(dual)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Wasteland's destroy ability activates");
     drain_stack(&mut g);
 
@@ -1113,7 +1113,7 @@ fn wasteland_rejects_basic_land_target() {
     let res = g.perform_action(GameAction::ActivateAbility {
         card_id: waste,
         ability_index: 1,
-        target: Some(Target::Permanent(plains)), additional_targets: Vec::new(), x_value: None });
+        target: Some(Target::Permanent(plains)), additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(res.is_err(),
         "Wasteland's destroy ability should reject a basic-land target");
 }
@@ -1129,7 +1129,7 @@ fn strip_mine_destroys_any_land() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: strip,
         ability_index: 1,
-        target: Some(Target::Permanent(plains)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(plains)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Strip Mine activates against any land");
     drain_stack(&mut g);
 
@@ -1686,7 +1686,7 @@ fn fanatic_of_rhonas_taps_for_green() {
     let id = g.add_card_to_battlefield(0, catalog::fanatic_of_rhonas());
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("tap for green");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("tap for green");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
     assert!(g.battlefield_find(id).unwrap().tapped, "Tap cost taps the source");
 }
@@ -1719,7 +1719,7 @@ fn orcish_lumberjack_sacrifices_forest_for_three_red() {
     g.clear_sickness(lj);
     let forest = g.add_card_to_battlefield(0, catalog::forest());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lj, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Lumberjack should activate for {T}");
+        card_id: lj, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Lumberjack should activate for {T}");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == forest),
         "Forest should be sacrificed as the activation cost");
@@ -1735,7 +1735,7 @@ fn orcish_lumberjack_cannot_activate_without_a_forest() {
     // A non-Forest land doesn't satisfy the Sacrifice-a-Forest cost.
     g.add_card_to_battlefield(0, catalog::mountain());
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: lj, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None });
+        card_id: lj, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(res.is_err(), "no Forest to sacrifice → activation rejected");
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 0, "no mana made");
 }
@@ -1864,7 +1864,7 @@ fn talisman_of_progress_taps_for_colorless_or_one_of_w_or_u() {
     g.clear_sickness(id);
     // Colorless ability (index 0) — no life cost.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("colorless tap succeeds");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("colorless tap succeeds");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
     // Mana abilities tap the source synchronously; untap to use again.
     let life_before = g.players[0].life;
@@ -1873,7 +1873,7 @@ fn talisman_of_progress_taps_for_colorless_or_one_of_w_or_u() {
     // it's no longer a pure mana ability, so it goes on the stack and
     // needs draining.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).expect("white tap succeeds");
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("white tap succeeds");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
     assert_eq!(g.players[0].life, life_before - 1,
@@ -1888,7 +1888,7 @@ fn talisman_of_dominance_taps_for_blue_costing_one_life() {
     g.clear_sickness(id);
     let life_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).expect("blue tap succeeds");
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("blue tap succeeds");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
     assert_eq!(g.players[0].life, life_before - 1);
@@ -1901,7 +1901,7 @@ fn elvish_spirit_guide_pitches_from_hand_for_green() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::elvish_spirit_guide());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("pitch ability activates from hand");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "added one green");
     assert!(g.exile.iter().any(|c| c.id == id), "pitched card is exiled");

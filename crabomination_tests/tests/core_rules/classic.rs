@@ -107,7 +107,7 @@ fn royal_assassin_destroys_a_tapped_creature() {
     g.battlefield_find_mut(victim).unwrap().tapped = true;
     g.perform_action(GameAction::ActivateAbility {
         card_id: assassin, ability_index: 0,
-        target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Royal Assassin on a tapped creature");
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "tapped creature is destroyed");
@@ -121,7 +121,7 @@ fn royal_assassin_cannot_target_an_untapped_creature() {
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // untapped
     let res = g.perform_action(GameAction::ActivateAbility {
         card_id: assassin, ability_index: 0,
-        target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None, mode: None,
     });
     assert!(res.is_err(), "untapped creature is not a legal target");
     assert!(g.battlefield_find(victim).is_some(), "victim survives");
@@ -133,7 +133,7 @@ fn wall_of_fire_pumps_its_power() {
     let wall = g.add_card_to_battlefield(0, catalog::wall_of_fire());
     g.players[0].mana_pool.add(Color::Red, 2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wall, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: wall, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("firebreathing");
     drain_stack(&mut g);
     let c = g.battlefield_find(wall).unwrap();
@@ -147,7 +147,7 @@ fn goblin_balloon_brigade_gains_flying() {
     assert!(!g.battlefield_find(gob).unwrap().has_keyword(&Keyword::Flying), "starts grounded");
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gob, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: gob, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("gain flying");
     drain_stack(&mut g);
     assert!(g.battlefield_find(gob).unwrap().has_keyword(&Keyword::Flying), "now flying");
@@ -167,7 +167,7 @@ fn looming_shade_pumps_plus_one_plus_one() {
     let shade = g.add_card_to_battlefield(0, catalog::looming_shade());
     g.players[0].mana_pool.add(Color::Black, 2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: shade, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: shade, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("shade pump");
     drain_stack(&mut g);
     let c = g.battlefield_find(shade).unwrap();
@@ -181,7 +181,7 @@ fn gorilla_chieftain_stamps_a_regeneration_shield() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ape, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: ape, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{1}{G}: Regenerate");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(ape).unwrap().regeneration_shields, 1,

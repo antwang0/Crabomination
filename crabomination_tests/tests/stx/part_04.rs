@@ -42,7 +42,7 @@ fn mana_dorks_tap_for_their_color() {
         g.clear_sickness(id);
         let before = g.players[0].mana_pool.amount(color);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("tap for mana");
+            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("tap for mana");
         drain_stack(&mut g);
         assert!(g.players[0].mana_pool.amount(color) > before, "mana added");
     }
@@ -658,7 +658,7 @@ fn witherbloom_apothecary_sacs_and_drains() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: apothecary_id,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None }).expect("Apothecary activation works");
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Apothecary activation works");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "fodder went to gy");
     assert_eq!(g.players[1].life, oppbefore - 1, "opp lost 1");
@@ -679,7 +679,7 @@ fn witherbloom_apothecary_cannot_activate_without_another_creature() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     });
     assert!(res.is_err(), "no other creature to sacrifice → rejected");
     assert_eq!(g.players[1].life, oppbefore, "no drain when cost unpayable");
@@ -1508,7 +1508,7 @@ fn witherbloom_brewer_taps_for_two_colors_paying_two_life() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Brewer activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before - 2, "paid 2 life");
@@ -1758,7 +1758,7 @@ fn strixhaven_sanctum_taps_for_colorless_and_surveils() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Sanctum can tap for {C}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
@@ -1771,7 +1771,7 @@ fn strixhaven_sanctum_taps_for_colorless_and_surveils() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 1,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Surveil ability activatable");
     drain_stack(&mut g);
     // Library should either shrink by 1 (surveiled to gy) or be the same.
@@ -1858,7 +1858,7 @@ fn mystic_slate_taps_for_scry_one() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Slate scry activatable");
     drain_stack(&mut g);
     let bf = g.battlefield_find(id).expect("Slate on bf");

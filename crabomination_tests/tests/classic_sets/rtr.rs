@@ -30,7 +30,7 @@ fn bellows_lizard_firebreathes() {
     g.players[0].mana_pool.add_colorless(1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lizard, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: lizard, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("firebreathe");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(lizard).unwrap().power, 2, "pumped to 2/1");
@@ -86,7 +86,7 @@ fn centaurs_herald_makes_centaur() {
     g.players[0].mana_pool.add_colorless(2);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: herald, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: herald, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac for token");
     drain_stack(&mut g);
     assert!(g.battlefield_find(herald).is_none(), "Herald sacrificed");
@@ -111,7 +111,7 @@ fn doorkeeper_mills_by_defenders() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: door, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("mill");
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.len(), lib1 - 2, "milled 2 (two defenders)");
@@ -192,7 +192,7 @@ fn korozda_monitor_scavenges() {
     g.players[0].mana_pool.add(crabomination::mana::Color::Green, 2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: mon, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("scavenge");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 3,
@@ -210,7 +210,7 @@ fn tavern_swindler_wins_flip() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sw, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: sw, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("flip");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life - 3 + 6, "paid 3 life, won 6");
@@ -320,7 +320,7 @@ fn frostburn_weird_pumps() {
     let weird = g.add_card_to_battlefield(0, catalog::frostburn_weird()); // 1/4
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: weird, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: weird, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     let cp = g.computed_permanent(weird).unwrap();
@@ -422,7 +422,7 @@ fn izzet_keyrune_animates() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: rune, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: rune, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("animate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(rune).unwrap();
@@ -450,7 +450,7 @@ fn axebane_guardian_mana_scales_with_defenders() {
     g.clear_sickness(axe);
     g.add_card_to_battlefield(0, catalog::hover_barrier()); // second defender
     g.perform_action(GameAction::ActivateAbility {
-        card_id: axe, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: axe, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("mana");
     assert_eq!(g.players[0].mana_pool.total(), 2, "two mana (two defenders)");
 }
@@ -464,7 +464,7 @@ fn lobber_crew_pings_and_untaps_on_multicolor() {
     g.clear_sickness(crew);
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: crew, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: crew, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("ping");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 1, "1 damage to opponent");
@@ -504,7 +504,7 @@ fn judges_familiar_counters_unpaid_spell() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: bird, ability_index: 0,
         target: Some(crabomination::game::types::Target::Permanent(bolt)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac to counter");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "spell countered into graveyard");
@@ -524,7 +524,7 @@ fn korozda_guildmage_makes_saprolings() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mage, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: mage, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac for saprolings");
     drain_stack(&mut g);
     let saps = g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count();
@@ -635,7 +635,7 @@ fn lotleth_troll_discards_creature_for_counter() {
     g.clear_sickness(troll);
     g.add_card_to_hand(0, catalog::grizzly_bears()); // a creature card to pitch
     g.perform_action(GameAction::ActivateAbility {
-        card_id: troll, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: troll, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("discard for counter");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(troll).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
@@ -711,7 +711,7 @@ fn pursuit_of_flight_pumps_and_grants_flying() {
     g.clear_sickness(bear);
     g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bear, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: bear, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant flying");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
@@ -756,7 +756,7 @@ fn hellhole_flailer_sacs_for_power_damage() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: flailer, ability_index: 0,
         target: Some(crabomination::game::types::Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac to burn");
     drain_stack(&mut g);
     assert!(g.battlefield_find(flailer).is_none(), "Flailer sacrificed");
@@ -1039,7 +1039,7 @@ fn gobbling_ooze_grows() {
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ooze, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ooze, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac for counter");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
@@ -1270,7 +1270,7 @@ fn tower_drake_toughness_pump() {
     let drake = g.add_card_to_battlefield(0, catalog::tower_drake());
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: drake, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: drake, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(drake).unwrap().toughness, 2, "2/1 → 2/2");
@@ -1358,7 +1358,7 @@ fn mercurial_chemister_gy_exile_burn() {
         card_id: chem, ability_index: 1,
         target: Some(Target::Permanent(wrath)),
         additional_targets: vec![Target::Player(1)],
-        x_value: None,
+        x_value: None, mode: None,
     }).expect("exile + burn");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == wrath), "the I/S card was exiled");
@@ -1378,7 +1378,7 @@ fn grove_of_the_guardian_makes_elemental() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: grove, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: grove, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("make elemental");
     drain_stack(&mut g);
     assert!(g.battlefield_find(grove).is_none(), "Grove sacrificed");
@@ -1523,7 +1523,7 @@ fn jarad_grows_and_drains() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: jarad, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: jarad, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac-drain");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
@@ -1538,7 +1538,7 @@ fn jarad_recurs_from_graveyard() {
     let swamp = g.add_card_to_battlefield(0, catalog::swamp());
     let forest = g.add_card_to_battlefield(0, catalog::forest());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: jarad, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: jarad, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("recur");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == jarad), "Jarad back in hand");
@@ -1680,7 +1680,7 @@ fn racecourse_fury_grants_haste() {
     // Index 0 is the land's own mana ability; the granted haste ability is 1.
     g.perform_action(GameAction::ActivateAbility {
         card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant haste");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
@@ -1711,7 +1711,7 @@ fn security_blockade_knight_and_prevention() {
     // Activate the granted prevention (index 1; 0 is the land's mana), then
     // 3 damage lands as 2.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("prevent shield");
     drain_stack(&mut g);
     let life = g.players[0].life;
@@ -1732,7 +1732,7 @@ fn izzet_staticaster_pings_same_name() {
     let other = g.add_card_to_battlefield(1, catalog::risen_sanctuary());
     g.perform_action(GameAction::ActivateAbility {
         card_id: caster, ability_index: 0, target: Some(Target::Permanent(bear1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("ping");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear1).unwrap().damage, 1, "target bear pinged");
@@ -1756,7 +1756,7 @@ fn mana_bloom_enters_with_counters_and_taps_for_mana() {
     assert_eq!(g.battlefield_find(bloom).unwrap().counter_count(CounterType::Charge), 3,
         "entered with 3 charge counters");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bloom, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: bloom, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bloom).unwrap().counter_count(CounterType::Charge), 2,
@@ -1791,7 +1791,7 @@ fn cr_514_2_racecourse_haste_expires_at_cleanup() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant haste");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
@@ -1815,7 +1815,7 @@ fn nivmagus_elemental_eats_a_spell_for_counters() {
     assert_eq!(g.stack.len(), 1, "bolt is on the stack");
     let opp_life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: niv, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: niv, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("eat the spell");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(niv).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
@@ -1830,7 +1830,7 @@ fn nivmagus_elemental_needs_a_spell_to_eat() {
     let mut g = two_player_game();
     let niv = g.add_card_to_battlefield(0, catalog::nivmagus_elemental());
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: niv, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: niv, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     });
     assert!(res.is_err(), "no spell to exile → activation rejected");
 }

@@ -560,7 +560,7 @@ mod recent34 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: quest, ability_index: 0, target: None, additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         }).expect("remove 3 quest counters + sacrifice");
         drain_stack(&mut g);
         assert!(g.battlefield_find(quest).is_none(), "quest sacrificed");
@@ -580,7 +580,7 @@ mod recent34 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: quest, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("remove a quest counter + sacrifice");
         drain_stack(&mut g);
         assert!(g.battlefield_find(quest).is_none(), "quest sacrificed");
@@ -599,7 +599,7 @@ mod recent34 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: quest, ability_index: 0, target: Some(Target::Player(0)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("remove 5 quest counters + sacrifice");
         drain_stack(&mut g);
         // The quest itself is sacrificed (so it's now in the graveyard), but the
@@ -619,7 +619,7 @@ mod recent34 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: quest, ability_index: 0, target: None, additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         }).expect("remove 5 quest counters + sacrifice");
         drain_stack(&mut g);
         assert_eq!(
@@ -655,7 +655,7 @@ mod recent34 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: atog, ability_index: 0, target: None, additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         }).expect("Sacrifice an artifact: +2/+2");
         drain_stack(&mut g);
         assert!(g.battlefield_find(art).is_none(), "artifact sacrificed");
@@ -671,7 +671,7 @@ mod recent34 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: bomb, ability_index: 0, target: None, additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         }).expect("{1}, {T}, Sacrifice: make a Myr");
         drain_stack(&mut g);
         assert!(g.battlefield_find(bomb).is_none(), "spellbomb sacrificed");
@@ -710,7 +710,7 @@ mod recent35 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: idx, target, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: idx, target, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("ability activates");
         drain_stack(g);
     }
@@ -750,7 +750,7 @@ mod recent35 {
         g.step = TurnStep::PreCombatMain;
         // No opponent lands → activation illegal.
         let res = g.perform_action(GameAction::ActivateAbility {
-            card_id: way, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: way, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         });
         assert!(res.is_err(), "can't activate while not behind on lands");
     }
@@ -1146,7 +1146,7 @@ mod recent37 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: dawn, ability_index: 0, target: None, additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         }).expect("{3}{W}: make a Soldier");
         drain_stack(&mut g);
         let sol = g.battlefield.iter().find(|c| c.definition.name == "Soldier")
@@ -1300,7 +1300,7 @@ mod recent40 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: idx, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: idx, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("ability activates");
         drain_stack(g);
     }

@@ -164,7 +164,7 @@ fn nykthos_taps_for_devotion_of_chosen_color() {
     g.clear_sickness(nyk);
     g.players[0].mana_pool.add_colorless(2); // pay the {2} activation cost
     g.perform_action(GameAction::ActivateAbility {
-        card_id: nyk, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: nyk, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Nykthos devotion ability activates");
     let pd = g.pending_decision.as_ref().expect("ChooseColor suspends");
     assert!(matches!(pd.decision, Decision::ChooseColor { .. }));
@@ -248,7 +248,7 @@ fn thassa_grants_unblockable_to_your_creature() {
     g.players[0].mana_pool.add_colorless(1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: thassa, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+        card_id: thassa, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Thassa's unblockable ability");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
@@ -281,7 +281,7 @@ fn voyaging_satyr_untaps_a_land() {
     g.battlefield_find_mut(land).unwrap().tapped = true;
     g.clear_sickness(satyr);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: satyr, ability_index: 0, target: Some(Target::Permanent(land)), additional_targets: Vec::new(), x_value: None,
+        card_id: satyr, ability_index: 0, target: Some(Target::Permanent(land)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("untap land");
     drain_stack(&mut g);
     assert!(!g.battlefield_find(land).unwrap().tapped, "land untapped");
@@ -484,7 +484,7 @@ fn theros_artifact_bodies() {
     // Opaline Unicorn taps for any color.
     g.clear_sickness(uni);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: uni, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: uni, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "Opaline Unicorn made one mana");
@@ -558,7 +558,7 @@ fn pithing_needle_suppresses_named_sources_nonmana_ability() {
     g.priority.player_with_priority = 0;
 
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: crypt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).unwrap_err();
+        card_id: crypt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap_err();
     assert!(matches!(err, GameError::AbilitySuppressedByNamedCard),
         "named source's non-mana ability is suppressed, got {err:?}");
 }
@@ -571,7 +571,7 @@ fn pithing_needle_naming_a_different_card_leaves_ability_usable() {
     g.battlefield_find_mut(needle).unwrap().named_card = Some("Llanowar Elves".into());
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: crypt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: crypt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("an unrelated name doesn't suppress the Crypt");
 }
 
@@ -596,7 +596,7 @@ fn phyrexian_revoker_is_a_two_one_construct_that_names_and_suppresses() {
 
     g.priority.player_with_priority = 1;
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: crypt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).unwrap_err();
+        card_id: crypt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap_err();
     assert!(matches!(err, GameError::AbilitySuppressedByNamedCard));
 }
 
@@ -669,7 +669,7 @@ fn nihil_spellbomb_exiles_opponent_graveyard() {
     g.add_card_to_graveyard(1, catalog::lightning_bolt());
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bomb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: bomb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("{T},Sac: exile opp graveyard");
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.is_empty(), "opponent graveyard exiled");
@@ -683,7 +683,7 @@ fn pyrite_spellbomb_deals_two_to_a_player() {
     g.priority.player_with_priority = 0;
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bomb, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None })
+        card_id: bomb, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("{T},Sac: 2 damage to any target");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 2);
@@ -696,7 +696,7 @@ fn seal_of_removal_bounces_a_creature() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: seal, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None })
+        card_id: seal, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("Sac: bounce target creature");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear left the battlefield");
@@ -727,7 +727,7 @@ fn sylvan_spellbomb_fetches_a_basic_land_to_hand() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bomb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: bomb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("{T},Sac: fetch a basic land");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == forest), "Forest goes to hand");
@@ -742,7 +742,7 @@ fn expedition_map_fetches_any_land_to_hand() {
     g.players[0].mana_pool.add_colorless(2);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: map, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: map, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("{2},{T},Sac: fetch any land");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == land), "nonbasic land goes to hand");
@@ -757,7 +757,7 @@ fn executioners_capsule_destroys_nonblack_creature() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cap, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None })
+        card_id: cap, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("{1}{B},Sac: destroy nonblack creature");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "nonblack creature destroyed");
@@ -773,7 +773,7 @@ fn horizon_spellbomb_draw_mode_works() {
     g.priority.player_with_priority = 0;
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bomb, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: bomb, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("{W},Sac: draw a card");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
@@ -918,11 +918,11 @@ fn collector_ouphe_locks_artifact_abilities_but_not_mana() {
     g.priority.player_with_priority = 0;
     let err = g.perform_action(GameAction::ActivateAbility {
         card_id: mill, ability_index: 0,
-        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     });
     assert!(err.is_err(), "Millstone's non-mana ability is locked under Collector Ouphe: {err:?}");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sol, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: sol, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Sol Ring's mana ability still works under the lock");
     assert!(g.players[0].mana_pool.total() >= 2, "Sol Ring added mana");
 }
@@ -960,7 +960,7 @@ fn soul_snare_exiles_an_attacker() {
     g.players[0].mana_pool.add_colorless(1);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: snare, ability_index: 0, target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None })
+        card_id: snare, ability_index: 0, target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("{1},Sac: exile attacking creature");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == attacker), "attacking creature exiled");

@@ -1090,7 +1090,7 @@ fn strixhaven_crucible_activation_drains_one() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Crucible activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before - 1);

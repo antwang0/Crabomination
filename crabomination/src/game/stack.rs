@@ -89,16 +89,19 @@ impl GameState {
         None
     }
 
-    /// Unwrap reflexive-payment wrappers (`MayDo`/`MayPay*`/`PayEnergy*`) to
-    /// find a nested `ChooseMode` whose pick must wait for the payment. Only
-    /// descends single-child bodies — a `Seq` or branching effect is left to
-    /// its own resolution-time handling.
-    fn governing_modal(effect: &Effect) -> Option<&Vec<Effect>> {
+    /// Unwrap reflexive-payment wrappers (`MayDo`/`MayPay*`/`PayEnergy*`) and
+    /// the cost-capture wrappers the activation path adds
+    /// (`WithSacrificedPt`/`WithTappedPower`) to find a nested `ChooseMode`.
+    /// Only descends single-child bodies — a `Seq` or branching effect is left
+    /// to its own resolution-time handling.
+    pub(crate) fn governing_modal(effect: &Effect) -> Option<&Vec<Effect>> {
         match effect {
             Effect::ChooseMode(modes) => Some(modes),
             Effect::MayDo { body, .. }
             | Effect::PayEnergy { then: body, .. }
-            | Effect::PayEnergyValue { then: body, .. } => Self::governing_modal(body),
+            | Effect::PayEnergyValue { then: body, .. }
+            | Effect::WithSacrificedPt { body, .. }
+            | Effect::WithTappedPower { body, .. } => Self::governing_modal(body),
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => {
                 Self::governing_modal(body)
             }

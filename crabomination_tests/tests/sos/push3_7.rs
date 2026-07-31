@@ -134,7 +134,7 @@ fn tablet_restricted_mana_casts_instant_but_not_creature() {
 
     // Index 1 is the restricted {R}{R} ability (index 0 is the plain {R}).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tablet, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: tablet, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("Tablet {T}: Add {R}{R}");
     assert_eq!(g.players[0].mana_pool.restricted_total(), 2);
     assert_eq!(g.players[0].mana_pool.total(), 0, "restricted mana isn't freely spendable");
@@ -1156,7 +1156,7 @@ fn ark_of_hunger_mill_activation() {
     let gy_before = g.players[0].graveyard.len();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ark, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: ark, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Ark of Hunger {T}: Mill activation");
     drain_stack(&mut g);
 
@@ -1606,7 +1606,7 @@ fn topiary_lecturer_taps_for_g_equal_to_power() {
     }
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lec, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: lec, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Topiary Lecturer {T}: Add G mana ability");
     drain_stack(&mut g);
 
@@ -2141,7 +2141,7 @@ fn rubble_rouser_activation_exiles_gy_card_pings_opp_and_adds_red() {
     let opp_life_before = g.players[1].life;
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Rubble Rouser activation w/ gy card to exile");
     drain_stack(&mut g);
 
@@ -2165,7 +2165,7 @@ fn rubble_rouser_activation_rejected_with_empty_graveyard() {
     assert!(g.players[0].graveyard.is_empty());
 
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None });
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(res.is_err(),
         "Activation rejected when gy is empty; got {:?}", res);
     assert!(!g.battlefield_find(id).unwrap().tapped,
@@ -2241,7 +2241,7 @@ fn petrified_hamlet_taps_for_colorless() {
         c.tapped = false;
     }
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: lid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Petrified Hamlet {T}: Add C");
     drain_stack(&mut g);
 

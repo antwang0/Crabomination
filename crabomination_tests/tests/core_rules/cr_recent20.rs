@@ -48,7 +48,7 @@ fn cr_302_6_tap_ability_needs_no_sickness() {
     g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     let sick = g.perform_action(GameAction::ActivateAbility {
-        card_id: tiger, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: tiger, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     });
     assert!(matches!(sick, Err(GameError::SummoningSickness(_))),
         "a summoning-sick creature can't use its {{T}} ability");
@@ -56,7 +56,7 @@ fn cr_302_6_tap_ability_needs_no_sickness() {
     g.clear_sickness(tiger);
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tiger, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: tiger, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate once not sick");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 2, "gained 2 life");

@@ -635,6 +635,7 @@ pub fn spawn_decision_ui(
             targeting.pending_card_id = None;
             targeting.pending_ability_source = None;
             targeting.pending_ability_index = None;
+            targeting.pending_ability_mode = None;
             targeting.back_face_pending = false;
             targeting.pending_decision_target = true;
             legal_targets.permanents.clear();

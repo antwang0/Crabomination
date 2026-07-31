@@ -26,7 +26,7 @@ fn arcbound_javelineer_remove_x() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: jav, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: Some(2),
+        additional_targets: vec![], x_value: Some(2), mode: None,
     }).expect("remove 2 counters");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "2 damage kills the attacking 2/2");
@@ -50,7 +50,7 @@ fn arcus_acolyte_grants_outlast() {
     let printed = catalog::grizzly_bears().activated_abilities.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: bear, ability_index: printed, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("outlast");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
@@ -117,7 +117,7 @@ fn shattered_ego_bury() {
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: ego, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("bury");
     drain_stack(&mut g);
     assert!(g.battlefield_find(djinn).is_none());
@@ -197,7 +197,7 @@ fn lonis_investigate_and_steal() {
     g.add_card_to_library(1, catalog::island());
     g.perform_action(GameAction::ActivateAbility {
         card_id: lonis, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: Some(2),
+        additional_targets: vec![], x_value: Some(2), mode: None,
     }).expect("steal");
     drain_stack(&mut g);
     assert!(
@@ -315,7 +315,7 @@ fn zabaz_flying_pump() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: zabaz, ability_index: 1, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("flying");
     drain_stack(&mut g);
     assert!(g.computed_permanent(zabaz).unwrap().keywords.contains(&Keyword::Flying));

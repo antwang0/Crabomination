@@ -122,7 +122,7 @@ fn garth_one_eye_classics() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(5)]));
     g.perform_action(GameAction::ActivateAbility {
         card_id: garth, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("choose");
     drain_stack(&mut g);
     assert!(
@@ -136,7 +136,7 @@ fn garth_one_eye_classics() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(5)]));
     g.perform_action(GameAction::ActivateAbility {
         card_id: garth, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("choose again");
     drain_stack(&mut g);
     let lotuses = g.players[0].hand.iter().filter(|c| c.definition.name == "Black Lotus").count();
@@ -162,7 +162,7 @@ fn dermotaxi_imprint_copy() {
     assert!(g.exile.iter().any(|c| c.id == corpse), "imprinted in exile");
     g.perform_action(GameAction::ActivateAbility {
         card_id: taxi, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("crew-copy");
     drain_stack(&mut g);
     assert!(g.battlefield_find(c1).unwrap().tapped && g.battlefield_find(c2).unwrap().tapped);

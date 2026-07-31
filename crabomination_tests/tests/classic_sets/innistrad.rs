@@ -194,7 +194,7 @@ fn larder_zombie_taps_three() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .unwrap();
     drain_stack(&mut g);
@@ -311,7 +311,7 @@ fn siege_zombie_drains() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .unwrap();
     drain_stack(&mut g);
@@ -1272,7 +1272,7 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     g.add_token_to_battlefield(0, &crabomination::game::effects::blood_token());
     g.add_token_to_battlefield(0, &crabomination::game::effects::blood_token());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: seeker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: seeker, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac two Blood to transform");
     drain_stack(&mut g);
     assert_eq!(count_named(&g, 0, "Blood"), 0, "both Blood sacrificed");
@@ -1285,7 +1285,7 @@ fn restless_bloodseeker_blood_transform_and_drain() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: seeker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: seeker, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate back-face drain");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18, "opponent lost 2");
@@ -1818,7 +1818,7 @@ fn catapult_fodder_transforms_and_captain_drains() {
     g.players[0].mana_pool.add_colorless(2);
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fodder, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: fodder, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("captain drain");
     drain_stack(&mut g);
     let _ = victim;

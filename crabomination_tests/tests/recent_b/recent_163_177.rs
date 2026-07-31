@@ -26,7 +26,7 @@ mod recent163 {
         g.add_card_to_library(0, catalog::island());
         let lib = g.players[0].library.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: wall, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: wall, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("surveil");
         drain_stack(&mut g);
@@ -100,7 +100,7 @@ mod recent163 {
         g.players[0].mana_pool.add(Color::Red, 1);
         g.perform_action(GameAction::ActivateAbility {
             card_id: bomber, ability_index: 0,
-            target: Some(crabomination::game::types::Target::Permanent(goblin)), additional_targets: vec![], x_value: None,
+            target: Some(crabomination::game::types::Target::Permanent(goblin)), additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("grant flying");
         drain_stack(&mut g);
@@ -375,7 +375,7 @@ mod recent166 {
         let land = g.add_card_to_battlefield(0, catalog::white_lotus_hideout());
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("{T}: Add {C}");
         assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "one colorless produced");
@@ -389,7 +389,7 @@ mod recent166 {
         g.players[0].mana_pool.add_colorless(5);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("{5},{T}: make Ally");
         drain_stack(&mut g);
@@ -406,7 +406,7 @@ mod recent166 {
         g.players[0].mana_pool.add_colorless(4);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+            card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("{4},{T}: unblockable");
         drain_stack(&mut g);
@@ -423,7 +423,7 @@ mod recent166 {
         g.players[0].mana_pool.add_colorless(1);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: art, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: art, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("{1},{T}: Scry 2");
         drain_stack(&mut g);
@@ -469,7 +469,7 @@ mod recent166 {
         g.players[0].mana_pool.add_colorless(1);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: ragost, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: ragost, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("{1},{T},Sac Food: 3 to each opponent");
         drain_stack(&mut g);
@@ -497,7 +497,7 @@ mod recent166 {
         g.players[0].mana_pool.add_colorless(3);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: sub, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: sub, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("exhaust {3}: animate");
         drain_stack(&mut g);
@@ -561,7 +561,7 @@ mod recent166 {
         g.clear_sickness(opt);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: opt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: opt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("{T}: Add {U}");
         // The mana is spend-restricted (artifact spells/abilities only), so it
@@ -601,7 +601,7 @@ mod recent166 {
         g.players[0].mana_pool.add(Color::White, 1);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: basri, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: basri, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("{W},{T}: make Cat");
         drain_stack(&mut g);
@@ -624,7 +624,7 @@ mod recent166 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: engine, ability_index: 0, target: Some(Target::Permanent(dead)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("sac: reanimate");
         drain_stack(&mut g);
@@ -641,7 +641,7 @@ mod recent166 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("max speed {T}: grant haste");
         drain_stack(&mut g);
@@ -708,7 +708,7 @@ mod recent166 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: haz, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("{1},{T}: unblockable");
         drain_stack(&mut g);
@@ -782,7 +782,7 @@ mod recent166 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: v, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("{T}: buff");
         drain_stack(&mut g);
@@ -810,7 +810,7 @@ mod recent166 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("sac for Pilot");
         drain_stack(&mut g);
@@ -844,7 +844,7 @@ mod recent166 {
         }).collect();
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: v, ability_index: 0, target: None, additional_targets: crew, x_value: None,
+            card_id: v, ability_index: 0, target: None, additional_targets: crew, x_value: None, mode: None,
         })
         .expect("tap 3: animate");
         drain_stack(&mut g);
@@ -890,7 +890,7 @@ mod recent167 {
         assert!(
             g.perform_action(GameAction::ActivateAbility {
                 card_id: surveyor, ability_index: 0, target: None,
-                additional_targets: Vec::new(), x_value: None,
+                additional_targets: Vec::new(), x_value: None, mode: None,
             }).is_err(),
             "not usable below max speed"
         );
@@ -899,7 +899,7 @@ mod recent167 {
         let before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
             card_id: surveyor, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("max speed gy draw");
         drain_stack(&mut g);
@@ -965,7 +965,7 @@ mod recent167 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: mb, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("sac: gain life = speed");
         drain_stack(&mut g);
@@ -1006,7 +1006,7 @@ mod recent167 {
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(target))]));
         g.perform_action(GameAction::ActivateAbility {
             card_id: hov, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("max speed sac: tutor");
         drain_stack(&mut g);
@@ -1039,7 +1039,7 @@ mod recent167 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: land, ability_index: 1, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("max speed: {T} add CC");
         assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "added two colorless at max speed");
@@ -1058,7 +1058,7 @@ mod recent167 {
         let hand_before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
             card_id: land, ability_index: 1, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("max speed: discard, draw");
         drain_stack(&mut g);
@@ -1079,7 +1079,7 @@ mod recent167 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: land, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("{T}: add chosen color");
         assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "added blue (the chosen color)");
@@ -1102,7 +1102,7 @@ mod recent167 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: vehicle, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("exhaust: become creature + 2 counters");
         drain_stack(&mut g);
@@ -1122,7 +1122,7 @@ mod recent167 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: boom, ability_index: 0, target: Some(Target::Permanent(foe)),
-            additional_targets: Vec::new(), x_value: Some(2),
+            additional_targets: Vec::new(), x_value: Some(2), mode: None,
         })
         .expect("exhaust: X=2 damage");
         drain_stack(&mut g);
@@ -1324,7 +1324,7 @@ mod recent168 {
             ability_index: 0,
             target: Some(Target::Permanent(mount)),
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("saddle activation");
         drain_stack(&mut g);
@@ -1479,7 +1479,7 @@ mod recent169 {
         let hand_before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
             card_id: veh, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("exhaust animate");
         drain_stack(&mut g);
@@ -1502,7 +1502,7 @@ mod recent169 {
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::ActivateAbility {
             card_id: veh, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("exhaust animate");
         drain_stack(&mut g);
@@ -1540,7 +1540,7 @@ mod recent169 {
         let lands_before = g.battlefield.iter().filter(|c| c.definition.is_land()).count();
         g.perform_action(GameAction::ActivateAbility {
             card_id: ench, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("sac: search basics = speed");
         drain_stack(&mut g);
@@ -1604,7 +1604,7 @@ mod recent170 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: land, ability_index: 1, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("sac for a Pilot");
         drain_stack(&mut g);
@@ -1626,7 +1626,7 @@ mod recent170 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: refueler, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("activate an exhaust ability");
         drain_stack(&mut g);
@@ -1828,7 +1828,7 @@ mod recent172 {
         let hand_before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
             card_id: col, ability_index: 1, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("max-speed sac");
         drain_stack(&mut g);
@@ -2021,7 +2021,7 @@ mod recent173 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: coord, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("tap to make Pilots");
         drain_stack(&mut g);
@@ -2051,7 +2051,7 @@ mod recent174 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: scholar, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("exhaust");
         drain_stack(&mut g);
@@ -2074,7 +2074,7 @@ mod recent174 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: cycle, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("exhaust taps another Vehicle");
         drain_stack(&mut g);
@@ -2105,7 +2105,7 @@ mod recent174 {
         // Copy it with Slick Imitator's max-speed sacrifice ability.
         g.perform_action(GameAction::ActivateAbility {
             card_id: imitator, ability_index: 0, target: Some(Target::Permanent(bolt)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("copy the Bolt at max speed");
         drain_stack(&mut g);
@@ -2392,7 +2392,7 @@ mod recent175 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: bay, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("sac + fetch");
         drain_stack(&mut g);
         assert!(g.battlefield.iter().any(|c| c.id == orni && c.controller == 0),
@@ -2447,7 +2447,7 @@ mod recent175 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: mon, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("mill ability");
         drain_stack(&mut g);
         assert_eq!(g.players[1].graveyard.len(), gy_before + 2, "opponent milled two");
@@ -2564,7 +2564,7 @@ mod recent176 {
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac another creature → surveil");
         drain_stack(&mut g);
@@ -2577,7 +2577,7 @@ mod recent176 {
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         });
         assert!(r.is_err(), "second activation blocked by once-per-turn");
         assert!(g.battlefield_find(other).is_some(), "no extra creature sacrificed");
@@ -2606,7 +2606,7 @@ mod recent176 {
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("pay 2 life + {2}{B}: draw");
         drain_stack(&mut g);
@@ -2723,7 +2723,7 @@ mod recent177 {
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(victim))]));
         g.perform_action(GameAction::ActivateAbility {
             card_id: pot, ability_index: 0,
-            target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
+            target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("sac to destroy");
         drain_stack(&mut g);
@@ -2764,7 +2764,7 @@ mod recent177 {
         g.priority.player_with_priority = 0;
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: bird, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: bird, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .expect("loot");
         drain_stack(&mut g);

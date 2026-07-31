@@ -18,7 +18,7 @@ mod recent111 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: douser, ability_index: 0, target: Some(Target::Permanent(foe)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("douse");
         drain_stack(&mut g);
@@ -40,7 +40,7 @@ mod recent111 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: sovereign, ability_index: 0, target: Some(Target::Permanent(speaker)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("grant");
         drain_stack(&mut g);
@@ -290,7 +290,7 @@ mod recent111 {
         let evs = g.remove_to_graveyard_with_triggers(colossus);
         g.dispatch_triggers_for_events(&evs);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: colossus, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: colossus, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("graveyard recursion");
         drain_stack(&mut g);
@@ -325,7 +325,7 @@ mod recent111 {
         g.clear_sickness(djinn);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: architect, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+            card_id: architect, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("tap a blue creature for {C}{C}");
         assert!(g.battlefield_find(djinn).unwrap().tapped, "the blue creature tapped");
@@ -355,12 +355,12 @@ mod recent112 {
         g.priority.player_with_priority = 0;
         // Untapped: {Q} is unpayable.
         let err = g.perform_action(GameAction::ActivateAbility {
-            card_id: pala, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: pala, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         });
         assert!(err.is_err(), "{{Q}} needs a tapped source");
         g.battlefield_find_mut(pala).unwrap().tapped = true;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: pala, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: pala, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("pay {2}, {Q}");
         assert!(!g.battlefield_find(pala).unwrap().tapped, "untapped as the cost");
@@ -377,7 +377,7 @@ mod recent112 {
         g.players[0].mana_pool.add_colorless(2);
         g.priority.player_with_priority = 0;
         let err = g.perform_action(GameAction::ActivateAbility {
-            card_id: pala, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: pala, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         });
         assert!(matches!(err, Err(GameError::SummoningSickness(_))));
     }
@@ -737,7 +737,7 @@ mod recent113 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: bear, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: bear, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate from graveyard");
         drain_stack(&mut g);
@@ -876,7 +876,7 @@ mod recent113 {
         assert!(
             g.perform_action(GameAction::ActivateAbility {
                 card_id: devil, ability_index: 0, target: Some(Target::Player(1)),
-                additional_targets: vec![], x_value: None,
+                additional_targets: vec![], x_value: None, mode: None,
             })
             .is_err(),
             "morbid not active yet"
@@ -889,7 +889,7 @@ mod recent113 {
         let life = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: devil, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("morbid active");
         drain_stack(&mut g);
@@ -1006,7 +1006,7 @@ mod recent113 {
         assert!(
             g.perform_action(GameAction::ActivateAbility {
                 card_id: decoy, ability_index: 0, target: Some(Target::Permanent(victim)),
-                additional_targets: vec![], x_value: None,
+                additional_targets: vec![], x_value: None, mode: None,
             })
             .is_err(),
             "no creature entered this turn"
@@ -1015,7 +1015,7 @@ mod recent113 {
         g.players[0].creatures_entered_this_turn.push(decoy);
         g.perform_action(GameAction::ActivateAbility {
             card_id: decoy, ability_index: 0, target: Some(Target::Permanent(victim)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("gate satisfied");
         drain_stack(&mut g);
@@ -1057,7 +1057,7 @@ mod recent113 {
         g.priority.player_with_priority = 0;
         let life = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: officer, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: officer, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate drain");
         drain_stack(&mut g);
@@ -1328,7 +1328,7 @@ mod recent114 {
         let target = g.add_card_to_battlefield(1, catalog::enchantresss_presence());
         g.perform_action(GameAction::ActivateAbility {
             card_id: fracture, ability_index: 0, target: Some(Target::Permanent(target)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate Aura Fracture");
         drain_stack(&mut g);
@@ -1393,7 +1393,7 @@ mod recent114 {
         g.players[0].mana_pool.add(Color::White, 1);
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: mesa, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: mesa, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate Sacred Mesa");
         drain_stack(&mut g);
@@ -1483,7 +1483,7 @@ mod recent114 {
         g.players[0].mana_pool.add(Color::Green, 2);
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: grove, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: grove, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate Tranquil Grove");
         drain_stack(&mut g);
@@ -1525,7 +1525,7 @@ mod recent114 {
         let ward = g.battlefield.iter().find(|c| c.definition.name == "Flickering Ward").unwrap().id;
         g.players[0].mana_pool.add(Color::White, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: ward, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: ward, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate Flickering Ward bounce");
         drain_stack(&mut g);
@@ -1609,7 +1609,7 @@ mod recent114 {
             crabomination::decision::DecisionAnswer::Search(Some(forest)),
         ]));
         g.perform_action(GameAction::ActivateAbility {
-            card_id: font, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: font, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate Font of Fertility");
         drain_stack(&mut g);

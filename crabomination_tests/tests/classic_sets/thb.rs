@@ -125,7 +125,7 @@ fn nyxbloom_ancient_triples_tapped_mana() {
     let dork = g.add_card_to_battlefield(0, catalog::llanowar_elves());
     g.clear_sickness(dork);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 3, "G → GGG");
@@ -134,7 +134,7 @@ fn nyxbloom_ancient_triples_tapped_mana() {
     let dork2 = g.add_card_to_battlefield(0, catalog::llanowar_elves());
     g.clear_sickness(dork2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dork2, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: dork2, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("tap for mana");
     assert_eq!(
@@ -226,7 +226,7 @@ fn polukranos_fight_activation() {
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("fight the bear");
     drain_stack(&mut g);
@@ -343,7 +343,7 @@ fn dream_trawler_discard_grants_hexproof() {
     g.priority.player_with_priority = 0;
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: dt, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("discard a card: hexproof");
     drain_stack(&mut g);
@@ -500,7 +500,7 @@ fn alseid_grants_protection_from_chosen_color() {
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("sac Alseid");
     drain_stack(&mut g);
@@ -631,7 +631,7 @@ fn phoenix_of_ash_pump() {
     g.players[0].mana_pool.add_colorless(2);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ph, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: ph, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("pump");
     drain_stack(&mut g);
@@ -994,7 +994,7 @@ fn eidolon_of_philosophy_draws_three() {
     g.players[0].mana_pool.add_colorless(6);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: eid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: eid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Eidolon");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 3, "drew three");
@@ -1014,7 +1014,7 @@ fn lampad_drains_on_sacrifice() {
         crabomination::decision::DecisionAnswer::Target(Target::Permanent(fodder)),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lampad, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: lampad, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Lampad");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
@@ -1097,7 +1097,7 @@ fn oread_rummages() {
     let lib = g.players[0].library.len();
     let gy = g.players[0].graveyard.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: oread, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: oread, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Oread");
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.len(), lib - 1, "drew one");
@@ -1395,7 +1395,7 @@ fn soulreaper_sacrifices_to_draw() {
     g.players[0].mana_pool.add_colorless(2);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: reaper, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: reaper, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Soulreaper");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
@@ -1593,7 +1593,7 @@ fn skophos_warleader_sac_pumps_and_grants_menace() {
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: leader, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: leader, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Skophos");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
@@ -1838,7 +1838,7 @@ fn dreadful_apathy_exiles_enchanted() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: aura_id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: aura_id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Dreadful Apathy");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bear), "enchanted creature exiled");
@@ -2017,7 +2017,7 @@ fn travelers_amulet_fetches_a_basic_land() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: amulet, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: amulet, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("amulet");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == forest), "basic fetched to hand");
@@ -2090,7 +2090,7 @@ fn temple_of_abandon_enters_tapped() {
     assert!(g.battlefield_find(land).unwrap().tapped, "Temple enters tapped");
     g.battlefield_find_mut(land).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("tap for {R}");
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "produced red");
@@ -2263,7 +2263,7 @@ fn nyx_lotus_taps_for_devotion() {
         crabomination::decision::DecisionAnswer::Color(Color::Black),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lotus, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: lotus, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("tap Nyx Lotus");
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 2, "devotion-2 black mana");
@@ -2446,7 +2446,7 @@ fn sunmane_pegasus_gains_vigilance_lifelink() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: peg, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: peg, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("activate pump");
     drain_stack(&mut g);
@@ -2464,7 +2464,7 @@ fn skola_grovedancer_mills() {
     g.players[0].mana_pool.add_colorless(2);
     let gy = g.players[0].graveyard.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skola, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: skola, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("activate mill");
     drain_stack(&mut g);
@@ -2789,7 +2789,7 @@ fn wolfwillow_haven_adds_extra_green() {
         card_id: haven, target: Some(Target::Permanent(forest)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("enchant the forest");
     drain_stack(&mut g);
-    g.perform_action(GameAction::ActivateAbility { card_id: forest, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("tap enchanted forest");
+    g.perform_action(GameAction::ActivateAbility { card_id: forest, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("tap enchanted forest");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "base green plus extra green");
 }
 
@@ -3312,7 +3312,7 @@ fn skophos_maze_warden_pumps() {
     let w = g.add_card_to_battlefield(0, catalog::skophos_maze_warden());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: w, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: w, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     let cp = g.computed_permanent(w).unwrap();
@@ -3367,14 +3367,14 @@ fn ilysian_caryatid_scales_with_power() {
     let dork = g.add_card_to_battlefield(0, catalog::ilysian_caryatid());
     g.clear_sickness(dork);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for one");
     assert_eq!(g.players[0].mana_pool.total(), 1, "one mana with no big creature");
     g.players[0].mana_pool.empty();
     g.battlefield_find_mut(dork).unwrap().tapped = false;
     g.add_card_to_battlefield(0, catalog::craw_wurm()); // 6/4
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: dork, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for two");
     assert_eq!(g.players[0].mana_pool.total(), 2, "two mana with a power-4+ creature");
 }
@@ -3716,7 +3716,7 @@ fn altar_of_the_pantheon_devotion_and_conditional_life() {
     let life = g.players[0].life;
     let mana_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: altar, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: altar, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("activate mana ability");
     assert_eq!(g.players[0].mana_pool.total(), mana_before + 1, "added one mana");
@@ -3726,7 +3726,7 @@ fn altar_of_the_pantheon_devotion_and_conditional_life() {
     g.battlefield_find_mut(altar).unwrap().tapped = false;
     g.add_card_to_battlefield(0, catalog::heliod_god_of_the_sun());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: altar, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: altar, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("activate again");
     assert_eq!(g.players[0].life, life + 1, "God controlled → gain 1 life");
@@ -3934,7 +3934,7 @@ fn entrancing_lyre_taps_and_locks() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: lyre, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: Vec::new(), x_value: Some(2),
+        additional_targets: Vec::new(), x_value: Some(2), mode: None,
     }).expect("tap a power-2 creature with X=2");
     drain_stack(&mut g);
     let b = g.battlefield_find(bear).unwrap();
@@ -3961,7 +3961,7 @@ fn entrancing_lyre_respects_power_filter() {
     g.players[0].mana_pool.add_colorless(1);
     let res = g.perform_action(GameAction::ActivateAbility {
         card_id: lyre, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: Vec::new(), x_value: Some(1),
+        additional_targets: Vec::new(), x_value: Some(1), mode: None,
     });
     assert!(res.is_err(), "power 2 > X=1 is an illegal target");
 }
@@ -4158,7 +4158,7 @@ fn purphoros_sneaks_a_red_creature_in() {
     g.priority.player_with_priority = 0;
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![dragon])]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: god, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: god, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Purphoros");
     drain_stack(&mut g);
     assert!(g.battlefield_find(dragon).is_some(), "creature snuck in");
@@ -4188,7 +4188,7 @@ fn nylea_discounts_and_digs() {
     g.players[0].mana_pool.add_colorless(2);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: god, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: god, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Nylea");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "revealed creature to hand");
@@ -4232,7 +4232,7 @@ fn bronzehide_lion_returns_as_aura() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lion, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: lion, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate the Aura");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible));

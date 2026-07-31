@@ -62,7 +62,7 @@ fn carrion_feeder_sacs_a_creature_to_grow() {
     g.clear_sickness(feeder);
     g.perform_action(GameAction::ActivateAbility {
         card_id: feeder, ability_index: 0,
-        target: Some(Target::Permanent(fodder)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(fodder)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac-a-creature ability activates");
     drain_stack(&mut g);
     let cp = g.computed_permanent(feeder).expect("feeder alive");
@@ -273,7 +273,7 @@ fn krenko_makes_goblins_equal_to_goblin_count() {
     let before = g.battlefield.iter().filter(|c| c.controller == 0
         && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Goblin)).count();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: krenko, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: krenko, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Krenko taps for Goblins");
     drain_stack(&mut g);
     let after = g.battlefield.iter().filter(|c| c.controller == 0
@@ -304,7 +304,7 @@ fn goblin_trashmaster_sacrifices_a_goblin_to_destroy_an_artifact() {
     g.clear_sickness(tm);
     let art = g.add_card_to_battlefield(1, catalog::ornithopter()); // an artifact
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tm, ability_index: 0, target: Some(Target::Permanent(art)), additional_targets: Vec::new(), x_value: None,
+        card_id: tm, ability_index: 0, target: Some(Target::Permanent(art)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Trashmaster sac-destroys an artifact");
     drain_stack(&mut g);
     assert!(g.battlefield_find(art).is_none(), "the artifact is destroyed");
@@ -349,7 +349,7 @@ fn skirk_prospector_sacrifices_a_goblin_for_red() {
     let prospector = g.add_card_to_battlefield(0, catalog::skirk_prospector());
     g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // sac fodder
     g.perform_action(GameAction::ActivateAbility {
-        card_id: prospector, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: prospector, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac a Goblin for one red");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "added one red");
@@ -428,7 +428,7 @@ fn goblin_sledder_sacs_a_goblin_to_pump() {
     g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // sac fodder
     let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sledder, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+        card_id: sledder, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac a Goblin to pump");
     drain_stack(&mut g);
     let s = g.battlefield_find(target).unwrap();
@@ -441,7 +441,7 @@ fn mogg_raider_sacs_a_creature_to_grow() {
     let raider = g.add_card_to_battlefield(0, catalog::mogg_raider());
     g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
     g.perform_action(GameAction::ActivateAbility {
-        card_id: raider, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: raider, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac a creature");
     drain_stack(&mut g);
     let s = g.battlefield_find(raider).unwrap();
@@ -456,7 +456,7 @@ fn bloodlust_inciter_grants_haste() {
     g.clear_sickness(inciter);
     let target = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // summoning sick
     g.perform_action(GameAction::ActivateAbility {
-        card_id: inciter, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+        card_id: inciter, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("grant haste");
     drain_stack(&mut g);
     assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Haste),
@@ -527,7 +527,7 @@ fn merfolk_looter_taps_to_loot() {
     let junk = g.add_card_to_hand(0, catalog::grizzly_bears());
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: looter, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: looter, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("loot ability activates");
     drain_stack(&mut g);
     // Draw 1, discard 1 → hand size unchanged; the discarded card is in gy.
@@ -572,7 +572,7 @@ fn selfless_spirit_sac_grants_team_indestructible() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(spirit);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: spirit, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: spirit, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac ability activates");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).expect("bear alive");
@@ -1009,7 +1009,7 @@ fn plague_wind_ignores_regeneration_shields() {
     g.players[1].mana_pool.add(Color::Black, 1);
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: skel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regenerate activates");
     drain_stack(&mut g);
     g.priority.player_with_priority = 0;
@@ -1062,7 +1062,7 @@ fn krark_clan_ironworks_sacs_artifact_for_two_colorless() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: kci, ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("KCI activated");
     drain_stack(&mut g);
 
@@ -1113,13 +1113,13 @@ fn underground_mortuary_taps_for_black_or_green() {
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).unwrap();
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap();
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1,
         "ability 0 produces {{B}}");
 
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).unwrap();
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap();
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1,
         "ability 1 produces {{G}}");
 }
@@ -1814,7 +1814,7 @@ fn elvish_reclaimer_sacrifices_land_to_search_for_one() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: reclaimer,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None }).expect("Elvish Reclaimer's tap+sac+search ability");
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Elvish Reclaimer's tap+sac+search ability");
     drain_stack(&mut g);
 
     // Forest was sacrificed.
@@ -1856,7 +1856,7 @@ fn rofellos_taps_for_green_per_forest() {
     g.add_card_to_battlefield(0, catalog::forest());
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Rofellos's mana ability");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 4,
         "Rofellos adds green mana for each Forest you control (4 Forests)");
@@ -2249,7 +2249,7 @@ fn pentad_prism_removes_counter_to_add_one_mana_of_any_color() {
 
     let pool_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Pentad Prism's counter-removal mana ability");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Pentad Prism's counter-removal mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), pool_before + 1,
         "Mana pool gains 1");

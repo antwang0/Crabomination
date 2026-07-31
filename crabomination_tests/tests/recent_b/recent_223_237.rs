@@ -761,7 +761,7 @@ mod recent229 {
             ability_index: 0,
             target: Some(Target::Permanent(enemy)),
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("from-hand discard ability");
         drain_stack(&mut g);

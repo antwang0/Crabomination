@@ -17,7 +17,7 @@ fn great_hall_taps_for_colorless() {
     let mp_before_c = g.players[0].mana_pool.colorless_amount();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Great Hall {T}: Add {C}");
 
     assert_eq!(g.players[0].mana_pool.colorless_amount(), mp_before_c + 1);
@@ -33,7 +33,7 @@ fn great_hall_pay_one_life_taps_for_any_color() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Black)]));
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Great Hall pay-1-life mana ability");
 
     assert_eq!(g.players[0].life, life_before - 1);
@@ -403,7 +403,7 @@ fn rubble_rouser_mana_ability_damage_rides_the_stack() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: rouser, ability_index: 0, target: None, additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("Rubble Rouser mana ability activatable");
     assert_eq!(
@@ -539,7 +539,7 @@ fn sundering_archaic_two_mana_bottoms_graveyard_card() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: archaic_id,
         ability_index: 0,
-        target: Some(Target::Permanent(bolt_id)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(bolt_id)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Sundering Archaic {2} ability activatable");
     drain_stack(&mut g);
     // Bolt should be at the bottom of player 1's library, not in their gy.
@@ -581,7 +581,7 @@ fn summoned_dromedary_returns_from_graveyard_to_hand() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: drome,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Dromedary activation from gy must succeed");
     drain_stack(&mut g);
 
@@ -603,7 +603,7 @@ fn summoned_dromedary_activation_rejected_during_opponent_priority() {
     let _ = g.perform_action(GameAction::ActivateAbility {
         card_id: drome,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect_err("opponent shouldn't be able to activate a graveyard card belonging to player 0");
 }
 
@@ -621,7 +621,7 @@ fn teachers_pest_returns_from_graveyard_to_battlefield_tapped() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pest,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Teacher's Pest activation from gy must succeed");
     drain_stack(&mut g);
 
@@ -643,7 +643,7 @@ fn stone_docent_exiles_self_and_gains_life() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: docent,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Stone Docent activation from gy must succeed");
     drain_stack(&mut g);
 
@@ -667,7 +667,7 @@ fn eternal_student_exiles_self_and_creates_two_inklings() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: student,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Eternal Student activation from gy must succeed");
     drain_stack(&mut g);
 
@@ -693,7 +693,7 @@ fn stone_docent_rejected_at_instant_speed() {
     let err = g.perform_action(GameAction::ActivateAbility {
         card_id: docent,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None });
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(err.is_err(), "Stone Docent should reject upkeep activation (sorcery-speed)");
 }
 
@@ -792,7 +792,7 @@ fn postmortem_professor_returns_from_graveyard_by_exiling_instant_or_sorcery() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: prof_id,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Postmortem Professor gy-activation should be legal with bolt in gy");
     drain_stack(&mut g);
 
@@ -822,7 +822,7 @@ fn postmortem_professor_rejects_activation_without_eligible_gy_card() {
     let result = g.perform_action(GameAction::ActivateAbility {
         card_id: prof_id,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None });
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(result.is_err(),
         "Activation must reject when no IS card is in the graveyard");
     // Mana should be untouched (pre-flight gate rejected before payment).
@@ -1361,7 +1361,7 @@ fn skycoach_waypoint_taps_for_colorless() {
     let c_before = g.players[0].mana_pool.colorless_amount();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("{T}: Add {C} activatable");
 
     assert_eq!(g.players[0].mana_pool.colorless_amount(), c_before + 1);
@@ -1391,7 +1391,7 @@ fn skycoach_waypoint_prepare_activation_adds_prepared_counter() {
     );
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: Some(Target::Permanent(mdfc)), additional_targets: Vec::new(), x_value: None })
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(mdfc)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Skycoach Waypoint {3}, {T}: prepare activation");
     drain_stack(&mut g);
 
@@ -1417,7 +1417,7 @@ fn skycoach_waypoint_rejects_creature_without_prepare_spell() {
 
     let result = g.perform_action(GameAction::ActivateAbility {
         card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None
-    });
+    , mode: None});
     assert!(
         result.is_err(),
         "prepare activation must be rejected against a creature with no back face"
@@ -1439,7 +1439,7 @@ fn skycoach_waypoint_prepare_rejected_without_three_mana() {
     // No mana in pool — activation should be rejected.
 
     let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None });
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(
         result.is_err(),
         "prepare activation should fail without {{3}} in pool"
@@ -1533,7 +1533,7 @@ fn skycoach_waypoint_then_biblioplex_tomekeeper_round_trip() {
     g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: Some(Target::Permanent(mdfc)), additional_targets: Vec::new(), x_value: None })
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(mdfc)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Skycoach Waypoint prepare activation");
     drain_stack(&mut g);
 
@@ -2045,13 +2045,13 @@ fn harmonized_trio_taps_two_other_creatures() {
     g1.clear_sickness(only);
     assert!(g1.perform_action(GameAction::ActivateAbility {
         card_id: t1, ability_index: 0, target: None,
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "needs two untapped creatures to tap");
 
     // With two, it works and taps both.
     g.perform_action(GameAction::ActivateAbility {
         card_id: trio, ability_index: 0, target: None,
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("prepare activation with two tappable creatures");
     drain_stack(&mut g);
     assert!(g.battlefield_find(b1).unwrap().tapped && g.battlefield_find(b2).unwrap().tapped,
@@ -2073,7 +2073,7 @@ fn emil_counts_differently_named_lands() {
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
         card_id: emil, ability_index: 0, target: None,
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Emil activation");
     drain_stack(&mut g);
     let fractal = g.battlefield.iter()

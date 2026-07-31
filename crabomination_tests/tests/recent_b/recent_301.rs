@@ -85,7 +85,7 @@ fn terraformer_turns_your_lands_into_a_chosen_basic() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tf, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: tf, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Terraformer");
     drain_stack(&mut g);
     for land in [f1, f2] {

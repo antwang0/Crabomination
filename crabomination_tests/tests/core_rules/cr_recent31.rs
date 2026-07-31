@@ -30,7 +30,7 @@ fn cr_702_108c_adapt_activation_triggers() {
     g.battlefield_find_mut(eng).unwrap().tapped = true;
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(5);
-    g.perform_action(GameAction::ActivateAbility { card_id: eel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("adapt");
+    g.perform_action(GameAction::ActivateAbility { card_id: eel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("adapt");
     drain_stack(&mut g);
     assert!(!g.battlefield_find(eng).unwrap().tapped, "Gyre Engineer untapped by the adapt-activation trigger");
 }
@@ -72,6 +72,6 @@ fn cr_602_5e_binding_locks_activation() {
     assert!(g.computed_permanent(creature).unwrap().keywords.contains(&Keyword::CantActivateAbilities), "binding grants CantActivateAbilities");
     g.players[1].mana_pool.add(Color::Green, 1);
     g.players[1].mana_pool.add_colorless(4);
-    assert!(g.perform_action(GameAction::ActivateAbility { card_id: creature, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).is_err(),
+    assert!(g.perform_action(GameAction::ActivateAbility { card_id: creature, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).is_err(),
         "bound creature can't activate its ability");
 }

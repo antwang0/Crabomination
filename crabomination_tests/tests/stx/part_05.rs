@@ -528,7 +528,7 @@ fn lorehold_cathedral_taps_for_red_or_white() {
     let id = g.add_card_to_battlefield(0, catalog::lorehold_cathedral());
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("tap for R");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("tap for R");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "added one red mana");
 }
@@ -627,7 +627,7 @@ fn strixhaven_reservoir_taps_for_any_color() {
     let id = g.add_card_to_battlefield(0, catalog::strixhaven_reservoir());
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Reservoir taps for color");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Reservoir taps for color");
     drain_stack(&mut g);
     // AutoDecider picks a color (white by default).
     let mana = &g.players[0].mana_pool;
@@ -700,7 +700,7 @@ fn quandrix_loremind_sac_draws_two() {
     let hand_before = g.players[0].hand.len();
     add_generous_mana(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Loremind activatable");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Loremind activatable");
     drain_stack(&mut g);
     // Sacrificed → no longer on bf.
     assert!(g.battlefield_find(id).is_none(), "Loremind sacrificed");
@@ -775,7 +775,7 @@ fn lorehold_bookburner_sac_pings_a_creature() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: burner, ability_index: 0,
-        target: Some(crabomination::game::types::Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None }).expect("Activatable");
+        target: Some(crabomination::game::types::Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None}).expect("Activatable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(burner).is_none(), "Burner sacrificed");
     // Bear (2 toughness) takes 2 damage → dies to SBA.
@@ -789,7 +789,7 @@ fn quandrix_tessellator_activated_mints_fractal_with_counters() {
     g.clear_sickness(id);
     add_generous_mana(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Activatable");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Activatable");
     drain_stack(&mut g);
     let fractal = g.battlefield.iter().find(|c| {
         c.controller == 0 && c.is_token && c.definition.name == "Fractal"
@@ -837,7 +837,7 @@ fn strixhaven_vault_etb_scrys_then_sac_draws() {
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vault_id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Sac activation");
+        card_id: vault_id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Sac activation");
     drain_stack(&mut g);
     assert!(g.battlefield_find(vault_id).is_none(), "Vault sacrificed");
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew 1 card");

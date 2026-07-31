@@ -74,7 +74,7 @@ fn sunhome_guildmage_makes_a_hasty_soldier() {
     flood(&mut g);
     let before = g.battlefield.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mage, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: mage, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("make token");
     drain_stack(&mut g);
     assert_eq!(g.battlefield.len(), before + 1, "one Soldier token minted");

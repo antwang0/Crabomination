@@ -44,7 +44,7 @@ fn activate(g: &mut GameState, card: CardId, idx: usize, target: Option<Target>)
         ability_index: idx,
         target,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(g);

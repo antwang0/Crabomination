@@ -256,7 +256,7 @@ fn omen_of_the_sea_etb_and_sac() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: omen, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: omen, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac to scry");
     drain_stack(&mut g);
     assert!(g.battlefield_find(omen).is_none(), "sacrificed");
@@ -488,7 +488,7 @@ fn aftermath_analyst_mills_then_returns_lands() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: aa, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: aa, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac");
     drain_stack(&mut g);
     let lands: Vec<_> = g.battlefield.iter().filter(|c| c.definition.is_land()).collect();
@@ -509,7 +509,7 @@ fn meld_urza_creates_planeswalker() {
     g.add_card_to_battlefield(0, catalog::the_mightstone_and_weakstone());
     g.players[0].mana_pool.add_colorless(7);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: urza, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: urza, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("meld");
     drain_stack(&mut g);
     let pw = g.battlefield.iter().find(|c| c.definition.name == "Urza, Planeswalker")
@@ -526,7 +526,7 @@ fn meld_without_partner_is_noop() {
     let urza = g.add_card_to_battlefield(0, catalog::urza_lord_protector());
     g.players[0].mana_pool.add_colorless(7);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: urza, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: urza, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == urza), "Urza stays");
@@ -544,7 +544,7 @@ fn meld_requires_owning_both() {
     g.battlefield_find_mut(stone).unwrap().controller = 0;
     g.players[0].mana_pool.add_colorless(7);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: urza, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: urza, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Urza, Planeswalker"));
@@ -559,7 +559,7 @@ fn melded_permanent_dies_as_both_cards() {
     g.add_card_to_battlefield(0, catalog::the_mightstone_and_weakstone());
     g.players[0].mana_pool.add_colorless(7);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: urza, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: urza, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("meld");
     drain_stack(&mut g);
     let pw = g.battlefield.iter().find(|c| c.definition.name == "Urza, Planeswalker")
@@ -581,7 +581,7 @@ fn urza_planeswalker_twice_per_turn_and_discount() {
     g.add_card_to_battlefield(0, catalog::the_mightstone_and_weakstone());
     g.players[0].mana_pool.add_colorless(7);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: urza, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: urza, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("meld");
     drain_stack(&mut g);
     let pw = g.battlefield.iter().find(|c| c.definition.name == "Urza, Planeswalker")
@@ -616,7 +616,7 @@ fn circle_of_protection_red_soaks_one_event() {
     let goblin = g.add_card_to_battlefield(1, catalog::raging_goblin());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: cop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate CoP");
     drain_stack(&mut g);
     // chosen source = the only red candidate (the Goblin)
@@ -639,7 +639,7 @@ fn circle_of_protection_shield_is_source_restricted() {
     let _ = goblin;
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: cop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate CoP");
     drain_stack(&mut g);
     let mut events = Vec::new();
@@ -802,7 +802,7 @@ fn splinter_twin_grants_copy_ability() {
     // the granted ability surfaces past the printed list (index 0 — Bears
     // print none)
     g.perform_action(GameAction::ActivateAbility {
-        card_id: exarch, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: exarch, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("granted twin ability");
     drain_stack(&mut g);
     let copies: Vec<_> = g.battlefield.iter()
@@ -1008,7 +1008,7 @@ fn urza_tron_assembles() {
     let mut g = two_player_game();
     let tower = g.add_card_to_battlefield(0, catalog::urzas_tower());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tower, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: tower, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap tower");
     assert_eq!(g.players[0].mana_pool.total(), 1, "lone tower: {{C}}");
     g.battlefield_find_mut(tower).unwrap().tapped = false;
@@ -1016,7 +1016,7 @@ fn urza_tron_assembles() {
     g.add_card_to_battlefield(0, catalog::urzas_mine());
     g.add_card_to_battlefield(0, catalog::urzas_power_plant());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tower, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: tower, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap assembled tower");
     assert_eq!(g.players[0].mana_pool.total(), 3, "full tron: {{C}}{{C}}{{C}}");
 }
@@ -1027,7 +1027,7 @@ fn eldrazi_temple_restricted_mana() {
     let mut g = two_player_game();
     let temple = g.add_card_to_battlefield(0, catalog::eldrazi_temple());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: temple, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: temple, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for restricted {C}{C}");
     // Restricted {C} sits apart from the free pool (it only becomes
     // spendable through pay_for_spell when the restriction permits).
@@ -1083,7 +1083,7 @@ fn mausoleum_wanderer_taxes_by_power() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: wanderer, ability_index: 0, target: Some(Target::Permanent(bolt)),
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     }).expect("sac wanderer");
     drain_stack(&mut g);
     // bolt's controller had no mana left to pay {1} -> countered
@@ -1104,7 +1104,7 @@ fn paradise_mantle_grants_mana_ability() {
     g.perform_action(GameAction::Equip { equipment: mantle, target: bear }).expect("equip");
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bear, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: bear, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("granted mana ability");
     assert_eq!(g.players[0].mana_pool.total(), 1);
 }

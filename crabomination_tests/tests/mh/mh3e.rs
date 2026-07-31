@@ -173,7 +173,7 @@ fn chthonian_nightmare_reanimates_by_energy_x() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: nightmare, ability_index: 0,
         target: Some(crabomination::game::types::Target::Permanent(dead)),
-        additional_targets: vec![], x_value: Some(2),
+        additional_targets: vec![], x_value: Some(2), mode: None,
     }).expect("activate for X=2");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 3, "spent two energy");
@@ -350,7 +350,7 @@ fn argent_dais_exiles_and_draws() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: dais, ability_index: 0,
         target: Some(crabomination::game::types::Target::Permanent(victim)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate exile ability");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == victim), "victim exiled");
@@ -418,7 +418,7 @@ fn unstable_amulet_impulse_ability() {
     g.players[0].energy = 2;
     let top = g.add_card_to_library(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: amulet, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: amulet, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate impulse for {T} + {E}{E}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 0, "paid two energy");
@@ -442,7 +442,7 @@ fn izzet_generatorium_energy_bonus_and_draw_gate() {
     assert_eq!(g.players[0].energy, 3, "two energy plus the Generatorium's one");
     // Draw ability is locked until 4+ energy is spent this turn.
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: generatorium, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: generatorium, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).is_err(), "draw locked with under four energy spent");
     // Spend four energy this turn (routed through the shared chokepoint).
     g.players[0].energy = 4;
@@ -451,7 +451,7 @@ fn izzet_generatorium_energy_bonus_and_draw_gate() {
     let hand = g.players[0].hand.len();
     let _ = g.add_card_to_library(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: generatorium, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: generatorium, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("draw now unlocked");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card once 4+ energy was spent");

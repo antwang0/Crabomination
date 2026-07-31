@@ -14,7 +14,7 @@ fn thundersong_trumpeter_locks_a_creature_down() {
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: trumpeter, ability_index: 0, target: Some(Target::Permanent(foe)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap it down");
     drain_stack(&mut g);
     let kw = g.computed_permanent(foe).unwrap().keywords;
@@ -50,7 +50,7 @@ fn grozoth_can_shed_defender_to_attack() {
     assert!(g.computed_permanent(grz).unwrap().keywords.contains(&Keyword::Defender));
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: grz, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: grz, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("shed defender");
     drain_stack(&mut g);
     assert!(!g.computed_permanent(grz).unwrap().keywords.contains(&Keyword::Defender),

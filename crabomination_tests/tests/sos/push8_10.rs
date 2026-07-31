@@ -640,7 +640,7 @@ fn resonating_lute_draw_blocked_when_hand_below_seven() {
     g.add_card_to_library(0, catalog::lightning_bolt());
 
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: lute, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None });
+        card_id: lute, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(res.is_err(),
         "Resonating Lute should reject activation with hand size < 7");
     assert!(g.players[0].hand.is_empty(),
@@ -662,7 +662,7 @@ fn resonating_lute_draw_succeeds_at_seven_in_hand() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: lute, ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Resonating Lute should activate when hand size ≥ 7");
     drain_stack(&mut g);
 
@@ -684,7 +684,7 @@ fn resonating_lute_grants_lands_tap_for_any_color() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
     let free_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: forest, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: forest, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("Resonating Lute grants lands a tap-for-any-color ability at index 1");
     assert_eq!(g.players[0].mana_pool.total(), free_before,
         "granted mana is restricted, so the free total is unchanged");
@@ -702,7 +702,7 @@ fn potioners_trove_lifegain_blocked_without_spell_cast() {
 
     // Lifegain ability index 1 (mana ability is index 0).
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: trove, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None });
+        card_id: trove, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(res.is_err(),
         "Potioner's Trove lifegain should reject without IS-cast this turn");
     assert!(!g.battlefield_find(trove).unwrap().tapped,
@@ -720,7 +720,7 @@ fn potioners_trove_lifegain_succeeds_after_spell_cast() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: trove, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: trove, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Potioner's Trove lifegain should activate when a spell was cast");
     drain_stack(&mut g);
 
@@ -1145,7 +1145,7 @@ fn page_loose_leaf_taps_for_colorless() {
 
     let mana_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Page, Loose Leaf {T}: Add {C} should activate");
     drain_stack(&mut g);
 
@@ -1165,7 +1165,7 @@ fn page_loose_leaf_grandeur_rejected_without_another_page_in_hand() {
     drain_stack(&mut g);
 
     let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None });
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(result.is_err(),
         "Grandeur rejected without another Page in hand");
 }
@@ -1195,7 +1195,7 @@ fn page_loose_leaf_grandeur_with_another_page_reveals_is_card() {
     drain_stack(&mut g);
 
     let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None });
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(result.is_ok(),
         "Grandeur should activate when another Page is in hand");
     drain_stack(&mut g);
@@ -1616,7 +1616,7 @@ fn ward_counters_opp_activated_ability_when_payer_cannot_afford() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: sorcerer,
         ability_index: 0,
-        target: Some(Target::Permanent(demo)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(demo)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Activation legal at the cost line — Ward fires after the ability is queued");
     drain_stack(&mut g);
 
@@ -1640,7 +1640,7 @@ fn ward_allows_opp_activated_ability_when_payer_can_afford() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: sorcerer,
         ability_index: 0,
-        target: Some(Target::Permanent(demo)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(demo)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Activation legal");
     drain_stack(&mut g);
 
@@ -2859,7 +2859,7 @@ fn potioners_trove_lifegain_rejects_after_creature_cast_only() {
     g.players[0].instants_or_sorceries_cast_this_turn = 0;
 
     let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: trove, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None });
+        card_id: trove, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(matches!(result, Err(GameError::AbilityConditionNotMet)),
         "Should reject without IS cast (got {:?})", result);
 }

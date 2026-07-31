@@ -62,7 +62,7 @@ mod recent41 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: pool, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: pool, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("animate");
         drain_stack(&mut g);
         let cp = g.computed_permanent(pool).unwrap();
@@ -82,7 +82,7 @@ mod recent42 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: idx, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: idx, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("ability activates");
         drain_stack(g);
     }
@@ -181,7 +181,7 @@ mod recent43 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: idx, target, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: idx, target, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("ability activates");
         drain_stack(g);
     }
@@ -196,7 +196,7 @@ mod recent43 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: bz, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: Some(1),
+            card_id: bz, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: Some(1), mode: None,
         }).expect("charge");
         drain_stack(&mut g);
         assert_eq!(
@@ -236,7 +236,7 @@ mod recent43 {
         // Opponent controls only one land → activation illegal.
         let res = g.perform_action(GameAction::ActivateAbility {
             card_id: edge, ability_index: 1, target: Some(Target::Permanent(victim)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         });
         assert!(res.is_err(), "can't blow up a land until the opponent has four");
         // Give them three more lands (four total) → now legal.
@@ -287,7 +287,7 @@ mod recent44 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: idx, target, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: idx, target, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("ability activates");
         drain_stack(g);
     }
@@ -369,7 +369,7 @@ mod recent44 {
         g.priority.player_with_priority = 1;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: bomb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: bomb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("charge ability");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, life - 2, "Harsh Mentor deals 2 to the activating opponent");
@@ -587,7 +587,7 @@ mod recent47 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: idx, target, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: idx, target, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("ability activates");
         drain_stack(g);
     }
@@ -690,7 +690,7 @@ mod recent47 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         assert!(g.perform_action(GameAction::ActivateAbility {
-            card_id: speaker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: speaker, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).is_err(), "blocked below the +7 life threshold");
         // Untap and climb to 27 — now it fires.
         g.battlefield_find_mut(speaker).unwrap().tapped = false;
@@ -756,7 +756,7 @@ mod recent48 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: ouphe, ability_index: 0, target: Some(Target::Permanent(bird)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("sac ability");
         drain_stack(&mut g);
         assert!(g.battlefield_find(bird).is_none(), "the flier took 3 and died");
@@ -774,7 +774,7 @@ mod recent48 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: atlas, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: atlas, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap for a land");
         drain_stack(&mut g);
         assert!(g.battlefield_find(forest).is_some(), "land entered from hand");
@@ -801,7 +801,7 @@ mod recent48 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: bear, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: bear, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("granted mana ability");
         assert!(g.players[0].mana_pool.amount(Color::Green) >= 1, "tapped the counter-bearing bear for green");
     }

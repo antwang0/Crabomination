@@ -155,7 +155,7 @@ fn nessian_wilds_ravager_becomes_monstrous() {
     g.players[0].mana_pool.add_colorless(6);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Monstrosity 5 activatable for {6}{G}{G}");
     drain_stack(&mut g);
     let view = g.compute_battlefield();
@@ -174,7 +174,7 @@ fn monstrosity_is_once_only() {
     g.priority.player_with_priority = 0;
     for _ in 0..2 {
         let _ = g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         });
         drain_stack(&mut g);
     }
@@ -198,7 +198,7 @@ fn ember_swallower_monstrous_trigger_sacrifices_lands() {
     g.players[0].mana_pool.add_colorless(3);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Monstrosity 3 activatable for {3}{R}{R}");
     drain_stack(&mut g);
     for p in 0..2 {
@@ -272,7 +272,7 @@ fn arbor_colossus_monstrous_destroys_a_flier() {
     g.players[0].mana_pool.add_colorless(6);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Monstrosity 3 activatable");
     drain_stack(&mut g);
     let view = g.compute_battlefield();
@@ -308,7 +308,7 @@ fn thrashing_brontodon_sacrifices_to_destroy_artifact() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: bronto, ability_index: 0,
-        target: Some(crabomination::game::types::Target::Permanent(art)), additional_targets: Vec::new(), x_value: None,
+        target: Some(crabomination::game::types::Target::Permanent(art)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac ability activatable");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == art), "artifact destroyed");
@@ -380,7 +380,7 @@ fn ill_tempered_cyclops_monstrosity() {
     g.players[0].mana_pool.add_colorless(3);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Monstrosity 2 activatable for {3}{R}");
     drain_stack(&mut g);
     let view = g.compute_battlefield();
@@ -604,7 +604,7 @@ fn nantuko_husk_sacrifices_for_a_pump() {
     let husk = g.add_card_to_battlefield(0, catalog::nantuko_husk());
     g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
     g.perform_action(GameAction::ActivateAbility {
-        card_id: husk, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: husk, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac ability activatable");
     drain_stack(&mut g);
     let c = g.battlefield_find(husk).unwrap();
@@ -656,7 +656,7 @@ fn mogg_fanatic_sacrifices_to_ping() {
     let fanatic = g.add_card_to_battlefield(0, catalog::mogg_fanatic());
     let opp = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fanatic, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: fanatic, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac ability activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 1, "Mogg Fanatic pinged for 1");
@@ -673,7 +673,7 @@ fn spectral_sailor_draws_with_its_ability() {
     g.players[0].mana_pool.add_colorless(3);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sailor, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: sailor, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("draw ability activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "Spectral Sailor drew a card");
@@ -842,7 +842,7 @@ fn ember_hauler_sacrifices_to_deal_two() {
     g.players[0].mana_pool.add_colorless(2);
     let opp = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hauler, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: hauler, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac-ping activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 2, "Ember Hauler dealt 2");
@@ -890,7 +890,7 @@ fn rootwater_hunter_pings_a_creature() {
     // Target a 1-toughness creature so the single point is lethal.
     let target = g.add_card_to_battlefield(1, catalog::mogg_fanatic()); // 1/1
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hunter, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+        card_id: hunter, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap-ping activatable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(target).is_none(), "1 damage killed the 1/1");
@@ -904,7 +904,7 @@ fn goblin_balloon_brigade_grants_itself_flying() {
     let gob = g.add_card_to_battlefield(0, catalog::goblin_balloon_brigade());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gob, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: gob, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("flying-grant activatable");
     drain_stack(&mut g);
     let cp = g.computed_permanent(gob).expect("Goblin in play");
@@ -950,7 +950,7 @@ fn maze_of_ith_prevents_combat_damage_to_and_from_attacker() {
     let life_before = g.players[1].life;
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: maze, ability_index: 0, target: Some(Target::Permanent(jug)), additional_targets: Vec::new(), x_value: None,
+        card_id: maze, ability_index: 0, target: Some(Target::Permanent(jug)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Maze of Ith targets the attacker");
     drain_stack(&mut g);
 

@@ -1268,7 +1268,7 @@ mod recent241 {
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sacrifice the Clue to draw");
         drain_stack(&mut g);
@@ -1810,7 +1810,7 @@ mod recent243 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sacrifice to draw");
         drain_stack(&mut g);
@@ -1923,7 +1923,7 @@ mod recent244 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate the deathtouch/lifelink grant");
         drain_stack(&mut g);
@@ -2164,7 +2164,7 @@ mod recent245 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac Candlestick to draw");
         drain_stack(&mut g);
@@ -2287,7 +2287,7 @@ mod recent246 {
             ability_index: 0,
             target: Some(Target::Permanent(foe)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac the suspected creature");
         drain_stack(&mut g);
@@ -2381,7 +2381,7 @@ mod recent246 {
             ability_index: 0,
             target: Some(Target::Permanent(foe)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         });
         assert!(res.is_err(), "no suspected creature to sacrifice → activation rejected");
     }
@@ -2409,7 +2409,7 @@ mod recent247 {
             ability_index: 1,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate the investigate ability");
         drain_stack(&mut g);
@@ -2428,7 +2428,7 @@ mod recent247 {
             ability_index: 1,
             target: Some(Target::Permanent(bear)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate the unblockable ability");
         drain_stack(&mut g);
@@ -2455,7 +2455,7 @@ mod recent247 {
             ability_index: 2,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac to draw");
         drain_stack(&mut g);
@@ -2742,7 +2742,7 @@ mod recent251 {
             ability_index: 0,
             target: Some(Target::Permanent(land)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate the untap ability");
         drain_stack(&mut g);
@@ -2870,7 +2870,7 @@ mod recent252 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate sac-artifact ability");
         drain_stack(&mut g);
@@ -2900,7 +2900,7 @@ mod recent252 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate collect-evidence mana ability");
         drain_stack(&mut g);
@@ -2921,7 +2921,7 @@ mod recent252 {
             ability_index: 1,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate the sacrifice draw ability");
         drain_stack(&mut g);
@@ -2947,7 +2947,7 @@ mod recent252 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         });
         assert!(err.is_err(), "gated before an artifact sacrifice");
         // After sacrificing an artifact it makes a Thopter.
@@ -2957,7 +2957,7 @@ mod recent252 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("Thopter ability now activatable");
         drain_stack(&mut g);
@@ -2994,7 +2994,7 @@ mod recent252 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate the collect-evidence punisher");
         drain_stack(&mut g);
@@ -3038,7 +3038,7 @@ mod recent252 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate the shuffle ability");
         drain_stack(&mut g);

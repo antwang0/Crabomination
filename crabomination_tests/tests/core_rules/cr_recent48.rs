@@ -220,7 +220,7 @@ fn cr_721_4_station_ability_is_always_active() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("station with no charges yet");
     drain_stack(&mut g);
@@ -229,4 +229,43 @@ fn cr_721_4_station_ability_is_always_active() {
         2,
         "the 2/2 charged it by its power"
     );
+}
+
+// ── CR 601.2b — modal activated abilities ──
+
+/// CR 601.2b — the mode of a modal activated ability is chosen as part of the
+/// activation. A submitted mode is authoritative, which is the only way to pick
+/// a mode whose body takes a target (Teardrop Kami's tap / untap).
+#[test]
+fn cr_601_2b_activated_ability_mode_is_submitted() {
+    let run = |mode: Option<usize>| {
+        let mut g = two_player_game();
+        let kami = g.add_card_to_battlefield(0, catalog::teardrop_kami());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.battlefield_find_mut(bear).unwrap().tapped = true;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: kami,
+            ability_index: 0,
+            target: Some(crabomination::game::types::Target::Permanent(bear)),
+            additional_targets: vec![],
+            x_value: None,
+            mode,
+        })
+        .expect("activate");
+        drain_stack(&mut g);
+        g.battlefield_find(bear).unwrap().tapped
+    };
+    assert!(run(Some(0)), "mode 0 taps — the already-tapped bear stays tapped");
+    assert!(!run(Some(1)), "mode 1 untaps it");
+}
+
+/// The server view surfaces a modal activated ability's mode texts so the
+/// client can offer one row per mode.
+#[test]
+fn cr_601_2b_ability_view_lists_modes() {
+    let mut g = two_player_game();
+    let kami = g.add_card_to_battlefield(0, catalog::teardrop_kami());
+    let cv = crabomination::server::view::project(&g, 0);
+    let pv = cv.battlefield.iter().find(|p| p.id == kami).expect("on battlefield");
+    assert_eq!(pv.abilities[0].modes.len(), 2, "tap / untap");
 }

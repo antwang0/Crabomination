@@ -19,7 +19,7 @@ fn activate(g: &mut GameState, id: crabomination::card::CardId, idx: usize, targ
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: idx, target, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: idx, target, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(g);
@@ -150,7 +150,7 @@ fn gilt_blade_prowler_gate() {
     assert!(
         g.perform_action(GameAction::ActivateAbility {
             card_id: prowler, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .is_err(),
         "locked before a discard"
@@ -390,7 +390,7 @@ fn raving_visionary_delirium_lock() {
     assert!(
         g.perform_action(GameAction::ActivateAbility {
             card_id: vis, ability_index: 1, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .is_err(),
         "no delirium yet"

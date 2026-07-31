@@ -25,13 +25,13 @@ fn selesnya_guildmage_makes_saproling_and_pumps_team() {
     flood(&mut g);
     // {3}{G}: create a Saproling.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("make saproling");
     drain_stack(&mut g);
     assert_eq!(count_tokens(&g, "Saproling"), 1, "one Saproling minted");
     // {3}{W}: +1/+1 to all your creatures until EOT.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("team pump");
     drain_stack(&mut g);
     let bp = g.computed_permanent(bear).unwrap();
@@ -49,13 +49,13 @@ fn dimir_guildmage_draws_and_discards_at_sorcery_speed() {
     flood(&mut g);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 0, target: Some(Target::Player(0)), additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 0, target: Some(Target::Player(0)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "targeted self drew a card");
     let opp_hand = g.players[1].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 1, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 1, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("discard");
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), opp_hand - 1, "opponent discarded");
@@ -68,12 +68,12 @@ fn boros_guildmage_grants_haste_and_first_strike() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("haste");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::Haste));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("first strike");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::FirstStrike));
@@ -87,14 +87,14 @@ fn gruul_guildmage_sac_land_burn_and_pump() {
     flood(&mut g);
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("burn");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 2, "2 damage to the player");
     assert!(g.battlefield_find(land).is_none(), "a land was sacrificed as the cost");
     // {3}{G}: +2/+2 to the guildmage itself.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 1, target: Some(Target::Permanent(gm)), additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 1, target: Some(Target::Permanent(gm)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     let p = g.computed_permanent(gm).unwrap();
@@ -108,13 +108,13 @@ fn orzhov_guildmage_gains_life_and_symmetric_drain() {
     flood(&mut g);
     let l0 = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 0, target: Some(Target::Player(0)), additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 0, target: Some(Target::Player(0)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("gain");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, l0 + 1, "gained 1 life");
     let (a, b) = (g.players[0].life, g.players[1].life);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("each player loses 1");
     drain_stack(&mut g);
     assert_eq!((g.players[0].life, g.players[1].life), (a - 1, b - 1), "each player lost 1");
@@ -128,13 +128,13 @@ fn rakdos_guildmage_discards_for_minus_and_makes_a_temp_goblin() {
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("-2/-2");
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "the 2/2 died to -2/-2");
     // {3}{R}: a 2/1 haste Goblin, exiled at the next end step.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("goblin");
     drain_stack(&mut g);
     assert_eq!(count_tokens(&g, "Goblin"), 1, "a Goblin token exists before the end step");
@@ -151,7 +151,7 @@ fn azorius_guildmage_taps_and_counters_an_ability() {
     let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gm, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: vec![], x_value: None,
+        card_id: gm, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap");
     drain_stack(&mut g);
     assert!(g.battlefield_find(target).unwrap().tapped, "target creature tapped");
@@ -205,7 +205,7 @@ fn golgari_rotwurm_sacs_a_creature_to_drain_one() {
     flood(&mut g);
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wurm, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+        card_id: wurm, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("drain");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 1, "target player lost 1");
@@ -335,7 +335,7 @@ fn golgari_guildmage_sacs_to_return_and_pumps_with_a_counter() {
     // {4}{B}, Sac a creature: return a creature card from your graveyard to hand.
     g.perform_action(GameAction::ActivateAbility {
         card_id: gm, ability_index: 0, target: Some(Target::Permanent(dead)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("return");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "the creature card returned to hand");
@@ -343,7 +343,7 @@ fn golgari_guildmage_sacs_to_return_and_pumps_with_a_counter() {
     // {4}{G}: +1/+1 counter on target creature.
     g.perform_action(GameAction::ActivateAbility {
         card_id: gm, ability_index: 1, target: Some(Target::Permanent(gm)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("counter");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(gm).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 1);
@@ -361,7 +361,7 @@ fn simic_guildmage_moves_a_counter_and_reattaches_an_aura() {
     // {1}{G}: move the +1/+1 counter from A onto B.
     g.perform_action(GameAction::ActivateAbility {
         card_id: gm, ability_index: 0, target: Some(Target::Permanent(a)),
-        additional_targets: vec![Target::Permanent(b)], x_value: None,
+        additional_targets: vec![Target::Permanent(b)], x_value: None, mode: None,
     }).expect("move counter");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(a).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 0);
@@ -371,7 +371,7 @@ fn simic_guildmage_moves_a_counter_and_reattaches_an_aura() {
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(a);
     g.perform_action(GameAction::ActivateAbility {
         card_id: gm, ability_index: 1, target: Some(Target::Permanent(aura)),
-        additional_targets: vec![Target::Permanent(b)], x_value: None,
+        additional_targets: vec![Target::Permanent(b)], x_value: None, mode: None,
     }).expect("reattach aura");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(b), "the Aura moved to B");
@@ -427,7 +427,7 @@ fn mortipede_forces_all_able_blockers() {
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mortipede, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: mortipede, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("lure");
     drain_stack(&mut g);
     // The opponent's untapped creature is now required to block Mortipede.

@@ -220,7 +220,7 @@ fn khalni_heart_expedition_quest_and_fetch() {
         g.battlefield_find(khe).unwrap().counter_count(crabomination::card::CounterType::Quest),
         3
     );
-    g.perform_action(GameAction::ActivateAbility { card_id: khe, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).unwrap();
+    g.perform_action(GameAction::ActivateAbility { card_id: khe, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap();
     drain_stack(&mut g);
     assert!(g.battlefield_find(khe).is_none(), "sacrificed");
     let forests = g.battlefield.iter()
@@ -254,7 +254,7 @@ fn goblin_engineer_entomb_and_reanimate() {
     g.battlefield_find_mut(eng).unwrap().summoning_sick = false;
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: eng, ability_index: 0, target: Some(Target::Permanent(clamp)), additional_targets: Vec::new(), x_value: None,
+        card_id: eng, ability_index: 0, target: Some(Target::Permanent(clamp)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).unwrap();
     drain_stack(&mut g);
     assert!(g.battlefield_find(clamp).is_some(), "clamp returned to battlefield");
@@ -283,7 +283,7 @@ fn ancient_ziggurat_creature_only_mana() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::ActivateAbility { card_id: zig, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).unwrap();
+    g.perform_action(GameAction::ActivateAbility { card_id: zig, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap();
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     assert!(
         g.perform_action(GameAction::CastSpell {
@@ -311,7 +311,7 @@ fn unclaimed_territory_chosen_type_mana() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::PlayLand(land)).unwrap();
     drain_stack(&mut g);
-    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).unwrap();
+    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap();
     // Bear isn't an Elf — the restricted pip won't fund it.
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
     assert!(
@@ -339,7 +339,7 @@ fn castle_garenbrig_six_green_for_creatures() {
     assert!(!g.battlefield_find(castle).unwrap().tapped, "untapped with a Forest");
     g.players[0].mana_pool.add_colorless(2);
     g.players[0].mana_pool.add(Color::Green, 2);
-    g.perform_action(GameAction::ActivateAbility { card_id: castle, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).unwrap();
+    g.perform_action(GameAction::ActivateAbility { card_id: castle, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).unwrap();
     // Six green restricted to creature spells: cast a 6-drop creature.
     let serp = g.add_card_to_hand(0, catalog::cryptic_serpent());
     // (graveyard empty — full {5}{U}{U}); use a green fatty instead.
@@ -561,7 +561,7 @@ fn inventors_fair_metalcraft_gate() {
     g.priority.player_with_priority = 0;
     assert!(
         g.perform_action(GameAction::ActivateAbility {
-            card_id: fair, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: fair, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).is_err(),
         "needs three artifacts"
     );
@@ -569,7 +569,7 @@ fn inventors_fair_metalcraft_gate() {
     let clamp = g.add_card_to_library(0, catalog::skullclamp());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(clamp))]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fair, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: fair, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("metalcraft satisfied");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == clamp), "artifact tutored to hand");
@@ -821,7 +821,7 @@ fn spellskite_redirects_spell_target() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: skite, ability_index: 0,
-        target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Spellskite");
     assert_eq!(g.players[0].life, 18, "paid 2 life for {{U/P}}");
     drain_stack(&mut g);
@@ -842,12 +842,12 @@ fn spellskite_redirects_ability_target() {
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
         card_id: tim, ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("ping the bear");
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: skite, ability_index: 0,
-        target: Some(Target::Permanent(tim)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(tim)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Spellskite at the ability");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "bear untouched");
@@ -1324,7 +1324,7 @@ fn alpine_moon_neutralizes_named_land() {
     g.priority.player_with_priority = 1;
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: post, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: post, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("granted any-color ability");
     assert_eq!(g.players[1].mana_pool.amount(Color::Green), 1, "made one mana of the chosen color");
 }
@@ -1409,7 +1409,7 @@ fn conspicuous_snoop_shares_top_goblin_ability() {
     // Snoop index 0 = the borrowed "sac a Goblin: add {R}" (it has no
     // printed activated abilities).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: snoop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: snoop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("borrowed Prospector ability");
     assert_eq!(g.players[0].mana_pool.total(), 1, "made one red via the borrowed ability");
     assert!(g.battlefield_find(fodder).is_none(), "a Goblin was sacrificed as the cost");
@@ -1418,7 +1418,7 @@ fn conspicuous_snoop_shares_top_goblin_ability() {
     let forest = crabomination::card::CardInstance::new(fid, catalog::forest(), 0);
     g.players[0].library.insert(0, forest);
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: snoop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: snoop, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "no Goblin on top → no ability");
 }
 
@@ -1431,12 +1431,12 @@ fn fanatic_of_rhonas_ferocious_gates_big_mana() {
     let snake = g.add_card_to_battlefield(0, catalog::fanatic_of_rhonas());
     g.clear_sickness(snake);
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: snake, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: snake, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "no power-4 creature → Ferocious off");
     g.add_card_to_battlefield(0, catalog::cryptic_serpent());
     g.battlefield_find_mut(snake).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: snake, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: snake, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Ferocious on with a 6-power creature");
     assert_eq!(g.players[0].mana_pool.total(), 4, "added four green");
 }
@@ -1453,12 +1453,12 @@ fn cao_cao_discards_two_precombat_only() {
     g.add_card_to_hand(1, catalog::forest());
     g.step = TurnStep::PostCombatMain;
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: cao, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: cao, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "after combat → can't activate");
     g.step = TurnStep::PreCombatMain;
     g.active_player_idx = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cao, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: cao, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("precombat on your turn");
     drain_stack(&mut g);
     assert_eq!(g.players[1].hand.len(), 1, "opponent discarded two");
@@ -1528,7 +1528,7 @@ fn trickbind_counters_activated_ability() {
     g.add_card_to_library(1, catalog::island());
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: stone, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: stone, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate draw ability");
     let ability_on_stack = matches!(g.stack.last(),
         Some(crabomination::game::types::StackItem::Trigger { source, .. }) if *source == stone);
@@ -1621,7 +1621,7 @@ fn heliod_vigilance_anthem_and_cleric_token() {
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: heliod, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: heliod, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("mint Cleric");
     drain_stack(&mut g);
     let cleric = g.battlefield.iter().find(|c| c.definition.name == "Cleric").expect("token");
@@ -1679,7 +1679,7 @@ fn phenax_grants_mill_by_toughness() {
     for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
     let printed = catalog::yoked_ox().activated_abilities.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ox, ability_index: printed, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: ox, ability_index: printed, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("granted mill ability");
     drain_stack(&mut g);
     assert_eq!(g.players[1].graveyard.len(), 4, "milled X = Yoked Ox's toughness");
@@ -1696,7 +1696,7 @@ fn pharika_exiles_and_mints_snake_for_owner() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pharika, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: Vec::new(), x_value: None,
+        card_id: pharika, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Pharika");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == dead), "creature card exiled");
@@ -1910,7 +1910,7 @@ fn channel_land_legendary_discount() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ota, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+        card_id: ota, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("discounted channel");
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bounced");
@@ -1970,7 +1970,7 @@ fn purphoros_bronze_blooded_sneak() {
         DecisionAnswer::Cards(vec![dragon]),
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pur, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: pur, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sneak");
     drain_stack(&mut g);
     assert!(g.battlefield_find(dragon).is_some(), "dragon snuck in");
@@ -1993,7 +1993,7 @@ fn nylea_keen_eyed_discount_and_dig() {
     g.players[0].mana_pool.add_colorless(2);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: nyl, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: nyl, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("dig");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "creature revealed → hand");
@@ -2011,7 +2011,7 @@ fn hall_of_storm_giants_animates() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hall, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: hall, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("animate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(hall).unwrap();
@@ -2030,7 +2030,7 @@ fn lair_of_the_hydra_x_animate() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lair, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: Some(4),
+        card_id: lair, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: Some(4), mode: None,
     }).expect("animate for X=4");
     drain_stack(&mut g);
     let cp = g.computed_permanent(lair).unwrap();
@@ -2078,7 +2078,7 @@ fn emry_mills_and_recasts_artifacts() {
     let bauble = g.add_card_to_graveyard(0, catalog::mishras_bauble());
     g.clear_sickness(emry);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: emry, ability_index: 0, target: Some(Target::Permanent(bauble)), additional_targets: Vec::new(), x_value: None,
+        card_id: emry, ability_index: 0, target: Some(Target::Permanent(bauble)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("grant may-cast");
     drain_stack(&mut g);
     g.perform_action(GameAction::CastFromZoneWithoutPaying {
@@ -2210,7 +2210,7 @@ fn woe_strider_goat_and_escape() {
         DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![] },
     ]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: strider, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: strider, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac to scry");
     drain_stack(&mut g);
     assert!(g.battlefield_find(goat_id).is_none(), "goat sacrificed");
@@ -2312,7 +2312,7 @@ fn destiny_spinner_uncounterable_and_animate() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: spinner, ability_index: 0, target: Some(Target::Permanent(forest)), additional_targets: Vec::new(), x_value: None,
+        card_id: spinner, ability_index: 0, target: Some(Target::Permanent(forest)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("animate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(forest).unwrap();

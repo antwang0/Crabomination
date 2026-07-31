@@ -21,7 +21,7 @@ macro_rules! act {
             ability_index: $idx,
             target: $tgt,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate ability");
         drain_stack(&mut $g);

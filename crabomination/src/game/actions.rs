@@ -10382,7 +10382,7 @@ impl GameState {
                 // the right answer.
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
-                let result = self.activate_ability(id, idx, None, Vec::new(), None);
+                let result = self.activate_ability(id, idx, None, Vec::new(), None, None);
                 self.decider = prev_decider;
                 self.players[player].wants_ui = prev_wants_ui;
                 if let Ok(mut evs) = result {
@@ -10402,7 +10402,7 @@ impl GameState {
                     .map(|(idx, _)| (c.id, idx))
             }).next();
             let Some((id, idx)) = source else { break };
-            if let Ok(mut evs) = self.activate_ability(id, idx, None, Vec::new(), None) {
+            if let Ok(mut evs) = self.activate_ability(id, idx, None, Vec::new(), None, None) {
                 events.append(&mut evs);
             } else {
                 break;
@@ -10869,7 +10869,7 @@ impl GameState {
             self.players[p].mana_pool.add_colorless(1);
         }
         self.pending_cast_spend_float = Some(true);
-        let r = self.activate_ability(card_id, ability_index, target, additional_targets, x_value);
+        let r = self.activate_ability(card_id, ability_index, target, additional_targets, x_value, None);
         if r.is_err() {
             self.pending_cast_spend_float = None;
             self.restore_payment_state(p, snapshot);
@@ -10877,6 +10877,7 @@ impl GameState {
         r
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn activate_ability(
         &mut self,
         card_id: CardId,
@@ -10884,6 +10885,7 @@ impl GameState {
         target: Option<Target>,
         additional_targets: Vec<Target>,
         x_value: Option<u32>,
+        chosen_mode: Option<usize>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
 
@@ -11379,7 +11381,7 @@ impl GameState {
         if let Some(tgt) = &target
             && let Some(filter) = ability
                 .effect
-                .target_filter_for_slot(0)
+                .target_filter_for_slot_in_mode(0, chosen_mode)
                 .map(|f| f.resolve_x(x_value.unwrap_or(0)))
             && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
         {
@@ -11410,8 +11412,12 @@ impl GameState {
         // are optional (CR 115.3), so only a genuinely required slot rejects.
         let next_slot = 1 + additional_targets.len() as u8;
         if target.is_some()
-            && ability.effect.target_filter_for_slot(next_slot).is_some()
-            && !ability.effect.target_slot_optional_x(next_slot, None, x_value.unwrap_or(0))
+            && ability.effect.target_filter_for_slot_in_mode(next_slot, chosen_mode).is_some()
+            && !ability.effect.target_slot_optional_x(
+                next_slot,
+                chosen_mode,
+                x_value.unwrap_or(0),
+            )
         {
             return Err(GameError::SelectionRequirementViolated);
         }
@@ -12229,7 +12235,7 @@ impl GameState {
                         ability_index,
                         target: target.clone(),
                         additional_targets: Vec::new(),
-                        x_value,
+                        x_value, mode: None,
                     }),
                 },
             });
@@ -12870,7 +12876,12 @@ impl GameState {
             }
             // CR 601.2b — a modal activated ability's mode is chosen as part
             // of the activation (Shifting Ceratops's reach/trample/haste).
-            let mode = self.pick_trigger_mode(&queued_effect, card_id, p);
+            // A submitted mode is authoritative — it's the only path by which
+            // a UI seat can pick a mode whose body takes a target.
+            let mode = match chosen_mode {
+                Some(m) => Some(clamp_activated_mode(&queued_effect, m)),
+                None => self.pick_trigger_mode(&queued_effect, card_id, p),
+            };
             self.stack.push(
                 TriggerPush::new(card_id, p, queued_effect)
                     .target(target)
@@ -12969,4 +12980,14 @@ pub(crate) struct CastFlags {
     /// artifacts/creatures, clamped to `n`, each tapping for {1}). Stamps
     /// `cast_via_waterbend` so optional-cost riders can branch.
     pub waterbend: Option<u32>,
+}
+
+
+/// CR 601.2b — clamp a submitted activated-ability mode into the body's real
+/// mode count. A body whose top level isn't modal ignores the pick.
+fn clamp_activated_mode(effect: &crate::effect::Effect, chosen: usize) -> usize {
+    match crate::game::GameState::governing_modal(effect) {
+        Some(modes) if !modes.is_empty() => chosen.min(modes.len() - 1),
+        _ => 0,
+    }
 }

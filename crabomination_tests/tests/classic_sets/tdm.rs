@@ -163,7 +163,7 @@ fn jade_cast_sentinel_bottoms_graveyard_card() {
         ability_index: 0,
         target: Some(Target::Permanent(dead)),
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("bottom a graveyard card");
     drain_stack(&mut g);
@@ -304,7 +304,7 @@ fn dragonstorm_globe_counters_dragons_and_makes_mana() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap for mana");
     assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
@@ -341,7 +341,7 @@ fn wingspan_stride_pumps_flying_and_self_bounces() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("bounce self");
     drain_stack(&mut g);
@@ -532,7 +532,7 @@ fn ringing_strike_mastery_grants_untap_ability() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate granted untap");
     drain_stack(&mut g);
@@ -556,7 +556,7 @@ fn krumar_initiate_endures_x_paying_life() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: Some(2),
+        x_value: Some(2), mode: None,
     })
     .expect("endure 2, pay 2 life");
     drain_stack(&mut g);
@@ -712,7 +712,7 @@ fn essence_anchor_gated_on_graveyard_departure() {
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .is_err(),
         "gated off without a graveyard departure"
@@ -724,7 +724,7 @@ fn essence_anchor_gated_on_graveyard_departure() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate after departure");
     drain_stack(&mut g);
@@ -840,7 +840,7 @@ fn kheru_goldkeeper_renew_grants_counters() {
         ability_index: 0,
         target: Some(Target::Permanent(target)),
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("Renew from graveyard");
     drain_stack(&mut g);
@@ -895,7 +895,7 @@ fn clarion_conqueror_locks_creature_abilities() {
             ability_index: 0,
             target: Some(Target::Permanent(dead)),
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .is_err(),
         "activated ability locked by Clarion Conqueror"
@@ -1083,7 +1083,7 @@ fn dragonbroods_relic_makes_reliquary_dragon() {
         ability_index: 1, // the sac ability
         target: None, // sac ability has no target; the token's ETB auto-targets
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("sacrifice for a Reliquary Dragon");
     drain_stack(&mut g);
@@ -1276,7 +1276,7 @@ fn abzan_monument_mints_xx_spirit() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("mint Spirit");
     drain_stack(&mut g);
@@ -1338,7 +1338,7 @@ fn dragonstorm_forecaster_tutors_by_name() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tutor by name");
     drain_stack(&mut g);
@@ -1564,7 +1564,7 @@ fn kishla_village_enters_tapped_and_taps_for_green() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap for green");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "added green mana");
@@ -1657,7 +1657,7 @@ fn herd_heirloom_grants_trample_and_draw_on_damage() {
         ability_index: 1,
         target: Some(Target::Permanent(beast)),
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("grant trample + draw trigger");
     drain_stack(&mut g);
@@ -1727,7 +1727,7 @@ fn great_arashin_city_exiles_for_spirit() {
         ability_index: 1,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("make a Spirit");
     drain_stack(&mut g);
@@ -1911,7 +1911,7 @@ fn maelstrom_taps_for_colorless_and_tutors_dragon() {
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("tap for C");
     assert_eq!(g.players[0].mana_pool.total(), 1, "added one colorless");
@@ -1923,7 +1923,7 @@ fn maelstrom_taps_for_colorless_and_tutors_dragon() {
     g.players[0].mana_pool.add_colorless(4);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(dragon))]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("tutor Dragon");
     drain_stack(&mut g);

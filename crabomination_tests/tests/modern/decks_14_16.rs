@@ -716,7 +716,7 @@ fn seal_of_fire_sacrifices_to_deal_two() {
     let seal = g.add_card_to_battlefield(0, catalog::seal_of_fire());
     let foe_life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: seal, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None,
+        card_id: seal, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac Seal of Fire");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == seal), "Seal is sacrificed");
@@ -1068,7 +1068,7 @@ fn geier_reach_sanitarium_taps_for_colorless() {
     let pool_before = g.players[0].mana_pool.total();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("First mana ability is {T}: Add {C}");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("First mana ability is {T}: Add {C}");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].mana_pool.total(), pool_before + 1,
@@ -1090,7 +1090,7 @@ fn geier_reach_sanitarium_wheel_ability_each_player_loots() {
     let h1 = g.players[1].hand.len();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).expect("Wheel ability is sorcery-speed");
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Wheel ability is sorcery-speed");
     drain_stack(&mut g);
 
     // Each player draws 1 then discards 1 → net 0 hand size for each.
@@ -1601,7 +1601,7 @@ fn fellwar_stone_taps_for_any_color() {
     g.add_card_to_battlefield(1, catalog::island());
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: stone, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: stone, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Fellwar Stone's mana ability should resolve");
 
     let pool = &g.players[0].mana_pool;
@@ -1623,7 +1623,7 @@ fn fellwar_stone_falls_back_to_colorless_when_no_opp_basic_lands() {
     g.battlefield_find_mut(stone).unwrap().summoning_sick = false;
     // Opp has no battlefield permanents at all.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: stone, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: stone, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Fellwar Stone activates with no opp lands");
     let pool = &g.players[0].mana_pool;
     assert_eq!(pool.total(), 1, "Pool has exactly 1 mana");
@@ -1646,7 +1646,7 @@ fn fellwar_stone_unions_colors_across_multiple_opp_lands() {
     g.add_card_to_battlefield(1, catalog::island());
     g.add_card_to_battlefield(1, catalog::forest());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: stone, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: stone, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Fellwar Stone activates");
     let pool = &g.players[0].mana_pool;
     assert_eq!(pool.total(), 1);
@@ -1670,7 +1670,7 @@ fn star_compass_taps_for_your_basic_land_color() {
     // You control a Mountain → Red is the only legal color.
     g.add_card_to_battlefield(0, catalog::mountain());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: compass, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: compass, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Star Compass mana ability resolves");
     let pool = &g.players[0].mana_pool;
     assert_eq!(pool.amount(Color::Red), 1, "produced red from your Mountain");
@@ -1686,7 +1686,7 @@ fn star_compass_falls_back_to_colorless() {
     // Opp's Island shouldn't count — only the controller's own lands do.
     g.add_card_to_battlefield(1, catalog::island());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: compass, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: compass, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Star Compass activates with no basic land you control");
     let pool = &g.players[0].mana_pool;
     assert_eq!(pool.total(), 1);
@@ -1711,7 +1711,7 @@ fn grim_lavamancer_pings_creature_with_gy_card_to_exile() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: lava, ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Lavamancer can activate with R + 2 gy fodder");
     drain_stack(&mut g);
     // Bear (2/2) takes 2 damage and dies.
@@ -1735,7 +1735,7 @@ fn grim_lavamancer_rejects_activation_with_only_one_gy_card() {
 
     let result = g.perform_action(GameAction::ActivateAbility {
         card_id: lava, ability_index: 0,
-        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None });
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(result.is_err(),
         "Only 1 card in gy — activation must reject the exile-2 cost");
     assert_eq!(g.players[1].life, life_before, "No damage was dealt");

@@ -26,7 +26,7 @@ fn cr_305_7_terraformer_relands_your_lands() {
     ]));
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tf, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: tf, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Terraformer choosing Island");
     drain_stack(&mut g);
     let cp = g.computed_permanent(mtn).unwrap();
@@ -57,7 +57,7 @@ fn cr_701_15_regeneration_shield_replaces_destruction() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ape, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ape, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("regenerate");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(ape).unwrap().regeneration_shields, 1);

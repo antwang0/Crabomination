@@ -22,7 +22,7 @@ fn sneak_attack_cheats_creature_in_with_haste_then_sacrifices() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![dragon])]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sneak, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: sneak, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Sneak Attack");
     drain_stack(&mut g);
     let c = g.computed_permanent(dragon).expect("dragon on battlefield");
@@ -46,7 +46,7 @@ fn elvish_piper_puts_creature_in_to_stay() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![dragon])]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: piper, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: piper, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Elvish Piper");
     drain_stack(&mut g);
     assert!(g.battlefield_find(dragon).is_some(), "creature stays on battlefield");
@@ -104,7 +104,7 @@ fn quicksilver_amulet_puts_creature_in() {
     g.players[0].mana_pool.add_colorless(4);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![dragon])]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: amulet, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: amulet, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Quicksilver Amulet");
     drain_stack(&mut g);
     assert!(g.battlefield_find(dragon).is_some(), "creature put onto battlefield");
@@ -203,7 +203,7 @@ fn cursecatcher_taxes_instant() {
     }).expect("cast bolt");
     g.perform_action(GameAction::ActivateAbility {
         card_id: catcher, ability_index: 0,
-        target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Cursecatcher");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt countered (unpaid)");
@@ -289,7 +289,7 @@ fn manaweft_sliver_grants_mana_ability() {
     g.clear_sickness(mw);
     // The granted "{T}: add any color" is the Sliver's only activated ability (index 0).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mw, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: mw, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Manaweft taps for mana via its granted ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "Manaweft Sliver produced one mana");
@@ -360,7 +360,7 @@ fn shepherd_of_rot_drains_per_zombie() {
     g.add_card_to_battlefield(0, catalog::cemetery_reaper()); // a second Zombie
     g.clear_sickness(shep);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: shep, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: shep, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Shepherd of Rot");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 18, "you lose 2 (two Zombies)");
@@ -427,7 +427,7 @@ fn pyrohemia_pings_everything() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pyro, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: pyro, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Pyrohemia");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 19, "you take 1");
@@ -447,7 +447,7 @@ fn lord_of_the_accursed_pumps_and_grants_menace() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lord, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: lord, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("grant menace");
     drain_stack(&mut g);
     assert!(g.computed_permanent(other).unwrap().keywords.contains(&Keyword::Menace));
@@ -503,7 +503,7 @@ fn voice_of_the_woods_makes_elemental() {
         elves.push(e);
     }
     g.perform_action(GameAction::ActivateAbility {
-        card_id: voice, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: voice, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap five Elves");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Elemental" && c.power() == 7),
@@ -524,7 +524,7 @@ fn captivating_vampire_steals_with_five_vampires() {
     }
     let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cap, ability_index: 0, target: Some(Target::Permanent(prey)), additional_targets: Vec::new(), x_value: None,
+        card_id: cap, ability_index: 0, target: Some(Target::Permanent(prey)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap five Vampires");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(prey).unwrap().controller, 0, "gained control of the bear");
@@ -576,7 +576,7 @@ fn immaculate_magistrate_counters_scale_with_elves() {
     g.clear_sickness(mag);
     g.perform_action(GameAction::ActivateAbility {
         card_id: mag, ability_index: 0,
-        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Immaculate Magistrate");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(target).unwrap().power, 4, "2/2 + two +1/+1 counters");
@@ -694,7 +694,7 @@ fn lord_of_the_undead_returns_zombie() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: lord, ability_index: 0,
-        target: Some(Target::Permanent(zombie)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(zombie)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Lord of the Undead");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == zombie), "Zombie returned to hand");
@@ -826,7 +826,7 @@ fn catapult_master_exiles_with_five_soldiers() {
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: master, ability_index: 0,
-        target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Catapult Master");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == victim), "target creature exiled");
@@ -1091,7 +1091,7 @@ fn necrotic_ooze_borrows_graveyard_creature_ability() {
     g.add_card_to_graveyard(0, catalog::llanowar_elves());
     // The borrowed ability surfaces at index = printed-ability count (0).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ooze, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: ooze, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Ooze taps for {G} via Llanowar Elves' ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "produced green mana");
@@ -1155,7 +1155,7 @@ fn talon_gates_from_hand_enters_and_phases_out_creature() {
     g.players[0].mana_pool.add_colorless(4);
     // Ability index 2 = {4}: put this from hand onto the battlefield.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gates, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: gates, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate from-hand put-into-play");
     drain_stack(&mut g);
     assert!(g.battlefield_find(gates).is_some(), "Talon Gates entered the battlefield");
@@ -1182,7 +1182,7 @@ fn talon_gates_taps_for_any_color() {
     let gates = g.add_card_to_battlefield(0, catalog::talon_gates_of_madara());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gates, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: Some(0),
+        card_id: gates, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: Some(0), mode: None,
     }).expect("tap for any color");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "spent one generic, produced one mana");
@@ -1284,7 +1284,7 @@ fn mana_crypt_taps_for_two_colorless() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::mana_crypt());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for {C}{C}");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "produced two colorless");
 }
@@ -1298,7 +1298,7 @@ fn null_rod_locks_artifact_abilities() {
     let icy = g.add_card_to_battlefield(0, catalog::icy_manipulator());
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: icy, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
+        card_id: icy, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None, mode: None,
     });
     assert!(err.is_err(), "Null Rod locks the artifact's nonmana ability");
 }
@@ -1365,7 +1365,7 @@ fn kessig_wolf_run_pumps_and_grants_trample() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2); // X=2
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: Some(2),
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: Some(2), mode: None,
     }).expect("activate {2}{R}, {T}");
     drain_stack(&mut g);
     let b = g.computed_permanent(bear).unwrap();
@@ -1420,7 +1420,7 @@ fn gingerbrute_sacrifices_for_life() {
     g.players[0].mana_pool.add_colorless(2);
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac for 3 life");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 3);
@@ -1437,7 +1437,7 @@ fn gingerbrute_evasion_only_haste_can_block() {
     let plain = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // no haste
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: gb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("grant evasion");
     drain_stack(&mut g);
     assert!(g.battlefield_find(gb).unwrap()

@@ -29,7 +29,7 @@ fn cr_702_97a_scavenge_only_as_sorcery() {
     assert!(
         g.perform_action(GameAction::ActivateAbility {
             card_id: dead, ability_index: 0, target: Some(Target::Permanent(boost)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).is_err(),
         "scavenge can't be activated at instant speed",
     );

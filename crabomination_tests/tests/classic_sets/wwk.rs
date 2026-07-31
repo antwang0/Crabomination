@@ -43,7 +43,7 @@ fn harabaz_druid_scales_with_allies() {
     g.clear_sickness(druid);
     g.add_card_to_battlefield(0, catalog::hada_freeblade());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: druid, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: druid, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("tap for mana");
     drain_stack(&mut g);
@@ -143,7 +143,7 @@ fn dread_statuary_animates_itself() {
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
         card_id: statuary, ability_index: 1, target: None, additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("animate");
     drain_stack(&mut g);
@@ -225,7 +225,7 @@ fn ruin_ghost_blinks_a_land() {
         ability_index: 0,
         target: Some(Target::Permanent(land)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("blink");
     drain_stack(&mut g);

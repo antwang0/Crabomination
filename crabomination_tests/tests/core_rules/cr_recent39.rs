@@ -42,7 +42,7 @@ fn cr_609_7b_shield_rechecks_source_color_and_survives_a_miss() {
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);

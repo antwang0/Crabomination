@@ -49,7 +49,7 @@ fn ghost_warden_pumps_a_creature() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: gw, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     let p = g.computed_permanent(bear).unwrap();
@@ -65,7 +65,7 @@ fn selesnya_evangel_taps_a_creature_for_a_saproling() {
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
         card_id: ev, ability_index: 0, target: None,
-        additional_targets: vec![Target::Permanent(helper)], x_value: None,
+        additional_targets: vec![Target::Permanent(helper)], x_value: None, mode: None,
     }).expect("make saproling");
     drain_stack(&mut g);
     assert_eq!(count_tokens(&g, "Saproling"), 1);
@@ -116,7 +116,7 @@ fn gatherer_of_graces_scales_with_auras_and_regenerates() {
     // Sacrifice the Aura to set up a regeneration shield.
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: g0, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: g0, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("regenerate");
     drain_stack(&mut g);
     assert!(g.battlefield_find(aura).is_none(), "the Aura was sacrificed");
@@ -160,7 +160,7 @@ fn gruul_nodorog_grants_itself_menace() {
     let n = g.add_card_to_battlefield(0, catalog::gruul_nodorog());
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: n, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: n, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("menace");
     drain_stack(&mut g);
     assert!(g.computed_permanent(n).unwrap().keywords.contains(&Keyword::Menace));
@@ -175,7 +175,7 @@ fn ostiary_thrull_taps_a_creature() {
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
         card_id: thrull, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap");
     drain_stack(&mut g);
     assert!(g.battlefield_find(target).unwrap().tapped);
@@ -190,7 +190,7 @@ fn rakdos_ickspitter_pings_and_drains_controller() {
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: ick, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("ping");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().damage, 1, "1 damage to the creature");
@@ -223,14 +223,14 @@ fn ghor_clan_bloodscale_pumps_once_per_turn() {
     assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::FirstStrike));
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: b, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: b, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     let p = g.computed_permanent(b).unwrap();
     assert_eq!((p.power, p.toughness), (4, 3), "+2/+2");
     // Once each turn — a second activation is rejected.
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: b, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: b, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).is_err(), "the ability is once-per-turn");
 }
 
@@ -244,7 +244,7 @@ fn sandsower_taps_three_to_tap_a_creature() {
     // Cost taps three creatures you control (the sower itself + two bears).
     g.perform_action(GameAction::ActivateAbility {
         card_id: sower, ability_index: 0, target: Some(Target::Permanent(target)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap");
     drain_stack(&mut g);
     assert!(g.battlefield_find(target).unwrap().tapped, "the target creature is tapped");
@@ -311,7 +311,7 @@ fn torch_drake_flies_and_firebreathes() {
     assert!(g.computed_permanent(drake).unwrap().keywords.contains(&Keyword::Flying));
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: drake, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: drake, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     let p = g.computed_permanent(drake).unwrap();

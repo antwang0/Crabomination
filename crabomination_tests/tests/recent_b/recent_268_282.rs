@@ -268,7 +268,7 @@ mod recent269 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .unwrap();
         drain_stack(&mut g);
@@ -313,7 +313,7 @@ mod recent269 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activated for the reduced {3}");
         drain_stack(&mut g);
@@ -333,7 +333,7 @@ mod recent269 {
             ability_index: 0,
             target: Some(Target::Permanent(ally)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .unwrap();
         drain_stack(&mut g);
@@ -360,7 +360,7 @@ mod recent270 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .unwrap();
         drain_stack(&mut g);
@@ -429,7 +429,7 @@ mod recent271 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate sac-menace");
         drain_stack(&mut g);
@@ -471,7 +471,7 @@ mod recent271 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .unwrap();
         drain_stack(&mut g);
@@ -538,7 +538,7 @@ mod recent271 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .unwrap();
         drain_stack(&mut g);

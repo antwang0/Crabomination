@@ -138,7 +138,7 @@ mod recent133 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate graveyard return");
         drain_stack(&mut g);
@@ -180,7 +180,7 @@ mod recent133 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("cash in Candy Trail");
         drain_stack(&mut g);
@@ -462,7 +462,7 @@ mod recent135 {
             ability_index: idx,
             target,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(g);
@@ -736,7 +736,7 @@ mod recent136 {
             ability_index: idx,
             target,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(g);
@@ -871,7 +871,7 @@ mod recent136 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         });
         assert!(err.is_err(), "second activation blocked by once-per-turn");
     }
@@ -1051,7 +1051,7 @@ mod recent138 {
             ability_index: idx,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(g);
@@ -1735,7 +1735,7 @@ mod recent141 {
             ability_index: 0,
             target: Some(Target::Permanent(food)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .unwrap();
         drain_stack(&mut g);
@@ -1785,7 +1785,7 @@ mod recent142 {
             ability_index: 0,
             target: Some(Target::Permanent(greta)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac a Food for a counter");
         drain_stack(&mut g);
@@ -1872,7 +1872,7 @@ mod recent142 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("tap for restricted mana");
         assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "two restricted mana floated");
@@ -2396,7 +2396,7 @@ mod recent146 {
             ability_index: 0,
             target: Some(Target::Permanent(prey)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Faunsbane fight");
         drain_stack(&mut g);

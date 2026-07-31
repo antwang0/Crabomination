@@ -389,7 +389,7 @@ fn diary_of_dreams_activation_costs_five_with_no_page_counters() {
     let res = g.perform_action(GameAction::ActivateAbility {
         card_id: diary,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None });
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(res.is_err(), "0-Page Diary activation needs {{5}}, only 4 available");
     let d = g.battlefield.iter().find(|c| c.id == diary).unwrap();
     assert!(!d.tapped, "Diary should not tap on a failed payment");
@@ -412,7 +412,7 @@ fn diary_of_dreams_page_counters_reduce_cost_by_one_each() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: diary,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Diary activates at {2} with 3 page counters");
     drain_stack(&mut g);
     assert_eq!(
@@ -441,7 +441,7 @@ fn diary_of_dreams_page_counters_clamp_at_printed_generic() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: diary,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Diary should activate at {{0}} with 8 page counters");
     drain_stack(&mut g);
     assert_eq!(

@@ -14,7 +14,7 @@ fn haazda_exonerator_sacs_to_destroy_an_aura() {
     let aura = g.add_card_to_battlefield(1, catalog::pacifism());
     g.perform_action(GameAction::ActivateAbility {
         card_id: ex, ability_index: 0, target: Some(Target::Permanent(aura)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac to destroy the Aura");
     drain_stack(&mut g);
     assert!(g.battlefield_find(aura).is_none(), "Aura destroyed");
@@ -70,7 +70,7 @@ fn silkwing_scout_sacs_to_fetch_a_basic() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
     let lands_before = g.battlefield.iter().filter(|c| c.definition.is_land()).count();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ss, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ss, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac to fetch");
     drain_stack(&mut g);
     assert!(g.battlefield_find(ss).is_none(), "sacrificed as a cost");
@@ -85,7 +85,7 @@ fn vesper_ghoul_taps_and_bleeds_for_any_color() {
     g.clear_sickness(vg);
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vg, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: vg, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("mana ability");
     assert_eq!(g.players[0].life, life - 1, "paid 1 life");
     assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
@@ -162,7 +162,7 @@ fn wakestone_gargoyle_lets_defenders_attack() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wg, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: wg, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("drop defender for the team");
     drain_stack(&mut g);
     g.step = TurnStep::DeclareAttackers;

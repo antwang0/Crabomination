@@ -1805,9 +1805,31 @@ fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
                 gate_label,
                 gate_blocked: false,
                 opponents_only: a.opponents_only,
+                modes: ability_mode_labels(&a.effect),
             }
         })
         .collect()
+}
+
+/// CR 601.2b — the short text of each mode of a modal activated ability, in
+/// mode order. Empty when the body isn't modal. Drives the client's mode
+/// picker and, through it, `GameAction::ActivateAbility.mode`.
+fn ability_mode_labels(effect: &crate::effect::Effect) -> Vec<String> {
+    fn modal(e: &crate::effect::Effect) -> Option<&Vec<crate::effect::Effect>> {
+        use crate::effect::Effect;
+        match e {
+            Effect::ChooseMode(modes) => Some(modes),
+            Effect::MayDo { body, .. }
+            | Effect::PayEnergy { then: body, .. }
+            | Effect::PayEnergyValue { then: body, .. }
+            | Effect::MayPay { body, .. }
+            | Effect::MayPayLife { body, .. } => modal(body),
+            _ => None,
+        }
+    }
+    modal(effect)
+        .map(|modes| modes.iter().map(|m| m.effect_short_text()).collect())
+        .unwrap_or_default()
 }
 
 /// Render an `ActivatedAbility.condition` predicate as a short

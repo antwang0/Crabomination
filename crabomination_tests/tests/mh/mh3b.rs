@@ -39,7 +39,7 @@ fn eldrazi_ravager_recurs_from_graveyard() {
     g.add_card_to_battlefield(0, catalog::eldrazi_ravager());
     g.add_card_to_battlefield(0, catalog::eldrazi_ravager());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ravager, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ravager, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate gy ability");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == ravager), "returned to hand");
@@ -112,7 +112,7 @@ fn dreamdrinker_adapt_grants_menace() {
     g.clear_sickness(id);
     fill_mana(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("adapt");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
@@ -128,7 +128,7 @@ fn evolution_witness_returns_on_counter() {
     g.clear_sickness(id);
     fill_mana(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("adapt");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "graveyard card returned to hand");
@@ -213,7 +213,7 @@ fn kami_of_jealous_thirst_drains() {
     fill_mana(&mut g);
     let (my, opp) = (g.players[0].life, g.players[1].life);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 2);
@@ -416,7 +416,7 @@ fn essence_reliquary_bounces_own() {
     g.clear_sickness(relic);
     g.step = crabomination::game::TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: relic, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+        card_id: relic, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "bounced");
@@ -541,7 +541,7 @@ fn sage_of_the_unknowable_colorless_mana() {
     g.clear_sickness(sage);
     let before = g.players[0].mana_pool.restricted_total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sage, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: sage, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.restricted_total(), before + 1, "produced one restricted mana");
     assert!(g.battlefield_find(sage).unwrap().tapped, "tapped for the ability");
@@ -633,7 +633,7 @@ fn scurry_of_gremlins_tokens_energy_and_pump() {
     g.players[0].energy = 4;
     let ench = g.battlefield.iter().find(|c| c.definition.name == "Scurry of Gremlins").unwrap().id;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ench, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ench, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate pump");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 0, "spent {{E}}{{E}}{{E}}{{E}}");
@@ -799,7 +799,7 @@ fn quest_for_the_necropolis_landfall_and_reanimate() {
     // Activate the reanimation (sac + {5}{B} reduced by 2 → {3}{B}).
     fill_mana(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: quest, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None,
+        card_id: quest, ability_index: 0, target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("reanimate");
     drain_stack(&mut g);
     assert!(g.battlefield_find(dead).is_some(), "creature reanimated to the battlefield");

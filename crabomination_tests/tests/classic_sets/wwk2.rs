@@ -535,7 +535,7 @@ fn agadeem_occultist_is_capped_by_allies() {
             ability_index: 0,
             target: Some(Target::Permanent(t)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
     };
     assert!(act(&mut g, big).is_err(), "mana value 2 > one Ally");
@@ -557,7 +557,7 @@ fn vastwood_animist_scales_with_allies() {
         ability_index: 0,
         target: Some(Target::Permanent(land)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("animate");
     drain_stack(&mut g);
@@ -579,7 +579,7 @@ fn razor_boomerang_comes_back() {
         ability_index: 0,
         target: Some(Target::Player(1)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("throw it");
     drain_stack(&mut g);

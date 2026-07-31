@@ -274,7 +274,7 @@ mod recent286 {
         g.players[0].mana_pool.add_colorless(5);
         // Ability 1 is `{5}{U}: Level 3` — illegal from level 1.
         let res = g.perform_action(GameAction::ActivateAbility {
-            card_id: class, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+            card_id: class, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
         });
         assert!(res.is_err(), "can't jump to level 3 from level 1");
         assert_eq!(g.battlefield_find(class).unwrap().class_level, 1, "still level 1");
@@ -409,7 +409,7 @@ mod recent286 {
         g.players[0].mana_pool.add(Color::Blue, 1);
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: class, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: class, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("level up to 2");
         drain_stack(&mut g);
@@ -419,7 +419,7 @@ mod recent286 {
         g.players[0].mana_pool.add(Color::Blue, 1);
         g.players[0].mana_pool.add_colorless(4);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: class, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+            card_id: class, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("level up to 3");
         drain_stack(&mut g);
@@ -981,7 +981,7 @@ mod recent290 {
         g.battlefield_find_mut(land).unwrap().tapped = true;
         g.perform_action(GameAction::ActivateAbility {
             card_id: bill, ability_index: 0, target: Some(Target::Permanent(land)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("untap");
         drain_stack(&mut g);
         assert!(!g.battlefield_find(land).unwrap().tapped, "the target land is untapped");
@@ -1006,7 +1006,7 @@ mod recent290 {
             .collect();
         g.perform_action(GameAction::ActivateAbility {
             card_id: bill, ability_index: 1, target: None,
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("threshold untap");
         drain_stack(&mut g);
         assert!(lands.iter().all(|&l| !g.battlefield_find(l).unwrap().tapped), "three lands untapped");
@@ -1117,7 +1117,7 @@ mod recent290 {
         let hand_before = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
             card_id: fin, ability_index: 0, target: Some(Target::Permanent(treasure)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("donate");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(treasure).unwrap().controller, 1, "opponent controls the Treasure");

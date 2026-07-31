@@ -77,7 +77,7 @@ fn soothsayer_adept_loots_draw_then_discard() {
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("loot ability activates for {1}{U}, {T}");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("loot ability activates for {1}{U}, {T}");
     drain_stack(&mut g);
 
     // Draw 1 then discard 1: hand net unchanged (relative to pre-activation
@@ -421,7 +421,7 @@ fn hall_monitor_makes_a_creature_unable_to_block() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hm, ability_index: 0, target: Some(Target::Permanent(blocker)), additional_targets: Vec::new(), x_value: None,
+        card_id: hm, ability_index: 0, target: Some(Target::Permanent(blocker)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{1}{R},{T}: can't block");
     drain_stack(&mut g);
     let b = g.compute_battlefield().into_iter().find(|c| c.id == blocker).unwrap();
@@ -2278,7 +2278,7 @@ fn star_pupils_papers_sac_activation_grants_counter() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: papers,
         ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Sac-for-counter activation should be legal");
     drain_stack(&mut g);
 
@@ -2828,7 +2828,7 @@ fn selfless_glyphweaver_exile_grants_indestructible_to_friendlies() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: gw,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Selfless Glyphweaver exile activation");
     drain_stack(&mut g);
 
@@ -2940,7 +2940,7 @@ fn plargg_dean_of_chaos_taps_and_discards_to_loot() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: plargg,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Plargg loot activation");
     drain_stack(&mut g);
 
@@ -2971,7 +2971,7 @@ fn plargg_dean_of_chaos_reveals_and_free_casts_cheap_card() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: plargg,
         ability_index: 1,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Plargg reveal-cast activation");
     drain_stack(&mut g);
 
@@ -3014,7 +3014,7 @@ fn pestilent_cauldron_pest_mint_and_lifegain_mill() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pc,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Cauldron Pest activation");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Pest"),
@@ -3029,7 +3029,7 @@ fn pestilent_cauldron_pest_mint_and_lifegain_mill() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pc,
         ability_index: 1,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Cauldron mill activation");
     drain_stack(&mut g);
     assert_eq!(g.players[1].graveyard.len(), gy1_before + 3,
@@ -3057,7 +3057,7 @@ fn pestilent_cauldron_exiles_four_from_single_graveyard_draws() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pc,
         ability_index: 2,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Cauldron exile activation");
     drain_stack(&mut g);
 
@@ -3483,7 +3483,7 @@ fn lorehold_excavation_exile_creature_mints_spirit_token_non_creature_does_not()
     let bear_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: excavation, ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Lorehold Excavation activates for {5} + exile a creature card");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bear_gy),
@@ -3501,7 +3501,7 @@ fn lorehold_excavation_exile_creature_mints_spirit_token_non_creature_does_not()
     let _doj = g.add_card_to_graveyard(0, catalog::day_of_judgment());
     let res = g.perform_action(GameAction::ActivateAbility {
         card_id: excavation, ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None });
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(res.is_err(),
         "activation rejected without a creature card to exile; got {res:?}");
     assert_eq!(g.battlefield.iter()
@@ -4248,7 +4248,7 @@ fn manifold_key_grants_unblockable_to_target_creature() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: mk,
         ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Manifold Key {1},{T}: unblockable activatable");
     drain_stack(&mut g);
 
@@ -4285,7 +4285,7 @@ fn manifold_key_untaps_target_artifact() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: mk,
         ability_index: 1,
-        target: Some(Target::Permanent(target_artifact)), additional_targets: Vec::new(), x_value: None })
+        target: Some(Target::Permanent(target_artifact)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Manifold Key {T}: untap artifact activatable");
     drain_stack(&mut g);
 
@@ -4501,7 +4501,7 @@ fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
     let res_three = g.perform_action(GameAction::ActivateAbility {
         card_id: pok,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None });
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(
         res_three.is_err(),
         "PoK activation with only 3 study counters fails"
@@ -4516,7 +4516,7 @@ fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pok,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("PoK activatable with 4+ study counters");
     // The remove-counter cost is paid at announcement: 5 − 4 = 1 left
     // while the ability is on the stack (the sac cost already binned it

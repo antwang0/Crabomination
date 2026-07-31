@@ -355,7 +355,7 @@ fn granting_auras_hand_over_their_ability() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("granted ability");
     drain_stack(&mut g);
@@ -391,7 +391,7 @@ fn graverobber_spider_scales_with_the_yard() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("pump");
     drain_stack(&mut g);
@@ -516,7 +516,7 @@ fn lightning_volley_grant_expires() {
         ability_index: 0,
         target: Some(Target::Player(1)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("ping");
     drain_stack(&mut g);
@@ -627,7 +627,7 @@ fn astral_cornucopia_scales_with_charge_counters() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap for mana");
     drain_stack(&mut g);
@@ -685,7 +685,7 @@ fn scourge_of_skola_vale_eats_for_toughness() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("sac for counters");
     drain_stack(&mut g);
@@ -897,7 +897,7 @@ fn everflame_eidolon_pumps_the_right_body() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("pump self");
     drain_stack(&mut g);
@@ -1052,7 +1052,7 @@ fn champion_of_stray_souls_reanimates_x() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: Some(1),
+        x_value: Some(1), mode: None,
     })
     .expect("sac one, return one");
     drain_stack(&mut g);
@@ -1081,7 +1081,7 @@ fn vortex_elemental_shuffles_the_combat_away() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("shuffle away");
     drain_stack(&mut g);
@@ -1205,7 +1205,7 @@ fn mindreaver_counters_only_named_spells() {
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("counter it");
     drain_stack(&mut g);

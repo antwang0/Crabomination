@@ -48,13 +48,13 @@ mod recent71 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("first activation");
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(id).unwrap().power, 1, "0/1 → 1/1");
         // Second activation the same turn is illegal (once per turn).
         assert!(g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).is_err(), "can't activate twice in one turn");
     }
 
@@ -75,7 +75,7 @@ mod recent71 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: id, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, foe - 1, "1 damage to opponent");
@@ -135,7 +135,7 @@ mod recent72 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate regen");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(id).unwrap().regeneration_shields, 1, "shield stamped");
@@ -156,7 +156,7 @@ mod recent72 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: spirit, ability_index: 0, target: Some(Target::Permanent(flyer)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         assert!(!g.computed_permanent(flyer).unwrap().keywords.contains(&Keyword::Flying),
@@ -212,7 +212,7 @@ mod recent73 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: arrows, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("shoot");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(arrows).unwrap().counter_count(CounterType::Charge), 2, "spent one");
@@ -289,7 +289,7 @@ mod recent74 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: pet, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: pet, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("sac for mana");
         assert!(g.battlefield_find(pet).is_none(), "Blood Pet sacrificed");
         assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "one black added");
@@ -318,7 +318,7 @@ mod recent74 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: vamp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: vamp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("discard-pump");
         drain_stack(&mut g);
         let p = g.computed_permanent(vamp).unwrap();
@@ -337,7 +337,7 @@ mod recent74 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: mage, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("ping");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, foe - 1, "1 damage dealt");
@@ -493,7 +493,7 @@ mod recent76 {
         assert_eq!(granted.len(), 1, "host gained the firebreathing ability");
         g.players[0].mana_pool.add(Color::Red, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: bear, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: bear, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate granted {R}: +1/+0");
         drain_stack(&mut g);
         let p = g.computed_permanent(bear).unwrap();
@@ -559,7 +559,7 @@ mod recent76 {
         g.clear_sickness(dw);
         g.perform_action(GameAction::ActivateAbility {
             card_id: dw, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("grant unblockable");
         drain_stack(&mut g);
         assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
@@ -571,7 +571,7 @@ mod recent76 {
         let shade = g.add_card_to_battlefield(0, catalog::frozen_shade());
         g.players[0].mana_pool.add(Color::Black, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: shade, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: shade, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("pump");
         drain_stack(&mut g);
         let p = g.computed_permanent(shade).unwrap();
@@ -585,7 +585,7 @@ mod recent76 {
         assert!(catalog::wall_of_brambles().keywords.contains(&Keyword::Defender));
         g.players[0].mana_pool.add(Color::Green, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: wall, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: wall, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("regenerate");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(wall).unwrap().regeneration_shields, 1, "regen shield stamped");
@@ -627,7 +627,7 @@ mod recent76 {
         drain_stack(&mut g);
         g.perform_action(GameAction::ActivateAbility {
             card_id: archers, ability_index: 0, target: Some(Target::Permanent(flyer)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("shoot the attacking flyer");
         drain_stack(&mut g);
         assert!(g.battlefield_find(flyer).is_none(), "took 4, died");
@@ -639,7 +639,7 @@ mod recent76 {
         let elder = g.add_card_to_battlefield(0, catalog::fyndhorn_elder());
         g.clear_sickness(elder);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: elder, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: elder, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("mana");
         assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "added two green");
     }
@@ -652,7 +652,7 @@ mod recent76 {
         g.clear_sickness(wolf);
         g.perform_action(GameAction::ActivateAbility {
             card_id: wolf, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("pump the bear");
         drain_stack(&mut g);
         let p = g.computed_permanent(bear).unwrap();
@@ -689,7 +689,7 @@ mod recent76 {
         g.players[0].mana_pool.add_colorless(4);
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: tome, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: tome, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("draw");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
@@ -703,7 +703,7 @@ mod recent76 {
         let foe = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: ring, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("ping");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, foe - 4, "4 damage to the opponent");
@@ -763,7 +763,7 @@ mod recent77 {
         let s = g.add_card_to_battlefield(0, catalog::storm_shaman());
         g.players[0].mana_pool.add(Color::Red, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("{R}: +1/+0");
         drain_stack(&mut g);
         let p = g.computed_permanent(s).unwrap();
@@ -776,13 +776,13 @@ mod recent77 {
         let a = g.add_card_to_battlefield(0, catalog::wild_aesthir());
         g.players[0].mana_pool.add(Color::White, 4);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: a, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: a, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("first activation");
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(a).unwrap().power, 3, "1/1 → 3/1");
         // Second activation the same turn is illegal (activate only once each turn).
         assert!(g.perform_action(GameAction::ActivateAbility {
-            card_id: a, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: a, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).is_err(), "once each turn");
     }
 
@@ -817,7 +817,7 @@ mod recent77 {
         let me = g.players[0].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: art, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("ping");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, foe - 2, "2 to target");
@@ -832,7 +832,7 @@ mod recent77 {
         let wall = g.add_card_to_battlefield(1, catalog::wall_of_brambles()); // Plant Wall
         g.perform_action(GameAction::ActivateAbility {
             card_id: team, ability_index: 0, target: Some(Target::Permanent(wall)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("destroy wall");
         drain_stack(&mut g);
         assert!(g.battlefield_find(wall).is_none(), "Wall destroyed");
@@ -847,7 +847,7 @@ mod recent77 {
         let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
         g.perform_action(GameAction::ActivateAbility {
             card_id: bur, ability_index: 0, target: Some(Target::Permanent(small)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("tap the 2/2");
         drain_stack(&mut g);
         assert!(g.battlefield_find(small).unwrap().tapped, "power-2 creature tapped");
@@ -871,7 +871,7 @@ mod recent77 {
         // Crafter is already 2/3 from its own static; +1/+1 makes it 3/4.
         g.perform_action(GameAction::ActivateAbility {
             card_id: anc, ability_index: 0, target: Some(Target::Permanent(target)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("pump another Minotaur");
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(target).unwrap().toughness, 4, "+1/+1");
@@ -957,7 +957,7 @@ mod recent77 {
         assert_eq!(granted.len(), 1, "host gained a regenerate ability");
         g.players[0].mana_pool.add(Color::Green, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: bear, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: bear, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("regen shield");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(bear).unwrap().regeneration_shields, 1, "regen shield stamped");
@@ -977,7 +977,7 @@ mod recent77 {
         assert_eq!(g.computed_permanent(bear).unwrap().toughness, 4, "+0/+2");
         // Sacrifice the Aura to set up a regen shield on the enchanted creature.
         g.perform_action(GameAction::ActivateAbility {
-            card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("sac Carapace to regenerate");
         drain_stack(&mut g);
         assert!(g.battlefield_find(aura).is_none(), "Carapace sacrificed");
@@ -1064,7 +1064,7 @@ mod recent78 {
         let crab = g.add_card_to_battlefield(0, catalog::giant_crab());
         g.players[0].mana_pool.add(Color::Blue, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: crab, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: crab, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("{U}: shroud");
         drain_stack(&mut g);
         assert!(g.computed_permanent(crab).unwrap().keywords.contains(&Keyword::Shroud));
@@ -1078,7 +1078,7 @@ mod recent78 {
         g.players[0].mana_pool.add(Color::Blue, 2);
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: wall, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: wall, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("+4/-4 & attack despite defender");
         drain_stack(&mut g);
         let p = g.computed_permanent(wall).unwrap();
@@ -1106,14 +1106,14 @@ mod recent78 {
         // Tap the bear, then the {0} untap ability should free it.
         if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) { c.tapped = true; }
         g.perform_action(GameAction::ActivateAbility {
-            card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("{0}: untap");
         drain_stack(&mut g);
         assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped by Instill Energy");
         // Second activation the same turn is illegal.
         if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) { c.tapped = true; }
         assert!(g.perform_action(GameAction::ActivateAbility {
-            card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).is_err(), "once each turn");
     }
 
@@ -1138,7 +1138,7 @@ mod recent78 {
         g.players[0].mana_pool.add(Color::Black, 1);
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: f, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: f, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("{B}, pay 1 life: bounce");
         drain_stack(&mut g);
         assert!(g.battlefield_find(f).is_none(), "returned to hand");
@@ -1331,7 +1331,7 @@ mod recent78 {
         }).expect("enchant");
         drain_stack(&mut g);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: aura, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("sac to regenerate");
         drain_stack(&mut g);
         assert!(g.battlefield_find(aura).is_none(), "Carapace sacrificed");
@@ -1355,7 +1355,7 @@ mod recent79 {
         g.players[0].mana_pool.add_colorless(2);
         for _ in 0..2 {
             g.perform_action(GameAction::ActivateAbility {
-                card_id: ants, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+                card_id: ants, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
             }).expect("{1}: +1/+1");
             drain_stack(&mut g);
         }
@@ -1373,7 +1373,7 @@ mod recent79 {
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
             card_id: hunter, ability_index: 0, target: Some(Target::Permanent(foe)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("untap lock");
         drain_stack(&mut g);
         assert!(g.battlefield_find(foe).unwrap().skip_next_untap, "target flagged to skip its next untap");
@@ -1387,7 +1387,7 @@ mod recent79 {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
         g.perform_action(GameAction::ActivateAbility {
             card_id: nomad, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("grant unblockable");
         drain_stack(&mut g);
         assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
@@ -1413,7 +1413,7 @@ mod recent79 {
         g.players[0].mana_pool.add(Color::Black, 1);
         g.perform_action(GameAction::ActivateAbility {
             card_id: robbers, ability_index: 0, target: Some(Target::Permanent(art)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("exile artifact from graveyard");
         drain_stack(&mut g);
         assert!(g.exile.iter().any(|c| c.id == art), "artifact exiled from the graveyard");
@@ -1469,7 +1469,7 @@ mod recent80 {
             ability_index: 0,
             target: Some(Target::Permanent(victim)),
             additional_targets: Vec::new(),
-            x_value: Some(2),
+            x_value: Some(2), mode: None,
         })
         .expect("activate -X/-X for X=2");
         drain_stack(&mut g);
@@ -1556,7 +1556,7 @@ mod recent80 {
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("regenerate");
         drain_stack(&mut g);

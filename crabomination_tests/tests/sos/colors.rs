@@ -310,7 +310,7 @@ fn burrog_banemaker_pump_ability_works() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: banemaker,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Banemaker pump activatable for {1}{B}");
     drain_stack(&mut g);
 
@@ -603,7 +603,7 @@ fn noxious_newt_taps_for_green() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: newt,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Noxious Newt {T} mana ability activatable");
     drain_stack(&mut g);
 
@@ -631,7 +631,7 @@ fn mindful_biomancer_etb_gains_one_life_and_pump_is_once_per_turn() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bio, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: bio, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Pump activatable for {2}{G}");
     drain_stack(&mut g);
 
@@ -643,7 +643,7 @@ fn mindful_biomancer_etb_gains_one_life_and_pump_is_once_per_turn() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
     let again = g.perform_action(GameAction::ActivateAbility {
-        card_id: bio, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None });
+        card_id: bio, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(again.is_err(),
         "Mindful Biomancer pump should be activatable only once each turn");
 }
@@ -767,7 +767,7 @@ fn charging_strifeknight_loots_with_tap() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: knight,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None })
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Strifeknight tap-loot ability activatable");
     drain_stack(&mut g);
 

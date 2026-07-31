@@ -62,7 +62,7 @@ fn maw_of_the_obzedat_pumps_team() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: maw, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: maw, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Maw");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none() || g.battlefield_find(bear).is_none(), "a creature was sacrificed");
@@ -162,7 +162,7 @@ fn zhur_taa_druid_pings_on_tap() {
     g.priority.player_with_priority = 0;
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: druid, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: druid, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 1, "opponent pinged for 1");
@@ -317,7 +317,7 @@ fn cluestone_mana_and_sac_draw() {
     g.priority.player_with_priority = 0;
     // Mana ability adds one blue-or-red.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: stone, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: stone, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
@@ -328,7 +328,7 @@ fn cluestone_mana_and_sac_draw() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: stone2, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: stone2, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac for card");
     drain_stack(&mut g);
     assert!(g.battlefield_find(stone2).is_none(), "sacrificed");
@@ -523,7 +523,7 @@ fn vorel_doubles_all_counters() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: vorel, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Vorel");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 6, "3 → 6 counters");
@@ -538,7 +538,7 @@ fn zhur_taa_ancient_extra_mana() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: forest, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: forest, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap Forest");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "Forest yields two green");
@@ -584,7 +584,7 @@ fn rot_farm_skeleton_recurs_from_graveyard() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skel, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: skel, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate recursion");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Rot Farm Skeleton" && c.controller == 0), "returned to battlefield");
@@ -686,7 +686,7 @@ fn mazes_end_fetches_gate() {
     g.players[0].mana_pool.add_colorless(3);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(gate))]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: end, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: end, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Maze's End");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Dimir Guildgate"), "fetched a Gate");
@@ -706,7 +706,7 @@ fn aetherling_pump_ability() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ae, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+        card_id: ae, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate +1/-1");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(ae).map(|c| (c.power, c.toughness)), Some((5, 4)), "+1/-1");
@@ -750,7 +750,7 @@ fn krasis_incubation_lock_and_bounce() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: aura, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: aura, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Krasis release");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "two counters");
@@ -1146,7 +1146,7 @@ fn varolz_grants_scavenge_to_graveyard_creatures() {
     g.priority.player_with_priority = 0;
     assert!(
         g.perform_action(GameAction::ActivateAbility {
-            card_id: orphan, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: orphan, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).is_err(),
         "no scavenge without Varolz",
     );
@@ -1162,7 +1162,7 @@ fn varolz_grants_scavenge_to_graveyard_creatures() {
     // Granted scavenge sits at index 0 (Grizzly Bears prints no ability).
     g.perform_action(GameAction::ActivateAbility {
         card_id: dead, ability_index: 0, target: Some(Target::Permanent(boost)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate granted scavenge");
     drain_stack(&mut g);
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == dead), "scavenged card exiled");
@@ -1278,7 +1278,7 @@ fn goblin_test_pilot_hits_something_at_random() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap for 2");
     drain_stack(&mut g);
@@ -1381,7 +1381,7 @@ fn legions_initiative_anthems_and_blinks() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("blink the team");
     drain_stack(&mut g);

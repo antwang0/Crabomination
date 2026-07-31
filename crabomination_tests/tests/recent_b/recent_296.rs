@@ -167,7 +167,7 @@ fn dowsing_shaman_returns_enchantment_from_graveyard() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: shaman, ability_index: 0, target: Some(Target::Permanent(ench)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("return enchantment");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == ench), "enchantment back in hand");

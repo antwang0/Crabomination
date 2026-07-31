@@ -90,7 +90,7 @@ fn cr_702_96_scavenge_is_sorcery_speed() {
     assert!(
         g.perform_action(crabomination::game::GameAction::ActivateAbility {
             card_id: mon, ability_index: 0, target: Some(Target::Permanent(target)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).is_err(),
         "scavenge can't be activated at instant speed",
     );

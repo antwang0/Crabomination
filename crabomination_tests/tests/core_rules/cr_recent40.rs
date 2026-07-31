@@ -65,7 +65,7 @@ fn cr_612_2_land_type_rewrite_moves_the_mana_ability_not_the_name() {
         ability_index: mana[0].0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);

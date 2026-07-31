@@ -123,7 +123,7 @@ fn cr_701_59_collect_evidence_activation_cost() {
             ability_index: 1,
             target: Some(Target::Permanent(foe)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .is_err(),
         "rejected with no evidence to collect",
@@ -139,7 +139,7 @@ fn cr_701_59_collect_evidence_activation_cost() {
         ability_index: 1,
         target: Some(Target::Permanent(foe)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("collect-evidence tap resolves");
     crabomination::game::drain_stack(&mut g);
@@ -199,7 +199,7 @@ fn cr_701_55_punisher_opponent_dodges_by_sacrificing() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate the punisher");
     crabomination::game::drain_stack(&mut g);

@@ -86,7 +86,7 @@ fn chatterfang_sac_x_squirrels_pumps() {
         ability_index: 0,
         target: Some(Target::Permanent(victim)),
         additional_targets: vec![],
-        x_value: Some(2),
+        x_value: Some(2), mode: None,
     })
     .expect("sac two Squirrels");
     drain_stack(&mut g);
@@ -201,7 +201,7 @@ fn drey_keeper_tokens_and_anthem() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: keeper, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: keeper, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("pump");
     drain_stack(&mut g);
@@ -232,7 +232,7 @@ fn timeless_dragon_eternalize() {
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dead, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: dead, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("eternalize");
     drain_stack(&mut g);
@@ -313,7 +313,7 @@ fn brainstone_brainstorms() {
     g.priority.player_with_priority = 0;
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: stone, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: stone, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -516,7 +516,7 @@ fn vermin_gorger_drains() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gorger, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: gorger, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("drain");
     drain_stack(&mut g);
@@ -537,7 +537,7 @@ fn legion_vanguard_explores() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vanguard, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: vanguard, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("explore");
     drain_stack(&mut g);
@@ -556,7 +556,7 @@ fn tormods_cryptkeeper_exiles_graveyard() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: keeper, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("exile graveyard");
     drain_stack(&mut g);
@@ -594,7 +594,7 @@ fn myr_scrapling_sacrifices_for_counter() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: myr, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sac");
     drain_stack(&mut g);
@@ -682,7 +682,7 @@ fn hell_mongrel_discard_pump() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dog, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: dog, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("discard to pump");
     drain_stack(&mut g);
@@ -739,7 +739,7 @@ fn fairgrounds_patrol_graveyard_thopter() {
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: patrol, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: patrol, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate from graveyard");
     drain_stack(&mut g);
@@ -757,7 +757,7 @@ fn knighted_myr_adapt_double_strike() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: myr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: myr, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("adapt");
     drain_stack(&mut g);

@@ -148,7 +148,7 @@ fn circle_of_elders_only_taps_when_formidable() {
     g.step = TurnStep::PreCombatMain;
     let act = GameAction::ActivateAbility {
         card_id: circle, ability_index: 0, target: None,
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     };
     assert!(g.perform_action(act.clone()).is_err(), "not formidable → can't activate");
     // Push total power to 8+ (2/4 circle + 4/4 + 4/4).

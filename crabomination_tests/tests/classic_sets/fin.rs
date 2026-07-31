@@ -185,7 +185,7 @@ fn phoenix_down_reanimates() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: down, ability_index: 0,
-        target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None,
+        target: Some(Target::Permanent(dead)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Phoenix Down");
     drain_stack(&mut g);
     let r = g.battlefield_find(dead).expect("creature reanimated");
@@ -776,7 +776,7 @@ fn goobbue_gardener_taps_for_green() {
     g.clear_sickness(dork);
     g.perform_action(GameAction::ActivateAbility {
         card_id: dork, ability_index: 0, target: None,
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Green), 1, "added one green");
 }
@@ -793,7 +793,7 @@ fn blazing_bomb_blow_up() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: bomb, ability_index: 0, target: Some(Target::Permanent(foe)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Blow Up");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bomb).is_none(), "Blazing Bomb sacrificed itself");
@@ -870,7 +870,7 @@ fn demon_wall_counter_unlocks_attack() {
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
         card_id: wall, ability_index: 0, target: None,
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("add counters");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(wall).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
@@ -1417,7 +1417,7 @@ fn qiqirn_merchant_loots() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate loot");
     drain_stack(&mut g);
@@ -1988,7 +1988,7 @@ fn gran_pulse_ochu_pumps_from_graveyard() {
     g.players[0].mana_pool.add_colorless(8);
     g.perform_action(GameAction::ActivateAbility {
         card_id: ochu, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Ochu pump");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(ochu).unwrap().power(), 1 + 3, "+3/+3 from 3 permanent cards");
@@ -2144,7 +2144,7 @@ fn ring_of_the_lucii_taps_a_permanent() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: ring, ability_index: 1, target: Some(Target::Permanent(foe)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Ring tap ability");
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).unwrap().tapped, "target tapped");
@@ -2207,7 +2207,7 @@ fn crossroads_village_taps_for_chosen_color() {
     g.battlefield_find_mut(land).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
         card_id: land, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for chosen color");
     assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Blue), 1, "added blue (chosen)");
 }
@@ -2221,7 +2221,7 @@ fn capital_city_cycles_and_taps() {
     let land = g.add_card_to_battlefield(0, catalog::capital_city());
     g.perform_action(GameAction::ActivateAbility {
         card_id: land, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for colorless");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added colorless");
 }
@@ -2235,7 +2235,7 @@ fn lunatic_pandora_sacs_to_destroy() {
     g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
         card_id: pandora, ability_index: 1, target: Some(Target::Permanent(foe)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate sac-destroy");
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).is_none(), "target destroyed");
@@ -2252,7 +2252,7 @@ fn pupu_ufo_base_power_from_towns() {
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: ufo, ability_index: 1, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate base-power set");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(ufo).unwrap().power, 2, "base power = 2 Towns");
@@ -2301,7 +2301,7 @@ fn world_map_fetches_basic_to_hand() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
     g.perform_action(GameAction::ActivateAbility {
         card_id: map, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate basic fetch");
     drain_stack(&mut g);
     assert!(g.battlefield_find(map).is_none(), "World Map sacrificed");
@@ -2702,7 +2702,7 @@ fn zack_fair_counter_and_indestructible() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: zack, ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+        target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("sacrifice Zack for indestructible");
     drain_stack(&mut g);
     assert!(g.battlefield_find(zack).is_none(), "Zack sacrificed");
@@ -3017,18 +3017,18 @@ fn blitzball_mana_and_conditional_draw() {
     g.priority.player_with_priority = 0;
     // Mana ability works.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ball, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ball, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.total(), 1, "one mana of any color");
     // GOOOOAAAALLL is gated on having dealt combat damage this turn.
     g.battlefield_find_mut(ball).unwrap().tapped = false;
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: ball, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: ball, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).is_err(), "can't draw without a combat hit this turn");
     g.players[0].dealt_combat_damage_to_player_this_turn = true;
     let hand0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ball, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: ball, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("GOOOOAAAALLL");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 2, "drew two");
@@ -3230,7 +3230,7 @@ fn the_gold_saucer_coinflip_treasure_and_sac_draw() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: saucer, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: saucer, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("flip for Treasure");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Treasure"),
@@ -3242,7 +3242,7 @@ fn the_gold_saucer_coinflip_treasure_and_sac_draw() {
     g.players[0].mana_pool.add_colorless(3);
     let hand0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: saucer, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+        card_id: saucer, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac two artifacts to draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
@@ -3257,7 +3257,7 @@ fn ether_adds_mana_and_copies_next_spell() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: ether, ability_index: 0,
-        target: None, additional_targets: vec![], x_value: None,
+        target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Ether");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.definition.name == "Ether"), "Ether exiled itself");
@@ -3556,7 +3556,7 @@ fn relentless_x_atm092_evasion_and_recursion() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("recur from graveyard");
     drain_stack(&mut g);
     let onbf = g.battlefield.iter().find(|c| c.definition.name == "Relentless X-ATM092")
@@ -4013,7 +4013,7 @@ fn phantom_train_animates_on_sacrifice() {
     assert!(!g.computed_permanent(train).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
         "starts as a noncreature Vehicle");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: train, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: train, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
@@ -4138,7 +4138,7 @@ fn the_water_crystal_mills_scaled_by_hand() {
     g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: crystal, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: crystal, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     // 3 (hand) doubled by the crystal's own replacement = 6 milled.
@@ -4170,7 +4170,7 @@ fn the_wandering_minstrel_town_scaling() {
     }
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: minstrel, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: minstrel, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate pump");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(ally).unwrap().power, 2 + 4, "+X/+X where X = 4 Towns");
@@ -4574,7 +4574,7 @@ fn kefka_eight_mana_edicts_and_transforms() {
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 8);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kefka, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: kefka, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{8}: edict + transform");
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "opponent sacrificed their creature");
@@ -4631,7 +4631,7 @@ fn starting_town_taps_for_any_color_for_life() {
     let life0 = g.players[0].life;
     // Second ability: {T}, pay 1 life → one mana of any color.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("pay 1 life for any color");
     assert_eq!(g.players[0].life, life0 - 1, "paid 1 life");
     assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
@@ -4671,7 +4671,7 @@ fn elixir_reshuffles_nonlands_and_gains_life() {
     let lib0 = g.players[0].library.len();
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: elixir, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: elixir, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{5},{T},exile: reshuffle nonlands");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life0 + 2, "gained 2 for the 2 nonlands");
@@ -4793,7 +4793,7 @@ fn stiltzkin_donates_and_draws() {
     let hand0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: stiltzkin, ability_index: 0,
-        target: Some(Target::Permanent(gift)), additional_targets: vec![], x_value: None,
+        target: Some(Target::Permanent(gift)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Stiltzkin");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(gift).unwrap().controller, 1, "opponent now controls the gift");
@@ -4925,7 +4925,7 @@ fn eden_mills_then_sacrifices_to_return_permanent() {
     g.priority.player_with_priority = 0;
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // yes, sacrifice
     g.perform_action(GameAction::ActivateAbility {
-        card_id: eden, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: eden, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Eden");
     drain_stack(&mut g);
     assert!(g.battlefield_find(eden).is_none(), "Eden sacrificed");
@@ -5146,7 +5146,7 @@ fn darkness_crystal_exiles_then_recurs() {
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
         card_id: crystal, ability_index: 0, target: Some(Target::Permanent(victim)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate the crystal");
     drain_stack(&mut g);
     let back = g.battlefield_find(victim).expect("creature returned");
@@ -5227,13 +5227,13 @@ fn gogo_copies_an_ability_x_times() {
     g.priority.player_with_priority = 0;
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: scamp, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: scamp, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate the ping");
     // Copy it twice with Gogo (X=2 → pay {2}{2}).
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
         card_id: gogo, ability_index: 0, target: Some(Target::Permanent(scamp)),
-        additional_targets: vec![], x_value: Some(2),
+        additional_targets: vec![], x_value: Some(2), mode: None,
     }).expect("Gogo copies");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life - 3, "original + two copies = 3 damage");
@@ -5284,7 +5284,7 @@ fn ultima_blights_lands_and_doubles_colorless() {
     let printed = g.battlefield_find(mine).unwrap().definition.activated_abilities.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: mine, ability_index: printed, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap blighted land for colorless");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "one C plus the mirrored C");
 }
@@ -5351,7 +5351,7 @@ fn quina_adds_a_frog_to_token_mints() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: quina, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: quina, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("eat the Frog");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(quina).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);

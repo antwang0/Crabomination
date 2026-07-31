@@ -38,7 +38,7 @@ fn cr_723_1_control_applies_on_the_targets_next_turn() {
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
         card_id: slaver, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -96,7 +96,7 @@ fn cr_605_1a_mana_ability_taps_without_using_the_stack() {
     let events = g
         .perform_action(GameAction::ActivateAbility {
             card_id: swamp, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("tap for mana");
     assert!(g.stack.is_empty(), "mana abilities don't use the stack");
@@ -117,7 +117,7 @@ fn cr_605_1a_non_mana_tap_is_not_tapped_for_mana() {
     let events = g
         .perform_action(GameAction::ActivateAbility {
             card_id: tower, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate");
     assert!(!events.iter().any(|e| matches!(e, GameEvent::TappedForMana { .. })));
@@ -186,7 +186,7 @@ fn cr_605_1a_mana_tap_emits_both_tap_events_once() {
     let events = g
         .perform_action(GameAction::ActivateAbility {
             card_id: swamp, ability_index: 0, target: None, additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("tap");
     assert_eq!(

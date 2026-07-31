@@ -816,7 +816,7 @@ fn potioners_trove_lifegain_requires_is_cast_this_turn() {
     // Ability index 1 = lifegain activation. With 0 IS casts, the
     // condition rejects.
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: trove, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None });
+        card_id: trove, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(err.is_err(), "Lifegain activation should be rejected without an IS cast this turn");
     assert_eq!(g.players[0].life, life_before, "No life gained on rejected activation");
 
@@ -833,7 +833,7 @@ fn potioners_trove_lifegain_requires_is_cast_this_turn() {
 
     // Now the lifegain activation succeeds.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: trove, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: trove, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("Lifegain activation should succeed after casting an IS spell");
     drain_stack(&mut g);
     assert_eq!(
@@ -1305,7 +1305,7 @@ fn ark_of_hunger_mill_activation_grants_may_play() {
     }
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ark_id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Ark mill activation");
+        card_id: ark_id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Ark mill activation");
     drain_stack(&mut g);
 
     let milled = g.players[0].graveyard.iter().find(|c| c.id == top_id)
@@ -1836,7 +1836,7 @@ fn nita_forum_conciliator_activation_exiles_and_grants_may_play() {
         // targets the graveyard card; the sacrifice is a cost picked by
         // the engine's sac_cost machinery.
         target: Some(crabomination::game::types::Target::Permanent(bolt_id)),
-        additional_targets: Vec::new(), x_value: None }).expect("Nita activation");
+        additional_targets: Vec::new(), x_value: None , mode: None}).expect("Nita activation");
     drain_stack(&mut g);
 
     // Bolt should now be in exile with may_play + pay-own-cost-any-color

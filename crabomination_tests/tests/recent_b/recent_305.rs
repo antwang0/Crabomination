@@ -69,7 +69,7 @@ fn gristleback_sacs_for_life_equal_to_power() {
     g.clear_sickness(gb);
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: gb, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: gb, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac for life");
     drain_stack(&mut g);
     assert!(g.battlefield_find(gb).is_none(), "sacrificed");

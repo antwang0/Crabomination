@@ -233,7 +233,7 @@ fn dungeon_map_ventures() {
     let map = g.add_card_to_battlefield(0, catalog::dungeon_map());
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: map, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: map, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("venture via map");
     drain_stack(&mut g);
     assert!(g.players[0].dungeon.is_some(), "ventured");
@@ -371,7 +371,7 @@ fn rangers_hawk_taps_helper_to_venture() {
     g.clear_sickness(hawk);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hawk, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: hawk, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("venture");
     drain_stack(&mut g);
     assert!(g.players[0].dungeon.is_some(), "ventured");
@@ -462,7 +462,7 @@ fn circle_of_dreams_druid_scales_with_creatures() {
     g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(druid);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: druid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: druid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for mana");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Green), 3,
@@ -519,7 +519,7 @@ fn half_elf_monk_taps_target() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: monk, ability_index: 0,
         target: Some(crabomination::game::types::Target::Permanent(bear)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap the bear");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).unwrap().tapped);

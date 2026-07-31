@@ -490,7 +490,7 @@ fn emissary_of_soulfire_exalted_counters_stack() {
     for _ in 0..2 {
         g.perform_action(GameAction::ActivateAbility {
             card_id: em, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("{E}{E}: exalted counter");
         drain_stack(&mut g);
     }
@@ -536,7 +536,7 @@ fn monumental_henge_digs_for_historic() {
     let hand = g.players[0].hand.len();
     g.players[0].mana_pool.add(crabomination::mana::Color::White, 4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: henge, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: henge, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("{2}{W}{W}, {T}: dig for historic");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "one historic card taken to hand");
@@ -559,7 +559,7 @@ fn spymasters_vault_connives_by_creatures_died() {
     g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: vault, ability_index: 1, target: Some(Target::Permanent(target)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("{B}, {T}: connive X");
     drain_stack(&mut g);
     // Drew 2, discarded 2 nonland cards → two +1/+1 counters on the target.
@@ -641,14 +641,14 @@ fn bespoke_battlewagon_energy_and_animate() {
     g.clear_sickness(wagon);
     // {T}: get {E}{E}
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wagon, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: wagon, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for energy");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 2, "two energy");
     // Pay {E}{E}{E}{E} to self-animate (no tap needed) — top up first.
     g.players[0].energy = 4;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wagon, ability_index: 3, target: None, additional_targets: vec![], x_value: None,
+        card_id: wagon, ability_index: 3, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("pay 4 energy to animate");
     drain_stack(&mut g);
     assert!(g.computed_permanent(wagon).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
@@ -660,7 +660,7 @@ fn bespoke_battlewagon_energy_and_animate() {
     g.players[0].energy = 2;
     g.perform_action(GameAction::ActivateAbility {
         card_id: w2, ability_index: 1, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap target creature");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).unwrap().tapped, "the bear is tapped");
@@ -694,7 +694,7 @@ fn imskir_sac_artifact_deals_mana_value_damage() {
     let opp = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: imskir, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("{3}{R}, sac an artifact");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 2, "MV-2 artifact deals 2 damage");
@@ -741,7 +741,7 @@ fn snow_covered_wastes_taps_for_colorless() {
     let land = g.add_card_to_battlefield(0, catalog::snow_covered_wastes());
     assert!(g.battlefield.iter().find(|c| c.id == land).unwrap().definition.is_snow(), "is a snow land");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{T}: Add {C}");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "one colorless mana");
 }
@@ -820,7 +820,7 @@ fn aether_revolt_energy_gain_deals_damage() {
     g.clear_sickness(wagon);
     let opp = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wagon, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: wagon, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for {E}{E}");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 2, "gained 2 energy → 2 damage to opponent");

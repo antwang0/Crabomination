@@ -140,7 +140,7 @@ fn diamond_lion_mana_burst() {
     g.active_player_idx = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: lion, ability_index: 0, target: None, additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -164,7 +164,7 @@ fn deepwood_denizen_counter_discount() {
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: elf, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: elf, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("discounted draw");
     drain_stack(&mut g);

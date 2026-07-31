@@ -57,7 +57,7 @@ mod recent101 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("channel Sunblade Samurai");
         drain_stack(&mut g);
@@ -94,7 +94,7 @@ mod recent101 {
                 ability_index: 0,
                 target: None,
                 additional_targets: vec![],
-                x_value: None,
+                x_value: None, mode: None,
             })
         };
         assert!(act(&mut g).is_err(), "can't activate before a death");
@@ -174,7 +174,7 @@ mod recent101 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac Mnemonic Sphere");
         drain_stack(&mut g);
@@ -317,7 +317,7 @@ mod recent103 {
         g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: dead, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: dead, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("encore from the graveyard");
         drain_stack(&mut g);
         assert!(g.exile.iter().any(|c| c.id == dead), "source exiled as the cost");
@@ -349,7 +349,7 @@ mod recent103 {
         g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 2);
         g.players[0].mana_pool.add_colorless(5);
         assert!(g.perform_action(GameAction::ActivateAbility {
-            card_id: dead, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: dead, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).is_err(), "sorcery-only activation rejected mid-combat");
     }
 
@@ -369,7 +369,7 @@ mod recent103 {
         let life = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: kiln, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap to ping");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, life - 3, "3 damage");
@@ -455,7 +455,7 @@ mod recent104 {
             ability_index: 0,
             target: Some(Target::Permanent(small)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("weld");
         drain_stack(&mut g);
@@ -502,7 +502,7 @@ mod recent104 {
             ability_index: 0,
             target: Some(Target::Player(1)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("tap seven Druids");
         drain_stack(&mut g);
@@ -528,7 +528,7 @@ mod recent105 {
         g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: squee, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: squee, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("recast from graveyard");
         drain_stack(&mut g);
         assert!(g.battlefield_find(squee).is_some(), "back from the graveyard");
@@ -538,7 +538,7 @@ mod recent105 {
         g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: squee, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+            card_id: squee, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("recast from exile");
         drain_stack(&mut g);
         assert!(g.battlefield_find(squee).is_some(), "back from exile");
@@ -557,7 +557,7 @@ mod recent105 {
         g.priority.player_with_priority = 0;
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: depths, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: depths, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("remove the last ice counter");
         drain_stack(&mut g);
         assert!(g.battlefield_find(depths).is_none(), "Dark Depths sacrificed");
@@ -652,7 +652,7 @@ mod recent106 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: station, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("grind");
         drain_stack(&mut g);
         assert_eq!(g.players[1].graveyard.len(), 3, "milled three");
@@ -696,7 +696,7 @@ mod recent106 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: dead, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("scavenge");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
@@ -773,7 +773,7 @@ mod recent106 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: cantor, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: cantor, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("sac for mana");
         assert!(g.battlefield_find(cantor).is_none(), "sacrificed");
         assert!(g.players[0].mana_pool.total() >= 1, "one mana added");
@@ -846,7 +846,7 @@ mod recent107 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: book, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: book, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("discard for Food");
         drain_stack(&mut g);
         assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"));
@@ -930,7 +930,7 @@ mod recent107 {
         let unearth_idx = catalog::fatestitcher().activated_abilities.len() - 1;
         g.perform_action(GameAction::ActivateAbility {
             card_id: stitcher, ability_index: unearth_idx, target: None,
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("unearth");
         drain_stack(&mut g);
         let c = g.computed_permanent(stitcher).expect("unearthed");
@@ -938,7 +938,7 @@ mod recent107 {
         // {T}: tap another permanent (mode 0).
         g.perform_action(GameAction::ActivateAbility {
             card_id: stitcher, ability_index: 0, target: Some(Target::Permanent(land)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap the land");
         drain_stack(&mut g);
         assert!(g.battlefield_find(land).unwrap().tapped);
@@ -958,7 +958,7 @@ mod recent107 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: urza, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: urza, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap the Construct for {U}");
         assert!(g.battlefield_find(construct).unwrap().tapped, "artifact tapped for the cost");
         assert!(g.players[0].mana_pool.total() >= 1, "added blue mana");
@@ -1025,7 +1025,7 @@ mod recent108 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: cave, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+            card_id: cave, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("fetch");
         drain_stack(&mut g);
         assert!(g.battlefield_find(cave).is_none(), "cave sacrificed");
@@ -1057,7 +1057,7 @@ mod recent108 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: faerie, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: faerie, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("self-untap");
         drain_stack(&mut g);
         // CR 122.1i — the stun counter eats the untap instead.
@@ -1069,7 +1069,7 @@ mod recent108 {
         g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: faerie, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: faerie, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("self-untap again");
         drain_stack(&mut g);
         assert!(!g.battlefield_find(faerie).unwrap().tapped, "untapped once unstunned");
@@ -1376,7 +1376,7 @@ mod recent110 {
         g.battlefield_find_mut(garrison).unwrap().attached_to = Some(forest);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: forest, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: forest, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("tap forest for mana");
         drain_stack(&mut g);
@@ -1394,7 +1394,7 @@ mod recent110 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: saffi, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("sac Saffi");
         drain_stack(&mut g);
@@ -1515,7 +1515,7 @@ mod recent110 {
         let gy_before = g.players[1].graveyard.len();
         g.perform_action(GameAction::ActivateAbility {
             card_id: horn, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("mill two");
         drain_stack(&mut g);
@@ -1573,7 +1573,7 @@ mod recent110 {
         let life = g.players[0].life;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: martyr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: martyr, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("sac Martyr");
         drain_stack(&mut g);
@@ -1759,7 +1759,7 @@ mod recent110 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: informer, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(&mut g);
@@ -1858,7 +1858,7 @@ mod recent110 {
         g.active_player_idx = 0;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: tw, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+            card_id: tw, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("transmute");
         drain_stack(&mut g);
@@ -1875,7 +1875,7 @@ mod recent110 {
         let life = g.players[0].life;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: boseiju, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: boseiju, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("tap Boseiju");
         assert_eq!(g.players[0].life, life - 2);
@@ -1911,13 +1911,13 @@ mod recent110 {
         g.priority.player_with_priority = 0;
         let err = g.perform_action(GameAction::ActivateAbility {
             card_id: haven, ability_index: 1, target: Some(Target::Permanent(lion)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         });
         assert!(err.is_err(), "a 2/1 is not a legal target");
         g.battlefield_find_mut(haven).unwrap().tapped = false;
         g.perform_action(GameAction::ActivateAbility {
             card_id: haven, ability_index: 1, target: Some(Target::Permanent(speaker)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("pump the 1/1");
         drain_stack(&mut g);

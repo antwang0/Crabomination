@@ -24,7 +24,7 @@ fn woodwraith_corrupter_animates_a_forest() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: wc, ability_index: 0, target: Some(Target::Permanent(forest)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("animate the Forest");
     drain_stack(&mut g);
     let cp = g.computed_permanent(forest).unwrap();

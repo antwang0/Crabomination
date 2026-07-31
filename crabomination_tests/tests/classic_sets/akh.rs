@@ -26,7 +26,7 @@ fn embalm_and_eternalize_mint_token_copies() {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: cat, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+            card_id: cat, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
             .expect("Embalm {W} from graveyard");
         drain_stack(&mut g);
         assert!(!g.players[0].graveyard.iter().any(|c| c.id == cat), "card exiled by Embalm");
@@ -48,7 +48,7 @@ fn embalm_and_eternalize_mint_token_copies() {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: p, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+            card_id: p, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
             .expect("Eternalize {3}{W}{W}");
         drain_stack(&mut g);
         let tok = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Adorned Pouncer")
@@ -71,7 +71,7 @@ fn embalm_rejected_at_instant_speed() {
     g.step = TurnStep::PreCombatMain;
     g.active_player_idx = 1;
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: cat, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None });
+        card_id: cat, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None});
     assert!(res.is_err(), "Embalm only as a sorcery — rejected on opponent's turn");
 }
 
@@ -139,7 +139,7 @@ fn akh_etb_and_pump_batch() {
         g.clear_sickness(s);
         g.players[0].mana_pool.add(Color::Blue, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+            card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
             .expect("activate {U} pump");
         drain_stack(&mut g);
         let cp = g.computed_permanent(s).unwrap();
@@ -287,7 +287,7 @@ fn akh_green_batch_functionality() {
     g.clear_sickness(naga);
     g.add_card_to_battlefield(0, catalog::forest());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: naga, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: naga, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("Naga taps for mana");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
 

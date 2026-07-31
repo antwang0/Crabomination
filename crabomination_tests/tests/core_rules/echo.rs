@@ -97,7 +97,7 @@ fn ticking_gnomes_and_dragoons() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: gnomes, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac ping");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1 - 1);
@@ -127,7 +127,7 @@ fn cr_310_7_portent_tracker_battle_defense() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: tracker, ability_index: 1, target: Some(Target::Permanent(siege)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("tilt");
     drain_stack(&mut g);
     assert_eq!(
@@ -214,7 +214,7 @@ fn treetop_village_animates() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: village, ability_index: 1, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("animate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(village).unwrap();

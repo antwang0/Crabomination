@@ -193,7 +193,7 @@ fn hydra_broodmaster_mints_a_brood() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: Some(2),
+        x_value: Some(2), mode: None,
     })
     .expect("monstrosity 2");
     drain_stack(&mut g);
@@ -219,7 +219,7 @@ fn jou_fonts_cash_out() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("cash it in");
     drain_stack(&mut g);
@@ -504,7 +504,7 @@ fn oppressive_rays_taxes_attacks_and_abilities() {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .is_err());
     g.players[1].mana_pool.add_colorless(3);
@@ -513,7 +513,7 @@ fn oppressive_rays_taxes_attacks_and_abilities() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("paid the {3} tax");
 }
@@ -541,7 +541,7 @@ fn market_festival_doubles_down_on_a_land() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.total(), 3, "{{G}} plus two more");
@@ -561,7 +561,7 @@ fn thassas_ire_taps_or_untaps() {
         ability_index: 0,
         target: Some(Target::Permanent(mine)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("untap mine");
     drain_stack(&mut g);
@@ -575,7 +575,7 @@ fn thassas_ire_taps_or_untaps() {
         ability_index: 0,
         target: Some(Target::Permanent(theirs)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap theirs");
     drain_stack(&mut g);
@@ -595,7 +595,7 @@ fn stonewise_fortifier_blanks_one_source() {
         ability_index: 0,
         target: Some(Target::Permanent(big)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("shield up");
     drain_stack(&mut g);
@@ -663,7 +663,7 @@ fn wildfire_cerberus_burns_on_monstrosity() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("monstrosity 1");
     drain_stack(&mut g);
@@ -685,7 +685,7 @@ fn swarmborn_giant_reaches_when_monstrous() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("monstrosity 2");
     drain_stack(&mut g);
@@ -832,7 +832,7 @@ fn sage_of_hours_buys_a_turn_per_five_counters() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("cash in");
     drain_stack(&mut g);
@@ -853,7 +853,7 @@ fn deserters_quarters_locks_a_creature_down() {
         ability_index: 0,
         target: Some(Target::Permanent(victim)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("lock it");
     drain_stack(&mut g);
@@ -923,7 +923,7 @@ fn dictate_of_karametra_doubles_land_taps() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap");
     assert_eq!(g.players[1].mana_pool.total(), 2, "the opponent's land doubles too");

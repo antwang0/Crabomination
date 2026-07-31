@@ -131,7 +131,7 @@ mod recent119 {
         g.players[0].mana_pool.add(Color::Black, 1);
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: raider, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: raider, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("pump");
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(raider).unwrap().power, 2, "1/1 → 2/2");
@@ -317,7 +317,7 @@ mod recent120 {
         g.players[0].mana_pool.add(Color::White, 1);
         g.players[0].mana_pool.add_colorless(4);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: marshal, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: marshal, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("pump");
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "bear 2/2 → 3/3");
@@ -393,7 +393,7 @@ mod recent121 {
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
             card_id: harvester, ability_index: 0, target: Some(Target::Permanent(bolt)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("tuck");
         drain_stack(&mut g);
         assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt), "left the graveyard");
@@ -410,7 +410,7 @@ mod recent121 {
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::ActivateAbility {
             card_id: orator, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("recur");
         drain_stack(&mut g);
         assert!(g.players[0].hand.iter().any(|c| c.id == bear), "bear returned to hand");
@@ -511,7 +511,7 @@ mod recent121 {
         g.players[0].mana_pool.add(Color::Green, 2);
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: wurm, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: wurm, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("reanimate");
         drain_stack(&mut g);
         let onbf = g.battlefield.iter().find(|c| c.definition.name == "Balustrade Wurm");
@@ -657,7 +657,7 @@ mod recent124 {
         g.players[0].mana_pool.add(Color::White, 1);
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: dillo, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: dillo, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("pump");
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(dillo).unwrap().power, 4, "+X/+0 where X = toughness 4");
@@ -698,7 +698,7 @@ mod recent124 {
         let life = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: duelist, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("ping");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, life - 1, "1 damage to the opponent");
@@ -955,6 +955,7 @@ mod recent127 {
             target: None,
             additional_targets: Vec::new(),
             x_value: None,
+            mode: None,
         })
         .expect("tap for blue");
         assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Blue), 1, "tapped for blue");
@@ -1067,7 +1068,7 @@ mod recent127 {
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac a creature");
         drain_stack(&mut g);
@@ -1084,7 +1085,7 @@ mod recent127 {
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac an outlaw");
         drain_stack(&mut g);
@@ -1242,7 +1243,7 @@ mod recent127 {
             ability_index: 1,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("cash two loot counters");
         drain_stack(&mut g);
@@ -1270,7 +1271,7 @@ mod recent127 {
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("exile from graveyard to fetch a Desert");
         drain_stack(&mut g);
@@ -1630,7 +1631,7 @@ mod recent129 {
             ability_index: 0,
             target: None,
             additional_targets: Vec::new(),
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac Werefox");
         drain_stack(&mut g);
@@ -1983,7 +1984,7 @@ mod recent131 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Toadstool Admirer");
         drain_stack(&mut g);
@@ -2003,7 +2004,7 @@ mod recent131 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("tap Rootrider Faun for G");
         assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "one green mana");
@@ -2303,7 +2304,7 @@ mod recent132 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("sac a Food");
         drain_stack(&mut g);
@@ -2355,7 +2356,7 @@ mod recent132 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate Verdant Outrider");
         drain_stack(&mut g);

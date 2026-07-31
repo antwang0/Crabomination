@@ -122,7 +122,7 @@ fn erratic_visionary_loots() {
     g.players[0].mana_pool.add_colorless(1);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: viz, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: viz, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("loot");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand, "drew one and discarded one → net zero");
@@ -140,7 +140,7 @@ fn vampire_opportunist_drains() {
     g.players[0].mana_pool.add_colorless(6);
     let (l0, l1) = (g.players[0].life, g.players[1].life);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vamp, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: vamp, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("drain");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, l1 - 2, "opponent loses 2");
@@ -158,7 +158,7 @@ fn ashioks_skulker_unblockable() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: skulker, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: skulker, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("unblockable");
     drain_stack(&mut g);
     assert!(g.computed_permanent(skulker).unwrap().keywords.contains(&Keyword::Unblockable));
@@ -350,7 +350,7 @@ fn law_rune_enforcer_taps_expensive_creature() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: enf, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+        card_id: enf, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).unwrap().tapped, "MV-2 creature tapped");
@@ -414,7 +414,7 @@ fn spellkeeper_weird_returns_instant() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: weird, ability_index: 0, target: Some(Target::Permanent(bolt)), additional_targets: vec![], x_value: None,
+        card_id: weird, ability_index: 0, target: Some(Target::Permanent(bolt)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("return");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "Bolt back in hand");
@@ -466,7 +466,7 @@ fn dreadmalkin_sacrifices_for_counters() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::ActivateAbility { card_id: cat, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("sac");
+    g.perform_action(GameAction::ActivateAbility { card_id: cat, ability_index: 0, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("sac");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(cat).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
@@ -797,7 +797,7 @@ fn soul_diviner_removes_counter_to_draw() {
     let hand = g.players[0].hand.len();
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::ActivateAbility { card_id: sd, ability_index: 0, target: None, additional_targets: vec![], x_value: None }).expect("draw");
+    g.perform_action(GameAction::ActivateAbility { card_id: sd, ability_index: 0, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "counter removed");
@@ -1283,7 +1283,7 @@ fn viviens_grizzly_reveals_creature_to_hand() {
     g.players[0].mana_pool.add_colorless(3);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: grizzly, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: grizzly, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == top), "creature drawn to hand");
@@ -1302,7 +1302,7 @@ fn viviens_grizzly_bottoms_noncreature() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: grizzly, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: grizzly, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.last().map(|c| c.id), Some(land), "land bottomed");
@@ -1439,7 +1439,7 @@ fn living_twister_pings_by_discarding_land() {
     g.players[0].mana_pool.add_colorless(1);
     let l1 = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lt, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+        card_id: lt, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, l1 - 2, "dealt 2");
@@ -1807,7 +1807,7 @@ fn mobilized_district_animates() {
     g.priority.player_with_priority = 0;
     let land = g.add_card_to_battlefield(0, catalog::mobilized_district());
     g.players[0].mana_pool.add_colorless(4);
-    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None }).expect("animate");
+    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("animate");
     drain_stack(&mut g);
     let c = g.computed_permanent(land).expect("district");
     assert!(c.card_types.contains(&crabomination::card::CardType::Creature) && c.card_types.contains(&crabomination::card::CardType::Land));
@@ -1823,7 +1823,7 @@ fn emergence_zone_grants_flash() {
     g.priority.player_with_priority = 0;
     let zone = g.add_card_to_battlefield(0, catalog::emergence_zone());
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::ActivateAbility { card_id: zone, ability_index: 1, target: None, additional_targets: vec![], x_value: None }).expect("sac for flash");
+    g.perform_action(GameAction::ActivateAbility { card_id: zone, ability_index: 1, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("sac for flash");
     drain_stack(&mut g);
     assert!(g.players[0].sorceries_as_flash, "may cast at instant speed this turn");
     assert!(g.battlefield_find(zone).is_none(), "sacrificed itself");
@@ -2948,7 +2948,7 @@ fn nissa_shakes_extra_green_and_land_animation() {
     let forest = g.add_card_to_battlefield(0, catalog::forest());
     // Tap the Forest for mana → base {G} + Nissa's extra {G}.
     let (idx, _) = g.effective_mana_abilities(forest).into_iter().next().expect("mana ability");
-    g.perform_action(GameAction::ActivateAbility { card_id: forest, ability_index: idx, target: None, additional_targets: Vec::new(), x_value: None }).expect("tap");
+    g.perform_action(GameAction::ActivateAbility { card_id: forest, ability_index: idx, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("tap");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "Forest {{G}} + Nissa's extra {{G}}");
 }
 

@@ -41,7 +41,7 @@ fn spear_of_heliod_destroys_creature_that_damaged_you() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: spear, ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Spear activates on the attacker");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
@@ -61,7 +61,7 @@ fn hammer_of_purphoros_sacs_land_for_golem() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: hammer, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: hammer, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Hammer activates at sorcery speed");
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_none(), "land sacrificed");
@@ -89,7 +89,7 @@ fn whip_of_erebos_reanimates_with_haste_then_exiles() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: whip, ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Whip reanimates the bear");
     drain_stack(&mut g);
     let c = g.battlefield_find(bear).expect("bear reanimated");
@@ -174,7 +174,7 @@ fn parallax_tide_exiles_land_and_returns_it_tapped_when_it_fades() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: tide, ability_index: 0,
-        target: Some(Target::Permanent(opp_land)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(opp_land)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Parallax Tide exiles a land");
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == opp_land), "land exiled");
@@ -1108,7 +1108,7 @@ fn coldsteel_heart_enters_tapped_and_taps_for_chosen_color() {
     assert!(heart.tapped, "Coldsteel Heart enters tapped");
     g.battlefield_find_mut(id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for the chosen color");
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
 }
@@ -1118,17 +1118,17 @@ fn floodfarm_verge_blue_gated_on_plains_or_island() {
     let mut g = two_player_game();
     let v = g.add_card_to_battlefield(0, catalog::floodfarm_verge());
     // White is unconditional.
-    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("white");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::White) > 0);
     // Blue needs a Plains or Island.
     g.battlefield_find_mut(v).unwrap().tapped = false;
     assert!(g
-        .perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None })
+        .perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .is_err());
     g.add_card_to_battlefield(0, catalog::island());
-    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("blue now allowed");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Blue) > 0);
@@ -1151,20 +1151,20 @@ fn new_talismans_tap_for_colorless_and_their_two_colors() {
         g.clear_sickness(id);
         // Colorless ability (index 0).
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("colorless");
+            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("colorless");
         assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
         // First color (index 1, costs 1 life).
         g.battlefield_find_mut(id).unwrap().tapped = false;
         let life = g.players[0].life;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None }).expect("c1");
+            card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("c1");
         drain_stack(&mut g);
         assert_eq!(g.players[0].mana_pool.amount(*c1), 1);
         assert_eq!(g.players[0].life, life - 1);
         // Second color (index 2).
         g.battlefield_find_mut(id).unwrap().tapped = false;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None }).expect("c2");
+            card_id: id, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("c2");
         drain_stack(&mut g);
         assert_eq!(g.players[0].mana_pool.amount(*c2), 1);
     }
@@ -1191,7 +1191,7 @@ fn signets_pay_one_and_tap_for_their_two_colors() {
         g.clear_sickness(id);
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("signet activates");
+            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("signet activates");
         drain_stack(&mut g);
         assert_eq!(g.players[0].mana_pool.amount(*c1), 1, "produced first color");
         assert_eq!(g.players[0].mana_pool.amount(*c2), 1, "produced second color");

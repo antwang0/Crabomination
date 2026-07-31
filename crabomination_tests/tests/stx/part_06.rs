@@ -215,7 +215,7 @@ fn strixhaven_initiate_has_reach_and_taps_for_green() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: init,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None }).expect("Mana ability activates");
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Mana ability activates");
     drain_stack(&mut g);
     let green_after = g.players[0].mana_pool.amount(Color::Green);
     assert_eq!(green_after, green_before + 1, "Initiate added Green");
@@ -611,7 +611,7 @@ fn tome_shredder_exiles_instant_from_graveyard_to_grow() {
     g.add_card_to_graveyard(0, catalog::island()); // land — not a legal exile fodder
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None,
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{T}, exile an instant/sorcery from graveyard: +1/+1 counter");
     drain_stack(&mut g);
     let c = g.battlefield_find(id).expect("Tome Shredder on battlefield");
@@ -1168,7 +1168,7 @@ fn inkling_sage_pump_activation_makes_two_two_flier() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: sage,
         ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None }).expect("Sage activation");
+        target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Sage activation");
     drain_stack(&mut g);
     let sage = g.battlefield_find(sage).unwrap();
     assert_eq!(sage.power(), 2, "Sage pumped from 1/2 → 2/3");
@@ -1186,7 +1186,7 @@ fn spirit_conduit_taps_for_one_damage() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: sc,
         ability_index: 0,
-        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None }).expect("Spirit Conduit activation");
+        target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None , mode: None}).expect("Spirit Conduit activation");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_life - 1, "Conduit pings for 1");
     let sc = g.battlefield_find(sc).unwrap();
@@ -1207,7 +1207,7 @@ fn quandrix_aether_adept_taps_target_creature() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: qa,
         ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None }).expect("Aether Adept activation");
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None}).expect("Aether Adept activation");
     drain_stack(&mut g);
     let bear = g.battlefield_find(bear).unwrap();
     assert!(bear.tapped, "Bear tapped");

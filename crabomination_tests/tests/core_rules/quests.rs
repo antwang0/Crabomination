@@ -27,7 +27,7 @@ fn quest_for_pure_flame_accrues_and_doubles() {
     g.battlefield_find_mut(quest).unwrap().add_counters(CounterType::Quest, 3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: quest, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac the quest");
     drain_stack(&mut g);
     assert!(g.battlefield_find(quest).is_none(), "quest sacrificed");

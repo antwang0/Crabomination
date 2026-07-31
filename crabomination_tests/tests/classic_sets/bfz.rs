@@ -212,7 +212,7 @@ fn cryptic_cruiser_needs_a_card_in_exile_to_process() {
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     };
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
@@ -252,7 +252,7 @@ fn blighted_steppe_gains_two_life_per_creature() {
     g.players[0].mana_pool.add_colorless(3);
     let life = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: steppe, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: steppe, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
@@ -342,7 +342,7 @@ fn veteran_warleader_counts_creatures_and_grants_a_keyword() {
     g.clear_sickness(leader);
     g.clear_sickness(ally);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: leader, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+        card_id: leader, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("tap the Ally");
     drain_stack(&mut g);
@@ -605,7 +605,7 @@ fn gruesome_slaughter_grants_a_tap_to_ping() {
         ability_index: 0,
         target: Some(Target::Permanent(victim)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("granted ping");
     drain_stack(&mut g);

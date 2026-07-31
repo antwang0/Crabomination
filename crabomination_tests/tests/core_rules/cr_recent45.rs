@@ -34,7 +34,7 @@ fn cr_115_7b_change_a_target_moves_one_ability_target() {
         ability_index: 0,
         target: Some(Target::Permanent(victim)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate");
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
@@ -66,7 +66,7 @@ fn cr_115_7a_original_target_stands_when_nothing_else_is_legal() {
         ability_index: 0,
         target: Some(Target::Permanent(kraj)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate");
     let reroute = g.add_card_to_hand(0, catalog::reroute());
@@ -284,7 +284,7 @@ fn cr_502_3_wont_untap_flag_covers_every_skip_reason() {
         ability_index: 1,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap for coloured mana");
     drain_stack(&mut g);

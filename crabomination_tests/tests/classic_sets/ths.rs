@@ -220,7 +220,7 @@ fn dragon_mantle_grants_firebreathing() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("granted firebreathing");
     drain_stack(&mut g);
@@ -382,7 +382,7 @@ fn coastline_chimera_buys_an_extra_block() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("buy an extra block");
     drain_stack(&mut g);
@@ -498,7 +498,7 @@ fn sacrifice_abilities_deal_their_damage() {
     let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: triton, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sac for 2");
     drain_stack(&mut g);
@@ -510,7 +510,7 @@ fn sacrifice_abilities_deal_their_damage() {
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
         card_id: wheel, ability_index: 0, target: Some(Target::Permanent(victim)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("wheel");
     drain_stack(&mut g);
@@ -648,7 +648,7 @@ fn karametras_acolyte_taps_for_devotion() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 3);
@@ -668,7 +668,7 @@ fn ths_batch3_monstrosity_riders() {
         ability_index: 0,
         target: Some(Target::Permanent(victim)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("monstrosity");
     drain_stack(&mut g);
@@ -685,7 +685,7 @@ fn ths_batch3_monstrosity_riders() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("monstrosity");
     drain_stack(&mut g);
@@ -707,7 +707,7 @@ fn sealock_monster_makes_an_island() {
         ability_index: 0,
         target: Some(Target::Permanent(land)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("monstrosity");
     drain_stack(&mut g);
@@ -732,7 +732,7 @@ fn erebos_s_emissary_pump_follows_the_aura() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("discard a creature card");
     drain_stack(&mut g);
@@ -760,7 +760,7 @@ fn erebos_s_emissary_pump_follows_the_aura() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("discard a creature card");
     drain_stack(&mut g);
@@ -892,7 +892,7 @@ fn stoneshock_giant_stops_ground_blockers() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("monstrosity");
     drain_stack(&mut g);
@@ -913,7 +913,7 @@ fn titan_of_eternal_fire_arms_humans() {
         ability_index: 0,
         target: Some(Target::Player(1)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("granted pinger");
     drain_stack(&mut g);
@@ -940,7 +940,7 @@ fn returned_phalanx_can_buy_an_attack() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("pay {1}{U}");
     drain_stack(&mut g);
@@ -967,7 +967,7 @@ fn vipers_kiss_locks_abilities() {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .is_err(),
         "activated abilities are locked"
@@ -1005,7 +1005,7 @@ fn witches_eye_grants_a_scry_ability() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("granted scry");
     drain_stack(&mut g);
@@ -1152,7 +1152,7 @@ fn colossus_of_akros_attacks_when_monstrous() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("monstrosity 10");
     drain_stack(&mut g);
@@ -1176,7 +1176,7 @@ fn hythonia_wipes_non_gorgons() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("monstrosity");
     drain_stack(&mut g);
@@ -1215,7 +1215,7 @@ fn reaper_of_the_wilds_scries_and_grants() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("deathtouch");
     drain_stack(&mut g);
@@ -1235,7 +1235,7 @@ fn tymaret_flings_then_returns() {
         ability_index: 0,
         target: Some(Target::Player(1)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("fling");
     drain_stack(&mut g);
@@ -1250,7 +1250,7 @@ fn tymaret_flings_then_returns() {
         ability_index: 1,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("rebuy");
     drain_stack(&mut g);
@@ -1303,7 +1303,7 @@ fn bow_of_nylea_arms_the_team() {
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("mode 0");
     drain_stack(&mut g);
@@ -1493,7 +1493,7 @@ fn shipbreaker_kraken_locks_creatures_while_present() {
         ability_index: 0,
         target: Some(Target::Permanent(victim)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("monstrosity");
     drain_stack(&mut g);
@@ -1522,7 +1522,7 @@ fn polukranos_trades_damage_with_its_victims() {
         ability_index: 0,
         target: Some(Target::Permanent(victim)),
         additional_targets: vec![],
-        x_value: Some(2),
+        x_value: Some(2), mode: None,
     })
     .expect("monstrosity X=2");
     drain_stack(&mut g);
@@ -1550,7 +1550,7 @@ fn triad_of_fates_cashes_a_fate_counter() {
         ability_index: 0,
         target: Some(Target::Permanent(mark)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("fate counter");
     drain_stack(&mut g);
@@ -1564,7 +1564,7 @@ fn triad_of_fates_cashes_a_fate_counter() {
         ability_index: 2,
         target: Some(Target::Permanent(mark)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("exile for cards");
     drain_stack(&mut g);

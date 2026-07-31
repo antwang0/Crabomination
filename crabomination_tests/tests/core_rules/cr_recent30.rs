@@ -76,13 +76,13 @@ fn cr_702_108_adapt_skips_when_already_countered() {
     // First adapt: no counters → gains two.
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::ActivateAbility { card_id: eel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("adapt");
+    g.perform_action(GameAction::ActivateAbility { card_id: eel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("adapt");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(eel).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
     // Second adapt: already has counters → no change.
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::ActivateAbility { card_id: eel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("adapt again");
+    g.perform_action(GameAction::ActivateAbility { card_id: eel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("adapt again");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(eel).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
         "adapt is a no-op with counters already present");

@@ -41,7 +41,7 @@ fn corpse_blockade_gains_deathtouch_by_sacrifice() {
     g.add_card_to_battlefield(0, catalog::grizzly_bears()); // fodder
     g.clear_sickness(blockade);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: blockade, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: blockade, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac for deathtouch");
     drain_stack(&mut g);
     assert!(g.computed_permanent(blockade).unwrap().keywords.contains(&Keyword::Deathtouch));
@@ -66,7 +66,7 @@ fn grave_shell_scarab_sacrifices_for_a_card() {
     g.players[0].mana_pool.add_colorless(1);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: scarab, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: scarab, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac, draw");
     drain_stack(&mut g);
     assert!(g.battlefield_find(scarab).is_none(), "sacrificed");

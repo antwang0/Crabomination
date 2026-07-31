@@ -197,7 +197,7 @@ fn emperor_of_bones_adapts() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: emp, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: emp, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("adapt");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(emp).unwrap().power, 4, "adapt 2 → 4/4");
@@ -447,7 +447,7 @@ fn genku_pumps_your_team() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: genku, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: genku, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "your creature grew");

@@ -72,7 +72,7 @@ fn kravens_cats_once_per_turn_pump() {
     g.players[0].mana_pool.add_colorless(2);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("pump");
     drain_stack(&mut g);
@@ -80,7 +80,7 @@ fn kravens_cats_once_per_turn_pump() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
     let second = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     });
     assert!(second.is_err(), "second activation blocked (once each turn)");
 }
@@ -127,7 +127,7 @@ fn merciless_enforcers_pings() {
     g.priority.player_with_priority = 0;
     let before = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("ping");
     drain_stack(&mut g);
@@ -223,7 +223,7 @@ fn radioactive_spider_tutors_spider_hero() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(hero))]));
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("sac to tutor");
     drain_stack(&mut g);
@@ -289,7 +289,7 @@ fn vibrant_cityscape_ramps_tapped() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("fetch");
     drain_stack(&mut g);
@@ -369,7 +369,7 @@ fn costume_closet_moves_counter() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: closet, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("move counter");
     drain_stack(&mut g);
@@ -414,7 +414,7 @@ fn spectacular_spider_man_shields_team() {
     g.players[0].mana_pool.add_colorless(1);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: spidey, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: spidey, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("sac for team shield");
     drain_stack(&mut g);
@@ -475,7 +475,7 @@ fn taxi_driver_grants_haste() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: taxi, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: Vec::new(), x_value: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("grant haste");
     drain_stack(&mut g);

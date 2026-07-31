@@ -61,7 +61,7 @@ fn nightshade_dryad_taps_for_mana() {
     assert!(cp.keywords.contains(&Keyword::Deathtouch));
     // Ability 0: add {C}.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for colorless");
     assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
 }
@@ -107,7 +107,7 @@ fn retrofitted_transmogrant_reanimates_self() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate graveyard ability");
     drain_stack(&mut g);
     let inst = g.battlefield_find(id).expect("returned to battlefield");
@@ -124,7 +124,7 @@ fn sarpadian_simulacrum_sacs_for_damage() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate sac ability");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).is_none(), "sacrificed itself");
@@ -160,7 +160,7 @@ fn solstice_zealot_energy_taps_creature() {
     assert_eq!(g.players[0].energy, 2, "ETB gives two energy");
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(victim)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap with energy");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 1, "spent one energy");
@@ -179,7 +179,7 @@ fn tempest_harvester_energy_loots() {
     g.add_card_to_hand(0, catalog::island()); // something to discard
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("loot");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 1, "spent one energy");
@@ -193,7 +193,7 @@ fn snapping_voidcraw_taps_for_two_colorless() {
     let id = g.add_card_to_battlefield(0, catalog::snapping_voidcraw());
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for CC");
     assert_eq!(g.players[0].mana_pool.total(), 2, "{{C}}{{C}}");
 }
@@ -267,7 +267,7 @@ fn phyrexian_ironworks_makes_golem() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("make golem");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 0, "spent three energy");
@@ -434,7 +434,7 @@ fn skittering_precursor_spawns_on_sacrifice() {
     g.clear_sickness(trader);
     g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: trader, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: trader, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sacrifice a creature");
     drain_stack(&mut g);
     assert!(
@@ -454,7 +454,7 @@ fn fetid_gargantua_adapts() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("adapt 2");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
@@ -468,7 +468,7 @@ fn dreadmobile_sacs_to_grow() {
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac to grow");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed the creature");

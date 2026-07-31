@@ -1179,6 +1179,12 @@ pub struct AbilityView {
     /// Defaults to `false` for older clients. Detention Vortex.
     #[serde(default)]
     pub opponents_only: bool,
+    /// CR 601.2b — the short text of each mode when the ability's body is
+    /// modal (`Effect::ChooseMode`), in mode order. Empty for the
+    /// non-modal majority; a client with two or more entries prompts for
+    /// the mode and submits it as `GameAction::ActivateAbility.mode`.
+    #[serde(default)]
+    pub modes: Vec<String>,
 }
 
 /// A planeswalker's loyalty ability as visible to the client. Mirrors

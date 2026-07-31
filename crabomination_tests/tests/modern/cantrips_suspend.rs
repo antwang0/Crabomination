@@ -244,7 +244,7 @@ fn paradise_druid_taps_for_any_color() {
     g.clear_sickness(id);
     assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::Hexproof));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("tap for mana");
     drain_stack(&mut g);
     let pool = &g.players[0].mana_pool;
@@ -419,7 +419,7 @@ fn doomskar_titan_boast_pumps_team() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: titan, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: titan, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("boast");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().power(), 3, "bear pumped +1/+0");
@@ -450,7 +450,7 @@ fn thermo_alchemist_pings_and_untaps_on_instant() {
     let id = g.add_card_to_battlefield(0, catalog::thermo_alchemist());
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("tap for damage");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 19, "pinged opponent for 1");
@@ -532,7 +532,7 @@ fn goldhound_sac_for_mana() {
     let id = g.add_card_to_battlefield(0, catalog::goldhound());
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("activate Goldhound mana ability");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Goldhound sacrificed itself");

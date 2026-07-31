@@ -118,7 +118,7 @@ fn cradle_clearcutter_taps_for_power_in_green() {
         c.summoning_sick = false;
     }
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     // Full-cost body is a 3/6, so it taps for 3 green.
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 3);
@@ -214,7 +214,7 @@ fn fallaji_dragon_engine_firebreathes() {
     let base = g.computed_permanent(id).unwrap().power;
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("pump");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(id).unwrap().power, base + 1);
@@ -230,7 +230,7 @@ fn autonomous_assembler_counters_an_assembly_worker() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: src, ability_index: 0,
-        target: Some(Target::Permanent(tgt)), additional_targets: vec![], x_value: None,
+        target: Some(Target::Permanent(tgt)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("counter ability");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(tgt).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
@@ -347,7 +347,7 @@ fn depth_charge_colossus_doesnt_untap_then_untaps_for_three() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("untap ability");
     drain_stack(&mut g);
     assert!(!g.battlefield_find(id).unwrap().tapped, "untapped for {{3}}");
@@ -360,7 +360,7 @@ fn powerstone_shard_scales_with_copies() {
     let a = g.add_card_to_battlefield(0, catalog::powerstone_shard());
     g.add_card_to_battlefield(0, catalog::powerstone_shard());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: a, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: a, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "one colorless per Shard controlled");
 }
@@ -373,7 +373,7 @@ fn bitter_reunion_sac_grants_haste() {
     let beater = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: reunion, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: reunion, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac for haste");
     drain_stack(&mut g);
     assert!(g.battlefield_find(reunion).is_none(), "sacrificed");
@@ -431,7 +431,7 @@ fn penregon_strongbull_sacs_artifact_for_pump_and_ping() {
     g.players[0].mana_pool.add_colorless(1);
     let opp_life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bull, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: bull, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.battlefield_find(art).is_none(), "artifact sacrificed");

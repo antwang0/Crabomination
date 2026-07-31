@@ -24,7 +24,7 @@ fn craft_exiles_a_battlefield_creature_and_returns_transformed() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate craft");
     drain_stack(&mut g);
@@ -56,7 +56,7 @@ fn craft_exiles_graveyard_card_before_battlefield() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate craft");
     drain_stack(&mut g);
@@ -82,7 +82,7 @@ fn craft_rejected_at_instant_speed() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     });
     assert!(err.is_err(), "craft barred at instant speed");
 }
@@ -104,7 +104,7 @@ fn craft_returns_artifact_creature_back_face() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate craft");
     drain_stack(&mut g);
@@ -133,7 +133,7 @@ fn craft_back_face_anthem_applies() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate craft");
     drain_stack(&mut g);
@@ -161,7 +161,7 @@ fn craft_rejected_without_enough_fodder() {
         ability_index: 0,
         target: None,
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     });
     assert!(err.is_err(), "craft-with-two rejected with one creature");
 }

@@ -216,7 +216,7 @@ mod recent62 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("sac ability");
         drain_stack(&mut g);
         assert_eq!(servos(&g, 0), 2, "sac makes a second Servo");
@@ -528,7 +528,7 @@ mod recent64 {
         g.priority.player_with_priority = 0;
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: tc, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: tc, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("loot");
         drain_stack(&mut g);
         // +1 draw, -1 discard = net unchanged.
@@ -566,7 +566,7 @@ mod recent64 {
         g.priority.player_with_priority = 0;
         let hand = g.players[1].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: cb, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+            card_id: cb, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         // Opponent drew 2 and discarded 2 → net hand unchanged.
@@ -633,7 +633,7 @@ mod recent65 {
         g.priority.player_with_priority = 0;
         let (my, opp) = (g.players[0].life, g.players[1].life);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: bi, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+            card_id: bi, ability_index: 0, target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
         }).expect("drain");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, opp - 3);
@@ -674,7 +674,7 @@ mod recent65 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: d, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: d, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("regen shield");
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(d).unwrap().regeneration_shields, 1, "shield stamped");
@@ -976,7 +976,7 @@ mod recent67 {
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: pt, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: pt, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate sac-token ability");
         drain_stack(&mut g);
@@ -1070,7 +1070,7 @@ mod recent68 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: idx, target, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: idx, target, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("ability activates");
         drain_stack(g);
     }
@@ -1223,7 +1223,7 @@ mod recent69 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: tf, ability_index: 0, target: Some(Target::Permanent(art)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         assert!(g.battlefield_find(art).unwrap().tapped, "target artifact tapped");
@@ -1265,7 +1265,7 @@ mod recent70 {
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(id).unwrap().toughness, 5, "2/3 → 2/5");
@@ -1299,7 +1299,7 @@ mod recent70 {
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
             card_id: id, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: Vec::new(), x_value: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, foe_life - 1, "1 damage to the opponent");

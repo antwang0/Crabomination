@@ -22,7 +22,7 @@ fn boseiju_channel_destroys_nonbasic() {
     g.players[0].mana_pool.add_colorless(1);
     // The channel ability is index 1 (index 0 is the tap-for-{G} mana ability).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: boseiju, ability_index: 1, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+        card_id: boseiju, ability_index: 1, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("channel Boseiju");
     drain_stack(&mut g);
     assert!(g.battlefield_find(target).is_none(), "nonbasic land destroyed");
@@ -43,7 +43,7 @@ fn boseiju_opponent_search_routes_to_the_searched_seat() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: boseiju, ability_index: 1, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+        card_id: boseiju, ability_index: 1, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("channel Boseiju");
     g.perform_action(GameAction::PassPriority).expect("active passes");
     g.perform_action(GameAction::PassPriority).expect("resolve");
@@ -63,7 +63,7 @@ fn sokenzan_channel_makes_two_spirits() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("channel Sokenzan");
     drain_stack(&mut g);
     let spirits: Vec<_> = g.battlefield.iter()
@@ -84,7 +84,7 @@ fn takenuma_channel_mills_then_returns_creature_from_graveyard() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("channel Takenuma");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature returned to hand");
@@ -105,10 +105,10 @@ fn eiganjo_channel_burns_attacking_creature() {
     g.players[0].mana_pool.add_colorless(2);
     // A non-attacking, non-blocking creature is not a legal target.
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: Some(Target::Permanent(idle)), additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 1, target: Some(Target::Permanent(idle)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "idle creature rejected");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 1, target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("channel Eiganjo at the attacker");
     drain_stack(&mut g);
     assert!(g.battlefield_find(attacker).is_none(), "4 damage kills the 2/2 attacker");
@@ -121,7 +121,7 @@ fn fountainport_makes_a_treasure() {
     let land = g.add_card_to_battlefield(0, catalog::fountainport());
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 3, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 3, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate {4}, {T}");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"));
@@ -136,7 +136,7 @@ fn restless_spire_animates_first_strike() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("animate for {U}{R}");
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
@@ -684,7 +684,7 @@ fn voracious_varmint_sacs_to_destroy_artifact() {
     let art = g.add_card_to_battlefield(1, catalog::null_rod());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: varmint, ability_index: 0, target: Some(Target::Permanent(art)), additional_targets: Vec::new(), x_value: None,
+        card_id: varmint, ability_index: 0, target: Some(Target::Permanent(art)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate sac ability");
     drain_stack(&mut g);
     assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
@@ -756,7 +756,7 @@ fn restless_reef_animates_and_mills_on_attack() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("animate Restless Reef");
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
@@ -781,7 +781,7 @@ fn restless_vinestalk_animates_5_5_trample() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("animate Vinestalk");
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
@@ -813,7 +813,7 @@ fn restless_fortress_drains_on_attack() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None }).expect("animate");
+    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("animate");
     drain_stack(&mut g);
     let opp = g.players[1].life;
     let me = g.players[0].life;
@@ -834,7 +834,7 @@ fn restless_cottage_makes_food_on_attack() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None }).expect("animate");
+    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("animate");
     drain_stack(&mut g);
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
@@ -1117,7 +1117,7 @@ fn delighted_halfling_makes_mana() {
     let h = g.add_card_to_battlefield(0, catalog::delighted_halfling());
     g.clear_sickness(h);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: h, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: h, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for colorless");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added colorless mana");
 }
@@ -1459,7 +1459,7 @@ fn ghor_clan_rampager_bloodrush_pumps_and_grants_trample() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: rampager, ability_index: 0,
-        target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("bloodrush from hand");
     drain_stack(&mut g);
     let a = g.computed_permanent(attacker).unwrap();
@@ -1483,7 +1483,7 @@ fn slaughterhorn_bloodrush_pumps_attacker() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: horn, ability_index: 0,
-        target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("bloodrush");
     drain_stack(&mut g);
     let a = g.computed_permanent(attacker).unwrap();
@@ -1503,7 +1503,7 @@ fn bloodrush_rejects_non_attacking_target() {
     g.players[0].mana_pool.add(Color::Green, 1);
     assert!(g.perform_action(GameAction::ActivateAbility {
         card_id: horn, ability_index: 0,
-        target: Some(Target::Permanent(idle)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(idle)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "no attacking creature → illegal target");
 }
 
@@ -1531,7 +1531,7 @@ fn rubblehulk_cda_and_bloodrush_scale_with_lands() {
     g.players[0].mana_pool.add(Color::Green, 2);
     g.perform_action(GameAction::ActivateAbility {
         card_id: hulk2, ability_index: 0,
-        target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(attacker)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("bloodrush");
     drain_stack(&mut g);
     let a = g.computed_permanent(attacker).unwrap();
@@ -1725,7 +1725,7 @@ fn shifting_woodland_delirium_copies_graveyard_permanent() {
     // No delirium yet (one card type in gy) → gated.
     assert!(g.perform_action(GameAction::ActivateAbility {
         card_id: wood, ability_index: 1,
-        target: Some(Target::Permanent(dead)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(dead)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "delirium not met");
     // Fill the graveyard to four card types.
     g.add_card_to_graveyard(0, catalog::lightning_bolt());
@@ -1733,7 +1733,7 @@ fn shifting_woodland_delirium_copies_graveyard_permanent() {
     g.add_card_to_graveyard(0, catalog::divination());
     g.perform_action(GameAction::ActivateAbility {
         card_id: wood, ability_index: 1,
-        target: Some(Target::Permanent(dead)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(dead)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("delirium copy");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(wood).unwrap().definition.name, "Colossal Dreadmaw");
@@ -1754,11 +1754,11 @@ fn gravecrawler_recasts_from_graveyard_with_a_zombie() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: crawler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: crawler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "no Zombie → stays dead");
     g.add_card_to_battlefield(0, catalog::gravecrawler()); // a Zombie
     g.perform_action(GameAction::ActivateAbility {
-        card_id: crawler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: crawler, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("recast with a Zombie out");
     drain_stack(&mut g);
     assert!(g.battlefield_find(crawler).is_some(), "Gravecrawler returned");
@@ -1831,7 +1831,7 @@ fn yawgmoth_sacrifices_for_counter_and_card() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::ActivateAbility {
         card_id: yawg, ability_index: 0,
-        target: Some(Target::Permanent(opp)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(opp)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Yawgmoth");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 19, "paid 1 life");
@@ -1931,7 +1931,7 @@ fn bomat_courier_stashes_and_cashes_out() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.step = TurnStep::PostCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: courier, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: courier, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("cash out");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == stash1), "stash in hand");
@@ -2021,7 +2021,7 @@ fn gilded_goose_food_engine() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"), "ETB Food");
     g.clear_sickness(goose);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: goose, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: goose, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac Food for mana");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Food"), "Food eaten");
@@ -2057,7 +2057,7 @@ fn shifting_ceratops_uncounterable_and_modal_grant() {
     g.priority.player_with_priority = 0;
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(2)]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dino, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: dino, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("modal grant");
     drain_stack(&mut g);
     assert!(g.computed_permanent(dino).unwrap().keywords.contains(&Keyword::Haste));
@@ -2074,7 +2074,7 @@ fn thrun_regenerates() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: thrun, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: thrun, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regenerate shield");
     drain_stack(&mut g);
     // Hexproof blocks targeted removal entirely — wipe the board instead.

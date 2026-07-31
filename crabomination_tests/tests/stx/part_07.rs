@@ -1514,7 +1514,7 @@ fn lorehold_memorial_taps_for_red_or_white() {
     drain_stack(&mut g);
     // Activate the Red mana ability (index 0).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None }).expect("Memorial Red mana ability");
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Memorial Red mana ability");
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
     let body = g.battlefield_find(id).unwrap();
     assert!(body.tapped);
@@ -1584,7 +1584,7 @@ fn creative_outburst_discarded_from_hand_mints_a_treasure() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{U/R}{U/R}, Discard this card: Create a Treasure");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id),

@@ -22,7 +22,7 @@ fn godless_shrine_pays_two_life_and_taps_for_white_or_black() {
     assert_eq!(g.players[0].life, 18, "paid 2 life");
     // Taps for white (ability 0) or black (ability 1).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("white mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
@@ -37,7 +37,7 @@ fn blooming_marsh_enters_untapped_with_few_lands() {
     assert!(!g.battlefield_find(id).unwrap().tapped,
         "fastland enters untapped with no other lands");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("green mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
@@ -55,7 +55,7 @@ fn meticulous_archive_enters_tapped_and_surveils() {
     // Taps for white or blue once untapped.
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("blue mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
@@ -69,7 +69,7 @@ fn darkbore_pathway_plays_either_face() {
     g.perform_action(GameAction::PlayLand(front)).unwrap();
     drain_stack(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: front, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: front, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("black mana ability on front face");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "front face taps for black");
@@ -80,7 +80,7 @@ fn darkbore_pathway_plays_either_face() {
     g2.perform_action(GameAction::PlayLandBack(back)).unwrap();
     drain_stack(&mut g2);
     g2.perform_action(GameAction::ActivateAbility {
-        card_id: back, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: back, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("green mana ability on back face");
     drain_stack(&mut g2);
     assert_eq!(g2.players[0].mana_pool.amount(Color::Green), 1, "back face taps for green");
@@ -155,7 +155,7 @@ fn three_tree_city_enters_with_charge_and_taps_for_any_color() {
         "Three Tree City enters with three charge counters");
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("{T}, remove a charge: add one mana of any color");
     drain_stack(&mut g);
@@ -172,7 +172,7 @@ fn three_tree_city_sacrifices_itself_when_last_charge_removed() {
     g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Charge, 1);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("removing the last charge taps for mana");
     drain_stack(&mut g);
@@ -190,7 +190,7 @@ fn wight_of_the_reliquary_sacrifices_a_land_to_fetch_a_land() {
     let forest = g.add_card_to_library(0, catalog::forest());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wight, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: wight, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("{T}, sacrifice a land: search a land");
     drain_stack(&mut g);
@@ -236,7 +236,7 @@ fn assert_deck_dual_land(
         g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
         g.players[0].mana_pool = crabomination::mana::ManaPool::default();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: idx, target: None, additional_targets: Vec::new(), x_value: None,
+            card_id: id, ability_index: idx, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("mana ability");
         drain_stack(&mut g);
         assert_eq!(g.players[0].mana_pool.amount(color), 1, "ability {idx} taps for {color:?}");
@@ -286,7 +286,7 @@ fn assert_fetchland_fetches(
     let life_before = g.players[0].life;
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(basic))]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fetch, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: fetch, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("fetchland {T}, pay 1 life, sac: search a land");
     drain_stack(&mut g);
@@ -504,7 +504,7 @@ fn brass_squire_taps_to_attach_equipment() {
         ability_index: 0,
         target: Some(Target::Permanent(boner)),
         additional_targets: vec![Target::Permanent(bear)],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("Brass Squire activates");
     drain_stack(&mut g);
@@ -650,7 +650,7 @@ fn celestial_colonnade_animates_into_a_4_4_flier() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("animate for {3}{W}{U}");
     drain_stack(&mut g);
 
@@ -678,7 +678,7 @@ fn creeping_tar_pit_animates_unblockable() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("animate for {1}{U}{B}");
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
@@ -697,7 +697,7 @@ fn animated_manland_can_attack() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("animate");
     drain_stack(&mut g);
     g.step = TurnStep::DeclareAttackers;
@@ -718,14 +718,14 @@ fn mutavault_taps_for_c_and_animates_into_changeling() {
     let mut g = two_player_game();
     let land = g.add_card_to_battlefield(0, catalog::mutavault());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for {C}");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "produced colorless mana");
     // Untap so the animate ability (no tap cost) just needs {1}.
     g.battlefield_find_mut(land).unwrap().tapped = false;
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("animate for {1}");
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
@@ -742,7 +742,7 @@ fn inkmoth_nexus_animates_into_flying_infect() {
     let land = g.add_card_to_battlefield(0, catalog::inkmoth_nexus());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("animate for {1}");
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
@@ -759,7 +759,7 @@ fn mishras_factory_animates_into_assembly_worker() {
     let land = g.add_card_to_battlefield(0, catalog::mishras_factory());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("animate for {1}");
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();

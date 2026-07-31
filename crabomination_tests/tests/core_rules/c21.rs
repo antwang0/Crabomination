@@ -18,7 +18,7 @@ fn temple_of_epiphany_enters_tapped_and_taps_for_mana() {
     // Untap and tap for blue.
     g.battlefield_find_mut(id).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("tap for U");
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
@@ -43,7 +43,7 @@ fn rogues_passage_grants_unblockable() {
     let id = g.add_card_to_battlefield(0, catalog::rogues_passage());
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate unblockable");
     drain_stack(&mut g);
@@ -62,7 +62,7 @@ fn mikokoro_each_player_draws() {
     let h1 = g.players[1].hand.len();
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("activate draw");
     drain_stack(&mut g);
@@ -78,7 +78,7 @@ fn high_market_sacrifices_creature_for_life() {
     let id = g.add_card_to_battlefield(0, catalog::high_market());
     let before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sac creature");
     drain_stack(&mut g);
@@ -94,14 +94,14 @@ fn temple_of_false_god_gated_on_five_lands() {
     // With only the Temple, activation is illegal.
     assert!(g
         .perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .is_err());
     for _ in 0..4 {
         g.add_card_to_battlefield(0, catalog::forest());
     }
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("five lands → {C}{C}");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 2);
@@ -122,7 +122,7 @@ fn blighted_woodland_fetches_two_basics() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sac fetch");
     drain_stack(&mut g);
@@ -202,7 +202,7 @@ fn boros_locket_sacrifices_for_two_cards() {
     g.players[0].mana_pool.add(Color::Red, 4);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sac Boros Locket");
     drain_stack(&mut g);
@@ -331,7 +331,7 @@ fn phyrexias_core_sacrifices_artifact_for_life() {
     g.players[0].mana_pool.add_colorless(1);
     let before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sac artifact");
     drain_stack(&mut g);

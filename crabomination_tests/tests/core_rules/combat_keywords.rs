@@ -184,7 +184,7 @@ fn cr_702_142_boast_rejected_before_attacking() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     });
     assert!(res.is_err(), "Boast can't be activated by a creature that hasn't attacked");
 }
@@ -203,7 +203,7 @@ fn cr_702_142_boast_succeeds_after_attacking() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Boast activatable after attacking");
     drain_stack(&mut g);
     let s = g.battlefield_find(id).unwrap();
@@ -218,11 +218,11 @@ fn cr_702_142_boast_only_once_per_turn() {
     g.players[0].mana_pool.add(Color::Red, 2);
     g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("first boast");
     drain_stack(&mut g);
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     });
     assert!(res.is_err(), "Boast is once per turn");
 }
@@ -597,7 +597,7 @@ fn frenzied_arynx_pump_ability_grows_it() {
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("pump ability activatable");
     drain_stack(&mut g);
     let c = g.battlefield_find(id).unwrap();
@@ -687,7 +687,7 @@ fn crack_fetchland_on_opponents_end_step() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("crack fetch on opponent's end step");
     drain_stack(&mut g);
@@ -964,7 +964,7 @@ fn cr_505_1b_additional_combat_phase_lets_attacker_strike_twice() {
     }])).expect("attack 1");
     drain_stack(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: atk, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: atk, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("extra-combat ability");
     drain_stack(&mut g);
     // Walk out of the first combat — End of Combat loops back to Begin Combat.

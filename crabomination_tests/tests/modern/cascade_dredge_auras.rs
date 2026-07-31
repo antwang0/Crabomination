@@ -415,7 +415,7 @@ fn golgari_grave_troll_removes_four_counters_to_regenerate() {
     }
     g.clear_sickness(troll);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: troll, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: troll, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("regenerate ability activatable with 5 counters");
     drain_stack(&mut g);
     let c = g.battlefield_find(troll).expect("troll still here");
@@ -470,7 +470,7 @@ fn concealing_curtains_transforms_and_strips_a_card() {
     let opp_hand = g.players[1].hand.len();
     g.players[0].mana_pool.add(Color::Black, 3); // {B} + {2} generic
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: cc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{2}{B}: Transform");
     drain_stack(&mut g);
     let eye = g.battlefield_find(cc).expect("still on battlefield");
@@ -598,14 +598,14 @@ fn ulvenwald_captive_taps_for_mana_and_transforms() {
     g.clear_sickness(uc);
     // {T}: Add {G}.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: uc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: uc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{T}: Add G");
     assert_eq!(g.players[0].mana_pool.total(), 1, "tapped for one green");
     // Untap and pay {5}{G}{G} to transform.
     g.battlefield_find_mut(uc).unwrap().tapped = false;
     g.players[0].mana_pool.add(Color::Green, 7);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: uc, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: uc, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{5}{G}{G}: Transform");
     drain_stack(&mut g);
     let abom = g.battlefield_find(uc).unwrap();
@@ -647,7 +647,7 @@ fn outland_liberator_is_daybound_and_sacrifices_to_destroy() {
     g.clear_sickness(ol);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ol, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None,
+        card_id: ol, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{1}, Sac: destroy artifact");
     drain_stack(&mut g);
     assert!(g.battlefield_find(target).is_none(), "artifact destroyed");
@@ -789,7 +789,7 @@ fn kessig_prowler_transforms_into_sinuous_predator() {
     g.clear_sickness(kp);
     g.players[0].mana_pool.add(Color::Green, 5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: kp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("{4}{G}: Transform");
     drain_stack(&mut g);
     let pred = g.battlefield_find(kp).unwrap();

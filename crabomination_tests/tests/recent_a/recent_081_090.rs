@@ -24,7 +24,7 @@ mod recent81 {
         g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: rites, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: rites, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Vampiric Rites");
         drain_stack(&mut g);
         assert_eq!(g.players[0].life, life + 1, "gained 1 life");
@@ -41,7 +41,7 @@ mod recent81 {
         let life = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: station, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Blasting Station");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, life - 1, "1 damage to opponent");
@@ -197,7 +197,7 @@ mod recent81 {
         g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
         g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: cs, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: cs, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Coinsmith");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, opp - 1, "opponent lost 1");
@@ -350,7 +350,7 @@ mod recent82 {
         let myr = g.add_card_to_battlefield(0, catalog::alloy_myr());
         g.clear_sickness(myr);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: myr, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: myr, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap Alloy Myr");
         assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
     }
@@ -364,7 +364,7 @@ mod recent82 {
         g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: cap, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: cap, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Courier's Capsule");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand + 2, "drew two");
@@ -381,7 +381,7 @@ mod recent82 {
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
             card_id: bs, ability_index: 0, target: Some(Target::Permanent(victim)),
-            additional_targets: vec![], x_value: Some(2),
+            additional_targets: vec![], x_value: Some(2), mode: None,
         }).expect("activate Ballista Squad for X=2");
         drain_stack(&mut g);
         assert!(!g.battlefield.iter().any(|c| c.id == victim), "2 damage killed the 2/2");
@@ -395,7 +395,7 @@ mod recent82 {
         // Ping to tap it.
         g.perform_action(GameAction::ActivateAbility {
             card_id: gel, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("ping");
         drain_stack(&mut g);
         assert!(g.battlefield_find(gel).unwrap().tapped, "tapped after activating");
@@ -448,7 +448,7 @@ mod recent82 {
             "creatures you control have haste");
         g.perform_action(GameAction::ActivateAbility {
             card_id: fires, ability_index: 0, target: Some(Target::Permanent(bear)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("sac Fires for +2/+2");
         drain_stack(&mut g);
         assert!(!g.battlefield.iter().any(|c| c.id == fires), "Fires sacrificed");
@@ -493,7 +493,7 @@ mod recent83 {
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
             card_id: dr, ability_index: 0, target: Some(Target::Permanent(victim)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap ability");
         drain_stack(&mut g);
         assert!(g.battlefield_find(victim).unwrap().tapped, "target creature tapped");
@@ -505,7 +505,7 @@ mod recent83 {
         let vt = g.add_card_to_battlefield(0, catalog::vine_trellis());
         g.clear_sickness(vt);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: vt, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: vt, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap for G");
         assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Green), 1);
     }
@@ -518,7 +518,7 @@ mod recent83 {
         g.add_card_to_battlefield(0, catalog::grizzly_bears()); // not a defender
         g.clear_sickness(ob);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: ob, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: ob, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap for G per defender");
         assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Green), 2,
             "two defenders → GG");
@@ -815,7 +815,7 @@ mod recent86 {
         let life = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: sa, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("discard a land, deal 2");
         drain_stack(&mut g);
@@ -1100,7 +1100,7 @@ mod recent90 {
             3, "capped at three +1/+1 counters");
         // Remove three counters → add {R}{R}{R}.
         g.perform_action(GameAction::ActivateAbility {
-            card_id: kin, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: kin, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activation");
         assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "activation adds RRR");
         assert_eq!(
@@ -1265,7 +1265,7 @@ mod recent90 {
         let life = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: ce, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: Some(3),
+            additional_targets: vec![], x_value: Some(3), mode: None,
         }).expect("activate for X=3");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, life - 3, "X=3 damage to face");
@@ -1378,7 +1378,7 @@ mod recent90 {
         let life = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: cp, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap for 1");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, life - 1);
@@ -1457,7 +1457,7 @@ mod recent90 {
         let life = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: inv, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, life - 5, "5 damage to the player");
@@ -1473,7 +1473,7 @@ mod recent90 {
         g.players[0].mana_pool.add_colorless(1);
         g.perform_action(GameAction::ActivateAbility {
             card_id: tm, ability_index: 0, target: Some(Target::Permanent(other)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("pump a Goblin");
         drain_stack(&mut g);
         assert_eq!(g.computed_permanent(other).unwrap().power, 2, "+1/+0 to a Goblin");
@@ -1487,7 +1487,7 @@ mod recent90 {
         let (l0, l1) = (g.players[0].life, g.players[1].life);
         g.perform_action(GameAction::ActivateAbility {
             card_id: fs, ability_index: 0, target: Some(Target::Player(1)),
-            additional_targets: vec![], x_value: None,
+            additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap");
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, l1 - 1, "1 to target");
@@ -1514,7 +1514,7 @@ mod recent90 {
         let pitch = g.add_card_to_hand(0, catalog::mountain());
         g.add_card_to_library(0, catalog::forest());
         g.perform_action(GameAction::ActivateAbility {
-            card_id: rg, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: rg, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("loot");
         drain_stack(&mut g);
         assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch), "discarded a card");
@@ -1563,7 +1563,7 @@ mod recent90 {
         g.players[0].mana_pool.add_colorless(1);
         let gy_before = g.players[0].graveyard.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: v, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: v, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("sac to dig");
         drain_stack(&mut g);
         // Took one of four to hand; the other three (+ the sacrificed Vessel) hit gy.

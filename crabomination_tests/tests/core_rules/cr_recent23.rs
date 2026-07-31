@@ -26,7 +26,7 @@ fn cr_701_10e_double_each_kind_of_counter() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: vorel, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Vorel");
     drain_stack(&mut g);
     let c = g.battlefield_find(bear).unwrap();

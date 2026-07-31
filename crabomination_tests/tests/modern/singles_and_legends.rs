@@ -59,7 +59,7 @@ fn portal_to_phyrexia_etb_forces_opponent_sacrifice() {
 fn rishadan_port_taps_for_colorless() {
     let mut g = two_player_game();
     let port = g.add_card_to_battlefield(0, catalog::rishadan_port());
-    g.perform_action(GameAction::ActivateAbility { card_id: port, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: port, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("tap for {C}");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.colorless_amount() > 0, "Port should produce colorless mana");
@@ -73,7 +73,7 @@ fn rishadan_port_taps_target_land() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: port, ability_index: 1,
-        target: Some(Target::Permanent(opp_land)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(opp_land)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap opp land");
     drain_stack(&mut g);
     let opp_land_card = g.battlefield.iter().find(|c| c.id == opp_land).unwrap();
@@ -87,7 +87,7 @@ fn horizon_canopy_taps_for_green_costing_one_life() {
     let mut g = two_player_game();
     let hc = g.add_card_to_battlefield(0, catalog::horizon_canopy());
     let life_before = g.players[0].life;
-    g.perform_action(GameAction::ActivateAbility { card_id: hc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: hc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("tap for {G}");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Green) > 0, "Should produce green mana");
@@ -101,7 +101,7 @@ fn horizon_canopy_sac_draws_a_card() {
     g.add_card_to_library(0, catalog::island());
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
-    g.perform_action(GameAction::ActivateAbility { card_id: hc, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: hc, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("sac for draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "Should draw 1");
@@ -115,7 +115,7 @@ fn sunbaked_canyon_taps_for_red_costing_one_life() {
     let mut g = two_player_game();
     let sc = g.add_card_to_battlefield(0, catalog::sunbaked_canyon());
     let life_before = g.players[0].life;
-    g.perform_action(GameAction::ActivateAbility { card_id: sc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: sc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("tap for {R}");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Red) > 0, "Should produce red mana");
@@ -129,7 +129,7 @@ fn waterlogged_grove_taps_for_green_costing_one_life() {
     let mut g = two_player_game();
     let wg = g.add_card_to_battlefield(0, catalog::waterlogged_grove());
     let life_before = g.players[0].life;
-    g.perform_action(GameAction::ActivateAbility { card_id: wg, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: wg, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("tap for {G}");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Green) > 0, "Should produce green mana");
@@ -143,7 +143,7 @@ fn fiery_islet_taps_for_blue_costing_one_life() {
     let mut g = two_player_game();
     let fi = g.add_card_to_battlefield(0, catalog::fiery_islet());
     let life_before = g.players[0].life;
-    g.perform_action(GameAction::ActivateAbility { card_id: fi, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: fi, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("tap for {U}");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Blue) > 0);
@@ -157,7 +157,7 @@ fn silent_clearing_sac_draws_a_card() {
     g.add_card_to_library(0, catalog::island());
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
-    g.perform_action(GameAction::ActivateAbility { card_id: sc, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: sc, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("sac for draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
@@ -170,7 +170,7 @@ fn silent_clearing_sac_draws_a_card() {
 fn blazemire_verge_taps_for_black_unconditionally() {
     let mut g = two_player_game();
     let v = g.add_card_to_battlefield(0, catalog::blazemire_verge());
-    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("tap for {B}");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Black) > 0);
@@ -182,11 +182,11 @@ fn blazemire_verge_red_gated_on_swamp_or_mountain() {
     let v = g.add_card_to_battlefield(0, catalog::blazemire_verge());
     // No Swamp/Mountain controlled → the red ability is illegal.
     assert!(g
-        .perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None })
+        .perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .is_err());
     // Controlling a Mountain unlocks it.
     g.add_card_to_battlefield(0, catalog::mountain());
-    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
         .expect("red now allowed");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Red) > 0);
@@ -228,7 +228,7 @@ fn monument_to_endurance_pumps_target_creature() {
     let power_before = g.battlefield.iter().find(|c| c.id == bear).unwrap().definition.power;
     g.perform_action(GameAction::ActivateAbility {
         card_id: mon, ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate pump");
     drain_stack(&mut g);
     let computed = g.compute_battlefield();
@@ -244,7 +244,7 @@ fn exotic_orchard_taps_for_any_color() {
     let eo = g.add_card_to_battlefield(0, catalog::exotic_orchard());
     g.perform_action(GameAction::ActivateAbility {
         card_id: eo, ability_index: 0,
-        target: None, additional_targets: Vec::new(), x_value: None,
+        target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for mana");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.total() > 0, "Should produce mana");
@@ -548,7 +548,7 @@ fn trenchpost_taps_for_one_colorless() {
     let mut g = two_player_game();
     let tp = g.add_card_to_battlefield(0, catalog::trenchpost());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: tp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: tp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Trenchpost tap should work");
     assert_eq!(g.players[0].mana_pool.total(), 1, "Should add 1 colorless mana");
 }

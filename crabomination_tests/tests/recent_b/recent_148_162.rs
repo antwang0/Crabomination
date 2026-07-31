@@ -41,7 +41,7 @@ mod recent148 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate sac ability");
         drain_stack(&mut g);
@@ -237,7 +237,7 @@ mod recent149 {
         g.active_player_idx = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
-            card_id: rallier, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None,
+            card_id: rallier, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Raccoon Rallier");
         drain_stack(&mut g);
         assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "granted haste");
@@ -399,7 +399,7 @@ mod recent151 {
         g.step = crabomination::game::TurnStep::PreCombatMain;
         fill_mana(&mut g);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: cultist, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: cultist, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("delirium reanimate");
         drain_stack(&mut g);
         let c = g.battlefield_find(cultist).expect("returned to battlefield");
@@ -413,7 +413,7 @@ mod recent151 {
         let zealot = g.add_card_to_battlefield(0, catalog::overgrown_zealot());
         g.clear_sickness(zealot);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: zealot, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: zealot, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("tap for mana");
         assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
         assert!(g.battlefield_find(zealot).unwrap().tapped, "tapped for the mana");
@@ -467,7 +467,7 @@ mod recent151 {
         g.step = TurnStep::PreCombatMain;
         fill_mana(&mut g);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: chandelier, ability_index: 0, target: Some(Target::Permanent(corpse)), additional_targets: vec![], x_value: None,
+            card_id: chandelier, ability_index: 0, target: Some(Target::Permanent(corpse)), additional_targets: vec![], x_value: None, mode: None,
         }).expect("bottom a graveyard card");
         drain_stack(&mut g);
         assert!(g.players[1].graveyard.iter().all(|c| c.id != corpse), "left the graveyard");
@@ -674,7 +674,7 @@ mod recent153 {
         g.clear_sickness(crab);
         fill_mana(&mut g);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: crab, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: crab, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Canyon Crab");
         drain_stack(&mut g);
         let c = g.computed_permanent(crab).unwrap();
@@ -727,7 +727,7 @@ mod recent154 {
         fill_mana(&mut g);
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: gecko, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: gecko, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("rummage");
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand, "discarded one, drew one");
@@ -819,7 +819,7 @@ mod recent155 {
         fill_mana(&mut g);
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: coroner, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: coroner, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Agency Coroner");
         drain_stack(&mut g);
         assert!(g.battlefield_find(fodder).is_none(), "sacrificed the other creature");
@@ -1215,7 +1215,7 @@ mod recent159 {
         fill_mana(&mut g);
         for _ in 0..2 {
             let _ = g.perform_action(GameAction::ActivateAbility {
-                card_id: fl, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+                card_id: fl, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
             });
             drain_stack(&mut g);
         }
@@ -1352,7 +1352,7 @@ mod recent160 {
         let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         fill_mana(&mut g);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: ghoul, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: ghoul, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Hungry Ghoul");
         drain_stack(&mut g);
         assert!(g.battlefield_find(fodder).is_none(), "sacrificed the fodder");
@@ -1592,7 +1592,7 @@ mod recent162 {
         g.players[0].mana_pool.add(Color::Red, 3);
         g.perform_action(GameAction::ActivateAbility {
             card_id: sower, ability_index: 0,
-            target: Some(Target::Permanent(foe)), additional_targets: vec![], x_value: None,
+            target: Some(Target::Permanent(foe)), additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate can't-block");
         drain_stack(&mut g);
@@ -1679,7 +1679,7 @@ mod recent162 {
         g.players[0].mana_pool.add(Color::White, 3);
         let hand = g.players[0].hand.len();
         g.perform_action(GameAction::ActivateAbility {
-            card_id: rallier, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: rallier, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         })
         .expect("activate dig");
         drain_stack(&mut g);

@@ -160,7 +160,7 @@ fn beledros_witherbloom_mass_untap_activation() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("should activate with 10 life");
     drain_stack(&mut g);
@@ -183,7 +183,7 @@ fn beledros_witherbloom_mass_untap_fails_low_life() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     });
     assert!(result.is_err(), "should fail — not enough life");
 }
@@ -217,7 +217,7 @@ fn lorehold_apprentice_magecraft_grants_spirits_a_tap_ping() {
     assert_eq!(g.players[1].life, p1_life - 3, "only the bolt so far");
     g.perform_action(GameAction::ActivateAbility {
         card_id: spirit, ability_index: 0, target: None,
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("granted tap-ping activatable");
     drain_stack(&mut g);

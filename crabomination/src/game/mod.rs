@@ -9314,7 +9314,15 @@ impl GameState {
                 target,
                 additional_targets,
                 x_value,
-            } => self.activate_ability(card_id, ability_index, target, additional_targets, x_value),
+                mode,
+            } => self.activate_ability(
+                card_id,
+                ability_index,
+                target,
+                additional_targets,
+                x_value,
+                mode,
+            ),
             GameAction::ActivateAbilityWaterbend {
                 card_id,
                 ability_index,
@@ -13162,6 +13170,7 @@ impl GameState {
                             target,
                             additional_targets,
                             Some(n),
+                            None,
                         );
                     }
                     K::GraveyardTarget => {
@@ -13180,10 +13189,18 @@ impl GameState {
                             Some(Target::Permanent(id)),
                             additional_targets,
                             x_value,
+                            None,
                         );
                     }
                 }
-                return self.activate_ability(card_id, ability_index, target, additional_targets, x_value);
+                return self.activate_ability(
+                    card_id,
+                    ability_index,
+                    target,
+                    additional_targets,
+                    x_value,
+                    None,
+                );
             }
         };
         let mut sba = self.check_state_based_actions();

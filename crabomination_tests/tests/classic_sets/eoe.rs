@@ -132,7 +132,7 @@ fn lander_token_fetches_a_basic_land() {
     g.players[0].mana_pool.add_colorless(2);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(plains))]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lander, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: lander, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("crack the Lander");
     drain_stack(&mut g);
     let p = g.battlefield_find(plains).expect("Plains fetched to battlefield");
@@ -391,7 +391,7 @@ fn station_charges_from_tapped_power_then_band_makes_creature() {
     // Before stationing it's a noncreature artifact.
     assert!(!g.computed_permanent(ship).unwrap().card_types.contains(&CardType::Creature));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("station the 4/4");
     drain_stack(&mut g);
     let s = g.battlefield_find(ship).unwrap();
@@ -415,7 +415,7 @@ fn station_accumulates_to_higher_band() {
     g.priority.player_with_priority = 0;
     let act = |g: &mut GameState| {
         g.perform_action(GameAction::ActivateAbility {
-            card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("station");
         drain_stack(g);
     };
@@ -440,7 +440,7 @@ fn station_is_sorcery_speed_only() {
     g.step = TurnStep::Upkeep; // not a main phase
     g.priority.player_with_priority = 0;
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).is_err(), "station rejected outside a main phase");
 }
 
@@ -454,7 +454,7 @@ fn galvanizing_sawship_band_grants_flying_haste() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("station");
     drain_stack(&mut g);
     let post = g.computed_permanent(ship).unwrap();
@@ -699,7 +699,7 @@ fn kavaron_turbodrone_pumps_and_hastes() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: drone, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Turbodrone");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
@@ -1017,7 +1017,7 @@ fn rust_harvester_grows_and_pings() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: rh, ability_index: 0,
         target: Some(crabomination::game::types::Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Rust Harvester");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(rh).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
@@ -1199,7 +1199,7 @@ fn station_autopick_taps_highest_power_creature() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("station");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(ship).unwrap().counter_count(CounterType::Charge), 4,
@@ -1715,7 +1715,7 @@ fn zookeeper_mechan_taps_for_red() {
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: zoo, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: zoo, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.amount(crabomination::mana::Color::Red), 1);
 }
@@ -1827,7 +1827,7 @@ fn planet_enters_tapped_and_taps_for_mana() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: evendo, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: evendo, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for green");
     assert!(g.players[0].mana_pool.total() >= 1, "Planet taps for mana");
 }
@@ -1857,7 +1857,7 @@ fn umbral_collar_zealot_sacrifices_to_surveil() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: zealot, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: zealot, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac an artifact to surveil");
     drain_stack(&mut g);
     assert!(g.battlefield_find(art).is_none(), "the artifact was sacrificed");
@@ -1927,7 +1927,7 @@ fn steelswarm_operator_makes_restricted_mana() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: op, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: op, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for restricted mana");
     assert!(g.players[0].mana_pool.restricted_total() >= 1, "restricted mana added");
 }
@@ -1985,7 +1985,7 @@ fn xu_ifit_reanimates_from_graveyard() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: xu, ability_index: 0, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("reanimate");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some(), "creature returned to battlefield");
@@ -2084,7 +2084,7 @@ fn melded_moxite_sacs_for_robot() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mox, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: mox, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac for a Robot");
     drain_stack(&mut g);
     assert!(g.battlefield_find(mox).is_none(), "Moxite sacrificed");
@@ -2132,7 +2132,7 @@ fn thaumaton_torpedo_destroys_nonland() {
     g.players[0].mana_pool.add_colorless(6);
     g.perform_action(GameAction::ActivateAbility {
         card_id: torpedo, ability_index: 0, target: Some(Target::Permanent(theirs)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("destroy target");
     drain_stack(&mut g);
     assert!(g.battlefield_find(theirs).is_none(), "nonland permanent destroyed");
@@ -2186,7 +2186,7 @@ fn station_activated_band_unlocks_at_threshold() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     // Printed abilities are tap-for-U (0) and Station (1); the band is index 2.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: uthros, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+        card_id: uthros, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate 12+ band");
     // Spent {U}, produced {U} per artifact (1) → at least one blue back.
     assert!(g.players[0].mana_pool.total() >= 1, "band added scaled mana");
@@ -2366,7 +2366,7 @@ fn starport_security_taps_a_creature() {
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: sec, ability_index: 0, target: Some(Target::Permanent(theirs)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap a creature");
     drain_stack(&mut g);
     assert!(g.battlefield_find(theirs).unwrap().tapped, "target creature tapped");
@@ -2400,7 +2400,7 @@ fn memorial_vault_exiles_scaled_by_sacrifice() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vault, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: vault, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Memorial Vault");
     drain_stack(&mut g);
     assert_eq!(g.exile.len(), exile_before + 3, "exiled 1 + MV 2 = 3 cards");
@@ -2563,7 +2563,7 @@ fn survey_mechan_sac_burn_and_draw() {
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: mech, ability_index: 0, target: Some(Target::Player(1)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Survey Mechan");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1 - 3, "dealt 3 damage");
@@ -2764,7 +2764,7 @@ fn all_fates_scroll_draws_per_differently_named_land() {
     g.players[0].mana_pool.add_colorless(7);
     let hand0 = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: scroll, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: scroll, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate sac-draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand0 + 2, "draws 2 (Forest, Island distinct)");
@@ -2878,7 +2878,7 @@ fn secluded_starforge_makes_a_robot() {
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: forge, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: forge, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate robot maker");
     drain_stack(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Robot").count(), 1);
@@ -2902,7 +2902,7 @@ fn eternity_elevator_taps_for_ccc() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: elev, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: elev, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for CCC");
     assert_eq!(g.players[0].mana_pool.total(), 3, "added 3 colorless");
 }
@@ -3107,7 +3107,7 @@ fn adagia_band_makes_legendary_copy() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: adagia, ability_index: 2,
         target: Some(crabomination::game::types::Target::Permanent(moxite)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Adagia 12+ band");
     drain_stack(&mut g);
     let copy = g.battlefield.iter().find(|c| {
@@ -3129,7 +3129,7 @@ fn kavaron_band_robot_and_team_haste() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: kavaron, ability_index: 2, target: None, additional_targets: vec![], x_value: None,
+        card_id: kavaron, ability_index: 2, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate Kavaron 12+ band");
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).is_none(), "a land was sacrificed");

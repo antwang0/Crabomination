@@ -99,7 +99,7 @@ fn time_sieve_sacrifices_five_artifacts_for_extra_turn() {
     g.priority.player_with_priority = 0;
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: sieve, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: sieve, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activation");
     drain_stack(&mut g);
     assert_eq!(g.players[0].extra_turns, 1);
@@ -248,7 +248,7 @@ fn vorinclex_locks_an_opponent_land_after_it_taps_for_mana() {
     g.priority.player_with_priority = 1;
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).unwrap();
     drain_stack(&mut g);
     assert!(g.battlefield_find(land).unwrap().skip_next_untap,
@@ -301,7 +301,7 @@ fn den_of_the_bugbear_attacks_and_mints_an_attacking_goblin() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: den, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: den, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).unwrap();
     drain_stack(&mut g);
     while g.step != TurnStep::DeclareAttackers {
@@ -478,7 +478,7 @@ fn pack_rat_scales_with_rats_and_copies_itself() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: rat, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: rat, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("copy activation");
     drain_stack(&mut g);
     let cp = g.compute_battlefield();
@@ -502,7 +502,7 @@ fn everflowing_chalice_multikicker_charges_and_taps_for_mana() {
     let chalice = g.battlefield.iter().find(|c| c.id == id).unwrap();
     assert_eq!(chalice.counter_count(CounterType::Charge), 2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.total(), 2, "adds {{C}} per charge counter");
 }
@@ -532,7 +532,7 @@ fn archive_trap_free_after_opponent_searches() {
     let fetch = g.add_card_to_battlefield(1, catalog::evolving_wilds());
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: fetch, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: fetch, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("fetch activation");
     drain_stack(&mut g);
     assert!(g.players[1].searched_library_this_turn, "search stamped");
@@ -768,7 +768,7 @@ fn dauthi_voidwalker_sac_frees_void_card() {
     let stolen = g.add_card_to_exile(1, catalog::serra_angel());
     g.find_card_anywhere_mut(stolen).unwrap().add_counters(CounterType::Void, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: walker, ability_index: 0, target: Some(Target::Permanent(stolen)), additional_targets: Vec::new(), x_value: None,
+        card_id: walker, ability_index: 0, target: Some(Target::Permanent(stolen)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac activation");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().all(|c| c.id != walker), "walker sacrificed");
@@ -796,7 +796,7 @@ fn urzas_saga_chapters_grant_abilities_then_tutor() {
     drain_stack(&mut g);
     // Chapter I — mana ability granted.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: saga, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: saga, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("granted {T}: Add {C}");
     assert_eq!(g.players[0].mana_pool.total(), 1);
     g.battlefield_find_mut(saga).unwrap().tapped = false;
@@ -805,7 +805,7 @@ fn urzas_saga_chapters_grant_abilities_then_tutor() {
     drain_stack(&mut g);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: saga, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: saga, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("granted construct mint");
     drain_stack(&mut g);
     let construct = g.battlefield.iter().find(|c| c.definition.name == "Construct")
@@ -1236,13 +1236,13 @@ fn luminarch_ascension_quests_and_mints_angels() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: asc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: asc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "needs four quest counters");
     g.battlefield_find_mut(asc).unwrap().add_counters(CounterType::Quest, 3);
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: asc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: asc, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("four counters → activate");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Angel"));
@@ -1343,7 +1343,7 @@ fn indulgent_aristocrat_sac_counters_vampires() {
     let fodder = g.add_card_to_battlefield(0, catalog::ornithopter()); // lowest power → auto-pick
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: aristo, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: aristo, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("sac activation");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().all(|c| c.id != fodder), "fodder sacrificed");
@@ -1408,14 +1408,14 @@ fn cryptbreaker_mints_and_draws() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: cb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("mint");
     drain_stack(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count(), 1);
     // Two more Zombies + Cryptbreaker untapped = three to tap for the draw.
     g.battlefield_find_mut(cb).unwrap().tapped = false;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: cb, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).err(); // out of mana — ignore
     let z2 = g.add_card_to_battlefield(0, catalog::diregraf_ghoul());
     g.battlefield_find_mut(z2).unwrap().tapped = false;
@@ -1423,7 +1423,7 @@ fn cryptbreaker_mints_and_draws() {
     let life = g.players[0].life;
     g.add_card_to_library(0, catalog::forest());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: cb, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: cb, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap-three draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1);
@@ -1474,7 +1474,7 @@ fn underworld_connections_grants_land_draw() {
     // The granted ability surfaces after the land's printed mana ability.
     let printed = g.battlefield_find(land).unwrap().definition.activated_abilities.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: printed, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: land, ability_index: printed, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("granted draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1);
@@ -1560,7 +1560,7 @@ fn vodalian_hexcatcher_lord_and_sac_counter() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: hex, ability_index: 0,
-        target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(bolt)), additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("sac a Merfolk to counter");
     assert!(!g.battlefield.iter().any(|c| c.id == folk), "Merfolk sacrificed");
@@ -1605,7 +1605,7 @@ fn tideshaper_mystic_changes_land_type_your_turn_only() {
     assert!(
         g.perform_action(GameAction::ActivateAbility {
             card_id: tide, ability_index: 0,
-            target: Some(Target::Permanent(land)), additional_targets: Vec::new(), x_value: None,
+            target: Some(Target::Permanent(land)), additional_targets: Vec::new(), x_value: None, mode: None,
         })
         .is_err(),
         "activate only during your turn"
@@ -1614,7 +1614,7 @@ fn tideshaper_mystic_changes_land_type_your_turn_only() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)])); // Island
     g.perform_action(GameAction::ActivateAbility {
         card_id: tide, ability_index: 0,
-        target: Some(Target::Permanent(land)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(land)), additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("activates on your turn");
     drain_stack(&mut g);
@@ -1631,11 +1631,11 @@ fn devoted_druid_vizier_combo_untaps_without_counters() {
     g.clear_sickness(druid);
     // Without Vizier: untap costs a real -1/-1 counter.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: druid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: druid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("tap for G");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: druid, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: druid, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("untap with a counter");
     drain_stack(&mut g);
@@ -1646,11 +1646,11 @@ fn devoted_druid_vizier_combo_untaps_without_counters() {
     // With Vizier: the counter never lands.
     g.add_card_to_battlefield(0, catalog::vizier_of_remedies());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: druid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: druid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("tap again");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: druid, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: druid, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("untap");
     drain_stack(&mut g);
@@ -1736,7 +1736,7 @@ fn aether_vial_charges_and_deploys_matching_mv() {
     let _elf = g.add_card_to_hand(0, catalog::llanowar_elves());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vial, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: vial, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("tap the vial");
     drain_stack(&mut g);
@@ -1750,7 +1750,7 @@ fn mox_amber_needs_a_legendary() {
     let mut g = two_player_game();
     let mox = g.add_card_to_battlefield(0, catalog::mox_amber());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("activates");
     drain_stack(&mut g);
@@ -1759,7 +1759,7 @@ fn mox_amber_needs_a_legendary() {
     // A blue legendary creature on the battlefield → produces {U}.
     g.add_card_to_battlefield(0, catalog::svyelun_of_sea_and_sky());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("activates with a legendary");
     drain_stack(&mut g);
@@ -1908,7 +1908,7 @@ fn malevolent_rumble_digs_and_spawns() {
         .map(|c| c.id)
         .expect("spawn created");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: spawn, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: spawn, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("sac for {C}");
     assert!(g.players[0].mana_pool.colorless_amount() >= 1, "spawn made {{C}}");
@@ -1956,7 +1956,7 @@ fn writhing_chrysalis_grows_on_spawn_sacrifice() {
         .map(|c| c.id)
         .expect("two spawns minted");
     g.perform_action(GameAction::ActivateAbility {
-        card_id: spawn, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: spawn, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("sac a spawn");
     drain_stack(&mut g);
@@ -2024,7 +2024,7 @@ fn priest_of_fell_rites_reanimates_and_unearths() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: priest, ability_index: 0,
-        target: Some(Target::Permanent(dead)), additional_targets: Vec::new(), x_value: None,
+        target: Some(Target::Permanent(dead)), additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("reanimate");
     drain_stack(&mut g);
@@ -2037,7 +2037,7 @@ fn priest_of_fell_rites_reanimates_and_unearths() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: priest, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: priest, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
     .expect("unearth");
     drain_stack(&mut g);

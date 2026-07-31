@@ -147,7 +147,7 @@ fn cr_616_1_source_scoped_shield_ignores_other_sources() {
         ability_index: 0,
         target: Some(Target::Permanent(shielded)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("shield against the Hydra");
     drain_stack(&mut g);

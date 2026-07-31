@@ -23,7 +23,7 @@ mod recent253 {
             ability_index: 0,
             target: Some(Target::Permanent(bear)),
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate the deathtouch ability");
         drain_stack(&mut g);
@@ -401,7 +401,7 @@ mod recent257 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: Some(2),
+            x_value: Some(2), mode: None,
         })
         .expect("activate the draw-X ability with X=2");
         drain_stack(&mut g);
@@ -578,7 +578,7 @@ mod recent260 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate the must-be-blocked ability");
         drain_stack(&mut g);
@@ -794,7 +794,7 @@ mod recent264 {
         let id = g.add_card_to_battlefield(0, catalog::fallaji_chaindancer());
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
         assert!(kw(&g, id, Keyword::DoubleStrike));
@@ -809,7 +809,7 @@ mod recent264 {
         g.players[0].mana_pool.add(Color::Green, 1);
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
         let cp = g.computed_permanent(id).unwrap();
@@ -827,7 +827,7 @@ mod recent264 {
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::ActivateAbility {
             card_id: marshal, ability_index: 0,
-            target: Some(Target::Permanent(soldier)), additional_targets: vec![], x_value: None,
+            target: Some(Target::Permanent(soldier)), additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
         assert!(kw(&g, soldier, Keyword::Flying), "the Soldier gained flying");
@@ -842,7 +842,7 @@ mod recent264 {
         let before = g.players[1].life;
         g.perform_action(GameAction::ActivateAbility {
             card_id: jav, ability_index: 0,
-            target: Some(Target::Player(1)), additional_targets: vec![], x_value: None,
+            target: Some(Target::Player(1)), additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, before - 2);
@@ -864,7 +864,7 @@ mod recent264 {
         g.battlefield_find_mut(jav).unwrap().summoning_sick = false;
         g.perform_action(GameAction::ActivateAbility {
             card_id: jav, ability_index: 0,
-            target: Some(Target::Permanent(battle)), additional_targets: vec![], x_value: None,
+            target: Some(Target::Permanent(battle)), additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
         assert_eq!(
@@ -883,7 +883,7 @@ mod recent264 {
         let _fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let (my_life, opp_life) = (g.players[0].life, g.players[1].life);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: dreg, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: dreg, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
         assert_eq!(g.players[1].life, opp_life - 1, "opponent lost one");
@@ -1014,7 +1014,7 @@ mod recent265 {
         assert!(kw(&g, id, Keyword::Deathtouch));
         g.perform_action(GameAction::ActivateAbility {
             card_id: id, ability_index: 0,
-            target: None, additional_targets: vec![], x_value: None,
+            target: None, additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         let total: u32 = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
             .iter().map(|c| g.players[0].mana_pool.amount(*c)).sum::<u32>()
@@ -1031,7 +1031,7 @@ mod recent265 {
         assert!(kw(&g, id, Keyword::Flying));
         g.players[0].mana_pool.add(Color::Black, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
         assert!(kw(&g, id, Keyword::Deathtouch));
@@ -1051,7 +1051,7 @@ mod recent265 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
             card_id: crawler, ability_index: 0,
-            target: Some(Target::Permanent(blocker)), additional_targets: vec![], x_value: None,
+            target: Some(Target::Permanent(blocker)), additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
         while g.step != TurnStep::DeclareAttackers {
@@ -1080,7 +1080,7 @@ mod recent265 {
         g.players[0].mana_pool.add(Color::White, 1);
         g.players[0].mana_pool.add_colorless(4);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: van, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: van, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
         let cp = g.computed_permanent(ally).unwrap();
@@ -1096,7 +1096,7 @@ mod recent265 {
         g.players[0].mana_pool.add(Color::Red, 1);
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
         assert!(kw(&g, id, Keyword::DoubleStrike));
@@ -1257,7 +1257,7 @@ mod recent266 {
         let id = g.add_card_to_battlefield(0, catalog::prakhata_pillar_bug());
         g.players[0].mana_pool.add(Color::Black, 1);
         g.perform_action(GameAction::ActivateAbility {
-            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+            card_id: id, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).unwrap();
         drain_stack(&mut g);
         assert!(kw(&g, id, Keyword::Lifelink));
@@ -1345,7 +1345,7 @@ mod recent267 {
             ability_index: 0,
             target: None,
             additional_targets: vec![],
-            x_value: None,
+            x_value: None, mode: None,
         })
         .expect("activate");
         drain_stack(&mut g);

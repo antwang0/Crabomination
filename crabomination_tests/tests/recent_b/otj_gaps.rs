@@ -253,7 +253,7 @@ fn akul_sacrifices_three_to_deploy_from_hand() {
     let fatty = g.add_card_to_hand(0, catalog::elder_gargaroth());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: akul, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: akul, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sac three");
     drain_stack(&mut g);
@@ -296,7 +296,7 @@ fn selvala_scales_mana_with_distinct_powers() {
     g.add_card_to_battlefield(0, catalog::grizzly_bears()); // duplicate power
     g.perform_action(GameAction::ActivateAbility {
         card_id: selvala, ability_index: 0, target: None, additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("tap for mana");
     // Powers present: Selvala 4, bears 2 → two distinct values.
@@ -420,7 +420,7 @@ fn rakdos_the_muscle_impulses_on_a_sacrifice() {
         g.add_card_to_library(1, catalog::grizzly_bears());
     }
     g.perform_action(GameAction::ActivateAbility {
-        card_id: rakdos, ability_index: 0, target: None, additional_targets: vec![], x_value: None,
+        card_id: rakdos, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("sac a creature");
     drain_stack(&mut g);
@@ -476,7 +476,7 @@ fn ghired_grants_the_token_copy_ability() {
     }
     g.perform_action(GameAction::ActivateAbility {
         card_id: body, ability_index: 0, target: Some(Target::Permanent(token)),
-        additional_targets: vec![], x_value: None,
+        additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("granted copy ability");
     drain_stack(&mut g);
@@ -759,7 +759,7 @@ fn bucolic_ranch_mount_mana_casts_a_mount() {
     let ranch = g.add_card_to_battlefield(0, catalog::bucolic_ranch());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ranch, ability_index: 1, target: None, additional_targets: vec![], x_value: None,
+        card_id: ranch, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("tap for Mount mana");
     g.players[0].mana_pool.add_colorless(1);

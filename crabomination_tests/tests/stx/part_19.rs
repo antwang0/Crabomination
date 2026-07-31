@@ -1003,7 +1003,7 @@ fn witherbloom_sapling_b155_activation_grows_self() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None,
+        card_id: s, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Activation succeeds");
     drain_stack(&mut g);
     let counters = g.battlefield_find(s).map(|c| {
@@ -1213,7 +1213,7 @@ fn cr_118_8_exile_from_graveyard_cost_pre_flight_no_mana_burned() {
         ability_index: 0,
         target: None,
         additional_targets: Vec::new(),
-        x_value: None,
+        x_value: None, mode: None,
     });
     assert!(result.is_err(), "must reject without legal gy-exile target");
     // Mana pool unchanged.

@@ -42,7 +42,7 @@ fn hisokas_guard_shroud_lasts_while_it_stays_tapped() {
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
-        x_value: None,
+        x_value: None, mode: None,
     })
     .expect("activate");
     drain_stack(&mut g);
