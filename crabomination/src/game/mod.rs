@@ -10105,6 +10105,21 @@ impl GameState {
         })
     }
 
+    /// CR 121.2a — the look-N-keep-one draw replacement `p` controls
+    /// (Tomorrow, Azami's Familiar), peeled through the gating wrappers.
+    fn look_instead_of_drawing(&self, p: usize) -> Option<u32> {
+        self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+            c.definition.static_abilities.iter().find_map(|sa| {
+                match self.active_static(&sa.effect, c) {
+                    Some(crate::effect::StaticEffect::ReplaceDrawWithLookN { count }) => {
+                        Some(*count)
+                    }
+                    _ => None,
+                }
+            })
+        })
+    }
+
     pub fn draw_one(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
         // CR 121.2b — a per-turn draw cap applies to *individual* card draws,
         // so it gates every draw source, not just `Effect::Draw`'s count.
@@ -10159,6 +10174,31 @@ impl GameState {
             return true;
         }
         if self.try_dredge_instead_of_draw(p, events) {
+            return true;
+        }
+        // CR 121.2a — Tomorrow, Azami's Familiar: look at the top N instead,
+        // keep one, bottom the rest.
+        if let Some(n) = self.look_instead_of_drawing(p) {
+            let ctx =
+                crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), p, None);
+            if let Ok(mut evs) = self.resolve_effect(
+                &crate::effect::Effect::LookPickToHand {
+                    who: crate::effect::PlayerRef::Seat(p),
+                    count: crate::effect::Value::Const(n as i32),
+                    rest_to_graveyard: false,
+                    pick_filter: None,
+                    take: None,
+                    to_battlefield: false,
+                    gain_life_if_pick: None,
+                    gain_life_greatest_power_rest: false,
+                    optional: false,
+                    picked_lands_to_battlefield: false,
+                    rest_bottom_random: false,
+                },
+                &ctx,
+            ) {
+                events.append(&mut evs);
+            }
             return true;
         }
         // CR 121.2a — Archmage Ascension: "you may instead search your library
@@ -16318,6 +16358,11 @@ fn static_effect_to_effects(
             // Fist of Suns — consulted by `effective_alternative_cost` at cast
             // time; no layer effect.
             | StaticEffect::FiveColorAlternativeCost
+            // Kentaro — consulted by `effective_alternative_cost`; no layer.
+            | StaticEffect::GenericAlternativeCostForFilter { .. }
+            // Tomorrow, Azami's Familiar — a draw replacement consulted in
+            // `draw_one`; no layer effect.
+            | StaticEffect::ReplaceDrawWithLookN { .. }
             // Possessed Portal / Shared Fate — consulted by `draw_one`; no
             // layer effect.
             // MayReplaceDrawWithTutor — a draw replacement consulted in

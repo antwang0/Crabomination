@@ -167,6 +167,7 @@ pub fn refraction_trap() -> crate::card::CardDefinition {
         effect: Effect::PreventNextFromChosenSourceToTeam {
             amount: Value::Const(3),
             to: target_any(),
+            one_event: false,
         },
         ..Default::default()
     }

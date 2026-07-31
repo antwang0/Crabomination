@@ -4122,7 +4122,7 @@ pub fn brothers_yamazaki() -> CardDefinition {
 /// Squire): "Whenever you cast a Spirit or Arcane spell, you may put a ki
 /// counter on this" + "At the beginning of the end step, if there are two or
 /// more ki counters on this, you may flip it."
-fn ki_flip_triggers() -> Vec<TriggeredAbility> {
+pub(crate) fn ki_flip_triggers() -> Vec<TriggeredAbility> {
     use crate::card::CounterType;
     use crate::effect::Predicate;
     use crate::game::TurnStep;

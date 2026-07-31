@@ -418,3 +418,213 @@ fn neko_te_taps_down_what_it_damages() {
     assert!(g.battlefield_find(victim).unwrap().tapped, "it got tapped");
     assert!(g.battlefield_find(victim).unwrap().skip_next_untap);
 }
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────────
+
+/// Every wave-3 BOK factory is registered under its printed name.
+#[test]
+fn bok2_wave3_cards_are_registered() {
+    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+        .map(|f| f().name)
+        .collect();
+    for f in [
+        catalog::budoka_pupil as fn() -> crabomination::card::CardDefinition,
+        catalog::fumiko_the_lowblood,
+        catalog::kentaro_the_smiling_cat,
+        catalog::opal_eye_kondas_yojimbo,
+        catalog::toshiro_umezawa,
+        catalog::aura_barbs,
+        catalog::minamos_meddling,
+        catalog::shining_shoal,
+        catalog::mark_of_sakiko,
+        catalog::ornate_kanzashi,
+        catalog::blinding_powder,
+        catalog::shuriken,
+        catalog::clash_of_realities,
+        catalog::tomorrow_azamis_familiar,
+    ] {
+        let name = f().name;
+        assert!(names.contains(&name), "{name} is not registered");
+    }
+}
+
+/// Aura Barbs shocks each enchantment's controller and each Aura's host.
+#[test]
+fn aura_barbs_bites_controllers_and_hosts() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(1, catalog::pacifism());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let barbs = g.add_card_to_hand(0, catalog::aura_barbs());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 3);
+    let before = g.players[1].life;
+    cast(&mut g, barbs, None);
+    assert_eq!(g.players[1].life, before - 2, "the Aura's controller took 2");
+    assert!(g.battlefield_find(bear).is_none(), "and the 2/2 host died to its own Aura");
+}
+
+/// Minamo's Meddling counters the spell and strips the spliced names.
+#[test]
+fn minamos_meddling_discards_the_spliced_names() {
+    let mut g = two_player_game();
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    let splicer = g.add_card_to_hand(0, catalog::glacial_ray());
+    let copy = g.add_card_to_hand(0, catalog::glacial_ray());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 4);
+    g.perform_action(GameAction::CastSpellSpliced {
+        card_id: ray,
+        splice_cards: vec![splicer],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("spliced cast");
+    let meddle = g.add_card_to_hand(1, catalog::minamos_meddling());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Blue, 4);
+    g.priority.player_with_priority = 1;
+    cast(&mut g, meddle, Some(Target::Permanent(ray)));
+    assert!(g.stack.is_empty(), "the Ray was countered");
+    // Both remaining Glacial Rays (the splicer, still in hand, and the spare)
+    // share the spliced name and are discarded.
+    assert!(!g.players[0].hand.iter().any(|c| c.id == splicer || c.id == copy));
+}
+
+/// Tomorrow turns each draw into look-3-keep-1.
+#[test]
+fn tomorrow_replaces_draws_with_a_look_at_three() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tomorrow_azamis_familiar());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let lib = g.players[0].library.len();
+    let mut evs = vec![];
+    assert!(g.draw_one(0, &mut evs));
+    assert_eq!(g.players[0].hand.len(), 1);
+    assert_eq!(g.players[0].library.len(), lib - 1, "the other two went to the bottom");
+}
+
+/// Kentaro lets a Samurai spell be cast for colorless equal to its mana value.
+#[test]
+fn kentaro_lets_samurai_be_paid_generically() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kentaro_the_smiling_cat());
+    let samurai = g.add_card_to_hand(0, catalog::opal_eye_kondas_yojimbo()); // {1}{W}{W}
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: samurai,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        pitch_card: None,
+    })
+    .expect("alternative cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Opal-Eye, Konda's Yojimbo"));
+}
+
+/// Toshiro Umezawa flashes an instant back when an opponent's creature dies.
+#[test]
+fn toshiro_umezawa_unlocks_a_graveyard_instant() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::toshiro_umezawa());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let evs = g.remove_to_graveyard_with_triggers(victim);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(
+        g.players[0]
+            .graveyard
+            .iter()
+            .find(|c| c.id == bolt)
+            .is_some_and(|c| c.may_play_until.is_some()),
+        "the Bolt is castable from the graveyard"
+    );
+}
+
+/// Fumiko's bushido scales with the attacker count and pushes opponents to
+/// attack.
+#[test]
+fn fumiko_grants_must_attack_and_scaling_bushido() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::fumiko_the_lowblood());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(
+        g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::MustAttack),
+        "their creatures have to swing"
+    );
+    assert_eq!(catalog::fumiko_the_lowblood().triggered_abilities.len(), 2);
+}
+
+/// Ornate Kanzashi exiles an opponent's top card and lets you play it.
+#[test]
+fn ornate_kanzashi_lends_you_the_top_card() {
+    let mut g = two_player_game();
+    let kanzashi = g.add_card_to_battlefield(0, catalog::ornate_kanzashi());
+    g.clear_sickness(kanzashi);
+    let top = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kanzashi,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == top).expect("exiled");
+    assert_eq!(exiled.may_play_until.map(|m| m.player), Some(0));
+}
+
+/// Budoka Pupil flips into Ichiga once it has two ki counters.
+#[test]
+fn budoka_pupil_flips_into_ichiga() {
+    let mut g = two_player_game();
+    let pupil = g.add_card_to_battlefield(0, catalog::budoka_pupil());
+    g.battlefield_find_mut(pupil).unwrap().add_counters(CounterType::Ki, 2);
+    always_yes(&mut g);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(pupil).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3));
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Blinding Powder's unattach shrugs off the equipped creature's combat damage.
+#[test]
+fn blinding_powder_unattaches_to_dodge_combat_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let powder = g.add_card_to_battlefield(0, catalog::blinding_powder());
+    g.battlefield_find_mut(powder).unwrap().attached_to = Some(bear);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("unattach");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(powder).unwrap().attached_to.is_none(), "it came off");
+    assert!(g.combat_damage_prevented_to_self(bear));
+}
+
+/// Clash of Realities points every entering creature at the other camp.
+#[test]
+fn clash_of_realities_makes_arrivals_bite() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::clash_of_realities());
+    let spirit = g.add_card_to_battlefield(1, catalog::kami_of_ancient_law()); // 2/2 Spirit
+    always_yes(&mut g);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 2);
+    cast(&mut g, bear, None);
+    assert!(g.battlefield_find(spirit).is_none(), "the non-Spirit arrival shot the Spirit");
+}

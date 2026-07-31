@@ -769,9 +769,11 @@ impl Effect {
             Effect::MustBlockTarget { blocker, attacker } => {
                 sel_has_target(blocker) || sel_has_target(attacker)
             }
-            Effect::PreventNextFromChosenSourceToTeam { amount, to } => {
+            Effect::PreventNextFromChosenSourceToTeam { amount, to, .. } => {
                 value_has_target(amount) || sel_has_target(to)
             }
+            Effect::EnchantmentsBiteControllersAndHosts { .. } => false,
+            Effect::CounterSpellDiscardSplicedNames { what } => sel_has_target(what),
             Effect::UnlessPlayerPays { then, .. } => then.requires_target(),
             Effect::PumpPT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
@@ -1317,6 +1319,7 @@ impl Effect {
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_filter(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_filter(what),
             Effect::DoubleDamageFromSourceThisTurn { what } => sel_filter(what),
+            Effect::CounterSpellDiscardSplicedNames { what } => sel_filter(what),
             Effect::ExchangeCreatureControlWith { who, .. } => sel_filter(who),
             Effect::RedirectYourDamageToChosen { what }
             | Effect::RedirectYourCombatDamageToTarget { what }
@@ -2462,6 +2465,7 @@ impl Effect {
                 Effect::SearchSplitOpponentChooses { opponent, .. } => sel_find(opponent, slot),
                 Effect::RedirectSpellTargetToSelf { what } => sel_find(what, slot),
                 Effect::DoubleDamageFromSourceThisTurn { what } => sel_find(what, slot),
+                Effect::CounterSpellDiscardSplicedNames { what } => sel_find(what, slot),
                 Effect::ExchangeCreatureControlWith { who, .. } => sel_find(who, slot),
                 Effect::RedirectYourDamageToChosen { what }
                 | Effect::RedirectYourCombatDamageToTarget { what }

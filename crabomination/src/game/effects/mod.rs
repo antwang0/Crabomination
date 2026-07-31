@@ -17214,6 +17214,67 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EnchantmentsBiteControllersAndHosts { amount } => {
+                // Aura Barbs — every enchantment shocks its controller, then
+                // every Aura on a creature shocks its host. Both passes read a
+                // snapshot so an enchantment that dies mid-sweep still fired.
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let ench: Vec<(CardId, usize, Option<CardId>)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_enchantment())
+                    .map(|c| (c.id, c.controller, c.attached_to))
+                    .collect();
+                for (id, controller, _) in &ench {
+                    self.deal_damage_to_from(EntityRef::Player(*controller), n, Some(*id), events);
+                }
+                for (id, _, host) in &ench {
+                    let Some(host) = host else { continue };
+                    if self.battlefield_find(*host).is_some_and(|c| c.definition.is_creature()) {
+                        self.deal_damage_to_from(
+                            EntityRef::Permanent(*host),
+                            n,
+                            Some(*id),
+                            events,
+                        );
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::CounterSpellDiscardSplicedNames { what } => {
+                // Minamo's Meddling — counter the spell, then strip its
+                // controller's hand of every card sharing a name with one
+                // spliced onto it (CR 702.47).
+                let mut hits: Vec<(usize, Vec<String>)> = Vec::new();
+                for t in self.resolve_selector(what, ctx) {
+                    let Some(cid) = t.as_card_id() else { continue };
+                    if let Some(pos) = self.stack.iter().position(|si| matches!(
+                        si,
+                        StackItem::Spell { card, uncounterable: false, .. } if card.id == cid
+                    )) && let StackItem::Spell { card, caster, .. } = self.stack.remove(pos)
+                    {
+                        hits.push((caster, card.spliced_names.clone()));
+                        self.countered_spell_controller = Some(caster);
+                        self.countered_spell_off_stack(*card, ctx.controller, events);
+                    }
+                }
+                for (caster, names) in hits {
+                    let doomed: Vec<CardId> = self.players[caster]
+                        .hand
+                        .iter()
+                        .filter(|c| names.iter().any(|n| n == c.definition.name))
+                        .map(|c| c.id)
+                        .collect();
+                    for cid in doomed {
+                        self.discard_card(caster, cid, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::DoubleDamageFromSourceThisTurn { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id() {
@@ -20830,7 +20891,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventNextFromChosenSourceToTeam { amount, to } => {
+            Effect::PreventNextFromChosenSourceToTeam { amount, to, one_event } => {
                 // CR 615.7 — one shared "next N" pool around the controller and
                 // everything they control, restricted to a chosen source; the
                 // soaked damage is redirected to `to` (Refraction Trap).
@@ -20857,6 +20918,7 @@ impl GameState {
                         source: Some(chosen),
                         redirect_to: dst,
                         redirect_to_player: dst_player,
+                        one_event: *one_event,
                         ..Default::default()
                     });
                 }

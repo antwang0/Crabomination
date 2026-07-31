@@ -1694,6 +1694,14 @@ pub enum StaticEffect {
         filter: SelectionRequirement,
         ability: Box<TriggeredAbility>,
     },
+    /// CR 118.9 — "You may pay {X} rather than pay the mana cost for [filter]
+    /// spells you cast, where X is that spell's mana value" (Kentaro, the
+    /// Smiling Cat). Read by `effective_alternative_cost`.
+    GenericAlternativeCostForFilter { filter: SelectionRequirement },
+    /// CR 121.2a — "If you would draw a card, look at the top `count` cards of
+    /// your library instead. Put one into your hand and the rest on the bottom
+    /// in any order." (Tomorrow, Azami's Familiar.)
+    ReplaceDrawWithLookN { count: u32 },
     /// Alpine Moon — lands matching the source's chosen name
     /// (`CardInstance.named_card`) that opponents control lose all land
     /// types and abilities. Pair with a `GrantActivatedAbility` over

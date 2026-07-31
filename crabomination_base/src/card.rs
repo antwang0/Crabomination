@@ -4315,6 +4315,10 @@ pub struct CardInstance {
     /// matching `additional_targets` slot). Cleared when the spell leaves
     /// the stack (702.47e).
     pub spliced_effects: Vec<Effect>,
+    /// Names of the cards spliced onto this spell, parallel to
+    /// `spliced_effects` — Minamo's Meddling discards by name. Cleared with
+    /// them when the spell leaves the stack.
+    pub spliced_names: Vec<String>,
     /// CR 702.27 — true if this spell was cast paying its optional Buyback
     /// cost. On resolution the resolver returns the card to its owner's
     /// hand instead of the graveyard.
@@ -4850,6 +4854,7 @@ impl CardInstance {
             pending_etb_counters: Vec::new(),
             spree_modes: Vec::new(),
             spliced_effects: Vec::new(),
+            spliced_names: Vec::new(),
             bought_back: false,
             entwined: false,
             gift_promised: false,
@@ -5390,6 +5395,8 @@ struct CardInstanceWire {
     /// CR 702.47 spliced rules text. `#[serde(default)]` for back-compat.
     #[serde(default)]
     spliced_effects: Vec<Effect>,
+    #[serde(default)]
+    spliced_names: Vec<String>,
     /// CR 702.46 — creature this card is ciphered onto. `#[serde(default)]`
     /// for back-compat.
     #[serde(default)]
@@ -5686,6 +5693,7 @@ impl serde::Serialize for CardInstance {
             bargained: self.bargained,
             pending_etb_counters: self.pending_etb_counters.clone(),
             spliced_effects: self.spliced_effects.clone(),
+            spliced_names: self.spliced_names.clone(),
             encoded_on: self.encoded_on,
             cast_target_was_battlefield: self.cast_target_was_battlefield,
             granted_activated_abilities: self.granted_activated_abilities.clone(),
@@ -5806,6 +5814,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.bargained = wire.bargained;
         c.pending_etb_counters = wire.pending_etb_counters.clone();
         c.spliced_effects = wire.spliced_effects.clone();
+        c.spliced_names = wire.spliced_names.clone();
         c.encoded_on = wire.encoded_on;
         c.cast_target_was_battlefield = wire.cast_target_was_battlefield;
         c.granted_activated_abilities = wire.granted_activated_abilities;

@@ -691,3 +691,383 @@ pub fn neko_te() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Flip (CR 710) ───────────────────────────────────────────────────────────
+
+/// Budoka Pupil // Ichiga, Who Topples Oaks — {1}{G}{G} 2/2 ki-flip Monk;
+/// Ichiga is a 4/3 trampler whose ki counters pump.
+pub fn budoka_pupil() -> CardDefinition {
+    let ichiga = CardDefinition {
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            remove_counter_cost: Some((crate::card::CounterType::Ki, 1)),
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Ichiga, Who Topples Oaks",
+            cost(&[]),
+            vec![CreatureType::Spirit],
+            4,
+            3,
+        )
+    };
+    CardDefinition {
+        triggered_abilities: super::chk::ki_flip_triggers(),
+        flip_face: Some(Box::new(ichiga)),
+        ..creature(
+            "Budoka Pupil",
+            cost(&[generic(1), g(), g()]),
+            vec![CreatureType::Human, CreatureType::Monk],
+            2,
+            2,
+        )
+    }
+}
+
+// ── Samurai ─────────────────────────────────────────────────────────────────
+
+/// Fumiko the Lowblood — {2}{R}{R} 3/2. Bushido X (X = attacking creatures),
+/// and your opponents' creatures have to swing.
+pub fn fumiko_the_lowblood() -> CardDefinition {
+    let bushido_x = |kind| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::SelfSource),
+        effect: Effect::PumpPT {
+            what: Selector::This,
+            power: Value::count(Selector::EachPermanent(R::Creature.and(R::IsAttacking))),
+            toughness: Value::count(Selector::EachPermanent(R::Creature.and(R::IsAttacking))),
+            duration: Duration::EndOfTurn,
+        },
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            bushido_x(EventKind::Blocks),
+            bushido_x(EventKind::BecomesBlocked),
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures your opponents control attack each combat if able.",
+            effect: StaticEffect::AnthemForFilter {
+                filter: R::Creature,
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::MustAttack],
+                opponents: true,
+                all_players: false,
+                only_your_turn: false,
+                scale_by_counters_on_self: None,
+            },
+        }],
+        ..legend(
+            "Fumiko the Lowblood",
+            cost(&[generic(2), r(), r()]),
+            vec![CreatureType::Human, CreatureType::Samurai],
+            3,
+            2,
+        )
+    }
+}
+
+/// Kentaro, the Smiling Cat — {1}{W} 2/1 with bushido 1. Your Samurai spells
+/// may be cast for generic mana equal to their mana value.
+pub fn kentaro_the_smiling_cat() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Bushido(1)],
+        static_abilities: vec![StaticAbility {
+            description: "You may pay {X} rather than pay the mana cost for Samurai \
+                          spells you cast, where X is that spell's mana value.",
+            effect: StaticEffect::GenericAlternativeCostForFilter {
+                filter: R::HasCreatureType(CreatureType::Samurai),
+            },
+        }],
+        ..legend(
+            "Kentaro, the Smiling Cat",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Human, CreatureType::Samurai],
+            2,
+            1,
+        )
+    }
+}
+
+/// Opal-Eye, Konda's Yojimbo — {1}{W}{W} 1/4 defender with bushido 1. Tapping
+/// pulls a source's next damage onto itself; {1}{W} shrugs 1 off.
+pub fn opal_eye_kondas_yojimbo() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender, Keyword::Bushido(1)],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::PreventNextFromChosenSourceToTeam {
+                    amount: Value::Const(i32::MAX),
+                    to: Selector::This,
+                    one_event: true,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), w()]),
+                effect: Effect::PreventNextDamage {
+                    target: Selector::This,
+                    amount: Value::ONE,
+                },
+                ..Default::default()
+            },
+        ],
+        ..legend(
+            "Opal-Eye, Konda's Yojimbo",
+            cost(&[generic(1), w(), w()]),
+            vec![CreatureType::Fox, CreatureType::Samurai],
+            1,
+            4,
+        )
+    }
+}
+
+/// Toshiro Umezawa — {1}{B}{B} 2/2 with bushido 1. An opponent's creature
+/// dying lets you flash back an instant out of your graveyard.
+pub fn toshiro_umezawa() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Bushido(1)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                }),
+            effect: Effect::GrantMayPlay {
+                what: target_filtered(R::HasCardType(CardType::Instant).and(R::InYourGraveyard)),
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: true,
+                pay_own_cost: true,
+                any_color: false,
+            },
+        }],
+        ..legend(
+            "Toshiro Umezawa",
+            cost(&[generic(1), b(), b()]),
+            vec![CreatureType::Human, CreatureType::Samurai],
+            2,
+            2,
+        )
+    }
+}
+
+// ── Remaining spells, auras and artifacts ───────────────────────────────────
+
+/// Aura Barbs — {2}{R} Arcane instant. Every enchantment shocks its
+/// controller, then every Aura shocks the creature it's on.
+pub fn aura_barbs() -> CardDefinition {
+    arcane_instant(
+        "Aura Barbs",
+        cost(&[generic(2), r()]),
+        Effect::EnchantmentsBiteControllersAndHosts { amount: Value::Const(2) },
+    )
+}
+
+/// Minamo's Meddling — {2}{U}{U} Instant. Counter target spell; its controller
+/// discards every card sharing a name with one spliced onto it.
+pub fn minamos_meddling() -> CardDefinition {
+    instant(
+        "Minamo's Meddling",
+        cost(&[generic(2), u(), u()]),
+        Effect::CounterSpellDiscardSplicedNames { what: target_filtered(R::IsSpellOnStack) },
+    )
+}
+
+/// Shining Shoal — {X}{W}{W} Arcane instant, castable by exiling a white card
+/// with mana value X. The next X damage from a chosen source is redirected.
+pub fn shining_shoal() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            exile_filter: Some(R::HasColor(Color::White).and(R::ManaValueExactlyXFromCost)),
+            ..Default::default()
+        }),
+        ..arcane_instant(
+            "Shining Shoal",
+            cost(&[crate::mana::x(), w(), w()]),
+            Effect::PreventNextFromChosenSourceToTeam {
+                amount: Value::XFromCost,
+                to: crate::effect::shortcut::target_any(),
+                one_event: false,
+            },
+        )
+    }
+}
+
+/// Mark of Sakiko — {1}{G} Aura. The enchanted creature's combat damage to a
+/// player becomes green mana that survives the phase.
+pub fn mark_of_sakiko() -> CardDefinition {
+    CardDefinition {
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::AddManaKeptThisTurnCount {
+                    who: PlayerRef::You,
+                    color: Color::Green,
+                    amount: Value::TriggerEventAmount,
+                },
+            }],
+            ..Default::default()
+        }),
+        ..aura("Mark of Sakiko", cost(&[generic(1), g()]))
+    }
+}
+
+/// Ornate Kanzashi — {5} Artifact. {2}, {T}: an opponent exiles their top
+/// card and you may play it this turn.
+pub fn ornate_kanzashi() -> CardDefinition {
+    CardDefinition {
+        name: "Ornate Kanzashi",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::Target(0),
+                count: Value::ONE,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                pay_any_color: false,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Blinding Powder — {1} Equipment. Unattaching it shrugs off all combat
+/// damage headed at the equipped creature.
+pub fn blinding_powder() -> CardDefinition {
+    CardDefinition {
+        name: "Blinding Powder",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                unattach_cost: true,
+                effect: Effect::PreventCombatDamageToTargetThisTurn {
+                    target: Selector::This,
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Shuriken — {1} Equipment. Tapping and unattaching it flings 2 damage, and
+/// a non-Ninja thrower loses the Equipment to the victim's controller.
+pub fn shuriken() -> CardDefinition {
+    CardDefinition {
+        name: "Shuriken",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                unattach_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: target_filtered(R::Creature),
+                        amount: Value::Const(2),
+                    },
+                    Effect::If {
+                        cond: Predicate::Not(Box::new(Predicate::EntityMatches {
+                            what: Selector::This,
+                            filter: R::HasCreatureType(CreatureType::Ninja),
+                        })),
+                        then: Box::new(Effect::GainControl {
+                            what: Selector::AttachmentGranting,
+                            to: Some(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                            duration: Duration::Permanent,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Clash of Realities — {3}{R} Enchantment. Spirits and non-Spirits each enter
+/// pointing 3 damage at the other camp.
+pub fn clash_of_realities() -> CardDefinition {
+    let bite = |target: R| {
+        Box::new(TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Deal 3 damage?".into(),
+                body: Box::new(Effect::DealDamage {
+                    to: target_filtered(target),
+                    amount: Value::Const(3),
+                }),
+            },
+        })
+    };
+    let spirit = R::HasCreatureType(CreatureType::Spirit);
+    CardDefinition {
+        name: "Clash of Realities",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "All Spirits have \"When this permanent enters, you may have it \
+                              deal 3 damage to target non-Spirit creature.\"",
+                effect: StaticEffect::GrantTriggeredAbility {
+                    filter: spirit.clone(),
+                    ability: bite(R::Creature.and(R::Not(Box::new(spirit.clone())))),
+                },
+            },
+            StaticAbility {
+                description: "Non-Spirit creatures have \"When this creature enters, you may \
+                              have it deal 3 damage to target Spirit creature.\"",
+                effect: StaticEffect::GrantTriggeredAbility {
+                    filter: R::Creature.and(R::Not(Box::new(spirit.clone()))),
+                    ability: bite(R::Creature.and(spirit)),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Tomorrow, Azami's Familiar — {5}{U} 1/5. Your draws become "look at three,
+/// keep one, bottom the rest".
+pub fn tomorrow_azamis_familiar() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If you would draw a card, look at the top three cards of your \
+                          library instead. Put one into your hand and the rest on the bottom.",
+            effect: StaticEffect::ReplaceDrawWithLookN { count: 3 },
+        }],
+        ..legend(
+            "Tomorrow, Azami's Familiar",
+            cost(&[generic(5), u()]),
+            vec![CreatureType::Spirit],
+            1,
+            5,
+        )
+    }
+}

@@ -6693,7 +6693,22 @@ pub enum Effect {
     /// choice would deal to you and/or permanents you control this turn. If
     /// damage is prevented this way, deal that much damage to `to`."
     /// One shared pool across the whole team (Refraction Trap).
-    PreventNextFromChosenSourceToTeam { amount: Value, to: Selector },
+    PreventNextFromChosenSourceToTeam {
+        amount: Value,
+        to: Selector,
+        /// "The next time [it] would deal damage" — soak one whole damage
+        /// event rather than a point budget (Opal-Eye, Konda's Yojimbo).
+        #[serde(default)]
+        one_event: bool,
+    },
+    /// Aura Barbs — each enchantment deals `amount` damage to its controller,
+    /// then each Aura attached to a creature deals `amount` damage to that
+    /// creature.
+    EnchantmentsBiteControllersAndHosts { amount: Value },
+    /// Minamo's Meddling — counter target spell, then its controller reveals
+    /// their hand and discards each card sharing a name with a card spliced
+    /// onto that spell (CR 702.47).
+    CounterSpellDiscardSplicedNames { what: Selector },
     /// "Reveal the top `count` cards of your library. For each of those
     /// cards, put that card into your hand unless any opponent pays
     /// `life` life. Then exile the rest." (Sword-Point Diplomacy.)

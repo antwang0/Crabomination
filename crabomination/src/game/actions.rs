@@ -57,14 +57,32 @@ impl GameState {
                         matches!(sa.effect, crate::effect::StaticEffect::FiveColorAlternativeCost)
                     })
         });
-        five_color.then(|| crate::card::AlternativeCost {
-            mana_cost: crate::mana::cost(&[
-                crate::mana::w(),
-                crate::mana::u(),
-                crate::mana::b(),
-                crate::mana::r(),
-                crate::mana::g(),
-            ]),
+        if five_color {
+            return Some(crate::card::AlternativeCost {
+                mana_cost: crate::mana::cost(&[
+                    crate::mana::w(),
+                    crate::mana::u(),
+                    crate::mana::b(),
+                    crate::mana::r(),
+                    crate::mana::g(),
+                ]),
+                ..Default::default()
+            });
+        }
+        // Kentaro, the Smiling Cat — "pay {X} rather than the mana cost for
+        // [filter] spells you cast, where X is that spell's mana value."
+        let card = self.players[p].hand.iter().find(|c| c.id == card_id)?;
+        let generic_alt = self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::GenericAlternativeCostForFilter { filter } => {
+                        self.evaluate_requirement_on_card(filter, card, p)
+                    }
+                    _ => false,
+                })
+        });
+        generic_alt.then(|| crate::card::AlternativeCost {
+            mana_cost: crate::mana::cost(&[crate::mana::generic(card.definition.cost.cmc())]),
             ..Default::default()
         })
     }
@@ -3837,6 +3855,7 @@ impl GameState {
             .map(|c| c.definition.subtypes.spell_subtypes.clone())
             .ok_or(GameError::CardNotInHand(card_id))?;
         let mut spliced_effects = Vec::new();
+        let mut spliced_names = Vec::new();
         let mut cost_events = Vec::new();
         for &sid in splice_cards {
             // CR 702.47b — no card spliced onto the same spell twice.
@@ -3861,6 +3880,7 @@ impl GameState {
                 return Err(GameError::InvalidTarget);
             }
             let extra = splicer.definition.splice_extra_cost.clone();
+            spliced_names.push(splicer.definition.name.to_string());
             spliced_effects.push(splicer.definition.effect.clone());
             // The splice cost is an additional cost (601.2b); the card stays
             // in hand. CR 702.47's non-mana half (Torrent of Stone's "sacrifice
@@ -3879,6 +3899,7 @@ impl GameState {
         }
         if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
             c.spliced_effects = spliced_effects;
+            c.spliced_names = spliced_names;
         }
         let mut events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
         cost_events.append(&mut events);
@@ -12507,9 +12528,27 @@ impl GameState {
         // CR 702.6 — "Unattach this Equipment" as a cost (Sunforger): the
         // source must be attached, and it detaches before the effect runs.
         if ability.unattach_cost {
-            match self.battlefield.iter_mut().find(|c| c.id == card_id) {
-                Some(c) if c.attached_to.is_some() => c.attached_to = None,
-                _ => return Err(GameError::SelectionRequirementViolated),
+            // On an equipment-GRANTED ability (Blinding Powder, Shuriken) the
+            // source is the equipped creature, so the cost detaches the granter
+            // instead (CR 702.6e).
+            let detach = match self.battlefield.iter().find(|c| c.id == card_id) {
+                Some(c) if c.attached_to.is_some() => Some(card_id),
+                Some(_) => self
+                    .battlefield
+                    .iter()
+                    .find(|c| {
+                        c.attached_to == Some(card_id)
+                            && c.definition
+                                .equipped_bonus
+                                .as_ref()
+                                .is_some_and(|b| !b.activated_abilities.is_empty())
+                    })
+                    .map(|c| c.id),
+                None => None,
+            };
+            match detach.and_then(|id| self.battlefield.iter_mut().find(|c| c.id == id)) {
+                Some(c) => c.attached_to = None,
+                None => return Err(GameError::SelectionRequirementViolated),
             }
         }
         // "Return a [filter] you control to its owner's hand" as a cost

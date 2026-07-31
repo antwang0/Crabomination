@@ -1475,6 +1475,7 @@ impl GameState {
         // CR 702.47e — a spell loses its splice changes once it leaves the
         // stack for any reason.
         card.spliced_effects.clear();
+        card.spliced_names.clear();
         // CR 712.16/712.17 — a melded permanent leaving the battlefield
         // leaves as its two component cards; the melded shell ceases to
         // exist.
