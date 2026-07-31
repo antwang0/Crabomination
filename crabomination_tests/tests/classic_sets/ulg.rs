@@ -592,3 +592,327 @@ fn subversion_drains_on_your_upkeep() {
     assert_eq!(g.players[1].life, theirs - 1);
     assert_eq!(g.players[0].life, mine + 1);
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Every wave-2 factory is registered.
+#[test]
+fn ulg_wave2_cards_are_registered() {
+    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+        .map(|f| f().name)
+        .collect();
+    for f in [
+        catalog::bouncing_beebles as fn() -> crabomination::card::CardDefinition,
+        catalog::gang_of_elk,
+        catalog::last_ditch_effort,
+        catalog::multanis_presence,
+        catalog::palinchron,
+        catalog::parch,
+        catalog::pyromancy,
+        catalog::rank_and_file,
+        catalog::raven_familiar,
+        catalog::repopulate,
+        catalog::rivalry,
+        catalog::scrapheap,
+        catalog::slow_motion,
+        catalog::tethered_skirge,
+        catalog::tinker,
+        catalog::treefolk_mystic,
+        catalog::viashino_bey,
+        catalog::viashino_heretic,
+        catalog::walking_sponge,
+        catalog::weatherseed_elf,
+    ] {
+        let name = f().name;
+        assert!(names.contains(&name), "{name} is not registered");
+    }
+}
+
+/// Last-Ditch Effort converts a board into damage.
+#[test]
+fn last_ditch_effort_burns_for_the_creatures_sacrificed() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::last_ditch_effort());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        crabomination::decision::DecisionAnswer::Amount(3),
+    ]));
+    let life = g.players[1].life;
+    cast(&mut g, spell, Some(Target::Player(1)));
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 0);
+    assert_eq!(g.players[1].life, life - 3);
+}
+
+/// Parch's second mode doubles up on blue creatures.
+#[test]
+fn parch_hits_a_blue_creature_for_four() {
+    let mut g = two_player_game();
+    let faerie = g.add_card_to_battlefield(1, catalog::vigilant_drake());
+    let spell = g.add_card_to_hand(0, catalog::parch());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(faerie)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(faerie).is_none(), "4 damage killed the 3/3");
+}
+
+/// Gang of Elk grows by twice the number of blockers.
+#[test]
+fn gang_of_elk_grows_per_blocker() {
+    let mut g = two_player_game();
+    let gang = g.add_card_to_battlefield(0, catalog::gang_of_elk());
+    g.battlefield_find_mut(gang).unwrap().summoning_sick = false;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking.push(crabomination::game::types::Attack {
+        attacker: gang,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    });
+    g.block_map.insert(a, vec![gang]);
+    g.block_map.insert(b, vec![gang]);
+    g.dispatch_triggers_for_events(&[
+        GameEvent::BlockerDeclared { blocker: a, attacker: gang },
+        GameEvent::BlockerDeclared { blocker: b, attacker: gang },
+    ]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(gang).unwrap();
+    assert_eq!((cp.power, cp.toughness), (9, 8), "5/4 plus +4/+4");
+}
+
+/// Tethered Skirge bleeds you whenever something targets it.
+#[test]
+fn tethered_skirge_costs_a_life_per_target() {
+    let mut g = two_player_game();
+    let skirge = g.add_card_to_battlefield(0, catalog::tethered_skirge());
+    let pump = g.add_card_to_hand(0, catalog::iron_will());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let life = g.players[0].life;
+    cast(&mut g, pump, Some(Target::Permanent(skirge)));
+    assert_eq!(g.players[0].life, life - 1);
+}
+
+/// Scrapheap pays out only for your own artifacts and enchantments.
+#[test]
+fn scrapheap_gains_life_for_your_artifacts_and_enchantments() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::scrapheap());
+    let lens = g.add_card_to_battlefield(0, catalog::thran_lens());
+    let theirs = g.add_card_to_battlefield(1, catalog::knighthood());
+    let life = g.players[0].life;
+    let ctx = crabomination::game::effects::EffectContext::for_ability(theirs, 1, None);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::This },
+            &ctx,
+        )
+        .expect("destroy theirs");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "an opponent's enchantment pays nothing");
+    let ctx = crabomination::game::effects::EffectContext::for_ability(lens, 0, None);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::This },
+            &ctx,
+        )
+        .expect("destroy yours");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1);
+}
+
+/// Palinchron untaps up to seven lands on entry.
+#[test]
+fn palinchron_untaps_seven_lands() {
+    let mut g = two_player_game();
+    for _ in 0..9 {
+        let land = g.add_card_to_battlefield(0, catalog::island());
+        g.battlefield_find_mut(land).unwrap().tapped = true;
+    }
+    let pal = g.add_card_to_battlefield(0, catalog::palinchron());
+    g.fire_self_etb_triggers(pal, 0);
+    drain_stack(&mut g);
+    let untapped = g.battlefield.iter().filter(|c| c.definition.is_land() && !c.tapped).count();
+    assert_eq!(untapped, 7);
+}
+
+/// Viashino Heretic blows up an artifact and burns for its mana value.
+#[test]
+fn viashino_heretic_burns_for_the_artifacts_mana_value() {
+    let mut g = two_player_game();
+    let heretic = g.add_card_to_battlefield(0, catalog::viashino_heretic());
+    g.battlefield_find_mut(heretic).unwrap().summoning_sick = false;
+    let jar = g.add_card_to_battlefield(1, catalog::urzas_blueprints());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let life = g.players[1].life;
+    activate(&mut g, heretic, 0, Some(Target::Permanent(jar)));
+    assert!(g.battlefield_find(jar).is_none());
+    assert_eq!(g.players[1].life, life - 6, "Urza's Blueprints costs {{6}}");
+}
+
+/// Repopulate shuffles only creature cards back in.
+#[test]
+fn repopulate_shuffles_creatures_out_of_the_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let land = g.add_card_to_graveyard(1, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::repopulate());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].graveyard.len(), 1);
+    assert_eq!(g.players[1].graveyard[0].id, land);
+}
+
+/// Tinker sacrifices an artifact to tutor a bigger one straight into play.
+#[test]
+fn tinker_trades_an_artifact_for_a_tutored_one() {
+    let mut g = two_player_game();
+    let chaff = g.add_card_to_battlefield(0, catalog::jhoiras_toolbox());
+    g.add_card_to_library(0, catalog::urzas_blueprints());
+    let spell = g.add_card_to_hand(0, catalog::tinker());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    let target = g.players[0]
+        .library
+        .iter()
+        .find(|c| c.definition.name == "Urza's Blueprints")
+        .expect("in library")
+        .id;
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new(vec![
+        crabomination::decision::DecisionAnswer::Search(Some(target)),
+    ]));
+    cast(&mut g, spell, None);
+    assert!(g.battlefield_find(chaff).is_none(), "sacrificed as a cost");
+    assert!(
+        g.battlefield.iter().any(|c| c.definition.name == "Urza's Blueprints"),
+        "the tutored artifact is in play"
+    );
+}
+
+/// Treefolk Mystic strips the Auras off whatever it blocks.
+#[test]
+fn treefolk_mystic_strips_auras_from_its_blocker() {
+    let mut g = two_player_game();
+    let mystic = g.add_card_to_battlefield(0, catalog::treefolk_mystic());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(1, catalog::granite_grip());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.block_map.insert(bear, vec![mystic]);
+    g.dispatch_triggers_for_events(&[GameEvent::BlockerDeclared {
+        blocker: bear,
+        attacker: mystic,
+    }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_none(), "the Aura was destroyed");
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// Rivalry burns only the player with strictly the most lands.
+#[test]
+fn rivalry_burns_the_land_leader() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rivalry());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+        g.add_card_to_battlefield(1, catalog::mountain());
+    }
+    let life = g.players[0].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "tied on lands");
+    g.add_card_to_battlefield(0, catalog::mountain());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2);
+}
+
+/// Walking Sponge strips the chosen evasion keyword.
+#[test]
+fn walking_sponge_strips_flying() {
+    let mut g = two_player_game();
+    let sponge = g.add_card_to_battlefield(0, catalog::walking_sponge());
+    g.battlefield_find_mut(sponge).unwrap().summoning_sick = false;
+    let faerie = g.add_card_to_battlefield(1, catalog::weatherseed_faeries());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sponge,
+        ability_index: 0,
+        target: Some(Target::Permanent(faerie)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(faerie).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Weatherseed Elf hands out forestwalk.
+#[test]
+fn weatherseed_elf_grants_forestwalk() {
+    let mut g = two_player_game();
+    let elf = g.add_card_to_battlefield(0, catalog::weatherseed_elf());
+    g.battlefield_find_mut(elf).unwrap().summoning_sick = false;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, elf, 0, Some(Target::Permanent(bear)));
+    assert!(
+        g.computed_permanent(bear)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::Landwalk(crabomination::card::LandType::Forest))
+    );
+}
+
+/// Rank and File shrinks green creatures as it enters.
+#[test]
+fn rank_and_file_shrinks_green_creatures() {
+    let mut g = two_player_game();
+    let elf = g.add_card_to_battlefield(1, catalog::weatherseed_elf());
+    let faerie = g.add_card_to_battlefield(1, catalog::weatherseed_faeries());
+    let rank = g.add_card_to_battlefield(0, catalog::rank_and_file());
+    g.fire_self_etb_triggers(rank, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(elf).is_none(), "the 1/1 Elf died");
+    assert!(g.battlefield_find(faerie).is_some(), "the blue Faerie is untouched");
+}
+
+/// Multani's Presence replaces a countered spell.
+#[test]
+fn multanis_presence_draws_when_your_spell_is_countered() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::multanis_presence());
+    g.add_card_to_library(0, catalog::forest());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let counter = g.add_card_to_hand(1, catalog::intervene());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 1;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("counter");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the countered spell replaced itself");
+}

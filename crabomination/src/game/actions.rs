@@ -12042,7 +12042,12 @@ impl GameState {
                 if picks.len() < count {
                     return Err(GameError::SelectionRequirementViolated);
                 }
-                picks.sort_by_key(|(_, cmc)| *cmc);
+                if ability.discard_cost_random {
+                    use rand::seq::SliceRandom;
+                    picks.shuffle(&mut rand::rng());
+                } else {
+                    picks.sort_by_key(|(_, cmc)| *cmc);
+                }
                 picks.into_iter().take(count).map(|(cid, _)| cid).collect()
             }
         } else {

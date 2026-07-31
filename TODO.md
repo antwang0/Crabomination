@@ -5607,7 +5607,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   Host's per-combat haste-token loop, Mirrorform aura) — these still need a
   layer-1 copy effect rather than the one-shot definition rewrite.
 
-- 🟡 **CR 602 — Activating Activated Abilities** (push
+- ✅ **CR 602 — Activating Activated Abilities** (push
   claude/modern_decks — audit against `MagicCompRules_20260417.txt`).
   How the engine puts activated abilities on the stack and pays their
   costs. CR 602.1a is the costs/effect split (the colon).
@@ -5627,12 +5627,15 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   card leaves hand before the (targetless) effect resolves. Magma Opus's
   {U/R}{U/R} Treasure mode rides it; surfaced in `PlayerView.
   discard_activatable_hand`, offered by the bot as a fallback value play.
-  (b) **602.1b** — 🟡 (`ActivatedAbility.condition` covers per-ability
+  (b) **602.1b** — ✅ (`ActivatedAbility.condition` covers per-ability
   predicate gates ("Activate only if …"); `once_per_turn` /
   `sorcery_speed` / `from_graveyard` cover the canonical instructions.
   Per-opponent control restrictions ("Activate only if a player
   controls a Snow permanent") have no first-class slot but can be
-  expressed as `condition: Predicate::…` for most.).
+  expressed as `condition: Predicate::…` for most. Conformance:
+  `cr_602_1b_sorcery_speed_activation_needs_an_empty_stack` activates
+  Ghost-Lit Stalker's printed sorcery-speed line and asserts both the
+  rejection under a spell and the resolution once the stack clears.).
   (c) **602.2** — ✅ (`activate_ability` pushes a
   `StackItem::Trigger` for non-mana abilities; mana abilities resolve
   immediately per CR 605.3).
@@ -7654,41 +7657,62 @@ stalled games via `eval_material`.
   the printed card lets each player build their own three piles. Wants a
   `Decision::PartitionPermanents`.
 - **CR coverage gaps.** `scripts/cr_coverage.py` → `CR_COVERAGE.md` maps CR
-  section → conformance test; 94 sections are covered, 53 still have none
-  (307/725 came off the list this run). The highest-value untested blocks
-  left are 407/408 (the remaining zones), 503/512 (the last turn steps),
-  717–720 (the newer card types) and the 8xx multiplayer rules.
+  section → conformance test; 97 sections are covered, 50 still have none
+  (408/718/720 came off the list this run). The highest-value untested blocks
+  left are 407 (Ante), 600, 713/717/719 (the remaining card types), 727–733
+  (restart / subgames / merge / shortcuts) and the 8xx multiplayer rules.
 
-## Noticed this run (modern_decks — Saviors of Kamigawa closure)
+## Noticed this run (modern_decks — Kamigawa closure + Urza's Legacy)
 
-- **8 SOK cards remain, each blocked on one primitive:**
-  - Ashes of the Fallen — a graveyard creature-type grant (above).
-  - Choice of Damnations / Pain's Reward — an opponent picks a number, then
-    the caster picks a branch; wants `Decision::ChooseAmount` routed to a
-    non-controlling seat.
-  - Kaho, Minamo Historian — cast a spell with mana value X from among cards
-    exiled with this source; there is no cast-from-exiled-with-source effect.
-  - Murmurs from Beyond — an opponent picks which of three revealed cards is
-    binned; wants an opponent-routed `ChooseCards`.
-  - Pure Intentions — "whenever a spell or ability an opponent controls causes
-    you to discard cards this turn, return those cards"; needs discard
-    provenance (which effect caused it) on the discard event.
-  - Rally the Horde — exile in batches of three until the last is a land, then
-    tokens per nonland exiled; `ExileTopUntilNonland` stops at one card.
-  - Sekki, Seasons' Guide — a damage replacement that trades counters for
-    tokens 1:1.
+New suggestions from this run's engine work:
+
+- **Top-of-library orientation needs an invariant, not a convention.** Index 0
+  is the top everywhere, but `ExileTopUntilNonland` and Shared Fate's draw
+  replacement both read `library.last()`/`pop()` — the BOTTOM. Both are fixed;
+  a `fn library_top(&self, p)` / `fn take_library_top(&mut self, p)` pair would
+  make the next one a compile-time choice instead of a silent bug.
+- **`ask_seat_amount`'s replay log and `ask_seat_cards`'s stash are two
+  different suspend contracts.** `ask_seat_bool`/`ask_seat_amount` replay a log
+  and support several asks per resolution; `ask_seat_cards` stashes one answer
+  and must be the arm's first ask. Pain's Reward needed the log shape.
+  Converging `ask_seat_cards` onto the log would let a multi-ask arm mix card
+  and amount picks.
+- **The `AnthemFor*` family has three scope spellings.** `AnthemForFilter` and
+  `AnthemForChosenType` now both carry `opponents` + `all_players`;
+  `AnthemForChosenColor` still has neither. Worth a shared `AnthemScope` enum.
+
+
+SOK's last eight gaps shipped, so the whole Kamigawa block (CHK/BOK/SOK) is at
+zero `set_gaps.py` gaps. Urza's Legacy went 106 -> 13 across two waves.
+
+- **`PlayerDamaged` triggers can't reach the damage source.** `event_subject`
+  binds the damaged PLAYER, so "whenever a creature deals damage to you,
+  destroy it" (No Mercy) has nothing to point at. Michiko Konda's edict is
+  blocked on the same primitive: a `Selector::TriggerDamageSource` reading the
+  firing event's `from_card`. No Mercy is deliberately NOT in the catalog until
+  that lands.
+- **Remaining ULG gaps (13), each blocked on one primitive:** Angel's Trumpet
+  (tap-all-that-didn't-attack + damage per tapped), Aura Flux (grant an upkeep
+  tax to OTHER enchantments), Crawlspace (per-combat attacker cap against a
+  player), Damping Engine (a permanent-leader lock with a sacrifice-to-ignore
+  out), Hidden Gibbons / Lurking Skirge / Opal Avenger / Opal Champion (the
+  "if this permanent is an enchantment, it becomes an N/N creature" animation),
+  Martyr's Cause (a chosen-source damage shield), Memory Jar (exile-hand,
+  draw-seven, return at the next end step), Thran Weaponry (a
+  while-this-stays-tapped anthem), Treacherous Link (damage to the host is
+  dealt to its controller).
 - **The Epic copy doesn't re-choose targets.** CR 702.50a's copies "may choose
   new targets"; `process_epic` reuses the original's. Eternal Dominion /
   Neverending Torment / Undying Flames all want it.
 - **Erayo's Essence counters the first *opponent* spell via `once_per_turn`.**
-  Exact at two players; in multiplayer it should be per-opponent, which needs
-  a per-actor trigger budget rather than the per-trigger one.
-- **Michiko Konda's edict hits every opponent.** The printed card taxes only
-  the damage source's controller; binding that seat needs the dealer's
-  controller surfaced as a `PlayerRef` on a `PlayerDamaged` trigger.
+  Exact at two players; in multiplayer it should be per-opponent, which needs a
+  per-actor trigger budget rather than the per-trigger one.
 - **Sasaya's Essence doubles by `ExtraManaKind::Mirror`, not by same-named
   land count.** One extra mana per tap instead of one per other same-named
   land you control.
+- **Whims of the Fates piles are engine-chosen** (carried over): a shuffled
+  round-robin split; the printed card lets each player build their own three
+  piles. Wants a `Decision::PartitionPermanents`.
 
 ## Noticed this run (modern_decks — Betrayers of Kamigawa closure)
 
@@ -7696,9 +7720,9 @@ stalled games via `eval_material`.
   `Value::PermanentsReturnedThisEffect`.
 - ✅ ~~**SOK's Epic sorceries**~~ — all four ship. Residual: the epic copy
   reuses the original's targets rather than re-choosing them each upkeep.
-- **Ashes of the Fallen wants a graveyard type-grant static.** "Each creature
-  card in your graveyard has the chosen creature type" — the layer system
-  only walks the battlefield.
+- ✅ ~~**Ashes of the Fallen wants a graveyard type-grant static.**~~ —
+  `StaticEffect::YourGraveyardCreaturesHaveChosenType` + `graveyard_type_grants`,
+  read by the hidden-zone card evaluator.
 
 - **CR 712.4 doesn't fire on the direct move path.** `place_card_in_dest`
   reverts a flip card (CR 710.4) but deliberately leaves `revert_transform` /

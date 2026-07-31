@@ -1098,6 +1098,7 @@ impl Effect {
             Effect::ExileTopBatchesUntilLandLast { then, .. } => then.requires_target(),
             Effect::RevealTopOpponentBinsOne { .. } => false,
             Effect::MayCastExiledWithSource { .. } => false,
+            Effect::ShuffleFilteredGraveyardIntoLibrary { who, .. } => player_has_target(who),
             Effect::PutIntoLibraryBeneathTop { what, count } => {
                 sel_has_target(what) || value_has_target(count)
             }

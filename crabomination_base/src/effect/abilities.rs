@@ -2435,6 +2435,10 @@ pub struct ActivatedAbility {
     /// name:"). The pre-flight picks a name with enough matching copies.
     #[serde(default)]
     pub discard_cost_same_name: bool,
+    /// When set with `discard_cost`, the discard is at RANDOM rather than the
+    /// controller's choice (Pyromancy's "{3}, Discard a card at random:").
+    #[serde(default)]
+    pub discard_cost_random: bool,
     /// When set with `discard_cost`, the discarded card's mana value must equal
     /// the target's — the linked-X shape of "Discard a card with mana value X:
     /// Counter target spell with mana value X" (Kozilek, the Great Distortion).

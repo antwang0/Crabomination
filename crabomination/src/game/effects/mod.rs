@@ -17451,6 +17451,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ShuffleFilteredGraveyardIntoLibrary { who, filter } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    let gy = std::mem::take(&mut *self.players[p].graveyard);
+                    let (matched, kept): (Vec<_>, Vec<_>) = gy
+                        .into_iter()
+                        .partition(|c| self.evaluate_requirement_on_card(filter, c, p));
+                    self.players[p].graveyard = kept.into();
+                    self.players[p].library.extend(matched);
+                    self.shuffle_library(p, events);
+                }
+                Ok(())
+            }
+
             Effect::ShuffleFilteredGraveyardIntoLibraryGainLife { who, filter } => {
                 
                 if let Some(p) = self.resolve_player(who, ctx) {
@@ -18860,6 +18873,9 @@ impl GameState {
                     events.push(GameEvent::PermanentSacrificed { card_id: cid, who: p });
                     let mut die_evs = self.remove_to_graveyard_with_triggers(cid);
                     events.append(&mut die_evs);
+                    // `Value::SacrificedCount` reads the resolution tally
+                    // (Last-Ditch Effort's "that much damage").
+                    self.sacrificed_count += 1;
                     // Run the per-sacrifice payoff once (GainLife 3 → 3 × count).
                     self.run_effect(per_each, ctx, events)?;
                 }

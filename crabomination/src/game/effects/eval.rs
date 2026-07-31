@@ -1269,6 +1269,28 @@ impl GameState {
                     .into_iter()
                     .any(|p| self.effective_life(p) >= max_life)
             }
+            Predicate::PlayerControlsMostOf { who, filter } => {
+                let count = |p: usize| {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.controller == p)
+                        .filter(|c| {
+                            self.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                p,
+                                ctx.source,
+                            )
+                        })
+                        .count()
+                };
+                self.resolve_players(who, ctx).into_iter().any(|p| {
+                    let mine = count(p);
+                    (0..self.players.len())
+                        .filter(|&q| q != p && !self.players[q].eliminated)
+                        .all(|q| count(q) < mine)
+                })
+            }
             Predicate::PlayerHasLessLifeThanOpponent { who } => {
                 self.resolve_players(who, ctx).into_iter().any(|p| {
                     let my_life = self.effective_life(p);

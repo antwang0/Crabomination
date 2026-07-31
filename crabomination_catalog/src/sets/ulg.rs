@@ -1225,3 +1225,374 @@ pub fn simian_grunts() -> CardDefinition {
         ..creature("Simian Grunts", cost(&[generic(2), g()]), vec![CreatureType::Ape], 3, 4)
     }
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Bouncing Beebles — {2}{U} 2/2. Unblockable while the defender has an
+/// artifact.
+pub fn bouncing_beebles() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeBlockedIfDefenderControls(Box::new(R::Artifact))],
+        ..creature("Bouncing Beebles", cost(&[generic(2), u()]), vec![CreatureType::Beeble], 2, 2)
+    }
+}
+
+/// Gang of Elk — {5}{G} 5/4. +2/+2 per blocker when it becomes blocked.
+pub fn gang_of_elk() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Times(
+                    Box::new(Value::BlockersOf(Box::new(Selector::This))),
+                    Box::new(Value::Const(2)),
+                ),
+                toughness: Value::Times(
+                    Box::new(Value::BlockersOf(Box::new(Selector::This))),
+                    Box::new(Value::Const(2)),
+                ),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature(
+            "Gang of Elk",
+            cost(&[generic(5), g()]),
+            vec![CreatureType::Elk, CreatureType::Beast],
+            5,
+            4,
+        )
+    }
+}
+
+/// Last-Ditch Effort — {R} Instant. Sacrifice any number of creatures for that
+/// much damage.
+pub fn last_ditch_effort() -> CardDefinition {
+    instant(
+        "Last-Ditch Effort",
+        cost(&[r()]),
+        Effect::Seq(vec![
+            Effect::SacrificeAnyNumber {
+                who: PlayerRef::You,
+                filter: R::Creature,
+                per_each: Box::new(Effect::Noop),
+            },
+            Effect::DealDamage { to: target_any(), amount: Value::SacrificedCount },
+        ]),
+    )
+}
+
+/// Parch — {1}{R} Instant. Two to anything, or four to a blue creature.
+pub fn parch() -> CardDefinition {
+    instant(
+        "Parch",
+        cost(&[generic(1), r()]),
+        Effect::ChooseMode(vec![
+            deal(2, target_any()),
+            deal(4, target_filtered(R::Creature.and(R::HasColor(Color::Blue)))),
+        ]),
+    )
+}
+
+/// Rank and File — {2}{B}{B} 3/3. ETB shrinks every green creature.
+pub fn rank_and_file() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature.and(R::HasColor(Color::Green))),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature(
+            "Rank and File",
+            cost(&[generic(2), b(), b()]),
+            vec![CreatureType::Zombie],
+            3,
+            3,
+        )
+    }
+}
+
+/// Raven Familiar — {2}{U} 1/2. Flying, echo {2}{U}; ETB digs three for one.
+pub fn raven_familiar() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Echo(cost(&[generic(2), u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                rest_to_graveyard: false,
+                pick_filter: None,
+                take: None,
+                to_battlefield: false,
+                gain_life_if_pick: None,
+                gain_life_greatest_power_rest: false,
+                optional: false,
+                picked_lands_to_battlefield: false,
+                rest_bottom_random: false,
+            },
+        }],
+        ..creature("Raven Familiar", cost(&[generic(2), u()]), vec![CreatureType::Bird], 1, 2)
+    }
+}
+
+/// Repopulate — {1}{G} Instant. Shuffle a graveyard's creatures back in;
+/// cycling {2}.
+pub fn repopulate() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        ..instant(
+            "Repopulate",
+            cost(&[generic(1), g()]),
+            Effect::ShuffleFilteredGraveyardIntoLibrary {
+                who: PlayerRef::Target(0),
+                filter: R::Creature,
+            },
+        )
+    }
+}
+
+/// Scrapheap — {3}. Gain 1 whenever an artifact or enchantment of yours dies.
+pub fn scrapheap() -> CardDefinition {
+    CardDefinition {
+        name: "Scrapheap",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact.or(R::Enchantment),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Multani's Presence — {G}. Draw whenever one of your spells is countered.
+pub fn multanis_presence() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCountered, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::OwnedByYou,
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..enchantment("Multani's Presence", cost(&[g()]))
+    }
+}
+
+/// Tethered Skirge — {2}{B} 2/2 Flying. Targeting it costs you a life.
+pub fn tethered_skirge() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+            effect: Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+        }],
+        ..creature(
+            "Tethered Skirge",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Phyrexian, CreatureType::Imp],
+            2,
+            2,
+        )
+    }
+}
+
+/// Palinchron — {5}{U}{U} 4/5. Flying; ETB untaps seven lands; {2}{U}{U}
+/// bounces it.
+pub fn palinchron() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Untap {
+                what: Selector::EachPermanent(R::Land.and(R::Tapped)),
+                up_to: Some(Value::Const(7)),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u(), u()]),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            ..Default::default()
+        }],
+        ..creature("Palinchron", cost(&[generic(5), u(), u()]), vec![CreatureType::Illusion], 4, 5)
+    }
+}
+
+/// Viashino Heretic — {2}{R} 1/3. {1}{R}, {T}: blow up an artifact and burn its
+/// controller for its mana value.
+pub fn viashino_heretic() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                    amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                },
+                Effect::Destroy { what: target_filtered(R::Artifact) },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Viashino Heretic", cost(&[generic(2), r()]), vec![CreatureType::Lizard], 1, 3)
+    }
+}
+
+/// Weatherseed Elf — {G} 1/1. {T}: hand out forestwalk.
+pub fn weatherseed_elf() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::Landwalk(LandType::Forest),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Weatherseed Elf", cost(&[g()]), vec![CreatureType::Elf], 1, 1)
+    }
+}
+
+/// Tinker — {2}{U} Sorcery. Sacrifice an artifact to tutor any artifact onto
+/// the battlefield.
+pub fn tinker() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Artifact,
+            count: 1,
+        }],
+        ..sorcery(
+            "Tinker",
+            cost(&[generic(2), u()]),
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: R::Artifact,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        )
+    }
+}
+
+/// Viashino Bey — {2}{R}{R} 4/3. Its attack drags the rest of your team in.
+pub fn viashino_bey() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::MustAttack,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature("Viashino Bey", cost(&[generic(2), r(), r()]), vec![CreatureType::Lizard], 4, 3)
+    }
+}
+
+/// Pyromancy — {2}{R}{R}. {3}, discard at random: burn for the discard's mana
+/// value.
+pub fn pyromancy() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            discard_cost: Some((R::Any, 1)),
+            discard_cost_random: true,
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::LastDiscardedManaValue,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Pyromancy", cost(&[generic(2), r(), r()]))
+    }
+}
+
+/// Treefolk Mystic — {3}{G} 2/4. Combat with it strips the other creature's
+/// Auras.
+pub fn treefolk_mystic() -> CardDefinition {
+    let strip = Effect::Destroy {
+        what: Selector::AttachedToMe(Box::new(Selector::CreaturesInCombatWith(Box::new(
+            Selector::This,
+        )))),
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: strip.clone(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: strip,
+            },
+        ],
+        ..creature("Treefolk Mystic", cost(&[generic(3), g()]), vec![CreatureType::Treefolk], 2, 4)
+    }
+}
+
+/// Slow Motion — {2}{U} Aura. The host's controller pays {2} each upkeep or
+/// loses it; the Aura recurs.
+pub fn slow_motion() -> CardDefinition {
+    let mut def = sticky_aura("Slow Motion", cost(&[generic(2), u()]), EquipBonus::default());
+    def.equipped_bonus.as_mut().unwrap().triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+        effect: Effect::SacrificeSourceUnlessPay { cost: cost(&[generic(2)]) },
+    });
+    def
+}
+
+/// Walking Sponge — {1}{U} 1/1. {T}: strip flying, first strike, or trample.
+pub fn walking_sponge() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::ChooseMode(vec![
+                Effect::LoseKeywordThisTurn {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::Flying,
+                },
+                Effect::LoseKeywordThisTurn {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::FirstStrike,
+                },
+                Effect::LoseKeywordThisTurn {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::Trample,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Walking Sponge", cost(&[generic(1), u()]), vec![CreatureType::Sponge], 1, 1)
+    }
+}
+
+/// Rivalry — {2}{R}. Each upkeep, the land leader takes 2.
+pub fn rivalry() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
+                .with_filter(Predicate::PlayerControlsMostOf {
+                    who: PlayerRef::ActivePlayer,
+                    filter: R::Land,
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::Const(2),
+            },
+        }],
+        ..enchantment("Rivalry", cost(&[generic(2), r()]))
+    }
+}

@@ -1137,6 +1137,9 @@ pub enum Predicate {
     /// 702.105 — "attacks the player with the most life or tied for most
     /// life"); pair with `who: DefendingPlayer` on an `Attacks` trigger.
     PlayerHasMostLife { who: PlayerRef },
+    /// `who` controls strictly more `filter` permanents than each other player
+    /// (Rivalry's land leader, Damping Engine's permanent leader).
+    PlayerControlsMostOf { who: PlayerRef, filter: SelectionRequirement },
     /// True if any player matched by `who` has strictly less life than at least
     /// one of their opponents. Geyadrone Dihada's "if you have less life than
     /// an opponent" loyalty-reset rider.
@@ -4031,6 +4034,10 @@ pub enum Effect {
     SecondSunrise,
     /// Shuffle `who`'s graveyard into their library.
     ShuffleGraveyardIntoLibrary { who: PlayerRef },
+    /// Shuffle every card matching `filter` from `who`'s graveyard into their
+    /// library (Repopulate) — the payoff-free sibling of
+    /// `ShuffleFilteredGraveyardIntoLibraryGainLife`.
+    ShuffleFilteredGraveyardIntoLibrary { who: PlayerRef, filter: SelectionRequirement },
     /// Shuffle every card matching `filter` from `who`'s graveyard into their
     /// library, then that player gains life equal to the number shuffled this
     /// way (Elixir — "shuffle all nonland cards … gain life equal to the number
