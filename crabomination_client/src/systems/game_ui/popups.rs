@@ -1394,5 +1394,11 @@ pub fn helper_cast_action(
             card_id, target, additional_targets: vec![], mode, x_value: None,
             helpers,
         },
+        // Spliced clause targets are auto-aimed server-side when
+        // `additional_targets` is short (CR 702.47b).
+        crate::game::HelperMechanic::Splice => GameAction::CastSpellSpliced {
+            card_id, target, additional_targets: vec![], mode, x_value: None,
+            splice_cards: helpers,
+        },
     }
 }

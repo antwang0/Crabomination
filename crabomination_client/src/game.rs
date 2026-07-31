@@ -332,6 +332,9 @@ pub enum HelperMechanic {
     Convoke,
     /// A "waterbend {N}" additional cost — `GameAction::CastSpellWaterbend`.
     Waterbend,
+    /// CR 702.47 Splice onto Arcane — `GameAction::CastSpellSpliced`. The
+    /// "helpers" are Splice cards in hand rather than battlefield permanents.
+    Splice,
 }
 
 impl HelperMechanic {
@@ -339,6 +342,7 @@ impl HelperMechanic {
         match self {
             Self::Convoke => "Convoke",
             Self::Waterbend => "Waterbend",
+            Self::Splice => "Splice",
         }
     }
 }

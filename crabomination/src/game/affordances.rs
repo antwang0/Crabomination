@@ -1287,7 +1287,62 @@ impl GameState {
             prepare_castable: self.prepare_castable_on(&template, seat),
             back_castable: self.back_castable_hand_cards_on(&template, seat),
             prototypable: self.prototypable_hand_cards_on(&template, seat),
+            spliceable: self.spliceable_hand_cards_on(&template, seat),
         }
+    }
+
+    /// CR 702.47 — for each castable Arcane spell in hand, the Splice cards in
+    /// hand whose quality matches and whose splice cost (mana plus any
+    /// `splice_extra_cost`) is payable on top. Dry-run-gated per candidate so
+    /// a splicer the seat can't afford alongside the host never shows up.
+    /// Hosts with no affordable splicer are omitted.
+    fn spliceable_hand_cards_on(
+        &self,
+        template: &GameState,
+        seat: usize,
+    ) -> Vec<(CardId, Vec<CardId>)> {
+        use crate::card::Keyword;
+        let splicers: Vec<(CardId, crate::card::SpellSubtype)> = self.players[seat]
+            .hand
+            .iter()
+            .filter_map(|c| {
+                c.definition.keywords.iter().find_map(|k| match k {
+                    Keyword::Splice(_, quality) => Some((c.id, *quality)),
+                    _ => None,
+                })
+            })
+            .collect();
+        if splicers.is_empty() {
+            return Vec::new();
+        }
+        let hosts: Vec<(CardId, Vec<crate::card::SpellSubtype>)> = self.players[seat]
+            .hand
+            .iter()
+            .filter(|c| !c.definition.subtypes.spell_subtypes.is_empty())
+            .map(|c| (c.id, c.definition.subtypes.spell_subtypes.clone()))
+            .collect();
+        hosts
+            .into_iter()
+            .filter_map(|(host, subtypes)| {
+                let usable: Vec<CardId> = splicers
+                    .iter()
+                    .filter(|(sid, quality)| {
+                        *sid != host
+                            && subtypes.contains(quality)
+                            && Self::would_accept_on(template, GameAction::CastSpellSpliced {
+                                card_id: host,
+                                splice_cards: vec![*sid],
+                                target: None,
+                                additional_targets: vec![],
+                                mode: None,
+                                x_value: None,
+                            })
+                    })
+                    .map(|(sid, _)| *sid)
+                    .collect();
+                (!usable.is_empty()).then_some((host, usable))
+            })
+            .collect()
     }
 
     /// CR 702.160 — hand cards with a Prototype face castable for the

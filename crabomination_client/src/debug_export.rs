@@ -258,6 +258,7 @@ mod tests {
             castable_hand: vec![],
             back_castable_hand: vec![],
             prepare_castable: vec![],
+            spliceable_hand: vec![],
             pitchable_hand: vec![],
             kickable_hand: vec![],
             buyback_hand: vec![],

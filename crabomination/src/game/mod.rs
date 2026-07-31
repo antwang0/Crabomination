@@ -269,6 +269,11 @@ pub struct HandAffordances {
     /// CR 702.160 — hand cards with Prototype castable for the prototype
     /// cost right now, so the client can offer "cast for prototype".
     pub prototypable: Vec<CardId>,
+    /// CR 702.47 — `(host, splicers)`: an Arcane spell in hand castable right
+    /// now, paired with every Splice card in hand whose quality matches and
+    /// whose splice cost is payable on top. Lets the client offer the
+    /// "splice which cards onto this?" picker before the cast.
+    pub spliceable: Vec<(CardId, Vec<CardId>)>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]

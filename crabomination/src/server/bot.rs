@@ -1996,6 +1996,41 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
         }
     }
 
+    // Splice onto Arcane (CR 702.47): splice every affordable partner onto an
+    // Arcane spell the bot is casting anyway. `spliceable` already dry-ran the
+    // one-splicer case; `would_accept` re-checks the combined cost, and the
+    // spliced clauses' targets are auto-aimed inside `cast_spell_spliced`.
+    for (host, splicers) in state.compute_hand_affordances(seat).spliceable {
+        let (target, additional_targets) = {
+            let eff = state.players[seat]
+                .hand
+                .iter()
+                .find(|c| c.id == host)
+                .map(|c| c.definition.effect.clone());
+            match eff {
+                Some(e) if e.requires_target() => {
+                    let (t, extras) = state.auto_targets_for_effect_all_slots(&e, seat, None);
+                    if t.is_none() {
+                        continue;
+                    }
+                    (t, extras)
+                }
+                _ => (None, vec![]),
+            }
+        };
+        let action = GameAction::CastSpellSpliced {
+            card_id: host,
+            splice_cards: splicers,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if GameState::would_accept_on(&probe, action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Conspire (CR 702.78): for any hand card with `Keyword::Conspire`, tap
     // the first two untapped creatures sharing a color with it to copy the
     // spell. The bot conspires whenever it can — the copy is strictly upside

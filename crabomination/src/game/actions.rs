@@ -3897,6 +3897,23 @@ impl GameState {
                 self.try_pay_with_auto_tap(p, &cost)?;
             }
         }
+        // CR 702.47b — spliced effect `i` reads its target from
+        // `additional_targets[i]`. A caller that didn't pre-pick them (the
+        // client's splice picker, the bot) gets each targeting splicer
+        // auto-aimed the way a plain cast would be.
+        let mut additional_targets = additional_targets;
+        for (i, eff) in spliced_effects.iter().enumerate() {
+            if additional_targets.get(i).is_some() || !eff.requires_target() {
+                continue;
+            }
+            additional_targets.resize(i, Target::Player(p));
+            match self.auto_target_for_effect(eff, p) {
+                Some(t) => additional_targets.push(t),
+                // No legal target: the spliced clause resolves as a no-op
+                // rather than blocking the whole cast (CR 608.2b).
+                None => additional_targets.push(Target::Player(p)),
+            }
+        }
         if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
             c.spliced_effects = spliced_effects;
             c.spliced_names = spliced_names;

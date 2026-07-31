@@ -628,3 +628,47 @@ fn clash_of_realities_makes_arrivals_bite() {
     cast(&mut g, bear, None);
     assert!(g.battlefield_find(spirit).is_none(), "the non-Spirit arrival shot the Spirit");
 }
+
+// ── Splice affordance (CR 702.47) ───────────────────────────────────────────
+
+/// The hand affordance sweep pairs an Arcane host with its affordable splicers.
+#[test]
+fn splice_affordance_pairs_host_with_splicers() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    let torrent = g.add_card_to_hand(0, catalog::torrent_of_stone());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 4);
+    // Both are Arcane splicers, so each is a legal host for the other.
+    let aff = g.compute_hand_affordances(0);
+    assert!(aff.spliceable.contains(&(ray, vec![torrent])));
+    assert!(aff.spliceable.contains(&(torrent, vec![ray])));
+}
+
+/// A spliced clause with no pre-picked target is auto-aimed at cast time.
+#[test]
+fn spliced_clause_targets_are_auto_aimed() {
+    let mut g = two_player_game();
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    let torrent = g.add_card_to_hand(0, catalog::torrent_of_stone());
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 4);
+    g.perform_action(GameAction::CastSpellSpliced {
+        card_id: ray,
+        splice_cards: vec![torrent],
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("spliced cast without pre-picked splice targets");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "Torrent of Stone found its target");
+}

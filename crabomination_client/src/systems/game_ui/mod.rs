@@ -3332,6 +3332,7 @@ pub fn auto_advance_p0(
         || !cv.back_castable_hand.is_empty()
         || !cv.prototypable_hand.is_empty()
         || !cv.prepare_castable.is_empty()
+        || !cv.spliceable_hand.is_empty()
         || !cv.activatable_permanents.is_empty()
         || !cv.kickable_hand.is_empty()
         || !cv.buyback_hand.is_empty();
@@ -3946,6 +3947,33 @@ pub fn handle_game_input(
                                 card_id, target: None, additional_targets: vec![],
                                 mode: None, x_value: None,
                             });
+                        }
+                    } else if let Some((_, splicers)) =
+                        cv.spliceable_hand.iter().find(|(host, _)| *host == card_id)
+                    {
+                        // CR 702.47 — right-click an Arcane spell whose splice
+                        // partners are in hand: tick which to splice on, then
+                        // Cast. Spliced clause targets are auto-aimed
+                        // server-side.
+                        let candidates: Vec<(CardId, String)> = splicers
+                            .iter()
+                            .filter_map(|sid| {
+                                cv.players.get(your_seat)?.hand.iter().find_map(|h| match h {
+                                    crabomination::net::HandCardView::Known(hk)
+                                        if hk.id == *sid =>
+                                    {
+                                        Some((*sid, hk.name.clone()))
+                                    }
+                                    _ => None,
+                                })
+                            })
+                            .collect();
+                        if !candidates.is_empty() {
+                            r.helper_tap.cap = None;
+                            r.helper_tap.selected = vec![false; candidates.len()];
+                            r.helper_tap.candidates = candidates;
+                            r.helper_tap.pending =
+                                Some((card_id, crate::game::HelperMechanic::Splice));
                         }
                     } else if cv.convokable_hand.contains(&card_id) || k.has_waterbend {
                         // CR 702.51 / 702.126 / 701.67 — right-click opens the
