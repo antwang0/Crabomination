@@ -349,7 +349,7 @@ fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
         return Some(format!("·{t:?}"));
     }
     // The filtered form names what it dodges when the filter is simple enough
-    // to render — "ProF·non-Spirit creatures".
+    // to render — Harbinger of Spring reads "ProF·!Spirit".
     if let ProtectionFromMatching(f) = kw {
         return req_short(f).map(|d| format!("·{d}"));
     }
