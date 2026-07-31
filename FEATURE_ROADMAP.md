@@ -63,6 +63,14 @@ exercising each) was elided in a compaction pass; recover it from
   Tenza, Hankyu. New: `StaticEffect::MaxOneArtifactUntap` (CR 502.3 — Imi
   Statue) and `SpendRestriction::LegendarySpell` + `SpellKind.legendary`
   (Untaidake). Tests in `classic_sets/chk::gaps1`.
+- **Saviors of Kamigawa opened** (`sets::sok`, 33 cards — `set_gaps.py sok`
+  131 → 98): the Kirin spiritcraft cycle, Channel (CR 702.58, an activated
+  ability with `from_hand` + `discard_self_cost`), the hand-size-matters
+  shell, and the utility spells. New: `SelectionRequirement::
+  ManaValueEqualsTriggerAmount` (Celestial Kirin's "all permanents with that
+  spell's mana value"), and `Effect::AtNextEndStep` now binds a token minted
+  in the same resolution so a delayed body naming it still finds it (Feral
+  Lightning). Tests in `classic_sets/sok`.
 - **Betrayers of Kamigawa complete** (`sets::bok` + `sets::bok2`, 112 cards —
   `set_gaps.py bok` at zero). The `bok2` closure added: `Keyword::
   CounterFirstTargetingEachTurn` (the Glasskite cycle, enforced alongside Ward

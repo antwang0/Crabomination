@@ -16,7 +16,7 @@ use crate::mana::{Color, b, cost, g, generic, r, u, w};
 use super::bok::{arcane_instant, creature, instant, legend, sorcery};
 
 /// "At the beginning of your upkeep, `effect`."
-fn on_upkeep(effect: Effect) -> TriggeredAbility {
+pub(crate) fn on_upkeep(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
         effect,

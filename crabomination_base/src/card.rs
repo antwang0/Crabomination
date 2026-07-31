@@ -1798,6 +1798,9 @@ pub enum SelectionRequirement {
     /// shape rather than the `AtMost`/`AtLeast` approximations).
     /// Composes naturally with `And`/`Or` for range gates.
     ManaValueExactly(u32),
+    /// Mana value equal to the firing event's amount — "destroy all permanents
+    /// with that spell's mana value" (Celestial Kirin).
+    ManaValueEqualsTriggerAmount,
     /// True when the card's mana value has the given parity — odd when
     /// `odd: true`, even (incl. 0) otherwise. Extinction Event's "exile each
     /// creature with mana value of the chosen parity".

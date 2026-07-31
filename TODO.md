@@ -7661,6 +7661,18 @@ stalled games via `eval_material`.
 
 ## Noticed this run (modern_decks — Betrayers of Kamigawa closure)
 
+- **SOK's Sweep cards are unimplemented.** "Return any number of [basic land
+  type] you control to their owner's hand" then scale off the count (Barrel
+  Down Sokenzan, Charge Across the Araba, and the other three). Wants a
+  `Decision::ChooseCards` over the matching lands plus a `Value` reading the
+  returned count — `Selector::LastMoved` gets the second half for free.
+- **SOK's Epic sorceries are unimplemented.** `Keyword::Epic` ships but
+  Endless Swarm / Eternal Dominion also need "copy this spell except for its
+  epic ability" to re-choose targets each upkeep.
+- **Ashes of the Fallen wants a graveyard type-grant static.** "Each creature
+  card in your graveyard has the chosen creature type" — the layer system
+  only walks the battlefield.
+
 - **CR 712.4 doesn't fire on the direct move path.** `place_card_in_dest`
   reverts a flip card (CR 710.4) but deliberately leaves `revert_transform` /
   `revert_prototype` to `place_card_at_resolved_zone`: a defeated battle

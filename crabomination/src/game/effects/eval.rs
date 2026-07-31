@@ -2773,6 +2773,9 @@ impl GameState {
                     R::ManaValueAtMostXFromCost | R::ManaValueExactlyXFromCost | R::PowerAtMostXFromCost | R::ToughnessAtMostXFromCost | R::ManaValueAtMostConverged => false,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
                     R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
+                    R::ManaValueEqualsTriggerAmount => {
+                        card.definition.cost.cmc() == self.trigger_event_amount_scratch
+                    }
                     R::ManaValueParity { odd } => (card.definition.cost.cmc() % 2 == 1) == *odd,
                     R::ManaValueEqualsSacrificedPlus(off) => {
                         card.definition.cost.cmc()
@@ -3033,6 +3036,9 @@ impl GameState {
         use SelectionRequirement as R;
         match req {
             R::Any => true,
+            R::ManaValueEqualsTriggerAmount => {
+                card.definition.cost.cmc() == self.trigger_event_amount_scratch
+            }
             R::Player | R::OpponentPlayer => false,
             R::And(a, b) => {
                 self.evaluate_requirement_on_card(a, card, controller)

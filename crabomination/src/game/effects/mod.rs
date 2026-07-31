@@ -21718,7 +21718,9 @@ impl GameState {
                     kind: crate::game::types::DelayedKind::NextEndStep,
                     effect,
                     target: captured,
-                    bound_token: None,
+                    // Carry a token minted in this same resolution so a body
+                    // naming it still finds it at fire time (Feral Lightning).
+                    bound_token: self.last_created_token,
                     // Carry the scheduling trigger's subject so a body naming
                     // "that card" still resolves at fire time (Shirei).
                     bound_subject: ctx.trigger_source,
