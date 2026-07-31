@@ -489,6 +489,10 @@ pub enum Value {
     /// Velus Manticore's "X = the number of card types the discarded card
     /// has"). Backed by `GameState.last_discarded_card_types`.
     LastDiscardedCardTypes,
+    /// Mana value of the most recently discarded card, falling back to the one
+    /// discarded to pay the resolving ability's cost (Slumbering Tora's X).
+    /// 0 when nothing has been discarded.
+    LastDiscardedManaValue,
     /// Distinct card types across every graveyard (Altar of the Goyf,
     /// Lhurgoyf-style counts as a spell value).
     CardTypesInAllGraveyards,
@@ -2977,6 +2981,13 @@ pub enum Effect {
     /// and the trigger's controller takes over the spell. (The printed "you
     /// may choose new targets" rider is not modeled.)
     ExchangeControlWithTriggeringSpell { what: Selector },
+    /// Twist Allegiance — you and each player `who` resolves to swap control
+    /// of every creature you each control for `duration`; the swapped
+    /// creatures untap and gain haste.
+    ExchangeCreatureControlWith { who: Selector, duration: Duration },
+    /// Overblaze — each resolved permanent's damage is doubled for the rest of
+    /// the turn (CR 614.2), via `doubled_damage_sources_this_turn`.
+    DoubleDamageFromSourceThisTurn { what: Selector },
     /// Whims of the Fates — starting with the controller, each player splits
     /// the permanents they control into `piles` piles and sacrifices one
     /// chosen at random. The split is round-robin over a shuffled list (no
@@ -3941,6 +3952,9 @@ pub enum Effect {
     /// Shuffle `who`'s hand and graveyard into their library (Day's
     /// Undoing, Timetwister).
     ShuffleHandAndGraveyardIntoLibrary { who: PlayerRef },
+    /// Sway of the Stars — `who` shuffles their hand, graveyard, and every
+    /// permanent they own into their library.
+    ShuffleEverythingOwnedIntoLibrary { who: PlayerRef },
     /// Each resolved player shuffles their hand into their library, then
     /// draws that many cards (Molten Psyche, Winds of Change).
     ShuffleHandsDrawSame { who: PlayerRef },

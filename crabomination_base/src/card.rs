@@ -598,6 +598,9 @@ pub enum WardCost {
     /// "Pay life equal to this creature's power" — a dynamic life cost read
     /// off the source's computed power at payment time (Phyrexian Fleshgorger).
     LifeSourcePower,
+    /// "...unless you remove a counter from a permanent you control" (Chisei,
+    /// Heart of Oceans). Unpayable when no controlled permanent has a counter.
+    RemoveCounterFromPermanent,
 }
 
 impl WardCost {
@@ -993,6 +996,11 @@ pub enum Keyword {
     Disturb(crate::mana::ManaCost),
     Prowess,
     Ward(WardCost),
+    /// "Whenever this creature becomes the target of a spell or ability for
+    /// the first time each turn, counter that spell or ability" — the
+    /// Glasskite cycle. Enforced alongside Ward at the targeting hooks, but
+    /// it fires on its own controller's spells too.
+    CounterFirstTargetingEachTurn,
     Changeling,
     /// CR 702.139 — Companion. Deck-construction restriction unvalidated;
     /// a sideboard copy moves to hand for {3} at sorcery speed via
@@ -1595,6 +1603,10 @@ pub enum SelectionRequirement {
     /// Shares a creature type with the permanent the ability's source is
     /// attached to (Konda's Banner). Changeling hosts share with everything.
     SharesCreatureTypeWithAttachedHost,
+    /// Shares a colour with any permanent the evaluating player controls —
+    /// Empty-Shrine Kannushi's "protection from the colors of permanents you
+    /// control".
+    SharesColorWithPermanentYouControl,
     /// The permanent's mana value equals the evaluating player's unspent
     /// (floating) mana — Glissa Sunseeker.
     ManaValueEqualsYourUnspentMana,
@@ -2640,6 +2652,11 @@ pub struct CardDefinition {
     /// entwined cast, alongside (or instead of) `Keyword::Entwine`'s mana.
     #[serde(default)]
     pub entwine_additional_cost: Option<AdditionalCastCost>,
+    /// CR 702.47 — a non-mana Splice cost ("Splice onto Arcane—Sacrifice two
+    /// Mountains" — Torrent of Stone). Paid alongside `Keyword::Splice`'s mana
+    /// when this card is spliced onto a spell.
+    #[serde(default)]
+    pub splice_extra_cost: Option<AdditionalCastCost>,
     /// "This spell costs {N} more to cast if it targets a [filter]" —
     /// Vanish into Eternity. Read by `extra_cost_for_spell` off the chosen
     /// target at cast time.
@@ -3195,6 +3212,9 @@ pub enum AdditionalCastCost {
         #[serde(default)]
         optional: bool,
     },
+    /// "As an additional cost, an opponent gains N life" (Roar of Jukai's
+    /// splice cost). Always payable; the caster's first opponent gains it.
+    OpponentGainsLife { amount: u32 },
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.

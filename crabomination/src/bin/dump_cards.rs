@@ -79,6 +79,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::SpellStorm => "SpellStorm",
         Keyword::CantBeCopied => "Can't be copied",
         Keyword::Prowess => "Prowess",
+        Keyword::CounterFirstTargetingEachTurn => "Counters first targeting each turn",
         Keyword::Infect => "Infect",
         Keyword::Wither => "Wither",
         Keyword::Toxic(_) => "Toxic",

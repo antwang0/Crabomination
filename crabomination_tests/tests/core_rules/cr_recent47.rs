@@ -117,6 +117,7 @@ fn cr_513_2_end_step_does_not_back_up_for_a_new_delayed_trigger() {
         target: None,
         fires_once: true,
         bound_token: None,
+        bound_subject: None,
     });
     let hand = g.players[0].hand.len();
     drain_stack(&mut g);

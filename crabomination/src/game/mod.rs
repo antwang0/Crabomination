@@ -488,6 +488,11 @@ pub struct GameState {
     /// Mana value of the last card discarded during the current resolution
     /// (Argentum Masticore's "MV ≤ the discarded card" reflexive gate).
     pub(crate) last_discarded_mana_value: Option<u32>,
+    /// Mana value of the card discarded to pay the activation cost currently
+    /// resolving (Slumbering Tora). Unlike `last_discarded_mana_value` this
+    /// survives `resolve_effect`'s per-resolution scratch reset.
+    #[serde(default)]
+    pub(crate) cost_discarded_mana_value: Option<u32>,
     /// "Whenever a creature blocks this turn, its controller gets N poison
     /// counters" (Noxious Assault). Cleared at cleanup.
     pub(crate) block_poison_this_turn: u32,
@@ -1044,6 +1049,10 @@ pub struct GameState {
     /// registrant's turn begins.
     #[serde(default)]
     pub(crate) staggered_damage_players: Vec<(usize, usize)>,
+    /// Overblaze — sources whose damage is doubled for the rest of the turn
+    /// (CR 614.2, applied in `scale_damage_to`). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) doubled_damage_sources_this_turn: Vec<CardId>,
     /// Single Combat's lock — `(registerer, registration_turn)`: no player may
     /// cast a creature or planeswalker spell until the end of the registerer's
     /// next turn. Cleared in `cleanup_wear_off` at the end of the registerer's
@@ -1457,6 +1466,7 @@ impl Clone for GameState {
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
             last_discarded_mana_value: self.last_discarded_mana_value,
+            cost_discarded_mana_value: self.cost_discarded_mana_value,
             block_poison_this_turn: self.block_poison_this_turn,
             tapped_for_cost_power: self.tapped_for_cost_power,
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
@@ -1539,6 +1549,7 @@ impl Clone for GameState {
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
             turn_scoped_spell_taxes: self.turn_scoped_spell_taxes.clone(),
             staggered_damage_players: self.staggered_damage_players.clone(),
+            doubled_damage_sources_this_turn: self.doubled_damage_sources_this_turn.clone(),
             creature_pw_cast_locks: self.creature_pw_cast_locks.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
             cant_block_pairs: self.cant_block_pairs.clone(),
@@ -1676,6 +1687,7 @@ impl GameState {
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
             last_discarded_mana_value: None,
+            cost_discarded_mana_value: None,
             block_poison_this_turn: 0,
             tapped_for_cost_power: None,
             trigger_event_amount_scratch: 0,
@@ -1756,6 +1768,7 @@ impl GameState {
             search_tax_paid_this_turn: Vec::new(),
             turn_scoped_spell_taxes: Vec::new(),
             staggered_damage_players: Vec::new(),
+            doubled_damage_sources_this_turn: Vec::new(),
             creature_pw_cast_locks: Vec::new(),
             damage_prevented_sources: Vec::new(),
             cant_block_pairs: Vec::new(),
@@ -3867,6 +3880,10 @@ impl GameState {
         let mut amount = amount;
         let mut d = self.damage_doublers();
         let mut h = self.damage_halvers();
+        // Overblaze — this source's damage is doubled for the rest of the turn.
+        if let Some(s) = source {
+            d += self.doubled_damage_sources_this_turn.iter().filter(|c| **c == s).count() as u32;
+        }
         if let Some(p) = affected {
             // Stagger (Lightning, Army of One): damage to a staggered player
             // or their permanents is doubled until the registrant's next turn.
@@ -13517,6 +13534,7 @@ impl GameState {
                             effect: body,
                             target: None,
                             bound_token: None,
+                            bound_subject: None,
                             fires_once: true,
                         });
                     }
@@ -14753,6 +14771,7 @@ impl GameState {
                 effect: body,
                 target: None, // re-pick at fire time
                 bound_token: None,
+                bound_subject: None,
                 fires_once: true,
             });
             self.exile.push(card);
@@ -14798,6 +14817,7 @@ impl GameState {
                 },
                 target: None,
                 bound_token: None,
+                bound_subject: None,
                 fires_once: true,
             });
             return Ok(events);
@@ -14816,6 +14836,7 @@ impl GameState {
                 effect: body,
                 target: None,
                 bound_token: None,
+                bound_subject: None,
                 fires_once: true,
             });
             return Ok(events);

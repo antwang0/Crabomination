@@ -654,6 +654,10 @@ impl GameState {
                 self.distinct_card_types_in_all_graveyards() as i32
             }
             Value::LastDiscardedCardTypes => self.last_discarded_card_types as i32,
+            Value::LastDiscardedManaValue => self
+                .last_discarded_mana_value
+                .or(self.cost_discarded_mana_value)
+                .unwrap_or(0) as i32,
             Value::CardsDiscardedThisTurn(who) => self
                 .resolve_players(who, ctx)
                 .into_iter()
@@ -3153,6 +3157,16 @@ impl GameState {
             | R::SameNameAsExiledWithSource
             | R::SharesColorWithAttachedHost
             | R::SharesCreatureTypeWithAttachedHost => false,
+            // Empty-Shrine Kannushi — printed colours on both sides, since
+            // this is consulted from inside the layer gather.
+            R::SharesColorWithPermanentYouControl => {
+                let colors = card.definition.printed_colors();
+                !colors.is_empty()
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == controller
+                            && c.definition.printed_colors().iter().any(|x| colors.contains(x))
+                    })
+            }
             // Glissa Sunseeker — "if its mana value is equal to the amount of
             // unspent mana you have".
             R::ManaValueEqualsYourUnspentMana => {

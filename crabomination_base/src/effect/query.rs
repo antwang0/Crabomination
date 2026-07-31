@@ -677,6 +677,7 @@ impl Effect {
             }
             Effect::ShuffleGraveyardIntoLibrary { who }
             | Effect::ShuffleHandAndGraveyardIntoLibrary { who }
+            | Effect::ShuffleEverythingOwnedIntoLibrary { who }
             | Effect::ShuffleFilteredGraveyardIntoLibraryGainLife { who, .. } => {
                 player_has_target(who)
             }
@@ -684,6 +685,8 @@ impl Effect {
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_has_target(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_has_target(what),
+            Effect::ExchangeCreatureControlWith { who, .. } => sel_has_target(who),
+            Effect::DoubleDamageFromSourceThisTurn { what } => sel_has_target(what),
             Effect::RedirectYourDamageToChosen { what }
             | Effect::RedirectYourCombatDamageToTarget { what }
             | Effect::PreventAllDamageFromTargetThisTurn { what, .. }
@@ -1313,6 +1316,8 @@ impl Effect {
             Effect::BottomChosenFromHandAndDraw { from, .. } => sel_filter(from),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_filter(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_filter(what),
+            Effect::DoubleDamageFromSourceThisTurn { what } => sel_filter(what),
+            Effect::ExchangeCreatureControlWith { who, .. } => sel_filter(who),
             Effect::RedirectYourDamageToChosen { what }
             | Effect::RedirectYourCombatDamageToTarget { what }
             | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_filter(what),
@@ -2456,6 +2461,8 @@ impl Effect {
                 Effect::BottomChosenFromHandAndDraw { from, .. } => sel_find(from, slot),
                 Effect::SearchSplitOpponentChooses { opponent, .. } => sel_find(opponent, slot),
                 Effect::RedirectSpellTargetToSelf { what } => sel_find(what, slot),
+                Effect::DoubleDamageFromSourceThisTurn { what } => sel_find(what, slot),
+                Effect::ExchangeCreatureControlWith { who, .. } => sel_find(who, slot),
                 Effect::RedirectYourDamageToChosen { what }
                 | Effect::RedirectYourCombatDamageToTarget { what }
                 | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_find(what, slot),

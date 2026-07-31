@@ -11,7 +11,7 @@ use crate::effect::{
 };
 use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
-fn creature(
+pub(crate) fn creature(
     name: &'static str,
     c: crate::mana::ManaCost,
     types: Vec<CreatureType>,
@@ -29,7 +29,7 @@ fn creature(
     }
 }
 
-fn legend(
+pub(crate) fn legend(
     name: &'static str,
     c: crate::mana::ManaCost,
     types: Vec<CreatureType>,
@@ -42,12 +42,12 @@ fn legend(
     }
 }
 
-fn instant(name: &'static str, c: crate::mana::ManaCost, effect: Effect) -> CardDefinition {
+pub(crate) fn instant(name: &'static str, c: crate::mana::ManaCost, effect: Effect) -> CardDefinition {
     CardDefinition { name, cost: c, card_types: vec![CardType::Instant], effect, ..Default::default() }
 }
 
 /// An Arcane instant — the splice-onto-Arcane host type.
-fn arcane_instant(
+pub(crate) fn arcane_instant(
     name: &'static str,
     c: crate::mana::ManaCost,
     effect: Effect,
@@ -61,11 +61,11 @@ fn arcane_instant(
     }
 }
 
-fn sorcery(name: &'static str, c: crate::mana::ManaCost, effect: Effect) -> CardDefinition {
+pub(crate) fn sorcery(name: &'static str, c: crate::mana::ManaCost, effect: Effect) -> CardDefinition {
     CardDefinition { name, cost: c, card_types: vec![CardType::Sorcery], effect, ..Default::default() }
 }
 
-fn arcane_sorcery(
+pub(crate) fn arcane_sorcery(
     name: &'static str,
     c: crate::mana::ManaCost,
     effect: Effect,

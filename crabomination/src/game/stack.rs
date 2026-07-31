@@ -684,7 +684,13 @@ impl GameState {
         // alongside the regular battlefield triggers. Fires-once triggers
         // are removed; this keeps `pact_of_negation`-style "next upkeep"
         // logic correct without leaking back into the next turn.
-        type DelayedFire = (CardId, Effect, usize, Option<Target>, Option<CardId>);
+        type DelayedFire = (
+            CardId,
+            Effect,
+            usize,
+            Option<Target>,
+            Option<crate::game::effects::EntityRef>,
+        );
         let mut delayed_to_fire: Vec<DelayedFire> = Vec::new();
         let mut keep: Vec<DelayedTrigger> = Vec::new();
         for dt in std::mem::take(&mut self.delayed_triggers) {
@@ -707,7 +713,9 @@ impl GameState {
                     dt.effect.clone(),
                     dt.controller,
                     dt.target.clone(),
-                    dt.bound_token,
+                    dt.bound_subject.clone().or_else(|| {
+                        dt.bound_token.map(crate::game::effects::EntityRef::Permanent)
+                    }),
                 ));
                 if !dt.fires_once {
                     keep.push(dt);
@@ -723,12 +731,8 @@ impl GameState {
         // `Decision::ChooseTarget` for wants_ui controllers instead of
         // silently auto-targeting them.
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
-        for (source, effect, controller, captured_target, bound_token) in delayed_to_fire {
+        for (source, effect, controller, captured_target, subject) in delayed_to_fire {
             let mode = self.pick_trigger_mode(&effect, source, controller);
-            // A bound token (Saheeli / Reflection of Kiki-Jiki) rides as
-            // the trigger's subject so `Selector::LastCreatedToken`
-            // re-finds it at fire time.
-            let subject = bound_token.map(crate::game::effects::EntityRef::Permanent);
             // Delayed triggers may have captured a target at registration
             // time (e.g. Pact's "lose the game"). If so, push immediately
             // with that target — we already passed the targeting moment.
@@ -1098,6 +1102,7 @@ impl GameState {
                                 effect: Effect::SacrificeSource,
                                 target: None,
                                 bound_token: None,
+                                bound_subject: None,
                                 fires_once: true,
                             });
                         }
@@ -1411,6 +1416,7 @@ impl GameState {
                             },
                             target: None,
                             bound_token: None,
+                            bound_subject: None,
                             fires_once: true,
                         });
                     }
@@ -1431,6 +1437,7 @@ impl GameState {
                             },
                             target: None,
                             bound_token: None,
+                            bound_subject: None,
                             fires_once: true,
                         });
                         self.delayed_triggers.push(crate::game::types::DelayedTrigger {
@@ -1440,6 +1447,7 @@ impl GameState {
                             effect: Effect::SacrificeSource,
                             target: None,
                             bound_token: None,
+                            bound_subject: None,
                             fires_once: true,
                         });
                     }
@@ -1472,6 +1480,7 @@ impl GameState {
                             ]),
                             target: None,
                             bound_token: None,
+                            bound_subject: None,
                             fires_once: true,
                         });
                     }
@@ -2827,6 +2836,7 @@ impl GameState {
         self.damage_cant_be_prevented_this_turn = false;
         self.damage_redirect_this_turn.clear();
         self.combat_damage_redirect_this_turn.clear();
+        self.doubled_damage_sources_this_turn.clear();
         self.damaged_creatures_die_this_turn = false;
         self.creature_deaths_drain_toughness_this_turn = false;
         self.no_search_this_turn = false;

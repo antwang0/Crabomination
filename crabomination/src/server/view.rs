@@ -1339,6 +1339,7 @@ fn project_permanent(
                 W::SacrificePermanents(n) => format!("Ward—sacrifice {n} permanents"),
                 W::GenericSourcePower => "Ward—{X} (this creature's power)".to_string(),
                 W::LifeSourcePower => "Ward—pay life equal to this creature's power".to_string(),
+                W::RemoveCounterFromPermanent => "Ward—remove a counter from a permanent".to_string(),
             })
         }).unwrap_or_default(),
         mana_value: card.definition.cost.cmc(),

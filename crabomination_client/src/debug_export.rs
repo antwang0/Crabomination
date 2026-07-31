@@ -218,6 +218,8 @@ mod tests {
                 enchanted_by: Vec::new(),
                 cannot_gain_life: false,
                 cant_cast_noncreature: false,
+                arbiter_cant_cast: false,
+                arbiter_cant_attack: false,
                 life_locked: false,
                 has_hexproof: false,
                 commander_damage_taken: vec![],

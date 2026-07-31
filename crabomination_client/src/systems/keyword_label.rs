@@ -81,6 +81,9 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         ProtectionFromColoredSpells => "ProCS",
         ProtectionFromEverything => "Pro★",
         Ward(_) => "Ward",
+        // Glasskite — the first spell or ability to target it each turn is
+        // countered outright, so it reads like an untaxed Ward.
+        CounterFirstTargetingEachTurn => "Ward1",
         Toxic(_) => "Tox",
         Poisonous(_) => "Psn",
         // Modular N — the counters it carries (and hands off on death) are a
@@ -280,6 +283,7 @@ fn ward_suffix(cost: &WardCost) -> String {
         CollectEvidence(n) => format!("ev{n}"),
         SacrificeCreature => "sac".into(),
         SacrificePermanents(n) => format!("sac{n}"),
+        RemoveCounterFromPermanent => "ctr-".into(),
         GenericSourcePower => "P".into(),
         LifeSourcePower => "P♥".into(),
     }

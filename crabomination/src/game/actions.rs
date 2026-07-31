@@ -30,6 +30,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::SacrificePermanents(n) => *n == 0,
         // Dynamic — the source's power can change before payment.
         WardCost::GenericSourcePower | WardCost::LifeSourcePower => false,
+        WardCost::RemoveCounterFromPermanent => false,
     }
 }
 
@@ -3836,6 +3837,7 @@ impl GameState {
             .map(|c| c.definition.subtypes.spell_subtypes.clone())
             .ok_or(GameError::CardNotInHand(card_id))?;
         let mut spliced_effects = Vec::new();
+        let mut cost_events = Vec::new();
         for &sid in splice_cards {
             // CR 702.47b — no card spliced onto the same spell twice.
             if !seen.insert(sid) {
@@ -3858,15 +3860,29 @@ impl GameState {
             if !spell_subtypes.contains(&quality) {
                 return Err(GameError::InvalidTarget);
             }
+            let extra = splicer.definition.splice_extra_cost.clone();
             spliced_effects.push(splicer.definition.effect.clone());
             // The splice cost is an additional cost (601.2b); the card stays
-            // in hand.
-            self.try_pay_with_auto_tap(p, &cost)?;
+            // in hand. CR 702.47's non-mana half (Torrent of Stone's "sacrifice
+            // two Mountains") rides the shared additional-cost payer.
+            if let Some(extra) = extra {
+                let costs = [extra];
+                if !self.additional_costs_payable(p, &costs) {
+                    return Err(GameError::InvalidTarget);
+                }
+                self.try_pay_with_auto_tap(p, &cost)?;
+                let (mut ev, _) = self.pay_additional_costs(p, &costs, None, None);
+                cost_events.append(&mut ev);
+            } else {
+                self.try_pay_with_auto_tap(p, &cost)?;
+            }
         }
         if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
             c.spliced_effects = spliced_effects;
         }
-        self.cast_spell(card_id, target, additional_targets, mode, x_value)
+        let mut events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        cost_events.append(&mut events);
+        Ok(cost_events)
     }
 
     pub(crate) fn cast_spell_bargain(
@@ -6325,6 +6341,8 @@ impl GameState {
                 self.battlefield.iter().any(|c| c.controller == p && c.definition.is_creature())
                     || self.players[p].hand.iter().any(|c| c.definition.is_creature())
             }
+            // Handing an opponent life is always payable.
+            A::OpponentGainsLife { .. } => true,
         })
     }
 
@@ -6822,6 +6840,17 @@ impl GameState {
                         events.append(&mut self.collect_evidence_from_graveyard(p, *amount));
                     }
                 }
+                A::OpponentGainsLife { amount } => {
+                    if let Some(opp) = self.opponents_of(p).first().copied() {
+                        let applied = self.adjust_life_applied(opp, *amount as i32);
+                        if applied > 0 {
+                            events.push(GameEvent::LifeGained {
+                                player: opp,
+                                amount: applied as u32,
+                            });
+                        }
+                    }
+                }
             }
         }
         (events, sac_power)
@@ -7245,6 +7274,7 @@ impl GameState {
                 Target::Permanent(id) => *id,
                 _ => continue,
             };
+            self.push_first_targeting_counter(perm_id, target_for_trigger);
             let (ward_cost, ward_controller) = match self
                 .battlefield
                 .iter()
@@ -7279,6 +7309,45 @@ impl GameState {
                     .build(),
             );
         }
+    }
+
+    /// `Keyword::CounterFirstTargetingEachTurn` (the Glasskite cycle, and
+    /// Kira's granted copy): the first spell or ability to target `perm_id`
+    /// each turn is countered. Rides the Ward push convention — the trigger's
+    /// slot 0 carries the targeting spell / ability source. The per-turn flag
+    /// reuses `triggered_once_per_turn_used` under a `usize::MAX` slot, which
+    /// no printed trigger index can collide with.
+    fn push_first_targeting_counter(&mut self, perm_id: CardId, target_for_trigger: CardId) {
+        use crate::card::Keyword;
+        let key = (perm_id, usize::MAX);
+        if self.triggered_once_per_turn_used.contains(&key) {
+            return;
+        }
+        let Some(controller) = self.battlefield_find(perm_id).map(|c| c.controller) else {
+            return;
+        };
+        let has = self
+            .computed_permanent(perm_id)
+            .map(|cp| cp.keywords)
+            .unwrap_or_else(|| {
+                self.battlefield_find(perm_id)
+                    .map(|c| c.definition.keywords.clone())
+                    .unwrap_or_default()
+            })
+            .contains(&Keyword::CounterFirstTargetingEachTurn);
+        if !has {
+            return;
+        }
+        self.triggered_once_per_turn_used.insert(key);
+        self.stack.push(
+            TriggerPush::new(
+                perm_id,
+                controller,
+                Effect::CounterSpellOrAbility { what: crate::effect::Selector::Target(0) },
+            )
+            .target(Some(Target::Permanent(target_for_trigger)))
+            .build(),
+        );
     }
 
     /// CR 702.21 — Ward enforcement on activated-ability targeting. Hooked
@@ -12722,9 +12791,20 @@ impl GameState {
         // Discard-as-cost (CR 602.5b): with tap/mana/life paid, discard each
         // cost-picked hand card (validated via the `discard_picks` pre-flight).
         // Fauna Shaman's "Discard a creature card:" cost runs here.
+        let mut discarded_for_cost_mv = None;
         for cid in discard_picks {
+            let mv = self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == cid)
+                .map(|c| c.definition.cost.cmc());
             self.discard_card(p, cid, &mut events);
+            discarded_for_cost_mv = discarded_for_cost_mv.max(mv);
         }
+        // Slumbering Tora reads the cost-discarded card's mana value at
+        // resolution; `last_discarded_mana_value` is per-resolution scratch and
+        // would be cleared before the body runs.
+        self.cost_discarded_mana_value = discarded_for_cost_mv;
 
         // Process-as-cost: the pre-flight-picked exile cards go to their
         // owners' graveyards (CR 614.6 hate redirects still apply).
@@ -13042,6 +13122,38 @@ impl GameState {
             self.pending_cost_events
                 .push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
         }
+    }
+
+    /// `WardCost::RemoveCounterFromPermanent` — take one counter off a
+    /// permanent `p` controls. Auto-pick prefers the most-stacked kind on the
+    /// least valuable permanent, and never touches loyalty (removing it is a
+    /// real cost the auto-payer shouldn't volunteer). Returns false — the cost
+    /// is unpayable — when nothing they control carries a removable counter.
+    pub(crate) fn remove_one_counter_from_own_permanent(
+        &mut self,
+        p: usize,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        let pick = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p)
+            .filter_map(|c| {
+                c.counters
+                    .iter()
+                    .filter(|(k, n)| **n > 0 && **k != crate::card::CounterType::Loyalty)
+                    .max_by_key(|(_, n)| **n)
+                    .map(|(k, _)| (c.id, *k))
+            })
+            .next();
+        let Some((cid, kind)) = pick else { return false };
+        if let Some(c) = self.battlefield_find_mut(cid) {
+            c.remove_counters(kind, 1);
+        }
+        events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count: 1 });
+        let mut sba = self.check_state_based_actions();
+        events.append(&mut sba);
+        true
     }
 }
 

@@ -666,6 +666,11 @@ pub struct DelayedTrigger {
     /// Rai's +1, Reflection of Kiki-Jiki's sac-at-end-step rider).
     #[serde(default)]
     pub bound_token: Option<CardId>,
+    /// The scheduling resolution's trigger subject, so a delayed body's
+    /// `Selector::TriggerSource` still resolves at fire time (Shirei's "return
+    /// that card"). Takes precedence over `bound_token`.
+    #[serde(default)]
+    pub bound_subject: Option<crate::game::effects::EntityRef>,
     /// True for one-shot triggers; removed after firing.
     pub fires_once: bool,
 }

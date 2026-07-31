@@ -1856,6 +1856,7 @@ impl GameState {
                         effect: Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile },
                         target: Some(crate::game::types::Target::Permanent(tid)),
                         bound_token: Some(tid),
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -5551,6 +5552,7 @@ impl GameState {
                         effect: Effect::SacrificePermanent { what: Selector::Target(0) },
                         target: Some(Target::Permanent(cid)),
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -7204,6 +7206,7 @@ impl GameState {
                         effect: body,
                         target: Some(Target::Permanent(cid)),
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -7236,6 +7239,7 @@ impl GameState {
                         },
                         target: Some(Target::Permanent(cid)),
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -7307,6 +7311,7 @@ impl GameState {
                     ]),
                     target: Some(Target::Permanent(cid)),
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -7345,6 +7350,7 @@ impl GameState {
                         effect: (**body).clone(),
                         target: None,
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 } else {
@@ -10164,6 +10170,7 @@ impl GameState {
                     },
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -11523,6 +11530,7 @@ impl GameState {
                     effect: Effect::ReturnLinkedExilesToBattlefieldAttached { host },
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -12480,6 +12488,7 @@ impl GameState {
                         effect: Effect::SacrificeSource,
                         target: None,
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -13087,6 +13096,9 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::RemoveCounterFromPermanent => {
+                        self.remove_one_counter_from_own_permanent(affected_controller, events)
+                    }
                     // Not a printed ward cost (UnlessPlayerPays-only).
                     WardCost::GenericSourcePower => false,
                 };
@@ -13165,8 +13177,29 @@ impl GameState {
                                 ok
                             }
                         }
-                        // Discard / sacrifice costs aren't used by the
-                        // tax-rider cards; treat as unpaid so the effect runs.
+                        WardCost::RemoveCounterFromPermanent => {
+                            self.remove_one_counter_from_own_permanent(payer, events)
+                        }
+                        // Ogre Marauder — "unless defending player sacrifices a
+                        // creature of their choice." Auto-pay takes their
+                        // cheapest creature.
+                        WardCost::SacrificeCreature => {
+                            let pick = self
+                                .battlefield
+                                .iter()
+                                .filter(|c| c.controller == payer && c.definition.is_creature())
+                                .min_by_key(|c| c.definition.cost.cmc())
+                                .map(|c| c.id);
+                            match pick {
+                                Some(cid) => {
+                                    self.sacrifice_one(cid, payer, events);
+                                    true
+                                }
+                                None => false,
+                            }
+                        }
+                        // The remaining printed ward costs aren't used by
+                        // tax riders; treat as unpaid so the effect runs.
                         _ => false,
                     };
                 if !paid {
@@ -14021,6 +14054,7 @@ impl GameState {
                             effect: Effect::SacrificeSource,
                             target: None,
                             bound_token: None,
+                            bound_subject: None,
                             fires_once: true,
                         });
                     }
@@ -14059,6 +14093,7 @@ impl GameState {
                         },
                         target: Some(crate::game::Target::Permanent(exiled_id)),
                         bound_token: Some(token_id),
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -14147,6 +14182,7 @@ impl GameState {
                         },
                         target: None,
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -16275,6 +16311,7 @@ impl GameState {
                         },
                         target: Some(Target::Permanent(pid)),
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -16338,6 +16375,7 @@ impl GameState {
                         effect: Effect::GraveBetrayalReanimate,
                         target: Some(Target::Permanent(dead)),
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -16478,6 +16516,7 @@ impl GameState {
                     ]),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -16673,6 +16712,7 @@ impl GameState {
                             },
                             target: Some(Target::Permanent(cid)),
                             bound_token: None,
+                            bound_subject: None,
                             fires_once: true,
                         });
                     }
@@ -17098,6 +17138,87 @@ impl GameState {
                     self.players[p].library.extend(hand);
                     self.players[p].library.extend(gy);
                     self.shuffle_library(p, events);
+                }
+                Ok(())
+            }
+
+            Effect::ShuffleEverythingOwnedIntoLibrary { who } => {
+                // Sway of the Stars — hand, graveyard and every owned permanent
+                // go back into the library. Permanents leave through the shared
+                // move funnel so leave-the-battlefield triggers still fire.
+                for p in self.resolve_players(who, ctx) {
+                    let owned: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.owner == p)
+                        .map(|c| c.id)
+                        .collect();
+                    let dest = crate::effect::ZoneDest::Library {
+                        who: crate::effect::PlayerRef::OwnerOfMoved,
+                        pos: crate::effect::LibraryPosition::Top,
+                    };
+                    for cid in owned {
+                        self.move_card_to(cid, &dest, ctx, events);
+                    }
+                    let hand = std::mem::take(&mut *self.players[p].hand);
+                    let gy = std::mem::take(&mut *self.players[p].graveyard);
+                    self.players[p].library.extend(hand);
+                    self.players[p].library.extend(gy);
+                    self.shuffle_library(p, events);
+                }
+                Ok(())
+            }
+
+            Effect::ExchangeCreatureControlWith { who, duration } => {
+                // Twist Allegiance — swap whole creature armies (CR 701.12),
+                // then untap the borrowed creatures and give them haste.
+                let me = ctx.controller;
+                let Some(them) = self.resolve_selector(who, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Player(p) => Some(p),
+                    EntityRef::Permanent(c) => self.battlefield_find(c).map(|c| c.controller),
+                    EntityRef::Card(_) => None,
+                }) else {
+                    return Ok(());
+                };
+                if them == me {
+                    return Ok(());
+                }
+                let swap: Vec<(CardId, usize)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.definition.is_creature() && (c.controller == me || c.controller == them)
+                    })
+                    .map(|c| (c.id, if c.controller == me { them } else { me }))
+                    .collect();
+                for (cid, to) in &swap {
+                    let Some(prev) = self.change_control(*cid, *to) else { continue };
+                    if !matches!(duration, crate::effect::Duration::Permanent)
+                        && !self.temporary_control.iter().any(|t| t.card == *cid)
+                    {
+                        self.temporary_control.push(crate::game::TempControl {
+                            card: *cid,
+                            original_controller: prev,
+                            duration: *duration,
+                            source: None,
+                            while_source_tapped: false,
+                        });
+                    }
+                    if let Some(c) = self.battlefield_find_mut(*cid) {
+                        c.tapped = false;
+                    }
+                }
+                for (cid, _) in &swap {
+                    self.grant_keyword_eot(*cid, crate::card::Keyword::Haste);
+                }
+                Ok(())
+            }
+
+            Effect::DoubleDamageFromSourceThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.doubled_damage_sources_this_turn.push(cid);
+                    }
                 }
                 Ok(())
             }
@@ -18388,6 +18509,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -18403,6 +18525,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -18727,6 +18850,7 @@ impl GameState {
                     // Bind a token minted earlier in this resolution so the
                     // delayed body's `LastCreatedToken` still finds it.
                     bound_token: self.last_created_token,
+                    bound_subject: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -18747,6 +18871,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target,
                     bound_token: self.last_created_token,
+                    bound_subject: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -18777,6 +18902,7 @@ impl GameState {
                     },
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -18800,6 +18926,7 @@ impl GameState {
                         effect: (**body).clone(),
                         target: captured,
                         bound_token: Some(token),
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -18822,6 +18949,7 @@ impl GameState {
                         effect: (**body).clone(),
                         target: Some(crate::game::Target::Player(controller)),
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -18837,6 +18965,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -18857,6 +18986,7 @@ impl GameState {
                         },
                         target: None,
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: false,
                     });
                 }
@@ -18872,6 +19002,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -18888,6 +19019,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -18902,6 +19034,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -18916,6 +19049,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -18930,6 +19064,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -18995,6 +19130,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -19009,6 +19145,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -19023,6 +19160,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -19298,6 +19436,7 @@ impl GameState {
                         effect: Effect::Exile { what: Selector::This },
                         target: None,
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -19315,6 +19454,7 @@ impl GameState {
                         effect: Effect::Exile { what: Selector::This },
                         target: None,
                         bound_token: Some(tok),
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -19330,6 +19470,7 @@ impl GameState {
                         effect: Effect::SacrificePermanent { what: Selector::This },
                         target: None,
                         bound_token: Some(tok),
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -19345,6 +19486,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -20523,6 +20665,7 @@ impl GameState {
                     },
                     target: Some(Target::Permanent(cid)),
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: true,
                 });
                 Ok(())
@@ -21386,6 +21529,7 @@ impl GameState {
                                 },
                                 target: Some(Target::Permanent(top_id)),
                                 bound_token: None,
+                                bound_subject: None,
                                 fires_once: true,
                             });
                         }
@@ -21467,6 +21611,7 @@ impl GameState {
                         },
                         target: None,
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -21497,6 +21642,9 @@ impl GameState {
                     effect,
                     target: captured,
                     bound_token: None,
+                    // Carry the scheduling trigger's subject so a body naming
+                    // "that card" still resolves at fire time (Shirei).
+                    bound_subject: ctx.trigger_source.clone(),
                     fires_once: true,
                 });
                 Ok(())
@@ -21537,6 +21685,7 @@ impl GameState {
                         effect: Effect::SacrificeSource,
                         target: None,
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -21573,6 +21722,7 @@ impl GameState {
                         effect: Effect::SacrificeSource,
                         target: None,
                         bound_token: None,
+                        bound_subject: None,
                         fires_once: true,
                     });
                 }
@@ -22966,6 +23116,7 @@ impl GameState {
                     effect: Effect::CastFreeParadigmCopy,
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: false,
                 });
                 Ok(())
@@ -23178,6 +23329,7 @@ impl GameState {
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,
+                    bound_subject: None,
                     fires_once: false,
                 });
                 Ok(())
