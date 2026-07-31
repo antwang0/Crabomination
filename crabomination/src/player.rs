@@ -323,6 +323,11 @@ pub struct Player {
     /// empty for snapshot back-compat.
     #[serde(default)]
     pub creatures_that_damaged_me_this_turn: Vec<crate::card::CardId>,
+    /// Lands that entered the battlefield under this player's control this
+    /// turn, played or otherwise. Cleared at the turn boundary; read by
+    /// `Predicate::LandsEnteredThisTurnAtLeast` (Lavaball Trap).
+    #[serde(default)]
+    pub lands_entered_this_turn: u32,
     /// Creature types among this player's creatures that dealt combat damage
     /// to a player this turn (CR 702.76 Prowl). Stamped at the combat-damage
     /// funnels, cleared at the turn boundary. `#[serde(default)]` for
@@ -832,6 +837,7 @@ impl Player {
             cast_from_library_top_this_turn: false,
             life_lost_this_turn: 0,
             creatures_that_damaged_me_this_turn: Vec::new(),
+            lands_entered_this_turn: 0,
             prowl_types_this_turn: Vec::new(),
             prowl_any_type_this_turn: false,
             attacked_this_turn: false,

@@ -1322,7 +1322,16 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `Effect::CopyForEachOtherTargetableCreature` (Zada, Hedron Grinder — a spell
   targeting only the source is copied once per other creature it could target).
   Emblem `AnthemForFilter` statics now reach the live anthem gather, so Gideon,
-  Ally of Zendikar's −4 actually pumps. **Worldwake is complete** (`set_gaps.py wwk` at zero — `sets::wwk`
+  Ally of Zendikar's −4 actually pumps. **Zendikar (ZEN) 150 → 80 gaps** (`sets::zen2`, 70 cards): the seven
+  board-state Traps, the Rally Allies, the landfall commons, the kicker
+  creatures/spells, the Refuge land cycle and the small statics. New:
+  `Predicate::{DamagedByCreaturesThisTurnAtLeast, LandsEnteredThisTurnAtLeast}`
+  (+ a per-turn `Player.lands_entered_this_turn` tally),
+  `StaticEffect::PumpTeamPerAttachmentOnSource` (Armament Master — an anthem
+  scaled by the *source's own* attachments) and
+  `CardDefinition.dies_to_library_bottom` (CR 614.6, the library sibling of
+  `dies_to_exile` — Nissa's Chosen). Tests in `classic_sets/zen2`.
+- **Worldwake is complete** (`set_gaps.py wwk` at zero — `sets::wwk`
   rides the same landfall/Rally shapes plus Multikicker and
   `Effect::SwitchPT` / `BecomeCreature`; `sets::wwk2` closes the last 43).
   The closure added: the **Trap alternative cost** (`Predicate::{

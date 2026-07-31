@@ -2388,6 +2388,11 @@ pub struct CardDefinition {
     /// Gloomshrieker, and the escape/Titan self-exile clauses.
     #[serde(default)]
     pub dies_to_exile: bool,
+    /// CR 614.6 — "If this creature would die, put it on the bottom of its
+    /// owner's library instead." The library sibling of `dies_to_exile`,
+    /// checked at the same battlefield-death funnel (Nissa's Chosen).
+    #[serde(default)]
+    pub dies_to_library_bottom: bool,
     /// CR 704.5j exception — "If there are exactly two permanents with this
     /// name on the battlefield, the legend rule doesn't apply to them."
     /// (Brothers Yamazaki.) When the same-name legend group has exactly two

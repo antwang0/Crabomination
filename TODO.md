@@ -7703,3 +7703,20 @@ stalled games via `eval_material`.
 - **Marshal's Anthem / Voyager Drake reanimate-per-kick pick their own targets.**
   `CapTargetsAt` truncates the auto-filled slot list at resolution; a UI seat
   never gets to choose *which* graveyard creatures come back.
+
+## Noticed this run (modern_decks — ZEN batch)
+
+- **Cobra Trap's gate needs destruction attribution.** "If a noncreature
+  permanent under your control was destroyed this turn by a spell or ability an
+  opponent controlled" wants a per-turn flag stamped where the destroying
+  effect's controller is known; the generic destroy funnel doesn't carry it.
+- **80 ZEN gap cards remain**, clustered on: the quest-counter enchantments with
+  bespoke payoffs (Archmage Ascension's draw replacement, Bloodchief Ascension),
+  the three planeswalkers (Chandra Ablaze, Nissa Revane, Sorin Markov), the
+  eon-counter / extra-turn lands (Magosi), Roil Elemental's landfall theft,
+  Eternity Vessel's life-total set, and Obsidian Fireheart's persistent
+  blaze-counter grant.
+- **Blazing Torch's throw sacrifices by name.** The granted ability's
+  "Sacrifice Blazing Torch" is modeled as `Effect::Sacrifice` with a
+  `HasName` filter, so a second Torch you control could be the one sacrificed.
+  Wants a `Selector::AttachmentGranting` sacrifice.

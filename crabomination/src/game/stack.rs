@@ -2498,6 +2498,7 @@ impl GameState {
             pl.lost_life_this_turn = false;
             pl.life_lost_this_turn = 0;
             pl.creatures_that_damaged_me_this_turn.clear();
+            pl.lands_entered_this_turn = 0;
             pl.prowl_types_this_turn.clear();
             pl.prowl_any_type_this_turn = false;
             // Veil of Summer's "this turn" riders clear at the turn boundary
@@ -4179,7 +4180,7 @@ impl GameState {
                 || valentin_redirect.is_some()
             {
                 crate::card::Zone::Exile
-            } else if library_top_redirect {
+            } else if library_top_redirect || card.definition.dies_to_library_bottom {
                 crate::card::Zone::Library
             } else if hand_redirect {
                 crate::card::Zone::Hand
@@ -4351,6 +4352,12 @@ impl GameState {
             Zone::Graveyard => self.players[owner].send_to_graveyard(card),
             Zone::Exile => self.exile.push(card),
             Zone::Hand => self.players[owner].hand.push(card),
+            // CR 614.6 — "put it on the bottom of its owner's library
+            // instead" (Nissa's Chosen).
+            Zone::Library if card.definition.dies_to_library_bottom => {
+                let owner = card.owner;
+                self.players[owner].library.push(card);
+            }
             // Top of owner's library. Replacement effects don't carry
             // a position field today; if a future replacement needs
             // bottom / shuffled, extend the type.

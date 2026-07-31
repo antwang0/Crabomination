@@ -4347,7 +4347,9 @@ impl GameState {
         if inst.definition.is_artifact() {
             self.players[ctrl].artifacts_entered_this_turn += 1;
         }
-        if !inst.definition.is_land() {
+        if inst.definition.is_land() {
+            self.players[ctrl].lands_entered_this_turn += 1;
+        } else {
             self.players[ctrl].nonland_permanents_entered_this_turn += 1;
         }
         if inst.definition.has_creature_type(crate::card::CreatureType::Mount)
@@ -6289,6 +6291,62 @@ impl GameState {
                         count * per_toughness,
                     ),
                 });
+            }
+        }
+        // "[applies_to] you control get +P/+T for each Equipment attached to
+        // this creature" (Armament Master) — count the source's own
+        // attachments, then emit a per-affected layer-7 pump.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::PumpTeamPerAttachmentOnSource {
+                    applies_to,
+                    attachment_filter,
+                    per_power,
+                    per_toughness,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let count = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.attached_to == Some(card.id)
+                            && self.evaluate_requirement_static(
+                                attachment_filter,
+                                &crate::game::types::Target::Permanent(c.id),
+                                card.controller,
+                                Some(card.id),
+                            )
+                    })
+                    .count() as i32;
+                if count == 0 {
+                    continue;
+                }
+                for target in &self.battlefield {
+                    if target.controller != card.controller
+                        || !self.evaluate_requirement_static(
+                            applies_to,
+                            &crate::game::types::Target::Permanent(target.id),
+                            card.controller,
+                            Some(card.id),
+                        )
+                    {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![target.id]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(
+                            count * per_power,
+                            count * per_toughness,
+                        ),
+                    });
+                }
             }
         }
         // "[applies_to] you control get +P/+T for each [count_filter] you
@@ -15884,6 +15942,9 @@ fn static_effect_to_effects(
             // PumpTeamByControlledPermanents — team anthem scaled by a live
             // controlled/graveyard count; resolved in `gather_continuous_effects`.
             | StaticEffect::PumpTeamByControlledPermanents { .. }
+            // PumpTeamPerAttachmentOnSource — scaled by the source's own
+            // attachments; resolved in `gather_continuous_effects`.
+            | StaticEffect::PumpTeamPerAttachmentOnSource { .. }
             // PumpPTPerOtherOfType — needs the live type count; resolved in
             // `gather_continuous_effects`.
             | StaticEffect::PumpPTPerOtherOfType { .. }

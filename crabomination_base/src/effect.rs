@@ -1213,6 +1213,12 @@ pub enum Predicate {
         colors: Vec<Color>,
         types: Vec<crate::card::CardType>,
     },
+    /// "[who] has been dealt damage by `at_least` different creatures this
+    /// turn" (Inferno Trap). Reads `Player.creatures_that_damaged_me_this_turn`.
+    DamagedByCreaturesThisTurnAtLeast { who: PlayerRef, at_least: u32 },
+    /// "[who] had `at_least` lands enter the battlefield under their control
+    /// this turn" (Lavaball Trap). Reads `Player.lands_entered_this_turn`.
+    LandsEnteredThisTurnAtLeast { who: PlayerRef, at_least: u32 },
     /// "[who] had a creature matching `filter` enter the battlefield under
     /// their control this turn" (Permafrost Trap). Matches over
     /// `Player.creatures_entered_this_turn`, so a creature that has since left

@@ -276,6 +276,15 @@ pub enum StaticEffect {
         #[serde(default)]
         exclude_self: bool,
     },
+    /// "[applies_to] you control get +per/+per for each Equipment attached to
+    /// *this creature*" (Armament Master). The attachment-scaled sibling of
+    /// `PumpTeamByControlledPermanents`, which counts board-wide instead.
+    PumpTeamPerAttachmentOnSource {
+        applies_to: SelectionRequirement,
+        attachment_filter: SelectionRequirement,
+        per_power: i32,
+        per_toughness: i32,
+    },
     /// "As long as this has `n` or more `kind` counters on it, it's an
     /// (artifact) creature." War Balloon (3+ fire counters). Emits a layer-4
     /// `AddCardType(Creature)` self-effect while the count holds; the printed

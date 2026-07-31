@@ -1383,6 +1383,16 @@ impl GameState {
                     })
                 })
             }
+            Predicate::DamagedByCreaturesThisTurnAtLeast { who, at_least } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| {
+                    self.players[p].creatures_that_damaged_me_this_turn.len() >= *at_least as usize
+                }),
+            Predicate::LandsEnteredThisTurnAtLeast { who, at_least } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].lands_entered_this_turn >= *at_least),
             Predicate::CreatureEnteredThisTurnMatching { who, filter } => {
                 self.resolve_players(who, ctx).into_iter().any(|p| {
                     self.players[p].creatures_entered_this_turn.iter().any(|&cid| {
