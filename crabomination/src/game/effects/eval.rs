@@ -276,6 +276,13 @@ impl GameState {
                 .iter()
                 .map(|&p| self.players[p].damage_taken_this_turn as i32)
                 .sum(),
+            Value::DamageDealtToSourceThisTurn => ctx
+                .source
+                .and_then(|id| {
+                    self.battlefield_find(id).or_else(|| self.leaves_bf_lki.get(&id))
+                })
+                .map(|c| c.damage_dealt_to_this_turn as i32)
+                .unwrap_or(0),
             Value::CardsInExileOwnedBy(p) => self
                 .resolve_players(p, ctx)
                 .iter()
@@ -299,6 +306,9 @@ impl GameState {
                 .map(|&p| self.players[p].spells_cast_this_turn as i32)
                 .max()
                 .unwrap_or(0),
+            Value::SpellsCastThisTurnTotal => {
+                self.players.iter().map(|p| p.spells_cast_this_turn as i32).sum()
+            }
             Value::OtherSpellsCastThisTurn(p) => self
                 .resolve_players(p, ctx)
                 .iter()

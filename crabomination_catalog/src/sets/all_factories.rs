@@ -11716,6 +11716,14 @@ static SOK2: &[Factory] = &[
     super::sok2::endless_swarm,
     super::sok2::akuta_born_of_ash,
     super::sok2::exile_into_darkness,
+    super::sok2::erayo_soratami_ascendant,
+    super::sok2::homura_human_ascendant,
+    super::sok2::kuon_ogre_ascendant,
+    super::sok2::rune_tail_kitsune_ascendant,
+    super::sok2::sasaya_orochi_ascendant,
+    super::sok2::into_the_fray,
+    super::sok2::shifting_borders,
+    super::sok2::rushing_tide_zubera,
 ];
 static SOS: &[Factory] = &[
     super::sos::cauldron_of_essence,

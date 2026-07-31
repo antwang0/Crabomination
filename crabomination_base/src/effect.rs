@@ -477,6 +477,11 @@ pub enum Value {
     /// "Bloodthirst X, where X is the damage dealt to your opponents this
     /// turn" (Petrified Wood-Kin). Sums across the resolved players.
     DamageTakenThisTurn(PlayerRef),
+    /// Total damage dealt to the ability's source permanent this turn
+    /// (`CardInstance.damage_dealt_to_this_turn`) — "if 4 or more damage was
+    /// dealt to it this turn" (Rushing-Tide Zubera). Reads death-time LKI so a
+    /// dies-trigger sees the damage that killed it.
+    DamageDealtToSourceThisTurn,
     /// Number of cards `who` owns in the exile zone (Kaya, Orzhov Usurper's −5).
     CardsInExileOwnedBy(PlayerRef),
     /// Distinct card types among cards in `who`'s graveyard (the delirium
@@ -510,6 +515,10 @@ pub enum Value {
     /// itself — `spells_cast_this_turn` minus one, clamped at 0. The current
     /// spell is already counted at cast time, so subtracting one yields "the
     /// number of other spells you've cast this turn" (Thunder Salvo).
+    /// Total spells cast this turn across every player (Erayo's "the fourth
+    /// spell of a turn"). The summed sibling of `SpellsCastThisTurn`, which
+    /// takes the max over the resolved seats.
+    SpellsCastThisTurnTotal,
     OtherSpellsCastThisTurn(PlayerRef),
     /// Creatures `who` declared as attackers this turn (max over resolved
     /// players). Creatures *put onto the battlefield attacking* don't count,

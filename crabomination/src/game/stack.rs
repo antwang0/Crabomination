@@ -3074,6 +3074,27 @@ impl GameState {
             }
         }
 
+        // CR 603.8 — state-triggered flip on a board predicate (Rune-Tail's
+        // "when you have 30 or more life"). Same once-only shape as the
+        // keyword variant above.
+        let flip_when: Vec<(CardId, usize)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.flip_when_predicate.is_some() && !c.flipped)
+            .map(|c| (c.id, c.controller))
+            .collect();
+        for (id, ctrl) in flip_when {
+            let Some(pred) =
+                self.battlefield_find(id).and_then(|c| c.definition.flip_when_predicate.clone())
+            else {
+                continue;
+            };
+            let ctx = crate::game::effects::EffectContext::for_ability(id, ctrl, None);
+            if self.evaluate_predicate(&pred, &ctx) {
+                self.flip_permanent(id, &mut events);
+            }
+        }
+
         // CR 603.8 — "when [condition], sacrifice this" state trigger
         // (Phylactery Lich). Evaluated from each carrier's own controller.
         let sacrifice_when: Vec<(CardId, usize)> = self

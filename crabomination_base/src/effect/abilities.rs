@@ -1798,6 +1798,11 @@ pub enum StaticEffect {
     /// control" (Emmara Tandris). Consulted on both the combat and noncombat
     /// damage paths for token creatures controlled by this static's controller.
     PreventAllDamageToYourCreatureTokens,
+    /// CR 615 — "Prevent all damage that would be dealt to creatures you
+    /// control" (Rune-Tail's Essence). The unconditional, all-creatures
+    /// sibling of `PreventAllDamageToYourCreatureTokens`; consulted on both
+    /// the combat and noncombat damage paths.
+    PreventAllDamageToYourCreatures,
     /// CR 615 — "Prevent all damage that the source would deal to creatures of
     /// the given color" (Indentured Oaf — prevents its own damage to red
     /// creatures). Keyed on the damage source having this static.

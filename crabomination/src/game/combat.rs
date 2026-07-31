@@ -2424,6 +2424,7 @@ impl GameState {
                     // CR 615 — Emmara shields your creature tokens.
                     if self.combat_damage_prevented_creatures.contains(&blocker_id)
                         || self.all_damage_to_creature_token_prevented(blocker_id)
+                        || self.all_damage_to_your_creature_prevented(blocker_id)
                     {
                         continue;
                     }
@@ -2465,6 +2466,7 @@ impl GameState {
 
                     if dealt > 0 && let Some(b) = self.battlefield_find_mut(blocker_id) {
                         b.dealt_damage_this_turn = true;
+                        b.damage_dealt_to_this_turn += dealt.max(0) as u32;
                         b.damaged_by_this_turn.push(atk.id);
                     }
                     if atk.has_infect || atk.has_wither {
@@ -2559,7 +2561,9 @@ impl GameState {
                     // CR 615 — Iroas shields attacking creatures you control.
                     && !self.damage_to_attacker_prevented(atk.id)
                     // CR 615 — Emmara shields your creature tokens.
-                    && !self.all_damage_to_creature_token_prevented(atk.id);
+                    && !self.all_damage_to_creature_token_prevented(atk.id)
+                    // CR 615 — Rune-Tail's Essence shields all your creatures.
+                    && !self.all_damage_to_your_creature_prevented(atk.id);
 
                 if attacker_takes_strike_back {
                     // CR 702.90 / 615.6 — each blocker's strike-back is its
@@ -2610,6 +2614,7 @@ impl GameState {
                             || bc.keywords.contains(&Keyword::Wither);
                         if let Some(attacker) = self.battlefield_find_mut(atk.id) {
                             attacker.dealt_damage_this_turn = true;
+                            attacker.damage_dealt_to_this_turn += dmg;
                             attacker.damaged_by_this_turn.push(bid);
                             if infect {
                                 attacker
@@ -2936,6 +2941,7 @@ impl GameState {
                     if let Some(c) = self.battlefield_find_mut(redirect) {
                         c.damage += amount;
                         c.dealt_damage_this_turn = true;
+                        c.damage_dealt_to_this_turn += amount;
                         c.damaged_by_this_turn.push(atk.id);
                     }
                     events.push(GameEvent::DamageDealt {

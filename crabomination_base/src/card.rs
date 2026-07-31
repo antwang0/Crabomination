@@ -2331,6 +2331,12 @@ pub struct CardDefinition {
     /// removes the condition so it fires once. Student of Elements (Flying).
     #[serde(default)]
     pub flip_when_has_keyword: Option<Keyword>,
+    /// CR 603.8 — state-triggered flip on a live board `Predicate`, evaluated
+    /// from the permanent's own controller once per SBA pass (Rune-Tail,
+    /// Kitsune Ascendant — "when you have 30 or more life, flip this").
+    /// Flipping clears the condition, so it fires once.
+    #[serde(default)]
+    pub flip_when_predicate: Option<crate::effect::Predicate>,
     /// Opening-hand effect ("If this card is in your opening hand…"): start
     /// in play (Leyline of Sanctity, Gemstone Caverns), reveal for a delayed
     /// effect (Chancellor of the Tangle, Chancellor of the Annex), or mark
@@ -4583,6 +4589,11 @@ pub struct CardInstance {
     /// cleanup. Powers "target creature that was dealt damage this turn"
     /// (Initiate of Blood // Goka). In-memory only.
     pub dealt_damage_this_turn: bool,
+    /// CR 120.x — total damage dealt to this permanent this turn (any source,
+    /// combat or not). Unlike `damage`, this survives regeneration and damage
+    /// wipes, so "if 4 or more damage was dealt to it this turn" (Rushing-Tide
+    /// Zubera) reads correctly. Reset at cleanup. In-memory only.
+    pub damage_dealt_to_this_turn: u32,
     /// Sources that have dealt damage to this creature this turn. Powers
     /// "When a creature dealt damage by this creature this turn dies"
     /// (Bushi Tenderfoot). Read off the LKI snapshot at death-trigger time.
@@ -4924,6 +4935,7 @@ impl CardInstance {
             may_play_until: None,
             dealt_deathtouch_damage: false,
             dealt_damage_this_turn: false,
+            damage_dealt_to_this_turn: 0,
             damaged_by_this_turn: Vec::new(),
             combat_damager_controller: None,
             regeneration_shields: 0,
@@ -5325,6 +5337,7 @@ impl CardInstance {
         self.granted_cast_surcharge_eot = None;
         self.dealt_deathtouch_damage = false;
         self.dealt_damage_this_turn = false;
+        self.damage_dealt_to_this_turn = 0;
         self.damaged_by_this_turn.clear();
         // CR 701.15g — unused regeneration shields expire at end of turn,
         // and so does the "can't be regenerated this turn" lock.

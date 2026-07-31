@@ -8158,6 +8158,28 @@ impl GameState {
         })
     }
 
+    /// CR 615 — Rune-Tail's Essence: "prevent all damage that would be dealt
+    /// to creatures you control." Consulted on both damage paths.
+    pub(crate) fn all_damage_to_your_creature_prevented(&self, target: CardId) -> bool {
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        let Some(tgt) = self.battlefield_find(target) else { return false };
+        if !tgt.definition.is_creature() {
+            return false;
+        }
+        let controller = tgt.controller;
+        self.battlefield.iter().any(|c| {
+            c.controller == controller
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::PreventAllDamageToYourCreatures
+                    )
+                })
+        })
+    }
+
     /// CR 615 — Light of Sanction: "prevent all damage to creatures you
     /// control by sources you control." True when `source` and `target` share a
     /// controller who has the static and `target` is a creature. Consulted on
@@ -16526,6 +16548,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventNoncombatDamageToYourCreatures
             | StaticEffect::PreventNoncombatDamageToYouAndYourPermanents
             | StaticEffect::PreventAllDamageToYourCreatureTokens
+            | StaticEffect::PreventAllDamageToYourCreatures
             | StaticEffect::PreventDamageToYourCreaturesFromYourSources
             | StaticEffect::PreventThisDamageToColor(_)
             | StaticEffect::UnspentManaBecomesColorless

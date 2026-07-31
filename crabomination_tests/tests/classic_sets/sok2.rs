@@ -610,3 +610,127 @@ fn reki_draws_on_legendary_spells() {
     cast(&mut g, reki2, None);
     assert_eq!(g.players[0].hand.len(), 1);
 }
+
+/// The Ascendant flip cycle and the splice/Zubera batch are all registered.
+#[test]
+fn sok2_batch3_cards_are_registered() {
+    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+        .map(|f| f().name)
+        .collect();
+    for f in [
+        catalog::erayo_soratami_ascendant as fn() -> crabomination::card::CardDefinition,
+        catalog::homura_human_ascendant,
+        catalog::kuon_ogre_ascendant,
+        catalog::rune_tail_kitsune_ascendant,
+        catalog::sasaya_orochi_ascendant,
+        catalog::into_the_fray,
+        catalog::shifting_borders,
+        catalog::rushing_tide_zubera,
+    ] {
+        let name = f().name;
+        assert!(names.contains(&name), "{name} is not registered");
+    }
+}
+
+/// Rune-Tail flips the moment you hit 30 life, then shields your board.
+#[test]
+fn rune_tail_flips_at_thirty_life() {
+    let mut g = two_player_game();
+    let fox = g.add_card_to_battlefield(0, catalog::rune_tail_kitsune_ascendant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.check_state_based_actions();
+    assert!(!g.battlefield_find(fox).unwrap().flipped, "still a creature at 20 life");
+    g.players[0].life = 30;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(fox).unwrap().flipped, "flipped at 30");
+    let mut ev = vec![];
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(bear), 2, None, &mut ev);
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "the Essence prevented it");
+}
+
+/// Erayo flips on the fourth spell of a turn.
+#[test]
+fn erayo_flips_on_the_fourth_spell() {
+    let mut g = two_player_game();
+    let erayo = g.add_card_to_battlefield(0, catalog::erayo_soratami_ascendant());
+    for i in 0..4 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        cast(&mut g, bolt, Some(Target::Player(1)));
+        let flipped = g.battlefield_find(erayo).unwrap().flipped;
+        assert_eq!(flipped, i == 3, "flips on exactly the fourth spell");
+    }
+}
+
+/// Homura comes back as its Essence and anthems the team.
+#[test]
+fn homura_returns_flipped_and_anthems() {
+    let mut g = two_player_game();
+    let homura = g.add_card_to_battlefield(0, catalog::homura_human_ascendant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ev = vec![];
+    g.destroy_permanent(homura, false, &mut ev);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(homura).expect("Homura returned");
+    assert!(back.flipped);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
+/// Kuon flips at end step once three creatures have died.
+#[test]
+fn kuon_flips_after_three_deaths() {
+    let mut g = two_player_game();
+    let kuon = g.add_card_to_battlefield(0, catalog::kuon_ogre_ascendant());
+    for _ in 0..3 {
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let mut ev = vec![];
+        g.destroy_permanent(bear, false, &mut ev);
+        drain_stack(&mut g);
+    }
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(kuon).unwrap().flipped);
+}
+
+/// Sasaya flips on a hand stuffed with lands.
+#[test]
+fn sasaya_flips_on_seven_lands_in_hand() {
+    let mut g = two_player_game();
+    let sasaya = g.add_card_to_battlefield(0, catalog::sasaya_orochi_ascendant());
+    g.battlefield_find_mut(sasaya).unwrap().summoning_sick = false;
+    let flip = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: sasaya,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    for _ in 0..6 {
+        g.add_card_to_hand(0, catalog::forest());
+    }
+    assert!(flip(&mut g).is_err(), "six lands is not enough");
+    g.add_card_to_hand(0, catalog::forest());
+    assert!(flip(&mut g).is_ok());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sasaya).unwrap().flipped);
+}
+
+/// Rushing-Tide Zubera only draws when four damage killed it.
+#[test]
+fn rushing_tide_zubera_needs_four_damage() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let zubera = g.add_card_to_battlefield(0, catalog::rushing_tide_zubera());
+    let mut ev = vec![];
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Permanent(zubera), 4, None, &mut ev);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 3);
+}

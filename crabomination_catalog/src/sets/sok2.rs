@@ -1481,3 +1481,267 @@ pub fn exile_into_darkness() -> CardDefinition {
         )
     }
 }
+
+// ── The Ascendant flip cycle (CR 711) ───────────────────────────────────────
+
+/// A flipped Essence — a costless Legendary Enchantment bottom face.
+fn essence(name: &'static str, abilities: Vec<StaticAbility>) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Enchantment],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        static_abilities: abilities,
+        ..Default::default()
+    }
+}
+
+/// Erayo, Soratami Ascendant — {1}{U} 1/1 flier that flips on the turn's
+/// fourth spell; Erayo's Essence counters each opponent's first spell.
+pub fn erayo_soratami_ascendant() -> CardDefinition {
+    let mut flipped = essence("Erayo's Essence", vec![]);
+    flipped.triggered_abilities = vec![crate::card::TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).once_per_turn(),
+        effect: Effect::CounterSpell { what: Selector::TriggerSource },
+    }];
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::ValueAtLeast(
+                    Value::SpellsCastThisTurnTotal,
+                    Value::Const(4),
+                ))
+                .once_per_turn(),
+            effect: Effect::Flip { what: Selector::This },
+        }],
+        flip_face: Some(Box::new(flipped)),
+        ..legend(
+            "Erayo, Soratami Ascendant",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Moonfolk, CreatureType::Monk],
+            1,
+            1,
+        )
+    }
+}
+
+/// Homura, Human Ascendant — {4}{R}{R} 4/4 that can't block and comes back
+/// flipped; Homura's Essence is a firebreathing anthem.
+pub fn homura_human_ascendant() -> CardDefinition {
+    let flipped = essence(
+        "Homura's Essence",
+        vec![
+            StaticAbility {
+                description: "Creatures you control get +2/+2 and have flying.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    power: 2,
+                    toughness: 2,
+                },
+            },
+            StaticAbility {
+                description: "Creatures you control have flying.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    keyword: Keyword::Flying,
+                },
+            },
+            StaticAbility {
+                description: "Creatures you control have \"{R}: This creature gets +1/+0.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    ability: ActivatedAbility {
+                        mana_cost: cost(&[r()]),
+                        effect: Effect::PumpPT {
+                            what: Selector::This,
+                            power: Value::ONE,
+                            toughness: Value::Const(0),
+                            duration: Duration::EndOfTurn,
+                        },
+                        ..Default::default()
+                    },
+                    condition: None,
+                },
+            },
+        ],
+    );
+    CardDefinition {
+        keywords: vec![Keyword::CantBlock],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::Flip { what: Selector::LastMoved },
+        ]))],
+        flip_face: Some(Box::new(flipped)),
+        ..legend(
+            "Homura, Human Ascendant",
+            cost(&[generic(4), r(), r()]),
+            vec![CreatureType::Human, CreatureType::Monk],
+            4,
+            4,
+        )
+    }
+}
+
+/// Kuon, Ogre Ascendant — {B}{B}{B} 2/4 that flips after a bloody turn;
+/// Kuon's Essence is a per-upkeep edict on everyone.
+pub fn kuon_ogre_ascendant() -> CardDefinition {
+    let mut flipped = essence("Kuon's Essence", vec![]);
+    flipped.triggered_abilities = vec![crate::card::TriggeredAbility {
+        event: EventSpec::new(
+            EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+            EventScope::AnyPlayer,
+        ),
+        effect: Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::ActivePlayer),
+            count: Value::ONE,
+            filter: R::Creature,
+        },
+    }];
+    CardDefinition {
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::End),
+                EventScope::AnyPlayer,
+            )
+            .with_filter(Predicate::CreaturesDiedThisTurnTotalAtLeast {
+                at_least: Value::Const(3),
+            }),
+            effect: Effect::Flip { what: Selector::This },
+        }],
+        flip_face: Some(Box::new(flipped)),
+        ..legend(
+            "Kuon, Ogre Ascendant",
+            cost(&[b(), b(), b()]),
+            vec![CreatureType::Ogre, CreatureType::Monk],
+            2,
+            4,
+        )
+    }
+}
+
+/// Rune-Tail, Kitsune Ascendant — {2}{W} 2/2 that flips at 30 life;
+/// Rune-Tail's Essence shields every creature you control.
+pub fn rune_tail_kitsune_ascendant() -> CardDefinition {
+    let flipped = essence(
+        "Rune-Tail's Essence",
+        vec![StaticAbility {
+            description: "Prevent all damage that would be dealt to creatures you control.",
+            effect: StaticEffect::PreventAllDamageToYourCreatures,
+        }],
+    );
+    CardDefinition {
+        flip_when_predicate: Some(Predicate::PlayerLifeAtLeast {
+            who: PlayerRef::You,
+            life: 30,
+        }),
+        flip_face: Some(Box::new(flipped)),
+        ..legend(
+            "Rune-Tail, Kitsune Ascendant",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Fox, CreatureType::Monk],
+            2,
+            2,
+        )
+    }
+}
+
+/// Sasaya, Orochi Ascendant — {1}{G}{G} 2/3 that flips on a land-flooded hand;
+/// Sasaya's Essence doubles up on same-named lands.
+pub fn sasaya_orochi_ascendant() -> CardDefinition {
+    let flipped = essence(
+        "Sasaya's Essence",
+        vec![StaticAbility {
+            description: "Whenever a land you control is tapped for mana, add an additional \
+                          one mana of any type that land produced for each other land you \
+                          control with the same name as it.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: false,
+                filter: R::Land.and(R::ControlledByYou),
+                extra: crate::effect::ExtraManaKind::Mirror,
+                while_monarch: false,
+            },
+        }],
+    );
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            condition: Some(Predicate::ValueAtLeast(
+                Value::CardsInHandMatching { who: PlayerRef::You, filter: R::Land },
+                Value::Const(7),
+            )),
+            effect: Effect::Flip { what: Selector::This },
+            ..Default::default()
+        }],
+        flip_face: Some(Box::new(flipped)),
+        ..legend(
+            "Sasaya, Orochi Ascendant",
+            cost(&[generic(1), g(), g()]),
+            vec![CreatureType::Snake, CreatureType::Monk],
+            2,
+            3,
+        )
+    }
+}
+
+// ── Splice / combat tricks ──────────────────────────────────────────────────
+
+/// Into the Fray — {R} Arcane instant that drags a creature into combat.
+/// Splices onto Arcane for {R}.
+pub fn into_the_fray() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Splice(cost(&[r()]), crate::card::SpellSubtype::Arcane)],
+        ..arcane_instant(
+            "Into the Fray",
+            cost(&[r()]),
+            Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::MustAttack,
+                duration: Duration::EndOfTurn,
+            },
+        )
+    }
+}
+
+/// Shifting Borders — {3}{U} Arcane instant that swaps two lands. Splices onto
+/// Arcane for {3}{U}.
+pub fn shifting_borders() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Splice(
+            cost(&[generic(3), u()]),
+            crate::card::SpellSubtype::Arcane,
+        )],
+        ..arcane_instant(
+            "Shifting Borders",
+            cost(&[generic(3), u()]),
+            Effect::ExchangeControl {
+                a: target_filtered(R::Land),
+                b: Selector::Target(1),
+            },
+        )
+    }
+}
+
+/// Rushing-Tide Zubera — {2}{U}{U} 3/3 that cashes in for three cards when it
+/// dies to four or more damage.
+pub fn rushing_tide_zubera() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource).with_filter(
+                Predicate::ValueAtLeast(
+                    Value::DamageDealtToSourceThisTurn,
+                    Value::Const(4),
+                ),
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        }],
+        ..creature(
+            "Rushing-Tide Zubera",
+            cost(&[generic(2), u(), u()]),
+            vec![CreatureType::Zubera, CreatureType::Spirit],
+            3,
+            3,
+        )
+    }
+}

@@ -689,7 +689,8 @@ impl GameState {
         // CR 615 — Emmara-Tandris-style "prevent all damage to creature tokens
         // you control" (both damage paths; combat is gated in combat.rs).
         if let EntityRef::Permanent(tgt) = ent
-            && self.all_damage_to_creature_token_prevented(tgt)
+            && (self.all_damage_to_creature_token_prevented(tgt)
+                || self.all_damage_to_your_creature_prevented(tgt))
         {
             return;
         }
@@ -966,6 +967,7 @@ impl GameState {
                     if let Some(c) = self.battlefield_find_mut(cid) {
                     if c.definition.is_creature() {
                         c.dealt_damage_this_turn = true;
+                        c.damage_dealt_to_this_turn += amount;
                         if let Some(src) = source {
                             c.damaged_by_this_turn.push(src);
                         }
