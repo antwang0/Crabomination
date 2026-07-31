@@ -5837,6 +5837,59 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachPlayerReturnsAMatchingPermanent { filter } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let source = ctx.source.unwrap_or(CardId(0));
+                let seats = self.apnap_sort((0..self.players.len()).collect());
+                let mut picks: Vec<CardId> = Vec::new();
+                for p in seats {
+                    let mine: Vec<(CardId, String)> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p && self.evaluate_requirement_on_card(filter, c, p)
+                        })
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let Some(&(first, _)) = mine.first() else { continue };
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Choose a permanent to return to its owner's hand".into(),
+                        candidates: mine,
+                        min: 1,
+                        max: 1,
+                    });
+                    picks.push(match answer {
+                        DecisionAnswer::Cards(picked) if !picked.is_empty() => picked[0],
+                        _ => first,
+                    });
+                }
+                let dest = ZoneDest::Hand(PlayerRef::OwnerOfMoved);
+                for cid in picks {
+                    self.move_card_to(cid, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::DealDamageToEachPlayerPerPermanent { filter, amount, flat } => {
+                let per = self.evaluate_value(amount, ctx);
+                let source = ctx.source;
+                for p in self.apnap_sort((0..self.players.len()).collect()) {
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p && self.evaluate_requirement_on_card(filter, c, p)
+                        })
+                        .count() as i32;
+                    let dmg = if *flat { if n > 0 { per } else { 0 } } else { per * n };
+                    if dmg > 0 {
+                        self.deal_damage_to_from(EntityRef::Player(p), dmg as u32, source, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SetMaxHandSize { who, size } => {
                 let n = self.evaluate_value(size, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
@@ -9622,6 +9675,102 @@ impl GameState {
                         });
                     }
                 }
+                Ok(())
+            }
+
+            Effect::BecomeCreatureLosingTypes {
+                what,
+                power,
+                toughness,
+                creature_types,
+                keywords,
+            } => {
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+                    PtSublayer,
+                };
+                let p = self.evaluate_value(power, ctx);
+                let t = self.evaluate_value(toughness, ctx);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let affected = AffectedPermanents::Specific(vec![cid]);
+                    let mut push = |layer, sublayer, modification| {
+                        let timestamp = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp,
+                            source,
+                            affected: affected.clone(),
+                            layer,
+                            sublayer,
+                            duration: EffectDuration::Indefinite,
+                            modification,
+                        });
+                    };
+                    // CR 205.1b — the granted type REPLACES the printed ones.
+                    push(
+                        Layer::L4Type,
+                        None,
+                        Modification::SetCardTypes(vec![crate::card::CardType::Creature]),
+                    );
+                    push(
+                        Layer::L4Type,
+                        None,
+                        Modification::SetCreatureTypes(creature_types.clone()),
+                    );
+                    push(
+                        Layer::L7PowerTough,
+                        Some(PtSublayer::SetValue),
+                        Modification::SetPowerToughness(p, t),
+                    );
+                    for kw in keywords {
+                        push(Layer::L6Ability, None, Modification::AddKeyword(kw.clone()));
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SetCardTypesTo { what, card_types } => {
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, EffectDuration, Layer, Modification,
+                };
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let timestamp = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected: AffectedPermanents::Specific(vec![cid]),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::Indefinite,
+                        modification: Modification::SetCardTypes(card_types.clone()),
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::GrantKeywordToMatchingThisTurn { filter, keyword } => {
+                use crate::game::layers::{
+                    ContinuousEffect, EffectDuration, Layer, Modification,
+                };
+                let source = ctx.source.unwrap_or(CardId(0));
+                let Some(affected) =
+                    crate::game::affected_from_requirement(filter, ctx.controller)
+                else {
+                    return Ok(());
+                };
+                let timestamp = self.next_timestamp();
+                self.add_continuous_effect(ContinuousEffect {
+                    timestamp,
+                    source,
+                    affected,
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::UntilEndOfTurn,
+                    modification: Modification::AddKeyword(keyword.clone()),
+                });
                 Ok(())
             }
 
@@ -13473,13 +13622,17 @@ impl GameState {
                             false
                         }
                     }
-                    WardCost::SacrificeCreature => {
+                    WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => {
+                        let matches = |g: &Self, c: &crate::card::CardInstance| match cost {
+                            WardCost::SacrificeMatching(f) => {
+                                g.evaluate_requirement_on_card(f, c, affected_controller)
+                            }
+                            _ => c.definition.is_creature(),
+                        };
                         let pick = self
                             .battlefield
                             .iter()
-                            .find(|c| {
-                                c.controller == affected_controller && c.definition.is_creature()
-                            })
+                            .find(|c| c.controller == affected_controller && matches(self, c))
                             .map(|c| c.id);
                         if let Some(sac_id) = pick {
                             // Real sacrifice (CR 701.16): dies/sac events
@@ -13608,11 +13761,18 @@ impl GameState {
                         // Ogre Marauder — "unless defending player sacrifices a
                         // creature of their choice." Auto-pay takes their
                         // cheapest creature.
-                        WardCost::SacrificeCreature => {
+                        WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => {
                             let pick = self
                                 .battlefield
                                 .iter()
-                                .filter(|c| c.controller == payer && c.definition.is_creature())
+                                .filter(|c| {
+                                    c.controller == payer
+                                        && match cost {
+                                            WardCost::SacrificeMatching(f) => self
+                                                .evaluate_requirement_on_card(f, c, payer),
+                                            _ => c.definition.is_creature(),
+                                        }
+                                })
                                 .min_by_key(|c| c.definition.cost.cmc())
                                 .map(|c| c.id);
                             match pick {
@@ -22442,6 +22602,20 @@ impl GameState {
                         fires_once: true,
                     });
                 }
+                Ok(())
+            }
+
+            Effect::AtEndOfCombat { body } => {
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    kind: DelayedKind::EndOfCombat,
+                    effect: (**body).clone(),
+                    target: ctx.targets.first().cloned(),
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: true,
+                });
                 Ok(())
             }
 

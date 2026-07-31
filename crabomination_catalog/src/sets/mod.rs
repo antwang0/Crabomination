@@ -322,6 +322,7 @@ pub mod sok3;
 pub mod ulg;
 pub mod uds;
 pub mod usg;
+pub mod usg2;
 pub mod chk;
 pub mod chk2;
 pub mod chk3;

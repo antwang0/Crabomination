@@ -238,6 +238,9 @@ impl Effect {
             | Effect::GuessManaValueAboveElseCastFree { .. }
             | Effect::EachPlayerSplitsAndSacrificesRandomPile { .. }
             | Effect::EachPlayerKeepsNSacrificesRest { .. }
+            | Effect::EachPlayerReturnsAMatchingPermanent { .. }
+            | Effect::DealDamageToEachPlayerPerPermanent { .. }
+            | Effect::GrantKeywordToMatchingThisTurn { .. }
             | Effect::RevealTopDeployIfMatch { .. }
             | Effect::LookTopEachPayLifeOrBin { .. }
             | Effect::ShareKeywordsAmongYourCreatures { .. }
@@ -335,7 +338,9 @@ impl Effect {
             Effect::ReduceEquipCost { .. } | Effect::SacrificeAtNextUpkeep { .. } => false,
             Effect::Unattach { what } => sel_has_target(what),
             Effect::SetSaddled { what } => sel_has_target(what),
-            Effect::AtNextEndStep { body } => body.requires_target(),
+            Effect::AtNextEndStep { body } | Effect::AtEndOfCombat { body } => {
+                body.requires_target()
+            }
             Effect::LookTopMayBottomAllElse { then, else_, .. } => {
                 then.requires_target() || else_.requires_target()
             }
@@ -811,9 +816,11 @@ impl Effect {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::SwitchPT { what, .. } => sel_has_target(what),
-            Effect::BecomeCreature { what, power, toughness, .. } => {
+            Effect::BecomeCreature { what, power, toughness, .. }
+            | Effect::BecomeCreatureLosingTypes { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
+            Effect::SetCardTypesTo { what, .. } => sel_has_target(what),
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
             Effect::GrantKeywords { what, .. } => sel_has_target(what),
             Effect::AnimateAsCreature { what, .. } => sel_has_target(what),
@@ -1344,7 +1351,9 @@ impl Effect {
             | Effect::DoublePower { what, .. } => {
                 sel_filter(what).or_else(|| implicit_creature_if_bare_target(what))
             }
-            Effect::BecomeCreature { what, .. } => sel_filter(what),
+            Effect::BecomeCreature { what, .. }
+            | Effect::BecomeCreatureLosingTypes { what, .. }
+            | Effect::SetCardTypesTo { what, .. } => sel_filter(what),
             Effect::AnimateAsCreature { what, .. } => sel_filter(what),
             Effect::SetBasePower { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. }
@@ -1554,7 +1563,7 @@ impl Effect {
             // tell.
             Effect::SetBasePT { .. } => false,
             // Animating your own land into a creature is a friendly self-buff.
-            Effect::BecomeCreature { .. } => true,
+            Effect::BecomeCreature { .. } | Effect::BecomeCreatureLosingTypes { .. } => true,
             Effect::AnimateAsCreature { .. } => true,
             // "Base power becomes equal to …" is a self-pump (Belligerent Yearling).
             Effect::SetBasePower { .. } => true,
@@ -2207,6 +2216,9 @@ impl Effect {
             | Effect::SetBasePT { .. }
             | Effect::SwitchPT { .. }
             | Effect::BecomeCreature { .. }
+            | Effect::BecomeCreatureLosingTypes { .. }
+            | Effect::SetCardTypesTo { .. }
+            | Effect::GrantKeywordToMatchingThisTurn { .. }
             | Effect::AnimateAsCreature { .. }
             | Effect::SetBasePower { .. }
             | Effect::GrantKeyword { .. }

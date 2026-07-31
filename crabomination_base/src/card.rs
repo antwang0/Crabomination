@@ -379,6 +379,9 @@ pub enum CounterType {
     Wish,
     /// Invitation counter — Wedding Announcement's end-step tally.
     Invitation,
+    /// Petal counter — Lotus Blossom's upkeep tally; cash them in for that
+    /// many mana of one colour.
+    Petal,
     /// Page counter — Strixhaven Book artifacts (Diary of Dreams). Builds
     /// up on instant/sorcery cast and discounts the host's activated
     /// ability one for one. The counter-scaled cost reduction itself is
@@ -599,6 +602,10 @@ pub enum WardCost {
     /// player must exile cards with total mana value ≥ N from their graveyard.
     CollectEvidence(u32),
     SacrificeCreature,
+    /// "…unless you sacrifice a [filter]" — the filtered sibling of
+    /// `SacrificeCreature` (Endless Wurm's enchantment, Contamination's
+    /// creature). Unpayable when nothing matches.
+    SacrificeMatching(Box<SelectionRequirement>),
     /// "Ward—Sacrifice N permanents." (Ulamog, the Defiler.)
     SacrificePermanents(u32),
     /// "{X}, where X is this creature's power" — a dynamic generic cost read
@@ -3445,6 +3452,10 @@ pub struct EquipScale {
     /// Equipment attached to it"), rather than a controlled-permanent count.
     #[serde(default)]
     pub count_host_attachments: Option<SelectionRequirement>,
+    /// When true, the attached host is excluded from the `filter` count —
+    /// the printed "for each **other** creature you control" (Bravado).
+    #[serde(default)]
+    pub exclude_host: bool,
     /// When true, the count is the number of cards in the *host creature's
     /// controller's* hand (Righteous Authority — "+1/+1 for each card in its
     /// controller's hand"), rather than the source-controller counts above.
@@ -3481,6 +3492,16 @@ pub enum DynamicPt {
         base_t: i32,
         filter: Box<SelectionRequirement>,
     },
+    /// Power is the fixed `base_p`; toughness = `base_t` + the number of
+    /// permanents matching `filter` the controller controls. The `*`-toughness
+    /// sibling of `PermanentsControlledMatching` (Treefolk Seedlings, `2/*`).
+    PermanentsControlledMatchingToughness {
+        base_p: i32,
+        base_t: i32,
+        filter: Box<SelectionRequirement>,
+    },
+    /// Power = toughness = the controller's life total (Serra Avatar).
+    ControllerLife,
     /// `base_p`/`base_t` plus one for each untapped permanent the controller's
     /// *opponents* control (Copperhoof Vorrac).
     BasePlusOpponentsUntappedPermanents { base_p: i32, base_t: i32 },

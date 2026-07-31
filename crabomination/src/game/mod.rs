@@ -2749,6 +2749,16 @@ impl GameState {
                 StaticEffect::WhileNotYourTurn { inner } => {
                     (self.active_player_idx != card.controller, inner)
                 }
+                StaticEffect::WhileCondition { condition, inner } => {
+                    let mut ctx = crate::game::effects::EffectContext::for_spell(
+                        card.controller,
+                        None,
+                        0,
+                        0,
+                    );
+                    ctx.source = Some(card.id);
+                    (self.evaluate_predicate(condition, &ctx), inner)
+                }
                 StaticEffect::WhileCountersAtLeast { kind, n, inner } => {
                     (card.counter_count(*kind) >= *n, inner)
                 }
@@ -5492,6 +5502,7 @@ impl GameState {
                         .iter()
                         .filter(|c| {
                             c.controller == card.controller
+                                && !(scale.exclude_host && c.id == target)
                                 && self.evaluate_requirement_on_card(
                                     &scale.filter,
                                     c,
@@ -7447,6 +7458,21 @@ impl GameState {
                     }).count() as i32;
                     (base_p + n, base_t + n)
                 }
+                crate::card::DynamicPt::PermanentsControlledMatchingToughness {
+                    base_p,
+                    base_t,
+                    ref filter,
+                } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller
+                            && self.evaluate_requirement_on_card(filter, c, card.controller)
+                    }).count() as i32;
+                    (base_p, base_t + n)
+                }
+                crate::card::DynamicPt::ControllerLife => {
+                    let n = self.players[card.controller].life;
+                    (n, n)
+                }
                 crate::card::DynamicPt::BasePlusOpponentsUntappedPermanents { base_p, base_t } => {
                     let n = self
                         .battlefield
@@ -7849,6 +7875,26 @@ impl GameState {
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::AddKeyword(Keyword::CantBlock),
                 });
+            }
+            // CR 611.2 — the general predicate gate. Its inner effect needs a
+            // `GameState` to evaluate, so it's emitted from this stateful pass
+            // rather than the pure `static_effect_to_effects` walk.
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::WhileCondition { condition, inner } = &sa.effect
+                else {
+                    continue;
+                };
+                let mut ctx =
+                    crate::game::effects::EffectContext::for_spell(card.controller, None, 0, 0);
+                ctx.source = Some(card.id);
+                if self.evaluate_predicate(condition, &ctx) {
+                    all_effects.extend(static_effect_to_effects(
+                        inner,
+                        card,
+                        card.object_timestamp(),
+                        self.active_player_idx == card.controller,
+                    ));
+                }
             }
             // CR 701.60 — a suspected creature has menace and can't block.
             // Injected as computed keywords so combat-legality enforcement
@@ -15782,6 +15828,9 @@ fn static_effect_to_effects(
             }
             // CR 611.2 — the counter gate: emit the inner effect only while the
             // source carries `n` or more `kind` counters (the Quest cycle).
+            // Gated in the stateful `gather_continuous_effects` pass, which has
+            // the `GameState` the predicate needs.
+            StaticEffect::WhileCondition { .. } => vec![],
             StaticEffect::WhileCountersAtLeast { kind, n, inner } => {
                 if card.counter_count(*kind) >= *n {
                     static_effect_to_effects(inner, card, timestamp, your_turn)
@@ -16956,7 +17005,7 @@ pub(crate) fn requirement_mentions_host_of_source(req: &SelectionRequirement) ->
     }
 }
 
-fn affected_from_requirement(
+pub(crate) fn affected_from_requirement(
     req: &SelectionRequirement,
     source_controller: usize,
 ) -> Option<AffectedPermanents> {

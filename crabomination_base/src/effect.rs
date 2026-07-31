@@ -2997,6 +2997,18 @@ pub enum Effect {
     /// lifelink apply). "Each creature you control deals 1 damage to that
     /// creature" — Case of the Gateway Express.
     EachControlledCreatureDealsDamage { to: Selector, amount: Value },
+    /// Damage to each player, computed *per player* from what they control:
+    /// `amount` × the number of permanents matching `filter` they control
+    /// (Acidic Soil — "damage to each player equal to the number of lands they
+    /// control"), or a flat `amount` to each player controlling at least one
+    /// match when `flat` (Disorder's player half). Players with no match take
+    /// nothing.
+    DealDamageToEachPlayerPerPermanent {
+        filter: SelectionRequirement,
+        amount: Value,
+        #[serde(default)]
+        flat: bool,
+    },
     /// Deal `amount` damage to a target creature; any damage beyond what's
     /// lethal (its remaining toughness) is dealt to that creature's
     /// controller (CR 120.10, trample-like). Flame Spill.
@@ -3345,6 +3357,10 @@ pub enum Effect {
     /// rest" (Razia's Purification). Each player's own pick — the auto picker
     /// keeps their highest-mana-value permanents.
     EachPlayerKeepsNSacrificesRest { keep: Value },
+    /// "Each player returns a permanent matching `filter` they control to its
+    /// owner's hand" (Curfew). APNAP order; each player picks their own, and a
+    /// player controlling no match does nothing.
+    EachPlayerReturnsAMatchingPermanent { filter: SelectionRequirement },
     /// CR 402.2b — set each resolved player's maximum hand size to a specific
     /// number (`Player.max_hand_size = Some(size)`). Used by "your maximum
     /// hand size is N" cards such as Null Profusion (zero) or Library of Leng
@@ -3823,6 +3839,10 @@ pub enum Effect {
     /// resolution's slot-0/1 targets (a generic `DelayedKind::NextEndStep`
     /// wrapper — Stolen Uniform's delayed unattach).
     AtNextEndStep { body: Box<Effect> },
+    /// "… at end of combat" — a CR 603.7a delayed trigger that fires in the
+    /// current combat's end-of-combat step (Vebulid's self-destruct, Wall of
+    /// Junk's bounce). Outside combat it waits for the next one.
+    AtEndOfCombat { body: Box<Effect> },
     /// "Look at the top `count` cards of your library. You may put those cards
     /// on the bottom in any order. If you do, `then`; otherwise `else_`."
     /// Petals of Insight. The controller is asked once for the whole batch.
@@ -4688,6 +4708,21 @@ pub enum Effect {
         keywords: Vec<Keyword>,
         duration: Duration,
     },
+    /// CR 205.1b — "[what] becomes a P/T [types] creature", *replacing* its
+    /// other card types (the Urza's Saga Opal / Veiled / Hidden enchantments
+    /// stand up as creatures and stop being enchantments). Indefinite;
+    /// `SetCardTypesTo` reverts it by a later layer-4 timestamp.
+    BecomeCreatureLosingTypes {
+        what: Selector,
+        power: Value,
+        toughness: Value,
+        creature_types: Vec<crate::card::CreatureType>,
+        keywords: Vec<Keyword>,
+    },
+    /// CR 205.1b layer-4 type replacement — "[what] becomes an enchantment"
+    /// (Opal Acrolith's `{0}`, Hidden Stag's land trigger). Indefinite; the
+    /// fresh timestamp beats any earlier `BecomeCreatureLosingTypes`.
+    SetCardTypesTo { what: Selector, card_types: Vec<crate::card::CardType> },
     /// "[what] becomes an artifact creature for `duration`" — adds
     /// `CardType::Creature` (layer 4) only, keeping the permanent's printed
     /// power/toughness (correct for Vehicles, which carry P/T even when not a
@@ -4695,6 +4730,13 @@ pub enum Effect {
     /// Matrix's "target Vehicle you control becomes an artifact creature until
     /// end of turn".
     AnimateAsCreature { what: Selector, duration: Duration },
+    /// CR 611.2c — grant `keyword` to every permanent matching `filter` for
+    /// the rest of the turn. Unlike `GrantKeyword` over `EachPermanent` the
+    /// affected set is *not* locked in at resolution, so permanents that
+    /// arrive later are covered too (Falter — "creatures without flying can't
+    /// block this turn"). `filter` is matched card-locally, so a keyword
+    /// granted by another continuous effect isn't seen.
+    GrantKeywordToMatchingThisTurn { filter: SelectionRequirement, keyword: Keyword },
     /// CR 613 layer 7b — "[what]'s base power becomes `power`" for `duration`,
     /// leaving base toughness intact (Belligerent Yearling: base power becomes
     /// equal to the entering Dinosaur's power until end of turn).

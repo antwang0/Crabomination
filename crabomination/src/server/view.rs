@@ -1342,6 +1342,7 @@ fn project_permanent(
                 W::Blight(n) => format!("Ward—Blight {n}"),
                 W::CollectEvidence(n) => format!("Ward—Collect evidence {n}"),
                 W::SacrificeCreature => "Ward—sacrifice a creature".to_string(),
+                W::SacrificeMatching(_) => "Ward—sacrifice a matching permanent".to_string(),
                 W::SacrificePermanents(n) => format!("Ward—sacrifice {n} permanents"),
                 W::GenericSourcePower => "Ward—{X} (this creature's power)".to_string(),
                 W::LifeSourcePower => "Ward—pay life equal to this creature's power".to_string(),
@@ -1966,6 +1967,9 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     // Phyrexian-mana flavoured activations, City of Brass-style
     // tap-for-damage hybrids). `life_cost` is the new field added
     // alongside `Effect::MayDo` in push XV.
+    if ability.half_life_cost {
+        parts.push("Pay half your life, rounded up".to_string());
+    }
     if ability.life_cost > 0 {
         parts.push(format!("Pay {} life", ability.life_cost));
     }

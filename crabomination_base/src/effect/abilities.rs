@@ -172,6 +172,12 @@ pub enum StaticEffect {
     /// "during your turn, equipped creatures you control have double strike and
     /// haste"). Nests inside `WhileClassLevelAtLeast`.
     WhileYourTurn { inner: Box<StaticEffect> },
+    /// CR 611.2 — a static ability whose continuous effect only applies while
+    /// `condition` (evaluated from the source's controller) holds. The general
+    /// gate behind the `WhileYourTurn` / `WhileCountersAtLeast` family
+    /// (Wirecat — "can't attack or block if an enchantment is on the
+    /// battlefield").
+    WhileCondition { condition: Predicate, inner: Box<StaticEffect> },
     /// CR 611.2 — the mirror of `WhileYourTurn`: the wrapped continuous effect
     /// applies only during turns *other than* the source controller's (Oak
     /// Street Innkeeper's "during turns other than yours, tapped creatures you
@@ -2247,6 +2253,11 @@ pub struct ActivatedAbility {
     /// initialisations pick up the new field automatically.
     #[serde(default)]
     pub life_cost: u32,
+    /// "Pay half your life, rounded up" as the activation cost (CR 118.4 —
+    /// Lurking Evil). A real cost, so it's paid up front and can't be declined;
+    /// a player at 0 or less life can't activate.
+    #[serde(default)]
+    pub half_life_cost: bool,
     /// "Pay X life" as a variable additional cost, where X is the activation's
     /// chosen `x_value` (CR 107.16). The body reads the same X via
     /// `Value::XFromCost`. Mirrors `energy_x_cost` but drains life. Powers

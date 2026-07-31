@@ -27,7 +27,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::DiscardHand => false,
         WardCost::Blight(n) => *n == 0,
         WardCost::CollectEvidence(n) => *n == 0,
-        WardCost::SacrificeCreature => false,
+        WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => false,
         WardCost::SacrificePermanents(n) => *n == 0,
         // Dynamic — the source's power can change before payment.
         WardCost::GenericSourcePower | WardCost::LifeSourcePower => false,
@@ -11679,6 +11679,10 @@ impl GameState {
         if ability.x_life_cost && self.players[p].life < x_value.unwrap_or(0) as i32 {
             return Err(GameError::InsufficientLife);
         }
+        // "Pay half your life, rounded up" (CR 118.4 — Lurking Evil).
+        if ability.half_life_cost && self.players[p].life <= 0 {
+            return Err(GameError::InsufficientLife);
+        }
 
         // Pre-flight {E} gate (CR 107.16): reject cleanly when the controller
         // lacks the energy. Mirrors the mana/life pre-pay checks; the spend
@@ -12499,6 +12503,14 @@ impl GameState {
                     player: p,
                     amount: (-applied) as u32,
                 });
+            }
+        }
+        if ability.half_life_cost {
+            let half = self.players[p].life.div_euclid(2) + self.players[p].life.rem_euclid(2);
+            let applied = self.adjust_life_applied(p, -half);
+            if applied < 0 {
+                auto_mana_events
+                    .push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
             }
         }
         if ability.x_life_cost {
