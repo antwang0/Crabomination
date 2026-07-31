@@ -739,6 +739,21 @@ pub struct GameState {
     /// `countered_spell_mana_spent`, read by `Value::CounteredSpellManaValue`.
     #[serde(default)]
     pub countered_spell_mana_value: u32,
+    /// The number picked by the innermost `Effect::PlayerChoosesNumber`
+    /// (Choice of Damnations), read by `Value::ChosenNumber`.
+    #[serde(default)]
+    pub chosen_number_this_resolution: u32,
+    /// The controller of the spell/ability currently causing discards, set by
+    /// the `Effect::Discard` family and consulted by `discard_card` for
+    /// "a spell or ability an opponent controls causes you to discard"
+    /// (Pure Intentions). `None` for game-driven discards (CR 514 cleanup).
+    #[serde(default)]
+    pub discard_causer: Option<usize>,
+    /// Nonland cards exiled by the innermost
+    /// `Effect::ExileTopBatchesUntilLandLast`, read by
+    /// `Value::NonlandCardsExiledThisEffect` (Rally the Horde).
+    #[serde(default)]
+    pub nonland_cards_exiled_this_effect: u32,
     /// The controller (caster) of the spell most recently countered during the
     /// current resolution. Read by `PlayerRef::CounteredSpellController` (Fold
     /// into Aether's "its controller may put a creature card …").
@@ -1513,6 +1528,9 @@ impl Clone for GameState {
             damaged_this_resolution: self.damaged_this_resolution.clone(),
             countered_spell_mana_spent: self.countered_spell_mana_spent,
             countered_spell_mana_value: self.countered_spell_mana_value,
+            chosen_number_this_resolution: self.chosen_number_this_resolution,
+            discard_causer: self.discard_causer,
+            nonland_cards_exiled_this_effect: self.nonland_cards_exiled_this_effect,
             countered_spell_controller: self.countered_spell_controller,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
@@ -1735,6 +1753,9 @@ impl GameState {
             damaged_this_resolution: Vec::new(),
             countered_spell_mana_spent: 0,
             countered_spell_mana_value: 0,
+            chosen_number_this_resolution: 0,
+            discard_causer: None,
+            nonland_cards_exiled_this_effect: 0,
             countered_spell_controller: None,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             named_card_this_resolution: None,
@@ -4309,6 +4330,30 @@ impl GameState {
                 _ => None,
             })
         })
+    }
+
+    /// Ashes of the Fallen — the creature types a card in its owner's
+    /// graveyard picks up from `YourGraveyardCreaturesHaveChosenType` grants
+    /// that owner controls. Empty for cards outside a graveyard.
+    pub(crate) fn graveyard_type_grants(
+        &self,
+        card: &crate::card::CardInstance,
+    ) -> Vec<crate::card::CreatureType> {
+        use crate::effect::StaticEffect;
+        let Some(owner) = self.players.get(card.owner) else { return Vec::new() };
+        if !owner.graveyard.iter().any(|c| c.id == card.id) {
+            return Vec::new();
+        }
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == card.owner)
+            .filter(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::YourGraveyardCreaturesHaveChosenType)
+                })
+            })
+            .filter_map(|c| c.chosen_creature_type)
+            .collect()
     }
 
     /// True when `card` can be retraced from `p`'s graveyard: printed
@@ -9747,7 +9792,42 @@ impl GameState {
                 }
             }
         }
+        self.fire_opponent_forced_discard_watchers(p, card_id);
         true
+    }
+
+    /// CR 603.4 — fire `OpponentCausesYouToDiscardThisTurn` watchers (Pure
+    /// Intentions) when `player` discards `card_id` because of a spell or
+    /// ability an opponent of theirs controls. The discarded card rides in
+    /// as the trigger source.
+    fn fire_opponent_forced_discard_watchers(
+        &mut self,
+        player: usize,
+        card_id: crate::card::CardId,
+    ) {
+        let Some(causer) = self.discard_causer else { return };
+        if !self.opponents_of(player).contains(&causer) {
+            return;
+        }
+        let watchers: Vec<crate::game::types::DelayedTrigger> = self
+            .delayed_triggers
+            .iter()
+            .filter(|dt| {
+                dt.controller == player
+                    && matches!(
+                        dt.kind,
+                        crate::game::types::DelayedKind::OpponentCausesYouToDiscardThisTurn
+                    )
+            })
+            .cloned()
+            .collect();
+        for dt in watchers {
+            self.stack.push(
+                crate::game::types::TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                    .trigger_source(Some(crate::game::effects::EntityRef::Card(card_id)))
+                    .build(),
+            );
+        }
     }
 
     /// CR 702.35b — offer the owner of an exiled Madness card a yes/no cast
@@ -10212,7 +10292,10 @@ impl GameState {
             let victim = (0..self.players.len())
                 .find(|q| *q != p && !self.players[*q].library.is_empty());
             let Some(victim) = victim else { return false };
-            let Some(mut card) = self.players[victim].library.pop() else { return false };
+            if self.players[victim].library.is_empty() {
+                return false;
+            }
+            let mut card = self.players[victim].library.remove(0);
             card.face_down = true;
             card.may_play_until = Some(crate::card::MayPlayPermission {
                 player: p,
@@ -11828,13 +11911,24 @@ impl GameState {
                         ta.event.kind,
                         crate::effect::EventKind::CardMilled
                     ) && self_scope;
+                    // "When … causes you to discard this card" — the card is
+                    // already in the graveyard at dispatch (Pure Intentions).
+                    let discarded_self = matches!(
+                        ta.event.kind,
+                        crate::effect::EventKind::CardDiscarded
+                    ) && self_scope;
                     // "When this is put into a graveyard from anywhere"
                     // (Emrakul) — also fires off the card in the graveyard.
                     let putgy_self = matches!(
                         ta.event.kind,
                         crate::effect::EventKind::PutIntoGraveyard
                     ) && self_scope;
-                    if !from_gy_scope && !cycle_self && !milled_self && !putgy_self {
+                    if !from_gy_scope
+                        && !cycle_self
+                        && !milled_self
+                        && !putgy_self
+                        && !discarded_self
+                    {
                         continue;
                     }
                     for ev in events {
@@ -14469,6 +14563,13 @@ impl GameState {
                 self.stashed_resolution_answer = Some(DecisionAnswer::Amount((*n).min(max)));
                 Ok(Vec::new())
             }
+            PendingEffectState::SeatAmountAnswerPending { max, .. } => {
+                let DecisionAnswer::Amount(n) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                self.resolution_answer_log.push(DecisionAnswer::Amount((*n).min(max)));
+                Ok(Vec::new())
+            }
             PendingEffectState::MayDoAnswerPending => {
                 let DecisionAnswer::Bool(b) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
@@ -16072,6 +16173,9 @@ fn static_effect_to_effects(
             // PreventNoncombatDamageToSelfAddCounters — read in the noncombat
             // damage funnel (`deal_damage_to_from`); no layer effect.
             | StaticEffect::PreventNoncombatDamageToSelfAddCounters
+            // PreventDamageToSelfTradingCounters — read at both damage
+            // funnels (`trade_counters_for_damage`); no layer effect.
+            | StaticEffect::PreventDamageToSelfTradingCounters { .. }
             // ExtraEtbCountersForCreatureCasts — read at creature-spell
             // resolution time in `stack.rs::resolve_spell`; no layer effect.
             | StaticEffect::ExtraEtbCountersForCreatureCasts { .. }
@@ -16228,6 +16332,9 @@ fn static_effect_to_effects(
             | StaticEffect::GraveyardLockdown
             | StaticEffect::GraveyardExileLockdown
             | StaticEffect::GraveyardCardsHaveEscape { .. }
+            // YourGraveyardCreaturesHaveChosenType — read by the hidden-zone
+            // card evaluator (`graveyard_type_grants`); no layer effect.
+            | StaticEffect::YourGraveyardCreaturesHaveChosenType
             | StaticEffect::GraveyardPermanentsHaveRetraceDuringYourTurn
             | StaticEffect::CollectsLeaverCounters
             | StaticEffect::OpponentsCantActivateArtifactAbilities

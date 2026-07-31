@@ -508,6 +508,44 @@ impl GameState {
         Some(b)
     }
 
+    /// Ask `seat` to choose a number in `0..=max`, routed to a seat that may
+    /// not be the resolving controller (Choice of Damnations, Pain's Reward).
+    /// Shares `ask_seat_bool`'s replay-log contract — pass one `cursor` per
+    /// run, keep side effects after the final ask, and `clear_answer_log()`
+    /// on every completing path.
+    pub(crate) fn ask_seat_amount(
+        &mut self,
+        cursor: &mut usize,
+        seat: usize,
+        prompt: String,
+        source: CardId,
+        max: u32,
+        effect: &Effect,
+    ) -> Option<u32> {
+        use crate::decision::{Decision, DecisionAnswer};
+        if let Some(DecisionAnswer::Amount(n)) = self.resolution_answer_log.get(*cursor) {
+            let n = (*n).min(max);
+            *cursor += 1;
+            return Some(n);
+        }
+        let decision = Decision::ChooseAmount { source, prompt, max };
+        if self.seat_suspends(seat) {
+            self.suspend_signal = Some((
+                decision,
+                PendingEffectState::SeatAmountAnswerPending { player: seat, max },
+                effect.clone(),
+            ));
+            return None;
+        }
+        let n = match self.decider.decide(&decision) {
+            DecisionAnswer::Amount(n) => n.min(max),
+            _ => 0,
+        };
+        self.resolution_answer_log.push(DecisionAnswer::Amount(n));
+        *cursor += 1;
+        Some(n)
+    }
+
     /// Ask `seat` for a card pick inside a resolving effect, suspending
     /// for a `wants_ui` seat via the `CardsAnswerPending` stash-and-rerun.
     /// Returns `None` when suspended (the originating `effect` is
@@ -1149,6 +1187,9 @@ impl GameState {
         self.sacrificed_mana_value = None;
         self.last_discarded_mana_value = None;
         self.tapped_for_cost_power = None;
+        // Every discard from this resolution is caused by this spell/ability
+        // (Pure Intentions' "a spell or ability an opponent controls").
+        self.discard_causer = Some(ctx.controller);
         // Reset last-created-token scratch — `Selector::LastCreatedToken`
         // (singular) and `Selector::LastCreatedTokens` (plural) only refer
         // to tokens created by *this* resolution.
@@ -1247,6 +1288,9 @@ impl GameState {
                 events.push(GameEvent::DiscardedBatch { player, count });
             }
         }
+        // Discards outside a resolution (CR 514.3 cleanup, cost payments)
+        // have no causing spell or ability.
+        self.discard_causer = None;
         Ok(events)
     }
 
@@ -7907,15 +7951,230 @@ impl GameState {
 
             Effect::ExileTopUntilNonland { who } => {
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
-                while let Some(top) = self.players[seat].library.last().map(|c| c.id) {
+                while let Some(top) = self.players[seat].library.first().map(|c| c.id) {
                     let is_land =
-                        self.players[seat].library.last().is_some_and(|c| c.definition.is_land());
+                        self.players[seat].library.first().is_some_and(|c| c.definition.is_land());
                     self.move_card_to(top, &ZoneDest::Exile, ctx, events);
                     if !is_land {
                         break;
                     }
                 }
                 Ok(())
+            }
+
+            Effect::ExileTopBatchesUntilLandLast { batch, then } => {
+                // Rally the Horde. Exile in fixed-size batches; the process
+                // repeats while the LAST card of a batch is a land.
+                let seat = ctx.controller;
+                let mut nonland = 0u32;
+                loop {
+                    let mut last_was_land = false;
+                    let mut exiled_any = false;
+                    for _ in 0..*batch {
+                        let Some(top) = self.players[seat].library.first() else { break };
+                        let (id, is_land) = (top.id, top.definition.is_land());
+                        self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                        last_was_land = is_land;
+                        exiled_any = true;
+                        if !is_land {
+                            nonland += 1;
+                        }
+                    }
+                    if !exiled_any || !last_was_land {
+                        break;
+                    }
+                }
+                self.nonland_cards_exiled_this_effect = nonland;
+                let r = self.run_effect(then, ctx, events);
+                self.nonland_cards_exiled_this_effect = 0;
+                r
+            }
+
+            Effect::PlayerChoosesNumber { who, prompt, max, then } => {
+                let Some(seat) = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                else {
+                    return Ok(());
+                };
+                let cap = self.evaluate_value(max, ctx).max(0) as u32;
+                let src = ctx.source.unwrap_or(CardId(0));
+                let Some(n) =
+                    self.ask_seat_amount(&mut 0, seat, prompt.clone(), src, cap, effect)
+                else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                self.chosen_number_this_resolution = n;
+                let r = self.run_effect(then, ctx, events);
+                self.chosen_number_this_resolution = 0;
+                r
+            }
+
+            Effect::LifeBidding { then } => {
+                // Pain's Reward. The controller opens; each other player in
+                // turn order may top the standing bid. A full pass with no
+                // raise ends it and the high bidder pays + runs `then`.
+                let src = ctx.source.unwrap_or(CardId(0));
+                let mut order = vec![ctx.controller];
+                let mut s = ctx.controller;
+                for _ in 1..self.players.len() {
+                    s = self.next_alive_seat(s);
+                    if s == ctx.controller {
+                        break;
+                    }
+                    order.push(s);
+                }
+                let mut cursor = 0usize;
+                let Some(open) = self.ask_seat_amount(
+                    &mut cursor,
+                    ctx.controller,
+                    "Open the bidding with how much life?".to_string(),
+                    src,
+                    u32::from(u16::MAX),
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                let (mut high, mut leader) = (open, ctx.controller);
+                'bidding: loop {
+                    let mut raised = false;
+                    for &p in order.iter().skip(1) {
+                        if p == leader {
+                            continue;
+                        }
+                        let Some(bid) = self.ask_seat_amount(
+                            &mut cursor,
+                            p,
+                            format!("Top the bid of {high} life? (0 to pass)"),
+                            src,
+                            u32::from(u16::MAX),
+                            effect,
+                        ) else {
+                            return Ok(());
+                        };
+                        if bid > high {
+                            high = bid;
+                            leader = p;
+                            raised = true;
+                        }
+                    }
+                    if !raised {
+                        break 'bidding;
+                    }
+                }
+                self.clear_answer_log();
+                let applied = self.adjust_life_applied(leader, -(high as i32));
+                if applied < 0 {
+                    events.push(GameEvent::LifeLost {
+                        player: leader,
+                        amount: (-applied) as u32,
+                    });
+                }
+                self.run_effect(then, &EffectContext { controller: leader, ..ctx.clone() }, events)
+            }
+
+            Effect::RevealTopOpponentBinsOne { count } => {
+                // Murmurs from Beyond — the bin pick is the opponent's.
+                let seat = ctx.controller;
+                let src = ctx.source.unwrap_or(CardId(0));
+                let revealed: Vec<CardId> = self.players[seat]
+                    .library
+                    .iter()
+                    .take(*count as usize)
+                    .map(|c| c.id)
+                    .collect();
+                if revealed.is_empty() {
+                    return Ok(());
+                }
+                let Some(opp) = self.opponents_of(seat).into_iter().next() else {
+                    return Ok(());
+                };
+                let candidates: Vec<(CardId, String)> = revealed
+                    .iter()
+                    .filter_map(|id| self.find_card_anywhere(*id))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                // The opponent bins the best card for them — the priciest.
+                let auto: Vec<CardId> = candidates
+                    .iter()
+                    .max_by_key(|(id, _)| {
+                        self.find_card_anywhere(*id).map(|c| c.definition.cost.cmc()).unwrap_or(0)
+                    })
+                    .map(|(id, _)| vec![*id])
+                    .unwrap_or_default();
+                let picked = if self.seat_suspends(opp) {
+                    let Some(p) = self.ask_seat_cards(
+                        opp,
+                        "Put which revealed card into its owner's graveyard?".to_string(),
+                        src,
+                        candidates.clone(),
+                        1,
+                        1,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    p
+                } else {
+                    auto.clone()
+                };
+                let binned = picked.first().copied().or_else(|| auto.first().copied());
+                for id in revealed {
+                    let dest = if Some(id) == binned {
+                        ZoneDest::Graveyard
+                    } else {
+                        ZoneDest::Hand(crate::effect::PlayerRef::You)
+                    };
+                    self.move_card_to(id, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::MayCastExiledWithSource { filter } => {
+                // Kaho, Minamo Historian. Offer the exiled cards stamped with
+                // this source that match `filter` (X resolved from the
+                // activation) and free-cast the pick.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let filter = filter.resolve_x(ctx.x_value);
+                let candidates: Vec<(CardId, String)> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src))
+                    .filter(|c| self.evaluate_requirement_on_card(&filter, c, ctx.controller))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let auto = vec![candidates[0].0];
+                let Some(picked) = self.choose_up_to_cards(
+                    ctx.controller,
+                    "Cast which exiled card without paying its mana cost?".to_string(),
+                    src,
+                    candidates,
+                    1,
+                    effect,
+                    auto,
+                ) else {
+                    return Ok(());
+                };
+                let Some(pick) = picked.first().copied() else { return Ok(()) };
+                self.run_effect(
+                    &Effect::CastWithoutPayingImmediate {
+                        what: Selector::Target(0),
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                        copy: false,
+                        reduce_generic: 0,
+                    },
+                    &EffectContext { targets: vec![Target::Permanent(pick)], ..ctx.clone() },
+                    events,
+                )
             }
 
             Effect::ReturnAnyNumberToHand { filter } => {
@@ -19177,6 +19436,21 @@ impl GameState {
                     controller: ctx.controller,
                     source,
                     kind: crate::game::types::DelayedKind::CreatureYouControlDealsCombatDamageThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: false,
+                });
+                Ok(())
+            }
+
+            Effect::WheneverOpponentMakesYouDiscardThisTurn { body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::OpponentCausesYouToDiscardThisTurn,
                     effect: (**body).clone(),
                     target: None,
                     bound_token: None,

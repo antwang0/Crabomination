@@ -1090,6 +1090,14 @@ impl Effect {
             Effect::MayDoElse { body, else_, .. } => {
                 body.requires_target() || else_.requires_target()
             }
+            Effect::PlayerChoosesNumber { who, max, then, .. } => {
+                sel_has_target(who) || value_has_target(max) || then.requires_target()
+            }
+            Effect::LifeBidding { then } => then.requires_target(),
+            Effect::WheneverOpponentMakesYouDiscardThisTurn { .. } => false,
+            Effect::ExileTopBatchesUntilLandLast { then, .. } => then.requires_target(),
+            Effect::RevealTopOpponentBinsOne { .. } => false,
+            Effect::MayCastExiledWithSource { .. } => false,
             Effect::PutIntoLibraryBeneathTop { what, count } => {
                 sel_has_target(what) || value_has_target(count)
             }
@@ -1679,6 +1687,7 @@ impl Effect {
                 match to {
                     ZoneDest::Exile => format!("exile {t}"),
                     ZoneDest::ExilePlotted => format!("exile {t}; it becomes plotted"),
+                    ZoneDest::ExileWithSourceStamp => format!("exile {t}"),
                     ZoneDest::Hand(_) => format!("return {t} to its owner's hand"),
                     ZoneDest::Graveyard => format!("put {t} into its owner's graveyard"),
                     ZoneDest::Battlefield { .. } => format!("put {t} onto the battlefield"),
@@ -2560,6 +2569,13 @@ impl Effect {
                 Effect::MayDoElse { body, else_, .. } => body
                     .target_filter_for_slot(slot)
                     .or_else(|| else_.target_filter_for_slot(slot)),
+                Effect::PlayerChoosesNumber { who, max, then, .. } => sel_find(who, slot)
+                    .or_else(|| val_find(max, slot))
+                    .or_else(|| then.target_filter_for_slot(slot)),
+                Effect::LifeBidding { then }
+                | Effect::ExileTopBatchesUntilLandLast { then, .. } => {
+                    then.target_filter_for_slot(slot)
+                }
                 Effect::PutIntoLibraryBeneathTop { what, .. } => sel_find(what, slot),
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))

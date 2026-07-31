@@ -725,6 +725,13 @@ impl GameState {
             });
             return;
         }
+        // CR 615 — Sekki, Seasons' Guide: prevent the damage, trading that
+        // many +1/+1 counters for that many Spirit tokens.
+        if let EntityRef::Permanent(tgt) = ent
+            && self.trade_counters_for_damage(tgt, amount, events)
+        {
+            return;
+        }
         // CR 615 — Stormwild Capridor: "If noncombat damage would be dealt
         // to this creature, prevent that damage. Put a +1/+1 counter on it
         // for each 1 damage prevented this way." Applied after scaling so
@@ -1275,6 +1282,14 @@ impl GameState {
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) {
+        // CR 607 — the linked-exile stamp, applied after the hop lands.
+        if matches!(dest, ZoneDest::ExileWithSourceStamp) {
+            self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+            if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                c.exiled_with = ctx.source;
+            }
+            return;
+        }
         // CR 400.4a — a nonpermanent card that would enter the battlefield
         // remains in its previous zone. Face-down cards are exempt: they enter
         // as 2/2 creatures (CR 708.2a), whatever the real card's types are.
@@ -1389,7 +1404,10 @@ impl GameState {
             // CR 406.7 — re-exiling an exiled object doesn't change zones, but
             // it becomes a *new* object that has just been exiled: the first
             // exiler's linked abilities (CR 607) can no longer find it.
-            if matches!(resolved_dest, ZoneDest::Exile | ZoneDest::ExilePlotted) {
+            if matches!(
+                resolved_dest,
+                ZoneDest::Exile | ZoneDest::ExilePlotted | ZoneDest::ExileWithSourceStamp
+            ) {
                 card.exiled_with = None;
                 card.exiled_by = None;
             }
@@ -1462,7 +1480,10 @@ impl GameState {
                 controller: flatten(controller),
                 tapped: *tapped,
             },
-            ZoneDest::Graveyard | ZoneDest::Exile | ZoneDest::ExilePlotted => dest.clone(),
+            ZoneDest::Graveyard
+            | ZoneDest::Exile
+            | ZoneDest::ExilePlotted
+            | ZoneDest::ExileWithSourceStamp => dest.clone(),
         }
     }
 
@@ -1488,7 +1509,9 @@ impl GameState {
             ZoneDest::Library { .. } => crate::card::Zone::Library,
             ZoneDest::Battlefield { .. } => crate::card::Zone::Battlefield,
             ZoneDest::Graveyard => crate::card::Zone::Graveyard,
-            ZoneDest::Exile | ZoneDest::ExilePlotted => crate::card::Zone::Exile,
+            ZoneDest::Exile | ZoneDest::ExilePlotted | ZoneDest::ExileWithSourceStamp => {
+                crate::card::Zone::Exile
+            }
         };
         // CR 702.47e — a spell loses its splice changes once it leaves the
         // stack for any reason.
@@ -1649,7 +1672,7 @@ impl GameState {
                 events.push(GameEvent::PermanentExiled { card_id: cid });
                 self.fire_becomes_plotted_triggers(cid, default_player);
             }
-            ZoneDest::Exile => {
+            ZoneDest::Exile | ZoneDest::ExileWithSourceStamp => {
                 let cid = card.id;
                 self.exile.push(card);
                 // Record for `Selector::ExiledThisResolution` ("if you exiled

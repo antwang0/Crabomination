@@ -606,6 +606,12 @@ pub enum Value {
     CounteredSpellManaValue,
     /// The controller's starting life total (Resolute Archangel).
     StartingLifeTotal,
+    /// The number just picked by [`Effect::PlayerChoosesNumber`] (0 outside
+    /// one). Choice of Damnations' "that much" / "all but that many".
+    ChosenNumber,
+    /// Nonland cards exiled by the enclosing
+    /// [`Effect::ExileTopBatchesUntilLandLast`] (Rally the Horde).
+    NonlandCardsExiledThisEffect,
     Sum(Vec<Value>),
     Diff(Box<Value>, Box<Value>),
     Times(Box<Value>, Box<Value>),
@@ -1526,6 +1532,10 @@ pub enum Predicate {
     /// instead") and Antiquities on the Loose's "cast from anywhere
     /// other than your hand" rider.
     CastFromGraveyard,
+    /// True while the discard being processed was caused by a spell or ability
+    /// an opponent of the trigger's controller controls (Pure Intentions'
+    /// self-return rider). Reads `GameState.discard_causer`.
+    DiscardCausedByOpponent,
     /// True when the resolving spell was cast from its caster's hand
     /// (the typical case). Inverse of `CastFromGraveyard`. Reserved for
     /// "if you cast this spell from your hand, …" rider patterns —
@@ -1859,6 +1869,9 @@ pub enum ZoneDest {
     /// half of plot: no plot cost is paid (Kellan Joins Up, Jace Reawakened,
     /// Make Your Own Luck, Aven Interrupter).
     ExilePlotted,
+    /// Exile, stamping `exiled_with = ctx.source` so the source can reach the
+    /// card later (`Selector::CardExiledWithSource`, Kaho's free cast).
+    ExileWithSourceStamp,
     /// Battlefield under `controller`, optionally tapped.
     Battlefield { controller: PlayerRef, tapped: bool },
 }
@@ -2770,6 +2783,21 @@ pub enum Effect {
     /// [`Effect::MayDo`] (Dakra Mystic). Shares MayPay's seat-routed yes/no
     /// suspend with an empty cost.
     MayDoElse { description: String, body: Box<Effect>, else_: Box<Effect> },
+    /// "Target opponent chooses a number, then [`then`]" — the pick is routed
+    /// to `who`'s seat (`ask_seat_amount`) and `then` reads it back through
+    /// [`Value::ChosenNumber`]. Choice of Damnations.
+    PlayerChoosesNumber {
+        who: Selector,
+        prompt: String,
+        max: Value,
+        then: Box<Effect>,
+    },
+    /// "Each player may bid life…the high bidder loses life equal to the high
+    /// bid and [`then`]" — the controller opens, then every other player in
+    /// turn order may top the standing bid; the round repeats until a full
+    /// pass leaves the high bid standing. `then` runs for the high bidder.
+    /// Pain's Reward (CR 104.3 — a bid above your life total is legal).
+    LifeBidding { then: Box<Effect> },
     /// "You may pay {X}. When you do, [body with X]." — the controller
     /// picks X at resolution via `Decision::ChooseAmount` (0 = decline,
     /// the AutoDecider default), capped by their FLOATED mana (the MayPay
@@ -3482,14 +3510,27 @@ pub enum Effect {
         filter: Option<crate::card::SelectionRequirement>,
     },
     /// "Exile cards from the top of `who`'s library until you exile a nonland
+    /// card." The exiled cards stay in exile; the stopping card's mana value
+    /// is published as `Value::LastExiledManaValue` (Undying Flames).
+    ExileTopUntilNonland { who: PlayerRef },
+    /// "Exile the top `batch` cards. If the last card exiled isn't a land
+    /// card, repeat this process." `then` runs afterwards and reads the
+    /// nonland tally through [`Value::NonlandCardsExiledThisEffect`].
+    /// Rally the Horde.
+    ExileTopBatchesUntilLandLast { batch: u32, then: Box<Effect> },
+    /// "Reveal the top `count` cards of your library. An opponent chooses one
+    /// of them. Put that card into your graveyard and the rest into your
+    /// hand." Murmurs from Beyond — the pick is routed to an opponent's seat.
+    RevealTopOpponentBinsOne { count: u32 },
+    /// "You may cast a spell matching `filter` from among cards exiled with
+    /// this source without paying its mana cost." Kaho, Minamo Historian —
+    /// `filter`'s X resolves against the activation's chosen X.
+    MayCastExiledWithSource { filter: crate::card::SelectionRequirement },
+    /// "Exile cards from the top of `who`'s library until you exile a nonland
     /// card; you may play/cast that card [`duration`]. The other exiled cards
     /// stay in exile." The impulse-until-nonland family (Territorial Bruntar's
     /// landfall, Solstice Revelations) — unlike `Discover`, there's no MV cap
     /// on the stop and the passed-over cards aren't bottomed.
-    /// "Exile cards from the top of `who`'s library until you exile a nonland
-    /// card." The exiled cards stay in exile; the stopping card's mana value
-    /// is published as `Value::LastExiledManaValue` (Undying Flames).
-    ExileTopUntilNonland { who: PlayerRef },
     ExileTopUntilNonlandMayPlay {
         who: PlayerRef,
         duration: crate::card::MayPlayDuration,
@@ -6423,6 +6464,12 @@ pub enum Effect {
     /// ("each opponent loses that much life").
     WheneverYouGainLifeThisTurn { body: Box<Effect> },
 
+    /// "Whenever a spell or ability an opponent controls causes you to discard
+    /// cards this turn, [body]." Registers a turn-scoped delayed trigger
+    /// (CR 603.4) firing once per such discard with the discarded card bound
+    /// as the trigger source. Expires at cleanup. Pure Intentions.
+    WheneverOpponentMakesYouDiscardThisTurn { body: Box<Effect> },
+
     /// "Until end of turn, whenever a card is put into an opponent's graveyard
     /// from anywhere, [body]." Registers a turn-scoped delayed trigger
     /// (CR 603.4); the graveyard's owner is bound as the body's `Target(0)`
@@ -7151,7 +7198,10 @@ fn zonedest_has_target(z: &ZoneDest) -> bool {
     match z {
         ZoneDest::Hand(p) | ZoneDest::Library { who: p, .. } => matches!(p, PlayerRef::Target(_)),
         ZoneDest::Battlefield { controller, .. } => matches!(controller, PlayerRef::Target(_)),
-        ZoneDest::Graveyard | ZoneDest::Exile | ZoneDest::ExilePlotted => false,
+        ZoneDest::Graveyard
+        | ZoneDest::Exile
+        | ZoneDest::ExilePlotted
+        | ZoneDest::ExileWithSourceStamp => false,
     }
 }
 

@@ -2747,6 +2747,10 @@ impl GameState {
         if dealt <= 0 {
             return dealt;
         }
+        // Sekki trades counters for tokens instead of growing (CR 615).
+        if self.trade_counters_for_damage(recipient, dealt as u32, events) {
+            return 0;
+        }
         // Ironscale Hydra grows by exactly one; Phytohydra grows by the full
         // amount. Both are replacements (CR 614), so they apply even when
         // damage can't be prevented.
@@ -2766,6 +2770,51 @@ impl GameState {
             count: grow,
         });
         0
+    }
+
+    /// Sekki, Seasons' Guide (CR 615) — prevent `dealt` damage to `recipient`,
+    /// remove that many counters, and mint that many tokens. Returns false
+    /// (damage stands) when `recipient` has no such static.
+    pub(crate) fn trade_counters_for_damage(
+        &mut self,
+        recipient: CardId,
+        dealt: u32,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        if dealt == 0 || self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        let Some((counter, token)) = self.battlefield_find(recipient).and_then(|c| {
+            c.definition.static_abilities.iter().find_map(|s| match &s.effect {
+                crate::effect::StaticEffect::PreventDamageToSelfTradingCounters {
+                    counter,
+                    token,
+                } => Some((*counter, (**token).clone())),
+                _ => None,
+            })
+        }) else {
+            return false;
+        };
+        let (controller, removed) = match self.battlefield_find_mut(recipient) {
+            Some(c) => {
+                let removed = dealt.min(c.counter_count(counter));
+                c.remove_counters(counter, removed);
+                (c.controller, removed)
+            }
+            None => return false,
+        };
+        if removed > 0 {
+            events.push(GameEvent::CounterRemoved {
+                card_id: recipient,
+                counter_type: counter,
+                count: removed,
+            });
+        }
+        let def = crabomination_base::tokens::token_to_card_definition(&token);
+        for _ in 0..dealt {
+            self.mint_token_onto_battlefield(def.clone(), controller, false, events);
+        }
+        true
     }
 
     /// Phytohydra (CR 614) — does `id` replace incoming damage with that many

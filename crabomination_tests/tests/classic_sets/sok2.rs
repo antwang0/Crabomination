@@ -760,9 +760,9 @@ fn sok2_batch4_cards_are_registered() {
 #[test]
 fn undying_flames_burns_for_the_first_nonland() {
     let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::serra_angel()); // MV 5 — deepest
-    g.add_card_to_library(0, catalog::forest());
     g.add_card_to_library(0, catalog::forest()); // top
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::serra_angel()); // MV 5 — deepest
     let spell = g.add_card_to_hand(0, catalog::undying_flames());
     g.players[0].mana_pool.add(Color::Red, 6);
     cast(&mut g, spell, Some(Target::Player(1)));

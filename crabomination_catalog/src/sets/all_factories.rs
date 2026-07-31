@@ -11737,6 +11737,16 @@ static SOK2: &[Factory] = &[
     super::sok2::tomb_of_urami,
     super::sok2::cowed_by_wisdom,
 ];
+static SOK3: &[Factory] = &[
+    super::sok3::ashes_of_the_fallen,
+    super::sok3::choice_of_damnations,
+    super::sok3::kaho_minamo_historian,
+    super::sok3::murmurs_from_beyond,
+    super::sok3::pains_reward,
+    super::sok3::pure_intentions,
+    super::sok3::rally_the_horde,
+    super::sok3::sekki_seasons_guide,
+];
 static SOS: &[Factory] = &[
     super::sos::cauldron_of_essence,
     super::sos::diary_of_dreams,
@@ -17181,6 +17191,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("shm", SHM),
     ("sok", SOK),
     ("sok2", SOK2),
+    ("sok3", SOK3),
     ("sos", SOS),
     ("stx", STX),
     ("thb", THB),

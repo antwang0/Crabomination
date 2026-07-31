@@ -1248,6 +1248,12 @@ pub enum StaticEffect {
     /// Underworld Breach: each nonland card in the controller's graveyard
     /// has escape — its own mana cost plus exile `exile_count` other cards.
     GraveyardCardsHaveEscape { exile_count: u32 },
+    /// "Each creature card in your graveyard has the chosen creature type in
+    /// addition to its other types" — the type comes from the source's
+    /// as-enters `chosen_creature_type`. Ashes of the Fallen. Read by the
+    /// hidden-zone card evaluator, so graveyard-scoped tribal filters
+    /// (Patriarch's Bidding, Rally cards, soulshift) see it.
+    YourGraveyardCreaturesHaveChosenType,
     /// Six: during the controller's turn, nonland permanent cards in their
     /// graveyard have retrace (CR 702.55).
     GraveyardPermanentsHaveRetraceDuringYourTurn,
@@ -1770,6 +1776,15 @@ pub enum StaticEffect {
     /// at both the combat and noncombat self-damage sites; grows by the full
     /// amount rather than a single counter.
     ReplaceDamageToSelfWithCounters,
+    /// CR 615 — "If damage would be dealt to this creature, prevent that
+    /// damage, remove that many `counter` counters from it, and create that
+    /// many `token` tokens." Sekki, Seasons' Guide. Consulted at both the
+    /// combat and noncombat self-damage sites; the removal is capped at the
+    /// counters actually present.
+    PreventDamageToSelfTradingCounters {
+        counter: crate::card::CounterType,
+        token: Box<crate::card::TokenDefinition>,
+    },
     /// CR 614 — "If this creature would deal combat damage to a player,
     /// instead put that many +1/+1 counters on it and that player mills that
     /// many cards." Szadek, Lord of Secrets. A dealer-side combat-damage

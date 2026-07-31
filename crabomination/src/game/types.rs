@@ -774,6 +774,12 @@ pub enum DelayedKind {
     /// as the body's `Target(0)` (so "that player loses 1 life" is exact in
     /// multiplayer). Expires at cleanup. Duskmantle Guildmage's first ability.
     CardEntersOpponentGraveyardThisTurn,
+    /// "Whenever a spell or ability an opponent controls causes you to
+    /// discard cards this turn, [body]" (CR 603.4). Fires per card discarded
+    /// by `DelayedTrigger.controller` while `GameState.discard_causer` is one
+    /// of their opponents; the discarded card is the trigger source. Expires
+    /// at cleanup. Pure Intentions.
+    OpponentCausesYouToDiscardThisTurn,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────
@@ -839,6 +845,7 @@ impl PendingEffectState {
         match self {
             PendingEffectState::SacrificePending { player } => Some(*player),
             PendingEffectState::SeatBoolAnswerPending { player } => Some(*player),
+            PendingEffectState::SeatAmountAnswerPending { player, .. } => Some(*player),
             PendingEffectState::CardsAnswerPending { player } => Some(*player),
             PendingEffectState::MayCastExiledPending { player, .. } => Some(*player),
             PendingEffectState::StashNamePending { player } => Some(*player),
@@ -1465,6 +1472,9 @@ pub enum PendingEffectState {
     /// Suspended on a `ChooseAmount` ("pay any amount of life", "sacrifice
     /// any number"). The answer is clamped to `max` then stashed.
     AmountAnswerPending { max: u32 },
+    /// As `AmountAnswerPending`, but the number is chosen by `player` rather
+    /// than the resolving controller (Choice of Damnations, Pain's Reward).
+    SeatAmountAnswerPending { player: usize, max: u32 },
     /// Suspended on the `OptionalTrigger` raised by `Effect::MayDo`. The
     /// yes/no answer is stashed for the re-run.
     MayDoAnswerPending,

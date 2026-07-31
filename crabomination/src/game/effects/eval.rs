@@ -545,6 +545,8 @@ impl GameState {
                 .count() as i32,
             Value::CounteredSpellManaSpent => self.countered_spell_mana_spent as i32,
             Value::CounteredSpellManaValue => self.countered_spell_mana_value as i32,
+            Value::ChosenNumber => self.chosen_number_this_resolution as i32,
+            Value::NonlandCardsExiledThisEffect => self.nonland_cards_exiled_this_effect as i32,
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
             Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),
             Value::Times(a, b) => self.evaluate_value(a, ctx) * self.evaluate_value(b, ctx),
@@ -1869,6 +1871,9 @@ impl GameState {
                 };
                 count >= n
             }
+            Predicate::DiscardCausedByOpponent => self
+                .discard_causer
+                .is_some_and(|c| self.opponents_of(ctx.controller).contains(&c)),
             Predicate::CastFromGraveyard => {
                 // Read directly off the resolution context. Stamped by
                 // `for_spell_with_source` from the resolving
@@ -3155,7 +3160,8 @@ impl GameState {
             }
             R::HasSupertype(st) => card.definition.supertypes.contains(st),
             R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct)
-                        || card.has_keyword(&crate::card::Keyword::Changeling),
+                        || card.has_keyword(&crate::card::Keyword::Changeling)
+                        || self.graveyard_type_grants(card).contains(ct),
             R::IsOutlaw => card_is_outlaw(card),
             R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
             R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),

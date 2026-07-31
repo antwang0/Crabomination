@@ -57,6 +57,7 @@ pub use sets::bok::*;
 pub use sets::bok2::*;
 pub use sets::sok::*;
 pub use sets::sok2::*;
+pub use sets::sok3::*;
 pub use sets::chk3::*;
 pub use sets::curses::*;
 pub use sets::decks::*;
