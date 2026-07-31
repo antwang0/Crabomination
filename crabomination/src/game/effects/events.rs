@@ -427,6 +427,11 @@ pub(crate) fn event_matches_spec(
                 if state.same_team(*fc, source.controller)
                     && !state.same_team(*p, source.controller)
         ),
+        EventScope::OpponentSourceDamagedYou => matches!(
+            event,
+            GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
+                if *p == source.controller && !state.same_team(*fc, source.controller)
+        ),
         EventScope::YourOtherSourceDamagedOpponent => matches!(
             event,
             GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), from_card, .. }
@@ -835,6 +840,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::YourCreatureTargeted
         | EventScope::EnchantedBySource
         | EventScope::YourSourceDamagedOpponent
+        | EventScope::OpponentSourceDamagedYou
         | EventScope::YourOtherSourceDamagedOpponent
         | EventScope::ControllerAttackedByOpponent
         | EventScope::ControllerPlaneswalkerAttackedByOpponent => false,

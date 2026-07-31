@@ -11724,6 +11724,14 @@ static SOK2: &[Factory] = &[
     super::sok2::into_the_fray,
     super::sok2::shifting_borders,
     super::sok2::rushing_tide_zubera,
+    super::sok2::eternal_dominion,
+    super::sok2::neverending_torment,
+    super::sok2::undying_flames,
+    super::sok2::curtain_of_light,
+    super::sok2::michiko_konda_truth_seeker,
+    super::sok2::measure_of_wickedness,
+    super::sok2::iname_as_one,
+    super::sok2::sakashima_the_impostor,
 ];
 static SOS: &[Factory] = &[
     super::sos::cauldron_of_essence,

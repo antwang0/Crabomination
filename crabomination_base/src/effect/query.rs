@@ -51,15 +51,19 @@ fn implicit_player_for_slot(what: &Selector, slot: u8) -> Option<&'static Select
 fn implicit_player_if_controlled_by_target(
     what: &Selector,
 ) -> Option<&'static SelectionRequirement> {
-    matches!(what, Selector::ControlledBy { who: PlayerRef::Target(_), .. })
-        .then_some(&IMPLICIT_PLAYER_TARGET)
+    matches!(
+        what,
+        Selector::ControlledBy {
+            who: PlayerRef::Target(_),
+            ..
+        }
+    )
+    .then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
 /// `Some(&Player)` when `what` is a bare `Selector::Player(Target(_))`
 /// (Oona's "target opponent exiles…").
-fn implicit_player_if_bare_player_target(
-    what: &Selector,
-) -> Option<&'static SelectionRequirement> {
+fn implicit_player_if_bare_player_target(what: &Selector) -> Option<&'static SelectionRequirement> {
     matches!(what, Selector::Player(PlayerRef::Target(_))).then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
@@ -75,7 +79,10 @@ fn implicit_player_for_bare_player_slot(
 /// `Some(&Player)` when a bare `PlayerRef::Target(n)` fills `slot` — effects
 /// that target a player directly through a `PlayerRef` field
 /// (`ExilePlayerGraveyard`, `ExileHand`, `DiscardUnlessKind`).
-fn implicit_player_for_ref_slot(who: &PlayerRef, slot: u8) -> Option<&'static SelectionRequirement> {
+fn implicit_player_for_ref_slot(
+    who: &PlayerRef,
+    slot: u8,
+) -> Option<&'static SelectionRequirement> {
     matches!(who, PlayerRef::Target(n) if *n == slot).then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
@@ -115,7 +122,11 @@ impl Effect {
                 );
                 let adds_counter = matches!(
                     &**then,
-                    Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, .. }
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        ..
+                    }
                 );
                 counter_check && adds_counter
             }
@@ -125,9 +136,13 @@ impl Effect {
     }
 
     pub fn seq(effects: Vec<Effect>) -> Self {
-        if effects.is_empty() { Effect::Noop }
-        else if effects.len() == 1 { effects.into_iter().next().unwrap() }
-        else { Effect::Seq(effects) }
+        if effects.is_empty() {
+            Effect::Noop
+        } else if effects.len() == 1 {
+            effects.into_iter().next().unwrap()
+        } else {
+            Effect::Seq(effects)
+        }
     }
 
     /// True if this effect (transitively) requires a chosen target (i.e.
@@ -142,11 +157,14 @@ impl Effect {
                 | Selector::RadianceGroup { subject: i }
                 | Selector::CreaturesInCombatWith(i)
                 | Selector::SharingNameWith(i) => sel_has_target(i),
-                Selector::Take { inner, count }
-                | Selector::TakeRandom { inner, count } => {
+                Selector::Take { inner, count } | Selector::TakeRandom { inner, count } => {
                     sel_has_target(inner) || value_has_target(count)
                 }
-                Selector::TakeWithSumCap { inner, cap, value_of_each } => {
+                Selector::TakeWithSumCap {
+                    inner,
+                    cap,
+                    value_of_each,
+                } => {
                     sel_has_target(inner)
                         || value_has_target(cap)
                         || value_has_target(value_of_each)
@@ -168,15 +186,18 @@ impl Effect {
         }
         fn value_has_target(v: &Value) -> bool {
             match v {
-                Value::CountOf(s) | Value::PowerOf(s) | Value::ToughnessOf(s)
+                Value::CountOf(s)
+                | Value::PowerOf(s)
+                | Value::ToughnessOf(s)
                 | Value::MarkedDamageOn(s) => sel_has_target(s),
                 Value::CountersOn { what, .. } => sel_has_target(what),
-                Value::LifeOf(p) | Value::HandSizeOf(p) | Value::GraveyardSizeOf(p)
-                | Value::LibrarySizeOf(p) | Value::PlayerSpeed(p)
+                Value::LifeOf(p)
+                | Value::HandSizeOf(p)
+                | Value::GraveyardSizeOf(p)
+                | Value::LibrarySizeOf(p)
+                | Value::PlayerSpeed(p)
                 | Value::PermanentCountControlledBy(p)
-                | Value::CreatureCountControlledBy(p) => {
-                    player_has_target(p)
-                }
+                | Value::CreatureCountControlledBy(p) => player_has_target(p),
                 Value::Sum(vs) => vs.iter().any(value_has_target),
                 Value::Diff(a, b) | Value::Times(a, b) | Value::Min(a, b) | Value::Max(a, b) => {
                     value_has_target(a) || value_has_target(b)
@@ -193,7 +214,9 @@ impl Effect {
                 Predicate::Not(q) => pred_has_target(q),
                 Predicate::All(v) | Predicate::Any(v) => v.iter().any(pred_has_target),
                 Predicate::SelectorExists(s) => sel_has_target(s),
-                Predicate::SelectorCountAtLeast { sel, n } => sel_has_target(sel) || value_has_target(n),
+                Predicate::SelectorCountAtLeast { sel, n } => {
+                    sel_has_target(sel) || value_has_target(n)
+                }
                 Predicate::ValueAtLeast(a, b)
                 | Predicate::ValueAtMost(a, b)
                 | Predicate::ValueEquals(a, b) => value_has_target(a) || value_has_target(b),
@@ -245,6 +268,7 @@ impl Effect {
             | Effect::PlayerTapsUntapped { .. }
             | Effect::TapAnyNumberThenPumpPerTapped { .. }
             | Effect::ReturnAnyNumberToHand { .. }
+            | Effect::ExileTopUntilNonland { .. }
             | Effect::TapAnyNumberThenCounters { .. }
             | Effect::GrantExtraPlusOneCountersThisTurn { .. }
             // Amount is a scratch read (CounteredSpellManaSpent), no slots.
@@ -746,6 +770,7 @@ impl Effect {
             | Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
             | Effect::ModularCounters { what }
+            | Effect::BecomeBlocked { what }
             | Effect::Tap { what }
             | Effect::TapAndUntapLock { what }
             | Effect::TapAndLockWhileSourcePresent { what }
@@ -1116,8 +1141,9 @@ impl Effect {
                 Selector::EachPermanent(f) => Some(f),
                 Selector::CardsInZone { filter, .. } => Some(filter),
                 Selector::TargetFiltered { filter, .. } => Some(filter),
-                Selector::Take { inner, .. }
-                | Selector::TakeRandom { inner, .. } => sel_filter(inner),
+                Selector::Take { inner, .. } | Selector::TakeRandom { inner, .. } => {
+                    sel_filter(inner)
+                }
                 Selector::TakeWithSumCap { inner, .. } => sel_filter(inner),
                 Selector::RadianceGroup { subject } => sel_filter(subject),
                 Selector::CreaturesInCombatWith(subject) => sel_filter(subject),
@@ -1134,8 +1160,9 @@ impl Effect {
                     _ => None,
                 })
             }
-            Effect::RadianceDamage { subject, .. }
-            | Effect::SameNameDamage { subject, .. } => sel_filter(subject),
+            Effect::RadianceDamage { subject, .. } | Effect::SameNameDamage { subject, .. } => {
+                sel_filter(subject)
+            }
             Effect::CreateTokenBlocking { filter, .. }
             | Effect::DealDamageDivided { filter, .. }
             | Effect::DealDamageDividedEvenly { filter, .. }
@@ -1156,8 +1183,9 @@ impl Effect {
             }
             Effect::DealDamageEqualToPower { target, .. } => sel_filter(target),
             // Land hosing targets the land slot (Tide Shaper's kicked mode).
-            Effect::BecomeBasicLand { what, .. }
-            | Effect::GainLandType { what, .. } => sel_filter(what),
+            Effect::BecomeBasicLand { what, .. } | Effect::GainLandType { what, .. } => {
+                sel_filter(what)
+            }
             // The chosen creature (`source`) is the targeted object; the
             // per-creature/opponent recipients are not targeted.
             Effect::DealDamageEqualToPowerToEach { source, .. } => sel_filter(source),
@@ -1252,6 +1280,7 @@ impl Effect {
             Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
             | Effect::ModularCounters { what }
+            | Effect::BecomeBlocked { what }
             | Effect::Tap { what }
             | Effect::SetSaddled { what }
             | Effect::TapAndUntapLock { what }
@@ -1314,8 +1343,9 @@ impl Effect {
             }
             Effect::Drain { to, .. } => sel_filter(to),
             Effect::AddPoison { who, .. } => sel_filter(who),
-            Effect::DiscardChosen { from, .. }
-            | Effect::DiscardChosenFromRevealed { from, .. } => sel_filter(from),
+            Effect::DiscardChosen { from, .. } | Effect::DiscardChosenFromRevealed { from, .. } => {
+                sel_filter(from)
+            }
             Effect::BottomChosenFromHandAndDraw { from, .. } => sel_filter(from),
             Effect::SearchSplitOpponentChooses { opponent, .. } => sel_filter(opponent),
             Effect::RedirectSpellTargetToSelf { what } => sel_filter(what),
@@ -1343,12 +1373,15 @@ impl Effect {
             Effect::If { then, else_, .. } => then
                 .primary_target_filter()
                 .or_else(|| else_.primary_target_filter()),
-            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } => body.primary_target_filter(),
+            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } => {
+                body.primary_target_filter()
+            }
             Effect::OptionalTargets { body, .. } => body.primary_target_filter(),
             // The copy *source* is the targeted slot ("becomes a copy of
             // target land").
-            Effect::BecomeCopyOf { source, .. }
-            | Effect::BecomeCopyOfFor { source, .. } => sel_filter(source),
+            Effect::BecomeCopyOf { source, .. } | Effect::BecomeCopyOfFor { source, .. } => {
+                sel_filter(source)
+            }
             Effect::WhenTargetDiesThisTurn { filter, .. } => {
                 filter.as_ref().or(Some(&SelectionRequirement::Creature))
             }
@@ -1360,15 +1393,9 @@ impl Effect {
             // narrow target candidates). Mode-specific validation lives
             // in `target_filter_for_slot_in_mode`, which the cast paths
             // consult once the user/bot has picked a mode.
-            Effect::ChooseMode(modes) => modes
-                .iter()
-                .find_map(|e| e.primary_target_filter()),
-            Effect::ChooseN { modes, .. } => modes
-                .iter()
-                .find_map(|e| e.primary_target_filter()),
-            Effect::Escalate { modes, .. } => modes
-                .iter()
-                .find_map(|e| e.primary_target_filter()),
+            Effect::ChooseMode(modes) => modes.iter().find_map(|e| e.primary_target_filter()),
+            Effect::ChooseN { modes, .. } => modes.iter().find_map(|e| e.primary_target_filter()),
+            Effect::Escalate { modes, .. } => modes.iter().find_map(|e| e.primary_target_filter()),
             // MayDo wraps an inner effect — surface its filter so the
             // cast prompt narrows correctly when the inner effect needs
             // a target (e.g. "you may sacrifice [target permanent]").
@@ -1377,14 +1404,16 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. } => body.primary_target_filter(),
-            Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.primary_target_filter(),
-            Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => then.primary_target_filter(),
+            Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => {
+                body.primary_target_filter()
+            }
+            Effect::PayEnergy { then, .. }
+            | Effect::PayEnergyValue { then, .. }
+            | Effect::PayAnyEnergy { then } => then.primary_target_filter(),
             Effect::Process { then, .. } => then.primary_target_filter(),
             Effect::CollectEvidence { then, .. }
             | Effect::CollectEvidenceX { then }
-            | Effect::Forage { then } => {
-                then.primary_target_filter()
-            }
+            | Effect::Forage { then } => then.primary_target_filter(),
             Effect::WithSacrificedPt { body, .. }
             | Effect::WithTappedPower { body, .. }
             | Effect::OnYourNextSpellCastThisTurn { body }
@@ -1424,7 +1453,9 @@ impl Effect {
             Effect::Tribute { otherwise, .. } => otherwise.primary_target_filter(),
             Effect::TemptingOffer { body } => body.primary_target_filter(),
             Effect::PlayersMayAccept { otherwise, .. } => otherwise.primary_target_filter(),
-            Effect::Punisher { options, otherwise, .. } => options
+            Effect::Punisher {
+                options, otherwise, ..
+            } => options
                 .iter()
                 .find_map(|e| e.primary_target_filter())
                 .or_else(|| otherwise.primary_target_filter()),
@@ -1438,7 +1469,9 @@ impl Effect {
             // FlipCoin: surface the heads branch first (the active
             // outcome) — same pattern as If/IfRevealFromHand. Falls back
             // to the tails branch if heads has no target.
-            Effect::FlipCoin { on_heads, on_tails, .. } => on_heads
+            Effect::FlipCoin {
+                on_heads, on_tails, ..
+            } => on_heads
                 .primary_target_filter()
                 .or_else(|| on_tails.primary_target_filter()),
             // RollDie: surface the first results arm's filter as the
@@ -1477,7 +1510,9 @@ impl Effect {
 
     pub fn prefers_friendly_target(&self) -> bool {
         match self {
-            Effect::PumpPT { power, toughness, .. } => {
+            Effect::PumpPT {
+                power, toughness, ..
+            } => {
                 // Pump is friendly when the bonus is non-negative; debuffs
                 // (Tragic Slip, Last Gasp) want opponent targets.
                 Self::value_is_non_negative(power) && Self::value_is_non_negative(toughness)
@@ -1517,17 +1552,15 @@ impl Effect {
                     .collect::<Vec<_>>()
                     .as_slice(),
             ),
-            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } | Effect::Repeat { body, .. } => {
-                body.prefers_friendly_target()
-            }
+            Effect::DelayUntilWithCapture { body, .. }
+            | Effect::DelayUntil { body, .. }
+            | Effect::Repeat { body, .. } => body.prefers_friendly_target(),
             Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
-            | Effect::MayPayX { body, .. } => {
-                body.prefers_friendly_target()
-            }
+            | Effect::MayPayX { body, .. } => body.prefers_friendly_target(),
             // "TARGET player draws a card" is a gift — aim slot 0 at the
             // caster (Shadrix Silverquill's draw mode is the mode you take
             // yourself in the canonical two-pick line). A non-targeted
@@ -1554,7 +1587,10 @@ impl Effect {
             Effect::Move { to, .. } => matches!(
                 to,
                 ZoneDest::Hand(PlayerRef::You)
-                    | ZoneDest::Battlefield { controller: PlayerRef::You, .. }
+                    | ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        ..
+                    }
             ),
             _ => false,
         }
@@ -1580,14 +1616,18 @@ impl Effect {
             Effect::Move { to, .. } => matches!(
                 to,
                 ZoneDest::Hand(PlayerRef::You)
-                    | ZoneDest::Battlefield { controller: PlayerRef::You, .. }
+                    | ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        ..
+                    }
                     | ZoneDest::Exile
             ),
             Effect::Seq(v) => v.iter().any(|e| e.prefers_graveyard_target()),
             Effect::If { then, else_, .. } => {
                 then.prefers_graveyard_target() || else_.prefers_graveyard_target()
             }
-            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. }
+            Effect::DelayUntilWithCapture { body, .. }
+            | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. }
@@ -1605,8 +1645,7 @@ impl Effect {
             }
             // Granting flashback to a card always targets one in a graveyard
             // (Snapcaster Mage, Slickshot Lockpicker).
-            Effect::GrantFlashbackThisTurn { .. }
-            | Effect::GrantHarmonizeThisTurn { .. } => true,
+            Effect::GrantFlashbackThisTurn { .. } | Effect::GrantHarmonizeThisTurn { .. } => true,
             _ => false,
         }
     }
@@ -1667,10 +1706,16 @@ impl Effect {
             }
             Effect::Exile { .. } => format!("exile {}", self.target_phrase()),
             Effect::ExileUntilSourceLeaves { .. } => {
-                format!("exile {} until this leaves the battlefield", self.target_phrase())
+                format!(
+                    "exile {} until this leaves the battlefield",
+                    self.target_phrase()
+                )
             }
             Effect::ExileUntilOpponentMonarch { .. } => {
-                format!("exile {} until an opponent becomes the monarch", self.target_phrase())
+                format!(
+                    "exile {} until an opponent becomes the monarch",
+                    self.target_phrase()
+                )
             }
             Effect::DealDamage { amount, .. } => {
                 let t = self.target_phrase();
@@ -1682,8 +1727,9 @@ impl Effect {
             Effect::DealDamageExcessToController { amount, .. } => {
                 let t = self.target_phrase();
                 match amount {
-                    Value::Const(n) => format!(
-                        "deal {n} damage to {t}; excess is dealt to its controller"),
+                    Value::Const(n) => {
+                        format!("deal {n} damage to {t}; excess is dealt to its controller")
+                    }
                     _ => format!("deal damage to {t}; excess is dealt to its controller"),
                 }
             }
@@ -1709,7 +1755,9 @@ impl Effect {
                     _ => format!("put {kind:?} counter(s) on {t}"),
                 }
             }
-            Effect::PumpPT { power, toughness, .. } => {
+            Effect::PumpPT {
+                power, toughness, ..
+            } => {
                 let t = self.target_phrase();
                 match (power, toughness) {
                     (Value::Const(p), Value::Const(tn)) => {
@@ -1723,7 +1771,9 @@ impl Effect {
             | Effect::TapAndLockWhileSourcePresent { .. }
             | Effect::TapBlockedByAndSkipUntap { .. } => format!("tap {}", self.target_phrase()),
             Effect::PhaseOut { .. } => format!("phase out {}", self.target_phrase()),
-            Effect::RemoveFromCombat { .. } => format!("remove {} from combat", self.target_phrase()),
+            Effect::RemoveFromCombat { .. } => {
+                format!("remove {} from combat", self.target_phrase())
+            }
             Effect::Untap { .. } => format!("untap {}", self.target_phrase()),
             Effect::CounterSpell { .. }
             | Effect::CounterSpellDrawIfUnderpaid { .. }
@@ -1738,13 +1788,22 @@ impl Effect {
             Effect::ExchangeControl { .. } | Effect::ExchangeControlChoosing { .. } => {
                 "exchange control".into()
             }
-            Effect::CreateToken { count, definition, .. } => {
+            Effect::CreateToken {
+                count, definition, ..
+            } => {
                 let n = match count {
                     Value::Const(n) => *n,
                     _ => 1,
                 };
-                let count_word = if n <= 1 { "a".to_string() } else { n.to_string() };
-                let pt = if definition.card_types.contains(&crate::card::CardType::Creature) {
+                let count_word = if n <= 1 {
+                    "a".to_string()
+                } else {
+                    n.to_string()
+                };
+                let pt = if definition
+                    .card_types
+                    .contains(&crate::card::CardType::Creature)
+                {
                     format!(" {}/{}", definition.power, definition.toughness)
                 } else {
                     String::new()
@@ -1770,13 +1829,19 @@ impl Effect {
                 format!("grant {}", format!("{keyword:?}").to_lowercase())
             }
             Effect::GrantKeywords { keywords, .. } => {
-                let names: Vec<String> =
-                    keywords.iter().map(|k| format!("{k:?}").to_lowercase()).collect();
+                let names: Vec<String> = keywords
+                    .iter()
+                    .map(|k| format!("{k:?}").to_lowercase())
+                    .collect();
                 format!("grant {}", names.join(", "))
             }
             Effect::Draw { amount, .. } => match amount {
                 Value::Const(n) => {
-                    if *n == 1 { "draw a card".into() } else { format!("draw {n} cards") }
+                    if *n == 1 {
+                        "draw a card".into()
+                    } else {
+                        format!("draw {n} cards")
+                    }
                 }
                 _ => "draw cards".into(),
             },
@@ -1835,7 +1900,8 @@ impl Effect {
             Effect::Discover { .. } => "discover".into(),
             Effect::ExileTopUntilNonlandMayPlay { free, .. } => {
                 if *free {
-                    "exile from the top of your library until a nonland card; you may cast it".into()
+                    "exile from the top of your library until a nonland card; you may cast it"
+                        .into()
                 } else {
                     "exile from the top of your library until a nonland card; you may play it this turn".into()
                 }
@@ -1849,7 +1915,12 @@ impl Effect {
             Effect::NameOpponentCastLock => {
                 "opponents can't cast the named card until your next turn".into()
             }
-            Effect::ResetCreature { power, toughness, creature_types, .. } => {
+            Effect::ResetCreature {
+                power,
+                toughness,
+                creature_types,
+                ..
+            } => {
                 let ty = creature_types
                     .first()
                     .map(|t| format!("{t:?}").to_lowercase())
@@ -1862,20 +1933,23 @@ impl Effect {
                 }
             }
             Effect::BecomeColor { colors, .. } => {
-                let words: Vec<String> =
-                    colors.iter().map(|c| format!("{c:?}").to_lowercase()).collect();
+                let words: Vec<String> = colors
+                    .iter()
+                    .map(|c| format!("{c:?}").to_lowercase())
+                    .collect();
                 format!("{} becomes {}", self.target_phrase(), words.join(" and "))
             }
             Effect::BecomeCreatureType { creature_types, .. }
             | Effect::AddCreatureTypes { creature_types, .. } => {
-                let words: Vec<String> =
-                    creature_types.iter().map(|t| format!("{t:?}")).collect();
+                let words: Vec<String> = creature_types.iter().map(|t| format!("{t:?}")).collect();
                 format!("{} becomes a {}", self.target_phrase(), words.join(" "))
             }
             Effect::LoseAllAbilities { .. } => {
                 format!("{} loses all abilities", self.target_phrase())
             }
-            Effect::SetBasePT { power, toughness, .. } => {
+            Effect::SetBasePT {
+                power, toughness, ..
+            } => {
                 let t = self.target_phrase();
                 match (power, toughness) {
                     (Value::Const(p), Value::Const(tn)) => {
@@ -1907,7 +1981,8 @@ impl Effect {
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
             | Effect::MayPayLife { body, .. }
-            | Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. }
+            | Effect::DelayUntilWithCapture { body, .. }
+            | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::Reflexive { body }
             | Effect::ForEach { body, .. } => body.effect_short_text(),
@@ -1917,8 +1992,12 @@ impl Effect {
             Effect::Search { to, .. } => {
                 use crate::effect::ZoneDest;
                 match to {
-                    ZoneDest::Battlefield { .. } => "search your library for a card and put it onto the battlefield".into(),
-                    ZoneDest::Hand(_) => "search your library for a card and put it into your hand".into(),
+                    ZoneDest::Battlefield { .. } => {
+                        "search your library for a card and put it onto the battlefield".into()
+                    }
+                    ZoneDest::Hand(_) => {
+                        "search your library for a card and put it into your hand".into()
+                    }
                     _ => "search your library for a card".into(),
                 }
             }
@@ -1929,20 +2008,24 @@ impl Effect {
                 "add mana equal to the enchanted permanent's mana cost".into()
             }
             Effect::NameCardExileMatchingAllZones => {
-                "name a card; exile every copy from that player's hand, graveyard, and library".into()
+                "name a card; exile every copy from that player's hand, graveyard, and library"
+                    .into()
             }
             Effect::ChooseTypeRevealTopPartition { count } => match count {
                 Value::Const(n) => format!(
-                    "choose a card type, then reveal the top {n}; keep that type, bin the rest"),
+                    "choose a card type, then reveal the top {n}; keep that type, bin the rest"
+                ),
                 _ => "choose a card type, then reveal cards; keep that type, bin the rest".into(),
             },
             Effect::FertileImagination { per } => match per {
                 Value::Const(n) => format!(
-                    "choose a card type; make {n} Saprolings per matching card in target hand"),
+                    "choose a card type; make {n} Saprolings per matching card in target hand"
+                ),
                 _ => "choose a card type; make Saprolings per matching card in target hand".into(),
             },
             Effect::GuildFeud => {
-                "each side reveals three, deploys a creature; the two deployed creatures fight".into()
+                "each side reveals three, deploys a creature; the two deployed creatures fight"
+                    .into()
             }
             Effect::InfernalTutor => {
                 "reveal a hand card and tutor its twin (Hellbent: tutor any card)".into()
@@ -1969,7 +2052,8 @@ impl Effect {
             }
             Effect::AethermagesTouch { count } => match count {
                 Value::Const(n) => format!(
-                    "reveal the top {n}; put a creature onto the battlefield until your end step, bottom the rest"),
+                    "reveal the top {n}; put a creature onto the battlefield until your end step, bottom the rest"
+                ),
                 _ => "reveal cards; deploy a creature until your end step, bottom the rest".into(),
             },
             _ => String::new(),
@@ -2009,8 +2093,14 @@ impl Effect {
             | Effect::SacrificeHalf { .. }
             | Effect::AddPoison { .. } => true,
             // Cross-library searches target the searched player.
-            Effect::SearchPickedBy { who: PlayerRef::Target(_), .. } => true,
-            Effect::Search { who: PlayerRef::Target(_), .. } => true,
+            Effect::SearchPickedBy {
+                who: PlayerRef::Target(_),
+                ..
+            } => true,
+            Effect::Search {
+                who: PlayerRef::Target(_),
+                ..
+            } => true,
             // Divided damage allows player targets only when its filter can
             // match a player (Crackle with Power "any target"); creature-only
             // divide spells (Forked Bolt, Pyrokinesis) reject players.
@@ -2041,7 +2131,13 @@ impl Effect {
             // (Emrakul, the World Anew) takes a player; the plain
             // permanent-steal form doesn't.
             Effect::GainControl { what, .. } => {
-                matches!(what, Selector::ControlledBy { who: PlayerRef::Target(_), .. })
+                matches!(
+                    what,
+                    Selector::ControlledBy {
+                        who: PlayerRef::Target(_),
+                        ..
+                    }
+                )
             }
             // Targets a card to recast (graveyard/exile), not a player.
             Effect::CastWithoutPayingImmediate { .. } => false,
@@ -2050,13 +2146,20 @@ impl Effect {
             Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
             | Effect::ModularCounters { what }
+            | Effect::BecomeBlocked { what }
             | Effect::Tap { what }
             | Effect::SetSaddled { what }
             | Effect::TapAndUntapLock { what }
             | Effect::TapAndLockWhileSourcePresent { what }
             | Effect::TapBlockedByAndSkipUntap { what }
             | Effect::Untap { what, .. } => {
-                matches!(what, Selector::ControlledBy { who: PlayerRef::Target(_), .. })
+                matches!(
+                    what,
+                    Selector::ControlledBy {
+                        who: PlayerRef::Target(_),
+                        ..
+                    }
+                )
             }
             // Permanent-targeting effects: skip Player.
             Effect::Destroy { .. }
@@ -2114,7 +2217,8 @@ impl Effect {
                     then.accepts_player_target() || else_.accepts_player_target()
                 }
             }
-            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. }
+            Effect::DelayUntilWithCapture { body, .. }
+            | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
             Effect::MayDo { body, .. }
@@ -2127,9 +2231,9 @@ impl Effect {
             Effect::Process { then, .. } => then.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.accepts_player_target()),
-            Effect::FlipCoin { on_heads, on_tails, .. } => {
-                on_heads.accepts_player_target() || on_tails.accepts_player_target()
-            }
+            Effect::FlipCoin {
+                on_heads, on_tails, ..
+            } => on_heads.accepts_player_target() || on_tails.accepts_player_target(),
             Effect::FlipCoinsUntilLoseOrStop { tiers } => {
                 tiers.iter().any(|(_, e)| e.accepts_player_target())
             }
@@ -2203,9 +2307,10 @@ impl Effect {
             const PLAYER: SelectionRequirement = SelectionRequirement::Player;
             match s {
                 Selector::TargetFiltered { slot: s2, filter } if *s2 == slot => Some(filter),
-                Selector::ControlledBy { who: PlayerRef::Target(s2), .. } if *s2 == slot => {
-                    Some(&PLAYER)
-                }
+                Selector::ControlledBy {
+                    who: PlayerRef::Target(s2),
+                    ..
+                } if *s2 == slot => Some(&PLAYER),
                 // A bare `Player(Target(n))` selector declares slot `n` as a
                 // player target — e.g. Lord of the Void's "exile the top seven
                 // of that player's library" (`ExileTopOfLibrary { who:
@@ -2216,8 +2321,9 @@ impl Effect {
                 | Selector::RadianceGroup { subject: i }
                 | Selector::CreaturesInCombatWith(i)
                 | Selector::SharingNameWith(i) => sel_find(i, slot),
-                Selector::Take { inner, .. }
-                | Selector::TakeRandom { inner, .. } => sel_find(inner, slot),
+                Selector::Take { inner, .. } | Selector::TakeRandom { inner, .. } => {
+                    sel_find(inner, slot)
+                }
                 Selector::TakeWithSumCap { inner, .. } => sel_find(inner, slot),
                 _ => None,
             }
@@ -2263,7 +2369,11 @@ impl Effect {
                 Effect::Seq(v) => v.iter().find_map(|x| eff_find(x, slot, mode, kicked)),
                 // `If(SpellWasKicked, …)` chooses the branch that will
                 // actually resolve so cast-time target legality matches it.
-                Effect::If { cond: Predicate::SpellWasKicked, then, else_ } => {
+                Effect::If {
+                    cond: Predicate::SpellWasKicked,
+                    then,
+                    else_,
+                } => {
                     if kicked {
                         eff_find(then, slot, mode, kicked)
                     } else {
@@ -2274,10 +2384,14 @@ impl Effect {
                     .or_else(|| eff_find(else_, slot, mode, kicked)),
                 // A death-watch that is its slot's only mention declares the
                 // filter itself (Melira's "another target creature or artifact").
-                Effect::WhenTargetDiesThisTurn { filter: Some(f), slot: s, .. }
-                    if *s as u8 == slot => Some(f),
-                Effect::GainLifeWhenTargetDealsDamageThisTurn { slot: s }
-                    if *s as u8 == slot => Some(&SelectionRequirement::Creature),
+                Effect::WhenTargetDiesThisTurn {
+                    filter: Some(f),
+                    slot: s,
+                    ..
+                } if *s as u8 == slot => Some(f),
+                Effect::GainLifeWhenTargetDealsDamageThisTurn { slot: s } if *s as u8 == slot => {
+                    Some(&SelectionRequirement::Creature)
+                }
                 Effect::ForEach { selector, body } => {
                     sel_find(selector, slot).or_else(|| eff_find(body, slot, mode, kicked))
                 }
@@ -2340,19 +2454,20 @@ impl Effect {
                 },
                 Effect::MayDo { body, .. }
                 | Effect::CapTargetsAtX { body }
-            | Effect::TargetsExactlyX { body }
+                | Effect::TargetsExactlyX { body }
                 | Effect::CapTargetsAt { body, .. }
                 | Effect::MayPayX { body, .. }
                 | Effect::MayPay { body, .. }
                 | Effect::MayPayLife { body, .. } => eff_find(body, slot, mode, kicked),
-                Effect::CollectEvidence { then, .. }
-                | Effect::CollectEvidenceX { then } => eff_find(then, slot, mode, kicked),
-                Effect::IfRevealFromHand { then, else_, .. } => {
-                    eff_find(then, slot, mode, kicked).or_else(|| eff_find(else_, slot, mode, kicked))
+                Effect::CollectEvidence { then, .. } | Effect::CollectEvidenceX { then } => {
+                    eff_find(then, slot, mode, kicked)
                 }
-                Effect::FlipCoin { on_heads, on_tails, .. } => {
-                    eff_find(on_heads, slot, mode, kicked).or_else(|| eff_find(on_tails, slot, mode, kicked))
-                }
+                Effect::IfRevealFromHand { then, else_, .. } => eff_find(then, slot, mode, kicked)
+                    .or_else(|| eff_find(else_, slot, mode, kicked)),
+                Effect::FlipCoin {
+                    on_heads, on_tails, ..
+                } => eff_find(on_heads, slot, mode, kicked)
+                    .or_else(|| eff_find(on_tails, slot, mode, kicked)),
                 Effect::FlipCoinsUntilLoseOrStop { tiers } => tiers
                     .iter()
                     .find_map(|(_, e)| eff_find(e, slot, mode, kicked)),
@@ -2371,19 +2486,54 @@ impl Effect {
                 Effect::PayAnyEnergyDealDamage { to } => sel_find(to, slot),
                 // Each of slots 0..max_targets carries the divide filter, so
                 // the cast/auto-target machinery collects "up to N targets".
-                Effect::DealDamageDivided { filter, max_targets, .. }
-                | Effect::DealDamageDividedEvenly { filter, max_targets, .. }
-                | Effect::DistributeCounters { filter, max_targets, .. } => {
-                    if slot < *max_targets { Some(filter) } else { None }
+                Effect::DealDamageDivided {
+                    filter,
+                    max_targets,
+                    ..
+                }
+                | Effect::DealDamageDividedEvenly {
+                    filter,
+                    max_targets,
+                    ..
+                }
+                | Effect::DistributeCounters {
+                    filter,
+                    max_targets,
+                    ..
+                } => {
+                    if slot < *max_targets {
+                        Some(filter)
+                    } else {
+                        None
+                    }
                 }
                 // X targets — every slot carries the filter.
                 Effect::DestroyTargetsPolymorph { filter } => Some(filter),
-                Effect::SupportCounters { filter, max_targets } => {
-                    if slot < *max_targets { Some(filter) } else { None }
+                Effect::SupportCounters {
+                    filter,
+                    max_targets,
+                } => {
+                    if slot < *max_targets {
+                        Some(filter)
+                    } else {
+                        None
+                    }
                 }
-                Effect::ApplyToTargets { filter, max_targets, .. }
-                | Effect::DeliverUntoEvil { filter, max_targets, .. } => {
-                    if slot < *max_targets { Some(filter) } else { None }
+                Effect::ApplyToTargets {
+                    filter,
+                    max_targets,
+                    ..
+                }
+                | Effect::DeliverUntoEvil {
+                    filter,
+                    max_targets,
+                    ..
+                } => {
+                    if slot < *max_targets {
+                        Some(filter)
+                    } else {
+                        None
+                    }
                 }
                 // Finale of Promise — slot 0 instant, slot 1 sorcery, each a
                 // graveyard card of mana value X or less.
@@ -2407,9 +2557,9 @@ impl Effect {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::TapOrUntap { what } => sel_find(what, slot),
-                Effect::MayDoElse { body, else_, .. } => {
-                    body.target_filter_for_slot(slot).or_else(|| else_.target_filter_for_slot(slot))
-                }
+                Effect::MayDoElse { body, else_, .. } => body
+                    .target_filter_for_slot(slot)
+                    .or_else(|| else_.target_filter_for_slot(slot)),
                 Effect::PutIntoLibraryBeneathTop { what, .. } => sel_find(what, slot),
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
@@ -2420,15 +2570,13 @@ impl Effect {
                 Effect::DealDamageEqualToPower { source, target } => {
                     sel_find(source, slot).or_else(|| sel_find(target, slot))
                 }
-                Effect::DealDamageEqualToPowerToEach { source, targets, .. } => {
-                    sel_find(source, slot).or_else(|| sel_find(targets, slot))
-                }
+                Effect::DealDamageEqualToPowerToEach {
+                    source, targets, ..
+                } => sel_find(source, slot).or_else(|| sel_find(targets, slot)),
                 Effect::EachDealsDamageEqualToPower { dealers, target } => {
                     sel_find(dealers, slot).or_else(|| sel_find(target, slot))
                 }
-                Effect::ExchangeControl { a, b } => {
-                    sel_find(a, slot).or_else(|| sel_find(b, slot))
-                }
+                Effect::ExchangeControl { a, b } => sel_find(a, slot).or_else(|| sel_find(b, slot)),
                 Effect::RedirectNextDamage { target, to, .. } => {
                     sel_find(target, slot).or_else(|| sel_find(to, slot))
                 }
@@ -2445,7 +2593,9 @@ impl Effect {
                 | Effect::DiscardHalf { who, .. }
                 | Effect::SacrificeHalf { who, .. } => sel_find(who, slot),
                 Effect::SetLifeTotal { who, .. } => sel_find(who, slot),
-                Effect::Drain { from, to, .. } => sel_find(from, slot).or_else(|| sel_find(to, slot)),
+                Effect::Drain { from, to, .. } => {
+                    sel_find(from, slot).or_else(|| sel_find(to, slot))
+                }
                 // `amount` may read a target's power/toughness (Soul's Majesty
                 // draws equal to target creature's power).
                 Effect::Draw { who, amount }
@@ -2453,10 +2603,12 @@ impl Effect {
                 | Effect::ExileTopOfLibrary { who, amount, .. } => {
                     sel_find(who, slot).or_else(|| val_find(amount, slot))
                 }
-                Effect::MillUntilLands { who, .. }
-                | Effect::MillTwoRepeatSharedColor { who } => sel_find(who, slot),
-                Effect::ExileTopMintPerChosenColor { who, .. } => sel_find(who, slot)
-                    .or_else(|| implicit_player_for_bare_player_slot(who, slot)),
+                Effect::MillUntilLands { who, .. } | Effect::MillTwoRepeatSharedColor { who } => {
+                    sel_find(who, slot)
+                }
+                Effect::ExileTopMintPerChosenColor { who, .. } => {
+                    sel_find(who, slot).or_else(|| implicit_player_for_bare_player_slot(who, slot))
+                }
                 Effect::DestroyTargets { filter } => Some(filter),
                 Effect::Discard { who, .. } => sel_find(who, slot),
                 Effect::DiscardAnyNumber { who } => sel_find(who, slot),
@@ -2474,13 +2626,14 @@ impl Effect {
                 Effect::ManaClash { opponent } => sel_find(opponent, slot),
                 Effect::SetNoMaxHandSize { who } => sel_find(who, slot),
                 Effect::SetMaxHandSize { who, .. } => sel_find(who, slot),
-                Effect::Move { what, .. }
-                | Effect::MoveChosen { from: what, .. } => sel_find(what, slot),
+                Effect::Move { what, .. } | Effect::MoveChosen { from: what, .. } => {
+                    sel_find(what, slot)
+                }
                 Effect::Destroy { what }
                 | Effect::DestroyAndRemember { what }
                 | Effect::DestroyNoRegen { what }
                 | Effect::Unattach { what }
-                    | Effect::ExileIfWouldDieThisTurn { what }
+                | Effect::ExileIfWouldDieThisTurn { what }
                 | Effect::GrantFlashbackThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
                 | Effect::Exile { what }
@@ -2492,7 +2645,7 @@ impl Effect {
                 | Effect::CounterSpellToZone { what, .. }
                 | Effect::CounterSpellExileNameLock { what }
                 | Effect::CounterAbility { what }
-            | Effect::CounterSpellOrAbility { what }
+                | Effect::CounterSpellOrAbility { what }
                 | Effect::CounterUnlessPaid { what, .. }
                 | Effect::CounterUnless { what, .. }
                 | Effect::MakeSpellUncounterable { what }
@@ -2500,10 +2653,10 @@ impl Effect {
                 | Effect::ClearSuspected { what }
                 | Effect::GainControl { what, .. }
                 | Effect::GainControlWhileSourceRemains { what }
-            | Effect::GainControlWhileSourceTapped { what }
-            | Effect::GrantKeywordWhileSourceTapped { what, .. }
-            | Effect::SacrificeThenRevealUntilSharedType { what }
-            | Effect::CounterAbilityAndDestroySource { what }
+                | Effect::GainControlWhileSourceTapped { what }
+                | Effect::GrantKeywordWhileSourceTapped { what, .. }
+                | Effect::SacrificeThenRevealUntilSharedType { what }
+                | Effect::CounterAbilityAndDestroySource { what }
                 | Effect::WeldArtifacts { what } => sel_find(what, slot),
                 Effect::RevealLibraryNamedCountPunish { who, .. }
                 | Effect::AlternatingExileFromHand { who } => sel_find(who, slot),
@@ -2537,11 +2690,12 @@ impl Effect {
                 Effect::PhaseOut { what, .. }
                 | Effect::GrantSuspend { what, .. }
                 | Effect::ModularCounters { what }
+                | Effect::BecomeBlocked { what }
                 | Effect::Tap { what }
                 | Effect::SetSaddled { what }
                 | Effect::TapAndUntapLock { what }
-            | Effect::TapAndLockWhileSourcePresent { what }
-            | Effect::TapBlockedByAndSkipUntap { what }
+                | Effect::TapAndLockWhileSourcePresent { what }
+                | Effect::TapBlockedByAndSkipUntap { what }
                 | Effect::Untap { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))
                 }
@@ -2560,7 +2714,9 @@ impl Effect {
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
                     sel_find(what, slot)
                 }
-                Effect::RemoveAllCounters { what } | Effect::RemoveAnyCounter { what } => sel_find(what, slot),
+                Effect::RemoveAllCounters { what } | Effect::RemoveAnyCounter { what } => {
+                    sel_find(what, slot)
+                }
                 Effect::RemoveCountersUpTo { what, .. } => sel_find(what, slot),
                 Effect::AddKeywordCounter { what, .. }
                 | Effect::RemoveKeywordCounter { what, .. }
@@ -2592,7 +2748,7 @@ impl Effect {
                 | Effect::ExileSameNameAsTarget { what }
                 | Effect::ExileTaggedWithSource { what }
                 | Effect::ExileLinked { what }
-            | Effect::ExileUntilSourceLeaves { what, .. }
+                | Effect::ExileUntilSourceLeaves { what, .. }
                 | Effect::ExileReturnToOwnerNextEndStep { what, .. }
                 | Effect::ExileReturnNextEndStep { what }
                 | Effect::FlipUntilLossThenTokenCopies { what }
@@ -2630,8 +2786,7 @@ impl Effect {
                 | Effect::LockTargetNameUntilYourNextTurn { what }
                 | Effect::Explore { who: what } => sel_find(what, slot),
                 Effect::CantBlockSourceThisTurn { target } => sel_find(target, slot),
-                Effect::MoveAllCounters { from, to }
-                | Effect::MoveCounter { from, to, .. } => {
+                Effect::MoveAllCounters { from, to } | Effect::MoveCounter { from, to, .. } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::BecomeCopyOf { what, source, .. }
@@ -2668,8 +2823,11 @@ impl Effect {
                 | Effect::OnYourNextInstantSorceryThisTurn { body }
                 | Effect::OnYourNextNamedSpellThisTurn { body }
                 | Effect::OptionalTargets { body, .. }
-                | Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
-                Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => eff_find(then, slot, mode, kicked),
+                | Effect::DelayUntilWithCapture { body, .. }
+                | Effect::DelayUntil { body, .. } => eff_find(body, slot, mode, kicked),
+                Effect::PayEnergy { then, .. }
+                | Effect::PayEnergyValue { then, .. }
+                | Effect::PayAnyEnergy { then } => eff_find(then, slot, mode, kicked),
                 Effect::PayEnergyOrElse { otherwise, .. }
                 | Effect::PayEnergyOrElseValue { otherwise, .. }
                 | Effect::PayManaOrElse { otherwise, .. } => {
@@ -2680,7 +2838,11 @@ impl Effect {
                 Effect::PlayersMayAccept { otherwise, .. } => {
                     eff_find(otherwise, slot, mode, kicked)
                 }
-                Effect::Punisher { chooser, options, otherwise } => sel_find(chooser, slot)
+                Effect::Punisher {
+                    chooser,
+                    options,
+                    otherwise,
+                } => sel_find(chooser, slot)
                     .or_else(|| options.iter().find_map(|e| eff_find(e, slot, mode, kicked)))
                     .or_else(|| eff_find(otherwise, slot, mode, kicked)),
                 Effect::NthResolutionThisTurn { branches } => branches
@@ -2762,9 +2924,13 @@ impl Effect {
                 Some(m) => modes
                     .get(m)
                     .is_some_and(|e| e.target_slot_optional_x(slot, None, x)),
-                None => self.min_targets_in_mode(mode).is_some_and(|min| slot >= min),
+                None => self
+                    .min_targets_in_mode(mode)
+                    .is_some_and(|min| slot >= min),
             },
-            _ => self.min_targets_in_mode(mode).is_some_and(|min| slot >= min),
+            _ => self
+                .min_targets_in_mode(mode)
+                .is_some_and(|min| slot >= min),
         }
     }
 

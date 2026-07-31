@@ -3032,6 +3032,11 @@ pub struct EntersAsCopy {
     /// copiable characteristics are stamped, so they survive the rewrite.
     #[serde(default)]
     pub extra_card_types: Vec<CardType>,
+    /// CR 707.2 — "except it's legendary in addition to its other types"
+    /// (Sakashima the Impostor). Added after the copiable characteristics are
+    /// stamped.
+    #[serde(default)]
+    pub legendary: bool,
     /// CR 707.2e — "except it's not legendary." When true the copy strips the
     /// Legendary supertype so it doesn't trigger the legend rule (Mirror Image).
     #[serde(default)]

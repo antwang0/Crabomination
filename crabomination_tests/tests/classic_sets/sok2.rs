@@ -734,3 +734,109 @@ fn rushing_tide_zubera_needs_four_damage() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 3);
 }
+
+/// The Epic batch and the last SOK stragglers are all registered.
+#[test]
+fn sok2_batch4_cards_are_registered() {
+    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+        .map(|f| f().name)
+        .collect();
+    for f in [
+        catalog::eternal_dominion as fn() -> crabomination::card::CardDefinition,
+        catalog::neverending_torment,
+        catalog::undying_flames,
+        catalog::curtain_of_light,
+        catalog::michiko_konda_truth_seeker,
+        catalog::measure_of_wickedness,
+        catalog::iname_as_one,
+        catalog::sakashima_the_impostor,
+    ] {
+        let name = f().name;
+        assert!(names.contains(&name), "{name} is not registered");
+    }
+}
+
+/// Undying Flames digs past lands and burns for the first nonland's mana value.
+#[test]
+fn undying_flames_burns_for_the_first_nonland() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::serra_angel()); // MV 5 — deepest
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest()); // top
+    let spell = g.add_card_to_hand(0, catalog::undying_flames());
+    g.players[0].mana_pool.add(Color::Red, 6);
+    cast(&mut g, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 15);
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 0).count(), 3);
+}
+
+/// Curtain of Light blanks an unblocked attacker's damage.
+#[test]
+fn curtain_of_light_blocks_an_unblocked_attacker() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(atk).unwrap().summoning_sick = false;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: atk, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    let spell = g.add_card_to_hand(0, catalog::curtain_of_light());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.priority.player_with_priority = 0;
+    cast(&mut g, spell, Some(Target::Permanent(atk)));
+    let life = g.players[0].life;
+    for _ in 0..8 {
+        if g.step == TurnStep::EndCombat || g.perform_action(GameAction::PassPriority).is_err() {
+            break;
+        }
+    }
+    assert_eq!(g.players[0].life, life, "the attacker is blocked by nothing");
+}
+
+/// Michiko Konda punishes any damage an opponent's source deals you.
+#[test]
+fn michiko_konda_taxes_damage_dealt_to_you() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::michiko_konda_truth_seeker());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    cast(&mut g, bolt, Some(Target::Player(0)));
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 1).count(),
+        0,
+        "the burn cost them their board"
+    );
+}
+
+/// Measure of Wickedness passes to an opponent when a card hits your graveyard.
+#[test]
+fn measure_of_wickedness_changes_hands() {
+    let mut g = two_player_game();
+    let measure = g.add_card_to_battlefield(0, catalog::measure_of_wickedness());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mut ev = vec![];
+    g.destroy_permanent(bear, false, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(measure).unwrap().controller, 1);
+}
+
+/// Sakashima enters as a copy but keeps its own name.
+#[test]
+fn sakashima_copies_but_keeps_its_name() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let saka = g.add_card_to_hand(0, catalog::sakashima_the_impostor());
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    cast(&mut g, saka, Some(Target::Permanent(angel)));
+    let cp = g.computed_permanent(saka).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert_eq!(g.battlefield_find(saka).unwrap().definition.name, "Sakashima the Impostor");
+}

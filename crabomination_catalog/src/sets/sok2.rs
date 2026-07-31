@@ -1746,3 +1746,216 @@ pub fn rushing_tide_zubera() -> CardDefinition {
         )
     }
 }
+
+// ── Epic (CR 702.50) ────────────────────────────────────────────────────────
+
+/// Eternal Dominion — {7}{U}{U}{U} Epic sorcery. Rip a permanent out of an
+/// opponent's library, every upkeep, forever.
+pub fn eternal_dominion() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Epic],
+        ..sorcery(
+            "Eternal Dominion",
+            cost(&[generic(7), u(), u(), u()]),
+            Effect::SearchPickedBy {
+                who: PlayerRef::Target(0),
+                picker: PlayerRef::You,
+                filter: R::Artifact.or(R::Creature).or(R::Enchantment).or(R::Land),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        )
+    }
+}
+
+/// Neverending Torment — {4}{B}{B} Epic sorcery. Exiles a hand's worth of a
+/// library, every upkeep, forever.
+pub fn neverending_torment() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Epic],
+        ..sorcery(
+            "Neverending Torment",
+            cost(&[generic(4), b(), b()]),
+            Effect::Repeat {
+                count: hand(),
+                body: Box::new(Effect::SearchPickedBy {
+                    who: PlayerRef::Target(0),
+                    picker: PlayerRef::You,
+                    filter: R::Any,
+                    to: ZoneDest::Exile,
+                }),
+            },
+        )
+    }
+}
+
+/// Undying Flames — {4}{R}{R} Epic sorcery. Digs to the first nonland card and
+/// burns for its mana value, every upkeep, forever.
+pub fn undying_flames() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Epic],
+        ..sorcery(
+            "Undying Flames",
+            cost(&[generic(4), r(), r()]),
+            Effect::Seq(vec![
+                Effect::ExileTopUntilNonland { who: PlayerRef::You },
+                Effect::DealDamage { to: target_any(), amount: Value::LastExiledManaValue },
+            ]),
+        )
+    }
+}
+
+// ── The rest ────────────────────────────────────────────────────────────────
+
+/// Curtain of Light — {1}{W} combat trick. An unblocked attacker becomes
+/// blocked, and you replace the card.
+pub fn curtain_of_light() -> CardDefinition {
+    CardDefinition {
+        cast_only_after_blockers: true,
+        ..instant(
+            "Curtain of Light",
+            cost(&[generic(1), w()]),
+            Effect::Seq(vec![
+                Effect::BecomeBlocked { what: target_filtered(R::Creature.and(R::IsUnblocked)) },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+        )
+    }
+}
+
+/// Michiko Konda, Truth Seeker — {3}{W} 2/2. Any damage an opponent's source
+/// deals you costs them a permanent. Approximation: the sacrifice hits every
+/// opponent rather than only the damage's controller (exact at two players).
+pub fn michiko_konda_truth_seeker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::OpponentSourceDamagedYou),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::ONE,
+                filter: R::Any,
+            },
+        }],
+        ..legend(
+            "Michiko Konda, Truth Seeker",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Human, CreatureType::Advisor],
+            2,
+            2,
+        )
+    }
+}
+
+/// Measure of Wickedness — {3}{B} Enchantment. A hot potato that costs 8 life
+/// if you're still holding it at your end step.
+pub fn measure_of_wickedness() -> CardDefinition {
+    CardDefinition {
+        name: "Measure of Wickedness",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            crate::card::TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::ONE,
+                        filter: R::HasName("Measure of Wickedness".into()),
+                    },
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(8) },
+                ]),
+            },
+            crate::card::TriggeredAbility {
+                event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::YourControl),
+                // Approximation: the printed "target opponent" is modeled as
+                // your opponent (exact at two players).
+                effect: Effect::GainControl {
+                    what: Selector::This,
+                    to: Some(PlayerRef::EachOpponent),
+                    duration: Duration::Permanent,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Iname as One — {8}{B}{B}{G}{G} 8/8. Fetches a Spirit on the way in and
+/// reanimates one on the way out.
+pub fn iname_as_one() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            crate::card::TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                    .with_filter(Predicate::CastFromHand),
+                effect: Effect::MayDo {
+                    description: "Search your library for a Spirit permanent card?".into(),
+                    body: Box::new(Effect::Search {
+                        who: PlayerRef::You,
+                        filter: R::PermanentCard.and(R::HasCreatureType(CreatureType::Spirit)),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    }),
+                },
+            },
+            crate::effect::shortcut::on_dies(Effect::MayDo {
+                description: "Exile Iname to reanimate a Spirit?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Exile { what: Selector::This },
+                    Effect::Move {
+                        what: target_filtered(
+                            R::InYourGraveyard
+                                .and(R::PermanentCard)
+                                .and(R::HasCreatureType(CreatureType::Spirit)),
+                        ),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    },
+                ])),
+            }),
+        ],
+        ..legend(
+            "Iname as One",
+            cost(&[generic(8), b(), b(), g(), g()]),
+            vec![CreatureType::Spirit],
+            8,
+            8,
+        )
+    }
+}
+
+/// Sakashima the Impostor — {2}{U}{U} 3/1 that enters as a copy of any
+/// creature, keeping its own name and a bounce escape hatch.
+pub fn sakashima_the_impostor() -> CardDefinition {
+    CardDefinition {
+        enters_as_copy: Some(crate::card::EntersAsCopy {
+            filter: R::Creature,
+            keep_name: true,
+            legendary: true,
+            extra_activated: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(2), u(), u()]),
+                effect: Effect::AtNextEndStep {
+                    body: Box::new(Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                    }),
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..legend(
+            "Sakashima the Impostor",
+            cost(&[generic(2), u(), u()]),
+            vec![CreatureType::Human, CreatureType::Rogue],
+            3,
+            1,
+        )
+    }
+}

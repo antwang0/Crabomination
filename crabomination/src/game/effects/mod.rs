@@ -7890,6 +7890,34 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeBlocked { what } => {
+                // CR 509.1h — the attacker becomes blocked with no blockers
+                // assigned; the combat resolver's `blocked_attackers` set makes
+                // it deal no damage (absent trample).
+                for ent in self.resolve_selector(what, ctx) {
+                    let EntityRef::Permanent(id) = ent else { continue };
+                    if self.attacking.iter().any(|a| a.attacker == id)
+                        && !self.blocked_attackers.contains(&id)
+                    {
+                        self.blocked_attackers.push(id);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ExileTopUntilNonland { who } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                while let Some(top) = self.players[seat].library.last().map(|c| c.id) {
+                    let is_land =
+                        self.players[seat].library.last().is_some_and(|c| c.definition.is_land());
+                    self.move_card_to(top, &ZoneDest::Exile, ctx, events);
+                    if !is_land {
+                        break;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReturnAnyNumberToHand { filter } => {
                 // Sweep. The controller picks any subset (min 0);
                 // the count feeds `Value::PermanentsReturnedThisEffect`.

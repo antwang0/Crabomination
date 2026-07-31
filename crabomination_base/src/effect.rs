@@ -657,6 +657,10 @@ pub enum Value {
     /// between independent resolutions, so a `Seq([Discard, Draw])`
     /// reads exactly the discards from this resolution.
     CardsDiscardedThisEffect,
+    /// Mana value of the last card exiled within the current resolution
+    /// (Undying Flames' "damage equal to that card's mana value"). 0 when
+    /// nothing was exiled. Reset between independent resolutions.
+    LastExiledManaValue,
     /// Number of permanents returned to hand by an
     /// `Effect::ReturnAnyNumberToHand` earlier in the current resolution — the
     /// Sweep count. Reset between independent resolutions.
@@ -2419,6 +2423,12 @@ pub enum EventScope {
     /// printed "other than this <permanent>" exclusion (Talon of Pain): the
     /// damage event's own source must not be the trigger's source.
     YourOtherSourceDamagedOpponent,
+    /// The mirror of `YourSourceDamagedOpponent`: a `PlayerDamaged` event whose
+    /// source is controlled by an opponent of the trigger's controller and
+    /// whose damaged player *is* the trigger's controller ("whenever a source
+    /// an opponent controls deals damage to you" — Michiko Konda). The damage
+    /// dealer's controller is bound as the trigger player.
+    OpponentSourceDamagedYou,
     /// A permanent **you control** (any, including the source) becomes the
     /// target of a spell or ability an **opponent** controls. Used with
     /// `EventKind::BecameTarget` — Battle Mammoth. Unlike SelfSource, the
@@ -3472,6 +3482,10 @@ pub enum Effect {
     /// stay in exile." The impulse-until-nonland family (Territorial Bruntar's
     /// landfall, Solstice Revelations) — unlike `Discover`, there's no MV cap
     /// on the stop and the passed-over cards aren't bottomed.
+    /// "Exile cards from the top of `who`'s library until you exile a nonland
+    /// card." The exiled cards stay in exile; the stopping card's mana value
+    /// is published as `Value::LastExiledManaValue` (Undying Flames).
+    ExileTopUntilNonland { who: PlayerRef },
     ExileTopUntilNonlandMayPlay {
         who: PlayerRef,
         duration: crate::card::MayPlayDuration,
@@ -4471,6 +4485,10 @@ pub enum Effect {
     /// (stacking across activations); cleared at cleanup. Distinct from
     /// `GrantExtraPlusOneCountersThisTurn`, which amplifies counters *placed*.
     CreaturesEnterWithExtraCounterThisTurn { who: PlayerRef },
+    /// CR 509.1h — "target unblocked attacking creature becomes blocked."
+    /// Marks the attacker blocked with no blockers assigned, so (absent
+    /// trample) it deals no combat damage. Curtain of Light.
+    BecomeBlocked { what: Selector },
     /// Sweep (CR 207.2c ability word) — "Return any number of `filter` you
     /// control to their owner's hand." The controller picks the subset (min 0);
     /// the count is published as `Value::PermanentsReturnedThisEffect` for a

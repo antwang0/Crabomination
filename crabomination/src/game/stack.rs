@@ -592,6 +592,7 @@ impl GameState {
             | EventScope::YourCreatureTargeted
             | EventScope::EnchantedBySource
             | EventScope::YourSourceDamagedOpponent
+            | EventScope::OpponentSourceDamagedYou
             | EventScope::YourOtherSourceDamagedOpponent
             | EventScope::YouTapped => false, // event-based
             EventScope::ControllerAttackedByOpponent
