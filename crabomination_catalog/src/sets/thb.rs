@@ -114,6 +114,7 @@ pub fn medomais_prophecy() -> CardDefinition {
                 2,
                 Effect::NameCard {
                     what: Selector::This,
+                    restrict_to: None,
                 },
             ),
             (

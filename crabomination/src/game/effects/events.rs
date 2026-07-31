@@ -116,6 +116,7 @@ pub(crate) fn event_matches_spec(
             EventKind::PermanentReturnedToHand,
             GameEvent::PermanentReturnedToHand { .. },
         ) => true,
+        (EventKind::SpellCountered, GameEvent::SpellCountered { .. }) => true,
         (EventKind::EnergyGained, GameEvent::EnergyGained { .. }) => true,
         (EventKind::DiscardedOneOrMore, GameEvent::DiscardedBatch { .. }) => true,
         (EventKind::Expend, GameEvent::Expended { .. }) => true,
@@ -405,13 +406,21 @@ pub(crate) fn event_matches_spec(
         // Player-actor events carry the seat directly; object events (a
         // permanent entering — Blood Speaker) fall back to the subject's
         // controller.
-        EventScope::FromYourGraveyard => event_actor(state, event)
-            .or_else(|| {
-                event_card(event)
-                    .and_then(|cid| state.battlefield_find(cid))
-                    .map(|c| c.controller)
-            })
-            .is_some_and(|p| p == source.owner),
+        // The graveyard walk already pins the source to its owner's graveyard;
+        // this half asks whose event it was. A spec that explicitly demands an
+        // opponent actor (Punishing Fire's "whenever an opponent gains life")
+        // wants the opposite side, so defer entirely to the `actor_is_opponent`
+        // rider below.
+        EventScope::FromYourGraveyard => {
+            spec.actor_is_opponent
+                || event_actor(state, event)
+                    .or_else(|| {
+                        event_card(event)
+                            .and_then(|cid| state.battlefield_find(cid))
+                            .map(|c| c.controller)
+                    })
+                    .is_some_and(|p| p == source.owner)
+        }
         EventScope::YourSourceDamagedOpponent => matches!(
             event,
             GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
@@ -606,6 +615,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::Expended { player, .. }
         | GameEvent::CoinFlipWon { player }
         | GameEvent::PermanentReturnedToHand { player, .. }
+        | GameEvent::SpellCountered { player, .. }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
         | GameEvent::RingTempted { player, .. }
@@ -694,7 +704,8 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::Transformed { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Mutated { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::TokenCreated { card_id } => Some(EntityRef::Permanent(*card_id)),
-        GameEvent::PermanentReturnedToHand { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::PermanentReturnedToHand { card_id, .. }
+        | GameEvent::SpellCountered { card_id, .. } => Some(EntityRef::Card(*card_id)),
         // DSK — bind `Selector::TriggerSource` to the turned-up permanent
         // ("put a +1/+1 counter on it" — Sumala Sentry) and to the Room that
         // was fully unlocked.

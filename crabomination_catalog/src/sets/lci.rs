@@ -4158,6 +4158,7 @@ pub fn sorcerous_spyglass() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![etb(Effect::NameCard {
             what: Selector::This,
+            restrict_to: None,
         })],
         ..Default::default()
     }

@@ -269,6 +269,7 @@ pub fn nevermore() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::NameCard {
                 what: Selector::This,
+                restrict_to: None,
             },
         }],
         static_abilities: vec![StaticAbility {

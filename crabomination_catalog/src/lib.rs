@@ -100,6 +100,7 @@ pub use sets::mkm::*;
 pub use sets::mod_set::*;
 pub use sets::bfz::*;
 pub use sets::zen2::*;
+pub use sets::zen3::*;
 pub use sets::wwk::*;
 pub use sets::wwk2::*;
 pub use sets::ogw::*;

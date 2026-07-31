@@ -11983,6 +11983,33 @@ impl GameState {
             }
         }
 
+        // Pre-flight tap-permanents gate (CR 602.5b "Tap N untapped [filter]
+        // you control:" — Lullmage Mentor). The tap is paid below, after mana.
+        let tap_cost_picks: Vec<CardId> = match ability.tap_permanents_cost.as_ref() {
+            Some((filter, count)) => {
+                let mut cands: Vec<&crate::card::CardInstance> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == p
+                            && !c.tapped
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                p,
+                                Some(card_id),
+                            )
+                    })
+                    .collect();
+                if cands.len() < *count as usize {
+                    return Err(GameError::SelectionRequirementViolated);
+                }
+                cands.sort_by_key(|c| (c.definition.is_land(), c.definition.cost.cmc()));
+                cands.iter().take(*count as usize).map(|c| c.id).collect()
+            }
+            None => Vec::new(),
+        };
+
         // Pre-flight "Remove X [kind] counters" gate (Arcbound Javelineer).
         if let Some(kind) = ability.remove_counter_x.as_ref() {
             let have = self
@@ -12470,6 +12497,16 @@ impl GameState {
             let mut die_evs = self.remove_to_graveyard_with_triggers(card_id);
             events.append(&mut die_evs);
         }
+        // Bounce-self-as-cost (CR 602.5b "…and return it to its owner's hand:"
+        // — Magosi, the Waterveil). Paid after tap/mana/counter costs, so the
+        // ability is already on its way to the stack when the source leaves.
+        if ability.bounce_self_cost
+            && let Some(snap) = self.battlefield_find(card_id).cloned()
+        {
+            self.leaves_bf_lki.insert(card_id, snap);
+            let mut evs = self.remove_from_battlefield_to_hand(card_id);
+            events.append(&mut evs);
+        }
 
         // Return-self-as-cost: with tap/mana/life paid, bounce the source
         // back to its owner's hand (CR 602.5b). Applied before the effect
@@ -12544,6 +12581,19 @@ impl GameState {
             c.remove_counters(kind, count);
             if kind == crate::card::CounterType::Oil {
                 self.players[ctrl].oil_activity_this_turn = true;
+            }
+        }
+
+        // Tap-permanents-as-cost (CR 602.5b): tap the pre-flight picks now that
+        // tap/mana/counter payments have succeeded (Lullmage Mentor).
+        for id in &tap_cost_picks {
+            if let Some(c) = self.battlefield_find_mut(*id) {
+                c.tapped = true;
+                events.push(GameEvent::PermanentTapped {
+                    card_id: *id,
+                    actor: Some(p),
+                    as_attacker: false,
+                });
             }
         }
 

@@ -1299,6 +1299,8 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Supply => "Supply",
         CounterType::Unlock => "Unlock",
         CounterType::Palliation => "Palliation",
+        CounterType::Eon => "Eon",
+        CounterType::Blaze => "Blaze",
         CounterType::Filibuster => "Filibuster",
     }
 }
@@ -1345,6 +1347,8 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Bait => "Fishing Pole tally — removed on untap to make a 1/1 Fish.",
         CounterType::Supply => "Stocking the Pantry tally — remove one to draw a card.",
         CounterType::Unlock => "Cryptex tally — one per collect-evidence; sacrifice for its payoff at five or more.",
+        CounterType::Blaze => "Obsidian Fireheart's fire — the land deals 1 damage to its controller each upkeep, for as long as it burns.",
+        CounterType::Eon => "Magosi, the Waterveil tally — banked by skipping a turn; cash it in for an extra turn.",
         CounterType::Palliation => "Palliation Accord tally — one per opponent's creature tapped; remove one to prevent 1 damage to you.",
         CounterType::Filibuster => "Azor's Elocutors tally — one each upkeep; at five you win the game (removed when a source deals damage to you).",
         _ => return None,

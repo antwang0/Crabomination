@@ -1949,6 +1949,9 @@ pub enum DecisionWire {
         /// first) for the client to offer as quick picks.
         #[serde(default)]
         suggestions: Vec<String>,
+        /// CR 201.4a — the restricted namespace's noun ("land"), if any.
+        #[serde(default)]
+        restriction: Option<String>,
     },
     /// CR 903.9b commander redirect — owner may send the commander to
     /// the command zone instead of `would_be`.
@@ -2106,11 +2109,14 @@ impl From<&Decision> for DecisionWire {
                     suggestions: suggestions.clone(),
                 }
             }
-            Decision::NameCard { source, source_name, suggestions } => DecisionWire::NameCard {
-                source: *source,
-                source_name: source_name.clone(),
-                suggestions: suggestions.clone(),
-            },
+            Decision::NameCard { source, source_name, suggestions, restriction } => {
+                DecisionWire::NameCard {
+                    source: *source,
+                    source_name: source_name.clone(),
+                    suggestions: suggestions.clone(),
+                    restriction: restriction.clone(),
+                }
+            }
             Decision::CommanderRedirect { commander, would_be } => {
                 DecisionWire::CommanderRedirect {
                     commander: *commander,
@@ -2295,6 +2301,7 @@ pub enum GameEventWire {
     TurnedFaceUp { card_id: CardId },
     TokenCreated { card_id: CardId },
     PermanentReturnedToHand { card_id: CardId, player: usize },
+    SpellCountered { card_id: CardId, player: usize },
     CardMilled { player: usize, card_id: CardId },
     ManifestedDread { player: usize, milled: CardId },
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
@@ -2536,6 +2543,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::TokenCreated { card_id } => {
                 GameEventWire::TokenCreated { card_id: *card_id }
+            }
+            GameEvent::SpellCountered { card_id, player } => {
+                GameEventWire::SpellCountered { card_id: *card_id, player: *player }
             }
             GameEvent::PermanentReturnedToHand { card_id, player } => {
                 GameEventWire::PermanentReturnedToHand { card_id: *card_id, player: *player }
@@ -2817,6 +2827,9 @@ impl GameEventWire {
             E::TokenCreated { card_id } => format!("token {} created", name(*card_id)),
             E::PermanentReturnedToHand { card_id, player } => {
                 format!("{} returned to P{player}'s hand", name(*card_id))
+            }
+            E::SpellCountered { card_id, player } => {
+                format!("{} countered {}", pn(*player), name(*card_id))
             }
             E::CardMilled { player, card_id } => {
                 format!("{} milled {}", pn(*player), name(*card_id))

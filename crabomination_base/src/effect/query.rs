@@ -353,6 +353,7 @@ impl Effect {
             Effect::ReturnGraveyardCreaturesUpToTotalManaValue { .. } => false,
             Effect::CommandTheDreadhorde => false,
             Effect::LookTopMayRevealMatchToHandElseBottom { .. } => false,
+            Effect::RevealHandDiscardAllMatching { who, .. } => player_has_target(who),
             Effect::NameCardTargetDiscardsMatching
             | Effect::NameCardExileMatchingAllZones
             | Effect::FertileImagination { .. }
@@ -1003,7 +1004,7 @@ impl Effect {
                 sel_has_target(from) || value_has_target(count)
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
-            Effect::NameCard { what } => sel_has_target(what),
+            Effect::NameCard { what, .. } => sel_has_target(what),
             Effect::LockTargetNameUntilYourNextTurn { what } => sel_has_target(what),
             Effect::NameOpponentCastLock => false,
             Effect::WinGame { who } | Effect::LoseGame { who } => player_has_target(who),
@@ -1137,7 +1138,11 @@ impl Effect {
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
-            Effect::MustBlockTarget { attacker, .. } => sel_filter(attacker),
+            // Either slot can be the target: Feral Contest picks the attacker,
+            // Turntimber Basilisk's landfall picks the lured blocker.
+            Effect::MustBlockTarget { blocker, attacker } => {
+                sel_filter(blocker).or_else(|| sel_filter(attacker))
+            }
             Effect::DealDamageEqualToPower { target, .. } => sel_filter(target),
             // Land hosing targets the land slot (Tide Shaper's kicked mode).
             Effect::BecomeBasicLand { what, .. }
@@ -1396,7 +1401,7 @@ impl Effect {
             | Effect::DoubleCountersOnEach { what, .. }
             | Effect::DoubleAllCountersOn { what }
             | Effect::NameCreatureType { what }
-            | Effect::NameCard { what }
+            | Effect::NameCard { what, .. }
             | Effect::LockTargetNameUntilYourNextTurn { what }
             | Effect::Explore { who: what } => sel_filter(what),
             Effect::MoveAllCounters { from, to } | Effect::MoveCounter { from, to, .. } => {
@@ -2604,7 +2609,7 @@ impl Effect {
                 | Effect::DoubleCountersOnEach { what, .. }
                 | Effect::DoubleAllCountersOn { what }
                 | Effect::NameCreatureType { what }
-                | Effect::NameCard { what }
+                | Effect::NameCard { what, .. }
                 | Effect::LockTargetNameUntilYourNextTurn { what }
                 | Effect::Explore { who: what } => sel_find(what, slot),
                 Effect::CantBlockSourceThisTurn { target } => sel_find(target, slot),

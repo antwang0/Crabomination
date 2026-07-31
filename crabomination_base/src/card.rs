@@ -541,6 +541,12 @@ pub enum CounterType {
     /// Palliation counter — Palliation Accord accrues one whenever an opponent's
     /// creature becomes tapped; remove one to prevent 1 damage to you.
     Palliation,
+    /// Eon counter — Magosi, the Waterveil banks one when you skip a turn and
+    /// cashes it in for an extra turn.
+    Eon,
+    /// Blaze counter — Obsidian Fireheart sets a land on fire; the land keeps
+    /// burning its controller for 1 each upkeep, source or no source.
+    Blaze,
 }
 
 /// Every zone a card can occupy.
@@ -1931,6 +1937,11 @@ pub enum SelectionRequirement {
     /// NamedBySource, .. }`. Falls back to "no match" when the source has
     /// not named a card.
     NamedBySource,
+    /// True when the candidate's card types include the type the resolving
+    /// source chose via `Effect::ChooseCardTypeForSource` (World Queller's
+    /// "each player sacrifices a permanent of their choice of that type").
+    /// Falls back to "no match" when the source hasn't chosen one.
+    IsSourceChosenCardType,
     /// True when the candidate's mana value is ≤ the number of permanents
     /// the evaluating player controls that match the inner filter. Powers
     /// "with mana value less than or equal to the number of [X] you

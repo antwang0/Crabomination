@@ -13991,6 +13991,7 @@ pub fn silverquill_silencer() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::NameCard {
                 what: Selector::This,
+                restrict_to: None,
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)

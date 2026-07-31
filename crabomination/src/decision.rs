@@ -158,6 +158,10 @@ pub enum Decision {
         /// the targeted hand / library). Empty when nothing is known.
         #[serde(default)]
         suggestions: Vec<String>,
+        /// CR 201.4a — a noun naming the restricted namespace ("land"), when
+        /// the card only allows names with certain characteristics.
+        #[serde(default)]
+        restriction: Option<String>,
     },
 
     /// CR 705 — flip a coin. The decider answers with `Bool(true)` for

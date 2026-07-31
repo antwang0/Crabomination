@@ -2499,6 +2499,8 @@ impl GameState {
             pl.life_lost_this_turn = 0;
             pl.creatures_that_damaged_me_this_turn.clear();
             pl.lands_entered_this_turn = 0;
+            pl.creature_spell_countered_by_opponent_this_turn = false;
+            pl.noncreature_destroyed_by_opponent_this_turn = false;
             pl.prowl_types_this_turn.clear();
             pl.prowl_any_type_this_turn = false;
             // Veil of Summer's "this turn" riders clear at the turn boundary
@@ -4242,6 +4244,40 @@ impl GameState {
                 );
             }
         }
+    }
+
+    /// Return a permanent to its owner's hand, unwinding combat/attachments and
+    /// emitting the leave-the-battlefield events. Used by cost lines that bounce
+    /// the source (`ActivatedAbility::bounce_self_cost` — Magosi).
+    pub fn remove_from_battlefield_to_hand(&mut self, id: CardId) -> Vec<GameEvent> {
+        let mut events = Vec::new();
+        let Some(mut card) = Self::take_card(&mut self.battlefield, id) else {
+            return events;
+        };
+        self.remove_effects_from_source(id);
+        self.remove_from_combat(id);
+        self.collect_leaver_counters(&card);
+        let owner = card.owner;
+        // CR 122.2 / 702.139 — counters vanish on the zone change, and the
+        // "a permanent left the battlefield this turn" watchers latch.
+        card.counters.clear();
+        card.keyword_counters.clear();
+        if card.controller < self.players.len() {
+            self.players[card.controller].permanent_left_battlefield_this_turn = true;
+        }
+        if !card.definition.is_land() {
+            self.nonland_permanent_left_bf_this_turn = true;
+        }
+        let leaver = card.definition.is_creature().then_some((card.id, card.controller));
+        if !card.is_token {
+            self.players[owner].hand.push(card);
+        }
+        self.on_left_battlefield(id, &mut events);
+        if let Some((card_id, controller)) = leaver {
+            events.push(GameEvent::CreatureLeftWithoutDying { card_id, controller });
+        }
+        events.push(GameEvent::PermanentReturnedToHand { card_id: id, player: owner });
+        events
     }
 
     pub fn remove_from_battlefield_to_exile(&mut self, id: CardId) {

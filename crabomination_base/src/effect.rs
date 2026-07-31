@@ -1224,6 +1224,16 @@ pub enum Predicate {
     /// `Player.creatures_entered_this_turn`, so a creature that has since left
     /// the battlefield still counts.
     CreatureEnteredThisTurnMatching { who: PlayerRef, filter: SelectionRequirement },
+    /// "A creature spell [who] cast this turn was countered by a spell or
+    /// ability an opponent controlled" (Summoning Trap). Reads
+    /// `Player.creature_spell_countered_by_opponent_this_turn`, stamped at the
+    /// single counter funnel.
+    CreatureSpellCounteredByOpponentThisTurn { who: PlayerRef },
+    /// "A noncreature permanent under [who]'s control was destroyed this turn
+    /// by a spell or ability an opponent controlled" (Cobra Trap). Reads
+    /// `Player.noncreature_destroyed_by_opponent_this_turn`, stamped in the
+    /// destroy funnel where the destroying effect's controller is known.
+    NoncreaturePermanentDestroyedByOpponentThisTurn { who: PlayerRef },
     /// True if any player `who` resolves to discarded a *nonland* card within
     /// the current effect resolution. Backed by
     /// `GameState.nonland_cards_discarded_per_player_this_resolution`. Gates
@@ -1532,6 +1542,9 @@ pub enum Predicate {
     /// "If the discarded card was multicolored" — reads the last-discarded
     /// scratch (Stormscale Anarch's doubled damage).
     LastDiscardedWasMulticolored,
+    /// The last card discarded during this resolution is the given color
+    /// (Chandra Ablaze's "if a red card is discarded this way").
+    LastDiscardedWasColor(crate::mana::Color),
     /// The entering permanent bound to `ctx.trigger_source` arrived from a
     /// graveyard this turn, or was cast from one (escape / unearth — read
     /// via `!cast_from_hand`; exile-casts over-trigger, noted per card).
@@ -2330,6 +2343,11 @@ pub enum EventKind {
     /// CR 605 — a permanent was tapped to pay a mana ability's `{T}` cost.
     /// The tapped permanent is the event subject (Extraplanar Lens).
     TappedForMana,
+    /// CR 701.5 — a spell on the stack was countered. The event's actor is the
+    /// player who controlled the countering spell or ability (so
+    /// `EventScope::YourControl` reads "a spell or ability you control counters
+    /// a spell" — Lullmage Mentor); the subject is the countered spell's card.
+    SpellCountered,
 }
 
 /// Whose events does this trigger listen for?
@@ -3607,6 +3625,10 @@ pub enum Effect {
     /// Cabal Therapy: choose a nonland card name; target player discards
     /// every card with that name from their hand.
     NameCardTargetDiscardsMatching,
+    /// "Target player reveals their hand and discards all `filter` cards"
+    /// (Trapfinder's Trick). The reveal is knowledge-only; every match is
+    /// discarded through the normal discard path so discard triggers fire.
+    RevealHandDiscardAllMatching { who: PlayerRef, filter: SelectionRequirement },
     /// Liar's Pendulum: name a card, then target opponent guesses whether a
     /// card with that name is in your hand. Reveal and draw when they guess
     /// wrong. The guess rides a `Decision::OptionalTrigger` asked of the
@@ -6458,7 +6480,16 @@ pub enum Effect {
     /// `activate_ability` then suppresses non-mana activated abilities of
     /// sources with that name. `what` selects the permanent to stamp
     /// (typically `Selector::This`).
-    NameCard { what: Selector },
+    ///
+    /// CR 201.4a — `restrict_to` narrows the namespace to card names whose
+    /// printed characteristics match ("choose a LAND card name" — Petrified
+    /// Hamlet). The suggestion feed is filtered and an off-namespace answer is
+    /// rejected. `None` allows any card name.
+    NameCard {
+        what: Selector,
+        #[serde(default)]
+        restrict_to: Option<SelectionRequirement>,
+    },
 
     /// "As [this] enters, choose a number." Stores the chosen number on the
     /// source permanent's `chosen_number` field (Sanctum Prelate — read by the

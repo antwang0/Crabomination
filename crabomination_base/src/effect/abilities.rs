@@ -1326,6 +1326,10 @@ pub enum StaticEffect {
     /// CR 401.5: the controller plays with the top card of their library
     /// revealed (surfaced to every seat via `PlayerView.library_top`).
     TopOfLibraryRevealed,
+    /// "You may look at the top card of your library any time" (Sphinx of Jwar
+    /// Isle) — the private sibling of [`TopOfLibraryRevealed`]: only the
+    /// controller's own view carries `library_top`.
+    MayLookAtOwnLibraryTop,
     /// "Creatures you control of the chosen type get +P/+T" — a tribal anthem
     /// keyed to the source permanent's `chosen_creature_type` (set at ETB via
     /// `Effect::NameCreatureType`). Resolved live in `gather_continuous_effects`
@@ -2386,6 +2390,19 @@ pub struct ActivatedAbility {
     /// source lacks enough counters. Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub remove_counter_cost: Option<(crate::card::CounterType, u32)>,
+    /// Optional cost: tap `count` untapped permanents matching the filter
+    /// (Lullmage Mentor's "Tap seven untapped Merfolk you control:"). The
+    /// source itself is eligible when it matches. Rejected before any other
+    /// payment when too few untapped matches exist; the auto-picker taps the
+    /// lowest-impact ones. Defaults to None.
+    #[serde(default)]
+    pub tap_permanents_cost: Option<(SelectionRequirement, u32)>,
+    /// Optional cost: return the source to its owner's hand (Magosi, the
+    /// Waterveil's "…, Remove an eon counter from this land and return it to
+    /// its owner's hand:"). Applied alongside `sac_cost`, after tap/mana/
+    /// counter payments and before the effect resolves. Defaults to false.
+    #[serde(default)]
+    pub bounce_self_cost: bool,
     /// "Remove X [kind] counters from this creature:" (Arcbound Javelineer).
     /// X comes from the activation's `x_value`; the pre-flight gate requires
     /// that many counters, and the body reads `Value::XFromCost`.

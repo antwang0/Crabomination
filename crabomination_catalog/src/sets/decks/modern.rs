@@ -20985,6 +20985,7 @@ pub fn pithing_needle() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::NameCard {
                 what: Selector::This,
+                restrict_to: None,
             },
         }],
         ..Default::default()
@@ -22791,6 +22792,7 @@ pub fn phyrexian_revoker() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::NameCard {
                 what: Selector::This,
+                restrict_to: None,
             },
         }],
         ..Default::default()
@@ -53243,6 +53245,7 @@ pub fn disruptor_flute() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![etb(Effect::NameCard {
             what: Selector::This,
+            restrict_to: None,
         })],
         static_abilities: vec![StaticAbility {
             description: "Spells with the chosen name cost {3} more to cast.",
@@ -55878,6 +55881,7 @@ pub fn meddling_mage() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::NameCard {
                 what: Selector::This,
+                restrict_to: None,
             },
         }],
         static_abilities: vec![StaticAbility {
@@ -56562,6 +56566,7 @@ pub fn alpine_moon() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![etb(Effect::NameCard {
             what: Selector::This,
+            restrict_to: None,
         })],
         static_abilities: vec![
             StaticAbility {

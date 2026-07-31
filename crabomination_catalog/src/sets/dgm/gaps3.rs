@@ -362,6 +362,7 @@ pub fn council_of_the_absolute() -> CardDefinition {
         ],
         triggered_abilities: vec![etb(Effect::NameCard {
             what: Selector::This,
+            restrict_to: None,
         })],
         ..Default::default()
     }

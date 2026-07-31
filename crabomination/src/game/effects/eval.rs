@@ -1393,6 +1393,14 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].lands_entered_this_turn >= *at_least),
+            Predicate::CreatureSpellCounteredByOpponentThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].creature_spell_countered_by_opponent_this_turn),
+            Predicate::NoncreaturePermanentDestroyedByOpponentThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].noncreature_destroyed_by_opponent_this_turn),
             Predicate::CreatureEnteredThisTurnMatching { who, filter } => {
                 self.resolve_players(who, ctx).into_iter().any(|p| {
                     self.players[p].creatures_entered_this_turn.iter().any(|&cid| {
@@ -1872,6 +1880,7 @@ impl GameState {
             Predicate::LastDiscardedWasMulticolored => {
                 self.last_discarded_was_multicolored.unwrap_or(false)
             }
+            Predicate::LastDiscardedWasColor(c) => self.last_discarded_colors.contains(c),
             Predicate::TriggerSourceEnteredFromGraveyard => {
                 let cid = match ctx.trigger_source {
                     Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
@@ -2601,9 +2610,14 @@ impl GameState {
                     }
                     R::IsBlocked => self.blocked_attackers.contains(&card.id),
                     R::IsBlocking => self.block_map.contains_key(&card.id),
+                    // Symmetric: the candidate blocks the source, or the source
+                    // blocks the candidate (Gomazoa's "each creature it's
+                    // blocking").
                     R::InCombatWithSource => source.is_some_and(|src| {
                         self.blockers_of(src).contains(cid)
                             || self.attackers_blocked_by(*cid).contains(&src)
+                            || self.attackers_blocked_by(src).contains(cid)
+                            || self.blockers_of(*cid).contains(&src)
                     }),
                     R::AttackedThisTurn => card.attacked_this_turn,
                     R::BlockedThisTurn => card.blocked_this_turn,
@@ -2914,6 +2928,10 @@ impl GameState {
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.named_card.as_deref())
                         .is_some_and(|n| n == card.definition.name),
+                    R::IsSourceChosenCardType => source
+                        .and_then(|sid| self.battlefield_find(sid))
+                        .and_then(|s| s.chosen_card_type.clone())
+                        .is_some_and(|t| card.definition.card_types.contains(&t)),
                     // Extraplanar Lens — "a land with the same name as the
                     // exiled card".
                     R::SameNameAsExiledWithSource => source.is_some_and(|sid| {
@@ -2971,6 +2989,19 @@ impl GameState {
                 }
             }
         }
+    }
+
+    /// CR 201.4a — evaluate a `SelectionRequirement` against a bare
+    /// `CardDefinition` (a *name*, not an object in any zone), for the
+    /// namespace restriction on "choose a [kind] card name".
+    pub fn definition_matches_requirement(
+        &self,
+        def: &crate::card::CardDefinition,
+        req: &SelectionRequirement,
+        controller: usize,
+    ) -> bool {
+        let scratch = CardInstance::new(CardId(u32::MAX), def.clone(), controller);
+        self.evaluate_requirement_on_card(req, &scratch, controller)
     }
 
     /// Evaluate a `SelectionRequirement` directly against a `CardInstance`
@@ -3247,6 +3278,7 @@ impl GameState {
             // Resolved to a concrete `HasName` by callers that have the
             // source in hand (RevealUntilFind); vacuously false otherwise.
             R::NamedBySource => false,
+            R::IsSourceChosenCardType => false,
             // Count walks the battlefield for the evaluating controller's
             // matching permanents; the candidate's own zone is irrelevant.
             R::ManaValueAtMostControlledCount(inner) => {

@@ -457,9 +457,15 @@ pub fn spawn_decision_ui(
                 spawn_optional_modal(&mut commands, &ui_fonts, description, true);
             }
         }
-        DecisionWire::NameCard { source_name, suggestions, .. } => {
+        DecisionWire::NameCard { source_name, suggestions, restriction, .. } => {
             state.spawned_for = Some(key);
-            spawn_name_card_modal(&mut commands, &ui_fonts, source_name, suggestions);
+            spawn_name_card_modal(
+                &mut commands,
+                &ui_fonts,
+                source_name,
+                suggestions,
+                restriction.as_deref(),
+            );
         }
         DecisionWire::OrderTriggers { triggers, .. } => {
             if state.trigger_order.is_empty() {
@@ -2791,6 +2797,7 @@ fn spawn_name_card_modal(
     ui_fonts: &UiFonts,
     source_name: &str,
     suggestions: &[String],
+    restriction: Option<&str>,
 ) {
     let root = commands
         .spawn((
@@ -2825,8 +2832,10 @@ fn spawn_name_card_modal(
     commands.entity(root).add_child(panel);
 
     commands.entity(panel).with_children(|p| {
+        // CR 201.4a — say which namespace the choice is restricted to.
+        let kind = restriction.map(|r| format!("{r} ")).unwrap_or_default();
         p.spawn((
-            Text::new(format!("{source_name} — choose a card name")),
+            Text::new(format!("{source_name} — choose a {kind}card name")),
             ui_fonts.tf(16.0),
             TextColor(theme::TEXT_PRIMARY),
         ));

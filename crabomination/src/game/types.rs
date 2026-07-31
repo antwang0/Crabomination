@@ -1433,7 +1433,12 @@ pub enum PendingEffectState {
     /// Suspended on a `NameCard` decision for `Effect::NameCard` (Pithing
     /// Needle, Phyrexian Revoker). The chooser names a card and the engine
     /// stamps it onto `target_id.named_card`.
-    NameCardPending { target_id: CardId },
+    NameCardPending {
+        target_id: CardId,
+        /// CR 201.4a namespace restriction; an answer outside it is dropped.
+        #[serde(default)]
+        restrict_to: Option<crate::card::SelectionRequirement>,
+    },
     /// Suspended on a `NameCard` decision for `Effect::NameOpponentCastLock`
     /// (Academic Probation). The chooser names a card and the engine records
     /// it in `players[caster].opponents_cant_cast_named`.
@@ -1820,6 +1825,10 @@ pub enum GameEvent {
     /// A permanent left the battlefield for a hand (Azorius Aethermage).
     /// `player` is whose hand it landed in.
     PermanentReturnedToHand { card_id: CardId, player: usize },
+    /// CR 701.5 — `card_id` was countered on the stack. `player` is the
+    /// counterer (the controller of the countering spell or ability), which is
+    /// what `EventScope::YourControl`/`OpponentControl` reads.
+    SpellCountered { card_id: CardId, player: usize },
     CardMilled { player: usize, card_id: CardId },
     /// DSK — `player` manifested dread, putting `milled` into their graveyard
     /// this way (the non-manifested of the top two). Drives

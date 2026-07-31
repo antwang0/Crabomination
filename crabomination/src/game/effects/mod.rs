@@ -6856,7 +6856,16 @@ impl GameState {
                 let entities = self.resolve_selector(what, ctx);
                 for ent in entities {
                     if let Some(cid) = ent.as_permanent_id() {
-                        self.destroy_permanent(cid, no_regen, events);
+                        let victim = self
+                            .battlefield_find(cid)
+                            .map(|c| (c.controller, c.definition.is_creature()));
+                        if self.destroy_permanent(cid, no_regen, events)
+                            && let Some((owner, is_creature)) = victim
+                            && !is_creature
+                            && !self.same_team(owner, ctx.controller)
+                        {
+                            self.players[owner].noncreature_destroyed_by_opponent_this_turn = true;
+                        }
                     }
                 }
                 let mut sba = self.check_state_based_actions();
@@ -8361,7 +8370,7 @@ impl GameState {
                         self.countered_spell_mana_spent = mana_spent;
                         self.countered_spell_controller = Some(caster);
                         self.countered_spell_mana_value = card.definition.cost.cmc();
-                        self.countered_spell_off_stack(*card, events);
+                        self.countered_spell_off_stack(*card, ctx.controller, events);
                         countered += 1;
                     }
                 }
@@ -12463,7 +12472,7 @@ impl GameState {
                         self.countered_spell_mana_spent = mana_spent;
                         self.countered_spell_controller = Some(caster);
                         self.countered_spell_mana_value = card.definition.cost.cmc();
-                        self.countered_spell_off_stack(*card, events);
+                        self.countered_spell_off_stack(*card, ctx.controller, events);
                     }
                 }
                 Ok(())
@@ -12497,7 +12506,7 @@ impl GameState {
                         self.countered_spell_mana_value = card.definition.cost.cmc();
                         let name = card.definition.name;
                         let owner = card.owner;
-                        self.countered_spell_off_stack(*card, events);
+                        self.countered_spell_off_stack(*card, ctx.controller, events);
                         let mut hand_exiled = 0usize;
                         for zone in ["gy", "hand", "lib"] {
                             let ids: Vec<CardId> = match zone {
@@ -12555,8 +12564,9 @@ impl GameState {
                     }
                 }
                 if let Some((pos, underpaid)) = hit {
-                    if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
-                        self.countered_spell_off_stack(*card, events);
+                    if let StackItem::Spell { card, caster, .. } = self.stack.remove(pos) {
+                        self.countered_spell_controller = Some(caster);
+                        self.countered_spell_off_stack(*card, ctx.controller, events);
                     }
                     if underpaid {
                         let draw = Effect::Draw { who: Selector::You, amount: crate::effect::Value::Const(1) };
@@ -12992,9 +13002,10 @@ impl GameState {
                 if !paid {
                     let removed = self.stack.remove(pos);
                     if is_spell
-                        && let StackItem::Spell { card, .. } = removed
+                        && let StackItem::Spell { card, caster, .. } = removed
                     {
-                        self.countered_spell_off_stack(*card, events);
+                        self.countered_spell_controller = Some(caster);
+                        self.countered_spell_off_stack(*card, ctx.controller, events);
                     }
                     // Trigger items just drop off — nothing else to clean up.
                 }
@@ -13135,7 +13146,7 @@ impl GameState {
                             self.countered_spell_mana_spent = mana_spent;
                             self.countered_spell_controller = Some(caster);
                         self.countered_spell_mana_value = card.definition.cost.cmc();
-                            self.countered_spell_off_stack(*card, events);
+                            self.countered_spell_off_stack(*card, ctx.controller, events);
                         }
                     } else if let Some(pos) = self
                         .stack
@@ -15631,6 +15642,7 @@ impl GameState {
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
                     source_name: ctx.source_name.unwrap_or_default().to_string(),
                     suggestions,
+                    restriction: None,
                 };
                 let pending = PendingEffectState::NameDiscardMatchingPending { who };
                 if self.players[ctx.controller].wants_ui {
@@ -15640,6 +15652,20 @@ impl GameState {
                 let answer = self.decider.decide(&decision);
                 let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
                 events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::RevealHandDiscardAllMatching { who, filter } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let hits: Vec<crate::card::CardId> = self.players[seat]
+                    .hand
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, seat))
+                    .map(|c| c.id)
+                    .collect();
+                for id in hits {
+                    self.discard_card(seat, id, events);
+                }
                 Ok(())
             }
 
@@ -15665,6 +15691,7 @@ impl GameState {
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
                     source_name: ctx.source_name.unwrap_or_default().to_string(),
                     suggestions,
+                    restriction: None,
                 };
                 let pending = PendingEffectState::NameExileAllZonesPending { who };
                 if self.players[ctx.controller].wants_ui {
@@ -15698,6 +15725,7 @@ impl GameState {
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
                     source_name: ctx.source_name.unwrap_or_default().to_string(),
                     suggestions,
+                    restriction: None,
                 };
                 let pending = PendingEffectState::NameDiscardOneOrDrawPending {
                     who,
@@ -15738,6 +15766,7 @@ impl GameState {
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
                     source_name,
                     suggestions,
+                    restriction: None,
                 };
                 let pending = PendingEffectState::NameRevealTopPending { player: p, count: n };
                 if self.players[p].wants_ui {
@@ -20066,7 +20095,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::NameCard { what } => {
+            Effect::NameCard { what, restrict_to } => {
                 // CR 201.3 — "as this enters, choose a card name." Mirrors
                 // NameCreatureType: stamp the chosen name onto the source
                 // permanent's `named_card`. Suspends for UI players; bots /
@@ -20106,8 +20135,30 @@ impl GameState {
                         self.players[ctx.controller].library.iter().map(|c| c.definition.name),
                     )
                 };
-                let decision = Decision::NameCard { source: target_id, source_name, suggestions };
-                let pending = PendingEffectState::NameCardPending { target_id };
+                // CR 201.4a — narrow the namespace when the card restricts it
+                // ("choose a land card name"); an off-namespace answer is
+                // dropped when the pending state is applied.
+                let suggestions: Vec<String> = match restrict_to {
+                    Some(f) => suggestions
+                        .into_iter()
+                        .filter(|n| {
+                            crate::card_registry::lookup_by_name(n).is_some_and(|d| {
+                                self.definition_matches_requirement(&d, f, ctx.controller)
+                            })
+                        })
+                        .collect(),
+                    None => suggestions,
+                };
+                let decision = Decision::NameCard {
+                    source: target_id,
+                    source_name,
+                    suggestions,
+                    restriction: restrict_to.as_ref().and_then(|f| f.target_noun()),
+                };
+                let pending = PendingEffectState::NameCardPending {
+                    target_id,
+                    restrict_to: restrict_to.clone(),
+                };
                 let chooser = ctx.controller;
                 if self.players[chooser].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -20236,6 +20287,7 @@ impl GameState {
                     source: source_id,
                     source_name: "Academic Probation".to_string(),
                     suggestions,
+                    restriction: None,
                 };
                 let pending = PendingEffectState::OpponentNameLockPending { caster };
                 if self.players[caster].wants_ui {

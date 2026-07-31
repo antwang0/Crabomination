@@ -470,6 +470,11 @@ pub struct GameState {
     /// `discard_card`.
     #[serde(default)]
     pub(crate) last_discarded_was_multicolored: Option<bool>,
+    /// Colors of the most recently discarded card
+    /// (`Predicate::LastDiscardedWasColor` — Chandra Ablaze). Stamped in
+    /// `discard_card`.
+    #[serde(default)]
+    pub(crate) last_discarded_colors: Vec<crate::mana::Color>,
     /// Transient: card-type count of the most recently discarded card
     /// (`Value::LastDiscardedCardTypes` — Mount Velus Manticore). Stamped in
     /// `discard_card`.
@@ -1439,6 +1444,7 @@ impl Clone for GameState {
             sacrificed_colors: self.sacrificed_colors.clone(),
             sacrificed_card: self.sacrificed_card,
             last_discarded_was_multicolored: self.last_discarded_was_multicolored,
+            last_discarded_colors: self.last_discarded_colors.clone(),
             last_discarded_card_types: self.last_discarded_card_types,
             last_discarded_creature_types: self.last_discarded_creature_types.clone(),
             sacrificed_toughness: self.sacrificed_toughness,
@@ -1656,6 +1662,7 @@ impl GameState {
             sacrificed_colors: None,
             sacrificed_card: None,
             last_discarded_was_multicolored: None,
+            last_discarded_colors: Vec::new(),
             last_discarded_card_types: 0,
             last_discarded_creature_types: Vec::new(),
             sacrificed_toughness: None,
@@ -4483,8 +4490,19 @@ impl GameState {
     pub(crate) fn countered_spell_off_stack(
         &mut self,
         card: crate::card::CardInstance,
+        counterer: usize,
         events: &mut Vec<crate::game::GameEvent>,
     ) {
+        // CR 701.5 — "a spell or ability you control counters a spell"
+        // (Lullmage Mentor) plus the Summoning Trap per-turn tally, both keyed
+        // on the counterer rather than the countered spell's caster.
+        events.push(crate::game::GameEvent::SpellCountered { card_id: card.id, player: counterer });
+        if let Some(caster) = self.countered_spell_controller
+            && card.definition.is_creature()
+            && !self.same_team(caster, counterer)
+        {
+            self.players[caster].creature_spell_countered_by_opponent_this_turn = true;
+        }
         if card.is_token {
             return;
         }
@@ -9497,6 +9515,7 @@ impl GameState {
         self.last_discarded_creature_types =
             card.definition.subtypes.creature_types.clone();
         self.last_discarded_was_multicolored = Some(card.definition.cost.distinct_colors() >= 2);
+        self.last_discarded_colors = card.definition.cost.colors();
         *self
             .cards_discarded_per_player_this_resolution
             .entry(p)
@@ -14148,11 +14167,17 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::NameCardPending { target_id } => {
+            PendingEffectState::NameCardPending { target_id, restrict_to } => {
                 let DecisionAnswer::NamedCard(name) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                if !name.is_empty() {
+                // CR 201.4a — a name outside the allowed namespace isn't a
+                // legal choice; treat it as naming nothing.
+                let legal = restrict_to.as_ref().is_none_or(|f| {
+                    crate::card_registry::lookup_by_name(name)
+                        .is_some_and(|d| self.definition_matches_requirement(&d, f, 0))
+                });
+                if !name.is_empty() && legal {
                     if let Some(card) = self.find_card_anywhere_mut(target_id) {
                         card.named_card = Some(name.clone());
                     }
@@ -15832,6 +15857,7 @@ fn static_effect_to_effects(
             | StaticEffect::PlayFromLibraryTopOncePerTurn { .. }
             | StaticEffect::PlayFromLibraryTopPayLife { .. }
             | StaticEffect::TopOfLibraryRevealed
+            | StaticEffect::MayLookAtOwnLibraryTop
             | StaticEffect::AllLibraryTopsRevealed
             // NamedSpellCantBeCast — consulted in cast_spell_with_convoke
             // (Meddling Mage); no layer effect.

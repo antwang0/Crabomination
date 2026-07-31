@@ -328,6 +328,16 @@ pub struct Player {
     /// `Predicate::LandsEnteredThisTurnAtLeast` (Lavaball Trap).
     #[serde(default)]
     pub lands_entered_this_turn: u32,
+    /// A creature spell this player cast this turn was countered by a spell or
+    /// ability an opponent controlled (Summoning Trap). Stamped at the counter
+    /// funnel, cleared at the turn boundary.
+    #[serde(default)]
+    pub creature_spell_countered_by_opponent_this_turn: bool,
+    /// A noncreature permanent this player controlled was destroyed this turn
+    /// by a spell or ability an opponent controlled (Cobra Trap). Stamped in
+    /// the destroy funnel, cleared at the turn boundary.
+    #[serde(default)]
+    pub noncreature_destroyed_by_opponent_this_turn: bool,
     /// Creature types among this player's creatures that dealt combat damage
     /// to a player this turn (CR 702.76 Prowl). Stamped at the combat-damage
     /// funnels, cleared at the turn boundary. `#[serde(default)]` for
@@ -838,6 +848,8 @@ impl Player {
             life_lost_this_turn: 0,
             creatures_that_damaged_me_this_turn: Vec::new(),
             lands_entered_this_turn: 0,
+            creature_spell_countered_by_opponent_this_turn: false,
+            noncreature_destroyed_by_opponent_this_turn: false,
             prowl_types_this_turn: Vec::new(),
             prowl_any_type_this_turn: false,
             attacked_this_turn: false,

@@ -241,7 +241,7 @@ pub fn skycoach_waypoint() -> CardDefinition {
 /// '{T}: Add {C}.' / {T}: Add {C}."
 ///
 /// All four printed abilities wired:
-/// - ETB `Effect::NameCard` (the Pithing Needle prompt/heuristic) stamps
+/// - ETB `Effect::NameCard` restricted to land names (CR 201.4a) stamps
 ///   the chosen name.
 /// - The lock-out ("activated abilities of sources with the chosen name
 ///   can't be activated unless they're mana abilities") is the engine's
@@ -250,10 +250,6 @@ pub fn skycoach_waypoint() -> CardDefinition {
 /// - "Lands with the chosen name have '{T}: Add {C}'" via
 ///   `GrantActivatedAbility { EachPermanent(Land ∧ NamedBySource) }`.
 /// - The printed `{T}: Add {C}` via the shared `tap_add_colorless`.
-/// Residual: the NameCard decision offers any card name (the printed
-/// text restricts the choice to LAND names — the UI doesn't yet filter
-/// the namespace, though naming a nonland simply makes the two
-/// name-keyed abilities dead).
 pub fn petrified_hamlet() -> CardDefinition {
     use super::super::tap_add_colorless;
     use crate::card::{SelectionRequirement, TriggeredAbility};
@@ -265,6 +261,7 @@ pub fn petrified_hamlet() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::NameCard {
                 what: Selector::This,
+                restrict_to: Some(SelectionRequirement::Land),
             },
         }],
         static_abilities: vec![StaticAbility {

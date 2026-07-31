@@ -51,7 +51,7 @@ pub fn mindblaze() -> CardDefinition {
         cost: cost(&[generic(5), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::NameCard { what: Selector::This },
+            Effect::NameCard { what: Selector::This, restrict_to: None },
             Effect::RevealLibraryNamedCountPunish {
                 who: target_filtered(R::Player),
                 damage: Value::Const(8),

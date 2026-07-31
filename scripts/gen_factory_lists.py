@@ -28,7 +28,7 @@ OUT = SETS / "all_factories.rs"
 EXCLUDE = {"all_factories"}
 
 FN_RE = re.compile(
-    r"^pub fn ([a-z_][a-z0-9_]*)\(\) -> CardDefinition\b", re.MULTILINE
+    r"^pub fn ([a-z_][a-z0-9_]*)\(\) -> (?:crate::card::)?CardDefinition\b", re.MULTILINE
 )
 
 

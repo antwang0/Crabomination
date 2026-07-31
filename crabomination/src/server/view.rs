@@ -476,8 +476,8 @@ fn commander_damage_taken(
 
 /// CR 401.5/401.6 — the top library card is public while a
 /// `TopOfLibraryRevealed` static is active (Courser of Kruphix), and
-/// owner-visible under a `PlayFromLibraryTop` permission (Mystic Forge's
-/// "may look at the top card of your library any time").
+/// owner-visible under a `PlayFromLibraryTop` permission (Mystic Forge) or a
+/// bare `MayLookAtOwnLibraryTop` (Sphinx of Jwar Isle).
 fn known_library_top(
     state: &GameState,
     player_seat: usize,
@@ -503,7 +503,8 @@ fn known_library_top(
     let owner_may_look = viewer_seat == player_seat
         && (has_static(&|e| matches!(e, StaticEffect::PlayFromLibraryTop { .. }
                 | StaticEffect::PlayFromLibraryTopOncePerTurn { .. }
-                | StaticEffect::PlayFromLibraryTopPayLife { .. }))
+                | StaticEffect::PlayFromLibraryTopPayLife { .. }
+                | StaticEffect::MayLookAtOwnLibraryTop))
             || state.players[player_seat].play_from_top_this_turn);
     if revealed_to_all || owner_may_look {
         state.players[player_seat].library.first().map(known_card).into_iter().collect()

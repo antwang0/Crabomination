@@ -132,6 +132,7 @@ pub fn spoils_of_the_vault() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::NameCard {
                 what: Selector::This,
+                restrict_to: None,
             },
             Effect::RevealUntilFind {
                 who: PlayerRef::You,
