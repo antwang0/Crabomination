@@ -7685,22 +7685,23 @@ New suggestions from this run's engine work:
 SOK's last eight gaps shipped, so the whole Kamigawa block (CHK/BOK/SOK) is at
 zero `set_gaps.py` gaps. Urza's Legacy went 106 -> 13 across two waves.
 
-- **`PlayerDamaged` triggers can't reach the damage source.** `event_subject`
-  binds the damaged PLAYER, so "whenever a creature deals damage to you,
-  destroy it" (No Mercy) has nothing to point at. Michiko Konda's edict is
-  blocked on the same primitive: a `Selector::TriggerDamageSource` reading the
-  firing event's `from_card`. No Mercy is deliberately NOT in the catalog until
-  that lands.
-- **Remaining ULG gaps (13), each blocked on one primitive:** Angel's Trumpet
+- ✅ ~~**`PlayerDamaged` triggers can't reach the damage source.**~~ —
+  `event_subject` now binds the DEALER for `EventKind::PlayerDamaged` (the
+  receiver-side wording), leaving the dealer-side kinds binding the damaged
+  player. No Mercy ships, and Michiko Konda's edict now hits only the damage
+  source's controller instead of every opponent.
+- **Remaining ULG gaps (8), each blocked on one primitive:** Angel's Trumpet
   (tap-all-that-didn't-attack + damage per tapped), Aura Flux (grant an upkeep
   tax to OTHER enchantments), Crawlspace (per-combat attacker cap against a
   player), Damping Engine (a permanent-leader lock with a sacrifice-to-ignore
-  out), Hidden Gibbons / Lurking Skirge / Opal Avenger / Opal Champion (the
-  "if this permanent is an enchantment, it becomes an N/N creature" animation),
-  Martyr's Cause (a chosen-source damage shield), Memory Jar (exile-hand,
-  draw-seven, return at the next end step), Thran Weaponry (a
-  while-this-stays-tapped anthem), Treacherous Link (damage to the host is
-  dealt to its controller).
+  out — `Predicate::PlayerControlsMostOf` is the read half), Martyr's Cause
+  (a chosen-source damage shield), Memory Jar (exile-hand, draw-seven, return
+  at the next end step), Thran Weaponry (a while-this-stays-tapped anthem),
+  Treacherous Link (damage to the host is dealt to its controller).
+- **`EventSpec::with_filter` silently REPLACES.** Every shared card-builder
+  that adds a gate has to fold the caller's filter in by hand (the ULG Opal
+  cycle's `opal()` helper does). A `with_extra_filter` that `All`-composes
+  would make the safe thing the default.
 - **The Epic copy doesn't re-choose targets.** CR 702.50a's copies "may choose
   new targets"; `process_epic` reuses the original's. Eternal Dominion /
   Neverending Torment / Undying Flames all want it.

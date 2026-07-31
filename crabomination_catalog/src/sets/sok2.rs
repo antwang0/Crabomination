@@ -1823,14 +1823,15 @@ pub fn curtain_of_light() -> CardDefinition {
 }
 
 /// Michiko Konda, Truth Seeker — {3}{W} 2/2. Any damage an opponent's source
-/// deals you costs them a permanent. Approximation: the sacrifice hits every
-/// opponent rather than only the damage's controller (exact at two players).
+/// deals you costs that source's controller a permanent.
 pub fn michiko_konda_truth_seeker() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![crate::card::TriggeredAbility {
             event: EventSpec::new(EventKind::PlayerDamaged, EventScope::OpponentSourceDamagedYou),
             effect: Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(
+                    Selector::TriggerSource,
+                ))),
                 count: Value::ONE,
                 filter: R::Any,
             },

@@ -726,7 +726,17 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // Damage to a player binds `Selector::TriggerSource` / `PlayerRef::Triggerer`
         // to the damaged player, so "that player discards / loses …" bodies on
         // player-damage triggers resolve (Pain Magnification).
-        GameEvent::DamageDealt { to_player: Some(p), .. } => Some(EntityRef::Player(*p)),
+        // CR — "whenever a creature deals damage to you" is the RECEIVER-side
+        // wording, so its subject is the dealer ("destroy it" — No Mercy;
+        // "that source's controller" — Michiko Konda). The dealer-side kinds
+        // (`DealsCombatDamageToPlayer`, …) keep binding the damaged player,
+        // which is what "that player" means there.
+        GameEvent::DamageDealt { to_player: Some(p), from_card, .. } => {
+            match (kind, from_card) {
+                (EventKind::PlayerDamaged, Some(dealer)) => Some(EntityRef::Permanent(*dealer)),
+                _ => Some(EntityRef::Player(*p)),
+            }
+        }
         // CardDrawn / CardDiscarded carry a card_id — bind
         // `Selector::TriggerSource` to the *card* (not the player) so
         // filters like `Predicate::EntityMatches { what: TriggerSource,

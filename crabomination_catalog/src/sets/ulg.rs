@@ -1596,3 +1596,117 @@ pub fn rivalry() -> CardDefinition {
         ..enchantment("Rivalry", cost(&[generic(2), r()]))
     }
 }
+
+// ── Wave 3: the "if this permanent is an enchantment" animations ────────────
+
+/// An Opal-cycle enchantment: when `event` fires and this is still an
+/// enchantment, it permanently becomes a `p`/`t` creature of `types`.
+fn opal(
+    name: &'static str,
+    c: crate::mana::ManaCost,
+    event: EventSpec,
+    types: Vec<CreatureType>,
+    p: i32,
+    t: i32,
+    keywords: Vec<Keyword>,
+) -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            // `with_filter` REPLACES, so fold the caller's gate in rather than
+            // dropping it.
+            event: {
+                let still_an_enchantment = Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::Enchantment.and(R::Noncreature),
+                };
+                let combined = match event.filter.clone() {
+                    Some(f) => Predicate::All(vec![f, still_an_enchantment]),
+                    None => still_an_enchantment,
+                };
+                event.with_filter(combined)
+            },
+            effect: Effect::BecomeCreature {
+                what: Selector::This,
+                power: Value::Const(p),
+                toughness: Value::Const(t),
+                creature_types: types,
+                keywords,
+                duration: Duration::Permanent,
+            },
+        }],
+        ..enchantment(name, c)
+    }
+}
+
+/// No Mercy — {2}{B}{B}. Any creature that damages you dies.
+pub fn no_mercy() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::OpponentSourceDamagedYou),
+            effect: Effect::Destroy { what: Selector::TriggerSource },
+        }],
+        ..enchantment("No Mercy", cost(&[generic(2), b(), b()]))
+    }
+}
+
+/// Opal Avenger — {2}{W}. At 10 or less life it wakes up as a 3/5 Soldier.
+pub fn opal_avenger() -> CardDefinition {
+    opal(
+        "Opal Avenger",
+        cost(&[generic(2), w()]),
+        EventSpec::new(EventKind::LifeLost, EventScope::YourControl)
+            .with_filter(Predicate::PlayerLifeAtMost { who: PlayerRef::You, life: 10 }),
+        vec![CreatureType::Soldier],
+        3,
+        5,
+        vec![],
+    )
+}
+
+/// Opal Champion — {2}{W}. An opponent's creature spell wakes it up as a 3/3
+/// first-striking Knight.
+pub fn opal_champion() -> CardDefinition {
+    opal(
+        "Opal Champion",
+        cost(&[generic(2), w()]),
+        EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(
+            Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+        ),
+        vec![CreatureType::Knight],
+        3,
+        3,
+        vec![Keyword::FirstStrike],
+    )
+}
+
+/// Hidden Gibbons — {G}. An opponent's instant wakes it up as a 4/4 Ape.
+pub fn hidden_gibbons() -> CardDefinition {
+    opal(
+        "Hidden Gibbons",
+        cost(&[g()]),
+        EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl).with_filter(
+            Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::HasCardType(CardType::Instant),
+            },
+        ),
+        vec![CreatureType::Ape],
+        4,
+        4,
+        vec![],
+    )
+}
+
+/// Lurking Skirge — {1}{B}. A creature dying under an opponent wakes it up as
+/// a 3/2 flying Phyrexian Imp.
+pub fn lurking_skirge() -> CardDefinition {
+    opal(
+        "Lurking Skirge",
+        cost(&[generic(1), b()]),
+        EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
+        vec![CreatureType::Phyrexian, CreatureType::Imp],
+        3,
+        2,
+        vec![Keyword::Flying],
+    )
+}

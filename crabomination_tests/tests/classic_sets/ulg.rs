@@ -916,3 +916,130 @@ fn multanis_presence_draws_when_your_spell_is_countered() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "the countered spell replaced itself");
 }
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────────
+
+/// No Mercy kills whatever damaged you.
+#[test]
+fn no_mercy_destroys_the_creature_that_hit_you() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::no_mercy());
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut ev = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(0),
+        2,
+        Some(attacker),
+        &mut ev,
+    );
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(attacker).is_none());
+}
+
+/// Opal Champion animates on an opponent's creature spell — and only once.
+#[test]
+fn opal_champion_wakes_on_an_opponents_creature_spell() {
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::opal_champion());
+    assert!(!g.computed_permanent(champ).unwrap().card_types.contains(&CardType::Creature));
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(champ).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature));
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+}
+
+/// An opponent's noncreature spell leaves Opal Champion asleep.
+#[test]
+fn opal_champion_ignores_noncreature_spells() {
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::opal_champion());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(!g.computed_permanent(champ).unwrap().card_types.contains(&CardType::Creature));
+}
+
+/// Hidden Gibbons wakes on an opponent's instant.
+#[test]
+fn hidden_gibbons_wakes_on_an_opponents_instant() {
+    let mut g = two_player_game();
+    let gibbons = g.add_card_to_battlefield(0, catalog::hidden_gibbons());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(gibbons).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+}
+
+/// Opal Avenger wakes up once you fall to 10.
+#[test]
+fn opal_avenger_wakes_at_ten_life() {
+    let mut g = two_player_game();
+    let avenger = g.add_card_to_battlefield(0, catalog::opal_avenger());
+    let mut ev = vec![];
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Player(0), 5, None, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(
+        !g.computed_permanent(avenger).unwrap().card_types.contains(&CardType::Creature),
+        "still at 15"
+    );
+    let mut ev = vec![];
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Player(0), 5, None, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(avenger).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 5));
+}
+
+/// Lurking Skirge wakes when a creature dies under an opponent.
+#[test]
+fn lurking_skirge_wakes_on_an_opponents_creature_dying() {
+    let mut g = two_player_game();
+    let skirge = g.add_card_to_battlefield(0, catalog::lurking_skirge());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(victim, 1, None);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::This },
+            &ctx,
+        )
+        .expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(skirge).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 2));
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
