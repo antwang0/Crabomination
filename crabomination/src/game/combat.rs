@@ -430,6 +430,25 @@ impl GameState {
                     matches!(k, Keyword::CantAttackUnlessLandTypeOnBattlefield(lt)
                         if !self.battlefield.iter().any(|c| c.definition.subtypes.land_types.contains(lt)))
                 });
+                // CR 508.1a — Harbor Serpent's "five or more Islands on the
+                // battlefield" and Bloodcrazed Goblin's "an opponent has been
+                // dealt damage this turn".
+                let predicate_locked = kws.iter().any(|k| match k {
+                    Keyword::CantAttackUnlessLandCount(lt, n) => {
+                        (self
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.definition.subtypes.land_types.contains(lt))
+                            .count() as u32)
+                            < *n
+                    }
+                    Keyword::CantAttackUnlessOpponentDamaged => !self
+                        .players
+                        .iter()
+                        .enumerate()
+                        .any(|(i, pl)| !self.same_team(i, p) && pl.was_dealt_damage_this_turn),
+                    _ => false,
+                });
                 let defender_locked =
                     kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(card);
                 let can_attack = is_creature_now
@@ -437,6 +456,7 @@ impl GameState {
                     && card.detained_by.is_none()
                     && !defender_locked
                     && !kws.contains(&Keyword::CantAttack)
+                    && !predicate_locked
                     && !cohort_locked
                     && !land_locked
                     && !hand_locked

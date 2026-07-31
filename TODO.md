@@ -7705,18 +7705,28 @@ stalled games via `eval_material`.
   `CapTargetsAt` truncates the auto-filled slot list at resolution; a UI seat
   never gets to choose *which* graveyard creatures come back.
 
-## Noticed this run (modern_decks — ZEN batch)
+## Noticed this run (modern_decks — ZEN / M11)
 
-- **Cobra Trap's gate needs destruction attribution.** "If a noncreature
-  permanent under your control was destroyed this turn by a spell or ability an
-  opponent controlled" wants a per-turn flag stamped where the destroying
-  effect's controller is known; the generic destroy funnel doesn't carry it.
-- **54 ZEN gap cards remain**, clustered on: the three planeswalkers
-  (Chandra Ablaze, Nissa Revane, Sorin Markov), the
-  eon-counter / extra-turn lands (Magosi), Roil Elemental's landfall theft,
-  Eternity Vessel's life-total set, and Obsidian Fireheart's persistent
-  blaze-counter grant.
 - **Blazing Torch's throw sacrifices by name.** The granted ability's
   "Sacrifice Blazing Torch" is modeled as `Effect::Sacrifice` with a
   `HasName` filter, so a second Torch you control could be the one sacrificed.
   Wants a `Selector::AttachmentGranting` sacrifice.
+- **Ten M11 cards remain**, each blocked on one primitive:
+  - Fire Servant / Vengeful Archon — "your red instant/sorcery spells deal
+    double damage" wants the damage source's card type in `scale_damage_to`
+    (`source_info` carries only controller + colors); the Archon additionally
+    wants `PreventNextDamageAndGainLife` to reflect the prevented amount.
+  - Angelic Arbiter — `CreaturesCantAttackController` has no condition slot,
+    and the mirrored "can't cast spells" half wants a per-opponent gate.
+  - Phylactery Lich — a phylactery counter kind plus a state trigger on
+    "you control no permanents with phylactery counters".
+  - Conundrum Sphinx (each player names a card, then reveals), Mass Polymorph,
+    Wild Evocation (random hand card cast for free), Necrotic Plague
+    (self-recurring Aura), Demon of Death's Gate (life + triple-sacrifice
+    alternative cost).
+- **`Effect::Search { to: Exile }` doesn't stamp `exiled_with`.** Hoarding
+  Dragon pairs it with `ExileWithSource { LastMoved }` to link the two halves
+  (CR 607.2); a `stamp_exiled_with` flag on `Search` would be tidier.
+- **`Effect::RevealHandDiscardAllMatching` reveals nothing visible.** The
+  discard is correct but the reveal is knowledge-only — no `hands_revealed_to`
+  entry, so a UI seat never sees the hand it just stripped.

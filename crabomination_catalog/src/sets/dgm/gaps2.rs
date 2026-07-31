@@ -42,6 +42,7 @@ pub fn aetherling() -> CardDefinition {
                 mana_cost: cost(&[u()]),
                 effect: Effect::ExileReturnToOwnerNextEndStep {
                     what: Selector::This,
+                    tapped: false,
                 },
                 ..Default::default()
             },

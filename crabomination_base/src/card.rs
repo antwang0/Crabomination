@@ -1080,6 +1080,14 @@ pub enum Keyword {
     /// [land type] on the battlefield" (Glacial Crasher). Any player's land
     /// counts; enforced in `declare_attackers`.
     CantAttackUnlessLandTypeOnBattlefield(LandType),
+    /// CR 508.1a restriction — "This creature can't attack unless there are N
+    /// or more [land type]s on the battlefield" (Harbor Serpent). Any player's
+    /// lands count; the N=1 case is `CantAttackUnlessLandTypeOnBattlefield`.
+    CantAttackUnlessLandCount(LandType, u32),
+    /// CR 508.1a restriction — "This creature can't attack unless an opponent
+    /// has been dealt damage this turn" (Bloodcrazed Goblin). Reads the
+    /// per-turn `was_dealt_damage_this_turn` flag on each opponent.
+    CantAttackUnlessOpponentDamaged,
     /// CR 508.1g — "This creature can't attack unless you return a [filter]
     /// you control to its owner's hand." An additional cost paid as attackers
     /// are declared (Floodtide Serpent); enforced in `declare_attackers`,

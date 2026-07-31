@@ -4371,7 +4371,12 @@ pub enum Effect {
     /// its **owner's** control at the beginning of the next end step, with no
     /// extra counter. The plain-flicker sibling of `ExileReturnNextEndStep`
     /// (Voidwalk, Voyager Staff — "return it under its owner's control").
-    ExileReturnToOwnerNextEndStep { what: Selector },
+    ExileReturnToOwnerNextEndStep {
+        what: Selector,
+        /// The permanent returns tapped (Mystifying Maze).
+        #[serde(default)]
+        tapped: bool,
+    },
     /// "You may exile this. If you do, return it to the battlefield under its
     /// owner's control at the beginning of your next upkeep. It gains haste."
     /// An optional self-flicker whose return is deferred to the controller's

@@ -7208,7 +7208,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileReturnToOwnerNextEndStep { what } => {
+            Effect::ExileReturnToOwnerNextEndStep { what, tapped } => {
                 // Plain flicker: exile now, return under the card's OWNER's
                 // control at the next end step with no extra counter.
                 use crate::game::types::{DelayedKind, DelayedTrigger};
@@ -7229,7 +7229,7 @@ impl GameState {
                             what: Selector::Target(0),
                             to: ZoneDest::Battlefield {
                                 controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                                tapped: false,
+                                tapped: *tapped,
                             },
                         },
                         target: Some(Target::Permanent(cid)),

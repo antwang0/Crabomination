@@ -167,6 +167,7 @@ pub fn voidwalk() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ExileReturnToOwnerNextEndStep {
                 what: target_filtered(R::Creature),
+                tapped: false,
             },
             Effect::Cipher,
         ]),

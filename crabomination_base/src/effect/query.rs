@@ -733,7 +733,7 @@ impl Effect {
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
             | Effect::FlipUntilLossThenTokenCopies { what }
-            | Effect::ExileReturnToOwnerNextEndStep { what }
+            | Effect::ExileReturnToOwnerNextEndStep { what, .. }
             | Effect::PhaseOut { what, .. }
             | Effect::GrantSuspend { what, .. }
             | Effect::ModularCounters { what }
@@ -1186,7 +1186,7 @@ impl Effect {
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
             | Effect::FlipUntilLossThenTokenCopies { what }
-            | Effect::ExileReturnToOwnerNextEndStep { what }
+            | Effect::ExileReturnToOwnerNextEndStep { what, .. }
             | Effect::Provoke { what }
             | Effect::MustBlockSource { what }
             | Effect::DestroyThenVictimControllersMakeToken { what, .. }
@@ -2576,7 +2576,7 @@ impl Effect {
                 | Effect::ExileTaggedWithSource { what }
                 | Effect::ExileLinked { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
-                | Effect::ExileReturnToOwnerNextEndStep { what }
+                | Effect::ExileReturnToOwnerNextEndStep { what, .. }
                 | Effect::ExileReturnNextEndStep { what }
                 | Effect::FlipUntilLossThenTokenCopies { what }
                 | Effect::RemoveAllCountersDiscountNextSpell { what }

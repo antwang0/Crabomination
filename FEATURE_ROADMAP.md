@@ -1322,7 +1322,8 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `Effect::CopyForEachOtherTargetableCreature` (Zada, Hedron Grinder — a spell
   targeting only the source is copied once per other creature it could target).
   Emblem `AnthemForFilter` statics now reach the live anthem gather, so Gideon,
-  Ally of Zendikar's −4 actually pumps. **Zendikar (ZEN) 150 → 54 gaps** (`sets::zen2`, 96 cards): the seven
+  Ally of Zendikar's −4 actually pumps. **Zendikar (ZEN) is complete**
+  (`set_gaps.py zen` at zero). `sets::zen2` (96 cards) covers the seven
   board-state Traps, the Rally Allies, the landfall commons, the kicker
   creatures/spells, the Refuge land cycle and the small statics. New:
   `Predicate::{DamagedByCreaturesThisTurnAtLeast, LandsEnteredThisTurnAtLeast}`
@@ -1333,7 +1334,26 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `dies_to_exile` — Nissa's Chosen). Wave 2 needed no new engine: the
   Equipment triggers, the upkeep sacrifice-unless riders, Hellkite Charger's
   extra combat, Eldrazi Monument's three statics and Emeria's seven-Plains
-  reanimation all ride existing primitives. Tests in `classic_sets/zen2`.
+  reanimation all ride existing primitives. `sets::zen3` closes the last 53:
+  the three planeswalkers, Kalitas, Roil Elemental, Obsidian Fireheart,
+  Eternity Vessel, Lullmage Mentor, World Queller, Gomazoa, Magosi, Oran-Rief,
+  the Expeditions and both remaining Traps. New there:
+  `EventKind::SpellCountered` (actor = the counterer),
+  `Predicate::{CreatureSpellCounteredByOpponentThisTurn,
+  NoncreaturePermanentDestroyedByOpponentThisTurn}`,
+  `ActivatedAbility::{tap_permanents_cost, bounce_self_cost}`,
+  `StaticEffect::MayLookAtOwnLibraryTop`,
+  `Effect::RevealHandDiscardAllMatching`,
+  `SelectionRequirement::IsSourceChosenCardType`,
+  `Predicate::LastDiscardedWasColor`, and `CounterType::{Eon, Blaze}`.
+  Tests in `classic_sets/zen2` + `classic_sets/zen3`.
+- **Magic 2011 (M11) 59 → 10 gaps** (`sets::m11::gaps`, 50 cards): the Leylines
+  (`OpeningHandEffect::StartInPlay`), the Servants, the Auras, Mitotic Slime's
+  nested token deaths, Hoarding Dragon's linked exile, Stormtide Leviathan's
+  world-flood, Mystifying Maze and the commons. New:
+  `Keyword::{CantAttackUnlessLandCount, CantAttackUnlessOpponentDamaged}` and a
+  `tapped` rider on `Effect::ExileReturnToOwnerNextEndStep`. The remaining ten
+  are listed in TODO.md. Tests in `classic_sets/m11`.
 - **Worldwake is complete** (`set_gaps.py wwk` at zero — `sets::wwk`
   rides the same landfall/Rally shapes plus Multikicker and
   `Effect::SwitchPT` / `BecomeCreature`; `sets::wwk2` closes the last 43).
@@ -1513,8 +1533,9 @@ Each unblocks a large swath of cards.
    first SBA so a printed `*/*` never dies as a 0/0), skip-step and skip-turn.
    Counter-placement replacements (Hardened Scales, Doubling Season, Mowu's
    self-scoped `ExtraPlusOneCounterOnSelf`) now also apply on the **proliferate**
-   path (CR 614.16), via `scaled_counter_count_on`. Still to generalize:
-   as-a-copy ETB, draw replacement breadth. A *general* as-enters one-shot now
+   path (CR 614.16), via `scaled_counter_count_on`. The draw branch is closed
+   (skip, exile-and-play, redirect, doubling, empty-hand bonus, dredge and
+   `MayReplaceDrawWithTutor`). Still to generalize: as-a-copy ETB. A *general* as-enters one-shot now
    ships (`CardDefinition.as_enters_effect`, resolved pre-SBA — Ixidron). (Devouring Hellion / Rescuer Sphinx's
    as-enters reflexive shape now ship via `devour` / a reflexive ETB.)
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes`;
@@ -1624,6 +1645,9 @@ Each unblocks a large swath of cards.
   no longer short-circuits a fully-prevented dealer, so a shield's riders fire
   on combat damage and `DamagePrevented` is emitted uniformly (615.13).
   Hallow (turn-long + life refund), Awe Strike (next instance only).
+- ✅ **Attack restrictions by board state** — `CantAttackUnlessLandCount`
+  (Harbor Serpent's five Islands) and `CantAttackUnlessOpponentDamaged`
+  (Bloodcrazed Goblin) join the CR 508.1a gate list in `declare_attackers`.
 - 🟡 **Loyalty fidelity:** loyalty-set effects ✅, proliferate on loyalty ✅
   (`CounterType::Loyalty`, test `cr_701_34_proliferate_adds_loyalty_counter`),
   combat damage to a planeswalker removes loyalty ✅ (CR 306.9, test

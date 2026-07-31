@@ -725,6 +725,7 @@ pub fn hikari_twilight_guardian() -> CardDefinition {
                 description: "Exile Hikari until the next end step".into(),
                 body: Box::new(Effect::ExileReturnToOwnerNextEndStep {
                     what: Selector::This,
+                    tapped: false,
                 }),
             },
         }],
