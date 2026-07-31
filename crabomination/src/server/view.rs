@@ -677,6 +677,7 @@ fn project_player(
         spells_cast_this_turn: player.spells_cast_this_turn,
         spell_cast_lock,
         even_mv_cast_locked,
+        development_locked: state.damping_engine_locks(player_seat),
         skip_next_combat: player.skip_next_combat,
         controlled_by: state.controlled_by.get(player_seat).copied().flatten(),
         // The *effective* cap, folding in Locust Miser / Minamo Scrollkeeper /
@@ -1826,6 +1827,7 @@ fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
                 gate_label,
                 gate_blocked: false,
                 opponents_only: a.opponents_only,
+                any_player: a.any_player,
                 modes: ability_mode_labels(&a.effect),
             }
         })
@@ -2057,6 +2059,11 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     // so the tooltip doesn't read as a self-usable ability.
     if ability.opponents_only {
         label.push_str(" (opponents only)");
+    }
+    // CR 113.3d — flag the shared abilities so a seat that doesn't control the
+    // permanent knows the row in their menu is real (Damping Engine).
+    if ability.any_player {
+        label.push_str(" (any player)");
     }
     label
 }
@@ -4000,6 +4007,27 @@ mod tests {
         assert!(project(&g, 0).players[0].even_mv_cast_locked, "opponent's Void Winnower locks");
         // The Void Winnower controller is unaffected by their own static.
         assert!(!project(&g, 1).players[1].even_mv_cast_locked, "the controller isn't locked");
+    }
+
+    #[test]
+    fn damping_engine_surfaces_the_development_lock_and_its_shared_ability() {
+        let mut g = two_player_game();
+        let engine = g.add_card_to_battlefield(1, catalog::damping_engine());
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let view = project(&g, 0);
+        assert!(view.players[0].development_locked, "seat 0 is ahead on permanents");
+        assert!(!view.players[1].development_locked);
+        // CR 113.3d — the escape ability is surfaced to the seat that doesn't
+        // control the Engine, flagged so the client keeps the row live.
+        let ability = view
+            .battlefield
+            .iter()
+            .find(|p| p.id == engine)
+            .and_then(|p| p.abilities.first())
+            .expect("Damping Engine has an ability");
+        assert!(ability.any_player);
+        assert!(ability.cost_label.contains("any player"));
     }
 
     #[test]

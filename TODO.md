@@ -23,6 +23,44 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
+## Noticed this run (modern_decks — Urza block closure)
+
+`set_gaps.py ulg` is at zero and `uds` is at 8. What's left in UDS needs one
+primitive each:
+
+- **Academy Rector / Gamekeeper** — "you may exile it. If you do, [search /
+  reveal-until-creature]". Wants a `MayExileSelfThen { body }` shape; the death
+  trigger has to see the card in the graveyard and move it to exile first.
+- **Body Snatcher** — an ETB "exile this unless you discard a creature card"
+  plus a death trigger that exiles itself *and* reanimates.
+- **Bubbling Muck** — `StaticEffect::ExtraManaOnLandTap` is a permanent's
+  static; the Muck needs a turn-scoped floating version.
+- **Goblin Festival** — "flip a coin; if you lose, choose an opponent, that
+  player gains control of this" — a coin-flip-driven control handoff.
+- **Iridescent Drake** — attach a target Aura *card from a graveyard* to the
+  entering creature.
+- **Scrying Glass** — a number-and-color guess against a revealed hand.
+- **Storage Matrix** — "each player chooses a card type during their untap
+  step; only permanents of that type untap." Wants a per-untap-step choice hook.
+
+Residuals in what did ship:
+
+- **`Effect::RevealAnyNumberFromHand` reveals nothing visible.** The count is
+  right, but no `hands_revealed_to` entry or event, so an opponent never learns
+  what the Scent / Seer player showed. Same gap as
+  `RevealHandDiscardAllMatching`.
+- **Memory Jar's stash is public.** The hands are exiled face down but the
+  exile zone is projected in full, so the view leaks them until they return.
+- **Encroach discards every matching nonbasic land**, not the one card the
+  printed card lets you choose (`RevealHandDiscardAllMatching`).
+- **`Effect::ExileAllCopiesOfTargetName` only walks the battlefield and the
+  stack for its subject.** A card already in a graveyard can't be the target,
+  which is right for the five printed cards but blocks a future reprint shape.
+- **`ActivatedAbility.any_player` has no bot policy.** The affordance probe and
+  the client menu surface it, but the bot planner treats it like any other
+  ability, so it'll happily sacrifice a permanent to Damping Engine even when
+  it isn't the locked seat.
+
 ## Noticed this run (modern_decks — Mirrodin block closure)
 
 The whole Mirrodin block (MRD / DST / 5DN) now reports zero `set_gaps.py`

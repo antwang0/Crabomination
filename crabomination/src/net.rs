@@ -736,6 +736,12 @@ pub struct PlayerView {
     /// hand. Defaults to false.
     #[serde(default)]
     pub even_mv_cast_locked: bool,
+    /// Damping Engine (CR 611) — true while this player controls more
+    /// permanents than each other player and hasn't bought their way out for
+    /// the turn, so they can't play lands or cast artifact/creature/enchantment
+    /// spells. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub development_locked: bool,
     /// CR 506 — number of this player's upcoming combat phases that will be
     /// skipped (Stonehorn Dignitary). Surfaced so the UI can warn "next
     /// combat skipped." Defaults to 0.
@@ -1194,6 +1200,12 @@ pub struct AbilityView {
     /// Defaults to `false` for older clients. Detention Vortex.
     #[serde(default)]
     pub opponents_only: bool,
+    /// True if this ability is flagged `any_player` (CR 113.3d — "Any player
+    /// may activate this ability"). Every seat's client surfaces it, whoever
+    /// controls the permanent. Defaults to `false` for older clients.
+    /// Damping Engine.
+    #[serde(default)]
+    pub any_player: bool,
     /// CR 601.2b — the short text of each mode when the ability's body is
     /// modal (`Effect::ChooseMode`), in mode order. Empty for the
     /// non-modal majority; a client with two or more entries prompts for

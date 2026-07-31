@@ -1054,7 +1054,10 @@ pub fn festering_wound() -> CardDefinition {
                 event: EventSpec::new(
                     EventKind::StepBegins(TurnStep::Upkeep),
                     EventScope::AnyPlayer,
-                ),
+                )
+                .with_filter(Predicate::IsTurnOf(PlayerRef::ControllerOf(Box::new(
+                    Selector::AttachedTo(Box::new(Selector::This)),
+                )))),
                 effect: Effect::DealDamage {
                     to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::AttachedTo(
                         Box::new(Selector::This),

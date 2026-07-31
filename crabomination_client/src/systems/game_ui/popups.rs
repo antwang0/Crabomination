@@ -61,14 +61,18 @@ pub fn spawn_ability_menu(
     // `mana_abilities.len() > 1` branch in `handle_game_input`).
     // An `opponents_only` ability (CR 602.5 — Detention Vortex's escape) can't
     // be activated by the permanent's controller, so grey it out in their own
-    // menu just like a once-per-turn ability that's already been used.
+    // menu just like a once-per-turn ability that's already been used. An
+    // `any_player` ability (CR 113.3d — Damping Engine) is live for every seat.
     let viewer_controls = pv.controller == cv.your_seat;
     // CR 601.2b — a modal ability gets one row per mode, so the click already
     // carries the choice (the engine's resolution-time modal can't run for a
     // mode that takes a target).
     let abilities: Vec<(usize, Option<usize>, String, bool)> = pv.abilities.iter()
         .flat_map(|a| {
-            let blocked = (a.opponents_only && viewer_controls) || a.once_per_turn_used;
+            let blocked = !a.any_player
+                && ((a.opponents_only && viewer_controls)
+                    || (!a.opponents_only && !viewer_controls)
+                    || a.once_per_turn_used);
             let suffix = if a.once_per_turn_used { " (used)" } else { "" };
             if a.modes.len() > 1 {
                 a.modes

@@ -352,14 +352,18 @@ impl GameState {
                             sa.effect == crate::effect::StaticEffect::ControllerSkipsDrawStep
                         })
                 });
-                let charged_skip = self.players[self.active_player_idx].skip_next_draw_step > 0;
+                let first_draw_skip =
+                    std::mem::take(&mut self.skip_first_draw) && self.turn_number == 1;
+                // CR 614.13 — a "skip your next draw step" charge is only spent
+                // when it's the effect doing the skipping; another skip already
+                // in force leaves the charge waiting for the next draw step.
+                let charged_skip = !first_draw_skip
+                    && !skips_draw_step
+                    && self.players[self.active_player_idx].skip_next_draw_step > 0;
                 if charged_skip {
                     self.players[self.active_player_idx].skip_next_draw_step -= 1;
                 }
-                if (std::mem::take(&mut self.skip_first_draw) && self.turn_number == 1)
-                    || skips_draw_step
-                    || charged_skip
-                {
+                if first_draw_skip || skips_draw_step || charged_skip {
                 } else {
                     let p = self.active_player_idx;
                     // CR 504.1 — the turn-based draw-step draw is exempt from

@@ -16,6 +16,21 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Urza block complete-ish** — `set_gaps.py ulg` is at zero and `uds` at 8
+  (`sets::ulg`, `sets::uds`, ~120 cards). New primitives: `Duration::
+  WhileSourceTapped` (CR 611.2c), `Value::{PermanentsTappedThisEffect,
+  CardsRevealedThisEffect}`, `PreventionTarget::Anything` +
+  `Effect::PreventNextEventFromChosenSourceAnywhere` (Martyr's Cause),
+  `Effect::{EachPlayerExilesHandDrawsSeven, IgnoreStaticFromSourceThisTurn,
+  RevealAnyNumberFromHand, ExileAllCopiesOfTargetName, ExileAndReturnToOwner,
+  DestroyEachMatchingWithManaValue, DestroyAllSharingNameWith,
+  SkipPlayerDrawStep, DealDamageExcessTo}`, `StaticEffect::{
+  MostPermanentsCantPlay, ControllerSkipsDrawStep}`,
+  `ActivatedAbility.any_player` (CR 113.3d — surfaced end-to-end through
+  `AbilityView.any_player` and the client's ability menu), and
+  `CounterType::{Arrow, Infection}`. Correctness: CR 120.4a excess damage is
+  now a *split* (the creature takes exactly lethal) rather than full damage
+  plus a bonus. Tests in `classic_sets/{ulg,uds}`, `core_rules/cr_recent53`.
 - **Mirrodin (MRD) complete** (`set_gaps.py mrd` at zero). The
   primitives that closure added: `GameEvent`/`EventKind::{LibraryShuffled,
   TappedForMana}` (CR 103.2c / 605) behind a central
@@ -1707,8 +1722,11 @@ Each unblocks a large swath of cards.
   `StaticEffect::LethalDamageByPower` — Zilortha — now overrides the toughness
   threshold in the SBA. **Excess damage** (CR 120.10) is tracked per resolution
   in `deal_damage_to_from` — `Predicate::ExcessDamageDealtThisResolution` gates
-  "if excess damage was dealt this way" (Orbital Plunge). Remaining: the broader
-  marking-interplay audit, and excess-to-another-permanent redirection (120.4a).)
+  "if excess damage was dealt this way" (Orbital Plunge). **CR 120.4a
+  redirection ships**: `Effect::{DealDamageExcessToController, DealDamageExcessTo}`
+  split the event before it happens, so the creature takes exactly lethal
+  (deathtouch-aware via `lethal_damage_needed`). Remaining: the broader
+  marking-interplay audit.)
 - ✅ **Prevention funnel is single-entry** — CR 615.5/615.8: chosen-source
   shields (`damage_prevented_sources`, carrying a life-gain beneficiary and a
   one-instance flag) are applied inside `apply_prevention_shields`, and combat

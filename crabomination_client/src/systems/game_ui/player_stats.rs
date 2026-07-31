@@ -883,6 +883,11 @@ pub fn update_player_stats_chips(
         if p.even_mv_cast_locked {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ even".to_string());
         }
+        // Damping Engine — the seat ahead on permanents can't develop until it
+        // sacrifices something.
+        if p.development_locked {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ develop".to_string());
+        }
         // CR 506 skipped combat (Stonehorn Dignitary) — surface so the player
         // knows their next combat phase won't happen.
         if p.skip_next_combat > 0 {

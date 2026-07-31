@@ -202,6 +202,7 @@ mod tests {
                 spells_cast_this_turn: 0,
                 spell_cast_lock: Default::default(),
                 even_mv_cast_locked: false,
+                development_locked: false,
                 max_hand_size: Some(7),
                 command: vec![],
                 commanders: vec![],
