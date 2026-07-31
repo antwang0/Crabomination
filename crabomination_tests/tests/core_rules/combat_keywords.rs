@@ -862,20 +862,21 @@ fn cr_702_16e_protection_prevents_combat_damage() {
     assert_eq!(g.battlefield_find(atk).unwrap().damage, 2, "attacker still takes the blocker's 2");
 }
 
-// ── CR 724 The Monarch ───────────────────────────────────────────────────────
+// ── CR 725 The Monarch ───────────────────────────────────────────────────────
 
 #[test]
-fn cr_724_monarch_draws_at_their_end_step() {
+fn cr_725_2_monarch_draws_at_their_end_step() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::grizzly_bears());
     g.monarch = Some(0);
     let before = g.players[0].hand.len();
     advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g); // CR 725.2 — the draw is a triggered ability
     assert_eq!(g.players[0].hand.len(), before + 1, "monarch drew at their end step");
 }
 
 #[test]
-fn cr_724_non_monarch_end_step_does_not_draw() {
+fn cr_725_2_non_monarch_end_step_does_not_draw() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::grizzly_bears());
     g.monarch = Some(1); // P1 is monarch, but it's P0's turn/end step
@@ -885,7 +886,7 @@ fn cr_724_non_monarch_end_step_does_not_draw() {
 }
 
 #[test]
-fn cr_724_combat_damage_to_monarch_steals_the_crown() {
+fn cr_725_2_combat_damage_to_monarch_steals_the_crown() {
     let mut g = two_player_game();
     g.monarch = Some(1); // the opponent starts as monarch
     let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -901,7 +902,7 @@ fn cr_724_combat_damage_to_monarch_steals_the_crown() {
 }
 
 #[test]
-fn cr_724_become_monarch_effect_via_etb() {
+fn cr_725_1_become_monarch_effect_via_etb() {
     use crabomination::card::Effect;
     use crabomination::effect::PlayerRef;
     let mut g = two_player_game();
@@ -918,7 +919,7 @@ fn cr_724_become_monarch_effect_via_etb() {
 }
 
 #[test]
-fn cr_724_is_monarch_predicate() {
+fn cr_725_3_is_monarch_predicate() {
     use crabomination::card::Predicate;
     use crabomination::effect::PlayerRef;
     use crabomination::game::effects::EffectContext;
@@ -1455,4 +1456,27 @@ fn cr_508_1d_must_attack_creature_is_forced_to_attack() {
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: rig, target: AttackTarget::Player(1),
     }])).expect("legal once the Rig is declared");
+}
+
+/// CR 725.3 — only one player is the monarch; becoming it displaces the old.
+#[test]
+fn cr_725_3_only_one_monarch_at_a_time() {
+    let mut g = two_player_game();
+    let mut events = vec![];
+    g.set_monarch(0, &mut events);
+    assert_eq!(g.monarch, Some(0));
+    g.set_monarch(1, &mut events);
+    assert_eq!(g.monarch, Some(1), "the crown moves rather than being shared");
+}
+
+/// CR 725.4 — a monarch leaving on their own turn hands the crown to the next
+/// player in turn order, not to nobody.
+#[test]
+fn cr_725_4_monarch_leaving_on_their_turn_passes_the_crown() {
+    let mut g = crabomination::game::multi_player_game(3);
+    let mut events = vec![];
+    g.active_player_idx = 0;
+    g.set_monarch(0, &mut events);
+    g.concede(0);
+    assert_eq!(g.monarch, Some(1), "next in turn order takes it");
 }

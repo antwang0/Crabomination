@@ -2319,7 +2319,7 @@ pub struct CardDefinition {
     /// Some((CounterType::Prepared, Value::Const(1)))`.
     #[serde(default)]
     pub prepare_spell: Option<Box<CardDefinition>>,
-    /// CR 711 — flip card. When `Some`, this is the *unflipped* (top) face and
+    /// CR 710 — flip card. When `Some`, this is the *unflipped* (top) face and
     /// the value is the flipped (bottom) characteristics. Unlike a DFC, a flip
     /// card is single-faced — it is never cast or rendered as its flip side; it
     /// only flips in place via `Effect::Flip`. Only the top stores this.
@@ -4368,12 +4368,12 @@ pub struct CardInstance {
     /// color, and size when it leaves the battlefield. In-memory only: the
     /// wire keeps the name + `cast_as_prototype` and rebuilds this on load.
     pub prototype_printed: Option<Arc<CardDefinition>>,
-    /// CR 711 — true while this flip card is showing its flipped (bottom) face.
+    /// CR 710 — true while this flip card is showing its flipped (bottom) face.
     /// `definition` is swapped to the flip face; `unflipped_def` stashes the
     /// top so it can be restored on zone change. Reconstructed on snapshot load
     /// from the top name + this flag.
     pub flipped: bool,
-    /// CR 711 — the unflipped (top) definition, kept while `flipped`. In-memory
+    /// CR 710 — the unflipped (top) definition, kept while `flipped`. In-memory
     /// only: the serde wire stores the top name + the `flipped` flag.
     pub unflipped_def: Option<Arc<CardDefinition>>,
     /// CR 708 — while this permanent is on the battlefield face down (morph /
@@ -5182,7 +5182,7 @@ impl CardInstance {
         Some(name)
     }
 
-    /// CR 711.2 — flip this permanent to its flipped (bottom) face in place.
+    /// CR 710.2 — flip this permanent to its flipped (bottom) face in place.
     /// No-op if already flipped or it has no flip face. Returns the flip
     /// face's name when a flip happened.
     pub fn flip(&mut self) -> Option<&'static str> {
@@ -5204,7 +5204,7 @@ impl CardInstance {
         Some(name)
     }
 
-    /// CR 711.6 — outside the battlefield only the unflipped characteristics
+    /// CR 710.2 — outside the battlefield only the unflipped characteristics
     /// exist; restore the top face as the card changes zones.
     pub fn revert_flip(&mut self) {
         if let Some(top) = self.unflipped_def.take() {
@@ -5487,7 +5487,7 @@ struct CardInstanceWire {
     /// `front.back_face` on load. `#[serde(default)]` for back-compat.
     #[serde(default)]
     transformed: bool,
-    /// CR 711 — showing the flipped face. `name` stores the unflipped (top)
+    /// CR 710 — showing the flipped face. `name` stores the unflipped (top)
     /// name; the flip face is recovered as `top.flip_face` on load.
     #[serde(default)]
     flipped: bool,
@@ -5873,7 +5873,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             c.definition = Arc::new(back);
             c.transformed = true;
         }
-        // CR 711 — restore a flipped permanent: stash the top, swap the active
+        // CR 710 — restore a flipped permanent: stash the top, swap the active
         // definition to the flip face.
         if wire.flipped
             && let Some(flip) = c.definition.flip_face.as_ref().map(|f| (**f).clone())

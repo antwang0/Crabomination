@@ -439,10 +439,23 @@ impl GameState {
             }
             TurnStep::End => {
                 self.end_steps_this_turn = self.end_steps_this_turn.saturating_add(1);
-                // CR 724 — the monarch draws a card at the beginning of
-                // their end step (a turn-based action).
+                // CR 725.2 — "At the beginning of the monarch's end step,
+                // that player draws a card." An inherent triggered ability
+                // with no source, so it uses the stack and can be responded
+                // to (and doubled) like any other trigger.
                 if self.monarch == Some(self.active_player_idx) {
-                    self.draw_one(self.active_player_idx, &mut events);
+                    let seat = self.active_player_idx;
+                    self.stack.push(
+                        crate::game::types::TriggerPush::new(
+                            CardId(0),
+                            seat,
+                            Effect::Draw {
+                                who: crate::effect::Selector::You,
+                                amount: crate::card::Value::ONE,
+                            },
+                        )
+                        .build(),
+                    );
                 }
                 // CR 702.183 — Impending time counters tick at the beginning of
                 // the controller's end step; the permanent becomes a creature
@@ -2983,11 +2996,19 @@ impl GameState {
         self.players[p].hand.clear();
         self.players[p].library.clear();
         self.players[p].graveyard.clear();
-        // CR 724.3 — if the monarch leaves the game, the active player
-        // becomes the monarch (no monarch if the active player is the one
-        // leaving).
+        // CR 725.4 — if the monarch leaves the game, the active player
+        // becomes the monarch; if the active player is the one leaving (or
+        // there is no active player), the next player in turn order who can
+        // still become the monarch does.
         if self.monarch == Some(p) {
-            self.monarch = if self.active_player_idx == p { None } else { Some(self.active_player_idx) };
+            self.monarch = if self.active_player_idx != p && !self.players[self.active_player_idx].eliminated {
+                Some(self.active_player_idx)
+            } else {
+                let n = self.players.len();
+                (1..n)
+                    .map(|off| (self.active_player_idx + off) % n)
+                    .find(|&q| q != p && !self.players[q].eliminated)
+            };
             let mut events = vec![];
             self.return_monarch_guarded_exiles(self.monarch, &mut events);
         }
@@ -4412,7 +4433,7 @@ impl GameState {
         // face, so capture them *before* the CR 712.4 front-face revert.
         let exile_on_graveyard = self.graveyard_exiled_for(&card) || card.disturb_back_exiles();
         let void_counter_on_exile = self.graveyard_exile_redirects(&card).1;
-        // CR 711.6 / 712.4 — flip cards and transformed DFCs revert to their
+        // CR 710.4 / 712.4 — flip cards and transformed DFCs revert to their
         // unflipped / front face off the battlefield.
         card.revert_flip();
         card.revert_transform();

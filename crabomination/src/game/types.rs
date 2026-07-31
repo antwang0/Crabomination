@@ -1823,7 +1823,7 @@ pub enum GameEvent {
     BecameMonstrous { card_id: CardId, n: u32 },
     /// CR 712 — a permanent transformed to its other face.
     Transformed { card_id: CardId },
-    /// CR 711 — a flip card flipped to its flipped (bottom) face.
+    /// CR 710 — a flip card flipped to its flipped (bottom) face.
     Flipped { card_id: CardId },
     /// CR 702.140 — a creature mutated (a mutate spell merged onto it).
     /// `card_id` is the resulting merged permanent (the host).

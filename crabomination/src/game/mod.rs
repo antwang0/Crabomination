@@ -587,7 +587,7 @@ pub struct GameState {
     #[serde(skip)]
     pub(crate) energy_paid_this_resolution: u32,
     /// Transient: permanents returned to hand by `Effect::ReturnAnyNumberToHand`
-    /// within the current resolution — the Sweep count (CR 702.60), read by
+    /// within the current resolution — the Sweep count, read by
     /// `Value::PermanentsReturnedThisEffect`. Reset between resolutions.
     #[serde(skip)]
     pub(crate) permanents_returned_this_resolution: u32,
@@ -1943,7 +1943,7 @@ impl GameState {
         );
     }
 
-    /// CR 711.2 — flip one flip-card permanent to its flipped face in place.
+    /// CR 710.2 — flip one flip-card permanent to its flipped face in place.
     /// The object is unchanged (counters/tapped/attachments persist); fires
     /// `Flipped`. No-op if already flipped or it has no flip face.
     pub fn flip_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {

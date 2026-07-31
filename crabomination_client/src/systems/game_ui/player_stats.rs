@@ -298,12 +298,15 @@ fn speed_chip_label(speed: u32, at_max: bool) -> String {
 }
 
 /// Label for the hand-size chip (CR 402.2 / 514.1 cleanup discard). No maximum
-/// (Reliquary Tower, Vnwxt) reads "✋ N ∞"; at or over the cap it reads "✋ N/M"
-/// so the looming cleanup discard is glanceable; otherwise the plain count.
+/// (Reliquary Tower, Vnwxt) reads "✋ N ∞"; at or over the cap, or whenever the
+/// cap has been moved off the printed seven (Locust Miser, Minamo Scrollkeeper),
+/// it reads "✋ N/M" so both the looming discard and the shifted cap are
+/// glanceable; otherwise the plain count.
 fn hand_chip_label(hand: usize, max_hand_size: Option<usize>) -> String {
+    const DEFAULT_MAX: usize = 7;
     match max_hand_size {
         None => format!("✋ {hand} ∞"),
-        Some(m) if hand >= m => format!("✋ {hand}/{m}"),
+        Some(m) if hand >= m || m != DEFAULT_MAX => format!("✋ {hand}/{m}"),
         _ => format!("✋ {hand}"),
     }
 }
@@ -1505,6 +1508,10 @@ mod tests {
         assert_eq!(hand_chip_label(9, Some(7)), "✋ 9/7");
         // Comfortably under the cap → plain count.
         assert_eq!(hand_chip_label(4, Some(7)), "✋ 4");
+        // A cap moved off the printed seven is always shown (Locust Miser,
+        // Minamo Scrollkeeper).
+        assert_eq!(hand_chip_label(4, Some(5)), "✋ 4/5");
+        assert_eq!(hand_chip_label(4, Some(9)), "✋ 4/9");
     }
 
     #[test]

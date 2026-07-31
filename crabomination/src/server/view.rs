@@ -679,7 +679,10 @@ fn project_player(
         even_mv_cast_locked,
         skip_next_combat: player.skip_next_combat,
         controlled_by: state.controlled_by.get(player_seat).copied().flatten(),
-        max_hand_size: player.max_hand_size,
+        // The *effective* cap, folding in Locust Miser / Minamo Scrollkeeper /
+        // Reliquary Tower statics — the raw `Player.max_hand_size` ignores them
+        // and made the client's cleanup-discard hint wrong.
+        max_hand_size: state.effective_max_hand_size(player_seat),
         // Command zone is public — every viewer sees every card as
         // `Known`. We reuse `HandCardView` for the card shape since
         // it already carries name / cost / types / target hints,
@@ -1739,6 +1742,8 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::LandPutIntoGraveyard, _) => "Land to GY",
         // Enrage (CR 702.130) — "Whenever this creature is dealt damage."
         (EventKind::DealsDamageToCreature, _) => "Damages a creature",
+        (EventKind::DealsCombatDamage, _) => "Deals combat damage",
+        (EventKind::DealsDamage, _) => "Deals damage",
         (EventKind::DealtDamage, EventScope::SelfSource) => "Enrage",
         (EventKind::DealtDamage, EventScope::YourControl) => "Your crea dealt dmg",
         (EventKind::DealtDamage, EventScope::AnyPlayer) => "Any crea dealt dmg",

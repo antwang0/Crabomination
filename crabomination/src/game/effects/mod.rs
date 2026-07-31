@@ -7891,7 +7891,7 @@ impl GameState {
             }
 
             Effect::ReturnAnyNumberToHand { filter } => {
-                // CR 702.60 — Sweep. The controller picks any subset (min 0);
+                // Sweep. The controller picks any subset (min 0);
                 // the count feeds `Value::PermanentsReturnedThisEffect`.
                 let seat = ctx.controller;
                 let source = ctx.source.unwrap_or(CardId(0));
@@ -9619,7 +9619,7 @@ impl GameState {
             }
 
             Effect::Flip { what } => {
-                // CR 711.2 — flip each matching flip-card permanent to its
+                // CR 710.2 — flip each matching flip-card permanent to its
                 // flipped face in place (counters / tapped / attachments persist).
                 let ids: Vec<CardId> = self
                     .resolve_selector(what, ctx)

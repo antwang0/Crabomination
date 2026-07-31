@@ -14,8 +14,8 @@ use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 use super::bok::{arcane_instant, creature, instant, legend, sorcery};
 use super::bok2::on_upkeep;
 
-/// A Channel ability (CR 702.58) — "{cost}, Discard this card: `effect`",
-/// activated from hand at instant speed.
+/// A Channel ability (CR 207.2c ability word) — "{cost}, Discard this card:
+/// `effect`", activated from hand at instant speed.
 pub(crate) fn channel_ability(mana: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: mana,

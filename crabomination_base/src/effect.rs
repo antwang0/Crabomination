@@ -659,7 +659,7 @@ pub enum Value {
     CardsDiscardedThisEffect,
     /// Number of permanents returned to hand by an
     /// `Effect::ReturnAnyNumberToHand` earlier in the current resolution — the
-    /// Sweep count (CR 702.60). Reset between independent resolutions.
+    /// Sweep count. Reset between independent resolutions.
     PermanentsReturnedThisEffect,
     /// Amount of {E} paid by an `Effect::PayAnyEnergy` earlier in the current
     /// resolution. Reset between independent resolutions. Aether Spike's
@@ -4225,7 +4225,7 @@ pub enum Effect {
     /// `CardInstance.renowned`). Paired with the Renown counter add so the
     /// once-only gate keys off the real flag, not a counter heuristic.
     BecomeRenowned { what: Selector },
-    /// CR 711.2 — Flip the matching flip-card permanent(s) to their flipped
+    /// CR 710.2 — Flip the matching flip-card permanent(s) to their flipped
     /// (bottom) face in place (same object, keeping counters / tapped state /
     /// attachments). One-way; no-op on a permanent already flipped or without a
     /// flip face. Emits `Flipped` so "when this flips" triggers can react.
@@ -4471,11 +4471,11 @@ pub enum Effect {
     /// (stacking across activations); cleared at cleanup. Distinct from
     /// `GrantExtraPlusOneCountersThisTurn`, which amplifies counters *placed*.
     CreaturesEnterWithExtraCounterThisTurn { who: PlayerRef },
-    /// CR 702.60 — Sweep: "Return any number of `filter` you control to their
-    /// owner's hand." The controller picks the subset (min 0); the count is
-    /// published as `Value::PermanentsReturnedThisEffect` for a follow-up step
-    /// in the same resolution to scale off (Barrel Down Sokenzan, Sink into
-    /// Takenuma).
+    /// Sweep (CR 207.2c ability word) — "Return any number of `filter` you
+    /// control to their owner's hand." The controller picks the subset (min 0);
+    /// the count is published as `Value::PermanentsReturnedThisEffect` for a
+    /// follow-up step in the same resolution to scale off (Barrel Down
+    /// Sokenzan, Sink into Takenuma).
     ReturnAnyNumberToHand { filter: SelectionRequirement },
     /// "Tap any number of untapped permanents matching `filter` you control;
     /// this source gets +`power`/+`toughness` until end of turn for each one

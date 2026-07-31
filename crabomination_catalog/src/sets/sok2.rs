@@ -26,8 +26,9 @@ fn hand_advantage() -> Predicate {
     Predicate::Not(Box::new(Predicate::AnOpponentHasMoreCardsInHand))
 }
 
-/// Sweep (CR 702.60) — return any number of `ty` you control to hand, then run
-/// `then`, which reads the count via `Value::PermanentsReturnedThisEffect`.
+/// Sweep (CR 207.2c ability word) — return any number of `ty` you control to
+/// hand, then run `then`, which reads the count via
+/// `Value::PermanentsReturnedThisEffect`.
 fn sweep(ty: LandType, then: Effect) -> Effect {
     Effect::Seq(vec![
         Effect::ReturnAnyNumberToHand { filter: R::HasLandType(ty) },
@@ -40,7 +41,7 @@ fn swept() -> Value {
     Value::PermanentsReturnedThisEffect
 }
 
-// ── Sweep (CR 702.60) ───────────────────────────────────────────────────────
+// ── Sweep (ability word) ────────────────────────────────────────────────────
 
 /// Barrel Down Sokenzan — {2}{R} Arcane instant. Sweep Mountains for twice
 /// that many damage to a creature.
@@ -1482,7 +1483,7 @@ pub fn exile_into_darkness() -> CardDefinition {
     }
 }
 
-// ── The Ascendant flip cycle (CR 711) ───────────────────────────────────────
+// ── The Ascendant flip cycle (CR 710) ───────────────────────────────────────
 
 /// A flipped Essence — a costless Legendary Enchantment bottom face.
 fn essence(name: &'static str, abilities: Vec<StaticAbility>) -> CardDefinition {
