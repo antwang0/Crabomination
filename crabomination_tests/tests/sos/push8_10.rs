@@ -2182,6 +2182,10 @@ fn cheerful_osteomancer_prepare_spell_returns_creature_from_graveyard() {
 fn prepare_spell_survives_float_spend_suspension() {
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    // CR 601.2g proper tapping is `manual_mana`, not `wants_ui`: this test
+    // models a human choosing their own sources. A bot seat wants its
+    // decisions surfaced but still auto-taps.
+    g.players[0].manual_mana = true;
     let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     // Regrowth ({1}{G}) off a prepared Emeritus of Abundance.
     let id = prepared_on_battlefield(&mut g, 0, catalog::emeritus_of_abundance());

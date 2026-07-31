@@ -57,6 +57,15 @@ pub struct EvalWeights {
     /// life linearly. Life near zero is worth far more per point than life
     /// near the starting total; a linear term prices them the same.
     pub concave_life: bool,
+    /// Restore the pre-fix mana behavior: tap every land before deciding
+    /// anything, and size affordability off the floating pool.
+    ///
+    /// Not a weight — a behavioral control, kept for the same reason
+    /// [`RandomBot::uniform_baseline`] is, so the tap-out fix stays
+    /// measurable on the ladder instead of being asserted. Approximates
+    /// the old pass with its land-tap half, which is the part the
+    /// measurement in `main_phase_action_with` was of.
+    pub legacy_pretap: bool,
 }
 
 impl EvalWeights {
@@ -73,6 +82,7 @@ impl EvalWeights {
             toughness: 1,
             keyword_pct: 0,
             concave_life: false,
+            legacy_pretap: false,
         }
     }
 
@@ -109,6 +119,7 @@ impl EvalWeights {
             toughness: 10,
             keyword_pct: 100,
             concave_life: true,
+            legacy_pretap: false,
         }
     }
 
@@ -135,7 +146,14 @@ impl EvalWeights {
             toughness: 10,
             keyword_pct: 0,
             concave_life: false,
+            legacy_pretap: false,
         }
+    }
+
+    /// The historical mana behavior, for laddering the tap-out fix.
+    /// See [`legacy_pretap`](Self::legacy_pretap).
+    pub const fn legacy_mana() -> Self {
+        Self { legacy_pretap: true, ..Self::baseline() }
     }
 
     /// Scaled control + the keyword term only. **Measured worse than the
@@ -442,7 +460,7 @@ impl Bot for RandomBot {
                 } else if state.blockers_declared() && state.stack.is_empty() {
                     // Post-block priority: a held pump trick that flips a
                     // fight one of our blockers is losing.
-                    Some(pick_combat_trick(state, seat).unwrap_or(GameAction::PassPriority))
+                    Some(pick_combat_trick(state, seat, &self.weights).unwrap_or(GameAction::PassPriority))
                 } else {
                     Some(GameAction::PassPriority)
                 }
@@ -452,7 +470,7 @@ impl Bot for RandomBot {
             TurnStep::DeclareBlockers
                 if is_active && state.blockers_declared() && state.stack.is_empty() =>
             {
-                Some(pick_combat_trick(state, seat).unwrap_or(GameAction::PassPriority))
+                Some(pick_combat_trick(state, seat, &self.weights).unwrap_or(GameAction::PassPriority))
             }
             // Master Warcraft on an opponent's turn: we choose *their*
             // attackers, so declare only the creatures that must attack.
@@ -1996,6 +2014,25 @@ fn main_phase_action_with(
     // needs (`try_pay_with_auto_tap`, which `would_accept_on` already runs
     // for every candidate), so leftover mana simply stays untapped and is
     // still there at instant speed.
+    if w.legacy_pretap
+        && let Some(id) = state
+            .battlefield
+            .iter()
+            .find(|c| c.controller == seat && c.definition.is_land() && !c.tapped)
+            .map(|c| c.id)
+    {
+        let action = GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        };
+        if GameState::would_accept_on(&probe, action.clone()) {
+            return action;
+        }
+    }
 
     // Build list of castable non-land spells. Affordability + target
     // pre-filters reduce the candidate set; the FINAL gate is still the
@@ -2020,7 +2057,7 @@ fn main_phase_action_with(
         // is a `SourceGiftPromised`-gated ETB) is wasted by a plain cast; it
         // gets a `CastGift` candidate in the gift block below instead.
         .filter(|c| !(c.definition.gift.is_some() && matches!(c.definition.effect, Effect::Noop)))
-        .filter(|c| can_afford_in_state(state, seat, c))
+        .filter(|c| can_afford_in_state(state, seat, c, w))
         .flat_map(|c| {
             // For modal effects (ChooseMode), enumerate each mode so the
             // bot can pick (e.g.) Drown in the Loch's mode 1 (destroy
@@ -2032,7 +2069,7 @@ fn main_phase_action_with(
                 None => vec![None],
             };
             let x_value = if x_relevant(&c.definition) {
-                Some(max_affordable_x(state, seat, c))
+                Some(max_affordable_x(state, seat, c, w))
             } else {
                 None
             };
@@ -2206,7 +2243,7 @@ fn main_phase_action_with(
         .hand
         .iter()
         .filter(|c| c.definition.gift.is_some())
-        .filter(|c| can_afford_in_state(state, seat, c))
+        .filter(|c| can_afford_in_state(state, seat, c, w))
     {
         let gifted = &c.definition.gift.as_ref().unwrap().gifted_effect;
         // The ETB payoff of a permanent gift lives on the creature, not the
@@ -4823,6 +4860,7 @@ pub fn can_afford_in_state(
     state: &GameState,
     seat: usize,
     card: &crate::card::CardInstance,
+    w: &EvalWeights,
 ) -> bool {
     let extra = state.extra_cost_for_card_in_hand(seat, card.id);
     // Fold in generic cost *reductions* (Affinity, CostReduction statics,
@@ -4834,6 +4872,9 @@ pub fn can_afford_in_state(
     // Mirror the payment funnel's Lattice relaxation so the bot doesn't
     // pass on a spell whose coloured pips any mana can now cover.
     let cost = state.relax_cost_colors(&card.definition.cost);
+    if w.legacy_pretap {
+        return can_afford_with_extra(&cost, &state.players[seat].mana_pool, extra, reduction);
+    }
     can_afford_from(&cost, &available_mana(state, seat), extra, reduction)
 }
 
@@ -4887,12 +4928,17 @@ pub fn max_affordable_x(
     state: &GameState,
     seat: usize,
     card: &crate::card::CardInstance,
+    w: &EvalWeights,
 ) -> u32 {
     if !x_relevant(&card.definition) { return 0; }
     // Everything the seat could still produce, not just what's floating --
     // see `available_mana`. Sizing X off the floating pool alone only
     // worked back when the bot tapped out before deciding anything.
-    let pool_total = available_mana(state, seat).total;
+    let pool_total = if w.legacy_pretap {
+        state.players[seat].mana_pool.total()
+    } else {
+        available_mana(state, seat).total
+    };
     let fixed_cmc = card.definition.cost.with_x_value(0).cmc();
     let extra = state.extra_cost_for_card_in_hand(seat, card.id);
     let needed = fixed_cmc + extra;
@@ -5472,7 +5518,7 @@ fn is_combat_trick(def: &CardDefinition) -> bool {
 /// Covers both sides of combat (our blocked attacker on our turn, our
 /// blocker on theirs). Constant pumps only; dynamic amounts are skipped
 /// rather than mis-valued.
-fn pick_combat_trick(state: &GameState, seat: usize) -> Option<GameAction> {
+fn pick_combat_trick(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     use crate::effect::{Duration, Selector, Value};
     fn pump_amounts(e: &Effect) -> Option<(i32, i32)> {
         match e {
@@ -5498,7 +5544,7 @@ fn pick_combat_trick(state: &GameState, seat: usize) -> Option<GameAction> {
         .hand
         .iter()
         .filter(|c| is_combat_trick(&c.definition))
-        .filter(|c| can_afford_in_state(state, seat, c))
+        .filter(|c| can_afford_in_state(state, seat, c, w))
         .filter_map(|c| pump_amounts(&c.definition.effect).map(|(p, t)| (c.id, p, t)))
         .collect();
     if tricks.is_empty() {
@@ -7928,10 +7974,10 @@ mod tests {
         let card = g.players[0].hand.iter().find(|c| c.id == terror).unwrap().clone();
         g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
         g.players[0].mana_pool.add_colorless(3); // {3}{U} only
-        assert!(!can_afford_in_state(&g, 0, &card), "no discount yet → unaffordable");
+        assert!(!can_afford_in_state(&g, 0, &card, &EvalWeights::default()), "no discount yet → unaffordable");
         for _ in 0..3 { g.add_card_to_graveyard(0, catalog::lightning_bolt()); }
         let card = g.players[0].hand.iter().find(|c| c.id == terror).unwrap().clone();
-        assert!(can_afford_in_state(&g, 0, &card), "−{{3}} discount → now affordable");
+        assert!(can_afford_in_state(&g, 0, &card, &EvalWeights::default()), "−{{3}} discount → now affordable");
     }
 
     /// Regression for the second deadlock observed at
@@ -7950,7 +7996,7 @@ mod tests {
         let mut g = two_player_game();
         let id = g.add_card_to_hand(0, catalog::lightning_bolt());
         let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap().clone();
-        assert_eq!(max_affordable_x(&g, 0, &card), 0,
+        assert_eq!(max_affordable_x(&g, 0, &card, &EvalWeights::default()), 0,
             "Non-X spell yields 0 — caller should pass x_value=None");
     }
 
@@ -7962,7 +8008,7 @@ mod tests {
         // Pool: 1 red + 4 colorless. Fixed cost = {R} (1 mana). X = 4.
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         g.players[0].mana_pool.add_colorless(4);
-        assert_eq!(max_affordable_x(&g, 0, &card), 4,
+        assert_eq!(max_affordable_x(&g, 0, &card, &EvalWeights::default()), 4,
             "X soaks up the remaining {{4}} after the fixed {{R}} pip");
     }
 
@@ -7973,7 +8019,7 @@ mod tests {
         let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap().clone();
         // Only enough mana for the {R} pip — X must collapse to 0.
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
-        assert_eq!(max_affordable_x(&g, 0, &card), 0);
+        assert_eq!(max_affordable_x(&g, 0, &card, &EvalWeights::default()), 0);
     }
 
     #[test]
@@ -7990,7 +8036,7 @@ mod tests {
         // Verify the helper independently first — the bot's `next_action`
         // gates on lots of other state (priority, lands, mana rocks) so
         // a direct call to the helper is the most reliable assertion.
-        assert_eq!(max_affordable_x(&g, 0, &card), 3,
+        assert_eq!(max_affordable_x(&g, 0, &card, &EvalWeights::default()), 3,
             "{{R}} + {{3}} in pool, fixed cost {{R}} => X = 3");
     }
 
@@ -8832,7 +8878,7 @@ mod stack_response_tests {
         g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 — toughest opp
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         g.players[0].mana_pool.add_colorless(6);
-        assert_eq!(max_affordable_x(&g, 0, &card), 2,
+        assert_eq!(max_affordable_x(&g, 0, &card, &EvalWeights::default()), 2,
             "X capped at the 2/2's toughness, not the full {{6}} pool");
     }
 
@@ -8846,7 +8892,7 @@ mod stack_response_tests {
         g.add_card_to_battlefield(1, catalog::grizzly_bears());
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         g.players[0].mana_pool.add_colorless(6);
-        assert_eq!(max_affordable_x(&g, 0, &card), 6, "Banefire keeps the full X");
+        assert_eq!(max_affordable_x(&g, 0, &card, &EvalWeights::default()), 6, "Banefire keeps the full X");
     }
 
     /// An Unblockable attacker swings even into a bigger blocker — no opposing

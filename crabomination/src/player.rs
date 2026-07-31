@@ -783,6 +783,21 @@ pub struct Player {
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
     pub wants_ui: bool,
+    /// CR 601.2g "proper tapping": when true this player chooses their own
+    /// mana sources, so the engine auto-taps only when the payment is
+    /// forced and otherwise rejects the cast with `ManualTapRequired` for
+    /// them to tap manually.
+    ///
+    /// Split out from [`wants_ui`](Self::wants_ui), which used to stand in
+    /// for it. The two are different questions — a bot wants its decisions
+    /// surfaced as `pending_decision` (that is how its policies run) but
+    /// emphatically does *not* want to hand-pick lands — and conflating
+    /// them silently broke every bot cast that needed a tap, because bot
+    /// seats set `wants_ui`. It went unnoticed only because the bot used to
+    /// pre-tap its whole board, so its pool always covered the cost and the
+    /// auto-tap path was never reached.
+    #[serde(default)]
+    pub manual_mana: bool,
     /// CR 705.3 — Krark's Thumb-style coin-flip advantage. When non-zero,
     /// every coin flip this player makes is replayed `coin_flip_advantage`
     /// extra times and they get to keep the result they prefer. Practically
@@ -933,6 +948,7 @@ impl Player {
             emblems: Vec::new(),
             cannot_gain_life: false,
             wants_ui: false,
+            manual_mana: false,
             coin_flip_advantage: 0,
         }
     }

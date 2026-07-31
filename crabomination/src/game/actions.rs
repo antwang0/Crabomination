@@ -2241,7 +2241,7 @@ impl GameState {
         }
         let cost = crate::mana::cost(&[crate::mana::generic(3)]);
         let snapshot = self.snapshot_payment_state(p);
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt =
             self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, &crate::mana::SpellKind::default(), None)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
@@ -4170,7 +4170,7 @@ impl GameState {
             }
             if right { room.right.cost.clone() } else { room.left.cost.clone() }
         };
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         let mut events = receipt.auto_events;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
@@ -4261,7 +4261,7 @@ impl GameState {
             return Err(GameError::SorcerySpeedOnly);
         }
         // Pay the suspend cost.
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         let mut events = receipt.auto_events;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
@@ -4302,7 +4302,7 @@ impl GameState {
         let cost = crate::mana::ManaCost {
             symbols: vec![crate::mana::ManaSymbol::Generic(2)],
         };
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         let mut events = receipt.auto_events;
         let mut card = self
@@ -4339,7 +4339,7 @@ impl GameState {
         let cost = crate::mana::ManaCost {
             symbols: vec![crate::mana::ManaSymbol::Generic(3)],
         };
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         let mana_spent = receipt
             .pool_before
@@ -4396,7 +4396,7 @@ impl GameState {
             .and_then(|c| c.face_up_def.as_ref())
             .map(|d| d.keywords.iter().any(|k| matches!(k, Keyword::Megamorph(_))))
             .unwrap_or(false);
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         let mut events = receipt.auto_events;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
@@ -4461,7 +4461,7 @@ impl GameState {
             cost.reduce_generic(reduction);
         }
         apply_spell_cost_floor(self, &mut cost);
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
@@ -4530,7 +4530,7 @@ impl GameState {
             adv.cost.clone()
         };
         apply_spell_cost_floor(self, &mut cost);
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
@@ -4594,7 +4594,7 @@ impl GameState {
             omen.cost.clone()
         };
         apply_spell_cost_floor(self, &mut cost);
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         // The Omen half is a noncreature instant/sorcery cast; flag it so
         // Omen-restricted mana (Maelstrom of the Spirit Dragon) may fund it.
         let kind = crate::mana::SpellKind {
@@ -4670,7 +4670,7 @@ impl GameState {
             cost.reduce_generic(reduction);
         }
         apply_spell_cost_floor(self, &mut cost);
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
@@ -4773,7 +4773,7 @@ impl GameState {
             cost = cost.with_x_value(x_value.unwrap_or(0));
         }
         apply_spell_cost_floor(self, &mut cost);
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
@@ -4843,7 +4843,7 @@ impl GameState {
             split.right.cost.clone()
         };
         apply_spell_cost_floor(self, &mut cost);
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
@@ -4909,7 +4909,7 @@ impl GameState {
         if plot_reduction > 0 {
             cost.reduce_generic(plot_reduction);
         }
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mut events = receipt.auto_events;
@@ -6033,7 +6033,7 @@ impl GameState {
             }
         }
 
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         // Spell kind gates spend-restricted mana ("spend only to cast …")
         // by the cast card's types — see `CardDefinition::spell_kind`.
         let spell_kind = card.definition.spell_kind();
@@ -7568,7 +7568,7 @@ impl GameState {
         cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
         apply_spell_cost_floor(self, &mut cost);
         let snapshot = self.snapshot_payment_state(p);
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_after_snapshot_mode(
             p, &cost, snapshot, forced_only, &card.definition.spell_kind(), None,
         )?;
@@ -7792,7 +7792,7 @@ impl GameState {
             });
             return Ok(vec![]);
         }
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let snapshot = self.snapshot_payment_state(p);
         let receipt = self.try_pay_after_snapshot_mode(
             p, &cost, snapshot, forced_only, &card.definition.spell_kind(), spend_float,
@@ -7906,7 +7906,7 @@ impl GameState {
         }
         apply_spell_cost_floor(self, &mut cost);
 
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let snapshot = self.snapshot_payment_state(p);
         let receipt = self.try_pay_after_snapshot_mode(
             p, &cost, snapshot, forced_only, &card.definition.spell_kind(), None,
@@ -8143,7 +8143,7 @@ impl GameState {
         }
         cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
         apply_spell_cost_floor(self, &mut cost);
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
@@ -8477,7 +8477,7 @@ impl GameState {
         // permission intact so the controller can retry once they have the
         // mana.
         if let Some(cost) = alt_cast_cost {
-            let forced_only = self.players[p].wants_ui;
+            let forced_only = self.players[p].manual_mana;
             let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
             self.pay_life_cost(p, receipt.side_effects.life_lost);
         }
@@ -8599,7 +8599,7 @@ impl GameState {
         apply_spell_cost_floor(self, &mut cost);
 
         // Pay. On failure put the card back in the command zone.
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let receipt = match self.try_pay_with_auto_tap_mode(p, &cost, forced_only) {
             Ok(r) => r,
             Err(e) => {
@@ -9010,7 +9010,7 @@ impl GameState {
             });
             return Ok(vec![]);
         }
-        let forced_only = self.players[p].wants_ui;
+        let forced_only = self.players[p].manual_mana;
         let alt_snapshot = self.snapshot_payment_state(p);
         let receipt = match self.try_pay_after_snapshot_mode(
             p, &mana_cost, alt_snapshot, forced_only, &card.definition.spell_kind(), spend_float,
@@ -12501,7 +12501,7 @@ impl GameState {
 
         let mut auto_mana_events = Vec::new();
         if let Some(snapshot) = pre_snapshot {
-            let forced_only = self.players[p].wants_ui;
+            let forced_only = self.players[p].manual_mana;
             // Restricted mana may fund this only per the source's spend
             // context (e.g. ArtifactOnly mana for an artifact's ability).
             let receipt = self.try_pay_after_snapshot_mode(

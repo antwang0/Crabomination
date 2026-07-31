@@ -82,6 +82,8 @@ pub struct PlayerSnapshot {
     pub poison_counters: u32,
     pub eliminated: bool,
     pub wants_ui: bool,
+    #[serde(default)]
+    pub manual_mana: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -341,6 +343,7 @@ fn player_snap(p: &Player) -> PlayerSnapshot {
         poison_counters: p.poison_counters,
         eliminated: p.eliminated,
         wants_ui: p.wants_ui,
+        manual_mana: p.manual_mana,
     }
 }
 
@@ -462,6 +465,7 @@ fn restore_player(ps: PlayerSnapshot) -> Result<Player, LoadError> {
     p.poison_counters = ps.poison_counters;
     p.eliminated = ps.eliminated;
     p.wants_ui = ps.wants_ui;
+    p.manual_mana = ps.manual_mana;
     Ok(p)
 }
 

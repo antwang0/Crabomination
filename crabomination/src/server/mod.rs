@@ -543,6 +543,12 @@ fn run_match_inner(
     for (i, occ) in occupants.into_iter().enumerate() {
         match occ {
             SeatOccupant::Human(seat) => {
+                // A real client taps its own lands (CR 601.2g). Bot seats
+                // leave `manual_mana` false so the engine auto-taps for
+                // them — see `Player::manual_mana`.
+                if let Some(p) = state.players.get_mut(i) {
+                    p.manual_mana = true;
+                }
                 let _ = seat.tx.send(ServerMsg::YourSeat(i));
                 let _ = seat.tx.send(ServerMsg::MatchStarted);
                 let _ = seat.tx.send(ServerMsg::View(Box::new(view::project(&state, i))));

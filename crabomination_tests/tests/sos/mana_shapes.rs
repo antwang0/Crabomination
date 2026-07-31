@@ -124,6 +124,10 @@ fn ui_player_must_tap_when_generic_has_a_color_choice() {
     // the cast stops for a manual tap of the generic part.
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    // CR 601.2g proper tapping is `manual_mana`, not `wants_ui`: this test
+    // models a human choosing their own sources. A bot seat wants its
+    // decisions surfaced but still auto-taps.
+    g.players[0].manual_mana = true;
     let mut lands = Vec::new();
     lands.push(g.add_card_to_battlefield(0, catalog::forest()));
     lands.push(g.add_card_to_battlefield(0, catalog::forest()));
@@ -166,6 +170,10 @@ fn ui_player_partial_tap_then_manual_generic_completes_cast() {
     // (what the client's pending-cast driver does) goes through.
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    // CR 601.2g proper tapping is `manual_mana`, not `wants_ui`: this test
+    // models a human choosing their own sources. A bot seat wants its
+    // decisions surfaced but still auto-taps.
+    g.players[0].manual_mana = true;
     let f1 = g.add_card_to_battlefield(0, catalog::forest());
     let f2 = g.add_card_to_battlefield(0, catalog::forest());
     let mut mountains = Vec::new();

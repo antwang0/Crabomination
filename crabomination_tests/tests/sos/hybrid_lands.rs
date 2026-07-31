@@ -828,6 +828,10 @@ fn ui_player_prompted_when_spirit_guide_could_pay() {
     // guide — the cast must stop for a manual choice.
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    // CR 601.2g proper tapping is `manual_mana`, not `wants_ui`: this test
+    // models a human choosing their own sources. A bot seat wants its
+    // decisions surfaced but still auto-taps.
+    g.players[0].manual_mana = true;
     g.add_card_to_battlefield(0, catalog::forest());
     g.add_card_to_hand(0, catalog::elvish_spirit_guide());
     let id = g.add_card_to_hand(0, catalog::crop_rotation());
@@ -849,6 +853,10 @@ fn ui_player_prompted_when_land_and_rock_make_same_color() {
     // choice, so the cast prompts instead of auto-tapping.
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    // CR 601.2g proper tapping is `manual_mana`, not `wants_ui`: this test
+    // models a human choosing their own sources. A bot seat wants its
+    // decisions surfaced but still auto-taps.
+    g.players[0].manual_mana = true;
     let forest = g.add_card_to_battlefield(0, catalog::forest());
     let mox = g.add_card_to_battlefield(0, catalog::mox_emerald());
     let id = g.add_card_to_hand(0, catalog::crop_rotation());

@@ -486,6 +486,10 @@ fn abrade_mode_descriptions_name_the_target_restrictions() {
 fn cast_keeps_floating_mana_when_player_declines_to_spend_it() {
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    // CR 601.2g proper tapping is `manual_mana`, not `wants_ui`: this test
+    // models a human choosing their own sources. A bot seat wants its
+    // decisions surfaced but still auto-taps.
+    g.players[0].manual_mana = true;
     g.players[0].mana_pool.add(Color::Blue, 1); // off-colour float to keep
     let f1 = g.add_card_to_battlefield(0, catalog::forest());
     let f2 = g.add_card_to_battlefield(0, catalog::forest());
@@ -514,6 +518,10 @@ fn cast_keeps_floating_mana_when_player_declines_to_spend_it() {
 fn cast_spends_floating_mana_when_player_confirms() {
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    // CR 601.2g proper tapping is `manual_mana`, not `wants_ui`: this test
+    // models a human choosing their own sources. A bot seat wants its
+    // decisions surfaced but still auto-taps.
+    g.players[0].manual_mana = true;
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.add_card_to_battlefield(0, catalog::forest());
     g.add_card_to_battlefield(0, catalog::forest());
@@ -537,6 +545,10 @@ fn cast_spends_floating_mana_when_player_confirms() {
 fn activated_ability_keeps_floating_mana_when_player_declines() {
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    // CR 601.2g proper tapping is `manual_mana`, not `wants_ui`: this test
+    // models a human choosing their own sources. A bot seat wants its
+    // decisions surfaced but still auto-taps.
+    g.players[0].manual_mana = true;
     g.players[0].mana_pool.add(Color::Blue, 1); // off-colour float to keep
     let gorilla = g.add_card_to_battlefield(0, catalog::gorilla_chieftain());
     g.clear_sickness(gorilla);
@@ -588,6 +600,10 @@ fn cast_auto_spends_floating_mana_when_it_is_the_only_source() {
 fn float_confirm_offers_only_off_colour_excess() {
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    // CR 601.2g proper tapping is `manual_mana`, not `wants_ui`: this test
+    // models a human choosing their own sources. A bot seat wants its
+    // decisions surfaced but still auto-taps.
+    g.players[0].manual_mana = true;
     g.players[0].mana_pool.add(Color::Red, 1); // off-colour excess
     g.players[0].mana_pool.add(Color::Green, 1); // matches the {G} pip
     let forests: Vec<_> = (0..4)

@@ -138,6 +138,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
     match name {
         "baseline" => Some(Pilot::Scored(EvalWeights::baseline())),
         "v2" => Some(Pilot::Scored(EvalWeights::v2())),
+        "pretap" => Some(Pilot::Scored(EvalWeights::legacy_mana())),
         "scaled" => Some(Pilot::Scored(EvalWeights::scaled_control())),
         "keywords" => Some(Pilot::Scored(EvalWeights::keywords_only())),
         "kw25" => Some(Pilot::Scored(EvalWeights::keywords_quarter())),
@@ -151,7 +152,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform";
+const PROFILES: &str = "baseline, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform";
 
 /// Wilson score interval for `wins` out of `n` at `z`. Chosen over the
 /// normal approximation because it stays sane at small n and at p̂ = 0 or 1,
