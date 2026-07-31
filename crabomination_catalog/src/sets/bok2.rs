@@ -503,9 +503,16 @@ pub fn shirei_shizos_caretaker() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Return it at the beginning of the next end step?".into(),
                 body: Box::new(Effect::AtNextEndStep {
-                    body: Box::new(Effect::Move {
-                        what: Selector::TriggerSource,
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    body: Box::new(Effect::If {
+                        cond: Predicate::SourceOnBattlefield,
+                        then: Box::new(Effect::Move {
+                            what: Selector::TriggerSource,
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::You,
+                                tapped: false,
+                            },
+                        }),
+                        else_: Box::new(Effect::Noop),
                     }),
                 }),
             },
@@ -609,10 +616,7 @@ pub fn kumanos_blessing() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::DealsCombatDamageToCreature,
-                    EventScope::SelfSource,
-                ),
+                event: EventSpec::new(EventKind::DealsDamageToCreature, EventScope::SelfSource),
                 effect: Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
             }],
             ..Default::default()
@@ -667,7 +671,7 @@ pub fn neko_te() -> CardDefinition {
             triggered_abilities: vec![
                 TriggeredAbility {
                     event: EventSpec::new(
-                        EventKind::DealsCombatDamageToCreature,
+                        EventKind::DealsDamageToCreature,
                         EventScope::SelfSource,
                     ),
                     effect: Effect::Seq(vec![

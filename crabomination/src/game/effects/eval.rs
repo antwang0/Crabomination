@@ -1287,6 +1287,9 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.bestowed)
                 .unwrap_or(false),
+            Predicate::SourceOnBattlefield => {
+                ctx.source.is_some_and(|cid| self.battlefield_find(cid).is_some())
+            }
             Predicate::SourceIsCreature => ctx
                 .source
                 .and_then(|cid| self.computed_permanent(cid))

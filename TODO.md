@@ -7673,17 +7673,10 @@ stalled games via `eval_material`.
 - **Flames of the Blood Hand's unpreventable rider is global.**
   `DamageCantBePreventedThisTurn` suppresses every shield for the turn, not
   just the Flames damage. Wants a per-source prevention lock.
-- **Neko-Te and Kumano's Blessing only watch combat damage.** Both printed
-  cards read "deals damage"; the engine's nearest event is
-  `DealsCombatDamageToCreature`. Wants a general `DealtDamageToCreature`
-  event scoped to the damage source.
 - **The splice picker can't pre-pick per-clause targets.** The client's
   `HelperMechanic::Splice` submits an empty `additional_targets` and lets
   `cast_spell_spliced` auto-aim each spliced clause. A UI seat should get one
   targeting pass per targeting splicer.
-- **Shirei's return isn't gated on Shirei still being around.** The printed
-  card checks at the delayed trigger's resolution; the engine schedules the
-  return unconditionally.
 
 ## Noticed this run (modern_decks — OGW closure + BFZ)
 

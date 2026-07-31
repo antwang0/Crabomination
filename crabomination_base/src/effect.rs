@@ -1138,6 +1138,10 @@ pub enum Predicate {
     /// granted by animation (Wandering Fumarole's `{0}` switch, Lavaclaw
     /// Reaches' firebreathing).
     SourceIsCreature,
+    /// The ability's source permanent is still on the battlefield — the
+    /// intervening-'if' half of "…if [this] is still on the battlefield"
+    /// (Shirei, Shizo's Caretaker's delayed return).
+    SourceOnBattlefield,
     /// CR 701.60 — the source permanent is suspected. Backed by
     /// `CardInstance.suspected`. Powers Repeat Offender's "if this creature
     /// is suspected, … otherwise, suspect it."
@@ -2042,6 +2046,11 @@ pub enum EventKind {
     ControllerDealtCombatDamage,
     /// Combat damage was dealt to a creature by a creature.
     DealsCombatDamageToCreature,
+    /// "Whenever this permanent deals damage to a creature" — the
+    /// combat-agnostic sibling of `DealsCombatDamageToCreature` (Neko-Te,
+    /// Kumano's Blessing). Fires from both the combat step and the
+    /// non-combat damage funnel, with the damaged creature bound to slot 0.
+    DealsDamageToCreature,
     /// CR 702.130 — **Enrage**: a permanent was dealt damage (combat or
     /// non-combat). Fires the source's enrage trigger. Unlike
     /// `DealsCombatDamageToCreature` (which is keyed on the *dealer* and

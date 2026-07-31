@@ -3274,6 +3274,33 @@ impl GameState {
             Target::Permanent(damaged_creature),
             damage_amount,
         );
+        // Combat damage is damage: the combat-agnostic wording fires too.
+        self.fire_combat_damage_triggers(
+            source,
+            EventKind::DealsDamageToCreature,
+            Target::Permanent(damaged_creature),
+            damage_amount,
+        );
+    }
+
+    /// The non-combat half of `EventKind::DealsDamageToCreature`: a permanent
+    /// source that just dealt non-combat damage to a creature fires the same
+    /// source-scoped triggers, with the damaged creature bound to slot 0.
+    pub(crate) fn fire_noncombat_damage_to_creature_triggers(
+        &mut self,
+        source: CardId,
+        damaged_creature: CardId,
+        damage_amount: u32,
+    ) {
+        if self.battlefield_find(source).is_none() {
+            return;
+        }
+        self.fire_combat_damage_triggers(
+            source,
+            EventKind::DealsDamageToCreature,
+            Target::Permanent(damaged_creature),
+            damage_amount,
+        );
     }
 
     /// Shared body for the combat-damage trigger dispatch (to a player or to a

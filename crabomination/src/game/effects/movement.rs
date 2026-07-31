@@ -990,6 +990,16 @@ impl GameState {
                         self.dies_to_exile_eot.insert(cid);
                     }
                     }
+                    // "Whenever this deals damage to a creature" (Neko-Te,
+                    // Kumano's Blessing) — the non-combat half; the combat
+                    // step fires the same kind from `resolve_combat`.
+                    if let Some(src) = source
+                        && self
+                            .battlefield_find(cid)
+                            .is_some_and(|c| c.definition.is_creature())
+                    {
+                        self.fire_noncombat_damage_to_creature_triggers(src, cid, amount);
+                    }
                 }
             }
             EntityRef::Card(_) => {}

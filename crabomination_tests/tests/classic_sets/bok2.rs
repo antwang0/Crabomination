@@ -672,3 +672,38 @@ fn spliced_clause_targets_are_auto_aimed() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "Torrent of Stone found its target");
 }
+
+/// Shirei's delayed return checks that Shirei is still around.
+#[test]
+fn shirei_return_fizzles_if_shirei_left() {
+    let mut g = two_player_game();
+    let shirei = g.add_card_to_battlefield(0, catalog::shirei_shizos_caretaker());
+    let weenie = g.add_card_to_battlefield(0, catalog::memnite());
+    always_yes(&mut g);
+    let evs = g.remove_to_graveyard_with_triggers(weenie);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    g.remove_to_graveyard_with_triggers(shirei);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Memnite"));
+}
+
+/// Neko-Te's lock fires on non-combat damage too, not just combat damage.
+#[test]
+fn neko_te_locks_down_noncombat_damage_victims() {
+    let mut g = two_player_game();
+    let pinger = g.add_card_to_battlefield(0, catalog::prodigal_pyromancer());
+    let te = g.add_card_to_battlefield(0, catalog::neko_te());
+    g.battlefield_find_mut(te).unwrap().attached_to = Some(pinger);
+    let victim = g.add_card_to_battlefield(1, catalog::wall_of_wood());
+    let mut evs = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(victim),
+        1,
+        Some(pinger),
+        &mut evs,
+    );
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped);
+}
