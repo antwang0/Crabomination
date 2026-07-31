@@ -1254,7 +1254,7 @@ pub fn vigilance_aura() -> CardDefinition {
 
 /// Shared "deals combat damage to a creature → tap it and it doesn't untap
 /// next turn" trigger (the Orochi/Matsu snake-tribe ability).
-fn snake_tap_lock() -> TriggeredAbility {
+pub(crate) fn snake_tap_lock() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(
             EventKind::DealsCombatDamageToCreature,

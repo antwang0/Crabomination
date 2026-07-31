@@ -3,7 +3,7 @@
 use crabomination::card::Keyword;
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{GameAction, Target, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -343,4 +343,270 @@ fn one_with_nothing_discards_everything() {
     g.players[0].mana_pool.add(Color::Black, 1);
     cast(&mut g, spell, None);
     assert!(g.players[0].hand.is_empty());
+}
+
+/// Every SOK wave-2 batch-2 factory is registered under its printed name.
+#[test]
+fn sok2_batch2_cards_are_registered() {
+    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+        .map(|f| f().name)
+        .collect();
+    for f in [
+        catalog::haru_onna as fn() -> crabomination::card::CardDefinition,
+        catalog::kiri_onna,
+        catalog::nikko_onna,
+        catalog::yuki_onna,
+        catalog::infernal_kirin,
+        catalog::skyfire_kirin,
+        catalog::inner_chamber_guard,
+        catalog::kitsune_dawnblade,
+        catalog::iizuka_the_ruthless,
+        catalog::matsu_tribe_birdstalker,
+        catalog::kashi_tribe_elite,
+        catalog::oni_of_wild_places,
+        catalog::stampeding_serow,
+        catalog::skull_collector,
+        catalog::oboro_breezecaller,
+        catalog::oboro_envoy,
+        catalog::moonbow_illusionist,
+        catalog::oboro_palace_in_the_clouds,
+        catalog::miren_the_moaning_well,
+        catalog::manriki_gusari,
+        catalog::soratami_cloud_chariot,
+        catalog::wine_of_blood_and_iron,
+        catalog::reverence,
+        catalog::seed_the_land,
+        catalog::molting_skin,
+        catalog::razorjaw_oni,
+        catalog::raving_oni_slave,
+        catalog::reki_the_history_of_kamigawa,
+        catalog::maga_traitor_to_mortals,
+        catalog::torii_watchward,
+        catalog::kami_of_the_tended_garden,
+        catalog::moonwing_moth,
+        catalog::path_of_angers_flame,
+        catalog::sunder_from_within,
+        catalog::ideas_unbound,
+        catalog::overwhelming_intellect,
+        catalog::twincast,
+        catalog::endless_swarm,
+        catalog::akuta_born_of_ash,
+        catalog::exile_into_darkness,
+    ] {
+        let name = f().name;
+        assert!(names.contains(&name), "{name} is not registered");
+    }
+}
+
+/// Infernal Kirin strips every card sharing the spell's mana value.
+#[test]
+fn infernal_kirin_strips_the_matching_mana_value() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::infernal_kirin());
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // MV 2
+    g.add_card_to_hand(1, catalog::memnite()); // MV 0
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray()); // MV 2 Arcane
+    g.players[0].mana_pool.add(Color::Red, 2);
+    cast(&mut g, ray, Some(Target::Player(1)));
+    assert_eq!(g.players[1].hand.len(), 1, "only the MV-2 card was pitched");
+}
+
+/// Haru-Onna draws on entry and can hop home off spiritcraft.
+#[test]
+fn haru_onna_draws_then_bounces_on_spiritcraft() {
+    let mut g = two_player_game();
+    let haru = g.add_card_to_hand(0, catalog::haru_onna());
+    g.players[0].mana_pool.add(Color::Green, 4);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    cast(&mut g, haru, None);
+    assert_eq!(g.players[0].hand.len(), 1, "the ETB drew a card");
+    let ray = g.add_card_to_hand(0, catalog::glacial_ray());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.decider = Box::new(ScriptedDecider::new(
+        std::iter::repeat_with(|| DecisionAnswer::Bool(true)).take(4),
+    ));
+    cast(&mut g, ray, Some(Target::Player(1)));
+    assert!(g.players[0].hand.iter().any(|c| c.id == haru), "Haru-Onna bounced itself");
+}
+
+/// Reverence only stops small attackers.
+#[test]
+fn reverence_stops_small_attackers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::reverence());
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    for id in [small, big] {
+        g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+    }
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    let attack = |a| vec![Attack { attacker: a, target: AttackTarget::Player(0) }];
+    assert!(g.declare_attackers(attack(small)).is_err(), "power 2 is barred");
+    g.priority.player_with_priority = 1;
+    let big_ok = g.declare_attackers(attack(big));
+    assert!(big_ok.is_ok(), "power 4 gets through: {big_ok:?}");
+}
+
+/// Razorjaw Oni shuts down black blockers on both sides.
+#[test]
+fn razorjaw_oni_stops_black_blockers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::razorjaw_oni());
+    let black = g.add_card_to_battlefield(1, catalog::gravedigger());
+    let green = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(g.computed_permanent(black).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(!g.computed_permanent(green).unwrap().keywords.contains(&Keyword::CantBlock));
+}
+
+/// Kashi-Tribe Elite hands your legendary Snakes shroud.
+#[test]
+fn kashi_tribe_elite_shrouds_legendary_snakes() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kashi_tribe_elite());
+    let sasuke = g.add_card_to_battlefield(0, catalog::seshiro_the_anointed());
+    assert!(g.computed_permanent(sasuke).unwrap().keywords.contains(&Keyword::Shroud));
+}
+
+/// Maga drains for the X it entered with.
+#[test]
+fn maga_drains_for_its_counters() {
+    let mut g = two_player_game();
+    let maga = g.add_card_to_hand(0, catalog::maga_traitor_to_mortals());
+    g.players[0].mana_pool.add(Color::Black, 7);
+    g.perform_action(GameAction::CastSpell {
+        card_id: maga,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(4),
+    })
+    .expect("cast Maga for X=4");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16);
+    assert_eq!(g.computed_permanent(maga).unwrap().power, 4);
+}
+
+/// Seed the Land mints a Snake for whoever played the land.
+#[test]
+fn seed_the_land_mints_for_the_land_controller() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::seed_the_land());
+    let land = g.add_card_to_hand(1, catalog::forest());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    let snakes = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Snake" && c.controller == 1)
+        .count();
+    assert_eq!(snakes, 1);
+}
+
+/// Miren eats a creature for its toughness in life.
+#[test]
+fn miren_pays_the_sacrificed_toughness() {
+    let mut g = two_player_game();
+    let miren = g.add_card_to_battlefield(0, catalog::miren_the_moaning_well());
+    g.battlefield_find_mut(miren).unwrap().summoning_sick = false;
+    g.add_card_to_battlefield(0, catalog::wall_of_omens()); // 0/4
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: miren,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("sac a creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4);
+}
+
+/// Overwhelming Intellect draws the countered spell's mana value.
+#[test]
+fn overwhelming_intellect_draws_the_countered_mana_value() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let angel = g.add_card_to_hand(1, catalog::serra_angel()); // MV 5
+    g.players[1].mana_pool.add(Color::White, 5);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: angel,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast angel");
+    g.priority.player_with_priority = 0;
+    let intellect = g.add_card_to_hand(0, catalog::overwhelming_intellect());
+    g.players[0].mana_pool.add(Color::Blue, 6);
+    cast(&mut g, intellect, Some(Target::Permanent(angel)));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == angel));
+    assert_eq!(g.players[0].hand.len(), 5);
+}
+
+/// Akuta buys itself back out of the graveyard for a Swamp.
+#[test]
+fn akuta_returns_from_the_graveyard_for_a_swamp() {
+    let mut g = two_player_game();
+    let akuta = g.add_card_to_graveyard(0, catalog::akuta_born_of_ash());
+    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
+    g.add_card_to_hand(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new(
+        std::iter::repeat_with(|| DecisionAnswer::Bool(true)).take(4),
+    ));
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(akuta).is_some(), "Akuta came back");
+    assert!(g.battlefield_find(swamp).is_none(), "the Swamp paid for it");
+}
+
+/// Molting Skin bounces itself to regenerate a creature.
+#[test]
+fn molting_skin_returns_itself_to_regenerate() {
+    let mut g = two_player_game();
+    let skin = g.add_card_to_battlefield(0, catalog::molting_skin());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skin,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bounce to regenerate");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == skin));
+    assert!(g.battlefield_find(bear).unwrap().regeneration_shields > 0);
+}
+
+/// Reki draws off your legendary spells only.
+#[test]
+fn reki_draws_on_legendary_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::reki_the_history_of_kamigawa());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, bears, None);
+    assert_eq!(g.players[0].hand.len(), 0, "a nonlegendary spell draws nothing");
+    let reki2 = g.add_card_to_hand(0, catalog::iizuka_the_ruthless());
+    g.players[0].mana_pool.add(Color::Red, 5);
+    cast(&mut g, reki2, None);
+    assert_eq!(g.players[0].hand.len(), 1);
 }

@@ -514,21 +514,30 @@ impl GameState {
                 }
             };
             let Some(d) = defender else { continue };
-            let attacker_matches = |f: &crate::card::SelectionRequirement| {
-                self.battlefield_find(atk.attacker).is_some_and(|a| {
-                    crate::game::layers::requirement_matches_card(f, a, a.controller)
-                })
-            };
-            let barred = self.battlefield.iter().filter(|c| c.controller == d).any(|c| {
-                c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+            // (source id, optional attacker filter) for each live prohibition.
+            let locks: Vec<(CardId, Option<crate::card::SelectionRequirement>)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == d)
+                .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c.id, sa)))
+                .filter_map(|(id, sa)| match &sa.effect {
                     crate::effect::StaticEffect::CreaturesCantAttackController {
                         protect_planeswalkers,
                         filter,
-                    } => {
-                        (!at_planeswalker || *protect_planeswalkers)
-                            && filter.as_ref().is_none_or(attacker_matches)
+                    } if !at_planeswalker || *protect_planeswalkers => {
+                        Some((id, filter.clone()))
                     }
-                    _ => false,
+                    _ => None,
+                })
+                .collect();
+            let barred = locks.into_iter().any(|(src, filter)| {
+                filter.is_none_or(|f| {
+                    self.evaluate_requirement_static(
+                        &f,
+                        &Target::Permanent(atk.attacker),
+                        d,
+                        Some(src),
+                    )
                 })
             });
             if barred {

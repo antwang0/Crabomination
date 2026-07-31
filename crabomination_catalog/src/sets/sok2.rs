@@ -597,3 +597,887 @@ pub fn thoughts_of_ruin() -> CardDefinition {
         },
     )
 }
+
+// ── Spirits that bounce themselves on spiritcraft ────────────────────────────
+
+/// An "-Onna" Spirit: an ETB `etb_effect` plus "whenever you cast a Spirit or
+/// Arcane spell, you may return this creature to its owner's hand."
+fn onna(
+    name: &'static str,
+    c: crate::mana::ManaCost,
+    p: i32,
+    t: i32,
+    etb_effect: Effect,
+) -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(etb_effect),
+            crate::effect::shortcut::spiritcraft(Effect::MayDo {
+                description: "Return this creature to its owner's hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                }),
+            }),
+        ],
+        ..creature(name, c, vec![CreatureType::Spirit], p, t)
+    }
+}
+
+/// Haru-Onna — {3}{G} 2/1. Draws on entry, then recurs off spiritcraft.
+pub fn haru_onna() -> CardDefinition {
+    onna(
+        "Haru-Onna",
+        cost(&[generic(3), g()]),
+        2,
+        1,
+        Effect::Draw { who: Selector::You, amount: Value::ONE },
+    )
+}
+
+/// Kiri-Onna — {4}{U} 2/2. Bounces a creature on entry.
+pub fn kiri_onna() -> CardDefinition {
+    onna(
+        "Kiri-Onna",
+        cost(&[generic(4), u()]),
+        2,
+        2,
+        Effect::Move {
+            what: target_filtered(R::Creature),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+    )
+}
+
+/// Nikko-Onna — {2}{W} 2/2. Blows up an enchantment on entry.
+pub fn nikko_onna() -> CardDefinition {
+    onna(
+        "Nikko-Onna",
+        cost(&[generic(2), w()]),
+        2,
+        2,
+        Effect::Destroy { what: target_filtered(R::Enchantment) },
+    )
+}
+
+/// Yuki-Onna — {3}{R} 3/1. Blows up an artifact on entry.
+pub fn yuki_onna() -> CardDefinition {
+    onna(
+        "Yuki-Onna",
+        cost(&[generic(3), r()]),
+        3,
+        1,
+        Effect::Destroy { what: target_filtered(R::Artifact) },
+    )
+}
+
+// ── Kirins (the rest of the cycle) ──────────────────────────────────────────
+
+/// Infernal Kirin — {2}{B}{B} 3/3 flier. Your Spirit/Arcane spells strip every
+/// card sharing their mana value from a hand.
+pub fn infernal_kirin() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(
+            Effect::RevealHandDiscardAllMatching {
+                who: PlayerRef::Target(0),
+                filter: R::ManaValueEqualsTriggerAmount,
+            },
+        )],
+        ..legend(
+            "Infernal Kirin",
+            cost(&[generic(2), b(), b()]),
+            vec![CreatureType::Kirin, CreatureType::Spirit],
+            3,
+            3,
+        )
+    }
+}
+
+/// Skyfire Kirin — {2}{R}{R} 3/3 flier. Your Spirit/Arcane spells steal a
+/// creature of matching mana value for the turn.
+pub fn skyfire_kirin() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::spiritcraft(Effect::MayDo {
+            description: "Gain control of a creature with that spell's mana value?".into(),
+            body: Box::new(Effect::GainControl {
+                what: target_filtered(R::Creature.and(R::ManaValueEqualsTriggerAmount)),
+                to: None,
+                duration: Duration::EndOfTurn,
+            }),
+        })],
+        ..legend(
+            "Skyfire Kirin",
+            cost(&[generic(2), r(), r()]),
+            vec![CreatureType::Kirin, CreatureType::Spirit],
+            3,
+            3,
+        )
+    }
+}
+
+// ── Samurai / Snake bodies ──────────────────────────────────────────────────
+
+/// Inner-Chamber Guard — {1}{W} 0/2 Samurai with bushido 2.
+pub fn inner_chamber_guard() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Bushido(2)],
+        ..creature(
+            "Inner-Chamber Guard",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Human, CreatureType::Samurai],
+            0,
+            2,
+        )
+    }
+}
+
+/// Kitsune Dawnblade — {4}{W} 2/3 Samurai with bushido 1 that taps a blocker
+/// on entry.
+pub fn kitsune_dawnblade() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Bushido(1)],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::MayDo {
+            description: "Tap target creature?".into(),
+            body: Box::new(Effect::Tap { what: target_filtered(R::Creature) }),
+        })],
+        ..creature(
+            "Kitsune Dawnblade",
+            cost(&[generic(4), w()]),
+            vec![CreatureType::Fox, CreatureType::Samurai],
+            2,
+            3,
+        )
+    }
+}
+
+/// Iizuka the Ruthless — {3}{R}{R} 3/3 with bushido 2; feeds a Samurai to give
+/// the rest double strike.
+pub fn iizuka_the_ruthless() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Bushido(2)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            sac_other_filter: Some((R::HasCreatureType(CreatureType::Samurai), 1)),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Samurai).and(R::ControlledByYou),
+                ),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Iizuka the Ruthless",
+            cost(&[generic(3), r(), r()]),
+            vec![CreatureType::Human, CreatureType::Samurai],
+            3,
+            3,
+        )
+    }
+}
+
+/// Matsu-Tribe Birdstalker — {2}{G}{G} 2/2 Snake with the tap-lock and a reach
+/// pump.
+pub fn matsu_tribe_birdstalker() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![super::chk::snake_tap_lock()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Reach,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Matsu-Tribe Birdstalker",
+            cost(&[generic(2), g(), g()]),
+            vec![CreatureType::Snake, CreatureType::Warrior, CreatureType::Archer],
+            2,
+            2,
+        )
+    }
+}
+
+/// Kashi-Tribe Elite — {1}{G}{G} 2/3 Snake with the tap-lock; your legendary
+/// Snakes have shroud.
+pub fn kashi_tribe_elite() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![super::chk::snake_tap_lock()],
+        static_abilities: vec![StaticAbility {
+            description: "Legendary Snakes you control have shroud.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    R::HasCreatureType(CreatureType::Snake)
+                        .and(R::HasSupertype(crate::card::Supertype::Legendary))
+                        .and(R::ControlledByYou),
+                ),
+                keyword: Keyword::Shroud,
+            },
+        }],
+        ..creature(
+            "Kashi-Tribe Elite",
+            cost(&[generic(1), g(), g()]),
+            vec![CreatureType::Snake, CreatureType::Warrior],
+            2,
+            3,
+        )
+    }
+}
+
+// ── Upkeep bounce bodies ────────────────────────────────────────────────────
+
+/// A big body whose upkeep returns one of your `color` creatures to hand.
+fn upkeep_bounce(
+    name: &'static str,
+    c: crate::mana::ManaCost,
+    types: Vec<CreatureType>,
+    p: i32,
+    t: i32,
+    color: Color,
+) -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_upkeep(Effect::Move {
+            what: Selector::take(
+                Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: R::Creature.and(R::HasColor(color)),
+                },
+                Value::ONE,
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..creature(name, c, types, p, t)
+    }
+}
+
+/// Oni of Wild Places — {5}{R} 6/5 hasty Demon that bounces a red creature
+/// every upkeep.
+pub fn oni_of_wild_places() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        ..upkeep_bounce(
+            "Oni of Wild Places",
+            cost(&[generic(5), r()]),
+            vec![CreatureType::Demon, CreatureType::Spirit],
+            6,
+            5,
+            Color::Red,
+        )
+    }
+}
+
+/// Stampeding Serow — {2}{G}{G} 5/4 trampler that bounces a green creature
+/// every upkeep.
+pub fn stampeding_serow() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        ..upkeep_bounce(
+            "Stampeding Serow",
+            cost(&[generic(2), g(), g()]),
+            vec![CreatureType::Antelope, CreatureType::Beast],
+            5,
+            4,
+            Color::Green,
+        )
+    }
+}
+
+/// Skull Collector — {1}{B}{B} 3/3 that regenerates but bounces a black
+/// creature every upkeep.
+pub fn skull_collector() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..upkeep_bounce(
+            "Skull Collector",
+            cost(&[generic(1), b(), b()]),
+            vec![CreatureType::Ogre, CreatureType::Warrior],
+            3,
+            3,
+            Color::Black,
+        )
+    }
+}
+
+// ── Moonfolk (land-bounce activations) ──────────────────────────────────────
+
+/// A Moonfolk ability: `{2}`, return a land you control to its owner's hand.
+fn moonfolk_ability(effect: Effect) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost(&[generic(2)]),
+        return_permanent_cost: Some(R::Land),
+        effect,
+        ..Default::default()
+    }
+}
+
+/// Oboro Breezecaller — {1}{U} 1/1 flier that untaps a land.
+pub fn oboro_breezecaller() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![moonfolk_ability(Effect::Untap {
+            what: target_filtered(R::Land),
+            up_to: None,
+        })],
+        ..creature(
+            "Oboro Breezecaller",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Moonfolk, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Oboro Envoy — {3}{U} 1/3 flier that shrinks a creature by your hand size.
+pub fn oboro_envoy() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![moonfolk_ability(Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::Diff(Box::new(Value::Const(0)), Box::new(hand())),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature(
+            "Oboro Envoy",
+            cost(&[generic(3), u()]),
+            vec![CreatureType::Moonfolk, CreatureType::Wizard],
+            1,
+            3,
+        )
+    }
+}
+
+/// Moonbow Illusionist — {2}{U} 2/1 flier that rewrites a land's basic type.
+pub fn moonbow_illusionist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![moonfolk_ability(Effect::LandsBecomeChosenBasicType {
+            what: target_filtered(R::Land),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature(
+            "Moonbow Illusionist",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Moonfolk, CreatureType::Wizard],
+            2,
+            1,
+        )
+    }
+}
+
+// ── Lands ───────────────────────────────────────────────────────────────────
+
+/// Oboro, Palace in the Clouds — Legendary Land that returns itself for {1}.
+pub fn oboro_palace_in_the_clouds() -> CardDefinition {
+    CardDefinition {
+        name: "Oboro, Palace in the Clouds",
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            super::tap_add(Color::Blue),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Miren, the Moaning Well — Legendary Land that eats a creature for its
+/// toughness in life.
+pub fn miren_the_moaning_well() -> CardDefinition {
+    CardDefinition {
+        name: "Miren, the Moaning Well",
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::ONE),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                sac_other_filter: Some((R::Creature, 1)),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::SacrificedToughness,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Artifacts, enchantments, spells ─────────────────────────────────────────
+
+/// Manriki-Gusari — {2} Equipment. +1/+2 and a tap to smash other Equipment.
+pub fn manriki_gusari() -> CardDefinition {
+    CardDefinition {
+        name: "Manriki-Gusari",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 2,
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Destroy {
+                    what: target_filtered(R::HasArtifactSubtype(
+                        crate::card::ArtifactSubtype::Equipment,
+                    )),
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Soratami Cloud Chariot — {5} Artifact. Grants flight, or a Maze-of-Ith fog
+/// on one creature.
+pub fn soratami_cloud_chariot() -> CardDefinition {
+    CardDefinition {
+        name: "Soratami Cloud Chariot",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::PreventAllCombatDamageInvolving {
+                    target: target_filtered(R::Creature.and(R::ControlledByYou)),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wine of Blood and Iron — {3} Artifact. Doubles a creature's power, then
+/// goes away at end of turn.
+pub fn wine_of_blood_and_iron() -> CardDefinition {
+    CardDefinition {
+        name: "Wine of Blood and Iron",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: Value::PowerOf(Box::new(Selector::Target(0))),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::AtNextEndStep {
+                    body: Box::new(Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::ONE,
+                        filter: R::HasName("Wine of Blood and Iron".into()),
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Reverence — {2}{W}{W} Enchantment. Small creatures can't attack you.
+pub fn reverence() -> CardDefinition {
+    CardDefinition {
+        name: "Reverence",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures with power 2 or less can't attack you.",
+            effect: StaticEffect::CreaturesCantAttackController {
+                protect_planeswalkers: false,
+                filter: Some(R::PowerAtMost(2)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seed the Land — {2}{G}{G} Enchantment. Every land entering mints a Snake
+/// for its controller.
+pub fn seed_the_land() -> CardDefinition {
+    CardDefinition {
+        name: "Seed the Land",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Land,
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                count: Value::ONE,
+                definition: crate::card::TokenDefinition {
+                    name: "Snake".into(),
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Snake],
+                        ..Default::default()
+                    },
+                    power: 1,
+                    toughness: 1,
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Molting Skin — {2}{G} Enchantment. Bounce it to regenerate a creature.
+pub fn molting_skin() -> CardDefinition {
+    CardDefinition {
+        name: "Molting Skin",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            return_self_cost: true,
+            effect: Effect::Regenerate { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Razorjaw Oni — {3}{B} 4/5 Demon. Black creatures can't block.
+pub fn razorjaw_oni() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Black creatures can't block.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::HasColor(Color::Black))),
+                keyword: Keyword::CantBlock,
+            },
+        }],
+        ..creature(
+            "Razorjaw Oni",
+            cost(&[generic(3), b()]),
+            vec![CreatureType::Demon, CreatureType::Spirit],
+            4,
+            5,
+        )
+    }
+}
+
+/// Raving Oni-Slave — {1}{B} 3/3 that costs you 3 life coming and going
+/// without a Demon.
+pub fn raving_oni_slave() -> CardDefinition {
+    let toll = || {
+        Effect::If {
+            cond: Predicate::Not(Box::new(Predicate::SelectorExists(Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: R::HasCreatureType(CreatureType::Demon),
+            }))),
+            then: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(3) }),
+            else_: Box::new(Effect::Noop),
+        }
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(toll()),
+            crate::card::TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: toll(),
+            },
+        ],
+        ..creature(
+            "Raving Oni-Slave",
+            cost(&[generic(1), b()]),
+            vec![CreatureType::Ogre, CreatureType::Warrior],
+            3,
+            3,
+        )
+    }
+}
+
+/// Reki, the History of Kamigawa — {2}{G} 1/2. Your legendary spells draw.
+pub fn reki_the_history_of_kamigawa() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellMatches(R::HasSupertype(crate::card::Supertype::Legendary)),
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..legend(
+            "Reki, the History of Kamigawa",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Human, CreatureType::Shaman],
+            1,
+            2,
+        )
+    }
+}
+
+/// Maga, Traitor to Mortals — {X}{B}{B}{B} 0/0 that drains for its counters.
+pub fn maga_traitor_to_mortals() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((crate::card::CounterType::PlusOnePlusOne, Value::XFromCost)),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::CountersOn {
+                what: Box::new(Selector::This),
+                kind: crate::card::CounterType::PlusOnePlusOne,
+            },
+        })],
+        ..legend(
+            "Maga, Traitor to Mortals",
+            cost(&[crate::mana::x(), b(), b(), b()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            0,
+            0,
+        )
+    }
+}
+
+/// Torii Watchward — {4}{W} 3/3 vigilant Spirit with soulshift 4.
+pub fn torii_watchward() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(4)],
+        ..creature("Torii Watchward", cost(&[generic(4), w()]), vec![CreatureType::Spirit], 3, 3)
+    }
+}
+
+/// Kami of the Tended Garden — {3}{G} 4/4 Spirit on a {G} upkeep lease, with
+/// soulshift 3.
+pub fn kami_of_the_tended_garden() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            on_upkeep(Effect::SacrificeSourceUnlessPay { cost: cost(&[g()]) }),
+            crate::effect::shortcut::soulshift(3),
+        ],
+        ..creature(
+            "Kami of the Tended Garden",
+            cost(&[generic(3), g()]),
+            vec![CreatureType::Spirit],
+            4,
+            4,
+        )
+    }
+}
+
+/// Moonwing Moth — {1}{W}{W} 2/1 flier that can armor up for {W}.
+pub fn moonwing_moth() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(0),
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Moonwing Moth", cost(&[generic(1), w(), w()]), vec![CreatureType::Insect], 2, 1)
+    }
+}
+
+/// Path of Anger's Flame — {2}{R} Arcane instant. Team +2/+0.
+pub fn path_of_angers_flame() -> CardDefinition {
+    arcane_instant(
+        "Path of Anger's Flame",
+        cost(&[generic(2), r()]),
+        Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Sunder from Within — {2}{R}{R} Arcane sorcery. Destroy an artifact or land.
+pub fn sunder_from_within() -> CardDefinition {
+    arcane_sorcery(
+        "Sunder from Within",
+        cost(&[generic(2), r(), r()]),
+        Effect::Destroy { what: target_filtered(R::Artifact.or(R::Land)) },
+    )
+}
+
+/// Ideas Unbound — {U}{U} Arcane sorcery. Draw three now, pitch three later.
+pub fn ideas_unbound() -> CardDefinition {
+    arcane_sorcery(
+        "Ideas Unbound",
+        cost(&[u(), u()]),
+        Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::AtNextEndStep {
+                body: Box::new(Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                    random: false,
+                }),
+            },
+        ]),
+    )
+}
+
+/// Overwhelming Intellect — {4}{U}{U} instant. Counter a creature spell and
+/// draw its mana value.
+pub fn overwhelming_intellect() -> CardDefinition {
+    instant(
+        "Overwhelming Intellect",
+        cost(&[generic(4), u(), u()]),
+        Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack.and(R::HasCardType(CardType::Creature))) },
+            Effect::Draw { who: Selector::You, amount: Value::CounteredSpellManaValue },
+        ]),
+    )
+}
+
+/// Twincast — {U}{U} instant. Copy an instant or sorcery spell.
+pub fn twincast() -> CardDefinition {
+    instant(
+        "Twincast",
+        cost(&[u(), u()]),
+        Effect::CopySpellMayChooseTargets {
+            what: target_filtered(R::IsSpellOnStack.and(
+                R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            )),
+            count: Value::ONE,
+        },
+    )
+}
+
+/// Endless Swarm — {5}{G}{G}{G} Epic sorcery. A Snake per card in hand, every
+/// upkeep, forever.
+pub fn endless_swarm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Epic],
+        ..sorcery(
+            "Endless Swarm",
+            cost(&[generic(5), g(), g(), g()]),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: hand(),
+                definition: crate::card::TokenDefinition {
+                    name: "Snake".into(),
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Snake],
+                        ..Default::default()
+                    },
+                    power: 1,
+                    toughness: 1,
+                    ..Default::default()
+                },
+            },
+        )
+    }
+}
+
+// ── Graveyard-triggered recursion ───────────────────────────────────────────
+
+/// Akuta, Born of Ash — {2}{B}{B} 3/2 haste that buys itself back out of the
+/// graveyard for a Swamp while you're ahead on cards.
+pub fn akuta_born_of_ash() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::FromYourGraveyard,
+            )
+            .with_filter(hand_advantage()),
+            effect: Effect::MayDo {
+                description: "Sacrifice a Swamp to return Akuta to the battlefield?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::ONE,
+                        filter: R::HasLandType(LandType::Swamp),
+                    },
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                ])),
+            },
+        }],
+        ..legend("Akuta, Born of Ash", cost(&[generic(2), b(), b()]), vec![CreatureType::Spirit], 3, 2)
+    }
+}
+
+/// Exile into Darkness — {4}{B} sorcery. A cheap edict that buys itself back
+/// while you're ahead on cards.
+pub fn exile_into_darkness() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::FromYourGraveyard,
+            )
+            .with_filter(hand_advantage()),
+            effect: Effect::MayDo {
+                description: "Return Exile into Darkness to your hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        ..sorcery(
+            "Exile into Darkness",
+            cost(&[generic(4), b()]),
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: R::Creature.and(R::ManaValueAtMost(3)),
+            },
+        )
+    }
+}
