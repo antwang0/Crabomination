@@ -183,6 +183,8 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // gates blocking and combat damage, not just spell targeting.
         ProtectionFromCreatures => "ProCr",
         ProtectionFromCreatureType(_) => "ProCT",
+        // The general filtered form ("protection from non-Spirit creatures").
+        ProtectionFromMatching(_) => "ProF",
         // Protection from a card type (e.g. from artifacts) likewise gates
         // which attackers/blockers connect; the suffix names the dodged type.
         ProtectionFromCardType(_) => "ProT",
@@ -315,6 +317,9 @@ fn req_short(req: &crabomination::card::SelectionRequirement) -> Option<String> 
             (None, Some(sb)) => sb,
             _ => return None,
         },
+        // Negated classes read with a leading "!" — "non-Spirit creatures"
+        // (Harbinger of Spring) renders as "!Spirit".
+        R::Not(inner) => format!("!{}", req_short(inner)?),
         // Disjunctive blocker classes (Spire Tracer — "except by creatures with
         // flying or reach") read as "Fly/Rch" so both required classes show.
         // Both halves must name themselves, else the chip stays unadorned.
@@ -342,6 +347,11 @@ fn keyword_value_suffix(kw: &Keyword) -> Option<String> {
     // type it dodges is the whole board read (who can block it / damage it).
     if let ProtectionFromCreatureType(t) = kw {
         return Some(format!("·{t:?}"));
+    }
+    // The filtered form names what it dodges when the filter is simple enough
+    // to render — "ProF·non-Spirit creatures".
+    if let ProtectionFromMatching(f) = kw {
+        return req_short(f).map(|d| format!("·{d}"));
     }
     // Filtered evasion names the excluded/required blocker class when it's a
     // simple filter — "Eva-·Fly" (Gnat Alley Creeper can't be blocked by

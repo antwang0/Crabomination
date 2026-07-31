@@ -7705,6 +7705,39 @@ stalled games via `eval_material`.
   `CapTargetsAt` truncates the auto-filled slot list at resolution; a UI seat
   never gets to choose *which* graveyard creatures come back.
 
+## Noticed this run (modern_decks — M11 closure / Betrayers of Kamigawa)
+
+- **BOK is at 51 gaps.** What's left needs one primitive each:
+  - The Baku cycle + Baku Altar — "{1}, Remove X ki counters: …" wants an
+    X-scaled `remove_counter_cost` on `ActivatedAbility`.
+  - The Shoal cycle — the alt-cost plumbing is in place (`exile_filter` now
+    resolves X), but the five cards still need writing.
+  - The Glasskites / Kira — "the first time each turn this becomes the target
+    of a spell or ability, counter it" needs a per-turn-per-object trigger
+    budget plus a counter-the-triggering-object effect.
+  - The non-mana splice costs (Horobi's Whisper, Hundred-Talon Strike, Roar of
+    Jukai, Torrent of Stone, Veil of Secrecy) — `Keyword::Splice` only carries
+    a `ManaCost`.
+  - Chisei, Heart of Oceans — wants `Effect::RemoveCounterOfPresentKind`, the
+    mirror of the existing `AddCounterOfPresentKind`.
+  - Empty-Shrine Kannushi — protection from *the colors of permanents you
+    control* is a live, board-derived keyword set.
+  - Fumiko the Lowblood — bushido X (scaled off attacker count) and a
+    "creatures your opponents control attack each combat if able" static.
+- **Genju's return trigger is modeled as the Aura's own LTB.** The printed
+  wording is "when enchanted land is put into a graveyard"; the Aura's
+  `PermanentDied`/`EnchantedBySource` listener doesn't fire because the
+  dispatcher only walks battlefield sources and the orphaned Aura is already in
+  the graveyard by then. Over-triggers if the Aura alone is destroyed.
+- **Genju of the Fens drops its granted "{B}: +1/+1".** `Effect::BecomeCreature`
+  grants keywords, not activated abilities.
+- **Forked-Branch Garami's two soulshifts share one target.** The auto-targeter
+  reuses the first legal Spirit, so the second trigger fizzles; a live seat
+  would pick the other.
+- **The client can't be compiled in the cloud sandbox** (`wayland-sys`'s build
+  script fails with no display libs), so `crabomination_client` edits ship
+  unverified. Clippy/test sweeps use `--workspace --exclude crabomination_client`.
+
 ## Noticed this run (modern_decks — ZEN / M11)
 
 - **Blazing Torch's throw sacrifices by name.** The granted ability's

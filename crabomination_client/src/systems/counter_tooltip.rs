@@ -827,6 +827,7 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
             "Has protection from each even mana value."
         },
         K::ProtectionFromCreatureType(_) => "Can't be blocked, targeted, or damaged by sources of the named creature type.",
+        K::ProtectionFromMatching(_) => "Can't be blocked, targeted, or damaged by any source matching the named filter.",
         K::ProtectionFromSpellSubtype(_) => "Can't be targeted or damaged by spells of the named subtype.",
         K::Cycling(_) => "Pay its cycling cost and discard it to draw a card, any time you could cast an instant.",
         K::CyclingLife(_) => "Pay that much life and discard it to draw a card.",
@@ -1159,6 +1160,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::ProtectionFromSpells => "Protection from spells".into(),
         K::ProtectionFromCreatures => "Protection from creatures".into(),
         K::ProtectionFromCreatureType(t) => format!("Protection from {t:?}"),
+        K::ProtectionFromMatching(f) => {
+            format!("Protection from {}", describe_count_filter(f))
+        }
         K::ProtectionFromSpellSubtype(s) => format!("Protection from {s:?} spells"),
         K::ProtectionFromManaValueExcept(n) => {
             format!("Protection from each mana value except {n}")

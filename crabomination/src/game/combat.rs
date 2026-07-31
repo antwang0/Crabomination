@@ -214,14 +214,8 @@ impl GameState {
         if !attacks.is_empty() {
             let p = self.active_player_idx;
             if self.players[p].spells_cast_this_turn > 0
-                && self.battlefield.iter().any(|c| {
-                    !self.same_team(c.controller, p)
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::OpponentsWhoCastCantAttack
-                            )
-                        })
+                && self.opponent_has_static(p, |e| {
+                    matches!(e, crate::effect::StaticEffect::OpponentsWhoCastCantAttack)
                 })
             {
                 return Err(GameError::CannotAttack(attacks[0].attacker));

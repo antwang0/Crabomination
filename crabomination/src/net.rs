@@ -832,6 +832,14 @@ pub struct PlayerView {
     /// out noncreature cards in hand. `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub cant_cast_noncreature: bool,
+    /// Angelic Arbiter's pair, resolved per viewer: this player has already
+    /// attacked this turn and so can't cast, or has already cast and so can't
+    /// attack. Surfaced so a UI can explain the lock instead of just rejecting
+    /// the action. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub arbiter_cant_cast: bool,
+    #[serde(default)]
+    pub arbiter_cant_attack: bool,
     /// True when this player's life total can't change this turn (Flare of
     /// Fortitude) — both gain and loss are dropped. Surfaced so UIs can show
     /// the life total is frozen. `#[serde(default)]` for snapshot back-compat.

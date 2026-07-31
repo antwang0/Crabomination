@@ -758,6 +758,14 @@ fn project_player(
         has_city_blessing: player.city_blessing,
         cannot_gain_life,
         cant_cast_noncreature: player.cant_cast_noncreature_this_turn,
+        arbiter_cant_cast: player.attacked_this_turn
+            && state.opponent_has_static(player_seat, |e| {
+                matches!(e, crate::effect::StaticEffect::OpponentsWhoAttackedCantCast)
+            }),
+        arbiter_cant_attack: player.spells_cast_this_turn > 0
+            && state.opponent_has_static(player_seat, |e| {
+                matches!(e, crate::effect::StaticEffect::OpponentsWhoCastCantAttack)
+            }),
         life_locked: player.life_locked_this_turn,
         has_hexproof,
         commander_damage_taken,

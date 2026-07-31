@@ -8893,6 +8893,20 @@ impl GameState {
         can_block_attacker_computed(blocker, blocker_cp, atk_kws, atk_colors, atk_power)
     }
 
+    /// True when some opponent of `seat` controls a battlefield permanent with
+    /// a static matching `pred`. The shared shape behind the "an opponent
+    /// controls X, so you can't Y" locks.
+    pub fn opponent_has_static(
+        &self,
+        seat: usize,
+        pred: impl Fn(&crate::effect::StaticEffect) -> bool,
+    ) -> bool {
+        self.battlefield.iter().any(|c| {
+            !self.same_team(c.controller, seat)
+                && c.definition.static_abilities.iter().any(|sa| pred(&sa.effect))
+        })
+    }
+
     /// CR 702.16 — the state-aware half of the protection block gate: an
     /// attacker with `Keyword::ProtectionFromMatching` can't be blocked by a
     /// creature matching that filter (Harbinger of Spring). The keyword's
@@ -9126,14 +9140,8 @@ impl GameState {
         if action.is_cast() {
             let caster = self.priority.player_with_priority;
             if self.players[caster].attacked_this_turn
-                && self.battlefield.iter().any(|c| {
-                    !self.same_team(c.controller, caster)
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::OpponentsWhoAttackedCantCast
-                            )
-                        })
+                && self.opponent_has_static(caster, |e| {
+                    matches!(e, crate::effect::StaticEffect::OpponentsWhoAttackedCantCast)
                 })
             {
                 return Err(GameError::SilencedThisTurn);
