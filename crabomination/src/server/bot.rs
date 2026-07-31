@@ -57,6 +57,9 @@ pub struct EvalWeights {
     /// life linearly. Life near zero is worth far more per point than life
     /// near the starting total; a linear term prices them the same.
     pub concave_life: bool,
+    /// Score a candidate on the board *after* this turn's combat rather
+    /// than the instant it resolves (see [`simulate_through_combat`]).
+    pub combat_aware: bool,
     /// Restore the pre-fix mana behavior: tap every land before deciding
     /// anything, and size affordability off the floating pool.
     ///
@@ -82,6 +85,7 @@ impl EvalWeights {
             toughness: 1,
             keyword_pct: 0,
             concave_life: false,
+            combat_aware: false,
             legacy_pretap: false,
         }
     }
@@ -97,19 +101,26 @@ impl EvalWeights {
     /// term is the part that costs: pooled over 20 000 games the baseline
     /// beats it 51.1 % [50.4 %, 51.8 %].
     ///
-    /// Kept rather than deleted because the likely reason is *depth*, not
-    /// the weights. A richer evaluation of a position the bot can only
-    /// reach one action deep gives a greedy step more confidence without
-    /// more foresight. Both references consume their evaluator through a
-    /// search -- Forge fast-forwards a copy of the game to combat damage
-    /// before scoring and plans three plies of sequences, XMage runs
-    /// depth-4 alpha-beta -- so their keyword weights are calibrated for a
-    /// consumer this bot doesn't have yet. Re-ladder this profile once the
-    /// evaluator sees past the current action; that is the experiment this
-    /// result argues for, and re-porting it from scratch would be waste.
+    /// The first explanation offered for this was *depth*: that a richer
+    /// evaluation of a position the bot can only see one action deep gives
+    /// a greedy step more confidence without more foresight, and that these
+    /// weights are calibrated for the real search their sources run (Forge
+    /// fast-forwards to combat damage and plans three plies; XMage runs
+    /// depth-4 alpha-beta). **That hypothesis was tested and is wrong.**
+    /// [`v2_combat`] — the same weights with the combat-aware evaluator —
+    /// measures 53.1 % to the baseline, i.e. *worse* than v2 alone. Extra
+    /// depth does not rescue them.
+    ///
+    /// So the honest reading is that these numbers are simply wrong for
+    /// this engine's surrounding balance, not merely premature. They are
+    /// kept as a documented dead end: a future attempt should re-derive
+    /// weights against *this* evaluator's creature-to-card and
+    /// board-to-life ratios rather than port another engine's, and can use
+    /// the decomposition profiles below to do it one term at a time.
     ///
     /// [`baseline`]: Self::baseline
     /// [`keywords_only`]: Self::keywords_only
+    /// [`v2_combat`]: Self::v2_combat
     pub const fn v2() -> Self {
         Self {
             unit: 10,
@@ -119,6 +130,7 @@ impl EvalWeights {
             toughness: 10,
             keyword_pct: 100,
             concave_life: true,
+            combat_aware: false,
             legacy_pretap: false,
         }
     }
@@ -146,8 +158,37 @@ impl EvalWeights {
             toughness: 10,
             keyword_pct: 0,
             concave_life: false,
+            combat_aware: false,
             legacy_pretap: false,
         }
+    }
+
+    /// Baseline + the combat-aware evaluation.
+    ///
+    /// **Measured exactly neutral**: 50.0 % [49.1 %, 50.9 %] over 12 000
+    /// games (6002-5998). Not adopted as the default, but kept and worth
+    /// revisiting, because the reason it does nothing here is structural
+    /// rather than a flaw in the simulation: within a single precombat
+    /// main phase, *this turn's combat is very nearly the same whichever
+    /// candidate the bot picks*, so the term is shared between candidates
+    /// and cancels in the comparison. It only starts to pay when the bot
+    /// can also choose *when* to act — which is what a turn planner adds
+    /// (Forge's `formulatePlanWithPhase(COMBAT_DECLARE_BLOCKERS)` and its
+    /// summon-sick gating both consume exactly this signal).
+    pub const fn combat_aware() -> Self {
+        Self { combat_aware: true, ..Self::baseline() }
+    }
+
+    /// [`v2`](Self::v2) weights *plus* the combat-aware evaluation — the
+    /// direct test of why v2 lost. The hypothesis was depth: that a richer
+    /// evaluation only pays once the evaluator can see past the current
+    /// action. This is the cheapest available "more depth".
+    ///
+    /// **The hypothesis is refuted.** This measures 53.1 % to the baseline
+    /// — worse than [`v2`](Self::v2) alone at 51.1 % — so the extra depth
+    /// does not rescue the ported weights, it compounds them.
+    pub const fn v2_combat() -> Self {
+        Self { combat_aware: true, ..Self::v2() }
     }
 
     /// The historical mana behavior, for laddering the tap-out fix.
@@ -485,417 +526,7 @@ impl Bot for RandomBot {
             TurnStep::DeclareAttackers if is_active && state.attack_declarer() == seat => {
                 if !self.attackers_declared {
                     self.attackers_declared = true;
-                    // Pick the attack target: prefer an opposing monarch (CR
-                    // 724 — stealing the crown denies their end-step card and
-                    // hands it to us); otherwise the next alive opponent.
-                    let target_player = match state.monarch {
-                        Some(m)
-                            if m != seat
-                                && state.players.get(m).map(|p| p.is_alive()).unwrap_or(false) =>
-                        {
-                            m
-                        }
-                        _ => state.next_alive_seat(seat),
-                    };
-                    // Filter on `controller`, not `owner`: cards that have
-                    // changed control (Threaten / Mind Control / etc.) are
-                    // attacked WITH by the new controller, not the original
-                    // owner.
-                    //
-                    // Bot AI improvement (push XXV): hold back attackers
-                    // that would suicide into deathtouch blockers when
-                    // there's no upside. The heuristic computes:
-                    //   * lethal_swing: whether sum of attackers' powers
-                    //     already meets opponent's life total.
-                    // When NOT lethal:
-                    //   * skip attackers whose toughness is <= the maximum
-                    //     opponent blocker power AND there's at least one
-                    //     opponent blocker with deathtouch + reach/flying
-                    //     parity (i.e. a blocker can be assigned).
-                    // This keeps small attackers from auto-dying to
-                    // Witherbloom Crawler / Sapworm / Toxicultivator and
-                    // similar deathtouch defenders.
-                    use crate::card::Keyword;
-                    let opp_seat = target_player;
-                    let opp_life = state.players[opp_seat].life;
-                    let raw_attackers: Vec<&crate::card::CardInstance> = state
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            c.controller == seat
-                                // `can_attack()`'s components minus its printed-
-                                // Defender gate, which is re-checked below against
-                                // the computed keyword set so a team "attack as
-                                // though no defender" grant (High Alert) applies.
-                                && c.definition.is_creature()
-                                && !c.tapped
-                                && (!c.summoning_sick || c.has_keyword(&Keyword::Haste))
-                                && !c.has_keyword(&Keyword::CantAttack)
-                                // Honor layer-granted Defender / can't-attack
-                                // (Pacifism, crewed-Vehicle states) — can_attack
-                                // only sees printed keywords.
-                                && state
-                                    .computed_permanent(c.id)
-                                    .map(|cp| {
-                                        (!cp.keywords.contains(&Keyword::Defender)
-                                            || state.ignores_defender_for_attack(c))
-                                            && !cp.keywords.contains(&Keyword::CantAttack)
-                                            // CR 508.1a — "can attack only if
-                                            // defending player controls [X]"
-                                            // (Dandân). Don't declare it into a
-                                            // defender whose board fails the
-                                            // filter, or the whole batch is
-                                            // rejected.
-                                            && cp.keywords.iter().all(|kw| match kw {
-                                                Keyword::CanAttackOnlyIfDefenderControls(req) => {
-                                                    state.battlefield.iter().any(|d| {
-                                                        d.controller == target_player
-                                                            && state.evaluate_requirement_on_card(
-                                                                req, d, target_player,
-                                                            )
-                                                    })
-                                                }
-                                                Keyword::CanAttackOnlyIfYouControl(req) => {
-                                                    state.battlefield.iter().any(|d| {
-                                                        d.controller == c.controller
-                                                            && state.evaluate_requirement_on_card(
-                                                                req, d, c.controller,
-                                                            )
-                                                    })
-                                                }
-                                                Keyword::CantAttackOrBlockUnlessEvenCounters => {
-                                                    c.counters.values().sum::<u32>() % 2 == 0
-                                                }
-                                                Keyword::CantAttackOrBlockUnlessYouControlCount {
-                                                    filter,
-                                                    min,
-                                                    block_only,
-                                                    exclude_self,
-                                                    ..
-                                                } => {
-                                                    // A block-only gate never
-                                                    // restricts attacking. `exclude_self`
-                                                    // drops the gated creature from the
-                                                    // count ("another …" — Tiger-Dillo).
-                                                    *block_only
-                                                        || state
-                                                            .battlefield
-                                                            .iter()
-                                                            .filter(|d| {
-                                                                d.controller == c.controller
-                                                                    && !(*exclude_self && d.id == c.id)
-                                                                    && state
-                                                                        .evaluate_requirement_on_card(
-                                                                            filter,
-                                                                            d,
-                                                                            c.controller,
-                                                                        )
-                                                            })
-                                                            .count()
-                                                            as u32
-                                                            >= *min
-                                                }
-                                                _ => true,
-                                            })
-                                    })
-                                    .unwrap_or(true)
-                        })
-                        .collect();
-                    // Use the damage-aware value so toughness-attackers (Doran,
-                    // High Alert) are weighed by what they actually deal.
-                    let total_raw_power: i32 =
-                        raw_attackers.iter().map(|c| attacker_damage_value(state, c.id)).sum();
-                    let lethal_swing = total_raw_power >= opp_life;
-                    // Race math: compare full-out clocks. We strike first
-                    // (it's our combat), so strictly fewer turns-to-lethal
-                    // than the opponent's counter-clock — inside a short
-                    // horizon — means holding back only concedes the race;
-                    // attack like it's lethal-in-N. Defenders and can't-
-                    // attack bodies add nothing to their clock.
-                    let opp_clock: i32 = state
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            c.controller == opp_seat
-                                && c.definition.is_creature()
-                                && !c.has_keyword(&Keyword::Defender)
-                                && !c.has_keyword(&Keyword::CantAttack)
-                        })
-                        .map(|c| c.power().max(0))
-                        .sum();
-                    let racing = total_raw_power > 0 && opp_clock > 0 && {
-                        let our_turns = (opp_life.max(1) + total_raw_power - 1) / total_raw_power;
-                        let their_turns =
-                            (state.effective_life(seat).max(1) + opp_clock - 1) / opp_clock;
-                        our_turns < their_turns && our_turns <= 5
-                    };
-                    let lethal_swing = lethal_swing || racing;
-                    let opp_blockers: Vec<&crate::card::CardInstance> = state
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            // A creature that's tapped, not a creature, or has a
-                            // computed `CantBlock` (Sandstorm Verge, pacifism-
-                            // style effects) can't block — don't let the bot hold
-                            // attackers back for a blocker that can't legally block.
-                            c.controller == opp_seat
-                                && c.can_block()
-                                && !state
-                                    .computed_permanent(c.id)
-                                    .is_some_and(|cp| cp.keywords.contains(&Keyword::CantBlock))
-                        })
-                        .collect();
-                    let has_ground_deathtouch = opp_blockers
-                        .iter()
-                        .any(|b| b.has_keyword(&Keyword::Deathtouch) && !b.has_keyword(&Keyword::Flying));
-                    let max_ground_blocker_power: i32 = opp_blockers
-                        .iter()
-                        .filter(|b| !b.has_keyword(&Keyword::Flying))
-                        .map(|b| b.power())
-                        .max()
-                        .unwrap_or(0);
-                    let mut attackers: Vec<crate::card::CardId> = raw_attackers
-                        .into_iter()
-                        .filter(|c| {
-                            // CR 508.1d — must-attack creatures (Juggernaut,
-                            // goaded) have no choice; always include them so
-                            // the engine's requirement check accepts the batch.
-                            if c.has_keyword(&Keyword::MustAttack) || !c.goaded_by.is_empty() {
-                                return true;
-                            }
-                            // Always attack on lethal swings — the bot
-                            // would rather suicide than miss a kill.
-                            if lethal_swing {
-                                return true;
-                            }
-                            // CR 615.1 — don't swing with a creature whose
-                            // combat damage is prevented this turn (Fog /
-                            // Inspire Awe's exception); attacking only risks it
-                            // for no damage.
-                            if state.combat_damage_prevented_for_dealer(c.id) {
-                                return false;
-                            }
-                            // Unblockable by the current board: if the
-                            // opponent has creatures but none can legally
-                            // block this attacker (Unblockable, "can't be
-                            // blocked by/except by" restrictions the board
-                            // can't satisfy), it's a free swing. Generalizes
-                            // the Flying/Menace evasion checks below.
-                            if !opp_blockers.is_empty()
-                                && opp_blockers
-                                    .iter()
-                                    .all(|b| !state.blocker_can_block_attacker(b.id, c.id))
-                            {
-                                return true;
-                            }
-                            let flying = c.has_keyword(&Keyword::Flying);
-                            // Evasive attackers (flying) — only block-
-                            // worried if there's a flying opp blocker.
-                            // Skip the deathtouch / ground-power filter
-                            // for them; assume they're safe.
-                            if flying {
-                                let opp_has_flying_blocker = opp_blockers.iter()
-                                    .any(|b| b.has_keyword(&Keyword::Flying)
-                                          || b.has_keyword(&Keyword::Reach));
-                                if !opp_has_flying_blocker {
-                                    return true; // free swing
-                                }
-                            }
-                            // Trample: tougher creatures still come in
-                            // (we'll get some damage through chumps).
-                            if c.has_keyword(&Keyword::Trample) {
-                                return true;
-                            }
-                            // Indestructible: safe to swing (won't die).
-                            if c.has_keyword(&Keyword::Indestructible) {
-                                return true;
-                            }
-                            // Shield counter on the attacker — the first
-                            // damage is prevented, so a basic ground-trade
-                            // is safe (push XXVI bot improvement).
-                            if c.counter_count(crate::card::CounterType::Shield) > 0 {
-                                return true;
-                            }
-                            // Lifelink: even if we trade, we gain life —
-                            // worth swinging when we can race.
-                            if c.has_keyword(&Keyword::Lifelink) {
-                                return true;
-                            }
-                            // Deathtouch attacker: any blocker that deals
-                            // with it dies (CR 702.2), so blocking is at
-                            // best an even trade for the opponent — swinging
-                            // is always at least fine.
-                            if c.has_keyword(&Keyword::Deathtouch) && c.power() >= 1 {
-                                return true;
-                            }
-                            // Menace (CR 702.111): needs two+ blockers. If
-                            // the opponent has fewer than two creatures that
-                            // can legally block this attacker, it gets
-                            // through unblocked — safe to swing.
-                            if c.has_keyword(&Keyword::Menace) {
-                                let able = opp_blockers
-                                    .iter()
-                                    .filter(|b| {
-                                        !flying
-                                            || b.has_keyword(&Keyword::Flying)
-                                            || b.has_keyword(&Keyword::Reach)
-                                    })
-                                    .count();
-                                if able < 2 {
-                                    return true;
-                                }
-                            }
-                            // First strike + bigger power than blockers'
-                            // toughness — we kill the blocker before it
-                            // strikes back. Safe attack (push XXVI).
-                            if c.has_keyword(&Keyword::FirstStrike)
-                                || c.has_keyword(&Keyword::DoubleStrike)
-                            {
-                                let max_blocker_toughness: i32 = opp_blockers
-                                    .iter()
-                                    .filter(|b| !b.has_keyword(&Keyword::Flying) || flying)
-                                    .map(|b| b.toughness())
-                                    .max()
-                                    .unwrap_or(0);
-                                if c.power() > max_blocker_toughness {
-                                    return true;
-                                }
-                            }
-                            // Hold back if a deathtouch blocker exists
-                            // and we don't outsize the biggest blocker.
-                            if has_ground_deathtouch && !flying {
-                                return false;
-                            }
-                            // Finality counter on the attacker — if it
-                            // dies it'll exile instead of returning to
-                            // the graveyard (CR 122.1h). Don't suicide
-                            // a finality-counter creature into ground
-                            // blockers that can kill it.
-                            // Push (claude/modern_decks, batches 192-197).
-                            if c.counter_count(crate::card::CounterType::Finality) > 0
-                                && !flying
-                                && max_ground_blocker_power >= c.toughness()
-                            {
-                                return false;
-                            }
-                            // Hold back if our toughness is <= biggest
-                            // blocker power and we wouldn't kill them
-                            // (basic suicide filter).
-                            if !flying
-                                && max_ground_blocker_power >= c.toughness()
-                                && c.power() <= max_ground_blocker_power
-                            {
-                                return false;
-                            }
-                            true
-                        })
-                        .map(|c| c.id)
-                        .collect();
-                    // CR 506.2 — Silent Arbiter caps the whole combat. An
-                    // over-sized batch is rejected outright, so trim to the
-                    // cap keeping the biggest attackers.
-                    if let Some(cap) = state.combat_participation_cap(false)
-                        && attackers.len() > cap as usize
-                    {
-                        attackers.sort_by_key(|id| {
-                            -state.computed_permanent(*id).map(|cp| cp.power).unwrap_or(0)
-                        });
-                        attackers.truncate(cap as usize);
-                    }
-                    // CR 508.0 — drop a lone attacker that can't attack alone
-                    // (Militia Rallier): a single-attacker batch with
-                    // CantAttackAlone would be rejected, costing the bot its
-                    // whole combat. Only matters when it's the sole attacker.
-                    if attackers.len() == 1
-                        && state
-                            .computed_permanent(attackers[0])
-                            .is_some_and(|cp| cp.keywords.contains(&Keyword::CantAttackAlone))
-                    {
-                        attackers.clear();
-                    }
-                    // Find opponent planeswalkers in loyalty-ascending
-                    // order. The bot will redirect attacks at PWs whose
-                    // current loyalty is at-or-below our total attacking
-                    // power — finishing off the walker. Each PW consumes
-                    // up to its loyalty worth of attackers; the rest
-                    // attack the player.
-                    let mut walker_targets: Vec<(crate::card::CardId, u32)> = state
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            c.definition.is_planeswalker()
-                                && c.controller != seat
-                                && state.players[c.controller].is_alive()
-                        })
-                        .map(|c| {
-                            let loyalty = c
-                                .counters
-                                .iter()
-                                .find_map(|(k, v)| {
-                                    matches!(k, crate::card::CounterType::Loyalty)
-                                        .then_some(*v)
-                                })
-                                .unwrap_or(0);
-                            (c.id, loyalty)
-                        })
-                        .collect();
-                    walker_targets.sort_by_key(|(_, l)| *l);
-                    let total_power: i32 = attackers
-                        .iter()
-                        .filter_map(|id| {
-                            state.battlefield.iter().find(|c| c.id == *id).map(|c| c.power())
-                        })
-                        .sum();
-                    let mut attacks: Vec<Attack> = Vec::new();
-                    for (pw_id, loyalty) in walker_targets {
-                        // Only redirect when we can plausibly finish it
-                        // off (total attacking power >= loyalty). Avoids
-                        // throwing 1-power chumps at a 5-loyalty walker.
-                        if (total_power as u32) < loyalty || loyalty == 0 {
-                            continue;
-                        }
-                        // Pull as many attackers as the walker's loyalty
-                        // for this redirect, picking smallest-power
-                        // first so we keep beefy beaters for the player
-                        // when possible. (Suicide-by-blocker is still
-                        // not modeled here.)
-                        let mut budget = loyalty as i32;
-                        attackers.sort_by_key(|id| {
-                            state
-                                .battlefield
-                                .iter()
-                                .find(|c| c.id == *id)
-                                .map(|c| c.power())
-                                .unwrap_or(0)
-                        });
-                        let mut remaining: Vec<crate::card::CardId> = Vec::new();
-                        for id in attackers.drain(..) {
-                            let pow = state
-                                .battlefield
-                                .iter()
-                                .find(|c| c.id == id)
-                                .map(|c| c.power())
-                                .unwrap_or(0);
-                            if budget > 0 && pow > 0 {
-                                attacks.push(Attack {
-                                    attacker: id,
-                                    target: AttackTarget::Planeswalker(pw_id),
-                                });
-                                budget -= pow;
-                            } else {
-                                remaining.push(id);
-                            }
-                        }
-                        attackers = remaining;
-                    }
-                    // Remaining attackers go at the player.
-                    for id in attackers {
-                        attacks.push(Attack {
-                            attacker: id,
-                            target: AttackTarget::Player(target_player),
-                        });
-                    }
-                    Some(GameAction::DeclareAttackers(attacks))
+                    Some(GameAction::DeclareAttackers(pick_attacks(state, seat)))
                 } else {
                     Some(GameAction::PassPriority)
                 }
@@ -4120,6 +3751,424 @@ pub fn pick_blocks_for_test(state: &GameState, seat: usize) -> Vec<(CardId, Card
     pick_blocks(state, seat)
 }
 
+/// The bot's attack declaration for `seat`: which creatures swing and at
+/// what. Extracted from `next_action` so the combat-aware evaluation can
+/// replay the same choice inside a simulation (see
+/// [`simulate_through_combat`]) rather than re-deriving it.
+pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
+    use crate::card::Keyword;
+    // Pick the attack target: prefer an opposing monarch (CR
+    // 724 — stealing the crown denies their end-step card and
+    // hands it to us); otherwise the next alive opponent.
+    let target_player = match state.monarch {
+        Some(m)
+            if m != seat
+                && state.players.get(m).map(|p| p.is_alive()).unwrap_or(false) =>
+        {
+            m
+        }
+        _ => state.next_alive_seat(seat),
+    };
+    // Filter on `controller`, not `owner`: cards that have
+    // changed control (Threaten / Mind Control / etc.) are
+    // attacked WITH by the new controller, not the original
+    // owner.
+    //
+    // Bot AI improvement (push XXV): hold back attackers
+    // that would suicide into deathtouch blockers when
+    // there's no upside. The heuristic computes:
+    //   * lethal_swing: whether sum of attackers' powers
+    //     already meets opponent's life total.
+    // When NOT lethal:
+    //   * skip attackers whose toughness is <= the maximum
+    //     opponent blocker power AND there's at least one
+    //     opponent blocker with deathtouch + reach/flying
+    //     parity (i.e. a blocker can be assigned).
+    // This keeps small attackers from auto-dying to
+    // Witherbloom Crawler / Sapworm / Toxicultivator and
+    // similar deathtouch defenders.
+    let opp_seat = target_player;
+    let opp_life = state.players[opp_seat].life;
+    let raw_attackers: Vec<&crate::card::CardInstance> = state
+        .battlefield
+        .iter()
+        .filter(|c| {
+            c.controller == seat
+                // `can_attack()`'s components minus its printed-
+                // Defender gate, which is re-checked below against
+                // the computed keyword set so a team "attack as
+                // though no defender" grant (High Alert) applies.
+                && c.definition.is_creature()
+                && !c.tapped
+                && (!c.summoning_sick || c.has_keyword(&Keyword::Haste))
+                && !c.has_keyword(&Keyword::CantAttack)
+                // Honor layer-granted Defender / can't-attack
+                // (Pacifism, crewed-Vehicle states) — can_attack
+                // only sees printed keywords.
+                && state
+                    .computed_permanent(c.id)
+                    .map(|cp| {
+                        (!cp.keywords.contains(&Keyword::Defender)
+                            || state.ignores_defender_for_attack(c))
+                            && !cp.keywords.contains(&Keyword::CantAttack)
+                            // CR 508.1a — "can attack only if
+                            // defending player controls [X]"
+                            // (Dandân). Don't declare it into a
+                            // defender whose board fails the
+                            // filter, or the whole batch is
+                            // rejected.
+                            && cp.keywords.iter().all(|kw| match kw {
+                                Keyword::CanAttackOnlyIfDefenderControls(req) => {
+                                    state.battlefield.iter().any(|d| {
+                                        d.controller == target_player
+                                            && state.evaluate_requirement_on_card(
+                                                req, d, target_player,
+                                            )
+                                    })
+                                }
+                                Keyword::CanAttackOnlyIfYouControl(req) => {
+                                    state.battlefield.iter().any(|d| {
+                                        d.controller == c.controller
+                                            && state.evaluate_requirement_on_card(
+                                                req, d, c.controller,
+                                            )
+                                    })
+                                }
+                                Keyword::CantAttackOrBlockUnlessEvenCounters => {
+                                    c.counters.values().sum::<u32>() % 2 == 0
+                                }
+                                Keyword::CantAttackOrBlockUnlessYouControlCount {
+                                    filter,
+                                    min,
+                                    block_only,
+                                    exclude_self,
+                                    ..
+                                } => {
+                                    // A block-only gate never
+                                    // restricts attacking. `exclude_self`
+                                    // drops the gated creature from the
+                                    // count ("another …" — Tiger-Dillo).
+                                    *block_only
+                                        || state
+                                            .battlefield
+                                            .iter()
+                                            .filter(|d| {
+                                                d.controller == c.controller
+                                                    && !(*exclude_self && d.id == c.id)
+                                                    && state
+                                                        .evaluate_requirement_on_card(
+                                                            filter,
+                                                            d,
+                                                            c.controller,
+                                                        )
+                                            })
+                                            .count()
+                                            as u32
+                                            >= *min
+                                }
+                                _ => true,
+                            })
+                    })
+                    .unwrap_or(true)
+        })
+        .collect();
+    // Use the damage-aware value so toughness-attackers (Doran,
+    // High Alert) are weighed by what they actually deal.
+    let total_raw_power: i32 =
+        raw_attackers.iter().map(|c| attacker_damage_value(state, c.id)).sum();
+    let lethal_swing = total_raw_power >= opp_life;
+    // Race math: compare full-out clocks. We strike first
+    // (it's our combat), so strictly fewer turns-to-lethal
+    // than the opponent's counter-clock — inside a short
+    // horizon — means holding back only concedes the race;
+    // attack like it's lethal-in-N. Defenders and can't-
+    // attack bodies add nothing to their clock.
+    let opp_clock: i32 = state
+        .battlefield
+        .iter()
+        .filter(|c| {
+            c.controller == opp_seat
+                && c.definition.is_creature()
+                && !c.has_keyword(&Keyword::Defender)
+                && !c.has_keyword(&Keyword::CantAttack)
+        })
+        .map(|c| c.power().max(0))
+        .sum();
+    let racing = total_raw_power > 0 && opp_clock > 0 && {
+        let our_turns = (opp_life.max(1) + total_raw_power - 1) / total_raw_power;
+        let their_turns =
+            (state.effective_life(seat).max(1) + opp_clock - 1) / opp_clock;
+        our_turns < their_turns && our_turns <= 5
+    };
+    let lethal_swing = lethal_swing || racing;
+    let opp_blockers: Vec<&crate::card::CardInstance> = state
+        .battlefield
+        .iter()
+        .filter(|c| {
+            // A creature that's tapped, not a creature, or has a
+            // computed `CantBlock` (Sandstorm Verge, pacifism-
+            // style effects) can't block — don't let the bot hold
+            // attackers back for a blocker that can't legally block.
+            c.controller == opp_seat
+                && c.can_block()
+                && !state
+                    .computed_permanent(c.id)
+                    .is_some_and(|cp| cp.keywords.contains(&Keyword::CantBlock))
+        })
+        .collect();
+    let has_ground_deathtouch = opp_blockers
+        .iter()
+        .any(|b| b.has_keyword(&Keyword::Deathtouch) && !b.has_keyword(&Keyword::Flying));
+    let max_ground_blocker_power: i32 = opp_blockers
+        .iter()
+        .filter(|b| !b.has_keyword(&Keyword::Flying))
+        .map(|b| b.power())
+        .max()
+        .unwrap_or(0);
+    let mut attackers: Vec<crate::card::CardId> = raw_attackers
+        .into_iter()
+        .filter(|c| {
+            // CR 508.1d — must-attack creatures (Juggernaut,
+            // goaded) have no choice; always include them so
+            // the engine's requirement check accepts the batch.
+            if c.has_keyword(&Keyword::MustAttack) || !c.goaded_by.is_empty() {
+                return true;
+            }
+            // Always attack on lethal swings — the bot
+            // would rather suicide than miss a kill.
+            if lethal_swing {
+                return true;
+            }
+            // CR 615.1 — don't swing with a creature whose
+            // combat damage is prevented this turn (Fog /
+            // Inspire Awe's exception); attacking only risks it
+            // for no damage.
+            if state.combat_damage_prevented_for_dealer(c.id) {
+                return false;
+            }
+            // Unblockable by the current board: if the
+            // opponent has creatures but none can legally
+            // block this attacker (Unblockable, "can't be
+            // blocked by/except by" restrictions the board
+            // can't satisfy), it's a free swing. Generalizes
+            // the Flying/Menace evasion checks below.
+            if !opp_blockers.is_empty()
+                && opp_blockers
+                    .iter()
+                    .all(|b| !state.blocker_can_block_attacker(b.id, c.id))
+            {
+                return true;
+            }
+            let flying = c.has_keyword(&Keyword::Flying);
+            // Evasive attackers (flying) — only block-
+            // worried if there's a flying opp blocker.
+            // Skip the deathtouch / ground-power filter
+            // for them; assume they're safe.
+            if flying {
+                let opp_has_flying_blocker = opp_blockers.iter()
+                    .any(|b| b.has_keyword(&Keyword::Flying)
+                          || b.has_keyword(&Keyword::Reach));
+                if !opp_has_flying_blocker {
+                    return true; // free swing
+                }
+            }
+            // Trample: tougher creatures still come in
+            // (we'll get some damage through chumps).
+            if c.has_keyword(&Keyword::Trample) {
+                return true;
+            }
+            // Indestructible: safe to swing (won't die).
+            if c.has_keyword(&Keyword::Indestructible) {
+                return true;
+            }
+            // Shield counter on the attacker — the first
+            // damage is prevented, so a basic ground-trade
+            // is safe (push XXVI bot improvement).
+            if c.counter_count(crate::card::CounterType::Shield) > 0 {
+                return true;
+            }
+            // Lifelink: even if we trade, we gain life —
+            // worth swinging when we can race.
+            if c.has_keyword(&Keyword::Lifelink) {
+                return true;
+            }
+            // Deathtouch attacker: any blocker that deals
+            // with it dies (CR 702.2), so blocking is at
+            // best an even trade for the opponent — swinging
+            // is always at least fine.
+            if c.has_keyword(&Keyword::Deathtouch) && c.power() >= 1 {
+                return true;
+            }
+            // Menace (CR 702.111): needs two+ blockers. If
+            // the opponent has fewer than two creatures that
+            // can legally block this attacker, it gets
+            // through unblocked — safe to swing.
+            if c.has_keyword(&Keyword::Menace) {
+                let able = opp_blockers
+                    .iter()
+                    .filter(|b| {
+                        !flying
+                            || b.has_keyword(&Keyword::Flying)
+                            || b.has_keyword(&Keyword::Reach)
+                    })
+                    .count();
+                if able < 2 {
+                    return true;
+                }
+            }
+            // First strike + bigger power than blockers'
+            // toughness — we kill the blocker before it
+            // strikes back. Safe attack (push XXVI).
+            if c.has_keyword(&Keyword::FirstStrike)
+                || c.has_keyword(&Keyword::DoubleStrike)
+            {
+                let max_blocker_toughness: i32 = opp_blockers
+                    .iter()
+                    .filter(|b| !b.has_keyword(&Keyword::Flying) || flying)
+                    .map(|b| b.toughness())
+                    .max()
+                    .unwrap_or(0);
+                if c.power() > max_blocker_toughness {
+                    return true;
+                }
+            }
+            // Hold back if a deathtouch blocker exists
+            // and we don't outsize the biggest blocker.
+            if has_ground_deathtouch && !flying {
+                return false;
+            }
+            // Finality counter on the attacker — if it
+            // dies it'll exile instead of returning to
+            // the graveyard (CR 122.1h). Don't suicide
+            // a finality-counter creature into ground
+            // blockers that can kill it.
+            // Push (claude/modern_decks, batches 192-197).
+            if c.counter_count(crate::card::CounterType::Finality) > 0
+                && !flying
+                && max_ground_blocker_power >= c.toughness()
+            {
+                return false;
+            }
+            // Hold back if our toughness is <= biggest
+            // blocker power and we wouldn't kill them
+            // (basic suicide filter).
+            if !flying
+                && max_ground_blocker_power >= c.toughness()
+                && c.power() <= max_ground_blocker_power
+            {
+                return false;
+            }
+            true
+        })
+        .map(|c| c.id)
+        .collect();
+    // CR 506.2 — Silent Arbiter caps the whole combat. An
+    // over-sized batch is rejected outright, so trim to the
+    // cap keeping the biggest attackers.
+    if let Some(cap) = state.combat_participation_cap(false)
+        && attackers.len() > cap as usize
+    {
+        attackers.sort_by_key(|id| {
+            -state.computed_permanent(*id).map(|cp| cp.power).unwrap_or(0)
+        });
+        attackers.truncate(cap as usize);
+    }
+    // CR 508.0 — drop a lone attacker that can't attack alone
+    // (Militia Rallier): a single-attacker batch with
+    // CantAttackAlone would be rejected, costing the bot its
+    // whole combat. Only matters when it's the sole attacker.
+    if attackers.len() == 1
+        && state
+            .computed_permanent(attackers[0])
+            .is_some_and(|cp| cp.keywords.contains(&Keyword::CantAttackAlone))
+    {
+        attackers.clear();
+    }
+    // Find opponent planeswalkers in loyalty-ascending
+    // order. The bot will redirect attacks at PWs whose
+    // current loyalty is at-or-below our total attacking
+    // power — finishing off the walker. Each PW consumes
+    // up to its loyalty worth of attackers; the rest
+    // attack the player.
+    let mut walker_targets: Vec<(crate::card::CardId, u32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| {
+            c.definition.is_planeswalker()
+                && c.controller != seat
+                && state.players[c.controller].is_alive()
+        })
+        .map(|c| {
+            let loyalty = c
+                .counters
+                .iter()
+                .find_map(|(k, v)| {
+                    matches!(k, crate::card::CounterType::Loyalty)
+                        .then_some(*v)
+                })
+                .unwrap_or(0);
+            (c.id, loyalty)
+        })
+        .collect();
+    walker_targets.sort_by_key(|(_, l)| *l);
+    let total_power: i32 = attackers
+        .iter()
+        .filter_map(|id| {
+            state.battlefield.iter().find(|c| c.id == *id).map(|c| c.power())
+        })
+        .sum();
+    let mut attacks: Vec<Attack> = Vec::new();
+    for (pw_id, loyalty) in walker_targets {
+        // Only redirect when we can plausibly finish it
+        // off (total attacking power >= loyalty). Avoids
+        // throwing 1-power chumps at a 5-loyalty walker.
+        if (total_power as u32) < loyalty || loyalty == 0 {
+            continue;
+        }
+        // Pull as many attackers as the walker's loyalty
+        // for this redirect, picking smallest-power
+        // first so we keep beefy beaters for the player
+        // when possible. (Suicide-by-blocker is still
+        // not modeled here.)
+        let mut budget = loyalty as i32;
+        attackers.sort_by_key(|id| {
+            state
+                .battlefield
+                .iter()
+                .find(|c| c.id == *id)
+                .map(|c| c.power())
+                .unwrap_or(0)
+        });
+        let mut remaining: Vec<crate::card::CardId> = Vec::new();
+        for id in attackers.drain(..) {
+            let pow = state
+                .battlefield
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| c.power())
+                .unwrap_or(0);
+            if budget > 0 && pow > 0 {
+                attacks.push(Attack {
+                    attacker: id,
+                    target: AttackTarget::Planeswalker(pw_id),
+                });
+                budget -= pow;
+            } else {
+                remaining.push(id);
+            }
+        }
+        attackers = remaining;
+    }
+    // Remaining attackers go at the player.
+    for id in attackers {
+        attacks.push(Attack {
+            attacker: id,
+            target: AttackTarget::Player(target_player),
+        });
+    }
+    attacks
+}
+
 fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // The heuristic probes block legality per blocker×attacker pair, each a
     // layer-aware check — share one gather across the whole scan.
@@ -5375,6 +5424,89 @@ fn lifegain_sources(state: &GameState, seat: usize) -> i32 {
     (battlefield + hand) as i32
 }
 
+/// Advance `g` through this turn's combat, so a candidate line can be
+/// scored on the board it actually produces rather than the board that
+/// exists the instant it resolves.
+///
+/// This is the single biggest gap between this evaluator and the reference
+/// AIs. `evaluate_action_outcome` snapshots immediately after resolution,
+/// which cannot see that the creature just cast dies on the crack-back,
+/// that the removal spell opened a lethal swing, or that the 2/2 deployed
+/// into an empty board is about to trade with a 4/4. Forge scores nothing
+/// without first fast-forwarding a copy to combat damage
+/// (`GameStateEvaluator.simulateUpcomingCombatThisTurn`); this is that,
+/// driven by the bot's own `pick_attacks` / `pick_blocks` so the simulated
+/// combat is the combat this bot would actually play.
+///
+/// Returns true when combat was simulated. Bails cheaply — without
+/// touching `g` — when there is no combat to look at: the game is over,
+/// the turn is already past combat damage, or the active player has no
+/// creature that could attack. Forge guards the same way, because the
+/// state copy is the expensive part.
+fn simulate_through_combat(g: &mut GameState, fuel: &mut u32) -> bool {
+    if g.is_game_over() || g.step >= TurnStep::CombatDamage {
+        return false;
+    }
+    let attacker_seat = g.active_player_idx;
+    let could_attack = g.battlefield.iter().any(|c| {
+        c.controller == attacker_seat
+            && c.definition.is_creature()
+            && !c.tapped
+            && (!c.summoning_sick || c.has_keyword(&crate::card::Keyword::Haste))
+    });
+    if !could_attack {
+        return false;
+    }
+    let turn = g.turn_number;
+    let mut attacks_submitted = false;
+    let mut blocks_submitted = false;
+    while g.step < TurnStep::CombatDamage && g.turn_number == turn && !g.is_game_over() {
+        *fuel = match fuel.checked_sub(1) {
+            Some(f) => f,
+            None => return false,
+        };
+        if g.pending_decision.is_some() {
+            let answer = {
+                let pending = g.pending_decision.as_ref().unwrap();
+                AutoDecider.decide(&pending.decision)
+            };
+            if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
+                return false;
+            }
+            continue;
+        }
+        let action = match g.step {
+            TurnStep::DeclareAttackers if !attacks_submitted => {
+                attacks_submitted = true;
+                let declarer = g.attack_declarer();
+                GameAction::DeclareAttackers(pick_attacks(g, declarer))
+            }
+            TurnStep::DeclareBlockers if !blocks_submitted && !g.attacking().is_empty() => {
+                // The defender is not the priority holder at this point, so
+                // ask the engine which seat is actually owed the
+                // declaration. Getting this wrong silently leaves every
+                // attacker unblocked, which flatters the attack.
+                match (0..g.players.len()).find(|&s| g.may_declare_blocks(s)) {
+                    Some(defender) => {
+                        blocks_submitted = true;
+                        GameAction::DeclareBlockers(pick_blocks(g, defender))
+                    }
+                    None => GameAction::PassPriority,
+                }
+            }
+            _ => GameAction::PassPriority,
+        };
+        if g.perform_action(action).is_err() {
+            // A rejected declaration would spin forever; fall back to
+            // passing, and give up if even that fails.
+            if g.perform_action(GameAction::PassPriority).is_err() {
+                return false;
+            }
+        }
+    }
+    true
+}
+
 /// Dry-run `action` to quiescence on a full-state clone (libraries kept —
 /// resolution may draw) and score the result for `seat`: the cast is
 /// applied, then priority passes with [`AutoDecider`] answers for any
@@ -5405,6 +5537,23 @@ fn evaluate_action_outcome(
             g.perform_action(GameAction::PassPriority).ok()?;
         }
         fuel = fuel.checked_sub(1)?;
+    }
+    // Score the board this line actually leads to, not the one that exists
+    // the moment it resolves -- see `simulate_through_combat`.
+    if w.combat_aware {
+        // Its own budget: the resolve loop above may have spent most of the
+        // 64, and combat is a long way through the step machine (two
+        // declarations plus a priority round per step, before triggers).
+        let mut combat_fuel = 256u32;
+        let started = g.step < TurnStep::CombatDamage;
+        simulate_through_combat(&mut g, &mut combat_fuel);
+        // A half-simulated combat is worse than none: attackers are
+        // declared and tapped but damage was never dealt, so the line reads
+        // as pure downside. Refuse to score a torn state -- the caller
+        // falls back to the static rank.
+        if started && g.step < TurnStep::CombatDamage && !g.is_game_over() {
+            return None;
+        }
     }
     Some(eval_material(&g, seat, w))
 }
@@ -8584,6 +8733,64 @@ mod tests {
         assert!(eval_material(&g, 1, &EvalWeights::default()) < 0);
         g.game_over = Some(Some(1));
         assert!(eval_material(&g, 1, &EvalWeights::default()) > eval_material(&g, 0, &EvalWeights::default()), "a won game beats any material");
+    }
+
+    /// The combat-aware evaluator has to actually reach combat damage and
+    /// come back, or it silently degrades to the old snapshot behavior.
+    #[test]
+    fn simulate_through_combat_advances_past_combat_damage() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        // Empty board opposite, so the swing is free and unambiguous.
+        let life_before = g.players[1].life;
+        let mut fuel = 200u32;
+        assert!(simulate_through_combat(&mut g, &mut fuel), "combat should be simulated");
+        assert!(g.step >= TurnStep::CombatDamage, "advanced to combat damage, got {:?}", g.step);
+        assert_eq!(g.players[1].life, life_before - 2, "the bear connected for 2");
+    }
+
+    /// The cheap bail-outs matter: the state clone is the expensive part,
+    /// so a position with no combat to look at must cost nothing.
+    #[test]
+    fn simulate_through_combat_bails_without_attackers() {
+        let mut g = two_player_game();
+        let mut fuel = 200u32;
+        assert!(!simulate_through_combat(&mut g, &mut fuel), "no creatures, no combat");
+        assert_eq!(fuel, 200, "bailing must not burn fuel");
+        // A summoning-sick creature can't attack, so still nothing to see.
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        assert!(!simulate_through_combat(&mut g, &mut fuel), "sick creature can't attack");
+        g.step = TurnStep::PostCombatMain;
+        g.clear_sickness(g.battlefield[0].id);
+        assert!(!simulate_through_combat(&mut g, &mut fuel), "combat is already over");
+    }
+
+    /// The payoff. A creature that is *forced* to attack into a blocker
+    /// that eats it is not the material the board says it is. The snapshot
+    /// evaluator counts the body and never sees it die; the combat-aware
+    /// one plays the turn out and prices it correctly.
+    #[test]
+    fn combat_aware_eval_sees_a_forced_attacker_die() {
+        use crate::card::Keyword;
+        let mut g = two_player_game();
+        let doomed = g.add_card_to_battlefield(
+            0,
+            weights_test_creature("Doomed Charger", 2, 2, 2, &[Keyword::MustAttack]),
+        );
+        g.clear_sickness(doomed);
+        // A 4/4 blocks it, kills it, and survives.
+        g.add_card_to_battlefield(1, catalog::craw_wurm());
+        let w = EvalWeights::combat_aware();
+        let snapshot = eval_material(&g, 0, &w);
+        let mut sim = g.clone();
+        let mut fuel = 200u32;
+        assert!(simulate_through_combat(&mut sim, &mut fuel));
+        assert!(sim.battlefield_find(doomed).is_none(), "the forced attacker died");
+        assert!(
+            eval_material(&sim, 0, &w) < snapshot,
+            "losing the body must score worse than the board that still has it",
+        );
     }
 
     /// The baseline profile must stay a byte-for-byte control for the

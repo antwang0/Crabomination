@@ -8,7 +8,14 @@ use serde::{Deserialize, Serialize};
 
 // ── Turn step sequence ────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// `PartialOrd`/`Ord` follow declaration order, which *is* the turn order,
+/// so `step < TurnStep::CombatDamage` reads as "earlier in the turn". Only
+/// meaningful within a single turn — the comparison says nothing across a
+/// turn boundary, where `Cleanup` precedes the next turn's `Untap` in time
+/// but sorts after it.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 pub enum TurnStep {
     Untap,
     Upkeep,
