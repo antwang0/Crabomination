@@ -7711,16 +7711,14 @@ stalled games via `eval_material`.
   "Sacrifice Blazing Torch" is modeled as `Effect::Sacrifice` with a
   `HasName` filter, so a second Torch you control could be the one sacrificed.
   Wants a `Selector::AttachmentGranting` sacrifice.
-- **Eight M11 cards remain**, each blocked on one primitive:
-  - Vengeful Archon — `PreventNextDamageAndGainLife` has no slot to reflect the
-    prevented amount back at a player or planeswalker.
+- **Four M11 cards remain**, each blocked on one primitive:
   - Angelic Arbiter — `CreaturesCantAttackController` has no condition slot,
     and the mirrored "can't cast spells" half wants a per-opponent gate.
-  - Phylactery Lich — a phylactery counter kind plus a state trigger on
-    "you control no permanents with phylactery counters".
-  - Conundrum Sphinx (each player names a card, then reveals), Mass Polymorph,
-    Wild Evocation (random hand card cast for free), Necrotic Plague
-    (self-recurring Aura).
+  - Conundrum Sphinx — each player names a card, then reveals their top.
+  - Mass Polymorph — exile your creatures, reveal until that many creature
+    cards, deploy them all.
+  - Necrotic Plague — a self-recurring Aura that reattaches from the graveyard
+    to an opponent's creature.
 - **`Effect::Search { to: Exile }` doesn't stamp `exiled_with`.** Hoarding
   Dragon pairs it with `ExileWithSource { LastMoved }` to link the two halves
   (CR 607.2); a `stamp_exiled_with` flag on `Search` would be tidier.

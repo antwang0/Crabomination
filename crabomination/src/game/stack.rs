@@ -3064,6 +3064,26 @@ impl GameState {
             }
         }
 
+        // CR 603.8 — "when [condition], sacrifice this" state trigger
+        // (Phylactery Lich). Evaluated from each carrier's own controller.
+        let sacrifice_when: Vec<(CardId, usize)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.sacrifice_when.is_some())
+            .map(|c| (c.id, c.controller))
+            .collect();
+        for (id, ctrl) in sacrifice_when {
+            let Some(pred) =
+                self.battlefield_find(id).and_then(|c| c.definition.sacrifice_when.clone())
+            else {
+                continue;
+            };
+            let ctx = crate::game::effects::EffectContext::for_ability(id, ctrl, None);
+            if self.evaluate_predicate(&pred, &ctx) {
+                self.sacrifice_one(id, ctrl, &mut events);
+            }
+        }
+
         // CR 603.8 — "when a player other than its owner controls it" state
         // trigger (Bronze Bombshell): that player sacrifices it, then it deals
         // N damage to them. Latched in `steal_penalty_armed` so it fires once

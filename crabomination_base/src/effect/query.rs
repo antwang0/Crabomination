@@ -401,7 +401,8 @@ impl Effect {
             Effect::WishToHand { .. } => false,
             Effect::SacrificeAllButOnePerType { who } => sel_has_target(who),
             Effect::EachPlayerKeepsOneSacrificeRest { who, .. } => sel_has_target(who),
-            Effect::RevealRandomDiscardNonland { who, .. } => sel_has_target(who),
+            Effect::RevealRandomDiscardNonland { who, .. }
+            | Effect::RandomHandCardDeployOrCastFree { who } => sel_has_target(who),
             // Search-library / counter-all effects pick no cast-time target.
             Effect::SearchLibraryCreaturesUpToTotalManaValue { .. }
             | Effect::CounterAllOtherSpellsDrawPer => false,

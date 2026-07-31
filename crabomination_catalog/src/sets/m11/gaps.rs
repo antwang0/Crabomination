@@ -9,7 +9,7 @@ use crate::effect::{
     Duration, Effect, ManaPayload, PlayerRef, Selector, StaticEffect, ZoneDest,
     shortcut::{etb, on_attack, on_dies, target_filtered},
 };
-use crate::mana::{Color, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 fn creature(
     name: &'static str,
@@ -302,6 +302,28 @@ pub fn phantom_beast() -> CardDefinition {
             4,
             5,
         )
+    }
+}
+
+/// Phylactery Lich — {B}{B}{B} 5/5 indestructible Zombie anchored to an
+/// artifact; lose every phylactery counter and it goes with them.
+pub fn phylactery_lich() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Indestructible],
+        as_enters_effect: Some(Effect::AddCounter {
+            what: Selector::Take {
+                inner: Box::new(Selector::EachPermanent(R::Artifact.and(R::ControlledByYou))),
+                count: Box::new(Value::Const(1)),
+            },
+            kind: CounterType::Phylactery,
+            amount: Value::Const(1),
+        }),
+        sacrifice_when: Some(Predicate::Not(Box::new(Predicate::SelectorExists(
+            Selector::EachPermanent(
+                R::WithCounter(CounterType::Phylactery).and(R::ControlledByYou),
+            ),
+        )))),
+        ..creature("Phylactery Lich", cost(&[b(), b(), b()]), vec![CreatureType::Zombie], 5, 5)
     }
 }
 
@@ -635,6 +657,26 @@ pub fn leyline_of_vitality() -> CardDefinition {
 
 // ── Auras ───────────────────────────────────────────────────────────────────
 
+/// Wild Evocation — {5}{R}; each upkeep its controller's opponent — and they —
+/// flip a random card off the top of their hand into play.
+pub fn wild_evocation() -> CardDefinition {
+    CardDefinition {
+        name: "Wild Evocation",
+        cost: cost(&[generic(5), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::RandomHandCardDeployOrCastFree {
+                who: Selector::Player(PlayerRef::ActivePlayer),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Dryad's Favor — {G} Aura granting forestwalk.
 pub fn dryads_favor() -> CardDefinition {
     aura(
@@ -944,6 +986,31 @@ pub fn time_reversal() -> CardDefinition {
                     amount: Value::Const(7),
                 },
             ]),
+        )
+    }
+}
+
+/// Vengeful Archon — {4}{W}{W}{W} 7/7 Archon with flying; {X} turns damage
+/// aimed at you around onto a player or planeswalker. (The redirected damage
+/// keeps its original source rather than becoming the Archon's.)
+pub fn vengeful_archon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            effect: Effect::RedirectNextDamage {
+                target: Selector::You,
+                to: target_filtered(R::Player.or(R::Planeswalker)),
+                amount: Value::XFromCost,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Vengeful Archon",
+            cost(&[generic(4), w(), w(), w()]),
+            vec![CreatureType::Archon],
+            7,
+            7,
         )
     }
 }

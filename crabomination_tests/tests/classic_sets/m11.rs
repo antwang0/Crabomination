@@ -809,3 +809,82 @@ fn demon_of_deaths_gate_alternative_cost() {
     assert!(!try_alt(2).0, "two black creatures isn't enough");
     assert_eq!(try_alt(3), (true, 14, true), "6 life and three bodies");
 }
+
+/// Vengeful Archon turns damage aimed at you around onto a chosen player.
+#[test]
+fn vengeful_archon_redirects_damage() {
+    let mut g = two_player_game();
+    let archon = g.add_card_to_battlefield(0, catalog::vengeful_archon());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: archon,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    cast(&mut g, bolt, Some(Target::Player(0)));
+    assert_eq!(g.players[0].life, 20, "the Archon soaked all three");
+    assert_eq!(g.players[1].life, 17, "and sent them back");
+}
+
+/// Wild Evocation flips a random hand card into play each upkeep — a land
+/// lands, anything else is cast free.
+#[test]
+fn wild_evocation_deploys_a_random_hand_card() {
+    // Land-only hand: it hits the battlefield.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::wild_evocation());
+    g.players[0].hand.clear();
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_some(), "the land is put onto the battlefield");
+
+    // Spell-only hand: it's cast without paying.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::wild_evocation());
+    g.players[0].hand.clear();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "cast for free");
+    assert_eq!(g.players[1].life, 17);
+}
+
+/// Phylactery Lich anchors itself to one artifact and dies with it.
+#[test]
+fn phylactery_lich_lives_and_dies_by_its_counter() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let lich = g.add_card_to_hand(0, catalog::phylactery_lich());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    cast(&mut g, lich, None);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(lich).is_some(), "anchored to the Sol Ring");
+    assert_eq!(
+        g.battlefield_find(rock).unwrap().counter_count(CounterType::Phylactery),
+        1
+    );
+    let mut ev = vec![];
+    g.destroy_permanent(rock, false, &mut ev);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(lich).is_none(), "the anchor is gone, so is the Lich");
+}
+
+/// With no artifact to anchor to, the Lich never sticks.
+#[test]
+fn phylactery_lich_without_an_artifact_dies_immediately() {
+    let mut g = two_player_game();
+    let lich = g.add_card_to_hand(0, catalog::phylactery_lich());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    cast(&mut g, lich, None);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(lich).is_none());
+}

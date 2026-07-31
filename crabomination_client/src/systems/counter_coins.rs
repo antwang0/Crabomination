@@ -399,6 +399,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Palliation => "Palliation",
         CounterType::Eon => "Eon",
         CounterType::Blaze => "Blaze",
+        CounterType::Phylactery => "Phylactery",
         CounterType::Filibuster => "Filibuster",
     }
 }

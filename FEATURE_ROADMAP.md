@@ -1347,15 +1347,19 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `SelectionRequirement::IsSourceChosenCardType`,
   `Predicate::LastDiscardedWasColor`, and `CounterType::{Eon, Blaze}`.
   Tests in `classic_sets/zen2` + `classic_sets/zen3`.
-- **Magic 2011 (M11) 59 → 8 gaps** (`sets::m11::gaps`, 52 cards): the Leylines
+- **Magic 2011 (M11) 59 → 4 gaps** (`sets::m11::gaps`, 56 cards): the Leylines
   (`OpeningHandEffect::StartInPlay`), the Servants, the Auras, Mitotic Slime's
   nested token deaths, Hoarding Dragon's linked exile, Stormtide Leviathan's
   world-flood, Mystifying Maze and the commons. New:
   `Keyword::{CantAttackUnlessLandCount, CantAttackUnlessOpponentDamaged}`, a
   `tapped` rider on `Effect::ExileReturnToOwnerNextEndStep`, and
   `StaticEffect::YourColorSpellDamageDoubled` (Fire Servant — the resolving
-  spell's card types now ride `resolving_source` alongside its colors). The
-  remaining eight are listed in TODO.md. Tests in `classic_sets/m11`.
+  spell's card types now ride `resolving_source` alongside its colors),
+  `Effect::RandomHandCardDeployOrCastFree` (Wild Evocation) and
+  `CardDefinition.sacrifice_when` — a general CR 603.8 "when [condition],
+  sacrifice this" state trigger checked once per SBA pass (Phylactery Lich,
+  plus `CounterType::Phylactery`). The remaining four are listed in TODO.md.
+  Tests in `classic_sets/m11`.
 - **Worldwake is complete** (`set_gaps.py wwk` at zero — `sets::wwk`
   rides the same landfall/Rally shapes plus Multikicker and
   `Effect::SwitchPT` / `BecomeCreature`; `sets::wwk2` closes the last 43).

@@ -547,6 +547,9 @@ pub enum CounterType {
     /// Blaze counter — Obsidian Fireheart sets a land on fire; the land keeps
     /// burning its controller for 1 each upkeep, source or no source.
     Blaze,
+    /// Phylactery counter — Phylactery Lich anchors its indestructibility to
+    /// an artifact; losing every phylactery-countered permanent kills it.
+    Phylactery,
 }
 
 /// Every zone a card can occupy.
@@ -2356,6 +2359,12 @@ pub struct CardDefinition {
     /// the stack and can be responded to.
     #[serde(default)]
     pub as_enters_effect: Option<crate::effect::Effect>,
+    /// CR 603.8 state trigger — "When [condition], sacrifice this permanent."
+    /// Checked once per state-based-action pass against the permanent's
+    /// controller; the sacrifice happens immediately (no stack), which matches
+    /// the observable outcome for the cards that use it (Phylactery Lich).
+    #[serde(default)]
+    pub sacrifice_when: Option<crate::effect::Predicate>,
     /// CR 614 — "As this enters, choose [mode A] or [mode B]." A *persistent*
     /// mode choice (unlike `enters_as_choice`, which only sets P/T): the
     /// controller picks one mode as the permanent enters and that mode's

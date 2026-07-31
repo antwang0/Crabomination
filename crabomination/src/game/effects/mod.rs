@@ -8411,6 +8411,51 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RandomHandCardDeployOrCastFree { who } => {
+                use rand::seq::IteratorRandom;
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    let Some((cid, is_land)) = self.players[p]
+                        .hand
+                        .iter()
+                        .map(|c| (c.id, c.definition.is_land()))
+                        .choose(&mut rand::rng())
+                    else {
+                        continue;
+                    };
+                    if is_land {
+                        if let Some(card) = self.players[p].remove_from_hand(cid) {
+                            self.place_card_in_dest(
+                                card,
+                                p,
+                                &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                                events,
+                            );
+                        }
+                        continue;
+                    }
+                    let Some(def) = self.find_card_anywhere(cid).map(|c| c.definition.clone())
+                    else {
+                        continue;
+                    };
+                    let auto_target =
+                        self.auto_target_for_effect_avoiding(&def.effect, p, Some(cid));
+                    if let Ok(mut evs) = self.cast_card_for_free(
+                        p,
+                        cid,
+                        crate::card::Zone::Hand,
+                        auto_target,
+                        vec![],
+                        None,
+                        None,
+                        false,
+                    ) {
+                        events.append(&mut evs);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ReturnGraveyardPermanentsDifferentNames => {
                 
                 use crate::effect::ZoneDest;

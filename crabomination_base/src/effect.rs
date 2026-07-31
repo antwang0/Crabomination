@@ -5092,6 +5092,11 @@ pub enum Effect {
     /// hand, then discards each nonland card revealed this way. Lands revealed
     /// this way stay in hand.
     RevealRandomDiscardNonland { who: Selector, count: Value },
+    /// Wild Evocation — "that player reveals a card at random from their hand.
+    /// If it's a land card, the player puts it onto the battlefield. Otherwise,
+    /// the player casts it without paying its mana cost if able." The free cast
+    /// uses auto-targets; an uncastable pick simply stays in hand.
+    RandomHandCardDeployOrCastFree { who: Selector },
     /// "Tap up to N target permanents; they don't untap during their
     /// controller's next untap step" where N is a runtime `Value`
     /// (Archipelagore — N = `Value::MutateCount`). The controller chooses up
