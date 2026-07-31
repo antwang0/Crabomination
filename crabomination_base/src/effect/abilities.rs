@@ -1387,6 +1387,11 @@ pub enum StaticEffect {
         exclude_source: bool,
         #[serde(default)]
         opponents: bool,
+        /// Applies to EVERY player's creatures of the chosen type, ignoring
+        /// `opponents` (Engineered Plague's "all creatures of the chosen
+        /// type get -1/-1").
+        #[serde(default)]
+        all_players: bool,
         #[serde(default)]
         per_counter: Option<crate::card::CounterType>,
     },

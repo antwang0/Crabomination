@@ -6848,7 +6848,7 @@ impl GameState {
         // Patchwork Banner.
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::AnthemForChosenType { power, toughness, exclude_source, opponents, per_counter } =
+                let crate::effect::StaticEffect::AnthemForChosenType { power, toughness, exclude_source, opponents, all_players, per_counter } =
                     &sa.effect
                 else {
                     continue;
@@ -6866,7 +6866,9 @@ impl GameState {
                 };
                 // Whose creatures the modifier hits: the controller's (the
                 // tribal-anthem default) or each opponent's (Plague Engineer).
-                let seats: Vec<usize> = if *opponents {
+                let seats: Vec<usize> = if *all_players {
+                    (0..self.players.len()).collect()
+                } else if *opponents {
                     self.opponents_of(card.controller)
                 } else {
                     vec![card.controller]
@@ -7321,6 +7323,23 @@ impl GameState {
                         c.controller == card.controller && c.definition.is_creature()
                     }).count() as i32;
                     (n, base_t)
+                }
+                crate::card::DynamicPt::AllCreaturesOnBattlefield => {
+                    let n = self.battlefield.iter()
+                        .filter(|c| c.definition.is_creature()).count() as i32;
+                    (n, n)
+                }
+                crate::card::DynamicPt::AllPlayersHandTotal => {
+                    let n: i32 = self.players.iter().map(|p| p.hand.len() as i32).sum();
+                    (n, n)
+                }
+                crate::card::DynamicPt::BasePlusOtherFlyersOnBattlefield { base } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.id != card.id
+                            && c.definition.is_creature()
+                            && c.definition.keywords.contains(&crate::card::Keyword::Flying)
+                    }).count() as i32;
+                    (base + n, base + n)
                 }
                 crate::card::DynamicPt::BasePlusOtherFlyersControlled { base } => {
                     let n = self.battlefield.iter().filter(|c| {

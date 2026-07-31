@@ -2714,6 +2714,14 @@ impl GameState {
                                 .any(|o| o.id == *id && o.controller == controller),
                         })
                     }),
+                    R::SpellTargetsCreature => self.stack.iter().any(|si| {
+                        let StackItem::Spell { card: c, target, additional_targets, .. } = si else { return false };
+                        c.id == card.id
+                            && target.iter().chain(additional_targets.iter()).any(|t| {
+                                matches!(t, crate::game::types::Target::Permanent(id)
+                                    if self.battlefield.iter().any(|o| o.id == *id && o.definition.is_creature()))
+                            })
+                    }),
                     R::SpellTargetsOnlySource => source.is_some_and(|src| {
                         self.stack.iter().any(|si| {
                             let StackItem::Spell { card: c, target, additional_targets, .. } = si
@@ -3408,6 +3416,7 @@ impl GameState {
             | R::FaceDown | R::HasAbilityOnStack
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
+            | R::SpellTargetsCreature
             | R::SpellTargetsOnlySource
             | R::SpellWithSingleTarget
             | R::DealtDamageToControllerThisTurn | R::IsBestowed

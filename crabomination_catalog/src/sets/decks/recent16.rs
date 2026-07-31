@@ -161,6 +161,7 @@ pub fn vanquishers_banner() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
+                all_players: false,
                 power: 1,
                 toughness: 1,
                 exclude_source: false,
@@ -186,6 +187,7 @@ pub fn icon_of_ancestry() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
+                all_players: false,
                 power: 1,
                 toughness: 1,
                 exclude_source: false,

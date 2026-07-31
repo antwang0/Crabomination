@@ -165,7 +165,9 @@ impl GameState {
         fn mentions_spell_on_stack(r: &crate::card::SelectionRequirement) -> bool {
             use crate::card::SelectionRequirement as R;
             match r {
-                R::IsSpellOnStack | R::SpellTargetsControllerOrControlled => true,
+                R::IsSpellOnStack
+                | R::SpellTargetsControllerOrControlled
+                | R::SpellTargetsCreature => true,
                 R::And(a, b) | R::Or(a, b) => {
                     mentions_spell_on_stack(a) || mentions_spell_on_stack(b)
                 }

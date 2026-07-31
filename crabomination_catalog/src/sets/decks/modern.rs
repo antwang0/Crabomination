@@ -35576,6 +35576,7 @@ pub fn adaptive_automaton() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
+                all_players: false,
                 power: 1,
                 toughness: 1,
                 exclude_source: true,
@@ -35602,6 +35603,7 @@ pub fn patchwork_banner() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
+                all_players: false,
                 power: 1,
                 toughness: 1,
                 exclude_source: false,
@@ -41619,6 +41621,7 @@ pub fn obelisk_of_urd() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +2/+2.",
             effect: StaticEffect::AnthemForChosenType {
+                all_players: false,
                 power: 2,
                 toughness: 2,
                 exclude_source: false,
@@ -42609,6 +42612,7 @@ pub fn shared_triumph() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Creatures of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {
+                all_players: false,
                 power: 1,
                 toughness: 1,
                 exclude_source: false,

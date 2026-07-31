@@ -1739,6 +1739,8 @@ pub enum SelectionRequirement {
     /// spell that targets you or a permanent you control"). Only meaningful
     /// against a `StackItem::Spell`.
     SpellTargetsControllerOrControlled,
+    /// A stack spell that targets at least one creature (Intervene).
+    SpellTargetsCreature,
     /// True when the candidate stack spell targets *only* the ability's
     /// source — one target slot, filled with the source (Ink-Treader
     /// Nephilim's "if that spell targets only this creature").
@@ -3504,6 +3506,15 @@ pub enum DynamicPt {
     /// controller controls that have flying. Skycat Sovereign (base 1/1).
     /// Reads printed flying (granted flying isn't counted).
     BasePlusOtherFlyersControlled { base: i32 },
+    /// Power = toughness = the number of creatures on the battlefield, any
+    /// controller. Beast of Burden.
+    AllCreaturesOnBattlefield,
+    /// Power = toughness = the total number of cards in ALL players' hands.
+    /// Multani, Maro-Sorcerer.
+    AllPlayersHandTotal,
+    /// Power = toughness = `base` + the number of *other* creatures on the
+    /// battlefield with flying, any controller. Radiant, Archangel.
+    BasePlusOtherFlyersOnBattlefield { base: i32 },
     /// Power = toughness = base + total land cards in all graveyards.
     /// Knight of the Reliquary (base 2/2; grows +1/+1 per land in any
     /// player's graveyard).
