@@ -62,6 +62,7 @@ pub(crate) fn map_effect_duration(
         crate::effect::Duration::EndOfCombat => EffectDuration::UntilEndOfCombat,
         crate::effect::Duration::UntilNextTurn
         | crate::effect::Duration::UntilYourNextUntap => EffectDuration::UntilNextTurn,
+        crate::effect::Duration::WhileSourceTapped => EffectDuration::WhileSourceTapped,
         crate::effect::Duration::Permanent => EffectDuration::Indefinite,
     }
 }
@@ -1206,6 +1207,7 @@ impl GameState {
         self.cards_discarded_this_resolution = 0;
         self.energy_paid_this_resolution = 0;
         self.permanents_returned_this_resolution = 0;
+        self.permanents_tapped_this_resolution = 0;
         self.creature_cards_discarded_this_resolution = 0;
         self.greatest_discarded_mv_this_resolution = 0;
         self.cards_discarded_per_player_this_resolution.clear();
@@ -3672,6 +3674,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DealDamageExcessTo { to, amount, excess_to, condition } => {
+                // CR 120.4a — the damage event is split before it's dealt: the
+                // creature takes exactly lethal and the remainder lands on
+                // `excess_to`.
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                if amt == 0 {
+                    return Ok(());
+                }
+                let redirect = condition.as_ref().is_none_or(|p| self.evaluate_predicate(p, ctx));
+                let deathtouch = ctx
+                    .source
+                    .and_then(|s| self.computed_permanent(s))
+                    .is_some_and(|cp| cp.keywords.contains(&crate::card::Keyword::Deathtouch));
+                let mut spill = 0u32;
+                for ent in self.resolve_selector(to, ctx) {
+                    let lethal = match ent {
+                        EntityRef::Permanent(cid) if redirect => {
+                            self.lethal_damage_needed(cid, deathtouch)
+                        }
+                        _ => None,
+                    };
+                    let dealt = lethal.map_or(amt, |l| amt.min(l));
+                    spill += amt - dealt;
+                    if dealt > 0 {
+                        self.deal_damage_to_from(ent, dealt, ctx.source, events);
+                    }
+                }
+                if spill > 0 {
+                    for ent in self.resolve_selector(excess_to, ctx) {
+                        self.deal_damage_to_from(ent, spill, ctx.source, events);
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             // CR 702 Radiance — damage the subject creature and each other
             // creature sharing a color with it.
             Effect::RadianceDamage { subject, amount } => {
@@ -3759,22 +3798,25 @@ impl GameState {
             Effect::DealDamageExcessToController { to, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }
+                // CR 120.4a — "excess damage is dealt to that creature's
+                // controller INSTEAD": the creature takes exactly lethal.
+                let deathtouch = ctx
+                    .source
+                    .and_then(|s| self.computed_permanent(s))
+                    .is_some_and(|cp| cp.keywords.contains(&crate::card::Keyword::Deathtouch));
                 for ent in self.resolve_selector(to, ctx) {
                     let EntityRef::Permanent(id) = ent else { continue };
-                    let Some(c) = self.battlefield_find(id) else { continue };
-                    if !c.definition.is_creature() { continue; }
-                    let controller = c.controller;
-                    let already = c.damage;
-                    let lethal = self
-                        .computed_permanent(id)
-                        .map(|cp| cp.toughness.max(0) as u32)
-                        .unwrap_or(0)
-                        .saturating_sub(already);
-                    let excess = amt.saturating_sub(lethal);
-                    self.deal_damage_to_from(ent, amt, ctx.source, events);
-                    if excess > 0 {
+                    let Some(lethal) = self.lethal_damage_needed(id, deathtouch) else { continue };
+                    let Some(controller) = self.battlefield_find(id).map(|c| c.controller) else {
+                        continue;
+                    };
+                    let dealt = amt.min(lethal);
+                    if dealt > 0 {
+                        self.deal_damage_to_from(ent, dealt, ctx.source, events);
+                    }
+                    if amt > dealt {
                         self.deal_damage_to_from(
-                            EntityRef::Player(controller), excess, ctx.source, events);
+                            EntityRef::Player(controller), amt - dealt, ctx.source, events);
                     }
                 }
                 let mut sba = self.check_state_based_actions();
@@ -7866,6 +7908,8 @@ impl GameState {
                         && let Some(c) = self.battlefield_find_mut(cid)
                         && !c.tapped {
                             c.tapped = true;
+                            // Feeds `Value::PermanentsTappedThisEffect`.
+                            self.permanents_tapped_this_resolution += 1;
                             events.push(GameEvent::PermanentTapped { card_id: cid, actor: Some(ctx.controller), as_attacker: false });
                         }
                 }
@@ -21300,6 +21344,92 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventNextEventFromChosenSourceAnywhere => {
+                // CR 615.7 — Martyr's Cause. One floating shield keyed to the
+                // chosen source; the first damage event it deals to anything is
+                // soaked whole.
+                let Some(chosen) = self
+                    .choose_damage_prevention_source(&crate::card::SelectionRequirement::Any, ctx)
+                else {
+                    return Ok(());
+                };
+                self.prevention_shields.push(crate::game::types::PreventionShield {
+                    target: crate::game::types::PreventionTarget::Anything,
+                    remaining: None,
+                    source: Some(chosen),
+                    one_event: true,
+                    ..Default::default()
+                });
+                Ok(())
+            }
+
+            Effect::IgnoreStaticFromSourceThisTurn => {
+                // Damping Engine's escape clause — the pass is per (source,
+                // player) and clears at cleanup.
+                if let Some(src) = ctx.source {
+                    let held = &mut self.players[ctx.controller].statics_ignored_this_turn;
+                    if !held.contains(&src) {
+                        held.push(src);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerExilesHandDrawsSeven => {
+                // Memory Jar. Hands are exiled face down stamped with the
+                // source; the end-step delayed trigger discards the new hands
+                // and hands the stash back.
+                let Some(src) = ctx.source else { return Ok(()) };
+                for seat in 0..self.players.len() {
+                    let hand: Vec<CardId> = self.players[seat].hand.iter().map(|c| c.id).collect();
+                    for cid in hand {
+                        self.move_card_to(cid, &ZoneDest::ExileWithSourceStamp, ctx, events);
+                        if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                            c.face_down = true;
+                        }
+                    }
+                    for _ in 0..7 {
+                        if !self.draw_one(seat, events) {
+                            self.lose_to_empty_draw(seat);
+                            break;
+                        }
+                    }
+                }
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    kind: crate::game::types::DelayedKind::NextEndStep,
+                    source: src,
+                    controller: ctx.controller,
+                    effect: Effect::EachPlayerDiscardsHandReturnsExiledWithSource,
+                    target: None,
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
+            Effect::EachPlayerDiscardsHandReturnsExiledWithSource => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                for seat in 0..self.players.len() {
+                    let hand: Vec<CardId> = self.players[seat].hand.iter().map(|c| c.id).collect();
+                    for cid in hand {
+                        self.discard_card(seat, cid, events);
+                    }
+                }
+                let stash: Vec<CardId> =
+                    self.exile.iter().filter(|c| c.exiled_with == Some(src)).map(|c| c.id).collect();
+                for cid in stash {
+                    let Some(pos) = self.exile.iter().position(|c| c.id == cid) else { continue };
+                    let owner = self.exile[pos].owner;
+                    self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(owner)), ctx, events);
+                    if let Some(c) = self.players[owner].hand.iter_mut().find(|c| c.id == cid) {
+                        c.face_down = false;
+                        c.exiled_with = None;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileSelfReturnTransformed => {
                 // CR 714.4 — exile this Saga, then return it transformed
                 // under its controller's control. Routed through
@@ -23885,6 +24015,11 @@ impl GameState {
         if candidates.is_empty() {
             return None;
         }
+        // Rank hostile sources first: the auto-decider takes candidates[0], and
+        // shielding yourself from your own permanent is never the intent.
+        candidates.sort_by_key(|(id, _)| {
+            self.battlefield_find(*id).is_some_and(|c| self.same_team(c.controller, p))
+        });
         if candidates.len() == 1 {
             return Some(candidates[0].0);
         }

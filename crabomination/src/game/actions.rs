@@ -1763,7 +1763,31 @@ impl crate::game::GameState {
         }) {
             return false;
         }
+        // Damping Engine — the player ahead on permanents can't play lands.
+        if self.damping_engine_locks(player) {
+            return false;
+        }
         self.players[player].lands_played_this_turn < self.max_lands_per_turn(player)
+    }
+
+    /// Damping Engine (CR 611) — true when `player` controls strictly more
+    /// permanents than each other player and a Damping Engine they haven't
+    /// bought out of this turn is on the battlefield.
+    pub(crate) fn damping_engine_locks(&self, player: usize) -> bool {
+        let count = |seat: usize| {
+            self.battlefield.iter().filter(|c| c.controller == seat).count()
+        };
+        let mine = count(player);
+        if (0..self.players.len()).any(|s| s != player && count(s) >= mine) {
+            return false;
+        }
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::MostPermanentsCantPlay))
+                && !self.players[player].statics_ignored_this_turn.contains(&c.id)
+        })
     }
 
     /// CR 402.2 — `player`'s effective maximum hand size, honoring any
@@ -11218,7 +11242,7 @@ impl GameState {
                 if self.same_team(controller, p) {
                     return Err(GameError::NotYourPriority);
                 }
-            } else if controller != p {
+            } else if !ability.any_player && controller != p {
                 return Err(GameError::NotYourPriority);
             }
         }

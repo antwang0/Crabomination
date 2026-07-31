@@ -63397,16 +63397,16 @@ pub fn honor_the_god_pharaoh() -> CardDefinition {
     }
 }
 
-/// Flame Spill — {4}{R} Sorcery. Deal 5 damage to target creature; excess
-/// damage is dealt to that creature's controller.
+/// Flame Spill — {2}{R} Instant. Deal 4 damage to target creature; excess
+/// damage is dealt to that creature's controller instead.
 pub fn flame_spill() -> CardDefinition {
     CardDefinition {
         name: "Flame Spill",
         cost: cost(&[generic(2), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::DealDamageExcessToController {
             to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(5),
+            amount: Value::Const(4),
         },
         ..Default::default()
     }
@@ -65274,23 +65274,29 @@ pub fn pristine_talisman() -> CardDefinition {
 }
 
 /// Ram Through — {1}{G} Instant. Target creature you control deals damage equal
-/// to its power to target creature you don't control. (Trample excess-to-player
-/// rider is dropped.)
+/// to its power to target creature you don't control; with trample, the excess
+/// hits that creature's controller (CR 120.4a).
 pub fn ram_through() -> CardDefinition {
+    let mine = Selector::TargetFiltered {
+        slot: 0,
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    };
     CardDefinition {
         name: "Ram Through",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
+        effect: Effect::DealDamageExcessTo {
             to: Selector::TargetFiltered {
                 slot: 1,
                 filter: SelectionRequirement::Creature
                     .and(SelectionRequirement::ControlledByOpponent),
             },
-            amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
-                slot: 0,
-                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            })),
+            amount: Value::PowerOf(Box::new(mine.clone())),
+            excess_to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(1)))),
+            condition: Some(Predicate::EntityMatches {
+                what: mine,
+                filter: SelectionRequirement::HasKeyword(Keyword::Trample),
+            }),
         },
         ..Default::default()
     }

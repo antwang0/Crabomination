@@ -1090,3 +1090,118 @@ fn treacherous_link_redirects_damage_to_the_hosts_controller() {
     assert_eq!(g.players[1].life, life - 3, "the controller took it");
     assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "the 2/2 is unmarked");
 }
+
+/// Angel's Trumpet grants vigilance and bites the active player for each idle
+/// creature it taps at their end step.
+#[test]
+fn angels_trumpet_taps_idlers_and_bites() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::angels_trumpet());
+    let idle = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(
+        g.computed_permanent(idle).unwrap().keywords.contains(&Keyword::Vigilance),
+        "the anthem reaches every creature"
+    );
+    let life = g.players[0].life;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(idle).unwrap().tapped);
+    assert!(g.battlefield_find(other).unwrap().tapped);
+    assert_eq!(g.players[0].life, life - 2, "one point per creature tapped this way");
+}
+
+/// Aura Flux taxes other enchantments — not itself — at their controller's
+/// upkeep.
+#[test]
+fn aura_flux_taxes_other_enchantments() {
+    let mut g = two_player_game();
+    let flux = g.add_card_to_battlefield(0, catalog::aura_flux());
+    let other = g.add_card_to_battlefield(0, catalog::planar_collapse());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(other).is_none(), "unpaid, so it goes");
+    assert!(g.battlefield_find(flux).is_some(), "\"other\" excludes the source");
+}
+
+/// Damping Engine locks the permanent leader out of lands, and a sacrifice
+/// buys the turn back.
+#[test]
+fn damping_engine_locks_the_leader_until_they_pay() {
+    let mut g = two_player_game();
+    let engine = g.add_card_to_battlefield(1, catalog::damping_engine());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.can_player_play_land(0), "seat 0 is ahead on permanents");
+    assert!(g.can_player_play_land(1), "seat 1 isn't");
+    g.priority.player_with_priority = 0;
+    activate(&mut g, engine, 0, None);
+    assert!(g.battlefield_find(fodder).is_none(), "a permanent was sacrificed");
+    assert!(g.can_player_play_land(0), "the pass holds for the turn");
+}
+
+/// Martyr's Cause soaks the whole next damage event from the chosen source,
+/// wherever it lands.
+#[test]
+fn martyrs_cause_blanks_the_next_damage_event() {
+    let mut g = two_player_game();
+    let cause = g.add_card_to_battlefield(0, catalog::martyrs_cause());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, cause, 0, None);
+    let life = g.players[0].life;
+    let mut ev = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(0),
+        5,
+        Some(attacker),
+        &mut ev,
+    );
+    assert_eq!(g.players[0].life, life, "the whole event was prevented");
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(0),
+        5,
+        Some(attacker),
+        &mut ev,
+    );
+    assert_eq!(g.players[0].life, life - 5, "the shield was one-shot");
+}
+
+/// Memory Jar swaps every hand for seven, then hands the stash back at the end
+/// step.
+#[test]
+fn memory_jar_lends_seven_and_takes_them_back() {
+    let mut g = two_player_game();
+    let jar = g.add_card_to_battlefield(0, catalog::memory_jar());
+    for seat in 0..2 {
+        for _ in 0..2 {
+            g.add_card_to_hand(seat, catalog::grizzly_bears());
+        }
+        for _ in 0..7 {
+            g.add_card_to_library(seat, catalog::grizzly_bears());
+        }
+    }
+    let stashed: Vec<CardId> = g.players[0].hand.iter().map(|c| c.id).collect();
+    activate(&mut g, jar, 0, None);
+    assert_eq!(g.players[0].hand.len(), 7);
+    assert_eq!(g.players[1].hand.len(), 7);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let back: Vec<CardId> = g.players[0].hand.iter().map(|c| c.id).collect();
+    assert_eq!(back, stashed, "the loan is returned, the drawn seven discarded");
+    assert_eq!(g.players[0].graveyard.len(), 8, "the drawn seven, plus the sacrificed Jar");
+}
+
+/// Thran Weaponry's pump lives exactly as long as it stays tapped.
+#[test]
+fn thran_weaponry_pump_ends_when_it_untaps() {
+    let mut g = two_player_game();
+    let weaponry = g.add_card_to_battlefield(0, catalog::thran_weaponry());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    activate(&mut g, weaponry, 0, None);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+    g.battlefield_find_mut(weaponry).unwrap().tapped = false;
+    g.check_state_based_actions();
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "the effect fell off");
+}

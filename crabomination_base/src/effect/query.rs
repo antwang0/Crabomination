@@ -1138,6 +1138,13 @@ impl Effect {
             Effect::Balance => false,
             Effect::GenesisWave => false,
             Effect::ShuffleHandsDrawSame { who } => player_has_target(who),
+            Effect::DealDamageExcessTo { to, excess_to, .. } => {
+                sel_has_target(to) || sel_has_target(excess_to)
+            }
+            Effect::EachPlayerExilesHandDrawsSeven
+            | Effect::EachPlayerDiscardsHandReturnsExiledWithSource
+            | Effect::IgnoreStaticFromSourceThisTurn
+            | Effect::PreventNextEventFromChosenSourceAnywhere => false,
         }
     }
 
@@ -2489,6 +2496,9 @@ impl Effect {
                 | Effect::DealDamageExcessToController { to, amount } => {
                     sel_find(to, slot).or_else(|| val_find(amount, slot))
                 }
+                Effect::DealDamageExcessTo { to, amount, excess_to, .. } => sel_find(to, slot)
+                    .or_else(|| val_find(amount, slot))
+                    .or_else(|| sel_find(excess_to, slot)),
                 Effect::RadianceDamage { subject, amount }
                 | Effect::SameNameDamage { subject, amount } => {
                     sel_find(subject, slot).or_else(|| val_find(amount, slot))

@@ -201,11 +201,13 @@ impl GameState {
         let perms: Vec<(CardId, Vec<AbilityProbe>)> = self
             .battlefield
             .iter()
-            // Seat's own permanents, plus opponents' permanents carrying an
-            // `opponents_only` ability the seat may activate (Detention Vortex).
+            // Seat's own permanents, plus others' permanents carrying an
+            // `opponents_only` (Detention Vortex) or `any_player` (Damping
+            // Engine) ability the seat may activate.
             .filter(|c| {
                 !c.definition.activated_abilities.is_empty()
                     && (c.controller == seat
+                        || c.definition.activated_abilities.iter().any(|a| a.any_player)
                         || (!self.same_team(c.controller, seat)
                             && c.definition.activated_abilities.iter().any(|a| a.opponents_only)))
             })
@@ -219,7 +221,8 @@ impl GameState {
                         // Only surface abilities the seat is actually allowed to
                         // use: own permanents' non-opponents_only abilities, or
                         // opponents' opponents_only abilities.
-                        let usable = if owns { !a.opponents_only } else { a.opponents_only };
+                        let usable =
+                            a.any_player || if owns { !a.opponents_only } else { a.opponents_only };
                         let targeted = (usable && a.effect.requires_target()).then(|| a.effect.clone());
                         (is_mana_ability_effect(&a.effect) || !usable, targeted)
                     })

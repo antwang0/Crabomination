@@ -1555,6 +1555,10 @@ pub enum PreventionTarget {
     /// source of your choice would deal to you and/or permanents you control"
     /// (Refraction Trap). Matches the seat and everything it controls.
     PlayerAndPermanents(usize),
+    /// A floating shield with no recipient restriction: "the next time a source
+    /// of your choice would deal damage to any target this turn, prevent that
+    /// damage" (Martyr's Cause). Pair with `source` + `one_event`.
+    Anything,
 }
 
 /// What a spell looked like when it was cast — the colors of its mana cost and

@@ -2541,7 +2541,7 @@ fn cunning_nightbonder_discounts_flash_spells() {
     assert!(!g.caster_grants_uncounterable(0, &nonflash), "non-flash spell counterable");
 }
 
-/// Flame Spill: 5 to a 2/2 kills it and spills 3 excess onto its controller.
+/// Flame Spill: 4 to a 2/2 kills it and spills 2 excess onto its controller.
 #[test]
 fn flame_spill_excess_hits_controller() {
     let mut g = two_player_game();
@@ -2556,8 +2556,48 @@ fn flame_spill_excess_hits_controller() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Flame Spill");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(bear).is_none(), "2/2 dies to 5 damage");
-    assert_eq!(g.players[1].life, life - 3, "5 - 2 lethal = 3 excess to controller");
+    assert!(g.battlefield_find(bear).is_none(), "2/2 dies to 4 damage");
+    assert_eq!(g.players[1].life, life - 2, "4 - 2 lethal = 2 excess to controller");
+}
+
+/// Ram Through only spills the excess onto the defending player when the
+/// creature you control has trample (CR 120.4a).
+#[test]
+fn ram_through_spills_only_with_trample() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3, no trample
+    let spell = g.add_card_to_hand(0, catalog::ram_through());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Ram Through");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[1].life, life, "no trample, no spill");
+
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let trampler = g.add_card_to_battlefield(0, catalog::colossal_dreadmaw()); // 6/6 trample
+    let spell = g.add_card_to_hand(0, catalog::ram_through());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(trampler)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Ram Through");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 4, "6 minus the lethal 2");
 }
 
 /// Lullmage's Domination at X=2 gains control of a mana-value-2 creature.

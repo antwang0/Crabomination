@@ -16741,6 +16741,12 @@ static ULG: &[Factory] = &[
     super::ulg::lurking_skirge,
     super::ulg::crawlspace,
     super::ulg::treacherous_link,
+    super::ulg::angels_trumpet,
+    super::ulg::aura_flux,
+    super::ulg::damping_engine,
+    super::ulg::martyrs_cause,
+    super::ulg::memory_jar,
+    super::ulg::thran_weaponry,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,

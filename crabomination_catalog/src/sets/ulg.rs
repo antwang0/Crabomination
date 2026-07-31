@@ -1744,3 +1744,149 @@ pub fn treacherous_link() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── The last six ULG gaps ───────────────────────────────────────────────────
+
+/// Angel's Trumpet — {3}. Vigilance for everyone, then each end step the active
+/// player's idle creatures tap and bite them for that many.
+pub fn angels_trumpet() -> CardDefinition {
+    CardDefinition {
+        name: "Angel's Trumpet",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "All creatures have vigilance.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::Creature),
+                keyword: Keyword::Vigilance,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer),
+            effect: Effect::Seq(vec![
+                Effect::Tap {
+                    what: Selector::ControlledBy {
+                        who: PlayerRef::ActivePlayer,
+                        filter: R::And(
+                            Box::new(R::Creature),
+                            Box::new(R::And(
+                                Box::new(R::Untapped),
+                                Box::new(R::Not(Box::new(R::AttackedThisTurn))),
+                            )),
+                        ),
+                    },
+                },
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ActivePlayer),
+                    amount: Value::PermanentsTappedThisEffect,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aura Flux — {2}{U}. Every other enchantment carries an upkeep {2} tax or
+/// gets sacrificed.
+pub fn aura_flux() -> CardDefinition {
+    CardDefinition {
+        name: "Aura Flux",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Other enchantments have \"At the beginning of your upkeep, sacrifice this enchantment unless you pay {2}.\"",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::And(Box::new(R::Enchantment), Box::new(R::OtherThanSource)),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::StepBegins(TurnStep::Upkeep),
+                        EventScope::YourControl,
+                    ),
+                    effect: Effect::UnlessPlayerPays {
+                        who: PlayerRef::You,
+                        cost: crate::card::WardCost::generic(2),
+                        then: Box::new(Effect::SacrificeSource),
+                    },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Damping Engine — {4}. Whoever is ahead on permanents can't develop their
+/// board unless they sacrifice something for the turn.
+pub fn damping_engine() -> CardDefinition {
+    CardDefinition {
+        name: "Damping Engine",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "A player who controls more permanents than each other player can't play lands or cast artifact, creature, or enchantment spells.",
+            effect: StaticEffect::MostPermanentsCantPlay,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            any_player: true,
+            sac_other_filter: Some((R::Any, 1)),
+            effect: Effect::IgnoreStaticFromSourceThisTurn,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Martyr's Cause — {2}{W}. Sacrifice a creature to blank the next damage
+/// event from a source of your choice.
+pub fn martyrs_cause() -> CardDefinition {
+    CardDefinition {
+        name: "Martyr's Cause",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::PreventNextEventFromChosenSourceAnywhere,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Memory Jar — {5}. Everyone stashes their hand, draws seven, and gets the
+/// stash back at the next end step.
+pub fn memory_jar() -> CardDefinition {
+    CardDefinition {
+        name: "Memory Jar",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::EachPlayerExilesHandDrawsSeven,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thran Weaponry — {4}. Echo {4}; stays tapped by choice to keep the team
+/// pumped.
+pub fn thran_weaponry() -> CardDefinition {
+    CardDefinition {
+        name: "Thran Weaponry",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Echo(cost(&[generic(4)])), Keyword::MayChooseNotToUntap],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::WhileSourceTapped,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

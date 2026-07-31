@@ -2533,6 +2533,7 @@ impl GameState {
             pl.hexproof_from_colors_this_turn.clear();
             pl.cast_blue_or_black_this_turn = false;
             pl.spell_casts_this_turn.clear();
+            pl.statics_ignored_this_turn.clear();
             pl.cant_cast_noncreature_this_turn = false;
             pl.free_spells_from_hand_this_turn = false;
             pl.play_from_graveyard_this_turn = false;

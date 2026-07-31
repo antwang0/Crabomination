@@ -2158,6 +2158,11 @@ pub enum StaticEffect {
     OpponentsCantCastFromAnywhereButHand,
     /// "You can't play lands." Aggressive Mining. Gated in `play_land`.
     ControllerCantPlayLands,
+    /// Damping Engine — "a player who controls more permanents than each other
+    /// player can't play lands or cast artifact, creature, or enchantment
+    /// spells." Symmetric (any player's Damping Engine binds every player);
+    /// escapable for the turn via `Effect::IgnoreStaticFromSourceThisTurn`.
+    MostPermanentsCantPlay,
     /// "[filter] spells you cast have convoke" (CR 702.51 — Chief Engineer).
     /// Consulted by the convoke cast path alongside the printed keyword.
     GrantConvokeToSpells { filter: SelectionRequirement },
@@ -2539,6 +2544,12 @@ pub struct ActivatedAbility {
     /// Vortex's `{3}: Destroy this Aura` escape clause. Defaults to false.
     #[serde(default)]
     pub opponents_only: bool,
+    /// CR 113.3d — "Any player may activate this ability." The permanent's
+    /// controller has no monopoly on it; costs are paid by (and the effect
+    /// resolves for) whoever activates. Damping Engine's sacrifice-to-ignore.
+    /// Defaults to false.
+    #[serde(default)]
+    pub any_player: bool,
     /// True if activating this ability discards the source from the activator's
     /// hand as part of its cost (CR 602.5b "Discard this card:" cost lines).
     /// Pairs with `from_hand: true`. The discard (hand → graveyard, firing a

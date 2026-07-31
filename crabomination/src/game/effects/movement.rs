@@ -78,6 +78,21 @@ impl GameState {
             && self.damage_prevented_sources.iter().any(|(s, ..)| *s == source)
     }
 
+    /// CR 120.6 — how much more damage would be lethal to `cid` right now,
+    /// with damage already marked subtracted. A deathtouch source needs only 1
+    /// (CR 702.2c). `None` when the permanent isn't a creature.
+    pub(crate) fn lethal_damage_needed(&self, cid: CardId, deathtouch: bool) -> Option<u32> {
+        let cp = self.computed_permanent(cid)?;
+        if !cp.card_types.contains(&crate::card::CardType::Creature) {
+            return None;
+        }
+        if deathtouch {
+            return Some(1);
+        }
+        let prior = self.battlefield_find(cid).map(|c| c.damage).unwrap_or(0);
+        Some((cp.toughness.max(0) as u32).saturating_sub(prior))
+    }
+
     /// CR 615.1 / 615.7 / 615.12 — apply prevention shields to a pending
     /// damage event aimed at `ent`. "Prevent all" shields zero the event;
     /// "prevent next N" shields soak up to N and then expire. The whole
@@ -415,7 +430,9 @@ impl GameState {
             .iter_mut()
             .enumerate()
             .filter(|(_, s)| {
-                (s.target == key || Some(s.target) == team_key)
+                (s.target == key
+                    || Some(s.target) == team_key
+                    || s.target == PreventionTarget::Anything)
                     && (s.source.is_none() || s.source == source)
                     && s.source_color.is_none_or(|c| src_colors.contains(&c))
             })
@@ -968,15 +985,9 @@ impl GameState {
                     // accounting for damage already marked. Deathtouch makes any
                     // damage past 1 excess (CR 702.2c). Computed before the
                     // mutable borrow below applies the new damage.
-                    if let Some(cp) = self.computed_permanent(cid)
-                        && cp.card_types.contains(&crate::card::CardType::Creature)
+                    if let Some(lethal_needed) =
+                        self.lethal_damage_needed(cid, source_has_deathtouch)
                     {
-                        let prior = self.battlefield_find(cid).map(|c| c.damage).unwrap_or(0);
-                        let lethal_needed = if source_has_deathtouch {
-                            1
-                        } else {
-                            (cp.toughness.max(0) as u32).saturating_sub(prior)
-                        };
                         let excess = amount.saturating_sub(lethal_needed);
                         self.excess_damage_this_resolution =
                             self.excess_damage_this_resolution.saturating_add(excess);

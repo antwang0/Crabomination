@@ -770,6 +770,11 @@ pub struct Player {
     /// player's `do_untap`; consulted by the cast-legality gate.
     #[serde(default)]
     pub opponents_cant_cast_named: Vec<String>,
+    /// Sources whose static effect this player has bought their way out of for
+    /// the turn (`Effect::IgnoreStaticFromSourceThisTurn` — Damping Engine).
+    /// Cleared at cleanup.
+    #[serde(default)]
+    pub statics_ignored_this_turn: Vec<crate::card::CardId>,
     /// When true, decisions this player would make suspend via
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
@@ -891,6 +896,7 @@ impl Player {
             play_from_graveyard_this_turn: false,
             graveyard_bound_exiled_this_turn: false,
             opponents_cant_cast_named: Vec::new(),
+            statics_ignored_this_turn: Vec::new(),
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,

@@ -675,6 +675,10 @@ pub enum Value {
     /// `Effect::ReturnAnyNumberToHand` earlier in the current resolution — the
     /// Sweep count. Reset between independent resolutions.
     PermanentsReturnedThisEffect,
+    /// Number of permanents actually tapped by an `Effect::Tap` earlier in the
+    /// current resolution (Angel's Trumpet's "damage equal to the number of
+    /// creatures tapped this way"). Reset between independent resolutions.
+    PermanentsTappedThisEffect,
     /// Amount of {E} paid by an `Effect::PayAnyEnergy` earlier in the current
     /// resolution. Reset between independent resolutions. Aether Spike's
     /// "counter that spell unless its controller pays {1} for each {E} paid
@@ -1798,6 +1802,10 @@ pub enum Duration {
     UntilYourNextUntap,
     /// Until the start of the next turn.
     UntilNextTurn,
+    /// CR 611.2c — "for as long as this permanent remains tapped" (Thran
+    /// Weaponry). The affected set is locked in at resolution; the SBA sweep
+    /// drops the effect once the source untaps or leaves.
+    WhileSourceTapped,
     /// Indefinite (for effects like "gain control" without a clause).
     Permanent,
 }
@@ -4853,6 +4861,19 @@ pub enum Effect {
     /// Awaken the Erstwhile — "each player discards all the cards in their
     /// hand, then creates that many `token` tokens." Resolved in turn order.
     EachPlayerDiscardsHandMakeTokens { token: crate::card::TokenDefinition },
+    /// Memory Jar — "each player exiles all cards from their hand face down and
+    /// draws seven cards. At the beginning of the next end step, each player
+    /// discards their hand and returns to their hand each card they exiled this
+    /// way." Stamps the exiles with the source and registers the end-step
+    /// delayed trigger itself, so the whole card is one effect.
+    EachPlayerExilesHandDrawsSeven,
+    /// The end-step half of `EachPlayerExilesHandDrawsSeven`, registered as a
+    /// delayed trigger by that effect (not printed on any card directly).
+    EachPlayerDiscardsHandReturnsExiledWithSource,
+    /// "[Player] ignores this permanent's static effect until end of turn"
+    /// (Damping Engine). Records `(source, controller)` on the player for the
+    /// turn; the static's gates skip anyone holding the pass.
+    IgnoreStaticFromSourceThisTurn,
     /// Rumbling Ruin — "count the +1/+1 counters on creatures you control;
     /// creatures your opponents control with power ≤ that number can't block
     /// this turn." The affected set is locked in at resolution (computed power).
@@ -6813,6 +6834,23 @@ pub enum Effect {
         /// event rather than a point budget (Opal-Eye, Konda's Yojimbo).
         #[serde(default)]
         one_event: bool,
+    },
+    /// CR 615.7 — "The next time a source of your choice would deal damage to
+    /// any target this turn, prevent that damage." Unlike
+    /// `PreventNextFromChosenSourceToTeam` the shield floats over every
+    /// recipient, so it soaks whichever damage event the chosen source deals
+    /// first (Martyr's Cause).
+    PreventNextEventFromChosenSourceAnywhere,
+    /// CR 120.4a — "deal `amount` damage to `to`; excess damage is dealt to
+    /// `excess_to` instead." The split happens before the damage event, so the
+    /// creature takes exactly lethal (marked damage and the source's deathtouch
+    /// counted). `condition` gates the rider (Ram Through's "if the creature
+    /// you control has trample"); `None` always redirects.
+    DealDamageExcessTo {
+        to: Selector,
+        amount: Value,
+        excess_to: Selector,
+        condition: Option<crate::card::Predicate>,
     },
     /// Aura Barbs — each enchantment deals `amount` damage to its controller,
     /// then each Aura attached to a creature deals `amount` damage to that
