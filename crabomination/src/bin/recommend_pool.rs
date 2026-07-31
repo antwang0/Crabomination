@@ -211,8 +211,11 @@ fn main() {
         cfg.gauntlet_size,
         if cfg.racing { "on" } else { "off" },
     );
+    // One session across all stages: the gauntlet is generated once, and
+    // decks re-raced in later stages replay their cached game outcomes.
+    let mut session = recommend::Session::new(cfg.clone());
     let progress = AtomicUsize::new(0);
-    let rec = recommend::recommend_prepared(candidates, &cfg, |evals| {
+    let rec = session.recommend_prepared(candidates, |evals| {
         // One status line every ~40 finished jobs.
         let n = progress.fetch_add(1, Ordering::Relaxed);
         if n.is_multiple_of(40) {
@@ -230,7 +233,7 @@ fn main() {
         println!(
             "\nrefining top {refine_top} shapes × {variants} variants (same gauntlet) …",
         );
-        let refined = recommend::refine(&pool, &rec, &cfg, |evals| {
+        let refined = session.refine(&pool, &rec, |evals| {
             let n = progress.fetch_add(1, Ordering::Relaxed);
             if n.is_multiple_of(40) {
                 let total: u32 = evals.iter().map(|e| e.decided() + e.undecided).sum();
@@ -255,7 +258,7 @@ fn main() {
             "\nlocal search: {search_gens} generation(s) × {} swap children (same gauntlet) …",
             cfg.search_children,
         );
-        let searched = recommend::local_search(&rec, &cfg, |evals| {
+        let searched = session.local_search(&rec, |evals| {
             let n = progress.fetch_add(1, Ordering::Relaxed);
             if n.is_multiple_of(40) {
                 let total: u32 = evals.iter().map(|e| e.decided() + e.undecided).sum();
