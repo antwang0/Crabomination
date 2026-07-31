@@ -10085,8 +10085,15 @@ impl GameState {
                                     n
                                 };
                                 if n == 0 { continue; }
+                                let before = c.counter_count(*kind);
                                 c.add_counters(*kind, n);
                                 events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: n });
+                                // CR 714.2b — lore counters from any source
+                                // (proliferate, a doubler, Sagas' own advance)
+                                // fire every chapter threshold they cross.
+                                if *kind == CounterType::Lore {
+                                    self.saga_chapters_crossed(cid, before, before + n);
+                                }
                             }
                             // Track per-turn "this permanent gained counters"
                             // for Fractal Tender's end-step trigger and any
@@ -24090,9 +24097,16 @@ impl GameState {
                 // Mowu's self-bonus, doublers) apply to the proliferated counter.
                 let n = self.scaled_counter_count_on(cid, k, 1);
                 if n == 0 { continue; }
+                let mut before = 0;
                 if let Some(c) = self.battlefield_find_mut(cid) {
+                    before = c.counter_count(k);
                     c.add_counters(k, n);
                     events.push(GameEvent::CounterAdded { card_id: cid, counter_type: k, count: n });
+                }
+                // CR 714.2b — a proliferated lore counter fires the chapter it
+                // crosses (Sagas advance twice in a turn with a proliferator).
+                if k == CounterType::Lore {
+                    self.saga_chapters_crossed(cid, before, before + n);
                 }
             }
         }

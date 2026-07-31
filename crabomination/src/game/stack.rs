@@ -853,18 +853,35 @@ impl GameState {
         if card.definition.saga_chapters.is_empty() {
             return;
         }
+        let before = card.counter_count(crate::card::CounterType::Lore);
         card.add_counters(crate::card::CounterType::Lore, 1);
-        let chapter = card.counter_count(crate::card::CounterType::Lore);
+        self.saga_chapters_crossed(card_id, before, before + 1);
+    }
+
+    /// CR 714.2b — "when one or more lore counters are put onto this Saga, if
+    /// the number of lore counters on it was less than N and became at least
+    /// N, [effect]". Fires every chapter whose threshold the count just
+    /// crossed, in chapter order, so a proliferate or a doubled placement
+    /// doesn't skip a chapter. Called from `saga_advance` and from every
+    /// generic lore-counter placement.
+    pub(crate) fn saga_chapters_crossed(&mut self, card_id: CardId, before: u32, after: u32) {
+        if after <= before {
+            return;
+        }
+        let Some(card) = self.battlefield.iter().find(|c| c.id == card_id) else {
+            return;
+        };
         let controller = card.controller;
-        let effects: Vec<Effect> = card
+        let mut chapters: Vec<(u32, Effect)> = card
             .definition
             .saga_chapters
             .iter()
-            .filter(|(n, _)| *n == chapter)
-            .map(|(_, e)| e.clone())
+            .filter(|(n, _)| *n > before && *n <= after)
+            .map(|(n, e)| (*n, e.clone()))
             .collect();
+        chapters.sort_by_key(|(n, _)| *n);
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
-        for effect in effects {
+        for (_, effect) in chapters {
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             queue.push(PendingTriggerPush {
                 source: card_id,
@@ -876,7 +893,9 @@ impl GameState {
                 intervening_if: None,
             });
         }
-        self.drain_trigger_queue(queue);
+        if !queue.is_empty() {
+            self.drain_trigger_queue(queue);
+        }
     }
 
     // ── Stack resolution ──────────────────────────────────────────────────────
