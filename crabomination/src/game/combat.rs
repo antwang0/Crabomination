@@ -594,18 +594,9 @@ impl GameState {
         // CR 508.1g — per-attacker "can't attack unless its controller pays
         // {N}" (Oppressive Rays). Same pool as the Propaganda tax above.
         for atk in &attacks {
-            for k in computed_kw(atk.attacker) {
-                match k {
-                    Keyword::CantAttackOrBlockUnlessPay(n) => total_tax += n,
-                    // Myr Prototype — the tax is its own counter count.
-                    Keyword::CantAttackOrBlockUnlessPayPerCounter(kind) => {
-                        total_tax += self
-                            .battlefield_find(atk.attacker)
-                            .map(|c| c.counter_count(*kind))
-                            .unwrap_or(0);
-                    }
-                    _ => {}
-                }
+            {
+                total_tax += self
+                    .attack_block_keyword_tax(atk.attacker, computed_kw(atk.attacker));
             }
         }
         if total_tax > 0 {
@@ -1326,21 +1317,8 @@ impl GameState {
                 let Some(seat) = self.battlefield_find(blocker_id).map(|c| c.controller) else {
                     continue;
                 };
-                for kw in kws_of(blocker_id) {
-                    match kw {
-                        Keyword::CantAttackOrBlockUnlessPay(n) => {
-                            *owed.entry(seat).or_default() += n;
-                        }
-                        Keyword::CantAttackOrBlockUnlessPayPerCounter(kind) => {
-                            let n = self
-                                .battlefield_find(blocker_id)
-                                .map(|c| c.counter_count(*kind))
-                                .unwrap_or(0);
-                            *owed.entry(seat).or_default() += n;
-                        }
-                        _ => {}
-                    }
-                }
+                *owed.entry(seat).or_default() +=
+                    self.attack_block_keyword_tax(blocker_id, kws_of(blocker_id));
             }
             for (seat, amount) in owed {
                 let tax = crate::mana::cost(&[crate::mana::generic(amount)]);
@@ -3109,6 +3087,38 @@ impl GameState {
                 }
             }
         }
+    }
+
+    /// CR 508.1a / 509.1a — the "can't attack or block unless its controller
+    /// pays {N}" tax carried by `id`'s own computed keywords. Shared by the
+    /// declare-attackers and declare-blockers payment loops.
+    pub(crate) fn attack_block_keyword_tax(&self, id: CardId, keywords: &[Keyword]) -> u32 {
+        keywords
+            .iter()
+            .map(|k| match k {
+                Keyword::CantAttackOrBlockUnlessPay(n) => *n,
+                // Myr Prototype — the tax is its own counter count.
+                Keyword::CantAttackOrBlockUnlessPayPerCounter(kind) => {
+                    self.battlefield_find(id).map(|c| c.counter_count(*kind)).unwrap_or(0)
+                }
+                // Cowed by Wisdom — one per card in each granting Aura's
+                // controller's hand.
+                Keyword::CantAttackOrBlockUnlessPayPerCardInEnchanterHand => self
+                    .battlefield
+                    .iter()
+                    .filter(|a| a.attached_to == Some(id))
+                    .filter(|a| {
+                        a.definition.equipped_bonus.as_ref().is_some_and(|b| {
+                            b.keywords.contains(
+                                &Keyword::CantAttackOrBlockUnlessPayPerCardInEnchanterHand,
+                            )
+                        })
+                    })
+                    .map(|a| self.players[a.controller].hand.len() as u32)
+                    .sum(),
+                _ => 0,
+            })
+            .sum()
     }
 
     /// Push triggered abilities of `source` whose event spec is

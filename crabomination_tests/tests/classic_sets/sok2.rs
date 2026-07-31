@@ -912,3 +912,34 @@ fn sok2_batch5_cards_are_registered() {
         assert!(names.contains(&name), "{name} is not registered");
     }
 }
+
+/// Cowed by Wisdom taxes the host by the Aura controller's hand size.
+#[test]
+fn cowed_by_wisdom_taxes_by_your_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    let aura = g.add_card_to_hand(0, catalog::cowed_by_wisdom());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast(&mut g, aura, Some(Target::Permanent(bear)));
+    for _ in 0..2 {
+        g.add_card_to_hand(0, catalog::forest());
+    }
+    let attack = vec![Attack { attacker: bear, target: AttackTarget::Player(0) }];
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    assert!(g.declare_attackers(attack.clone()).is_err(), "no mana for the two-card tax");
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.priority.player_with_priority = 1;
+    assert!(g.declare_attackers(attack).is_ok());
+}
+
+/// Cowed by Wisdom is registered.
+#[test]
+fn cowed_by_wisdom_is_registered() {
+    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+        .map(|f| f().name)
+        .collect();
+    assert!(names.contains(&catalog::cowed_by_wisdom().name));
+}

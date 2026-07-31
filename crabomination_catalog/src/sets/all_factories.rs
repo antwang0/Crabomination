@@ -11735,6 +11735,7 @@ static SOK2: &[Factory] = &[
     super::sok2::shape_stealer,
     super::sok2::sokenzan_renegade,
     super::sok2::tomb_of_urami,
+    super::sok2::cowed_by_wisdom,
 ];
 static SOS: &[Factory] = &[
     super::sos::cauldron_of_essence,

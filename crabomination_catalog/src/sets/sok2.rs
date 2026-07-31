@@ -2073,3 +2073,23 @@ pub fn tomb_of_urami() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cowed by Wisdom — {W} Aura. The host can't attack or block unless its
+/// controller pays for your whole hand.
+pub fn cowed_by_wisdom() -> CardDefinition {
+    CardDefinition {
+        name: "Cowed by Wisdom",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::CantAttackOrBlockUnlessPayPerCardInEnchanterHand],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

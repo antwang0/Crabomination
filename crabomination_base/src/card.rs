@@ -1124,6 +1124,11 @@ pub enum Keyword {
     /// "can't attack or block unless you pay {1} for each +1/+1 counter on it"
     /// (Myr Prototype).
     CantAttackOrBlockUnlessPayPerCounter(CounterType),
+    /// CR 508.1a / 509.1a — the tax scaled by the hand of whoever granted it:
+    /// "can't attack or block unless its controller pays {1} for each card in
+    /// *your* hand" (Cowed by Wisdom). Summed per attached Aura carrying the
+    /// grant, so the enchanter's hand is what's counted, not the host's.
+    CantAttackOrBlockUnlessPayPerCardInEnchanterHand,
     /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
     /// unless there are four or more card types among cards in your graveyard"
     /// (Delirium; Patchwork Beastie). Enforced against `delirium_active`.

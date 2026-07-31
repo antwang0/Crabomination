@@ -7661,14 +7661,11 @@ stalled games via `eval_material`.
 
 ## Noticed this run (modern_decks — Saviors of Kamigawa closure)
 
-- **9 SOK cards remain, each blocked on one primitive:**
+- **8 SOK cards remain, each blocked on one primitive:**
   - Ashes of the Fallen — a graveyard creature-type grant (above).
   - Choice of Damnations / Pain's Reward — an opponent picks a number, then
     the caster picks a branch; wants `Decision::ChooseAmount` routed to a
     non-controlling seat.
-  - Cowed by Wisdom — "can't attack or block unless its controller pays {1}
-    for each card in *your* hand"; `Keyword::CantAttackOrBlockUnlessPay` is a
-    fixed `u32` and reads no other player's zones.
   - Kaho, Minamo Historian — cast a spell with mana value X from among cards
     exiled with this source; there is no cast-from-exiled-with-source effect.
   - Murmurs from Beyond — an opponent picks which of three revealed cards is
