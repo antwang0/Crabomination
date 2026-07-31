@@ -1179,6 +1179,7 @@ impl GameState {
         self.countered_spell_mana_value = 0;
         self.players_sacrificed_this_resolution.clear();
         self.named_card_this_resolution = None;
+        self.names_this_resolution.clear();
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
         // Quina — a resolution that minted one or more tokens under a
@@ -15828,6 +15829,62 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachPlayerNamesCard { who } => {
+                use crate::decision::Decision;
+                let seats = self.resolve_players(who, ctx);
+                for (i, p) in seats.iter().copied().enumerate() {
+                    // Heuristic feed: the seat's own library names, densest
+                    // first — a bot guessing its own top card does best there.
+                    let suggestions = rank_names_by_frequency(
+                        self.players[p].library.iter().map(|c| c.definition.name),
+                    );
+                    let decision = Decision::NameCard {
+                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
+                        source_name: ctx.source_name.unwrap_or_default().to_string(),
+                        suggestions,
+                        restriction: None,
+                    };
+                    let pending = PendingEffectState::StashNamePending { player: p };
+                    if self.players[p].wants_ui {
+                        let rest = per_seat_continuation(&seats[i + 1..], |q| {
+                            Effect::EachPlayerNamesCard { who: PlayerRef::Seat(q) }
+                        });
+                        self.suspend_signal = Some((decision, pending, rest));
+                        return Ok(());
+                    }
+                    let answer = self.decider.decide(&decision);
+                    let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                    events.append(&mut applied);
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerRevealTopKeepIfNamed { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[p].library.first().map(|c| c.id) else {
+                        continue;
+                    };
+                    let Some(card) = Self::take_card(&mut self.players[p].library, top) else {
+                        continue;
+                    };
+                    let hit = self
+                        .names_this_resolution
+                        .get(&p)
+                        .is_some_and(|n| n == card.definition.name);
+                    events.push(GameEvent::TopCardRevealed {
+                        player: p,
+                        card_name: card.definition.name,
+                        is_land: card.definition.is_land(),
+                    });
+                    if hit {
+                        self.players[p].hand.push(card);
+                    } else {
+                        self.players[p].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::NameCardRevealTop { count } => {
                 // Tamiyo +1: choose a nonland card name, reveal the top N —
                 // matching names to hand, the rest to the graveyard.
@@ -20707,6 +20764,51 @@ impl GameState {
                 else {
                     return Ok(());
                 };
+                self.move_card_to(
+                    src,
+                    &ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false },
+                    ctx,
+                    events,
+                );
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.attached_to = Some(host);
+                }
+                Ok(())
+            }
+
+            Effect::ReturnSelfAttachedToChoiceOf { chooser } => {
+                // Necrotic Plague — the dead host's controller picks a creature
+                // they don't control and the Aura hops onto it.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(owner) =
+                    self.players.iter().position(|pl| pl.graveyard.iter().any(|c| c.id == src))
+                else {
+                    return Ok(());
+                };
+                let Some(&picker) = self.resolve_players(chooser, ctx).first() else {
+                    return Ok(());
+                };
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.definition.is_creature() && c.controller != picker)
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let Some(pick) = self.ask_seat_cards(
+                    picker,
+                    "Choose a creature you don't control".into(),
+                    src,
+                    candidates,
+                    1,
+                    1,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                let Some(&host) = pick.first() else { return Ok(()) };
                 self.move_card_to(
                     src,
                     &ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false },

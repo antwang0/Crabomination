@@ -209,6 +209,25 @@ impl GameState {
             }
         }
 
+        // Angelic Arbiter — an opponent who cast a spell this turn can't
+        // attack with creatures at all.
+        if !attacks.is_empty() {
+            let p = self.active_player_idx;
+            if self.players[p].spells_cast_this_turn > 0
+                && self.battlefield.iter().any(|c| {
+                    !self.same_team(c.controller, p)
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::OpponentsWhoCastCantAttack
+                            )
+                        })
+                })
+            {
+                return Err(GameError::CannotAttack(attacks[0].attacker));
+            }
+        }
+
         // CR 508.0 — "attacks only alone" (Master of Cruelties). If any
         // declared attacker carries AttacksAlone, the batch must be a
         // single attacker. Read from the computed keyword set so granted

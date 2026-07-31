@@ -220,6 +220,14 @@ pub enum StaticEffect {
     /// values" (zero is even). Gated at the cast dispatch off the spell's
     /// printed mana value.
     OpponentsCantCastEvenMv,
+    /// Angelic Arbiter — "Each opponent who cast a spell this turn can't
+    /// attack with creatures." Gated in `declare_attackers` off the declaring
+    /// player's `spells_cast_this_turn`.
+    OpponentsWhoCastCantAttack,
+    /// Angelic Arbiter — "Each opponent who attacked with a creature this turn
+    /// can't cast spells." Gated at the cast dispatch off the caster's
+    /// `Player.attacked_this_turn`.
+    OpponentsWhoAttackedCantCast,
     /// Lavinia, Azorius Renegade — "Each opponent can't cast noncreature spells
     /// with mana value greater than the number of lands that player controls."
     /// Gated at the cast dispatch against the caster's live land count.

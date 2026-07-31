@@ -3085,6 +3085,15 @@ pub enum Effect {
     /// "those players can't cast noncreature spells this turn"
     /// (Ranger-Captain of Eos). Cleared at the next untap.
     CantCastNoncreatureThisTurn { who: Selector },
+    /// "Each player names a card" — one `NameCard` decision per resolved seat
+    /// in APNAP order, stashed in `GameState.names_this_resolution` for a
+    /// later step in the same resolution to read (Conundrum Sphinx).
+    EachPlayerNamesCard { who: PlayerRef },
+    /// "Each player reveals the top card of their library. If it's the card
+    /// they named, that player puts it into their hand; if it isn't, they put
+    /// it on the bottom of their library." Reads the names stashed by
+    /// `EachPlayerNamesCard` (Conundrum Sphinx).
+    EachPlayerRevealTopKeepIfNamed { who: PlayerRef },
     /// Controller loses `amount` life, a different selector gains it.
     Drain { from: Selector, to: Selector, amount: Value },
 
@@ -4146,6 +4155,12 @@ pub enum Effect {
     /// (Gift of Immortality's end-step re-attach). No-op if the source isn't
     /// in a graveyard or the target isn't a battlefield permanent.
     ReturnSelfAttachedToTarget,
+    /// "Its controller chooses a creature they don't control. Return this card
+    /// from its owner's graveyard to the battlefield attached to that
+    /// creature" (Necrotic Plague). `chooser` picks; the pool is every creature
+    /// that player doesn't control. No-op if the source isn't in a graveyard or
+    /// the pool is empty.
+    ReturnSelfAttachedToChoiceOf { chooser: PlayerRef },
     /// "Return the top creature card of `who`'s graveyard to the battlefield."
     /// Top = most recently put into the graveyard (Mistmoon Griffin). No-op if
     /// the graveyard holds no creature card.

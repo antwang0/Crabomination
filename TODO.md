@@ -7711,12 +7711,9 @@ stalled games via `eval_material`.
   "Sacrifice Blazing Torch" is modeled as `Effect::Sacrifice` with a
   `HasName` filter, so a second Torch you control could be the one sacrificed.
   Wants a `Selector::AttachmentGranting` sacrifice.
-- **Three M11 cards remain**, each blocked on one primitive:
-  - Angelic Arbiter — `CreaturesCantAttackController` has no condition slot,
-    and the mirrored "can't cast spells" half wants a per-opponent gate.
-  - Conundrum Sphinx — each player names a card, then reveals their top.
-  - Necrotic Plague — a self-recurring Aura that reattaches from the graveyard
-    to an opponent's creature.
+- ✅ ~~**Three M11 cards remain**~~ — shipped; `set_gaps.py m11` is at zero.
+  Residual: Conundrum Sphinx's name prompt feeds a bot the densest library
+  name (the same auto-pick residual as the rest of the `NameCard` family).
 - **`Effect::Search { to: Exile }` doesn't stamp `exiled_with`.** Hoarding
   Dragon pairs it with `ExileWithSource { LastMoved }` to link the two halves
   (CR 607.2); a `stamp_exiled_with` flag on `Search` would be tidier.

@@ -1091,3 +1091,71 @@ pub fn stormtide_leviathan() -> CardDefinition {
         )
     }
 }
+
+/// Angelic Arbiter — {5}{W}{W} 5/6 flier. An opponent gets one or the other:
+/// casting a spell shuts off their attacks, attacking shuts off their spells.
+pub fn angelic_arbiter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each opponent who cast a spell this turn can't attack with creatures.",
+                effect: StaticEffect::OpponentsWhoCastCantAttack,
+            },
+            StaticAbility {
+                description: "Each opponent who attacked with a creature this turn can't cast spells.",
+                effect: StaticEffect::OpponentsWhoAttackedCantCast,
+            },
+        ],
+        ..creature("Angelic Arbiter", cost(&[generic(5), w(), w()]), vec![CreatureType::Angel], 5, 6)
+    }
+}
+
+/// Conundrum Sphinx — {2}{U}{U} 4/4 flier. On attack every player names a card,
+/// then reveals their top: a hit goes to hand, a miss to the bottom.
+pub fn conundrum_sphinx() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::EachPlayerNamesCard { who: PlayerRef::EachPlayer },
+            Effect::EachPlayerRevealTopKeepIfNamed { who: PlayerRef::EachPlayer },
+        ]))],
+        ..creature("Conundrum Sphinx", cost(&[generic(2), u(), u()]), vec![CreatureType::Sphinx], 4, 4)
+    }
+}
+
+/// Necrotic Plague — {2}{B}{B} Aura. Enchanted creature sacrifices itself at its
+/// controller's upkeep, and the Plague hops to a creature that player doesn't
+/// control when it dies.
+pub fn necrotic_plague() -> CardDefinition {
+    CardDefinition {
+        name: "Necrotic Plague",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature has \"At the beginning of your upkeep, sacrifice this creature.\"",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::IsHostOfSource,
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                        EventScope::YourControl,
+                    ),
+                    effect: Effect::SacrificeSource,
+                }),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::ReturnSelfAttachedToChoiceOf {
+                chooser: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+            },
+        }],
+        ..Default::default()
+    }
+}

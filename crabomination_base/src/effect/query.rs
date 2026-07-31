@@ -236,6 +236,9 @@ impl Effect {
             | Effect::DoubleYourSourcesDamageThisTurn
             | Effect::ReturnSelfTransformedAttached
             | Effect::ReturnSelfAttachedToTarget
+            | Effect::ReturnSelfAttachedToChoiceOf { .. }
+            | Effect::EachPlayerNamesCard { .. }
+            | Effect::EachPlayerRevealTopKeepIfNamed { .. }
             | Effect::SectorBlockLockThisTurn
             | Effect::SearchTheCityReturn
             | Effect::SecondSunrise

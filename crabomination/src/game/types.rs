@@ -836,6 +836,7 @@ impl PendingEffectState {
             PendingEffectState::SeatBoolAnswerPending { player } => Some(*player),
             PendingEffectState::CardsAnswerPending { player } => Some(*player),
             PendingEffectState::MayCastExiledPending { player, .. } => Some(*player),
+            PendingEffectState::StashNamePending { player } => Some(*player),
             _ => None,
         }
     }
@@ -1284,6 +1285,9 @@ pub enum PendingEffectState {
     /// Tamiyo +1: the named-card answer drives the reveal-top sort
     /// (matching name → hand, rest → graveyard).
     NameRevealTopPending { player: usize, count: usize },
+    /// Conundrum Sphinx: stash `player`'s named card in
+    /// `GameState.names_this_resolution` for the later reveal step.
+    StashNamePending { player: usize },
     /// CR 701.45 — suspended on a `Decision::Learn`. The resume step reads
     /// `DecisionAnswer::Learn(choice)` and reveals a Lesson into `player`'s
     /// hand, rummages (discard-then-draw), or declines.

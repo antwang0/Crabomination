@@ -742,6 +742,12 @@ pub struct GameState {
     /// Reset between independent resolutions.
     #[serde(skip)]
     pub(crate) named_card_this_resolution: Option<String>,
+    /// Transient: per-seat card names chosen by `Effect::EachPlayerNamesCard`
+    /// within the current resolution, read back by
+    /// `Effect::EachPlayerRevealTopKeepIfNamed` (Conundrum Sphinx). Reset
+    /// between independent resolutions.
+    #[serde(skip)]
+    pub(crate) names_this_resolution: std::collections::HashMap<usize, String>,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -1489,6 +1495,7 @@ impl Clone for GameState {
             countered_spell_controller: self.countered_spell_controller,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
+            names_this_resolution: self.names_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
             pending_cast_sacrifices: self.pending_cast_sacrifices.clone(),
             pending_cast_discards: self.pending_cast_discards.clone(),
@@ -1707,6 +1714,7 @@ impl GameState {
             countered_spell_controller: None,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             named_card_this_resolution: None,
+            names_this_resolution: HashMap::new(),
             pending_cast_face: CastFace::Front,
             pending_cast_sacrifices: None,
             pending_cast_discards: None,
@@ -9062,6 +9070,24 @@ impl GameState {
                 }
             }
         }
+        // Angelic Arbiter — an opponent who attacked with a creature this turn
+        // can't cast spells for the rest of it.
+        if action.is_cast() {
+            let caster = self.priority.player_with_priority;
+            if self.players[caster].attacked_this_turn
+                && self.battlefield.iter().any(|c| {
+                    !self.same_team(c.controller, caster)
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::OpponentsWhoAttackedCantCast
+                            )
+                        })
+                })
+            {
+                return Err(GameError::SilencedThisTurn);
+            }
+        }
         // Voice of Victory — the active player's opponents can't cast spells
         // during that player's turn. Dosan the Falling Leaf is the symmetric
         // sibling: nobody casts off-turn, whoever controls it.
@@ -14162,6 +14188,13 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::StashNamePending { player } => {
+                let DecisionAnswer::NamedCard(name) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                self.names_this_resolution.insert(player, name.clone());
+                Ok(vec![])
+            }
             PendingEffectState::NameRevealTopPending { player, count } => {
                 let DecisionAnswer::NamedCard(name) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
@@ -15922,6 +15955,10 @@ fn static_effect_to_effects(
             | StaticEffect::AttackTaxToController { .. }
             // CreaturesCantAttackController — consulted in declare_attackers; no layer.
             | StaticEffect::CreaturesCantAttackController { .. }
+            // Angelic Arbiter's pair — consulted in declare_attackers and at
+            // the cast dispatch; no layer.
+            | StaticEffect::OpponentsWhoCastCantAttack
+            | StaticEffect::OpponentsWhoAttackedCantCast
             // CreatureSpellsCantBeCountered — consulted at cast time; no layer.
             | StaticEffect::CreatureSpellsCantBeCountered
             // BlockTaxToController — consulted in declare_blockers; no layer.

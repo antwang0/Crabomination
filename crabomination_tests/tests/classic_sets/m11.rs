@@ -911,3 +911,103 @@ fn mass_polymorph_trades_the_board_for_the_top() {
     assert!(g.battlefield_find(drake).is_some());
     assert!(g.players[0].library.iter().any(|c| c.id == miss), "the land is shuffled back");
 }
+
+/// Angelic Arbiter locks an opponent out of attacking once they've cast a
+/// spell, and out of casting once they've attacked.
+#[test]
+fn angelic_arbiter_forces_the_choice() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::angelic_arbiter());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let swing = |g: &mut GameState| {
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: bear,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_ok()
+    };
+    g.players[0].spells_cast_this_turn = 1;
+    assert!(!swing(&mut g), "a spell this turn shuts off the attack");
+    g.players[0].spells_cast_this_turn = 0;
+    assert!(swing(&mut g), "no spell cast, the attack is legal");
+
+    // Having attacked, the same player can no longer cast.
+    g.step = TurnStep::PostCombatMain;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "attacking locks out spells"
+    );
+}
+
+/// Conundrum Sphinx: a correct guess goes to hand, a miss to the bottom.
+#[test]
+fn conundrum_sphinx_hits_and_misses() {
+    let mut g = two_player_game();
+    let sphinx = g.add_card_to_battlefield(0, catalog::conundrum_sphinx());
+    g.clear_sickness(sphinx);
+    for p in [0, 1] {
+        g.players[p].library.clear();
+    }
+    let mine = g.add_card_to_library(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_library(1, catalog::island());
+    let filler = g.add_card_to_library(1, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::NamedCard("Grizzly Bears".into()),
+        DecisionAnswer::NamedCard("Grizzly Bears".into()),
+    ]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sphinx,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "the hit goes to hand");
+    assert_eq!(
+        g.players[1].library.last().map(|c| c.id),
+        Some(theirs),
+        "the miss goes to the bottom"
+    );
+    assert_eq!(g.players[1].library.first().map(|c| c.id), Some(filler));
+}
+
+/// Necrotic Plague eats its host at that player's upkeep, then hops to a
+/// creature they don't control.
+#[test]
+fn necrotic_plague_eats_and_hops() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let next = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let plague = g.add_card_to_hand(0, catalog::necrotic_plague());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, plague, Some(Target::Permanent(victim)));
+    assert_eq!(g.battlefield_find(plague).and_then(|c| c.attached_to), Some(victim));
+
+    // Player 1's upkeep: the enchanted creature sacrifices itself.
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(victim).is_none(), "the host is sacrificed");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(plague).and_then(|c| c.attached_to),
+        Some(next),
+        "the Plague hops to a creature its victim's controller doesn't control"
+    );
+}

@@ -1347,7 +1347,8 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `SelectionRequirement::IsSourceChosenCardType`,
   `Predicate::LastDiscardedWasColor`, and `CounterType::{Eon, Blaze}`.
   Tests in `classic_sets/zen2` + `classic_sets/zen3`.
-- **Magic 2011 (M11) 59 → 3 gaps** (`sets::m11::gaps`, 57 cards): the Leylines
+- **Magic 2011 (M11) complete** (`set_gaps.py m11` at zero — `sets::m11::gaps`,
+  60 cards): the Leylines
   (`OpeningHandEffect::StartInPlay`), the Servants, the Auras, Mitotic Slime's
   nested token deaths, Hoarding Dragon's linked exile, Stormtide Leviathan's
   world-flood, Mystifying Maze and the commons. New:
@@ -1358,8 +1359,15 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `Effect::RandomHandCardDeployOrCastFree` (Wild Evocation) and
   `CardDefinition.sacrifice_when` — a general CR 603.8 "when [condition],
   sacrifice this" state trigger checked once per SBA pass (Phylactery Lich,
-  plus `CounterType::Phylactery`) and `Effect::MassPolymorph`. The remaining
-  three are listed in TODO.md. Tests in `classic_sets/m11`.
+  plus `CounterType::Phylactery`) and `Effect::MassPolymorph`. The last three
+  added `StaticEffect::{OpponentsWhoCastCantAttack, OpponentsWhoAttackedCantCast}`
+  (Angelic Arbiter — gated in `declare_attackers` / the cast dispatch),
+  `Effect::{EachPlayerNamesCard, EachPlayerRevealTopKeepIfNamed}` (Conundrum
+  Sphinx — names stashed in `GameState.names_this_resolution` so every seat
+  names before any reveal) and `Effect::ReturnSelfAttachedToChoiceOf` (Necrotic
+  Plague); `SelectionRequirement::IsHostOfSource` is now source-precise in the
+  static-grant walker instead of always answering `true`. Tests in
+  `classic_sets/m11`.
 - **Worldwake is complete** (`set_gaps.py wwk` at zero — `sets::wwk`
   rides the same landfall/Rally shapes plus Multikicker and
   `Effect::SwitchPT` / `BecomeCreature`; `sets::wwk2` closes the last 43).

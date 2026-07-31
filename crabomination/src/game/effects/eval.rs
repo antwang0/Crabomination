@@ -2955,6 +2955,16 @@ impl GameState {
                                     .any(|c| colors.contains(c))
                             })
                     }),
+                    // "The permanent this source is attached to" — the
+                    // source-precise half of `AttachedToSource` (Necrotic
+                    // Plague's granted upkeep sacrifice). A source-blind
+                    // caller still answers `true`.
+                    R::IsHostOfSource => {
+                        match source.and_then(|sid| self.battlefield_find(sid)) {
+                            Some(src) => src.attached_to == Some(card.id),
+                            None => true,
+                        }
+                    }
                     // Konda's Banner — "creatures that share a color / a
                     // creature type with equipped creature". Read off printed
                     // characteristics: this filter is evaluated *inside* the
