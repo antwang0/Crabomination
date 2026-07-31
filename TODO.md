@@ -25,24 +25,24 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (modern_decks — Urza's Saga wave 2/3)
 
-`set_gaps.py usg` is 254 → **52**. What the last 52 want, grouped by the
+`set_gaps.py usg` is 254 → **50**. What the last 52 want, grouped by the
 primitive that blocks them:
 
 - **A cycling-cost reduction hook** (Fluctuator — "cycling abilities you
   activate cost {2} less"). Wants a `StaticEffect` consulted where the Cycling
   keyword's cost is paid.
-- **Flat damage prevention statics**: Urza's Armor ("prevent 1 of that
-  damage"), Energy Field ("prevent all damage from sources you don't
-  control"), the five Runes of Protection ("the next time a [filter] source of
-  your choice would deal damage to you this turn, prevent it" — a
-  `PreventionTarget`-filtered shield). Serra's Hymn wants the divided form.
+- **Flat damage prevention statics**: Energy Field ("prevent all damage from
+  sources you don't control") and the five Runes of Protection ("the next time
+  a [filter] source of your choice would deal damage to you this turn, prevent
+  it" — a `PreventionTarget`-filtered shield). Serra's Hymn wants the divided
+  form. (Urza's Armor shipped as `StaticEffect::ReduceDamageToYouBy`.)
 - **A spell-source damage bonus** (Sulfuric Vapors). `AddDamageFromColorToPlayers`
   covers "any source, any player"; the printed card is spell-only and hits
   permanents too.
-- **Colour/type rewrites as statics**: Darkest Hour (all creatures are black),
-  Contamination (every land taps for {B}), Telepathy (opponents play with
-  hands revealed — the state is there in `hands_revealed_to`, the static
-  isn't).
+- **Colour/type rewrites as statics**: Contamination (every land taps for
+  {B}) and Telepathy (opponents play with hands revealed — the state is there
+  in `hands_revealed_to`, the static isn't). (Darkest Hour shipped as
+  `StaticEffect::SetColorOfMatching`.)
 - **State triggers** (CR 603.8) for Hidden Predators and Veiled Crocodile
   ("when an opponent controls a creature with power 4 or greater, …").
   `flip_when_predicate` is the closest existing shape.

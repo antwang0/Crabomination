@@ -2762,3 +2762,28 @@ pub fn spreading_algae() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Urza's Armor — {6}. Every hit you take comes in one lighter.
+pub fn urzas_armor() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If a source would deal damage to you, prevent 1 of that damage.",
+            effect: StaticEffect::ReduceDamageToYouBy(1),
+        }],
+        ..artifact("Urza's Armor", cost(&[generic(6)]))
+    }
+}
+
+/// Darkest Hour — {B}. Every creature is black.
+pub fn darkest_hour() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All creatures are black.",
+            effect: StaticEffect::SetColorOfMatching {
+                applies_to: Selector::EachPermanent(R::Creature),
+                color: Color::Black,
+            },
+        }],
+        ..enchantment("Darkest Hour", cost(&[b()]))
+    }
+}

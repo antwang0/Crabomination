@@ -17081,6 +17081,8 @@ static USG2: &[Factory] = &[
     super::usg2::soul_sculptor,
     super::usg2::retaliation,
     super::usg2::spreading_algae,
+    super::usg2::urzas_armor,
+    super::usg2::darkest_hour,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,

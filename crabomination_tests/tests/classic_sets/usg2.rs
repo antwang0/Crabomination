@@ -534,3 +534,38 @@ fn rain_of_filth_grants_a_sacrifice_for_black() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), before + 1);
     assert!(g.battlefield_find(land).is_none(), "the land was sacrificed");
 }
+
+/// Urza's Armor shaves one off every hit its controller takes, and nothing off
+/// damage to their permanents.
+#[test]
+fn urzas_armor_shaves_one_off_damage_to_you() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::urzas_armor());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let src = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    let mut ev = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(0),
+        3,
+        Some(src),
+        &mut ev,
+    );
+    assert_eq!(g.players[0].life, life - 2);
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(bear),
+        1,
+        Some(src),
+        &mut ev,
+    );
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 1, "permanents aren't shielded");
+}
+
+/// Darkest Hour paints every creature black (CR 613 layer 5), both sides.
+#[test]
+fn darkest_hour_makes_every_creature_black() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::darkest_hour());
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_zealot()); // white
+    assert_eq!(g.computed_permanent(theirs).unwrap().colors, vec![Color::Black]);
+}

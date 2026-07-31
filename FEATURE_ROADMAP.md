@@ -16,8 +16,8 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **Urza's Saga mostly closed** (`sets::usg` + `sets::usg2`, 199 cards —
-  `set_gaps.py usg` 254 → 52): the echo, cycling-land, verse-counter, Aura
+- **Urza's Saga mostly closed** (`sets::usg` + `sets::usg2`, 201 cards —
+  `set_gaps.py usg` 254 → 50): the echo, cycling-land, verse-counter, Aura
   recursion and Opal/Hidden/Veiled animation cycles, plus the utility shell.
   New primitives: `Effect::{BecomeCreatureLosingTypes, SetCardTypesTo}` (CR
   205.1b — an animation that REPLACES the type line, reverted by timestamp),
@@ -27,11 +27,12 @@ exercising each) was elided in a compaction pass; recover it from
   (Curfew), `Effect::AtEndOfCombat` (CR 603.7a), `StaticEffect::WhileCondition`
   (CR 611.2 — the general predicate gate), `WardCost::SacrificeMatching`,
   `ActivatedAbility.half_life_cost` (CR 118.4), `EquipScale.exclude_host`,
-  `CounterType::Petal`, and `DynamicPt::{ControllerLife,
+  `CounterType::Petal`, `StaticEffect::{ReduceDamageToYouBy,
+  SetColorOfMatching}`, and `DynamicPt::{ControllerLife,
   PermanentsControlledMatchingToughness}`. Correctness: CR 300.2a — a land card
   can only be *played*, never cast (`GameError::CannotCastLand`); the Onslaught
   cycling lands lost their stray basic land types. Tests in
-  `classic_sets/{usg,usg2}`, `core_rules/cr_recent54`. The remaining 52 gaps
+  `classic_sets/{usg,usg2}`, `core_rules/cr_recent54`. The remaining 50 gaps
   and what they want are in TODO.md.
 - **Urza block complete** — `set_gaps.py ulg` and `uds` both at zero
   (`sets::ulg`, `sets::uds`, 126 UDS cards). New primitives: `Duration::

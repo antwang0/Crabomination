@@ -910,6 +910,9 @@ pub enum StaticEffect {
     /// clause also blanks the colour of cards in other zones, which nothing in
     /// the engine reads.
     GrantColorless { applies_to: Selector },
+    /// CR 613 layer 5 — "[applies_to] are [color]" (Darkest Hour). Sets the
+    /// colour outright rather than adding to it.
+    SetColorOfMatching { applies_to: Selector, color: crate::mana::Color },
     /// CR 704.7 — "If you would lose the game, instead shuffle your hand, your
     /// graveyard, and all permanents you own into your library, then draw seven
     /// cards and your life total becomes 20" (Lich's Mirror). One application
@@ -1092,6 +1095,10 @@ pub enum StaticEffect {
     /// remainder is floor(amount/2) — same arithmetic as a halver, scoped
     /// to the static's controller's side.
     HalveDamageToYou,
+    /// "If a source would deal damage to you, prevent N of that damage"
+    /// (Urza's Armor). Applied per damage event to the static controller's own
+    /// life total, after the additive bonuses and before the doublers.
+    ReduceDamageToYouBy(u32),
     /// CR 614.5 — "If a [color] source you control would deal damage to an
     /// opponent or a permanent an opponent controls, it deals that much
     /// damage plus `amount` instead." (Torbran, Thane of Red Fell.)

@@ -3964,6 +3964,14 @@ impl GameState {
                             d += 1;
                         }
                         StaticEffect::HalveDamageToYou if c.controller == p => h += 1,
+                        // Urza's Armor — shave a flat N off every event that
+                        // hits its controller's life total.
+                        StaticEffect::ReduceDamageToYouBy(n)
+                            if c.controller == p
+                                && matches!(ent, EntityRef::Player(_)) =>
+                        {
+                            amount = amount.saturating_sub(*n);
+                        }
                         StaticEffect::AddDamageToOpponents { source_color, amount: bonus }
                             if !self.same_team(c.controller, p) =>
                         {
@@ -16047,6 +16055,20 @@ fn static_effect_to_effects(
                     None => vec![],
                 }
             }
+            StaticEffect::SetColorOfMatching { applies_to, color } => {
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L5Color,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetColors(vec![*color]),
+                    }],
+                    None => vec![],
+                }
+            }
             StaticEffect::GrantAllColors { applies_to } => {
                 use crate::mana::Color;
                 match selector_to_affected(applies_to, card) {
@@ -16258,6 +16280,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoubleNoncombatDamageToOpponents
             | StaticEffect::NoncombatDamageToOpponentsBonus { .. }
             | StaticEffect::HalveDamageToYou
+            | StaticEffect::ReduceDamageToYouBy(_)
             | StaticEffect::AddDamageToOpponents { .. }
             | StaticEffect::AddDamageToOpponentsPerCounter { .. }
             | StaticEffect::AddDamageFromColorToPlayers { .. }
