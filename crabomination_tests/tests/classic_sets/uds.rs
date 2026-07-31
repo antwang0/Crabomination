@@ -401,3 +401,197 @@ fn lurking_jackals_wakes_at_ten_life() {
     assert!(cp.card_types.contains(&CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (3, 2));
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// The cycling cards all carry Cycling {2}.
+#[test]
+fn uds_cycling_cards_carry_cycling_two() {
+    for f in [
+        catalog::flame_jet as fn() -> crabomination::card::CardDefinition,
+        catalog::fend_off,
+        catalog::rapid_decay,
+    ] {
+        let def = f();
+        assert!(
+            def.keywords.iter().any(|k| matches!(k, Keyword::Cycling(c) if c.cmc() == 2)),
+            "{} is missing Cycling {{2}}",
+            def.name
+        );
+    }
+}
+
+/// Fatigue eats the target's next draw step.
+#[test]
+fn fatigue_skips_the_next_draw_step() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::fatigue());
+    mana(&mut g, 0);
+    cast(&mut g, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].skip_next_draw_step, 1);
+    g.active_player_idx = 1;
+    g.turn_number = 3;
+    g.step = TurnStep::Upkeep;
+    g.advance_step(vec![]).expect("advance");
+    assert!(g.players[1].hand.is_empty(), "the draw was skipped");
+    assert_eq!(g.players[1].skip_next_draw_step, 0, "and the charge was spent");
+}
+
+/// Wake of Destruction takes every land sharing the target's name.
+#[test]
+fn wake_of_destruction_takes_every_land_of_that_name() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::mountain());
+    let b = g.add_card_to_battlefield(1, catalog::mountain());
+    let island = g.add_card_to_battlefield(1, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::wake_of_destruction());
+    mana(&mut g, 0);
+    cast(&mut g, spell, Some(Target::Permanent(a)));
+    assert!(g.battlefield_find(a).is_none());
+    assert!(g.battlefield_find(b).is_none());
+    assert!(g.battlefield_find(island).is_some());
+}
+
+/// Goblin Marshal brings two Goblins both coming and going.
+#[test]
+fn goblin_marshal_makes_goblins_twice() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::goblin_marshal());
+    mana(&mut g, 0);
+    cast(&mut g, spell, None);
+    let goblins = |g: &GameState| {
+        g.battlefield.iter().filter(|c| c.definition.name == "Goblin").count()
+    };
+    assert_eq!(goblins(&g), 2);
+    let marshal =
+        g.battlefield.iter().find(|c| c.definition.name == "Goblin Marshal").unwrap().id;
+    let ctx = crabomination::game::effects::EffectContext::for_ability(marshal, 0, None);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::This },
+            &ctx,
+        )
+        .expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(goblins(&g), 4);
+}
+
+/// Phyrexian Negator pays a permanent for every point it takes.
+#[test]
+fn phyrexian_negator_sacrifices_per_damage() {
+    let mut g = two_player_game();
+    let negator = g.add_card_to_battlefield(0, catalog::phyrexian_negator());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    let before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    let mut ev = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(negator),
+        2,
+        None,
+        &mut ev,
+    );
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), before - 2);
+}
+
+/// Bloodshot Cyclops flings the sacrificed creature's power.
+#[test]
+fn bloodshot_cyclops_flings_a_creature() {
+    let mut g = two_player_game();
+    let cyclops = g.add_card_to_battlefield(0, catalog::bloodshot_cyclops());
+    g.battlefield_find_mut(cyclops).unwrap().summoning_sick = false;
+    g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    let life = g.players[1].life;
+    activate(&mut g, cyclops, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 3);
+}
+
+/// Thran Golem suits up only while something is attached to it.
+#[test]
+fn thran_golem_grows_while_enchanted() {
+    let mut g = two_player_game();
+    let golem = g.add_card_to_battlefield(0, catalog::thran_golem());
+    let cp = g.computed_permanent(golem).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    let aura = g.add_card_to_hand(0, catalog::twisted_experiment());
+    mana(&mut g, 0);
+    cast(&mut g, aura, Some(Target::Permanent(golem)));
+    let cp = g.computed_permanent(golem).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 4), "+3/-1 from the Aura, +2/+2 from itself");
+    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Treachery steals the enchanted creature and untaps five lands.
+#[test]
+fn treachery_steals_and_untaps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..6 {
+        let land = g.add_card_to_battlefield(0, catalog::island());
+        g.battlefield_find_mut(land).unwrap().tapped = true;
+    }
+    let aura = g.add_card_to_hand(0, catalog::treachery());
+    mana(&mut g, 0);
+    cast(&mut g, aura, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land() && !c.tapped).count(),
+        5
+    );
+}
+
+/// Archery Training's arrow counters arm the enchanted creature.
+#[test]
+fn archery_training_shoots_for_its_arrow_counters() {
+    let mut g = two_player_game();
+    let archer = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(archer).unwrap().summoning_sick = false;
+    let aura = g.add_card_to_hand(0, catalog::archery_training());
+    mana(&mut g, 0);
+    cast(&mut g, aura, Some(Target::Permanent(archer)));
+    let aura =
+        g.battlefield.iter().find(|c| c.definition.name == "Archery Training").unwrap().id;
+    g.battlefield_find_mut(aura).unwrap().add_counters(CounterType::Arrow, 2);
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking.push(crabomination::game::types::Attack {
+        attacker,
+        target: crabomination::game::types::AttackTarget::Player(0),
+    });
+    activate(&mut g, archer, 0, Some(Target::Permanent(attacker)));
+    assert!(g.battlefield_find(attacker).is_none(), "two arrows killed the 2/2");
+}
+
+/// Compost draws off black cards hitting an opponent's graveyard.
+#[test]
+fn compost_draws_off_opposing_black_cards() {
+    let mut g = two_player_game();
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.add_card_to_battlefield(0, catalog::compost());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::phyrexian_negator()); // black
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Mill {
+                who: crabomination::effect::Selector::Player(
+                    crabomination::effect::PlayerRef::Seat(1),
+                ),
+                amount: crabomination::effect::Value::ONE,
+            },
+            &ctx,
+        )
+        .expect("mill");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1);
+}

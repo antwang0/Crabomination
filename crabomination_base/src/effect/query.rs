@@ -1140,6 +1140,8 @@ impl Effect {
             Effect::ShuffleHandsDrawSame { who } => player_has_target(who),
             Effect::RevealAnyNumberFromHand { then, .. } => then.requires_target(),
             Effect::DestroyEachMatchingWithManaValue { .. } => false,
+            Effect::DestroyAllSharingNameWith { what } => sel_has_target(what),
+            Effect::SkipPlayerDrawStep { player } => player_has_target(player),
             Effect::ExileAllCopiesOfTargetName { what }
             | Effect::ExileAndReturnToOwner { what } => sel_has_target(what),
             Effect::DealDamageExcessTo { to, excess_to, .. } => {
@@ -2503,6 +2505,7 @@ impl Effect {
                     sel_find(to, slot).or_else(|| val_find(amount, slot))
                 }
                 Effect::ExileAllCopiesOfTargetName { what }
+                | Effect::DestroyAllSharingNameWith { what }
                 | Effect::ExileAndReturnToOwner { what } => sel_find(what, slot),
                 Effect::DealDamageExcessTo { to, amount, excess_to, .. } => sel_find(to, slot)
                     .or_else(|| val_find(amount, slot))

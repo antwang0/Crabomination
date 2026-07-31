@@ -352,8 +352,13 @@ impl GameState {
                             sa.effect == crate::effect::StaticEffect::ControllerSkipsDrawStep
                         })
                 });
+                let charged_skip = self.players[self.active_player_idx].skip_next_draw_step > 0;
+                if charged_skip {
+                    self.players[self.active_player_idx].skip_next_draw_step -= 1;
+                }
                 if (std::mem::take(&mut self.skip_first_draw) && self.turn_number == 1)
                     || skips_draw_step
+                    || charged_skip
                 {
                 } else {
                     let p = self.active_player_idx;

@@ -3,7 +3,8 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EquipBonus, EquipScale, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
-    SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility, Value, WardCost,
+    SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TriggeredAbility, Value,
+    WardCost,
 };
 use crate::effect::{
     Duration, Effect, PlayerRef, Selector, StaticEffect, ZoneDest,
@@ -1500,4 +1501,545 @@ pub fn quash() -> CardDefinition {
             },
         },
     )
+}
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Flame Jet — {1}{R}. Three to the face, or cycle it away.
+pub fn flame_jet() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        ..sorcery(
+            "Flame Jet",
+            cost(&[generic(1), r()]),
+            deal(3, target_filtered(R::Player.or(R::Planeswalker))),
+        )
+    }
+}
+
+/// Fend Off — {1}{W}. Blank a creature's combat damage, or cycle it away.
+pub fn fend_off() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        ..instant(
+            "Fend Off",
+            cost(&[generic(1), w()]),
+            Effect::PreventCombatDamageByTargetThisTurn { target: target_filtered(R::Creature) },
+        )
+    }
+}
+
+/// Rapid Decay — {1}{B}. Strip up to three cards out of one graveyard, or
+/// cycle it away.
+pub fn rapid_decay() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        ..instant(
+            "Rapid Decay",
+            cost(&[generic(1), b()]),
+            Effect::ExileUpToNFromGraveyards {
+                count: Value::Const(3),
+                of: Some(PlayerRef::Target(0)),
+                single: true,
+            },
+        )
+    }
+}
+
+/// Fatigue — {1}{U}. Target player loses their next draw.
+pub fn fatigue() -> CardDefinition {
+    sorcery(
+        "Fatigue",
+        cost(&[generic(1), u()]),
+        Effect::SkipPlayerDrawStep { player: PlayerRef::Target(0) },
+    )
+}
+
+/// Wake of Destruction — {3}{R}{R}{R}. A land and every land sharing its name.
+pub fn wake_of_destruction() -> CardDefinition {
+    sorcery(
+        "Wake of Destruction",
+        cost(&[generic(3), r(), r(), r()]),
+        Effect::DestroyAllSharingNameWith { what: target_filtered(R::Land) },
+    )
+}
+
+/// Keldon Champion — {2}{R}{R} 3/2 with haste and echo; it lands for three.
+pub fn keldon_champion() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste, Keyword::Echo(cost(&[generic(2), r(), r()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: deal(3, target_filtered(R::Player.or(R::Planeswalker))),
+        }],
+        ..creature(
+            "Keldon Champion",
+            cost(&[generic(2), r(), r()]),
+            vec![CreatureType::Human, CreatureType::Barbarian],
+            3,
+            2,
+        )
+    }
+}
+
+/// Goblin Marshal — {4}{R}{R} 3/3 with echo that brings two Goblins coming and
+/// going.
+pub fn goblin_marshal() -> CardDefinition {
+    let goblins = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(2),
+        definition: crate::card::TokenDefinition {
+            name: "Goblin".into(),
+            power: 1,
+            toughness: 1,
+            card_types: vec![CardType::Creature],
+            colors: vec![Color::Red],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Goblin],
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Echo(cost(&[generic(4), r(), r()]))],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: goblins(),
+            },
+            on_dies(goblins()),
+        ],
+        ..creature(
+            "Goblin Marshal",
+            cost(&[generic(4), r(), r()]),
+            vec![CreatureType::Goblin, CreatureType::Warrior],
+            3,
+            3,
+        )
+    }
+}
+
+/// Hunting Moa — {2}{G} 3/2 with echo that leaves a counter coming and going.
+pub fn hunting_moa() -> CardDefinition {
+    let counter = || Effect::AddCounter {
+        what: target_filtered(R::Creature),
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::ONE,
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Echo(cost(&[generic(2), g()]))],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: counter(),
+            },
+            on_dies(counter()),
+        ],
+        ..creature(
+            "Hunting Moa",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Bird, CreatureType::Beast],
+            3,
+            2,
+        )
+    }
+}
+
+/// Telepathic Spies — {2}{U} 2/2 that peeks at a hand.
+pub fn telepathic_spies() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::LookAtHand { who: Selector::Player(PlayerRef::Target(0)) },
+        }],
+        ..creature(
+            "Telepathic Spies",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            2,
+            2,
+        )
+    }
+}
+
+/// Temporal Adept — {1}{U}{U} 1/1 that bounces a permanent a turn.
+pub fn temporal_adept() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), u(), u()]),
+            tap_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(R::Any),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Temporal Adept",
+            cost(&[generic(1), u(), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Serra Advocate — {3}{W} 2/2 flier that pumps whoever's in combat.
+pub fn serra_advocate() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Serra Advocate", cost(&[generic(3), w()]), vec![CreatureType::Angel], 2, 2)
+    }
+}
+
+/// Master Healer — {4}{W} 1/4 that taps for a four-point shield.
+pub fn master_healer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PreventNextDamage { target: target_any(), amount: Value::Const(4) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Master Healer",
+            cost(&[generic(4), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            4,
+        )
+    }
+}
+
+/// Field Surgeon — {1}{W} 1/1 that taps a body for a one-point shield.
+pub fn field_surgeon() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_other_filter: Some(R::Creature.and(R::ControlledByYou)),
+            effect: Effect::PreventNextDamage {
+                target: target_filtered(R::Creature),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Field Surgeon",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            1,
+        )
+    }
+}
+
+/// Bloodshot Cyclops — {5}{R} 4/4 that flings a creature's power anywhere.
+pub fn bloodshot_cyclops() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::DealDamage { to: target_any(), amount: Value::SacrificedPower },
+            ..Default::default()
+        }],
+        ..creature(
+            "Bloodshot Cyclops",
+            cost(&[generic(5), r()]),
+            vec![CreatureType::Cyclops, CreatureType::Giant],
+            4,
+            4,
+        )
+    }
+}
+
+/// Phyrexian Negator — {2}{B} 5/5 trampler that pays for every point it takes.
+pub fn phyrexian_negator() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::Sacrifice {
+                who: Selector::You,
+                filter: R::Any,
+                count: Value::TriggerEventAmount,
+            },
+        }],
+        ..creature(
+            "Phyrexian Negator",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Phyrexian, CreatureType::Horror],
+            5,
+            5,
+        )
+    }
+}
+
+/// Skittering Horror — {2}{B} 4/3 that bows out the moment you cast a creature.
+pub fn skittering_horror() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+            ),
+            effect: Effect::SacrificeSource,
+        }],
+        ..creature(
+            "Skittering Horror",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Phyrexian, CreatureType::Horror],
+            4,
+            3,
+        )
+    }
+}
+
+/// Rayne, Academy Chancellor — {2}{U} 1/1 that draws off opposing targeting.
+pub fn rayne_academy_chancellor() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::BecameTarget,
+                EventScope::YourPermanentTargetedByOpponent,
+            ),
+            effect: Effect::MayDo {
+                description: "Draw a card".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        ..creature(
+            "Rayne, Academy Chancellor",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Compost — {1}{G}. Every black card hitting an opponent's graveyard is a card
+/// for you.
+pub fn compost() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasColor(Color::Black),
+                }),
+            effect: Effect::MayDo {
+                description: "Draw a card".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        ..enchantment("Compost", cost(&[generic(1), g()]))
+    }
+}
+
+/// Sanctimony — {1}{W}. Opponents' Mountains pay you rent.
+pub fn sanctimony() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TappedForMana, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasLandType(LandType::Mountain),
+                }),
+            effect: Effect::MayDo {
+                description: "Gain 1 life".into(),
+                body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+            },
+        }],
+        ..enchantment("Sanctimony", cost(&[generic(1), w()]))
+    }
+}
+
+// ── "While enchanted" bodies ────────────────────────────────────────────────
+
+fn while_enchanted() -> Predicate {
+    Predicate::EntityMatches { what: Selector::This, filter: R::IsEnchanted }
+}
+
+/// Fledgling Osprey — {U} 1/1 that flies once something is on it.
+pub fn fledgling_osprey() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature has flying as long as it's enchanted.",
+            effect: StaticEffect::PumpTeamIf {
+                condition: while_enchanted(),
+                applies_to: Selector::This,
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Flying],
+            },
+        }],
+        ..creature("Fledgling Osprey", cost(&[u()]), vec![CreatureType::Bird], 1, 1)
+    }
+}
+
+/// Metathran Elite — {1}{U}{U} 2/3 that slips through once something is on it.
+pub fn metathran_elite() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature can't be blocked as long as it's enchanted.",
+            effect: StaticEffect::PumpTeamIf {
+                condition: while_enchanted(),
+                applies_to: Selector::This,
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Unblockable],
+            },
+        }],
+        ..creature("Metathran Elite", cost(&[generic(1), u(), u()]), vec![CreatureType::Soldier], 2, 3)
+    }
+}
+
+/// Thran Golem — {5} 3/3 that suits up into a 5/5 flier once enchanted.
+pub fn thran_golem() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature is enchanted, it gets +2/+2 and has flying, first strike, and trample.",
+            effect: StaticEffect::PumpTeamIf {
+                condition: while_enchanted(),
+                applies_to: Selector::This,
+                power: 2,
+                toughness: 2,
+                keywords: vec![Keyword::Flying, Keyword::FirstStrike, Keyword::Trample],
+            },
+        }],
+        ..creature("Thran Golem", cost(&[generic(5)]), vec![CreatureType::Golem], 3, 3)
+    }
+}
+
+/// Bubbling Beebles — {4}{U} 3/3 that walks past enchanted defenders.
+pub fn bubbling_beebles() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeBlockedIfDefenderControls(Box::new(R::Enchantment))],
+        ..creature("Bubbling Beebles", cost(&[generic(4), u()]), vec![CreatureType::Beeble], 3, 3)
+    }
+}
+
+// ── Auras ───────────────────────────────────────────────────────────────────
+
+/// Treachery — {3}{U}{U}. Steal a creature and untap five lands doing it.
+pub fn treachery() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainControlWhileSourceRemains {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                },
+                Effect::Untap {
+                    what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Land },
+                    up_to: Some(Value::Const(5)),
+                },
+            ]),
+        }],
+        ..aura("Treachery", cost(&[generic(3), u(), u()]), EquipBonus::default())
+    }
+}
+
+/// Sigil of Sleep — {U}. The host's damage bounces something of the victim's.
+pub fn sigil_of_sleep() -> CardDefinition {
+    CardDefinition {
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature.and(R::ControlledByOpponent),
+                    },
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(1)))),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..aura("Sigil of Sleep", cost(&[u()]), EquipBonus::default())
+    }
+}
+
+/// Pattern of Rebirth — {3}{G}. The host's death fetches a replacement.
+pub fn pattern_of_rebirth() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::EnchantedBySource),
+            effect: Effect::MayDo {
+                description: "Search for a creature card".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Creature,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+        }],
+        ..aura("Pattern of Rebirth", cost(&[generic(3), g()]), EquipBonus::default())
+    }
+}
+
+/// Archery Training — {W}. Arrow counters turn the host into a sniper.
+pub fn archery_training() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Put an arrow counter on Archery Training".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Arrow,
+                    amount: Value::ONE,
+                }),
+            },
+        }],
+        ..aura(
+            "Archery Training",
+            cost(&[w()]),
+            EquipBonus {
+                activated_abilities: vec![ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::DealDamage {
+                        to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+                        amount: Value::CountersOn {
+                            what: Box::new(Selector::AttachmentGranting),
+                            kind: CounterType::Arrow,
+                        },
+                    },
+                    ..Default::default()
+                }],
+                ..Default::default()
+            },
+        )
+    }
+}
+
+// ── Land ────────────────────────────────────────────────────────────────────
+
+/// Yavimaya Hollow — legendary land that keeps a creature alive.
+pub fn yavimaya_hollow() -> CardDefinition {
+    CardDefinition {
+        name: "Yavimaya Hollow",
+        card_types: vec![CardType::Land],
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![
+            crate::sets::tap_add_colorless(),
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                tap_cost: true,
+                effect: Effect::Regenerate { what: target_filtered(R::Creature) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
 }

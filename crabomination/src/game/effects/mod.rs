@@ -21434,6 +21434,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SkipPlayerDrawStep { player } => {
+                if let Some(seat) = self.resolve_player(player, ctx) {
+                    self.players[seat].skip_next_draw_step += 1;
+                }
+                Ok(())
+            }
+
+            Effect::DestroyAllSharingNameWith { what } => {
+                let names: Vec<&'static str> = self
+                    .resolve_selector(what, ctx)
+                    .iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter_map(|id| self.battlefield_find(id).map(|c| c.definition.name))
+                    .collect();
+                let ids: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| names.contains(&c.definition.name))
+                    .map(|c| c.id)
+                    .collect();
+                for id in ids {
+                    self.destroy_permanent(id, false, events);
+                }
+                Ok(())
+            }
+
             Effect::ExileAndReturnToOwner { what } => {
                 // Flicker — an immediate blink. Tokens cease to exist (CR
                 // 111.7), and the returned card is a new object.

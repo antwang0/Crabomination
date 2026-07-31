@@ -634,6 +634,10 @@ pub struct Player {
     /// their untap step would run; while > 0 their permanents don't untap.
     #[serde(default)]
     pub skip_next_untap_step: u32,
+    /// CR 504 — charges of "skip your next draw step" (Fatigue). Consumed one
+    /// per draw step.
+    #[serde(default)]
+    pub skip_next_draw_step: u32,
     /// CR 506 — number of this player's upcoming combat phases to skip
     /// (Stonehorn Dignitary). Consumed when their turn reaches Begin Combat,
     /// jumping straight to the postcombat main. Defaults to 0 for snapshot
@@ -919,6 +923,7 @@ impl Player {
             spell_names_cast_this_turn: Vec::new(),
             skip_turns: 0,
             skip_next_untap_step: 0,
+            skip_next_draw_step: 0,
             skip_next_combat: 0,
             lands_dont_untap_next_untap: 0,
             creatures_dont_untap_next_untap: 0,

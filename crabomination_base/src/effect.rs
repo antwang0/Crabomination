@@ -4201,6 +4201,9 @@ pub enum Effect {
     /// permanent matching `filter` whose mana value equals `value` (Powder
     /// Keg's "each artifact and creature").
     DestroyEachMatchingWithManaValue { filter: SelectionRequirement, value: Value },
+    /// "Destroy `what` and all other permanents with the same name" (Wake of
+    /// Destruction).
+    DestroyAllSharingNameWith { what: Selector },
     /// "Choose a number between 0 and `max`. Destroy all creatures with power
     /// greater than or equal to the chosen number." The controller picks the
     /// number at resolution (`Decision::ChooseAmount`); a bot/AutoDecider picks
@@ -4699,6 +4702,9 @@ pub enum Effect {
     /// CR 502.3 — the target player skips their next untap step (Yosei, the
     /// Morning Star). Adds one charge to `Player.skip_next_untap_step`.
     SkipPlayerUntapStep { player: PlayerRef },
+    /// "Target player skips their next draw step" (Fatigue). Adds one charge to
+    /// `Player.skip_next_draw_step`.
+    SkipPlayerDrawStep { player: PlayerRef },
     /// "Lands `who` controls don't untap during their next untap step"
     /// (Bontu's Last Reckoning). Adds one charge to
     /// `Player.lands_dont_untap_next_untap`; non-land permanents untap normally.
