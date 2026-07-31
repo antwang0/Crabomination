@@ -437,6 +437,21 @@ impl Bot for RandomBot {
                     crate::decision::Decision::ChooseCards { prompt, candidates, min, max, .. } => {
                         decide_choose_cards(&self.weights, state, seat, prompt, candidates, *min, *max)
                     }
+                    // London mulligan bottoming (CR 103.5) and "put N cards
+                    // from your hand on top/bottom" effects. `AutoDecider`
+                    // takes the first N cards of the hand, so a bot that
+                    // mulliganed bottomed whichever cards happened to sit at
+                    // the front — routinely its business spells. Rank them
+                    // the same way a discard is ranked: surplus lands first,
+                    // then the priciest spells.
+                    crate::decision::Decision::PutOnLibrary { player, count, hand }
+                        if *player == seat =>
+                    {
+                        let order = hand_worst_first(state, seat, hand);
+                        crate::decision::DecisionAnswer::PutOnLibrary(
+                            order.into_iter().take(*count).collect(),
+                        )
+                    }
                     // A self-discard (cleanup over max hand size, rummaging, a
                     // discard cost): every offered card is in our own hand and
                     // we're the one choosing. Unlike AutoDecider (which dumps
@@ -8733,6 +8748,45 @@ mod tests {
         assert!(eval_material(&g, 1, &EvalWeights::default()) < 0);
         g.game_over = Some(Some(1));
         assert!(eval_material(&g, 1, &EvalWeights::default()) > eval_material(&g, 0, &EvalWeights::default()), "a won game beats any material");
+    }
+
+    /// After a London mulligan the bot puts cards back on the library.
+    /// `AutoDecider` bottoms the first N cards of the hand, which routinely
+    /// meant shipping the business spells and keeping a fistful of lands.
+    /// Found by `bot_probe`: `PutOnLibrary` was 9 % of all decisions the bot
+    /// faced and every one of them fell through to that default.
+    #[test]
+    fn bot_bottoms_surplus_lands_not_the_front_of_its_hand() {
+        use crate::decision::{Decision, DecisionAnswer};
+        let mut g = two_player_game();
+        // Front of hand: the good cheap spell. Then a pile of lands.
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        let lands: Vec<_> =
+            (0..4).map(|_| g.add_card_to_hand(0, catalog::mountain())).collect();
+        // Already flooded, so every hand land is surplus.
+        for _ in 0..5 {
+            g.add_card_to_battlefield(0, catalog::mountain());
+        }
+        let hand: Vec<(crate::card::CardId, String)> = std::iter::once(bolt)
+            .chain(lands.iter().copied())
+            .map(|id| (id, String::new()))
+            .collect();
+        g.pending_decision = Some(crate::game::types::PendingDecision {
+            decision: Decision::PutOnLibrary { player: 0, count: 2, hand },
+            resume: crate::game::types::ResumeContext::Mulligan {
+                player: 0,
+                mulligans_taken: 1,
+                next_player: None,
+            },
+        });
+        let mut bot = RandomBot::new();
+        let action = bot.next_action(&g, 0).expect("bot answers the decision");
+        let GameAction::SubmitDecision(DecisionAnswer::PutOnLibrary(put)) = action else {
+            panic!("expected a PutOnLibrary answer, got {action:?}");
+        };
+        assert_eq!(put.len(), 2, "bottoms exactly the requested count");
+        assert!(!put.contains(&bolt), "the spell must not be bottomed: {put:?}");
+        assert!(put.iter().all(|id| lands.contains(id)), "only surplus lands go back");
     }
 
     /// The combat-aware evaluator has to actually reach combat damage and
