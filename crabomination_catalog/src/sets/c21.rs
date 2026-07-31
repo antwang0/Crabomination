@@ -7,6 +7,7 @@ use crate::card::{
     SelectionRequirement, Selector, Subtypes, Supertype, Value,
 };
 use crate::effect::shortcut::{etb, etb_gain_life, target_filtered};
+use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, w};
 
@@ -228,35 +229,34 @@ fn fetch_two_basics() -> Effect {
 
 // ── Onslaught cycling lands (mono, enter tapped, Cycling {C}) ──────────────
 
-fn cycling_land(name: &'static str, color: Color, land_type: LandType) -> CardDefinition {
+fn cycling_land(name: &'static str, color: Color) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![land_type],
-            ..Default::default()
-        },
         keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
-        triggered_abilities: vec![super::etb_tap()],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
         activated_abilities: vec![tap_add(color)],
         ..Default::default()
     }
 }
 
 pub fn barren_moor() -> CardDefinition {
-    cycling_land("Barren Moor", Color::Black, LandType::Swamp)
+    cycling_land("Barren Moor", Color::Black)
 }
 pub fn forgotten_cave() -> CardDefinition {
-    cycling_land("Forgotten Cave", Color::Red, LandType::Mountain)
+    cycling_land("Forgotten Cave", Color::Red)
 }
 pub fn lonely_sandbar() -> CardDefinition {
-    cycling_land("Lonely Sandbar", Color::Blue, LandType::Island)
+    cycling_land("Lonely Sandbar", Color::Blue)
 }
 pub fn secluded_steppe() -> CardDefinition {
-    cycling_land("Secluded Steppe", Color::White, LandType::Plains)
+    cycling_land("Secluded Steppe", Color::White)
 }
 pub fn tranquil_thicket() -> CardDefinition {
-    cycling_land("Tranquil Thicket", Color::Green, LandType::Forest)
+    cycling_land("Tranquil Thicket", Color::Green)
 }
 
 // ══════════════════════════════════════════════════════════════════════════

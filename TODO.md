@@ -23,6 +23,67 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
+## Noticed this run (modern_decks — Urza's Saga wave 2/3)
+
+`set_gaps.py usg` is 254 → **52**. What the last 52 want, grouped by the
+primitive that blocks them:
+
+- **A cycling-cost reduction hook** (Fluctuator — "cycling abilities you
+  activate cost {2} less"). Wants a `StaticEffect` consulted where the Cycling
+  keyword's cost is paid.
+- **Flat damage prevention statics**: Urza's Armor ("prevent 1 of that
+  damage"), Energy Field ("prevent all damage from sources you don't
+  control"), the five Runes of Protection ("the next time a [filter] source of
+  your choice would deal damage to you this turn, prevent it" — a
+  `PreventionTarget`-filtered shield). Serra's Hymn wants the divided form.
+- **A spell-source damage bonus** (Sulfuric Vapors). `AddDamageFromColorToPlayers`
+  covers "any source, any player"; the printed card is spell-only and hits
+  permanents too.
+- **Colour/type rewrites as statics**: Darkest Hour (all creatures are black),
+  Contamination (every land taps for {B}), Telepathy (opponents play with
+  hands revealed — the state is there in `hands_revealed_to`, the static
+  isn't).
+- **State triggers** (CR 603.8) for Hidden Predators and Veiled Crocodile
+  ("when an opponent controls a creature with power 4 or greater, …").
+  `flip_when_predicate` is the closest existing shape.
+- **`SelectionRequirement::IsSource`** — "Return this enchantment to its
+  owner's hand" as an activation cost (Attunement). `return_permanent_cost`
+  can only name *another* permanent today.
+- **A cleanup-step delayed trigger** (Waylay's "exile them at the beginning of
+  the next cleanup step"). `AtNextEndStep` / the new `AtEndOfCombat` cover the
+  other two windows.
+- **Per-player "choose one you control" moves**: Umbilicus, Noetic Scales.
+  `EachPlayerReturnsAMatchingPermanent` covers the unconditional shape;
+  these want a per-player predicate/cost gate.
+- **Reanimation with two chosen graveyard cards** (Victimize) and
+  return-all-basics-from-all-graveyards (Planar Birth).
+- The rest are one-offs: Abundance (draw replacement), Academy Researchers
+  (put an Aura from hand attached), Argothian Wurm, Brand, Carpet of Flowers,
+  Copper Gnomes, Defensive Formation, Diabolic Servitude, Discordant Dirge,
+  Electryte, Greener Pastures, Ill-Gotten Gains, Lifeline, No Rest for the
+  Wicked, Okk ("can't attack unless a creature with greater power also
+  attacks"), Outmaneuver, Persecute, Phyrexian Processor, Power Taint,
+  Purging Scythe, Remembrance, Sporogenesis, Temporal Aperture, Thran Turbine
+  (mana that can't be spent on spells), Time Spiral, Viashino Sandswimmer,
+  Wild Dogs, Yawgmoth's Will, Veiled Apparition.
+
+Residuals in what shipped:
+
+- **Opal Titan's protection rider is dropped** — "protection from each of that
+  spell's colours" needs a keyword grant computed from the trigger's spell.
+- **Soul Sculptor's blanking is indefinite**, not "until a player casts a
+  creature spell".
+- **Metrognome's forced-discard trigger is dropped** — there's no "an opponent
+  caused you to discard this card" event.
+- **Somnophore reads `ControlledByOpponent`** rather than "that player"; exact
+  heads-up, wrong in multiplayer.
+- **`Effect::GrantKeywordToMatchingThisTurn` matches card-locally**, so a
+  creature granted flying by an Aura is still stopped by Falter (CR 613.8
+  dependency ordering isn't modeled).
+- **`Effect::UnlessPlayerPays` auto-declines for bots**, so the upkeep-tax
+  bodies (Endless Wurm, Child of Gaea, Drifting Djinn, Contamination) always
+  sacrifice under the AutoDecider. Same policy gap as Masticore.
+
 ## Noticed this run (modern_decks — Urza block closure)
 
 `set_gaps.py ulg` and `set_gaps.py uds` are both at zero. **Urza's Saga (USG)

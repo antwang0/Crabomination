@@ -2059,7 +2059,70 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if let Some(n) = ability.collect_evidence_cost {
         parts.push(format!("Collect evidence {n}"));
     }
+    // The remaining cost riders. Without these the tooltip reads as though the
+    // ability were free for its tap+mana alone.
+    if ability.untap_self_cost {
+        parts.push("Untap this".into());
+    }
+    if ability.bounce_self_cost {
+        parts.push("Return this to hand".into());
+    }
+    if ability.unattach_cost {
+        parts.push("Unattach this".into());
+    }
+    if ability.discard_hand_cost {
+        parts.push("Discard your hand".into());
+    }
+    if ability.discard_cost_random {
+        parts.push("Discard at random".into());
+    }
+    if ability.discard_cost_same_name {
+        parts.push("Discard a card with the same name".into());
+    }
+    if ability.x_life_cost {
+        parts.push("Pay X life".into());
+    }
+    if ability.energy_x_cost {
+        parts.push("Pay X {E}".into());
+    }
+    if ability.exile_top_cost > 0 {
+        parts.push(format!("Exile {} from the top of your library", ability.exile_top_cost));
+    }
+    if let Some(req) = ability.return_permanent_cost.as_ref() {
+        parts.push(format!("Return a {} you control to hand", requirement_noun(req)));
+    }
+    if let Some(req) = ability.sac_all_matching_cost.as_ref() {
+        parts.push(format!("Sacrifice all {}s you control", requirement_noun(req)));
+    }
+    if let Some(req) = ability.exile_spell_cost.as_ref() {
+        parts.push(format!("Exile a {} card", requirement_noun(req)));
+    }
+    if let Some((req, n)) = ability.tap_permanents_cost.as_ref() {
+        parts.push(format!("Tap {n} {}s", requirement_noun(req)));
+    }
+    if let Some((req, n)) = ability.craft_exile_cost.as_ref() {
+        parts.push(format!("Exile {n} {}(s)", requirement_noun(req)));
+    }
+    if let Some((kind, n)) = ability.add_counter_cost.as_ref() {
+        parts.push(format!("Put {n} {} counter(s) on this", counter_kind_label(kind)));
+    }
+    if let Some(n) = ability.process_cost {
+        parts.push(format!("Put {n} card(s) an opponent owns from exile into their graveyard"));
+    }
     let mut label = if parts.is_empty() { "0".into() } else { parts.join(", ") };
+    // Zone and once-per-game riders.
+    if ability.from_graveyard {
+        label.push_str(" (from your graveyard)");
+    }
+    if ability.from_hand {
+        label.push_str(" (from your hand)");
+    }
+    if ability.from_exile {
+        label.push_str(" (from exile)");
+    }
+    if ability.exhaust {
+        label.push_str(" (Exhaust — once only)");
+    }
     // Opponent-only escape clauses (Detention Vortex) — flag who may activate
     // so the tooltip doesn't read as a self-usable ability.
     if ability.opponents_only {

@@ -971,6 +971,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             crabomination::card::WardCost::DiscardMatching(_, n) => {
                 format!("Ward—Discard {n} matching")
             }
+            crabomination::card::WardCost::SacrificeMatching(_) => {
+                "Ward—Sacrifice a matching permanent".into()
+            }
             crabomination::card::WardCost::DiscardHand => "Ward—Discard your hand".into(),
             crabomination::card::WardCost::Blight(n) => format!("Ward—Blight {n}"),
             crabomination::card::WardCost::RemoveCounterFromPermanent => {
@@ -1321,6 +1324,9 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Blaze => "Blaze",
         CounterType::Phylactery => "Phylactery",
         CounterType::Filibuster => "Filibuster",
+        CounterType::Petal => "Petal",
+        CounterType::Arrow => "Arrow",
+        CounterType::Infection => "Infection",
     }
 }
 
@@ -1348,6 +1354,9 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Conqueror => "Zhao's conquest tally — while present, nonbasic lands become Mountains.",
         CounterType::Muster => "Assemble the Legion tally — mints a Soldier token per counter each upkeep.",
         CounterType::Acorn => "Chitterspitter tally — Squirrels you control get +1/+1 per acorn.",
+        CounterType::Verse => "Verse tally — one added each of your upkeeps; the payoff scales with the total.",
+        CounterType::Petal => "Lotus Blossom tally — sacrifice it for that many mana of one colour.",
+        CounterType::Page => "Book tally — the host's ability scales with (or is discounted by) the page count.",
         CounterType::Lore => "Saga chapter tally — one added each turn; the matching chapter ability triggers.",
         CounterType::Level => "Level-up tally — reaching a level band grants larger stats and abilities.",
         CounterType::Fade => "Fading — remove one each upkeep; sacrifice this when none are left.",
