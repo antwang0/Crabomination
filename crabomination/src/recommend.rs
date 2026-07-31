@@ -46,7 +46,7 @@ use crate::draft::{
 use crate::game::GameState;
 use crate::mana::Color;
 use crate::player::Player;
-use crate::server::{Bot, RandomBot};
+use crate::server::{Bot, EvalWeights, RandomBot};
 
 /// Everything tunable about a recommender run. Maps 1:1 onto the client's
 /// simulation-settings panel; engine callers use `SimConfig::default()`.
@@ -760,6 +760,40 @@ pub fn generate_gauntlet(cfg: &SimConfig) -> Vec<GauntletDeck> {
 
 // ─────────────────────────────── simulation ──────────────────────────────
 
+/// Which bot drives a seat. The recommender only ever needs the scored
+/// bot and the uniform control, but the bot ladder pits two *evaluation
+/// profiles* against each other, so the seat pilot is a value rather than
+/// a bool.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Pilot {
+    /// The scored bot with a specific evaluation profile.
+    Scored(EvalWeights),
+    /// The pre-scoring uniform-random pick. Ladder control.
+    Uniform,
+}
+
+impl Pilot {
+    fn build(self) -> Box<dyn Bot> {
+        match self {
+            Pilot::Scored(w) => Box::new(RandomBot::with_weights(w)),
+            Pilot::Uniform => Box::new(RandomBot::uniform_baseline()),
+        }
+    }
+}
+
+impl Default for Pilot {
+    fn default() -> Self {
+        Pilot::Scored(EvalWeights::default())
+    }
+}
+
+impl From<bool> for Pilot {
+    /// `true` = the uniform control, matching the old `uniform_a` flags.
+    fn from(uniform: bool) -> Self {
+        if uniform { Pilot::Uniform } else { Pilot::default() }
+    }
+}
+
 /// Decided/undecided tally of `games` bot-vs-bot games between two decks,
 /// alternating which deck sits in seat 0 (turn order). `uniform_*` selects
 /// the legacy uniform-pick bot for that side (A/B ladders).
@@ -785,6 +819,26 @@ pub fn simulate_match_games(
     max_actions: usize,
     seed_base: Option<u64>,
 ) -> MatchTally {
+    simulate_match_games_piloted(
+        deck_a,
+        deck_b,
+        games,
+        [uniform_a.into(), uniform_b.into()],
+        max_actions,
+        seed_base,
+    )
+}
+
+/// [`simulate_match_games`] with an explicit pilot per side — the entry
+/// point the bot ladder uses to play evaluation profile A against B.
+pub fn simulate_match_games_piloted(
+    deck_a: &[CardFactory],
+    deck_b: &[CardFactory],
+    games: usize,
+    pilots: [Pilot; 2],
+    max_actions: usize,
+    seed_base: Option<u64>,
+) -> MatchTally {
     // Build the two seat arrangements ONCE (libraries loaded, unshuffled)
     // and clone per game — definitions are Arc'd, so a state clone is a
     // fraction of re-invoking ~80 card factories per game.
@@ -800,8 +854,13 @@ pub fn simulate_match_games(
             )
         });
         let template = if a_seat0 { &template_a0 } else { &template_b0 };
-        let uniform = if a_seat0 { [uniform_a, uniform_b] } else { [uniform_b, uniform_a] };
-        match play_one_game(template, uniform, max_actions, shuffle_rng.as_mut()) {
+        // Swap the pilots along with the decks so side A plays seat 0 and
+        // seat 1 equally often — turn order is worth a few points of win
+        // rate on its own and would otherwise be confounded with the
+        // profile under test.
+        let seated =
+            if a_seat0 { [pilots[0], pilots[1]] } else { [pilots[1], pilots[0]] };
+        match play_one_game(template, seated, max_actions, shuffle_rng.as_mut()) {
             Some(seat) => {
                 let a_won = (seat == 0) == a_seat0;
                 if a_won {
@@ -854,7 +913,7 @@ fn build_match_template(seat0: &[CardFactory], seat1: &[CardFactory]) -> GameSta
 /// server actor's fixed-point bot polling.
 fn play_one_game(
     template: &GameState,
-    uniform: [bool; 2],
+    pilots: [Pilot; 2],
     max_actions: usize,
     shuffle_rng: Option<&mut StdRng>,
 ) -> Option<usize> {
@@ -867,12 +926,7 @@ fn play_one_game(
         }
     }
     g.start_mulligan_phase();
-    let mut bots: Vec<Box<dyn Bot>> = uniform
-        .iter()
-        .map(|&u| -> Box<dyn Bot> {
-            if u { Box::new(RandomBot::uniform_baseline()) } else { Box::new(RandomBot::new()) }
-        })
-        .collect();
+    let mut bots: Vec<Box<dyn Bot>> = pilots.into_iter().map(Pilot::build).collect();
     let (mut actions, mut stale) = (0usize, 0usize);
     while !g.is_game_over() && actions < max_actions && stale < 8 {
         let mut any = false;

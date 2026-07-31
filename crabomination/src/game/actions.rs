@@ -10401,6 +10401,21 @@ impl GameState {
         events
     }
 
+    /// Preference rank for an auto-tap mana source: lower is tapped first.
+    /// Plain "{T}: add mana" sources cost nothing but the tap; life and
+    /// self-consuming sources (painlands, Lotus Petal, Chromatic Star) are
+    /// held back so a generic pip never eats a one-shot artifact or a
+    /// chunk of life while an ordinary land sits untapped.
+    fn mana_source_cost_rank(a: &crate::effect::ActivatedAbility) -> u8 {
+        if a.sac_cost || a.exile_self_cost || a.discard_cost.is_some() {
+            2
+        } else if a.life_cost > 0 || a.energy_cost > 0 {
+            1
+        } else {
+            0
+        }
+    }
+
     fn auto_tap_for_cost_inner(&mut self, player: usize, cost: &crate::mana::ManaCost) -> Vec<GameEvent> {
         let mut events = Vec::new();
 
@@ -10530,8 +10545,10 @@ impl GameState {
                 }
                 self.effective_mana_abilities(c.id).into_iter()
                     .find(|(_, a)| effect_produces_color(&a.effect, color))
-                    .map(|(idx, _)| (c.id, idx))
-            }).next();
+                    .map(|(idx, a)| (Self::mana_source_cost_rank(&a), c.id, idx))
+            // Cheapest source first; `min_by_key` keeps the first of equal
+            // ranks, so battlefield order still breaks ties as before.
+            }).min_by_key(|(rank, ..)| *rank).map(|(_, id, idx)| (id, idx));
             if let Some((id, idx)) = source {
                 let scripted = crate::decision::ScriptedDecider::new([
                     crate::decision::DecisionAnswer::Color(color),
@@ -10564,8 +10581,8 @@ impl GameState {
                     return None;
                 }
                 self.effective_mana_abilities(c.id).into_iter().next()
-                    .map(|(idx, _)| (c.id, idx))
-            }).next();
+                    .map(|(idx, a)| (Self::mana_source_cost_rank(&a), c.id, idx))
+            }).min_by_key(|(rank, ..)| *rank).map(|(_, id, idx)| (id, idx));
             let Some((id, idx)) = source else { break };
             if let Ok(mut evs) = self.activate_ability(id, idx, None, Vec::new(), None, None) {
                 events.append(&mut evs);

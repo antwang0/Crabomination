@@ -23,6 +23,182 @@ pub trait Bot: Send {
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction>;
 }
 
+/// Tunable weights for the bot's board evaluation, so a change to how the
+/// bot *values* things can be A/B-laddered against the previous numbers
+/// instead of argued about. Every profile is internally consistent: all
+/// non-permanent terms are expressed in multiples of [`unit`], so raising
+/// `unit` buys arithmetic resolution without moving any relative weight.
+///
+/// [`unit`]: EvalWeights::unit
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EvalWeights {
+    /// Value of one "point" on this profile's scale. Flat terms (hand
+    /// cards, life, the legendary premium, ...) are written as `n * unit`.
+    /// The baseline uses 1, which keeps the historical integer scores;
+    /// richer profiles use a larger unit so sub-point terms -- a keyword
+    /// worth two thirds of a power point -- survive integer division.
+    pub unit: i32,
+    /// Per-mana-value weight of a permanent.
+    pub cmc: i32,
+    /// Flat value of simply *being* a creature, before size. Forge's
+    /// evaluator opens at a constant 100 and adds power/toughness on top;
+    /// the historical weights here open at zero, which makes every other
+    /// creature term -- keywords especially -- proportionally far louder
+    /// than the reference they were calibrated against.
+    pub creature_base: i32,
+    /// Per-point weight of a creature's power and toughness.
+    pub power: i32,
+    pub toughness: i32,
+    /// Keyword scoring strength as a percentage (see [`keyword_value`]).
+    /// 0 disables it, which is the baseline: a 1/1 flying lifelinker reads
+    /// as a vanilla 1/1.
+    pub keyword_pct: i32,
+    /// Use the concave life curve (see [`life_value`]) instead of counting
+    /// life linearly. Life near zero is worth far more per point than life
+    /// near the starting total; a linear term prices them the same.
+    pub concave_life: bool,
+}
+
+impl EvalWeights {
+    /// The historical weights: mana value + power + toughness, one point
+    /// each, no keyword term, linear life. Kept exactly as-is so it stays
+    /// a valid ladder control -- and still the default, because nothing
+    /// tried against it has beaten it. See [`v2`](Self::v2).
+    pub const fn baseline() -> Self {
+        Self {
+            unit: 1,
+            cmc: 1,
+            creature_base: 0,
+            power: 1,
+            toughness: 1,
+            keyword_pct: 0,
+            concave_life: false,
+        }
+    }
+
+    /// Candidate weights ported from the reference AIs: body ratios and
+    /// power-scaled keyword terms from Forge's `CreatureEvaluator`, the
+    /// life curve from XMage's `ArtificialScoringSystem::LIFE_SCORES`,
+    /// `unit = 10` so those ratios survive integer division.
+    ///
+    /// **Measured worse than [`baseline`], and not adopted.** Over 12 000
+    /// laddered games it lands at 49.4 % (baseline 50.6 %, CI straddling
+    /// 50 %), and the [`keywords_only`] decomposition shows the keyword
+    /// term is the part that costs: pooled over 20 000 games the baseline
+    /// beats it 51.1 % [50.4 %, 51.8 %].
+    ///
+    /// Kept rather than deleted because the likely reason is *depth*, not
+    /// the weights. A richer evaluation of a position the bot can only
+    /// reach one action deep gives a greedy step more confidence without
+    /// more foresight. Both references consume their evaluator through a
+    /// search -- Forge fast-forwards a copy of the game to combat damage
+    /// before scoring and plans three plies of sequences, XMage runs
+    /// depth-4 alpha-beta -- so their keyword weights are calibrated for a
+    /// consumer this bot doesn't have yet. Re-ladder this profile once the
+    /// evaluator sees past the current action; that is the experiment this
+    /// result argues for, and re-porting it from scratch would be waste.
+    ///
+    /// [`baseline`]: Self::baseline
+    /// [`keywords_only`]: Self::keywords_only
+    pub const fn v2() -> Self {
+        Self {
+            unit: 10,
+            cmc: 10,
+            creature_base: 100,
+            power: 15,
+            toughness: 10,
+            keyword_pct: 100,
+            concave_life: true,
+        }
+    }
+
+    // -- Ladder decomposition profiles ---------------------------------
+    //
+    // A profile that bundles several changes can only ever be laddered as
+    // a bundle, and a bundle that loses tells you nothing about which part
+    // lost. These turn on one change at a time against a common scale.
+
+    /// Pure control: the baseline ratios at `unit = 10`. Every term is
+    /// exactly ten times the baseline's, so this *should* pick the same
+    /// actions and ladder at 50 % -- it measures 50.9 % [49.4 %, 52.5 %],
+    /// i.e. indistinguishable, which confirms the remaining scale-dependent
+    /// behavior (integer truncation in `score_candidate`, and the
+    /// fixed-size tie-break jitter, a tenth as influential at this scale)
+    /// costs nothing measurable. Run this before attributing a ladder
+    /// result to any of the weights themselves.
+    pub const fn scaled_control() -> Self {
+        Self {
+            unit: 10,
+            cmc: 10,
+            creature_base: 0,
+            power: 10,
+            toughness: 10,
+            keyword_pct: 0,
+            concave_life: false,
+        }
+    }
+
+    /// Scaled control + the keyword term only. **Measured worse than the
+    /// baseline**: 51.1 % to the baseline over 20 000 pooled games
+    /// ([50.4 %, 51.8 %]). See [`v2`](Self::v2) for why it is kept.
+    pub const fn keywords_only() -> Self {
+        Self { keyword_pct: 100, ..Self::scaled_control() }
+    }
+
+    /// Scaled control + a quarter-strength keyword term. Separates
+    /// "keywords are weighted too heavily" from "keyword scoring is the
+    /// wrong thing to feed this bot at all": if even a gentle version
+    /// loses, the problem is directional, not a magnitude to tune.
+    /// Measured neutral (50.1 % to the baseline).
+    pub const fn keywords_quarter() -> Self {
+        Self { keyword_pct: 25, ..Self::scaled_control() }
+    }
+
+    /// Scaled control + Forge's flat creature base only.
+    ///
+    /// This was the hypothesis for why the keyword port lost -- Forge's
+    /// keyword magnitudes are calibrated against a body term that opens at
+    /// a flat 100, where this evaluator opens at zero, so the same bonuses
+    /// land proportionally ~2.7x louder here. Adding the constant did not
+    /// help ([`base_and_keywords`] measured 52.4 % *to the baseline*, worse
+    /// than keywords alone), because the constant also shifts the
+    /// creature-to-card ratio from 4.5:1 to 12:1. Forge runs that ratio at
+    /// roughly 32:1; matching one term without the surrounding balance
+    /// moves everything.
+    ///
+    /// [`base_and_keywords`]: Self::base_and_keywords
+    pub const fn creature_base_only() -> Self {
+        Self { creature_base: 100, ..Self::scaled_control() }
+    }
+
+    /// The creature base plus keywords. **Measured worst of the lot**:
+    /// 52.4 % to the baseline. Retained as the record of a tested and
+    /// rejected hypothesis -- see [`creature_base_only`].
+    ///
+    /// [`creature_base_only`]: Self::creature_base_only
+    pub const fn base_and_keywords() -> Self {
+        Self { keyword_pct: 100, ..Self::creature_base_only() }
+    }
+
+    /// Scaled control + the concave life curve only. Measured neutral
+    /// (51.1 % to the baseline, CI straddling 50 %).
+    pub const fn life_only() -> Self {
+        Self { concave_life: true, ..Self::scaled_control() }
+    }
+
+    /// Scaled control + Forge's power-over-toughness emphasis only.
+    /// Measured neutral (50.4 % to the baseline, CI straddling 50 %).
+    pub const fn power_emphasis_only() -> Self {
+        Self { power: 15, ..Self::scaled_control() }
+    }
+}
+
+impl Default for EvalWeights {
+    fn default() -> Self {
+        Self::baseline()
+    }
+}
+
 /// Reference bot. Taps lands and plays a (roughly random) affordable card
 /// from hand, but combat is heuristic: it attacks with creatures that swing
 /// safely or profitably (evasion / first-strike / deathtouch / menace /
@@ -48,6 +224,9 @@ pub struct RandomBot {
     /// is lost, so the bot tracks what it has already committed to across
     /// consecutive prompts from the same source. `(source, cards, life)`.
     reveal_commit: Option<(CardId, usize, i32)>,
+    /// How this bot values the board. Ladder-selectable -- see
+    /// [`EvalWeights`].
+    weights: EvalWeights,
 }
 
 impl RandomBot {
@@ -58,7 +237,13 @@ impl RandomBot {
             blocks_declared: false,
             scored: true,
             reveal_commit: None,
+            weights: EvalWeights::default(),
         }
+    }
+
+    /// The scored bot piloted with a specific evaluation profile.
+    pub fn with_weights(weights: EvalWeights) -> Self {
+        Self { weights, ..Self::new() }
     }
 
     /// The pre-scoring reference bot: identical candidate enumeration and
@@ -155,7 +340,7 @@ impl Bot for RandomBot {
                             // cheap chaff die to its own upkeep.
                             state
                                 .battlefield_find(*source)
-                                .map(|c| permanent_value(state, c.id) >= 4)
+                                .map(|c| permanent_value(state, c.id, &self.weights) >= 4 * self.weights.unit)
                                 .unwrap_or(false)
                         } else if description.starts_with("Reveal the top card (") {
                             let (cards, life_committed) = match &self.reveal_commit {
@@ -191,7 +376,7 @@ impl Bot for RandomBot {
                     // AutoDecider chooses nothing; the bot exiles opponents'
                     // graveyard cards (deny graveyard value) up to the cap.
                     crate::decision::Decision::ChooseCards { prompt, candidates, min, max, .. } => {
-                        decide_choose_cards(state, seat, prompt, candidates, *min, *max)
+                        decide_choose_cards(&self.weights, state, seat, prompt, candidates, *min, *max)
                     }
                     // A self-discard (cleanup over max hand size, rummaging, a
                     // discard cost): every offered card is in our own hand and
@@ -214,7 +399,7 @@ impl Bot for RandomBot {
                     // permanent — or, when forced to choose among its own
                     // permanents, give up the *least* valuable.
                     crate::decision::Decision::ChooseTarget { legal, .. } if !legal.is_empty() => {
-                        decide_choose_target(state, seat, legal)
+                        decide_choose_target(state, seat, legal, &self.weights)
                     }
                     // AutoDecider answers every amount with 0, which turns
                     // "choose up to X" payoffs into no-ops and (worse) reads
@@ -223,7 +408,7 @@ impl Bot for RandomBot {
                     // with a real downside get their own rule.
                     crate::decision::Decision::ChooseAmount { prompt, max, .. } => {
                         let amount = if prompt.contains("destroy all creatures with power") {
-                            best_destroy_power_cutoff(state, seat, *max)
+                            best_destroy_power_cutoff(state, seat, *max, &self.weights)
                         } else if prompt.to_lowercase().contains("life") {
                             // Life payments: keep a buffer, never sink deep.
                             let spare = (state.effective_life(seat) - 10).max(0) as u32;
@@ -698,7 +883,7 @@ impl Bot for RandomBot {
                 }
             }
             TurnStep::PreCombatMain | TurnStep::PostCombatMain if is_active => {
-                Some(main_phase_action_with(state, seat, self.scored))
+                Some(main_phase_action_with(state, seat, self.scored, &self.weights))
             }
             // Opponent's end step with an empty stack — the bot's canonical
             // off-turn window. Reuse the whole scored main-phase enumeration:
@@ -708,10 +893,10 @@ impl Bot for RandomBot {
             // drop out of the candidate set. Without this, every non-counter
             // instant was dead in hand until the bot's own main phase.
             TurnStep::End if !is_active && state.stack.is_empty() => {
-                Some(main_phase_action_with(state, seat, self.scored))
+                Some(main_phase_action_with(state, seat, self.scored, &self.weights))
             }
             _ => Some(
-                pick_stack_response(state, seat)
+                pick_stack_response(state, seat, &self.weights)
                     .or_else(|| pick_ability_counter_response(state, seat))
                     .unwrap_or(GameAction::PassPriority),
             ),
@@ -790,7 +975,7 @@ fn attacker_damage_value(state: &GameState, id: CardId) -> i32 {
 /// bot itself, or it's expensive), cast a counterspell from hand at it.
 /// The `would_accept` dry-run is the final gate (timing, mana via
 /// auto-tap, per-counter target filters like Spell Snare's MV gate).
-fn pick_stack_response(state: &GameState, seat: usize) -> Option<GameAction> {
+fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     use crate::game::types::StackItem;
     let (spell_id, threat) = state.stack.iter().rev().find_map(|si| {
         let StackItem::Spell { card, caster, target, uncounterable, .. } = si else {
@@ -804,10 +989,12 @@ fn pick_stack_response(state: &GameState, seat: usize) -> Option<GameAction> {
         // "anything ≥ 3 cmc or pointed at us" gate, which burned
         // Counterspell on 3-mana value creatures and face burn at 20 life.
         let def = &card.definition;
-        let mut threat = def.cost.cmc() as i32;
+        // Raw card stats lifted onto the profile's scale so the
+        // `permanent_value` term below and the bar at the bottom agree.
+        let mut threat = def.cost.cmc() as i32 * w.unit;
         if def.card_types.contains(&crate::card::CardType::Creature) {
-            threat += def.power.max(0) + def.toughness.max(0);
-            threat += (def.keywords.len() as i32).min(3);
+            threat += (def.power.max(0) + def.toughness.max(0)) * w.unit;
+            threat += (def.keywords.len() as i32).min(3) * w.unit;
         }
         match target {
             // Aimed at one of our permanents: the spell is worth what
@@ -815,13 +1002,13 @@ fn pick_stack_response(state: &GameState, seat: usize) -> Option<GameAction> {
             Some(crate::game::Target::Permanent(id))
                 if state.battlefield_find(*id).is_some_and(|c| c.controller == seat) =>
             {
-                threat += permanent_value(state, *id);
+                threat += permanent_value(state, *id, w);
             }
             // Aimed at our face: mildly threatening, urgent when low.
             Some(crate::game::Target::Player(p)) if *p == seat => {
-                threat += 6;
+                threat += 6 * w.unit;
                 if state.effective_life(seat) <= 10 {
-                    threat += 8;
+                    threat += 8 * w.unit;
                 }
             }
             _ => {}
@@ -830,7 +1017,7 @@ fn pick_stack_response(state: &GameState, seat: usize) -> Option<GameAction> {
     })?;
     // Hold the counter below this bar — a vanilla two-drop or an early
     // cantrip isn't worth the bot's only interaction.
-    if threat < 10 {
+    if threat < 10 * w.unit {
         return None;
     }
     let mut counters: Vec<&crate::card::CardInstance> = state.players[seat]
@@ -1186,22 +1373,155 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
 /// most impactful hit, not the first one, and certainly not fizzle like the
 /// stock `AutoDecider`.
 /// Rough board value of a permanent for target selection: mana value + size,
-/// plus a loyalty term for planeswalkers and a small legendary premium.
-fn permanent_value(state: &GameState, id: crate::card::CardId) -> i32 {
+/// plus a loyalty term for planeswalkers and a small legendary premium. When
+/// the profile enables it, a keyword term (see [`keyword_value`]) too.
+fn permanent_value(state: &GameState, id: crate::card::CardId, w: &EvalWeights) -> i32 {
     use crate::card::{CardType, CounterType, Supertype};
     let Some(c) = state.computed_permanent(id) else { return 0 };
     let inst = state.battlefield_find(id);
-    let mut v = inst.map(|c| c.definition.cost.cmc() as i32).unwrap_or(0);
+    let mut v = inst.map(|c| c.definition.cost.cmc() as i32).unwrap_or(0) * w.cmc;
     if c.card_types.contains(&CardType::Creature) {
-        v += c.power.max(0) + c.toughness.max(0);
+        v += w.creature_base + c.power.max(0) * w.power + c.toughness.max(0) * w.toughness;
+        if w.keyword_pct != 0 {
+            v += keyword_value(&c.keywords, c.power, w) * w.keyword_pct / 100;
+        }
     }
     if c.card_types.contains(&CardType::Planeswalker) {
-        v += inst.map(|c| c.counter_count(CounterType::Loyalty) as i32).unwrap_or(0);
+        v += inst.map(|c| c.counter_count(CounterType::Loyalty) as i32).unwrap_or(0) * w.unit;
     }
     if c.supertypes.contains(&Supertype::Legendary) {
-        v += 2;
+        v += 2 * w.unit;
     }
     v
+}
+
+/// Keyword contribution to a creature's board value, in `w.unit`-scaled
+/// points. Ported from Forge's `CreatureEvaluator`, whose central idea is
+/// that keywords split into two families:
+///
+/// * **Offensive** -- evasion and damage riders are worth what they let the
+///   body actually deal, so they scale with power. Flying on a 5/5 is a
+///   five-point-per-turn clock; flying on a 1/1 is a chump-blocker that
+///   dodges. Pricing both at a flat bonus is the mistake this fixes.
+/// * **Defensive** -- protection and resilience are worth roughly the same
+///   whatever the body, so they're flat. Hexproof on a 1/1 and on a 5/5
+///   both buy exactly "removal doesn't answer this".
+///
+/// Bad keywords subtract, and a creature that can neither attack nor block
+/// collapses to a token value regardless of its printed size.
+fn keyword_value(keywords: &[crate::card::Keyword], power: i32, w: &EvalWeights) -> i32 {
+    use crate::card::Keyword;
+    let p = power.max(0);
+    let has = |k: &Keyword| keywords.contains(k);
+    // A body that can't attack or block is nearly inert: no size term
+    // survives, only the mana it represents. Checked first so the
+    // offensive terms below can't rescue a Pacifism'd fatty.
+    let inert = (has(&Keyword::CantAttack) || has(&Keyword::Defender))
+        && (has(&Keyword::CantBlock) || has(&Keyword::Decayed));
+    if inert {
+        return -(p * w.power + w.unit);
+    }
+    let mut v = 0;
+    // -- Offensive: scaled by power ------------------------------------
+    if has(&Keyword::Flying) || has(&Keyword::Horsemanship) || has(&Keyword::Shadow) {
+        v += p * 2 * w.unit / 3;
+    }
+    if has(&Keyword::Fear) || has(&Keyword::Intimidate) {
+        v += p * 2 * w.unit / 5;
+    }
+    if has(&Keyword::Menace) {
+        v += p * w.unit / 4;
+    }
+    if has(&Keyword::DoubleStrike) {
+        v += w.unit + p * w.unit;
+    } else if has(&Keyword::FirstStrike) {
+        v += w.unit + p * w.unit / 3;
+    }
+    if has(&Keyword::Lifelink) {
+        v += p * 2 * w.unit / 3;
+    }
+    if has(&Keyword::Infect) {
+        v += p * w.unit;
+    } else if has(&Keyword::Wither) {
+        v += p * 2 * w.unit / 3;
+    }
+    if p > 1 && has(&Keyword::Trample) {
+        v += (p - 1) * w.unit / 3;
+    }
+    if has(&Keyword::Vigilance) {
+        v += p * w.unit / 3;
+    }
+    for k in keywords {
+        match k {
+            Keyword::Toxic(n) | Keyword::Poisonous(n) => v += *n as i32 * w.unit / 3,
+            Keyword::Annihilator(n) => v += *n as i32 * 3 * w.unit,
+            Keyword::Rampage(n) | Keyword::Bushido(n) => v += *n as i32 * w.unit,
+            _ => {}
+        }
+    }
+    // -- Defensive: flat -----------------------------------------------
+    if has(&Keyword::Indestructible) {
+        v += 5 * w.unit;
+    }
+    if has(&Keyword::Deathtouch) {
+        v += 2 * w.unit;
+    }
+    if has(&Keyword::Hexproof) {
+        v += 2 * w.unit;
+    } else if has(&Keyword::Shroud) {
+        // Shroud is strictly worse than hexproof for its controller: it
+        // blocks our own auras, equipment and pump spells too.
+        v += 3 * w.unit / 2;
+    }
+    if has(&Keyword::Reach) && !has(&Keyword::Flying) {
+        v += w.unit / 2;
+    }
+    // -- Bad -----------------------------------------------------------
+    if has(&Keyword::Defender) || has(&Keyword::CantAttack) {
+        v -= p * w.power * 2 / 3 + w.unit;
+    }
+    if has(&Keyword::CantBlock) || has(&Keyword::Decayed) {
+        v -= w.unit;
+    }
+    v
+}
+
+/// Value of a life total, in `w.unit`-scaled points.
+///
+/// Life is not linear: the first few points are the difference between
+/// losing and not, while points near the starting total are close to
+/// worthless. A linear term prices "gain 3" the same at 3 life and at 20,
+/// so the bot over-values incidental lifegain when healthy and under-values
+/// it when it's actually dying. The curve is XMage's `LIFE_SCORES` shape
+/// (`ArtificialScoringSystem`), rescaled so that 20 life is worth the same
+/// 20 points it was under the linear term -- only the shape changes, which
+/// keeps this comparable against the baseline on the ladder without a
+/// wholesale re-tune of every other weight.
+///
+/// Expressed in tenths of a point (then scaled by `unit`) so the curve stays
+/// strictly increasing under integer arithmetic -- a flat spot would make
+/// "gain 1 life" evaluate to exactly zero.
+fn life_value(life: i32, w: &EvalWeights) -> i32 {
+    if !w.concave_life {
+        return life * w.unit;
+    }
+    /// Tenths of a point per life total, index = life, 0..=20.
+    const LIFE_TENTHS: [i32; 21] = [
+        0, 20, 40, 60, 80, 90, 100, 110, 120, 130, 140, 148, 156, 164, 172, 180, 184, 188, 192,
+        196, 200,
+    ];
+    const MAX: i32 = LIFE_TENTHS.len() as i32 - 1;
+    let tenths = if life <= 0 {
+        0
+    } else if life <= MAX {
+        LIFE_TENTHS[life as usize]
+    } else {
+        // Past the starting total each extra point is worth the same as the
+        // shallowest part of the curve (0.4), not nothing -- Ad Nauseam and
+        // friends do care about a big buffer.
+        LIFE_TENTHS[MAX as usize] + (life - MAX) * 4
+    };
+    tenths * w.unit / 10
 }
 
 /// Keep-value for deciding which of the bot's *own* permanents to give up (to an
@@ -1209,11 +1529,11 @@ fn permanent_value(state: &GameState, id: crate::card::CardId) -> i32 {
 /// `permanent_value`, which ranks removal targets: here a token is the ideal
 /// thing to lose (it can't be recast and vanishes on leaving), so it sorts
 /// strictly below every real card, even a bare land of `permanent_value` 0.
-fn sacrifice_keep_value(state: &GameState, id: crate::card::CardId) -> i32 {
+fn sacrifice_keep_value(state: &GameState, id: crate::card::CardId, w: &EvalWeights) -> i32 {
     if state.battlefield_find(id).is_some_and(|c| c.is_token) {
         return -1;
     }
-    permanent_value(state, id)
+    permanent_value(state, id, w)
 }
 
 /// Bot heuristic for `Decision::ChooseTarget` (votes, edicts, free-floating
@@ -1226,6 +1546,7 @@ fn decide_choose_target(
     state: &GameState,
     seat: usize,
     legal: &[crate::game::types::Target],
+    w: &EvalWeights,
 ) -> crate::decision::DecisionAnswer {
     use crate::decision::DecisionAnswer;
     use crate::game::types::Target;
@@ -1237,7 +1558,7 @@ fn decide_choose_target(
             Target::Permanent(id) if owner(*id).is_some_and(|o| o != seat) => Some(*id),
             _ => None,
         })
-        .max_by_key(|id| permanent_value(state, *id));
+        .max_by_key(|id| permanent_value(state, *id, w));
     if let Some(id) = best_opp {
         return DecisionAnswer::Target(Target::Permanent(id));
     }
@@ -1249,7 +1570,7 @@ fn decide_choose_target(
             Target::Permanent(id) if owner(*id) == Some(seat) => Some(*id),
             _ => None,
         })
-        .min_by_key(|id| sacrifice_keep_value(state, *id));
+        .min_by_key(|id| sacrifice_keep_value(state, *id, w));
     if let Some(id) = worst_own {
         return DecisionAnswer::Target(Target::Permanent(id));
     }
@@ -1380,6 +1701,7 @@ fn decide_library_search(
 /// - **Exile from graveyards** (Collect Evidence / Fateseal-style): exile every
 ///   offered card an opponent owns, up to `max`, skipping the bot's own.
 fn decide_choose_cards(
+    w: &EvalWeights,
     state: &GameState,
     seat: usize,
     prompt: &str,
@@ -1435,7 +1757,7 @@ fn decide_choose_cards(
                 .iter()
                 .filter_map(|(id, _)| {
                     let c = state.battlefield.iter().find(|c| c.id == *id)?;
-                    (c.controller == seat).then(|| (*id, sacrifice_keep_value(state, c.id)))
+                    (c.controller == seat).then(|| (*id, sacrifice_keep_value(state, c.id, w)))
                 })
                 .collect();
             own.sort_by_key(|(_, v)| *v);
@@ -1640,10 +1962,15 @@ fn decide_mulligan(
 
 #[cfg(test)]
 fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
-    main_phase_action_with(state, seat, true)
+    main_phase_action_with(state, seat, true, &EvalWeights::default())
 }
 
-fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameAction {
+fn main_phase_action_with(
+    state: &GameState,
+    seat: usize,
+    scored: bool,
+    w: &EvalWeights,
+) -> GameAction {
     // One library-stripped probe template per tick: every candidate dry-run
     // below re-clones this light template instead of the full state. The
     // library is the largest part of a `GameState` clone and cast/activate/
@@ -1651,47 +1978,24 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
     // so this turns N full-deck clones into one + N light ones.
     let probe = state.affordance_probe_template();
 
-    // Tap the first untapped land THE BOT CURRENTLY CONTROLS, one call
-    // at a time so each mana ability surfaces as its own event. The
-    // `controller`-not-`owner` filter is a cheap pre-filter; the
-    // dry-run gate below enforces it definitively (controller might
-    // have flipped via Threaten / Mind Control between the bot's
-    // last tick and now, etc.).
-    if let Some(id) = state
-        .battlefield
-        .iter()
-        .find(|c| c.controller == seat && c.definition.is_land() && !c.tapped)
-        .map(|c| c.id)
-    {
-        let action = GameAction::ActivateAbility {
-            card_id: id,
-            ability_index: 0,
-            target: None,
-            additional_targets: Vec::new(),
-            x_value: None, mode: None,
-        };
-        if GameState::would_accept_on(&probe, action.clone()) {
-            return action;
-        }
-    }
-
-    // After lands are exhausted, tap non-land "free" mana rocks (Sol Ring,
-    // Mind Stone-style) so their mana counts toward the pool. Only auto-
-    // handled mana abilities are eligible — color-choice and sacrifice-
-    // cost abilities (Lotus Petal, Chromatic Star) are skipped to avoid
-    // pointlessly destroying utility artifacts.
-    if let Some((id, idx)) = find_free_mana_rock(state, seat) {
-        let action = GameAction::ActivateAbility {
-            card_id: id,
-            ability_index: idx,
-            target: None,
-            additional_targets: Vec::new(),
-            x_value: None, mode: None,
-        };
-        if GameState::would_accept_on(&probe, action.clone()) {
-            return action;
-        }
-    }
+    // NOTE: the bot deliberately does *not* pre-tap its mana sources here.
+    //
+    // It used to: one untapped land per tick until the board was empty,
+    // which is what made `can_afford_in_state` work off the floating pool.
+    // The cost was severe and invisible to the unit tests (which all
+    // pre-fill `mana_pool` by hand). Pools empty at every step and phase
+    // boundary (CR 500.4), so tapping out in the precombat main left the
+    // bot with nothing for its own postcombat main and nothing at all on
+    // the opponent's turn: measured over 20 bot-vs-bot games, zero of 1366
+    // opponent-turn priority windows had a single untapped land, and 100 %
+    // of spells were cast in the precombat main. `pick_stack_response`,
+    // `pick_ability_counter_response`, `pick_combat_trick` and the
+    // end-of-turn instant window below were all dead code in real play.
+    //
+    // Now the engine's auto-tap pays each cast from only the sources it
+    // needs (`try_pay_with_auto_tap`, which `would_accept_on` already runs
+    // for every candidate), so leftover mana simply stays untapped and is
+    // still there at instant speed.
 
     // Build list of castable non-land spells. Affordability + target
     // pre-filters reduce the candidate set; the FINAL gate is still the
@@ -1747,7 +2051,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
                 // No friendly host at all → skip the candidate rather than
                 // let the fallback pump an opposing creature.
                 let (target, additional_targets) = if is_beneficial_aura(&c.definition) {
-                    (Some(beneficial_aura_host(state, seat, c)?), vec![])
+                    (Some(beneficial_aura_host(state, seat, c, w)?), vec![])
                 } else if mode_effect.requires_target() {
                     let (t, extras) =
                         state.auto_targets_for_effect_all_slots(mode_effect, seat, mode);
@@ -2615,7 +2919,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
             let mut ranked: Vec<(i32, GameAction, bool)> = pool
                 .into_iter()
                 .map(|(a, ok)| {
-                    (score_candidate(state, seat, &a) * 4 + r.random_range(0..4) as i32, a, ok)
+                    (score_candidate(state, seat, &a, w) * 4 + r.random_range(0..4) as i32, a, ok)
                 })
                 .collect();
             if has_magecraft {
@@ -2636,7 +2940,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
                     finalists.push((s, a));
                 }
             }
-            if let Some(best) = pick_by_outcome(state, seat, finalists) {
+            if let Some(best) = pick_by_outcome(state, seat, finalists, w) {
                 return best;
             }
         }
@@ -2680,7 +2984,7 @@ fn main_phase_action_with(state: &GameState, seat: usize, scored: bool) -> GameA
     // first usable ability per walker (engine enforces sorcery timing and
     // once-per-turn). The candidate set is dry-run-gated so failed targets
     // / over-spent loyalty / opp-controlled-walker rejections drop out.
-    if let Some(action) = pick_loyalty_ability(state, seat) {
+    if let Some(action) = pick_loyalty_ability(state, seat, w) {
         return action;
     }
 
@@ -3713,7 +4017,7 @@ fn pick_attach_ability(state: &GameState, seat: usize) -> Option<GameAction> {
 /// that require a target. Prefers a +loyalty ability when available
 /// (preserves the walker for next turn), falling back to the ability with
 /// the smallest absolute loyalty cost so we don't suicide-ult immediately.
-fn pick_loyalty_ability(state: &GameState, seat: usize) -> Option<GameAction> {
+fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     for card in &state.battlefield {
         if card.controller != seat {
             continue;
@@ -3763,10 +4067,10 @@ fn pick_loyalty_ability(state: &GameState, seat: usize) -> Option<GameAction> {
                 x_value,
             };
             if state.would_accept(action.clone()) {
-                finalists.push((score_candidate(state, seat, &action), action));
+                finalists.push((score_candidate(state, seat, &action, w), action));
             }
         }
-        if let Some(best) = pick_by_outcome(state, seat, finalists) {
+        if let Some(best) = pick_by_outcome(state, seat, finalists, w) {
             return Some(best);
         }
     }
@@ -4366,71 +4670,6 @@ fn min_blockers_required(attacker: &crate::card::CardInstance) -> usize {
     min
 }
 
-/// Find an untapped, non-land permanent the bot controls whose first
-/// activated ability is a "free" mana ability — `{T}: Add <fixed mana>` with
-/// no extra cost (no mana_cost, no sac_cost) and a deterministic payload
-/// (Colors or Colorless, not AnyOneColor / AnyColors which require a
-/// choice). Returns `(card_id, ability_index)`.
-///
-/// Used by the bot to tap mana rocks like Sol Ring and Mind Stone in the
-/// main phase. Sac-cost mana sources (Lotus Petal, Chromatic Star) and
-/// color-choice abilities are skipped — both can be valuable to keep around
-/// or activate at a smarter time.
-fn find_free_mana_rock(state: &GameState, seat: usize) -> Option<(CardId, usize)> {
-    state
-        .battlefield
-        .iter()
-        .filter(|c| c.controller == seat && !c.tapped && !c.definition.is_land())
-        .filter(|c| !c.summoning_sick)
-        .find_map(|c| {
-            c.definition
-                .activated_abilities
-                .iter()
-                .enumerate()
-                .find(|(_, a)| is_free_mana_ability(a))
-                .map(|(i, _)| (c.id, i))
-        })
-}
-
-fn is_free_mana_ability(a: &ActivatedAbility) -> bool {
-    if !a.tap_cost || a.sac_cost || a.life_cost > 0 || !a.mana_cost.symbols.is_empty() {
-        return false;
-    }
-    // Reject abilities carrying any *additional* resource cost beyond the tap:
-    // sacrificing / bouncing / tapping / exiling other permanents, discarding,
-    // exiling the source, paying energy, or a "from graveyard/hand"/gated
-    // activation. The bot shouldn't burn those just to float a mana mid-tap.
-    // (Quirion Ranger, Witch's Oven, Heritage Druid, energy taplands, etc.)
-    if a.sac_other_filter.is_some()
-        || a.bounce_other_filter.is_some()
-        || a.tap_other_filter.is_some()
-        || a.tap_n_filter.is_some()
-        || a.exile_other_filter.is_some()
-        || a.discard_cost.is_some()
-        || a.exile_self_cost
-        || a.energy_cost > 0
-        || a.collect_evidence_cost.is_some()
-        || a.condition.is_some()
-        || a.from_graveyard
-        || a.from_hand
-    {
-        return false;
-    }
-    // Plain fixed-color / colorless rocks (Sol Ring, Mind Stone) plus
-    // fixed-multicolor `OfColor` rocks — all decision-free, so the bot can
-    // tap them and keep sequencing toward a cast. *Choice* sources
-    // (`AnyOneColor`) are excluded on purpose: a mid-sequence `ChooseColor`
-    // breaks the tap-then-cast flow (see `bot_does_not_tap_color_choice_mana_source`).
-    // Damage / life-loss riders (painlands; the `life_cost > 0` guard above)
-    // are excluded so the bot doesn't hurt itself for a free tap.
-    matches!(
-        &a.effect,
-        Effect::AddMana {
-            pool: ManaPayload::Colors(_) | ManaPayload::Colorless(_) | ManaPayload::OfColor(_, _),
-            ..
-        }
-    )
-}
 
 /// True if the player can pay the card's mana cost from their current
 /// pool **including** static-ability cost increases (Damping Sphere's
@@ -4443,9 +4682,139 @@ pub fn can_afford(def: &CardDefinition, pool: &ManaPool) -> bool {
     can_afford_with_extra(&def.cost, pool, 0, 0)
 }
 
+/// What `seat` could still pay with this phase: mana already floating,
+/// plus the most each *untapped* source they control could add.
+///
+/// The bot used to answer "can I afford this?" against the floating pool
+/// alone, which only worked because it tapped every land before deciding
+/// anything. That made the pool an accurate picture of its mana -- and
+/// left it with none for the rest of the turn (CR 500.4 empties the pool
+/// at every step boundary), so counterspells, flash creatures, instant
+/// removal and combat tricks were unplayable in practice. Sizing against
+/// untapped sources instead lets the engine's auto-tap pay each cast from
+/// only what it needs, and whatever is left over survives into the
+/// opponent's turn.
+#[derive(Debug, Default, Clone, Copy)]
+struct AvailableMana {
+    /// Upper bound on the number of mana that could be produced.
+    total: u32,
+    /// Colors at least one source could produce.
+    colors: crate::mana::ColorSet,
+    /// Whether true colorless ({C}) is producible.
+    colorless: bool,
+}
+
+/// Estimate [`AvailableMana`] for `seat`.
+///
+/// Deliberately **optimistic**: it ignores the assignment problem (which
+/// source pays which pip), counts every color a choice-source could make,
+/// and rounds dynamic amounts down to one rather than giving up. That is
+/// the right bias, because this is only a pre-filter -- the authoritative
+/// gate on every candidate is still `would_accept_on`, which runs the
+/// engine's real auto-tap. An over-permissive estimate costs a few extra
+/// dry-run probes; an under-permissive one silently makes castable spells
+/// invisible to the bot, which is exactly the failure being fixed here.
+fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
+    use crate::mana::{Color, ColorSet};
+    let pool = &state.players[seat].mana_pool;
+    let mut out = AvailableMana {
+        total: pool.total(),
+        colors: ColorSet::empty(),
+        colorless: pool.colorless_amount() > 0,
+    };
+    for c in Color::ALL {
+        if pool.amount(c) > 0 {
+            out.colors.insert(c);
+        }
+    }
+    for p in state.battlefield.iter().filter(|p| p.controller == seat && !p.tapped) {
+        // Printed abilities plus anything granted to it (Cryptolith Rite
+        // turning creatures into mana sources, Urza's Saga chapters), so a
+        // granted mana ability doesn't read as "no mana here".
+        let granted = state.granted_abilities_for(p.id);
+        let mut best = 0u32;
+        for a in p.definition.activated_abilities.iter().chain(granted.iter()) {
+            if !is_countable_mana_ability(a) {
+                continue;
+            }
+            let (amount, colors, colorless) = mana_ability_output(&a.effect);
+            best = best.max(amount);
+            out.colors = out.colors.union(colors);
+            out.colorless |= colorless;
+        }
+        out.total += best;
+    }
+    out
+}
+
+/// A mana ability the bot is willing to count toward affordability: it
+/// costs a tap and nothing the bot would regret.
+///
+/// We only need to know the mana *could* be paid, so color-choice sources
+/// (dual lands, Birds of Paradise) and painland-style life costs count --
+/// the engine's auto-tap will happily use them. Sources that consume a
+/// real resource to fire (sacrifice, discard, exile, energy) are excluded:
+/// counting them would have the bot commit to lines it can only pay for by
+/// spending something it would rather keep.
+fn is_countable_mana_ability(a: &ActivatedAbility) -> bool {
+    a.tap_cost
+        && a.mana_cost.symbols.is_empty()
+        && !a.sac_cost
+        && a.sac_other_filter.is_none()
+        && a.bounce_other_filter.is_none()
+        && a.tap_other_filter.is_none()
+        && a.tap_n_filter.is_none()
+        && a.exile_other_filter.is_none()
+        && a.discard_cost.is_none()
+        && !a.exile_self_cost
+        && a.energy_cost == 0
+        && a.collect_evidence_cost.is_none()
+        && a.condition.is_none()
+        && !a.from_graveyard
+        && !a.from_hand
+        && matches!(a.effect, Effect::AddMana { .. })
+}
+
+/// `(most mana produced, colors it could be, produces true colorless)` for
+/// a mana ability's effect. Dynamic amounts (`{T}: add {G} equal to this
+/// creature's power`) count as one -- enough to keep the source visible
+/// without inventing a board state to measure it against.
+fn mana_ability_output(eff: &Effect) -> (u32, crate::mana::ColorSet, bool) {
+    use crate::effect::Value;
+    use crate::mana::{Color, ColorSet};
+    let mut colors = ColorSet::empty();
+    accumulate_mana_colors(eff, &mut colors);
+    let amount_of = |v: &Value| match v {
+        Value::Const(n) => (*n).max(0) as u32,
+        _ => 1,
+    };
+    let Effect::AddMana { pool, .. } = eff else { return (0, colors, false) };
+    let (amount, colorless) = match pool {
+        ManaPayload::Colors(cs) => (cs.len() as u32, false),
+        ManaPayload::Colorless(v) => (amount_of(v), true),
+        ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => (amount_of(v), false),
+        ManaPayload::AnyOneColor(v) | ManaPayload::AnyColors(v) => {
+            for c in Color::ALL {
+                colors.insert(c);
+            }
+            (amount_of(v), false)
+        }
+        // "Any color an opponent's land could produce" and friends: the
+        // exact palette depends on a board read this estimate doesn't do,
+        // so assume the source is live for any color.
+        _ => {
+            for c in Color::ALL {
+                colors.insert(c);
+            }
+            (1, true)
+        }
+    };
+    (amount, colors, colorless)
+}
+
 /// State-aware affordability check: queries the engine for any
 /// per-spell tax that would apply (Damping Sphere etc.) and folds it
-/// into the cost before testing the pool. Used by the random bot to
+/// into the cost before testing what `seat` can produce. Used by the bot to
 /// avoid submitting `CastSpell` actions that the engine will reject
 /// with a mana shortfall — repeated rejections are what deadlocked
 /// `debug/deadlock-t8-1777411577-473115700.json` (Damping Sphere on
@@ -4465,7 +4834,38 @@ pub fn can_afford_in_state(
     // Mirror the payment funnel's Lattice relaxation so the bot doesn't
     // pass on a spell whose coloured pips any mana can now cover.
     let cost = state.relax_cost_colors(&card.definition.cost);
-    can_afford_with_extra(&cost, &state.players[seat].mana_pool, extra, reduction)
+    can_afford_from(&cost, &available_mana(state, seat), extra, reduction)
+}
+
+/// Could `printed` be paid from `have`? Two independent tests: enough
+/// total mana for the (taxed, reduced) mana value, and a producible
+/// source for every coloured pip.
+///
+/// Hybrid pips pass if *either* half is producible and Phyrexian pips
+/// always pass (life is a legal payment), matching what the real payment
+/// funnel will accept.
+fn can_afford_from(
+    printed: &ManaCost,
+    have: &AvailableMana,
+    extra_generic: u32,
+    reduction: u32,
+) -> bool {
+    use crate::mana::ManaSymbol;
+    let mut cost = if printed.has_x() { printed.with_x_value(0) } else { printed.clone() };
+    if reduction > 0 {
+        cost.reduce_generic(reduction);
+    }
+    if cost.cmc() + extra_generic > have.total {
+        return false;
+    }
+    cost.symbols.iter().all(|s| match s {
+        ManaSymbol::Colored(c) => have.colors.contains(*c),
+        ManaSymbol::Hybrid(a, b) => have.colors.contains(*a) || have.colors.contains(*b),
+        // Phyrexian pips are payable with 2 life, so they never gate.
+        ManaSymbol::Phyrexian(_) | ManaSymbol::PhyrexianHybrid(_, _) => true,
+        ManaSymbol::Colorless(_) => have.colorless,
+        _ => true,
+    })
 }
 
 /// For an X-cost spell (or a spell whose effect reads
@@ -4489,7 +4889,10 @@ pub fn max_affordable_x(
     card: &crate::card::CardInstance,
 ) -> u32 {
     if !x_relevant(&card.definition) { return 0; }
-    let pool_total = state.players[seat].mana_pool.total();
+    // Everything the seat could still produce, not just what's floating --
+    // see `available_mana`. Sizing X off the floating pool alone only
+    // worked back when the bot tapped out before deciding anything.
+    let pool_total = available_mana(state, seat).total;
     let fixed_cmc = card.definition.cost.with_x_value(0).cmc();
     let extra = state.extra_cost_for_card_in_hand(seat, card.id);
     let needed = fixed_cmc + extra;
@@ -4713,6 +5116,7 @@ fn beneficial_aura_host(
     state: &GameState,
     seat: usize,
     aura: &crate::card::CardInstance,
+    w: &EvalWeights,
 ) -> Option<crate::game::Target> {
     let def = &aura.definition;
     if !is_beneficial_aura(def) {
@@ -4724,7 +5128,7 @@ fn beneficial_aura_host(
         .iter()
         .filter(|c| c.controller == seat && c.definition.is_creature())
         .collect();
-    hosts.sort_by_key(|c| std::cmp::Reverse(permanent_value(state, c.id)));
+    hosts.sort_by_key(|c| std::cmp::Reverse(permanent_value(state, c.id, w)));
     hosts
         .into_iter()
         .map(|c| crate::game::Target::Permanent(c.id))
@@ -4737,14 +5141,14 @@ fn beneficial_aura_host(
 /// Best cutoff for "choose a number; destroy all creatures with power ≥
 /// it": maximize destroyed enemy value minus destroyed own value,
 /// breaking ties upward (spare more of everyone's board when equal).
-fn best_destroy_power_cutoff(state: &GameState, seat: usize, max: u32) -> u32 {
+fn best_destroy_power_cutoff(state: &GameState, seat: usize, max: u32, w: &EvalWeights) -> u32 {
     let mut best = (i32::MIN, 0u32);
     for n in 0..=max {
         let mut score = 0i32;
         for c in state.battlefield.iter().filter(|c| c.definition.is_creature()) {
             let power = state.computed_permanent(c.id).map(|cp| cp.power).unwrap_or(c.power());
             if power >= n as i32 {
-                let v = permanent_value(state, c.id);
+                let v = permanent_value(state, c.id, w);
                 score += if c.controller == seat { -v } else { v };
             }
         }
@@ -4817,11 +5221,11 @@ fn first_damage_amount(effect: &Effect, x: u32) -> Option<i32> {
 /// per permanent, opponents' counted against), hand size (×2), and life.
 /// Deliberately coarse — it's compared between candidate *outcomes* of the
 /// same tick, so shared terms cancel and only the action's delta matters.
-fn eval_material(state: &GameState, seat: usize) -> i32 {
+fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
     if let Some(over) = state.game_over {
         return match over {
-            Some(winner) if winner == seat => 100_000,
-            Some(_) => -100_000,
+            Some(winner) if winner == seat => 100_000 * w.unit,
+            Some(_) => -100_000 * w.unit,
             None => 0,
         };
     }
@@ -4831,9 +5235,9 @@ fn eval_material(state: &GameState, seat: usize) -> i32 {
         // registers and land destruction isn't free, without a flooded
         // board dominating the material count.
         let pv = if c.definition.is_land() {
-            2
+            2 * w.unit
         } else {
-            let mut pv = permanent_value(state, c.id);
+            let mut pv = permanent_value(state, c.id, w);
             // Loyalty is a spendable RESOURCE, not material: counting it
             // here made every plus ability self-rewarding (+2 loyalty
             // read as +6 material for free) and every ultimate
@@ -4841,7 +5245,7 @@ fn eval_material(state: &GameState, seat: usize) -> i32 {
             // up forever. `permanent_value` keeps the loyalty term for
             // removal targeting — a fat walker is still the best target.
             if c.definition.is_planeswalker() {
-                pv -= c.counter_count(crate::card::CounterType::Loyalty) as i32;
+                pv -= c.counter_count(crate::card::CounterType::Loyalty) as i32 * w.unit;
             }
             3 * pv
         };
@@ -4859,7 +5263,8 @@ fn eval_material(state: &GameState, seat: usize) -> i32 {
         // "draw a card" beats "gain 3 life" (a card is a future play;
         // three life at a healthy total is nearly nothing).
         let emblems: i32 = p.emblems.iter().map(|e| emblem_value(state, i, e)).sum();
-        let material = 4 * p.hand.len() as i32 + state.effective_life(i) + emblems;
+        let material =
+            (4 * p.hand.len() as i32 + emblems) * w.unit + life_value(state.effective_life(i), w);
         if i == seat {
             v += material;
         } else if !state.same_team(i, seat) {
@@ -4929,7 +5334,12 @@ fn lifegain_sources(state: &GameState, seat: usize) -> i32 {
 /// applied, then priority passes with [`AutoDecider`] answers for any
 /// decision that surfaces until the stack empties. `None` on rejection or
 /// a resolution that won't settle — callers fall back to the static rank.
-fn evaluate_action_outcome(state: &GameState, seat: usize, action: &GameAction) -> Option<i32> {
+fn evaluate_action_outcome(
+    state: &GameState,
+    seat: usize,
+    action: &GameAction,
+    w: &EvalWeights,
+) -> Option<i32> {
     let mut g = state.clone();
     g.perform_action(action.clone()).ok()?;
     let mut fuel = 64u32;
@@ -4950,7 +5360,7 @@ fn evaluate_action_outcome(state: &GameState, seat: usize, action: &GameAction) 
         }
         fuel = fuel.checked_sub(1)?;
     }
-    Some(eval_material(&g, seat))
+    Some(eval_material(&g, seat, w))
 }
 
 /// Final pick among the validated finalists `(jittered static score,
@@ -4961,11 +5371,12 @@ fn pick_by_outcome(
     state: &GameState,
     seat: usize,
     finalists: Vec<(i32, GameAction)>,
+    w: &EvalWeights,
 ) -> Option<GameAction> {
     if finalists.len() <= 1 {
         return finalists.into_iter().next().map(|(_, a)| a);
     }
-    let baseline = eval_material(state, seat);
+    let baseline = eval_material(state, seat, w);
     finalists
         .into_iter()
         .max_by_key(|(s, a)| {
@@ -4977,7 +5388,7 @@ fn pick_by_outcome(
             let ev = if action_outcome_is_temporary(state, a) {
                 baseline
             } else {
-                evaluate_action_outcome(state, seat, a).unwrap_or(baseline)
+                evaluate_action_outcome(state, seat, a, w).unwrap_or(baseline)
             };
             (ev, *s)
         })
@@ -5144,7 +5555,7 @@ fn pick_combat_trick(state: &GameState, seat: usize) -> Option<GameAction> {
     None
 }
 
-fn score_candidate(state: &GameState, seat: usize, action: &GameAction) -> i32 {
+fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &EvalWeights) -> i32 {
     use crate::card::CardType;
     // (source card, slot-0 target, variant bonus, extra mana sunk in).
     let (card_id, target, variant_bonus, extra_mana) = match action {
@@ -5208,10 +5619,13 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction) -> i32 {
             (GameAction::CastPrepareSpell { .. }, Some(spell)) => spell,
             _ => def,
         };
-        score += 2 * (def.cost.cmc() as i32 + extra_mana as i32);
+        // These terms are raw card stats; `permanent_value` below is on the
+        // profile's scale, so lift them into the same units or a scaled
+        // profile would drown the cast's own merits in the target's value.
+        score += 2 * (def.cost.cmc() as i32 + extra_mana as i32) * w.unit;
         if def.card_types.contains(&CardType::Creature) {
-            score += def.power.max(0) + def.toughness.max(0);
-            score += (def.keywords.len() as i32).min(3);
+            score += (def.power.max(0) + def.toughness.max(0)) * w.unit;
+            score += (def.keywords.len() as i32).min(3) * w.unit;
         }
         damage = first_damage_amount(&def.effect, extra_mana);
     }
@@ -5224,7 +5638,7 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction) -> i32 {
             c.controller == seat && static_rewards_prepared(&c.definition)
         })
     {
-        score -= 4;
+        score -= 4 * w.unit;
     }
 
     match target {
@@ -5234,7 +5648,7 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction) -> i32 {
         Some(Target::Permanent(id)) => {
             match state.battlefield_find(id).map(|c| c.controller) {
                 Some(ctrl) if ctrl != seat => {
-                    let mut v = permanent_value(state, id);
+                    let mut v = permanent_value(state, id, w);
                     // Damage spells only count as removal when they kill:
                     // chip damage at a too-big creature keeps a quarter of
                     // the value, and overkill (a huge X at a small body)
@@ -5246,7 +5660,9 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction) -> i32 {
                         if dmg < cp.toughness {
                             v /= 4;
                         } else {
-                            v -= (dmg - cp.toughness).max(0);
+                            // Overkill is charged in scaled points -- `dmg` and
+                            // `toughness` are raw, `v` is not.
+                            v -= (dmg - cp.toughness).max(0) * w.unit;
                         }
                     }
                     // A bounce is tempo, not removal — the permanent comes
@@ -5260,16 +5676,16 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction) -> i32 {
                     }
                     score += v;
                 }
-                Some(_) => score += 2,
+                Some(_) => score += 2 * w.unit,
                 None => {}
             }
         }
         // Face damage / discard at an opponent beats a self-aimed cantrip.
-        Some(Target::Player(p)) => score += if p != seat { 4 } else { 1 },
+        Some(Target::Player(p)) => score += if p != seat { 4 * w.unit } else { w.unit },
         _ => {}
     }
 
-    score + variant_bonus
+    score + variant_bonus * w.unit
 }
 
 #[cfg(test)]
@@ -5418,7 +5834,7 @@ mod tests {
         };
         let id = g.add_card_to_battlefield(0, pw);
         g.add_card_to_library(0, catalog::island());
-        let action = pick_loyalty_ability(&g, 0).expect("bot finds the targetless +1");
+        let action = pick_loyalty_ability(&g, 0, &EvalWeights::default()).expect("bot finds the targetless +1");
         match action {
             GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
                 assert_eq!(card_id, id);
@@ -5442,7 +5858,7 @@ mod tests {
         g.priority.player_with_priority = 0;
         g.active_player_idx = 0;
         g.step = TurnStep::PreCombatMain;
-        let action = pick_loyalty_ability(&g, 0).expect("walker activates something");
+        let action = pick_loyalty_ability(&g, 0, &EvalWeights::default()).expect("walker activates something");
         match action {
             GameAction::ActivateLoyaltyAbility {
                 card_id, ability_index, target, ..
@@ -5507,7 +5923,7 @@ mod tests {
         g.priority.player_with_priority = 0;
         g.active_player_idx = 0;
         g.step = TurnStep::PreCombatMain;
-        let action = pick_loyalty_ability(&g, 0).expect("walker activates something");
+        let action = pick_loyalty_ability(&g, 0, &EvalWeights::default()).expect("walker activates something");
         match action {
             GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
                 assert_eq!(card_id, pw);
@@ -5535,7 +5951,7 @@ mod tests {
         g.priority.player_with_priority = 0;
         g.active_player_idx = 0;
         g.step = TurnStep::PreCombatMain;
-        let action = pick_loyalty_ability(&g, 0).expect("walker activates something");
+        let action = pick_loyalty_ability(&g, 0, &EvalWeights::default()).expect("walker activates something");
         match action {
             GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
                 assert_eq!(card_id, pw);
@@ -5582,7 +5998,7 @@ mod tests {
         };
         g.add_card_to_battlefield(0, granter);
         g.add_card_to_library(0, catalog::island());
-        match pick_loyalty_ability(&g, 0).expect("bot finds the granted ability") {
+        match pick_loyalty_ability(&g, 0, &EvalWeights::default()).expect("bot finds the granted ability") {
             GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
                 assert_eq!(card_id, id, "activated on the blank walker");
                 assert_eq!(ability_index, 0, "the granted +1 is index 0");
@@ -5813,24 +6229,59 @@ mod tests {
         }
     }
 
-    /// Free, fixed-payload mana rocks like Sol Ring should be picked up by
-    /// the bot's main-phase action loop after lands are exhausted.
+    /// A mana rock's output has to count toward what the bot can cast.
+    ///
+    /// This used to assert that the bot *tapped* Sol Ring as its own
+    /// action, back when it pre-tapped every source before deciding
+    /// anything. It no longer does that (see the note in
+    /// `main_phase_action_with`), so the assertion is now on the outcome
+    /// that mattered all along: the rock's mana is what makes the spell
+    /// affordable, and the engine's auto-tap spends it.
     #[test]
-    fn bot_taps_free_mana_rock_after_lands() {
+    fn bot_spends_mana_rock_output_on_a_spell() {
         let mut g = two_player_game();
         let sol = g.add_card_to_battlefield(0, catalog::sol_ring());
         g.clear_sickness(sol);
-        // No untapped lands, so the bot's land-tap branch returns None and
-        // the new mana-rock branch fires.
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        let forest = g.add_card_to_battlefield(0, catalog::forest());
+        g.clear_sickness(forest);
+        let have = available_mana(&g, 0);
+        assert_eq!(have.total, 3, "Sol Ring's two plus the Forest's one");
+        assert!(have.colors.contains(crate::mana::Color::Green));
+
         let mut bot = RandomBot::new();
         let action = bot.next_action(&g, 0).expect("bot should produce an action");
-        match action {
-            GameAction::ActivateAbility { card_id, ability_index, .. } => {
-                assert_eq!(card_id, sol, "bot should target Sol Ring");
-                assert_eq!(ability_index, 0);
-            }
-            _ => panic!("bot should activate Sol Ring's mana ability"),
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, .. } if card_id == bear),
+            "bot should cast the bear rather than pre-tapping anything, got {action:?}",
+        );
+    }
+
+    /// The tap-out regression guard. The bot must not spend mana it has no
+    /// use for: with an uncastable hand it should pass, leaving its lands
+    /// untapped so they survive into the opponent's turn for instant-speed
+    /// plays. Before this fix it tapped every land unconditionally and the
+    /// pool was emptied at the phase boundary (CR 500.4).
+    #[test]
+    fn bot_leaves_mana_untapped_when_it_has_nothing_to_cast() {
+        let mut g = two_player_game();
+        for _ in 0..3 {
+            let land = g.add_card_to_battlefield(0, catalog::forest());
+            g.clear_sickness(land);
         }
+        // A hand card it cannot cast: wrong color, and no black source.
+        g.add_card_to_hand(0, catalog::doom_blade());
+        let mut bot = RandomBot::new();
+        let action = bot.next_action(&g, 0).expect("bot should produce an action");
+        assert!(
+            matches!(action, GameAction::PassPriority),
+            "bot should pass, not burn mana, got {action:?}",
+        );
+        assert_eq!(
+            g.battlefield.iter().filter(|c| c.controller == 0 && !c.tapped).count(),
+            3,
+            "all three lands stay untapped and available at instant speed",
+        );
     }
 
 
@@ -7119,8 +7570,8 @@ mod tests {
 
     /// Color-choice mana abilities (Ornithopter of Paradise's `{T}: Add one
     /// mana of any color`) require an interactive `ChooseColor` decision,
-    /// which the bot's main loop doesn't supply at activation time. Those
-    /// are filtered out of `find_free_mana_rock`.
+    /// which the bot's main loop doesn't supply at activation time. The bot
+    /// must never volunteer one as a standalone action.
     #[test]
     fn bot_does_not_tap_color_choice_mana_source() {
         let mut g = two_player_game();
@@ -7134,43 +7585,61 @@ mod tests {
         }
     }
 
-    /// `is_free_mana_ability` accepts decision-free rocks but rejects
-    /// life/damage-rider and color-choice sources.
+    /// The concern that used to live in `is_free_mana_ability`: a generic
+    /// pip must not eat a one-shot artifact or a chunk of life while an
+    /// ordinary land sits untapped.
+    ///
+    /// The bot no longer picks its own mana sources -- it stopped pre-tapping
+    /// (see `main_phase_action_with`), so the engine's auto-tap chooses, and
+    /// this is the guard on its ordering. Lotus Petal sacrifices itself for
+    /// mana; with Forests available to pay the same pips, the Petal survives.
     #[test]
-    fn free_mana_ability_excludes_life_and_choice_sources() {
-        use crate::effect::{PlayerRef, Value};
-        let plain = ActivatedAbility {
-            tap_cost: true,
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
-            ..Default::default()
-        };
-        assert!(is_free_mana_ability(&plain), "plain {{C}} rock is free");
-        let pay_life = ActivatedAbility { life_cost: 1, ..plain.clone() };
-        assert!(!is_free_mana_ability(&pay_life), "life-paying mana source isn't free");
-        let any_color = ActivatedAbility {
-            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
-            ..plain.clone()
-        };
-        assert!(!is_free_mana_ability(&any_color), "color-choice source isn't auto-tapped");
-        // Mana abilities with an additional resource cost are NOT free: the
-        // bot must not pointlessly pay them mid-tap.
-        use crate::card::SelectionRequirement;
-        let sac_other = ActivatedAbility {
-            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            ..plain.clone()
-        };
-        assert!(!is_free_mana_ability(&sac_other), "sacrifice-cost mana source isn't free");
-        let tap_n = ActivatedAbility {
-            tap_cost: true,
-            tap_n_filter: Some((SelectionRequirement::Creature, 3)),
-            ..plain.clone()
-        };
-        assert!(!is_free_mana_ability(&tap_n), "tap-N-cost mana source isn't free");
-        let energy = ActivatedAbility { energy_cost: 1, ..plain.clone() };
-        assert!(!is_free_mana_ability(&energy), "energy-cost mana source isn't free");
-        // Collect-evidence is a real graveyard-exile cost — never a free tap.
-        let collect = ActivatedAbility { collect_evidence_cost: Some(3), ..plain };
-        assert!(!is_free_mana_ability(&collect), "collect-evidence mana source isn't free");
+    fn auto_tap_spends_a_land_before_sacrificing_a_mana_source() {
+        let mut g = two_player_game();
+        let petal = g.add_card_to_battlefield(0, catalog::lotus_petal());
+        g.clear_sickness(petal);
+        // Two Forests cover the bear's {1}{G} on their own. The Petal sits
+        // earlier in the battlefield, so a first-match source pick would
+        // sacrifice it for the generic pip anyway.
+        let forests: Vec<_> = (0..2)
+            .map(|_| {
+                let f = g.add_card_to_battlefield(0, catalog::forest());
+                g.clear_sickness(f);
+                f
+            })
+            .collect();
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+        let mut bot = RandomBot::new();
+        let action = bot.next_action(&g, 0).expect("bot should act");
+        assert!(
+            matches!(action, GameAction::CastSpell { .. }),
+            "the bear is affordable off the two Forests, got {action:?}",
+        );
+        g.perform_action(action).expect("the bear should be castable");
+        assert!(
+            g.battlefield_find(petal).is_some(),
+            "Lotus Petal must survive when lands could pay instead",
+        );
+        assert_eq!(
+            forests.iter().filter(|f| g.battlefield_find(**f).is_some_and(|c| c.tapped)).count(),
+            2,
+            "both Forests are what should have been tapped",
+        );
+    }
+
+    /// Sac-cost sources are deliberately *not* counted toward what the bot
+    /// can afford: it would be committing to lines it can only pay for by
+    /// spending something it would rather keep. A Lotus Petal on its own
+    /// does not make a two-drop look castable.
+    #[test]
+    fn available_mana_ignores_self_consuming_sources() {
+        let mut g = two_player_game();
+        let petal = g.add_card_to_battlefield(0, catalog::lotus_petal());
+        g.clear_sickness(petal);
+        assert_eq!(available_mana(&g, 0).total, 0, "a Lotus Petal is not spare mana");
+        let forest = g.add_card_to_battlefield(0, catalog::forest());
+        g.clear_sickness(forest);
+        assert_eq!(available_mana(&g, 0).total, 1, "only the Forest counts");
     }
 
     /// Reproducer for the "Vandalblast freeze" bug. The bot is in its main
@@ -7800,7 +8269,7 @@ mod tests {
         dino.name = "Dino"; dino.power = 6; dino.toughness = 6;
         let big = g.add_card_to_battlefield(1, dino);
         let legal = vec![Target::Permanent(small), Target::Permanent(big)];
-        match decide_choose_target(&g, 0, &legal) {
+        match decide_choose_target(&g, 0, &legal, &EvalWeights::default()) {
             DecisionAnswer::Target(Target::Permanent(id)) => {
                 assert_eq!(id, big, "bot targets the 6/6 over the 2/2");
             }
@@ -7817,7 +8286,7 @@ mod tests {
         g.players[1].life = 15;
         g.players[2].life = 6;
         let legal = vec![Target::Player(1), Target::Player(2)];
-        match decide_choose_target(&g, 0, &legal) {
+        match decide_choose_target(&g, 0, &legal, &EvalWeights::default()) {
             DecisionAnswer::Target(Target::Player(p)) => {
                 assert_eq!(p, 2, "targets the 6-life opponent over the 15-life one");
             }
@@ -7836,7 +8305,7 @@ mod tests {
         dino.name = "Dino"; dino.power = 6; dino.toughness = 6;
         let big = g.add_card_to_battlefield(0, dino);
         let legal = vec![Target::Permanent(big), Target::Permanent(small)];
-        match decide_choose_target(&g, 0, &legal) {
+        match decide_choose_target(&g, 0, &legal, &EvalWeights::default()) {
             DecisionAnswer::Target(Target::Permanent(id)) => {
                 assert_eq!(id, small, "bot gives up its 2/2, keeps the 6/6");
             }
@@ -7857,7 +8326,7 @@ mod tests {
         let token = g.add_card_to_battlefield(0, tok);
         g.battlefield_find_mut(token).unwrap().is_token = true; // ...but a token
         let legal = vec![Target::Permanent(land), Target::Permanent(token)];
-        match decide_choose_target(&g, 0, &legal) {
+        match decide_choose_target(&g, 0, &legal, &EvalWeights::default()) {
             DecisionAnswer::Target(Target::Permanent(id)) => {
                 assert_eq!(id, token, "bot sacrifices the token, keeps the land");
             }
@@ -7929,7 +8398,7 @@ mod tests {
             (small, "Grizzly Bears".to_string()),
             (big, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&g, 0, "Put a creature onto the battlefield?", &candidates, 0, 1) {
+        match decide_choose_cards(&EvalWeights::default(), &g, 0, "Put a creature onto the battlefield?", &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot picks the highest-cmc creature to cheat in"),
             other => panic!("expected Cards, got {other:?}"),
@@ -7950,7 +8419,7 @@ mod tests {
             (small, "Grizzly Bears".to_string()),
             (big, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&g, 0, "Tap which creatures?", &candidates, 0, 1) {
+        match decide_choose_cards(&EvalWeights::default(), &g, 0, "Tap which creatures?", &candidates, 0, 1) {
             DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
                 "bot taps the opponent's biggest creature, not its own"),
             other => panic!("expected Cards, got {other:?}"),
@@ -7969,7 +8438,7 @@ mod tests {
             (small, "Grizzly Bears".to_string()),
             (big, "Shivan Dragon".to_string()),
         ];
-        match decide_choose_cards(&g, 0, "Sacrifice a creature", &candidates, 1, 1) {
+        match decide_choose_cards(&EvalWeights::default(), &g, 0, "Sacrifice a creature", &candidates, 1, 1) {
             DecisionAnswer::Cards(v) => {
                 assert_eq!(v, vec![small], "bot sacrifices the smaller creature")
             }
@@ -8059,16 +8528,135 @@ mod tests {
     fn eval_material_prefers_board_and_cards() {
         let mut g = two_player_game();
         assert_eq!(
-            eval_material(&g, 0),
-            -eval_material(&g, 1),
+            eval_material(&g, 0, &EvalWeights::default()),
+            -eval_material(&g, 1, &EvalWeights::default()),
             "the two-player eval is symmetric",
         );
         g.add_card_to_battlefield(0, catalog::shivan_dragon());
         g.add_card_to_hand(0, catalog::lightning_bolt());
-        assert!(eval_material(&g, 0) > 0, "board + hand is a material lead");
-        assert!(eval_material(&g, 1) < 0);
+        assert!(eval_material(&g, 0, &EvalWeights::default()) > 0, "board + hand is a material lead");
+        assert!(eval_material(&g, 1, &EvalWeights::default()) < 0);
         g.game_over = Some(Some(1));
-        assert!(eval_material(&g, 1) > eval_material(&g, 0), "a won game beats any material");
+        assert!(eval_material(&g, 1, &EvalWeights::default()) > eval_material(&g, 0, &EvalWeights::default()), "a won game beats any material");
+    }
+
+    /// The baseline profile must stay a byte-for-byte control for the
+    /// ladder: life counted linearly, no keyword term, scale 1.
+    #[test]
+    fn baseline_profile_is_the_historical_evaluation() {
+        let base = EvalWeights::baseline();
+        for life in [-3, 0, 1, 7, 20, 41] {
+            assert_eq!(life_value(life, &base), life, "baseline life is linear");
+        }
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, weights_test_creature("Baseline Body", 4, 3, 3, &[]));
+        let body = g.battlefield[0].id;
+        // Baseline is exactly mana value + power + toughness, nothing else.
+        assert_eq!(permanent_value(&g, body, &base), 4 + 3 + 3);
+    }
+
+    /// A creature for the weighting tests: `cost` generic mana, `power`/
+    /// `toughness`, and whatever keywords the case needs.
+    fn weights_test_creature(
+        name: &'static str,
+        cost: u32,
+        power: i32,
+        toughness: i32,
+        keywords: &[crate::card::Keyword],
+    ) -> CardDefinition {
+        use crate::card::CardType;
+        CardDefinition {
+            name,
+            card_types: vec![CardType::Creature],
+            cost: crate::mana::cost(&[crate::mana::generic(cost)]),
+            power,
+            toughness,
+            keywords: keywords.to_vec(),
+            ..Default::default()
+        }
+    }
+
+    /// Life is worth more per point the closer to zero it is. A linear term
+    /// prices "gain 3" identically at 3 life and at 20 -- this is the whole
+    /// reason for the curve, so assert the shape, not just the endpoints.
+    #[test]
+    fn concave_life_curve_is_monotone_with_diminishing_returns() {
+        let w = EvalWeights::v2();
+        let at = |l: i32| life_value(l, &w);
+        // Anchored to the linear term it replaces: 20 life is still 20 points.
+        assert_eq!(at(20), 20 * w.unit);
+        assert_eq!(at(0), 0);
+        for l in 1..=40 {
+            assert!(at(l) > at(l - 1), "life {l} must beat life {}", l - 1);
+        }
+        // Marginal value never rises as life goes up.
+        for l in 2..=39 {
+            let lower = at(l) - at(l - 1);
+            let upper = at(l + 1) - at(l);
+            assert!(upper <= lower, "marginal life at {l} rose ({lower} -> {upper})");
+        }
+        // And the low end is dramatically steeper than the high end: the
+        // point that saves us from dying is worth several near the top.
+        assert!(
+            at(1) - at(0) >= 4 * (at(20) - at(19)),
+            "the first point of life should dwarf the twentieth",
+        );
+    }
+
+    /// Evasion scales with power (it's worth what it lets the body deal);
+    /// protection is flat (it buys the same thing on any body). Getting
+    /// this backwards is the mistake a flat keyword table makes.
+    #[test]
+    fn keyword_value_scales_evasion_but_not_protection() {
+        use crate::card::Keyword;
+        let w = EvalWeights::v2();
+        let flying = [Keyword::Flying];
+        let hexproof = [Keyword::Hexproof];
+        assert!(
+            keyword_value(&flying, 5, &w) > keyword_value(&flying, 1, &w),
+            "flying is worth more on a bigger body",
+        );
+        assert_eq!(
+            keyword_value(&hexproof, 5, &w),
+            keyword_value(&hexproof, 1, &w),
+            "hexproof buys the same thing regardless of size",
+        );
+        // Bad keywords are negative, and a body that can neither attack nor
+        // block is worth less than its printed size suggests.
+        assert!(keyword_value(&[Keyword::Defender], 4, &w) < 0);
+        let pacified = keyword_value(&[Keyword::CantAttack, Keyword::CantBlock], 6, &w);
+        assert!(
+            pacified < keyword_value(&[Keyword::Defender], 6, &w),
+            "a fully locked-down creature is the worst case",
+        );
+    }
+
+    /// The payoff: two bodies the baseline scores as *identical* -- same
+    /// cost, same stats -- are correctly separated by v2, which sees that
+    /// one of them flies and drains. This is the behavioral difference the
+    /// ladder is measuring; removal targeting and cast ranking both read
+    /// `permanent_value`, so a tie here is a coin flip on the baseline.
+    #[test]
+    fn v2_breaks_a_baseline_tie_toward_the_creature_that_does_something() {
+        use crate::card::Keyword;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(
+            0,
+            weights_test_creature("Test Flier", 4, 3, 3, &[Keyword::Flying, Keyword::Lifelink]),
+        );
+        g.add_card_to_battlefield(0, weights_test_creature("Test Lump", 4, 3, 3, &[]));
+        let (f, l) = (g.battlefield[0].id, g.battlefield[1].id);
+        let base = EvalWeights::baseline();
+        let v2 = EvalWeights::v2();
+        assert_eq!(
+            permanent_value(&g, f, &base),
+            permanent_value(&g, l, &base),
+            "the baseline can't tell these apart at all",
+        );
+        assert!(
+            permanent_value(&g, f, &v2) > permanent_value(&g, l, &v2),
+            "v2 sees that the flier actually does something",
+        );
     }
 }
 
@@ -8542,7 +9130,7 @@ mod stack_response_tests {
             additional_targets: vec![], mode: None, x_value: None,
         };
         assert!(
-            score_candidate(&g, 0, &kill) > score_candidate(&g, 0, &chip),
+            score_candidate(&g, 0, &kill, &EvalWeights::default()) > score_candidate(&g, 0, &chip, &EvalWeights::default()),
             "killing the 2/2 must outscore chipping the 5/5",
         );
     }
@@ -8620,13 +9208,13 @@ mod stack_response_tests {
             mode: None,
             x_value: None,
         };
-        let plain = score_candidate(&g, 0, &cast);
+        let plain = score_candidate(&g, 0, &cast, &EvalWeights::default());
         assert!(
             plain <= 8,
             "inset {{U}} draw spell must score as a cheap spell, got {plain}",
         );
         g.add_card_to_battlefield(0, catalog::top_of_the_class());
-        let with_anthem = score_candidate(&g, 0, &cast);
+        let with_anthem = score_candidate(&g, 0, &cast, &EvalWeights::default());
         assert!(
             with_anthem < plain,
             "unpreparing under a prepared-matters anthem must score lower \

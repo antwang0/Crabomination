@@ -75,7 +75,7 @@ pub mod view;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ws;
 
-pub use bot::{Bot, RandomBot};
+pub use bot::{Bot, EvalWeights, RandomBot};
 pub use lobby::{serve_lobbies, ConnId, LobbyManager};
 #[cfg(not(target_arch = "wasm32"))]
 pub use tcp::{tcp_client, tcp_seat};
