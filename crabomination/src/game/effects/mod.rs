@@ -1208,6 +1208,7 @@ impl GameState {
         self.energy_paid_this_resolution = 0;
         self.permanents_returned_this_resolution = 0;
         self.permanents_tapped_this_resolution = 0;
+        self.cards_revealed_this_resolution = 0;
         self.creature_cards_discarded_this_resolution = 0;
         self.greatest_discarded_mv_this_resolution = 0;
         self.cards_discarded_per_player_this_resolution.clear();
@@ -7005,6 +7006,16 @@ impl GameState {
                 use crate::card::SelectionRequirement as R;
                 let n = self.evaluate_value(value, ctx).max(0) as u32;
                 let req = R::Creature.and(R::ManaValueExactly(n));
+                self.run_effect(
+                    &Effect::Destroy { what: crate::effect::Selector::EachPermanent(req) },
+                    ctx,
+                    events,
+                )
+            }
+
+            Effect::DestroyEachMatchingWithManaValue { filter, value } => {
+                let n = self.evaluate_value(value, ctx).max(0) as u32;
+                let req = filter.clone().and(crate::card::SelectionRequirement::ManaValueExactly(n));
                 self.run_effect(
                     &Effect::Destroy { what: crate::effect::Selector::EachPermanent(req) },
                     ctx,
@@ -21340,6 +21351,106 @@ impl GameState {
                         one_event: *one_event,
                         ..Default::default()
                     });
+                }
+                Ok(())
+            }
+
+            Effect::RevealAnyNumberFromHand { filter, then } => {
+                // The Scent / Seer cycle. Reveals are knowledge-only here; the
+                // count is what the body reads.
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let picked = if candidates.is_empty() {
+                    Vec::new()
+                } else {
+                    // Revealing is pure upside, so the bot policy is "reveal
+                    // everything"; only a live seat is offered the choice.
+                    let max = candidates.len() as u32;
+                    let min = if self.players[p].wants_ui { 0 } else { max };
+                    let Some(v) = self.ask_seat_cards(
+                        p,
+                        "Reveal any number of cards".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates,
+                        min,
+                        max,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    v
+                };
+                self.cards_revealed_this_resolution = picked.len() as u32;
+                self.run_effect(then, ctx, events)
+            }
+
+            Effect::ExileAllCopiesOfTargetName { what } => {
+                // Eradicate / Quash / Scour / Sowing Salt / Splinter. Exile the
+                // named object (countering it if it's still on the stack), then
+                // strip every copy from its controller's other zones.
+                let Some(cid) = self.resolve_selector(what, ctx).iter().find_map(|e| match e {
+                    EntityRef::Permanent(c) | EntityRef::Card(c) => Some(*c),
+                    EntityRef::Player(_) => None,
+                }) else {
+                    return Ok(());
+                };
+                let stack_pos = self
+                    .stack
+                    .iter()
+                    .position(|si| matches!(si, StackItem::Spell { card, .. } if card.id == cid));
+                let (name, victim) = if let Some(pos) = stack_pos {
+                    let StackItem::Spell { card, caster, .. } = self.stack.remove(pos) else {
+                        return Ok(());
+                    };
+                    let (name, owner) = (card.definition.name, card.owner);
+                    self.exile.push(*card);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    let _ = owner;
+                    (name, caster)
+                } else if let Some(c) = self.battlefield_find(cid) {
+                    let (name, victim) = (c.definition.name, c.controller);
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    (name, victim)
+                } else {
+                    return Ok(());
+                };
+                let ids: Vec<CardId> = self.players[victim]
+                    .hand
+                    .iter()
+                    .chain(self.players[victim].graveyard.iter())
+                    .chain(self.players[victim].library.iter())
+                    .filter(|c| c.definition.name == name)
+                    .map(|c| c.id)
+                    .collect();
+                for id in ids {
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                }
+                self.shuffle_library(victim, events);
+                Ok(())
+            }
+
+            Effect::ExileAndReturnToOwner { what } => {
+                // Flicker — an immediate blink. Tokens cease to exist (CR
+                // 111.7), and the returned card is a new object.
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let Some(card) = self.battlefield_find(cid) else { continue };
+                    let (is_token, owner) = (card.is_token, card.owner);
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    if is_token {
+                        continue;
+                    }
+                    self.move_card_to(
+                        cid,
+                        &ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: false },
+                        ctx,
+                        events,
+                    );
                 }
                 Ok(())
             }

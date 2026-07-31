@@ -679,6 +679,10 @@ pub enum Value {
     /// current resolution (Angel's Trumpet's "damage equal to the number of
     /// creatures tapped this way"). Reset between independent resolutions.
     PermanentsTappedThisEffect,
+    /// Cards revealed from hand by an `Effect::RevealAnyNumberFromHand` earlier
+    /// in the current resolution — X for the Scent / Seer cycle. Reset between
+    /// independent resolutions.
+    CardsRevealedThisEffect,
     /// Amount of {E} paid by an `Effect::PayAnyEnergy` earlier in the current
     /// resolution. Reset between independent resolutions. Aether Spike's
     /// "counter that spell unless its controller pays {1} for each {E} paid
@@ -4193,6 +4197,10 @@ pub enum Effect {
     /// "destroy each creature with the same mana value as the sacrificed
     /// creature" via `Value::SacrificedManaValue`).
     DestroyEachCreatureWithManaValue { value: Value },
+    /// The filtered form of `DestroyEachNonlandWithManaValue`: destroys every
+    /// permanent matching `filter` whose mana value equals `value` (Powder
+    /// Keg's "each artifact and creature").
+    DestroyEachMatchingWithManaValue { filter: SelectionRequirement, value: Value },
     /// "Choose a number between 0 and `max`. Destroy all creatures with power
     /// greater than or equal to the chosen number." The controller picks the
     /// number at resolution (`Decision::ChooseAmount`); a bot/AutoDecider picks
@@ -6841,6 +6849,18 @@ pub enum Effect {
     /// recipient, so it soaks whichever damage event the chosen source deals
     /// first (Martyr's Cause).
     PreventNextEventFromChosenSourceAnywhere,
+    /// "Reveal any number of `filter` cards in your hand, then [`then`]" — the
+    /// Urza's Destiny Scent / Seer cycle and Metalworker. The revealed count is
+    /// published as `Value::CardsRevealedThisEffect` for the body to read.
+    RevealAnyNumberFromHand { filter: crate::card::SelectionRequirement, then: Box<Effect> },
+    /// "Exile `what`, then search its controller's graveyard, hand, and library
+    /// for all cards with the same name and exile them; that player shuffles."
+    /// The Urza's Destiny name-hate cycle (Eradicate, Quash, Scour, Sowing Salt,
+    /// Splinter). `what` may be a stack object (Quash counters it).
+    ExileAllCopiesOfTargetName { what: Selector },
+    /// "Exile `what`, then return it to the battlefield under its owner's
+    /// control" — an immediate blink (Flicker). Tokens cease to exist.
+    ExileAndReturnToOwner { what: Selector },
     /// CR 120.4a — "deal `amount` damage to `to`; excess damage is dealt to
     /// `excess_to` instead." The split happens before the damage event, so the
     /// creature takes exactly lethal (marked damage and the source's deathtouch

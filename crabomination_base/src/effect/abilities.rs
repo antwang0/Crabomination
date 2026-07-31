@@ -2156,6 +2156,9 @@ pub enum StaticEffect {
     /// their hands." Drannith Magistrate. Checked in `cast_from_zone_blocked`
     /// for every non-hand cast path (flashback / escape / retrace / free-cast).
     OpponentsCantCastFromAnywhereButHand,
+    /// "Skip your draw step" (Yawgmoth's Bargain, Necropotence). Consulted at
+    /// the draw step's turn-based action.
+    ControllerSkipsDrawStep,
     /// "You can't play lands." Aggressive Mining. Gated in `play_land`.
     ControllerCantPlayLands,
     /// Damping Engine — "a player who controls more permanents than each other

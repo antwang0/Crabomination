@@ -1138,6 +1138,10 @@ impl Effect {
             Effect::Balance => false,
             Effect::GenesisWave => false,
             Effect::ShuffleHandsDrawSame { who } => player_has_target(who),
+            Effect::RevealAnyNumberFromHand { then, .. } => then.requires_target(),
+            Effect::DestroyEachMatchingWithManaValue { .. } => false,
+            Effect::ExileAllCopiesOfTargetName { what }
+            | Effect::ExileAndReturnToOwner { what } => sel_has_target(what),
             Effect::DealDamageExcessTo { to, excess_to, .. } => {
                 sel_has_target(to) || sel_has_target(excess_to)
             }
@@ -1415,7 +1419,8 @@ impl Effect {
             // MayDo wraps an inner effect — surface its filter so the
             // cast prompt narrows correctly when the inner effect needs
             // a target (e.g. "you may sacrifice [target permanent]").
-            Effect::MayDo { body, .. }
+            Effect::RevealAnyNumberFromHand { then: body, .. }
+            | Effect::MayDo { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
@@ -2469,7 +2474,8 @@ impl Effect {
                     Some(m) if m < modes.len() => eff_find(&modes[m], slot, None, kicked),
                     _ => modes.iter().find_map(|m| eff_find(m, slot, None, kicked)),
                 },
-                Effect::MayDo { body, .. }
+                Effect::RevealAnyNumberFromHand { then: body, .. }
+                | Effect::MayDo { body, .. }
                 | Effect::CapTargetsAtX { body }
                 | Effect::TargetsExactlyX { body }
                 | Effect::CapTargetsAt { body, .. }
@@ -2496,6 +2502,8 @@ impl Effect {
                 | Effect::DealDamageExcessToController { to, amount } => {
                     sel_find(to, slot).or_else(|| val_find(amount, slot))
                 }
+                Effect::ExileAllCopiesOfTargetName { what }
+                | Effect::ExileAndReturnToOwner { what } => sel_find(what, slot),
                 Effect::DealDamageExcessTo { to, amount, excess_to, .. } => sel_find(to, slot)
                     .or_else(|| val_find(amount, slot))
                     .or_else(|| sel_find(excess_to, slot)),

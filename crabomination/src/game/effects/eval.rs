@@ -584,6 +584,7 @@ impl GameState {
             Value::EnergyPaidThisEffect => self.energy_paid_this_resolution as i32,
             Value::PermanentsReturnedThisEffect => self.permanents_returned_this_resolution as i32,
             Value::PermanentsTappedThisEffect => self.permanents_tapped_this_resolution as i32,
+            Value::CardsRevealedThisEffect => self.cards_revealed_this_resolution as i32,
             Value::LastExiledManaValue => self
                 .exiled_card_ids_this_resolution
                 .last()

@@ -346,7 +346,15 @@ impl GameState {
                 // skipped. Consuming the flag unconditionally handed the skip
                 // to whoever reached a draw step first, so a game advanced
                 // past turn 1 (every test fixture) robbed the wrong seat.
-                if std::mem::take(&mut self.skip_first_draw) && self.turn_number == 1 {
+                let skips_draw_step = self.battlefield.iter().any(|c| {
+                    c.controller == self.active_player_idx
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            sa.effect == crate::effect::StaticEffect::ControllerSkipsDrawStep
+                        })
+                });
+                if (std::mem::take(&mut self.skip_first_draw) && self.turn_number == 1)
+                    || skips_draw_step
+                {
                 } else {
                     let p = self.active_player_idx;
                     // CR 504.1 — the turn-based draw-step draw is exempt from

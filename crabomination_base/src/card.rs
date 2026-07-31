@@ -550,6 +550,12 @@ pub enum CounterType {
     /// Phylactery counter — Phylactery Lich anchors its indestructibility to
     /// an artifact; losing every phylactery-countered permanent kills it.
     Phylactery,
+    /// Arrow counter — Archery Training accrues one each upkeep and fuels the
+    /// enchanted creature's "deals X damage" tap ability (UDS).
+    Arrow,
+    /// Infection counter — Festering Wound accrues one each of your upkeeps and
+    /// bites the enchanted creature's controller for the count (UDS).
+    Infection,
 }
 
 /// Every zone a card can occupy.

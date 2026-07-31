@@ -596,6 +596,10 @@ pub struct GameState {
     /// (Angel's Trumpet). Reset between resolutions.
     #[serde(skip)]
     pub(crate) permanents_tapped_this_resolution: u32,
+    /// Transient: cards revealed from hand by `Effect::RevealAnyNumberFromHand`
+    /// within the current resolution (`Value::CardsRevealedThisEffect`).
+    #[serde(skip)]
+    pub(crate) cards_revealed_this_resolution: u32,
     /// Transient: count of *creature* cards discarded within the current
     /// effect resolution. Bumped alongside `cards_discarded_this_resolution`
     /// when the discarded card carries `CardType::Creature`. Read by
@@ -1512,6 +1516,7 @@ impl Clone for GameState {
             energy_paid_this_resolution: self.energy_paid_this_resolution,
             permanents_returned_this_resolution: self.permanents_returned_this_resolution,
             permanents_tapped_this_resolution: self.permanents_tapped_this_resolution,
+            cards_revealed_this_resolution: self.cards_revealed_this_resolution,
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             greatest_discarded_mv_this_resolution: self.greatest_discarded_mv_this_resolution,
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
@@ -1738,6 +1743,7 @@ impl GameState {
             energy_paid_this_resolution: 0,
             permanents_returned_this_resolution: 0,
             permanents_tapped_this_resolution: 0,
+            cards_revealed_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
             greatest_discarded_mv_this_resolution: 0,
             cards_discarded_per_player_this_resolution: HashMap::new(),
@@ -16186,6 +16192,7 @@ fn static_effect_to_effects(
             // Gated at their action dispatch (`can_player_play_land`,
             // the convoke cast path); no layer effect.
             | StaticEffect::ControllerCantPlayLands
+            | StaticEffect::ControllerSkipsDrawStep
             | StaticEffect::MostPermanentsCantPlay
             | StaticEffect::GrantConvokeToSpells { .. }
             | StaticEffect::DoubleDamageToOpponents
