@@ -16,6 +16,10 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
+- **Urza's Saga opened** (`sets::usg`, 53 cards — `set_gaps.py usg` 254 → 201):
+  the echo and cycling cycles, the prevention Clerics, and the utility spells.
+  All ride existing primitives; the remaining gaps and what they want are in
+  TODO.md. Tests in `classic_sets/usg`.
 - **Urza block complete** — `set_gaps.py ulg` and `uds` both at zero
   (`sets::ulg`, `sets::uds`, 126 UDS cards). New primitives: `Duration::
   WhileSourceTapped` (CR 611.2c), `Value::{PermanentsTappedThisEffect,

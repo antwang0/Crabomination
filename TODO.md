@@ -25,8 +25,24 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (modern_decks — Urza block closure)
 
-`set_gaps.py ulg` and `set_gaps.py uds` are both at zero — the Urza block is
-closed. Residuals in what shipped:
+`set_gaps.py ulg` and `set_gaps.py uds` are both at zero. **Urza's Saga (USG)
+is opened at 254 -> 201** (`sets::usg`, the 53 commons/uncommons that ride
+existing primitives). What the remaining USG gaps want, roughly in order of
+leverage:
+
+- **A per-player scaling damage/`Value`** — Acidic Soil ("damage to each player
+  equal to the number of lands they control") and Disorder both need the amount
+  evaluated once per affected player, which `Effect::DealDamage`'s single
+  `Value` can't express.
+- **"Creatures without flying can't block this turn"** (Falter) — a turn-scoped
+  filtered block restriction; the engine only has `CantBlockSourceThisTurn`.
+- **"Each player returns a creature they control"** (Curfew) — a per-player
+  choose-and-move.
+- **Combat-state triggers for "becomes blocked"** exist (`EventKind::
+  BecomesBlocked`), but Cave Tiger / Dromosaur also want the blocks-side
+  wording on the same body.
+
+Residuals in the rest of what shipped:
 
 - **Iridescent Drake can't be cast at its Aura.** The ETB body works
   (`Effect::AttachAuraFromGraveyardTo`), but a graveyard card isn't a legal
