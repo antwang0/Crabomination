@@ -745,6 +745,53 @@ impl GameState {
         }
     }
 
+    /// CR 115.7a — "change the target of target spell": pick a *different*
+    /// legal target for a spell already on the stack (Ricochet Trap,
+    /// Misdirection, Deflection). Unlike `repoint_copy_target`, which offers
+    /// the original first because a copy may legitimately keep it, this must
+    /// move the spell if it can; the original stands only when nothing else
+    /// is legal. The auto-pick sends a hostile spell away from the chooser
+    /// and a friendly one toward them.
+    fn retarget_spell(
+        &mut self,
+        def: &crate::card::CardDefinition,
+        chooser: usize,
+        original: &Option<crate::game::types::Target>,
+    ) -> Option<crate::game::types::Target> {
+        use crate::decision::{Decision, DecisionAnswer};
+        use crate::game::types::Target;
+        let mut legal: Vec<Target> = self
+            .enumerate_legal_targets(&def.effect, chooser)
+            .into_iter()
+            .filter(|t| Some(t) != original.as_ref())
+            .collect();
+        if legal.is_empty() {
+            return original.clone();
+        }
+        let friendly = def.effect.prefers_friendly_target();
+        let mine = |t: &Target| match t {
+            Target::Player(p) => self.same_team(*p, chooser),
+            Target::Permanent(c) => {
+                self.battlefield_find(*c).is_some_and(|c| self.same_team(c.controller, chooser))
+            }
+        };
+        legal.sort_by_key(|t| mine(t) != friendly);
+        let answer = self.decider.decide(&Decision::ChooseTarget {
+            optional: false,
+            source: match original {
+                Some(Target::Permanent(c)) => *c,
+                _ => crate::card::CardId(0),
+            },
+            legal: legal.clone(),
+            source_name: def.name.to_string(),
+            description: "change the target".to_string(),
+        });
+        match answer {
+            DecisionAnswer::Target(t) if legal.contains(&t) => Some(t),
+            _ => legal.first().cloned(),
+        }
+    }
+
     /// CR 707 — apply a permanent's `enters_as_copy` replacement as it
     /// enters the battlefield. Auto-picks the highest-power matching
     /// permanent (excluding the copier itself); no-op when nothing
@@ -19904,7 +19951,7 @@ impl GameState {
                     if orig_target.is_none() {
                         continue;
                     }
-                    let new_target = self.repoint_copy_target(&def, chooser, &orig_target);
+                    let new_target = self.retarget_spell(&def, chooser, &orig_target);
                     if let crate::game::types::StackItem::Spell { target, .. } =
                         &mut self.stack[idx]
                     {

@@ -7687,9 +7687,11 @@ stalled games via `eval_material`.
   CastSpellThisTurnWith` reads `Player.spell_casts_this_turn` (colors + cast-half
   types, cleared at cleanup); an opponent who casts a spell that is *countered*
   still turns the Trap on, which matches the printed "cast" wording.
-- **`Effect::ChooseNewTargetsForSpell` picks the new target itself.** Ricochet
-  Trap / Misdirection retarget to the first legal alternative; the printed cards
-  let the caster choose. Wants the `CopySpellMayChooseTargets` prompt shape.
+- **`Effect::ChooseNewTargetsForSpell` picks the new target itself.** CR 115.7a
+  is honored (the spell moves off its original target, and the auto-pick sends a
+  hostile spell away from the chooser), but the pick goes through the
+  synchronous decider — a UI seat never sees a prompt. Wants the
+  `CopySpellMayChooseTargets` suspend shape.
 - **A combat-damage trigger still gets one target slot.** Cards whose body wants
   a slot beyond the damaged player (Sword of Sinew and Steel-style "and destroy
   up to one artifact") auto-pick via `auto_target_for_effect_avoiding_set_x`;

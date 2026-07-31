@@ -76,6 +76,31 @@ fn ricochet_trap_alt_cost_needs_a_blue_spell() {
     assert!(try_alt(true), "a blue spell does");
 }
 
+/// CR 115.7a — Ricochet Trap moves the spell off its original target.
+#[test]
+fn ricochet_trap_moves_the_spell() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt my bear");
+    let trap = g.add_card_to_hand(0, catalog::ricochet_trap());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, trap, Some(Target::Permanent(bolt)));
+    assert!(g.battlefield_find(mine).is_some(), "my bear is spared");
+    assert_eq!(g.players[1].life, 17, "the Bolt went back at its caster");
+}
+
 /// Refraction Trap shields the whole team off one shared 3-damage pool and
 /// fires the prevented damage back.
 #[test]
