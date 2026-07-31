@@ -7654,21 +7654,57 @@ stalled games via `eval_material`.
   the printed card lets each player build their own three piles. Wants a
   `Decision::PartitionPermanents`.
 - **CR coverage gaps.** `scripts/cr_coverage.py` → `CR_COVERAGE.md` maps CR
-  section → conformance test; 92 sections are covered, 55 still have none
-  (112/403/710 came off the list this run). The highest-value untested blocks
+  section → conformance test; 94 sections are covered, 53 still have none
+  (307/725 came off the list this run). The highest-value untested blocks
   left are 407/408 (the remaining zones), 503/512 (the last turn steps),
   717–720 (the newer card types) and the 8xx multiplayer rules.
 
+## Noticed this run (modern_decks — Saviors of Kamigawa closure)
+
+- **12 SOK cards remain, each blocked on one primitive:**
+  - Ashes of the Fallen — a graveyard creature-type grant (above).
+  - Choice of Damnations / Pain's Reward — an opponent picks a number, then
+    the caster picks a branch; wants `Decision::ChooseAmount` routed to a
+    non-controlling seat.
+  - Cowed by Wisdom — "can't attack or block unless its controller pays {1}
+    for each card in *your* hand"; `Keyword::CantAttackOrBlockUnlessPay` is a
+    fixed `u32` and reads no other player's zones.
+  - Kaho, Minamo Historian — cast a spell with mana value X from among cards
+    exiled with this source; there is no cast-from-exiled-with-source effect.
+  - Murmurs from Beyond — an opponent picks which of three revealed cards is
+    binned; wants an opponent-routed `ChooseCards`.
+  - Pure Intentions — "whenever a spell or ability an opponent controls causes
+    you to discard cards this turn, return those cards"; needs discard
+    provenance (which effect caused it) on the discard event.
+  - Rally the Horde — exile in batches of three until the last is a land, then
+    tokens per nonland exiled; `ExileTopUntilNonland` stops at one card.
+  - Sekki, Seasons' Guide — a damage replacement that trades counters for
+    tokens 1:1.
+  - Shape Stealer — "change this creature's base power and toughness to that
+    creature's"; wants `Effect::SetBasePtFromTarget`.
+  - Sokenzan Renegade — "the player who has the most cards in hand gains
+    control of this"; wants `PlayerRef::MostCardsInHand`.
+  - Tomb of Urami — "Sacrifice all lands you control" as an activation cost;
+    `sac_other_filter` takes a fixed count.
+- **The Epic copy doesn't re-choose targets.** CR 702.50a's copies "may choose
+  new targets"; `process_epic` reuses the original's. Eternal Dominion /
+  Neverending Torment / Undying Flames all want it.
+- **Erayo's Essence counters the first *opponent* spell via `once_per_turn`.**
+  Exact at two players; in multiplayer it should be per-opponent, which needs
+  a per-actor trigger budget rather than the per-trigger one.
+- **Michiko Konda's edict hits every opponent.** The printed card taxes only
+  the damage source's controller; binding that seat needs the dealer's
+  controller surfaced as a `PlayerRef` on a `PlayerDamaged` trigger.
+- **Sasaya's Essence doubles by `ExtraManaKind::Mirror`, not by same-named
+  land count.** One extra mana per tap instead of one per other same-named
+  land you control.
+
 ## Noticed this run (modern_decks — Betrayers of Kamigawa closure)
 
-- **SOK's Sweep cards are unimplemented.** "Return any number of [basic land
-  type] you control to their owner's hand" then scale off the count (Barrel
-  Down Sokenzan, Charge Across the Araba, and the other three). Wants a
-  `Decision::ChooseCards` over the matching lands plus a `Value` reading the
-  returned count — `Selector::LastMoved` gets the second half for free.
-- **SOK's Epic sorceries are unimplemented.** `Keyword::Epic` ships but
-  Endless Swarm / Eternal Dominion also need "copy this spell except for its
-  epic ability" to re-choose targets each upkeep.
+- ✅ ~~**SOK's Sweep cards**~~ — `Effect::ReturnAnyNumberToHand` +
+  `Value::PermanentsReturnedThisEffect`.
+- ✅ ~~**SOK's Epic sorceries**~~ — all four ship. Residual: the epic copy
+  reuses the original's targets rather than re-choosing them each upkeep.
 - **Ashes of the Fallen wants a graveyard type-grant static.** "Each creature
   card in your graveyard has the chosen creature type" — the layer system
   only walks the battlefield.

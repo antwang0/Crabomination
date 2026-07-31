@@ -63,14 +63,22 @@ exercising each) was elided in a compaction pass; recover it from
   Tenza, Hankyu. New: `StaticEffect::MaxOneArtifactUntap` (CR 502.3 — Imi
   Statue) and `SpendRestriction::LegendarySpell` + `SpellKind.legendary`
   (Untaidake). Tests in `classic_sets/chk::gaps1`.
-- **Saviors of Kamigawa opened** (`sets::sok`, 33 cards — `set_gaps.py sok`
-  131 → 98): the Kirin spiritcraft cycle, Channel (CR 702.58, an activated
-  ability with `from_hand` + `discard_self_cost`), the hand-size-matters
-  shell, and the utility spells. New: `SelectionRequirement::
-  ManaValueEqualsTriggerAmount` (Celestial Kirin's "all permanents with that
-  spell's mana value"), and `Effect::AtNextEndStep` now binds a token minted
-  in the same resolution so a delayed body naming it still finds it (Feral
-  Lightning). Tests in `classic_sets/sok`.
+- **Saviors of Kamigawa** (`sets::sok` + `sets::sok2`, 119 cards —
+  `set_gaps.py sok` 131 → 12): the Kirin spiritcraft cycle, Channel (an
+  ability word — an activated ability with `from_hand` + `discard_self_cost`),
+  Sweep, the Shinen channel cycle, the hand-size-matters shell, the Moonfolk
+  land-bounce activations, the Ascendant flip cycle, and the Epic sorceries.
+  New: `SelectionRequirement::ManaValueEqualsTriggerAmount`,
+  `Effect::ReturnAnyNumberToHand` + `Value::PermanentsReturnedThisEffect`
+  (Sweep), `StaticEffect::PumpPTByValue`, `ControllerMaxHandSizeIncreased`,
+  `PreventAllDamageToYourCreatures`, an attacker filter on
+  `CreaturesCantAttackController`, `EventKind::DealsDamage` /
+  `DealsCombatDamage`, `EventScope::OpponentSourceDamagedYou`,
+  `CardDefinition::flip_when_predicate` (CR 603.8 state-triggered flip),
+  `Value::SpellsCastThisTurnTotal`, `CardInstance::damage_dealt_to_this_turn`,
+  `Effect::BecomeBlocked` (CR 509.1h), `Effect::ExileTopUntilNonland` +
+  `Value::LastExiledManaValue`, and `EntersAsCopy::legendary`. Tests in
+  `classic_sets/sok` and `classic_sets/sok2`.
 - **Betrayers of Kamigawa complete** (`sets::bok` + `sets::bok2`, 112 cards —
   `set_gaps.py bok` at zero). The `bok2` closure added: `Keyword::
   CounterFirstTargetingEachTurn` (the Glasskite cycle, enforced alongside Ward
