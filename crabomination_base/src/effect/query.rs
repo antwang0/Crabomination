@@ -244,6 +244,7 @@ impl Effect {
             | Effect::SecondSunrise
             | Effect::PlayerTapsUntapped { .. }
             | Effect::TapAnyNumberThenPumpPerTapped { .. }
+            | Effect::ReturnAnyNumberToHand { .. }
             | Effect::TapAnyNumberThenCounters { .. }
             | Effect::GrantExtraPlusOneCountersThisTurn { .. }
             // Amount is a scratch read (CounteredSpellManaSpent), no slots.

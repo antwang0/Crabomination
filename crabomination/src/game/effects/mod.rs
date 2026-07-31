@@ -1164,6 +1164,7 @@ impl GameState {
         // mode 1's "draw cards equal to the number discarded this way").
         self.cards_discarded_this_resolution = 0;
         self.energy_paid_this_resolution = 0;
+        self.permanents_returned_this_resolution = 0;
         self.creature_cards_discarded_this_resolution = 0;
         self.greatest_discarded_mv_this_resolution = 0;
         self.cards_discarded_per_player_this_resolution.clear();
@@ -7885,6 +7886,47 @@ impl GameState {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.players[p].extra_etb_p1p1_counters_this_turn =
                         self.players[p].extra_etb_p1p1_counters_this_turn.saturating_add(1);
+                }
+                Ok(())
+            }
+
+            Effect::ReturnAnyNumberToHand { filter } => {
+                // CR 702.60 — Sweep. The controller picks any subset (min 0);
+                // the count feeds `Value::PermanentsReturnedThisEffect`.
+                let seat = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat)
+                    .filter(|c| crate::game::layers::requirement_matches_card(filter, c, seat))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                // Auto default: return everything, maximizing the payoff.
+                let auto_default: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                let n_cands = candidates.len() as u32;
+                let Some(chosen) = self.choose_up_to_cards(
+                    seat,
+                    "Return any number of permanents you control to your hand".to_string(),
+                    source,
+                    candidates.clone(),
+                    n_cands,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
+                };
+                for cid in chosen {
+                    if !candidates.iter().any(|(id, _)| *id == cid) {
+                        continue;
+                    }
+                    let owner = self.battlefield_find(cid).map(|c| c.owner);
+                    let Some(owner) = owner else { continue };
+                    self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(owner)), ctx, events);
+                    self.permanents_returned_this_resolution += 1;
                 }
                 Ok(())
             }

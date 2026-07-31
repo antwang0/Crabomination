@@ -514,12 +514,22 @@ impl GameState {
                 }
             };
             let Some(d) = defender else { continue };
+            let attacker_matches = |f: &crate::card::SelectionRequirement| {
+                self.battlefield_find(atk.attacker).is_some_and(|a| {
+                    crate::game::layers::requirement_matches_card(f, a, a.controller)
+                })
+            };
             let barred = self.battlefield.iter().filter(|c| c.controller == d).any(|c| {
-                c.definition.static_abilities.iter().any(|sa| matches!(
-                    &sa.effect,
-                    crate::effect::StaticEffect::CreaturesCantAttackController { protect_planeswalkers }
-                        if !at_planeswalker || *protect_planeswalkers
-                ))
+                c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::CreaturesCantAttackController {
+                        protect_planeswalkers,
+                        filter,
+                    } => {
+                        (!at_planeswalker || *protect_planeswalkers)
+                            && filter.as_ref().is_none_or(attacker_matches)
+                    }
+                    _ => false,
+                })
             });
             if barred {
                 return Err(GameError::CannotAttack(atk.attacker));
@@ -3143,6 +3153,14 @@ impl GameState {
             Target::Player(damaged_player),
             damage_amount,
         );
+        for kind in [EventKind::DealsCombatDamage, EventKind::DealsDamage] {
+            self.fire_combat_damage_triggers(
+                source,
+                kind,
+                Target::Player(damaged_player),
+                damage_amount,
+            );
+        }
         // CR 510 — "whenever combat damage is dealt to you" listeners fire off
         // the *recipient's* own permanents (SelfSource on a permanent the
         // damaged player controls). Risona sheds an indestructible counter.
@@ -3274,13 +3292,19 @@ impl GameState {
             Target::Permanent(damaged_creature),
             damage_amount,
         );
-        // Combat damage is damage: the combat-agnostic wording fires too.
-        self.fire_combat_damage_triggers(
-            source,
+        // Combat damage is damage: the combat-agnostic wordings fire too.
+        for kind in [
             EventKind::DealsDamageToCreature,
-            Target::Permanent(damaged_creature),
-            damage_amount,
-        );
+            EventKind::DealsCombatDamage,
+            EventKind::DealsDamage,
+        ] {
+            self.fire_combat_damage_triggers(
+                source,
+                kind,
+                Target::Permanent(damaged_creature),
+                damage_amount,
+            );
+        }
     }
 
     /// The non-combat half of `EventKind::DealsDamageToCreature`: a permanent
@@ -3295,10 +3319,32 @@ impl GameState {
         if self.battlefield_find(source).is_none() {
             return;
         }
+        for kind in [EventKind::DealsDamageToCreature, EventKind::DealsDamage] {
+            self.fire_combat_damage_triggers(
+                source,
+                kind,
+                Target::Permanent(damaged_creature),
+                damage_amount,
+            );
+        }
+    }
+
+    /// The non-combat, player-side half of `EventKind::DealsDamage`: a
+    /// permanent that just burned a player fires its own damage triggers with
+    /// that player bound to slot 0.
+    pub(crate) fn fire_noncombat_damage_to_player_triggers(
+        &mut self,
+        source: CardId,
+        damaged_player: usize,
+        damage_amount: u32,
+    ) {
+        if self.battlefield_find(source).is_none() {
+            return;
+        }
         self.fire_combat_damage_triggers(
             source,
-            EventKind::DealsDamageToCreature,
-            Target::Permanent(damaged_creature),
+            EventKind::DealsDamage,
+            Target::Player(damaged_player),
             damage_amount,
         );
     }

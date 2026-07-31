@@ -1804,8 +1804,20 @@ impl crate::game::GameState {
                 _ => None,
             })
             .min();
+        // Minamo Scrollkeeper / Trusted Advisor — "your maximum hand size is
+        // increased by N"; copies stack, applied after any set-to override.
+        let increase: usize = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == player)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .map(|sa| match sa.effect {
+                StaticEffect::ControllerMaxHandSizeIncreased(n) => n as usize,
+                _ => 0,
+            })
+            .sum();
         let base = set_to.or(self.players[player].max_hand_size);
-        base.map(|m| m.saturating_sub(reduction))
+        base.map(|m| (m + increase).saturating_sub(reduction))
     }
 
     /// CR 305 — Whether `player` may play lands from their graveyard

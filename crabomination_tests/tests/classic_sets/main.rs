@@ -12,6 +12,7 @@ mod bng;
 mod bok;
 mod bok2;
 mod sok;
+mod sok2;
 mod bro;
 mod chk;
 mod chk2;

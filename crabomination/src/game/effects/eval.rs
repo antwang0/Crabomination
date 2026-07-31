@@ -570,6 +570,7 @@ impl GameState {
             Value::SacrificedManaValue => self.sacrificed_mana_value.unwrap_or(0) as i32,
             Value::CardsDiscardedThisEffect => self.cards_discarded_this_resolution as i32,
             Value::EnergyPaidThisEffect => self.energy_paid_this_resolution as i32,
+            Value::PermanentsReturnedThisEffect => self.permanents_returned_this_resolution as i32,
             Value::MaxCardsDiscardedThisEffectByAnyPlayer => self
                 .cards_discarded_per_player_this_resolution
                 .values()
@@ -2909,6 +2910,9 @@ impl GameState {
                         })
                     }
                     R::HasName(name) => card.definition.name == name.as_str(),
+                    R::ManaValueAtMostControllerHand => {
+                        card.definition.cost.cmc() as usize <= self.players[controller].hand.len()
+                    }
                     R::ManaValueAtMostControlledCount(inner) => {
                         let count = self
                             .battlefield
@@ -3314,6 +3318,9 @@ impl GameState {
             R::IsSourceChosenCardType => false,
             // Count walks the battlefield for the evaluating controller's
             // matching permanents; the candidate's own zone is irrelevant.
+            R::ManaValueAtMostControllerHand => {
+                card.definition.cost.cmc() as usize <= self.players[controller].hand.len()
+            }
             R::ManaValueAtMostControlledCount(inner) => {
                 let count = self
                     .battlefield

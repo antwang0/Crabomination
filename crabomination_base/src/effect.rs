@@ -648,6 +648,10 @@ pub enum Value {
     /// between independent resolutions, so a `Seq([Discard, Draw])`
     /// reads exactly the discards from this resolution.
     CardsDiscardedThisEffect,
+    /// Number of permanents returned to hand by an
+    /// `Effect::ReturnAnyNumberToHand` earlier in the current resolution — the
+    /// Sweep count (CR 702.60). Reset between independent resolutions.
+    PermanentsReturnedThisEffect,
     /// Amount of {E} paid by an `Effect::PayAnyEnergy` earlier in the current
     /// resolution. Reset between independent resolutions. Aether Spike's
     /// "counter that spell unless its controller pays {1} for each {E} paid
@@ -2051,6 +2055,15 @@ pub enum EventKind {
     /// Kumano's Blessing). Fires from both the combat step and the
     /// non-combat damage funnel, with the damaged creature bound to slot 0.
     DealsDamageToCreature,
+    /// "Whenever this permanent deals combat damage" — recipient-agnostic
+    /// (player, planeswalker or creature). The union of
+    /// `DealsCombatDamageToPlayer` and `DealsCombatDamageToCreature`
+    /// (Descendant of Kiyomaro). The damaged entity is bound to slot 0.
+    DealsCombatDamage,
+    /// "Whenever this permanent deals damage" — recipient- *and*
+    /// combat-agnostic (Kiyomaro, First to Stand). Fires from the combat
+    /// steps and the non-combat damage funnel alike.
+    DealsDamage,
     /// CR 702.130 — **Enrage**: a permanent was dealt damage (combat or
     /// non-combat). Fires the source's enrage trigger. Unlike
     /// `DealsCombatDamageToCreature` (which is keyed on the *dealer* and
@@ -4449,6 +4462,12 @@ pub enum Effect {
     /// (stacking across activations); cleared at cleanup. Distinct from
     /// `GrantExtraPlusOneCountersThisTurn`, which amplifies counters *placed*.
     CreaturesEnterWithExtraCounterThisTurn { who: PlayerRef },
+    /// CR 702.60 — Sweep: "Return any number of `filter` you control to their
+    /// owner's hand." The controller picks the subset (min 0); the count is
+    /// published as `Value::PermanentsReturnedThisEffect` for a follow-up step
+    /// in the same resolution to scale off (Barrel Down Sokenzan, Sink into
+    /// Takenuma).
+    ReturnAnyNumberToHand { filter: SelectionRequirement },
     /// "Tap any number of untapped permanents matching `filter` you control;
     /// this source gets +`power`/+`toughness` until end of turn for each one
     /// tapped this way" (Orphans of the Wheat). The controller chooses which

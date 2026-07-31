@@ -1980,6 +1980,10 @@ pub enum SelectionRequirement {
     /// Battlefield/zone candidate; the count walks the battlefield for
     /// permanents matching `inner` under the evaluating controller.
     ManaValueAtMostControlledCount(Box<SelectionRequirement>),
+    /// "with mana value less than or equal to the number of cards in your
+    /// hand" (Rending Vines). Counts the *evaluating controller's* hand, not
+    /// the candidate's owner's.
+    ManaValueAtMostControllerHand,
     /// True when the candidate's mana value is ≤ the number of cards in its
     /// own controller's graveyard. Powers Drown in the Loch's "counter/
     /// destroy target with mana value ≤ cards in its controller's graveyard"
@@ -3414,6 +3418,12 @@ pub struct EquipScale {
     /// controller's hand"), rather than the source-controller counts above.
     #[serde(default)]
     pub count_host_controller_hand: bool,
+    /// When true, the count is the number of cards in the *source's*
+    /// controller's hand — "gets -X/-X, where X is the number of cards in
+    /// your hand" (Kagemaro's Clutch). The your-side sibling of
+    /// `count_host_controller_hand`.
+    #[serde(default)]
+    pub count_source_controller_hand: bool,
     /// When set, the count is the number of cards matching this filter in the
     /// *host creature's controller's* graveyard (Death's Approach — "-X/-X
     /// where X is the number of creature cards in its controller's graveyard").

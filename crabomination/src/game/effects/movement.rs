@@ -856,6 +856,12 @@ impl GameState {
                 {
                     self.record_commander_damage(p, src, amount);
                 }
+                // "Whenever this deals damage" (Kiyomaro) — the non-combat,
+                // player-side half; combat fires the same kind from
+                // `resolve_combat`.
+                if let Some(src) = source {
+                    self.fire_noncombat_damage_to_player_triggers(src, p, amount);
+                }
             }
             EntityRef::Permanent(cid) => {
                 // CR 122.1c — Shield counters: if damage would be dealt

@@ -586,6 +586,11 @@ pub struct GameState {
     /// independent resolutions.
     #[serde(skip)]
     pub(crate) energy_paid_this_resolution: u32,
+    /// Transient: permanents returned to hand by `Effect::ReturnAnyNumberToHand`
+    /// within the current resolution — the Sweep count (CR 702.60), read by
+    /// `Value::PermanentsReturnedThisEffect`. Reset between resolutions.
+    #[serde(skip)]
+    pub(crate) permanents_returned_this_resolution: u32,
     /// Transient: count of *creature* cards discarded within the current
     /// effect resolution. Bumped alongside `cards_discarded_this_resolution`
     /// when the discarded card carries `CardType::Creature`. Read by
@@ -1485,6 +1490,7 @@ impl Clone for GameState {
             last_moved_cards: self.last_moved_cards.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
             energy_paid_this_resolution: self.energy_paid_this_resolution,
+            permanents_returned_this_resolution: self.permanents_returned_this_resolution,
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             greatest_discarded_mv_this_resolution: self.greatest_discarded_mv_this_resolution,
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
@@ -1706,6 +1712,7 @@ impl GameState {
             last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
             energy_paid_this_resolution: 0,
+            permanents_returned_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
             greatest_discarded_mv_this_resolution: 0,
             cards_discarded_per_player_this_resolution: HashMap::new(),
@@ -5345,6 +5352,9 @@ impl GameState {
                     host_controller
                         .map(|hc| self.players[hc].hand.len() as i32)
                         .unwrap_or(0)
+                } else if scale.count_source_controller_hand {
+                    // "-X/-X for each card in YOUR hand" (Kagemaro's Clutch).
+                    self.players[card.controller].hand.len() as i32
                 } else if let Some(gy_filter) = &scale.count_host_controller_graveyard {
                     // "-X/-X for each creature card in its controller's gy".
                     host_controller
@@ -6649,6 +6659,39 @@ impl GameState {
                         });
                     }
                 }
+            }
+        }
+        // "[Creatures the selector picks] get +X/+Y" with live Values
+        // (`StaticEffect::PumpPTByValue`) — Meishin's hand-sized shrink.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::PumpPTByValue { applies_to, power, toughness } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                let Some(affected) = selector_to_affected(applies_to, card) else {
+                    continue;
+                };
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    card.id,
+                    card.controller,
+                    None,
+                );
+                let (p, t) =
+                    (self.evaluate_value(power, &ctx), self.evaluate_value(toughness, &ctx));
+                if p == 0 && t == 0 {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(p, t),
+                });
             }
         }
         // "As long as [condition], [creatures the selector picks] get +P/+T."
@@ -16226,6 +16269,8 @@ fn static_effect_to_effects(
             // PumpTeamIf — conditional team anthem, resolved in
             // `gather_continuous_effects` (needs live predicate eval).
             | StaticEffect::PumpTeamIf { .. }
+            // PumpPTByValue — dynamic anthem, resolved in gather_continuous_effects.
+            | StaticEffect::PumpPTByValue { .. }
             // AnthemForChosenType — reads the source's live chosen creature
             // type; resolved in `gather_continuous_effects`.
             | StaticEffect::AnthemForChosenType { .. }
@@ -16263,6 +16308,7 @@ fn static_effect_to_effects(
             | StaticEffect::YourCreaturesCanAttackAsThoughNoDefender
             | StaticEffect::OpponentsMaxHandSizeReduced(_)
             | StaticEffect::ControllerMaxHandSize(_)
+            | StaticEffect::ControllerMaxHandSizeIncreased(_)
             | StaticEffect::NamedSpellTax { .. }
             // MayPlayLandsFromGraveyard — consulted by the land-play paths
             // via `player_may_play_lands_from_graveyard`; no layer effect.

@@ -115,6 +115,12 @@ pub enum StaticEffect {
     /// (controller as context). Drowsing Tyrannodon ("…as long as you control
     /// a creature with power 4 or greater").
     CanAttackIgnoringDefenderWhile { condition: Predicate },
+    /// "[Creatures the selector picks] get +X/+Y", where X and Y are live
+    /// [`Value`]s evaluated with the source as context — the dynamic-magnitude
+    /// sibling of `PumpPT` (Meishin, the Mind Cage's "all creatures get -X/-0,
+    /// where X is the number of cards in your hand"). Resolved in
+    /// `gather_continuous_effects`, so it recomputes every layer pass.
+    PumpPTByValue { applies_to: Selector, power: Value, toughness: Value },
     /// "As long as [condition], [creatures the selector picks] get +P/+T."
     /// The conditional-team sibling of `PumpSelfIf` (self) and `PumpPT`
     /// (unconditional team). Resolved live in `gather_continuous_effects`:
@@ -841,7 +847,13 @@ pub enum StaticEffect {
     /// (and, when `protect_planeswalkers`, a planeswalker you control) — a hard
     /// no, not a tax. Checked in `declare_attackers`. Blazing Archon,
     /// Peacekeeper-style locks. (`AttackTaxToController` is the payable sibling.)
-    CreaturesCantAttackController { protect_planeswalkers: bool },
+    /// `filter`, when set, narrows the prohibition to attackers matching it
+    /// (Reverence — "creatures with power 2 or less can't attack you").
+    CreaturesCantAttackController {
+        protect_planeswalkers: bool,
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+    },
     /// CR 509.1d — block tax. "Creatures can't block unless their controllers
     /// pay `amount` for each of those creatures." Checked in `declare_blockers`,
     /// which sums the tax across every active source and auto-pays it from each
@@ -1891,6 +1903,10 @@ pub enum StaticEffect {
     /// scoped to the controller). Overrides the base seven; the smallest
     /// active override wins.
     ControllerMaxHandSize(u32),
+    /// "Your maximum hand size is increased by N" (Minamo Scrollkeeper,
+    /// Trusted Advisor). Copies stack; folded into `effective_max_hand_size`
+    /// after any `ControllerMaxHandSize` override.
+    ControllerMaxHandSizeIncreased(u32),
     /// CR 305 / 718 — "You may play lands from your graveyard." Crucible of
     /// Worlds, Ramunap Excavator. Read by the land-play legality + the
     /// `PlayLandFromGraveyard` action: a land in the controller's graveyard

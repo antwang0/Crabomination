@@ -16,7 +16,7 @@ use super::bok2::on_upkeep;
 
 /// A Channel ability (CR 702.58) — "{cost}, Discard this card: `effect`",
 /// activated from hand at instant speed.
-fn channel(mana: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
+pub(crate) fn channel_ability(mana: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: mana,
         from_hand: true,
@@ -111,7 +111,7 @@ pub fn arashi_the_sky_asunder() -> CardDefinition {
                 },
                 ..Default::default()
             },
-            channel(
+            channel_ability(
                 cost(&[x(), g(), g()]),
                 Effect::DealDamage {
                     to: Selector::EachPermanent(
@@ -148,7 +148,7 @@ pub fn ghost_lit_nourisher() -> CardDefinition {
                 effect: pump(2),
                 ..Default::default()
             },
-            channel(cost(&[generic(3), g()]), pump(4)),
+            channel_ability(cost(&[generic(3), g()]), pump(4)),
         ],
         ..creature(
             "Ghost-Lit Nourisher",

@@ -162,6 +162,7 @@ pub fn blazing_archon() -> CardDefinition {
             description: "Creatures can't attack you.",
             effect: StaticEffect::CreaturesCantAttackController {
                 protect_planeswalkers: false,
+                filter: None,
             },
         }],
         ..Default::default()
