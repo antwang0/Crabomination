@@ -2199,6 +2199,10 @@ impl TriggerPush {
 pub enum GameError {
     #[error("It is not your priority to act")]
     NotYourPriority,
+    /// CR 300.2a — a land card (even one that's also an artifact) is played,
+    /// not cast.
+    #[error("A land can only be played, not cast")]
+    CannotCastLand,
     #[error("Sorcery-speed only: stack must be empty and it must be your main phase")]
     SorcerySpeedOnly,
     #[error("You can't cast noncreature spells this turn")]

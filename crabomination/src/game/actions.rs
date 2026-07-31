@@ -2955,10 +2955,17 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         // CR 601.3e — a card with no mana cost can't be cast by paying it
         // (suspend / free-cast paths bypass this method).
+        // CR 300.2a — a card that's a land and another type (artifact lands,
+        // Dryad Arbor) can only be *played*, never cast.
         {
             let p = self.priority.player_with_priority;
-            if self.players[p].hand.iter().any(|c| c.id == card_id && c.definition.no_mana_cost) {
-                return Err(GameError::NoManaCost);
+            if let Some(c) = self.players[p].hand.iter().find(|c| c.id == card_id) {
+                if c.definition.no_mana_cost {
+                    return Err(GameError::NoManaCost);
+                }
+                if c.definition.is_land() {
+                    return Err(GameError::CannotCastLand);
+                }
             }
         }
         // {X} cast costs: a `wants_ui` caster who didn't send an X picks one

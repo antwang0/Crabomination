@@ -2445,3 +2445,320 @@ pub fn lurking_evil() -> CardDefinition {
         ..enchantment("Lurking Evil", cost(&[b(), b(), b()]))
     }
 }
+
+// ── Batch 3 ─────────────────────────────────────────────────────────────────
+
+/// Barrin, Master Wizard — {1}{U}{U} 1/1 that turns any permanent into a bounce.
+pub fn barrin_master_wizard() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((R::Permanent, 1)),
+            effect: Effect::Move {
+                what: target_filtered(R::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Barrin, Master Wizard",
+            cost(&[generic(1), u(), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Douse — {2}{U}. A repeatable counter for red spells.
+pub fn douse() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::CounterSpell {
+                what: Selector::TargetFiltered { slot: 0, filter: R::HasColor(Color::Red) },
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Douse", cost(&[generic(2), u()]))
+    }
+}
+
+/// Bulwark — {3}{R}{R}. Each upkeep, the card advantage becomes damage.
+pub fn bulwark() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Player.and(R::ControlledByOpponent)),
+                amount: Value::NonNeg(Box::new(Value::Diff(
+                    Box::new(Value::HandSizeOf(PlayerRef::You)),
+                    Box::new(Value::HandSizeOf(PlayerRef::Target(0))),
+                ))),
+            },
+        }],
+        ..enchantment("Bulwark", cost(&[generic(3), r(), r()]))
+    }
+}
+
+/// Tainted Aether — {2}{B}{B}. Every creature that lands costs its controller
+/// a creature or a land.
+pub fn tainted_aether() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+            ),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                count: Value::ONE,
+                filter: R::Creature.or(R::Land),
+            },
+        }],
+        ..enchantment("Tainted Aether", cost(&[generic(2), b(), b()]))
+    }
+}
+
+
+/// Catastrophe — {4}{W}{W}. All the lands or all the creatures, no
+/// regeneration.
+pub fn catastrophe() -> CardDefinition {
+    sorcery(
+        "Catastrophe",
+        cost(&[generic(4), w(), w()]),
+        Effect::ChooseMode(vec![
+            Effect::DestroyNoRegen { what: Selector::EachPermanent(R::Land) },
+            Effect::DestroyNoRegen { what: Selector::EachPermanent(R::Creature) },
+        ]),
+    )
+}
+
+/// Gilded Drake — {1}{U} 3/3 flier you trade away on arrival.
+pub fn gilded_drake() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::ExchangeControl {
+            a: Selector::This,
+            b: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+        })],
+        ..creature("Gilded Drake", cost(&[generic(1), u()]), vec![CreatureType::Drake], 3, 3)
+    }
+}
+
+/// Goblin Cadets — {R} 2/1 that defects the moment it meets a blocker.
+pub fn goblin_cadets() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: [EventKind::Blocks, EventKind::BecomesBlocked]
+            .map(|kind| TriggeredAbility {
+                event: EventSpec::new(kind, EventScope::SelfSource),
+                effect: Effect::GainControl {
+                    what: Selector::This,
+                    to: Some(PlayerRef::Target(0)),
+                    duration: Duration::Permanent,
+                },
+            })
+            .to_vec(),
+        ..creature("Goblin Cadets", cost(&[r()]), vec![CreatureType::Goblin], 2, 1)
+    }
+}
+
+/// Karn, Silver Golem — {5} 4/4 that turns any artifact into a body.
+pub fn karn_silver_golem() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: [EventKind::Blocks, EventKind::BecomesBlocked]
+            .map(|kind| TriggeredAbility {
+                event: EventSpec::new(kind, EventScope::SelfSource),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(-4),
+                    toughness: Value::Const(4),
+                    duration: Duration::EndOfTurn,
+                },
+            })
+            .to_vec(),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Seq(vec![
+                Effect::AnimateAsCreature {
+                    what: target_filtered(R::Artifact.and(R::Noncreature)),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::SetBasePT {
+                    what: Selector::Target(0),
+                    power: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                    toughness: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Karn, Silver Golem", cost(&[generic(5)]), vec![CreatureType::Golem], 4, 4)
+    }
+}
+
+/// Endoskeleton — {2}. A toughness boost that lasts as long as it stays tapped.
+pub fn endoskeleton() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::MayChooseNotToUntap],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::ZERO,
+                toughness: Value::Const(3),
+                duration: Duration::WhileSourceTapped,
+            },
+            ..Default::default()
+        }],
+        ..artifact("Endoskeleton", cost(&[generic(2)]))
+    }
+}
+
+/// Wall of Junk — {2} 0/7 Wall that falls apart after one block.
+pub fn wall_of_junk() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+            effect: Effect::AtEndOfCombat {
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                }),
+            },
+        }],
+        ..creature("Wall of Junk", cost(&[generic(2)]), vec![CreatureType::Wall], 0, 7)
+    }
+}
+
+/// Rain of Filth — {B}. Your lands all become one-shot Swamps.
+pub fn rain_of_filth() -> CardDefinition {
+    instant(
+        "Rain of Filth",
+        cost(&[b()]),
+        Effect::GainActivatedAbility {
+            what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Land },
+            ability: Box::new(ActivatedAbility {
+                sac_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Black]),
+                },
+                ..Default::default()
+            }),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Metrognome — {4}. A Gnome a turn. (The printed forced-discard trigger is
+/// dropped — the engine has no "an opponent made you discard this" event.)
+pub fn metrognome() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: crate::card::TokenDefinition {
+                    name: "Gnome".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Gnome],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..artifact("Metrognome", cost(&[generic(4)]))
+    }
+}
+
+/// Soul Sculptor — {2}{W} 1/1 that files a creature down to a blank
+/// enchantment. The printed "until a player casts a creature spell" end
+/// condition is indefinite here.
+pub fn soul_sculptor() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::SetCardTypesTo {
+                    what: target_filtered(R::Creature),
+                    card_types: vec![CardType::Enchantment],
+                },
+                Effect::LoseAllAbilities {
+                    what: Selector::Target(0),
+                    duration: Duration::Permanent,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Soul Sculptor",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Human],
+            1,
+            1,
+        )
+    }
+}
+
+/// Retaliation — {2}{G}. Your creatures grow when something stops them.
+pub fn retaliation() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have \"Whenever this creature becomes blocked by a creature, it gets +1/+1 until end of turn.\"",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Creature.and(R::ControlledByYou),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                    effect: Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::ONE,
+                        toughness: Value::ONE,
+                        duration: Duration::EndOfTurn,
+                    },
+                }),
+            },
+        }],
+        ..enchantment("Retaliation", cost(&[generic(2), g()]))
+    }
+}
+
+/// Spreading Algae — {G}. The enchanted Swamp dies the moment it's used; the
+/// Aura comes back for the next one.
+pub fn spreading_algae() -> CardDefinition {
+    CardDefinition {
+        name: "Spreading Algae",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::HasLandType(LandType::Swamp)),
+        },
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+                effect: Effect::Destroy { what: Selector::This },
+            }],
+            ..Default::default()
+        }),
+        triggered_abilities: vec![returns_to_hand()],
+        ..Default::default()
+    }
+}

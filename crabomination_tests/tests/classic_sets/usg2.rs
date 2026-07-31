@@ -394,3 +394,143 @@ fn recantation_bounces_up_to_its_verse_count() {
         "one verse counter, one bounce"
     );
 }
+
+// ── Batch 3 ─────────────────────────────────────────────────────────────────
+
+/// Karn animates a noncreature artifact at its mana value.
+#[test]
+fn karn_animates_an_artifact_at_its_mana_value() {
+    let mut g = two_player_game();
+    let karn = g.add_card_to_battlefield(0, catalog::karn_silver_golem());
+    let target = g.add_card_to_battlefield(0, catalog::metrognome()); // {4}
+    mana(&mut g, 0);
+    activate(&mut g, karn, 0, Some(Target::Permanent(target)));
+    let cp = g.computed_permanent(target).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature));
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+}
+
+/// Wall of Junk goes home at end of combat once it blocks.
+#[test]
+fn wall_of_junk_bounces_after_blocking() {
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(0, catalog::wall_of_junk());
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, atk)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wall).is_some(), "it blocks first");
+    g.step = TurnStep::EndCombat;
+    g.fire_step_triggers(TurnStep::EndCombat);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == wall));
+}
+
+/// Gilded Drake trades itself for one of theirs.
+#[test]
+fn gilded_drake_swaps_itself_for_a_creature() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let drake = g.add_card_to_hand(0, catalog::gilded_drake());
+    mana(&mut g, 0);
+    cast(&mut g, drake, Some(Target::Permanent(theirs)));
+    assert_eq!(g.battlefield_find(drake).unwrap().controller, 1);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0);
+}
+
+/// Endoskeleton's boost lasts exactly as long as it stays tapped (CR 611.2c).
+#[test]
+fn endoskeleton_boost_ends_when_it_untaps() {
+    let mut g = two_player_game();
+    let skel = g.add_card_to_battlefield(0, catalog::endoskeleton());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    activate(&mut g, skel, 0, Some(Target::Permanent(bear)));
+    assert_eq!(g.computed_permanent(bear).unwrap().toughness, 5);
+    g.battlefield_find_mut(skel).unwrap().tapped = false;
+    g.check_state_based_actions();
+    assert_eq!(g.computed_permanent(bear).unwrap().toughness, 2);
+}
+
+/// Tainted Aether taxes every creature that lands, whoever plays it.
+#[test]
+fn tainted_aether_taxes_each_arrival() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tainted_aether());
+    let fodder = g.add_card_to_battlefield(1, catalog::forest());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    mana(&mut g, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    cast(&mut g, bear, None);
+    assert!(g.battlefield_find(fodder).is_none(), "their land paid the tax");
+}
+
+/// Retaliation hands the "becomes blocked" pump to your whole team.
+#[test]
+fn retaliation_grants_the_block_trigger() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::retaliation());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, bear)])).expect("block");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+}
+
+/// Catastrophe's two modes each sweep their half of the board.
+#[test]
+fn catastrophe_sweeps_the_chosen_half() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::catastrophe());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature mode");
+    assert!(g.battlefield_find(land).is_some(), "lands untouched");
+}
+
+/// Rain of Filth turns every land you control into a one-shot Swamp.
+#[test]
+fn rain_of_filth_grants_a_sacrifice_for_black() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::rain_of_filth());
+    mana(&mut g, 0);
+    cast(&mut g, spell, None);
+    let before = g.players[0].mana_pool.amount(Color::Black);
+    let idx = g.granted_abilities_for(land).len();
+    assert_eq!(idx, 1, "one granted ability");
+    activate(&mut g, land, 1, None);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), before + 1);
+    assert!(g.battlefield_find(land).is_none(), "the land was sacrificed");
+}
