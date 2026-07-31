@@ -1394,3 +1394,210 @@ pub fn call_for_blood() -> CardDefinition {
         )
     }
 }
+
+// ── The Baku cycle ──────────────────────────────────────────────────────────
+
+/// Spiritcraft: "you may put a ki counter on this" — the Baku cycle's engine.
+fn ki_charger() -> TriggeredAbility {
+    spiritcraft(Effect::MayDo {
+        description: "Put a ki counter on this permanent?".into(),
+        body: Box::new(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Ki,
+            amount: Value::ONE,
+        }),
+    })
+}
+
+/// "{1}[, {T}], Remove X ki counters from this: `payoff`" — the Baku payoff.
+fn ki_payoff(tap: bool, payoff: Effect) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost(&[generic(1)]),
+        tap_cost: tap,
+        remove_counter_x: Some(CounterType::Ki),
+        effect: payoff,
+        ..Default::default()
+    }
+}
+
+/// Blademane Baku — {1}{R} 1/1. Each ki counter spent is +2/+0.
+pub fn blademane_baku() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![ki_charger()],
+        activated_abilities: vec![ki_payoff(
+            false,
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(2))),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        )],
+        ..creature("Blademane Baku", cost(&[generic(1), r()]), vec![CreatureType::Spirit], 1, 1)
+    }
+}
+
+/// Petalmane Baku — {1}{G} 1/2. Spend ki for that much mana of one color.
+pub fn petalmane_baku() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![ki_charger()],
+        activated_abilities: vec![ki_payoff(
+            false,
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::XFromCost),
+            },
+        )],
+        ..creature("Petalmane Baku", cost(&[generic(1), g()]), vec![CreatureType::Spirit], 1, 2)
+    }
+}
+
+/// Quillmane Baku — {4}{U} 3/3. Spend ki to bounce a creature of that mana
+/// value or less.
+pub fn quillmane_baku() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![ki_charger()],
+        activated_abilities: vec![ki_payoff(
+            true,
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::ManaValueAtMostXFromCost)),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+        )],
+        ..creature("Quillmane Baku", cost(&[generic(4), u()]), vec![CreatureType::Spirit], 3, 3)
+    }
+}
+
+/// Skullmane Baku — {3}{B}{B} 2/1. Spend ki for that much -X/-X.
+pub fn skullmane_baku() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![ki_charger()],
+        activated_abilities: vec![ki_payoff(
+            true,
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
+                toughness: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
+                duration: Duration::EndOfTurn,
+            },
+        )],
+        ..creature(
+            "Skullmane Baku",
+            cost(&[generic(3), b(), b()]),
+            vec![CreatureType::Spirit],
+            2,
+            1,
+        )
+    }
+}
+
+/// Waxmane Baku — {2}{W} 2/2. Spend ki to tap that many creatures.
+pub fn waxmane_baku() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![ki_charger()],
+        activated_abilities: vec![ki_payoff(
+            false,
+            Effect::TargetsExactlyX {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 6,
+                    min_targets: 1,
+                    filter: R::Creature,
+                    effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+                }),
+            },
+        )],
+        ..creature("Waxmane Baku", cost(&[generic(2), w()]), vec![CreatureType::Spirit], 2, 2)
+    }
+}
+
+/// Baku Altar — {2} Artifact. The same ki engine, spending counters for 1/1
+/// Spirit tokens.
+pub fn baku_altar() -> CardDefinition {
+    CardDefinition {
+        name: "Baku Altar",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![ki_charger()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            remove_counter_cost: Some((CounterType::Ki, 1)),
+            effect: Effect::CreateToken {
+                definition: spirit_token(),
+                count: Value::ONE,
+                who: PlayerRef::You,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+// ── The Shoal cycle ─────────────────────────────────────────────────────────
+
+/// A Shoal: an {X}{C}{C} Arcane instant you may cast by exiling a `color` card
+/// with mana value X from your hand instead of paying its cost.
+fn shoal(
+    name: &'static str,
+    c: crate::mana::ManaCost,
+    color: Color,
+    effect: Effect,
+) -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(crate::card::AlternativeCost {
+            exile_filter: Some(R::HasColor(color).and(R::ManaValueExactlyXFromCost)),
+            ..Default::default()
+        }),
+        ..arcane_instant(name, c, effect)
+    }
+}
+
+/// Blazing Shoal — {X}{R}{R}. Target creature gets +X/+0.
+pub fn blazing_shoal() -> CardDefinition {
+    shoal(
+        "Blazing Shoal",
+        cost(&[x(), r(), r()]),
+        Color::Red,
+        Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::XFromCost,
+            toughness: Value::ZERO,
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Sickening Shoal — {X}{B}{B}. Target creature gets -X/-X.
+pub fn sickening_shoal() -> CardDefinition {
+    shoal(
+        "Sickening Shoal",
+        cost(&[x(), b(), b()]),
+        Color::Black,
+        Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
+            toughness: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Nourishing Shoal — {X}{G}{G}. Gain X life.
+pub fn nourishing_shoal() -> CardDefinition {
+    shoal(
+        "Nourishing Shoal",
+        cost(&[x(), g(), g()]),
+        Color::Green,
+        Effect::GainLife { who: Selector::You, amount: Value::XFromCost },
+    )
+}
+
+/// Disrupting Shoal — {X}{U}{U}. Counter target spell if its mana value is X.
+pub fn disrupting_shoal() -> CardDefinition {
+    shoal(
+        "Disrupting Shoal",
+        cost(&[x(), u(), u()]),
+        Color::Blue,
+        Effect::CounterSpell { what: target_filtered(R::ManaValueExactlyXFromCost) },
+    )
+}

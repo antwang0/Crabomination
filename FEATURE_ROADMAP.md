@@ -63,8 +63,8 @@ exercising each) was elided in a compaction pass; recover it from
   Tenza, Hankyu. New: `StaticEffect::MaxOneArtifactUntap` (CR 502.3 — Imi
   Statue) and `SpendRestriction::LegendarySpell` + `SpellKind.legendary`
   (Untaidake). Tests in `classic_sets/chk::gaps1`.
-- **Betrayers of Kamigawa opened** (`sets::bok`, 61 cards — `set_gaps.py bok`
-  112 → 51): the Genju cycle, the Spirit/Arcane spiritcraft payoffs, the
+- **Betrayers of Kamigawa opened** (`sets::bok`, 71 cards — `set_gaps.py bok`
+  112 → 41): the Genju cycle, the Spirit/Arcane spiritcraft payoffs, the
   soulshift bodies, the Samurai/bushido shells, and the utility spells. New:
   `Keyword::ProtectionFromMatching` (CR 702.16 — the general filtered form,
   gated at cast / damage / block, with the state-aware half in
@@ -76,7 +76,9 @@ exercising each) was elided in a compaction pass; recover it from
   `CastWithoutPayingImmediate.reduce_generic`. `EventScope::EnchantedBySource`
   now also matches `PermanentDied`, and an alternative cost's `exile_filter`
   resolves its X atoms against the declared X (the Shoal cycle's shape).
-  Tests in `classic_sets/bok`.
+  The Baku and Shoal cycles ride existing plumbing (`ActivatedAbility.
+  remove_counter_x`, `AlternativeCost.exile_filter`). Tests in
+  `classic_sets/bok`.
 - **Champions of Kamigawa complete** (`set_gaps.py chk` at zero — `sets::chk3`
   closed the last six). New: `Keyword::MayChooseNotToUntap` (CR 502.3, asked in
   `do_untap`), `Effect::GrantKeywordWhileSourceTapped` +

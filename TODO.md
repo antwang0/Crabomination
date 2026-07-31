@@ -7707,11 +7707,10 @@ stalled games via `eval_material`.
 
 ## Noticed this run (modern_decks — M11 closure / Betrayers of Kamigawa)
 
-- **BOK is at 51 gaps.** What's left needs one primitive each:
-  - The Baku cycle + Baku Altar — "{1}, Remove X ki counters: …" wants an
-    X-scaled `remove_counter_cost` on `ActivatedAbility`.
-  - The Shoal cycle — the alt-cost plumbing is in place (`exile_filter` now
-    resolves X), but the five cards still need writing.
+- **BOK is at 41 gaps.** What's left needs one primitive each:
+  - Shining Shoal — the four other Shoals ship; this one also needs
+    "the next X damage from a source of your choice is dealt to any target
+    instead", a redirect the prevention layer doesn't express yet.
   - The Glasskites / Kira — "the first time each turn this becomes the target
     of a spell or ability, counter it" needs a per-turn-per-object trigger
     budget plus a counter-the-triggering-object effect.

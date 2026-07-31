@@ -944,3 +944,120 @@ fn kaijin_bounces_what_it_blocks() {
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == atk), "the attacker bounced");
 }
+
+// ── Batch 3: the Baku and Shoal cycles ──────────────────────────────────────
+
+/// A Baku banks a ki counter on each Spirit or Arcane spell and spends them
+/// for a scaled pump.
+#[test]
+fn blademane_baku_charges_and_spends_ki() {
+    let mut g = two_player_game();
+    let baku = g.add_card_to_battlefield(0, catalog::blademane_baku());
+    g.clear_sickness(baku);
+    always_yes(&mut g);
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let arcane = g.add_card_to_hand(0, catalog::uproot());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, arcane, Some(Target::Permanent(land)));
+    assert_eq!(g.battlefield_find(baku).map(|c| c.counter_count(CounterType::Ki)), Some(1));
+
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: baku,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("spend ki");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(baku).map(|c| c.power), Some(3), "+2/+0 per counter");
+    assert_eq!(g.battlefield_find(baku).map(|c| c.counter_count(CounterType::Ki)), Some(0));
+}
+
+/// Spending more ki than the Baku carries is rejected.
+#[test]
+fn baku_cant_overspend_ki() {
+    let mut g = two_player_game();
+    let baku = g.add_card_to_battlefield(0, catalog::petalmane_baku());
+    g.clear_sickness(baku);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: baku,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: Some(2),
+        })
+        .is_err(),
+        "no counters, no payoff"
+    );
+}
+
+/// Nourishing Shoal can be cast by pitching a green card of mana value X.
+#[test]
+fn nourishing_shoal_pitches_for_life() {
+    let mut g = two_player_game();
+    let shoal = g.add_card_to_hand(0, catalog::nourishing_shoal());
+    let pitch = g.add_card_to_hand(0, catalog::body_of_jukai()); // green, MV 9
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: shoal,
+        pitch_card: Some(pitch),
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(9),
+    })
+    .expect("pitch cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 9);
+    assert!(g.exile.iter().any(|c| c.id == pitch), "the pitched card is exiled");
+}
+
+/// The pitched card's mana value has to match the declared X.
+#[test]
+fn shoal_pitch_must_match_x() {
+    let mut g = two_player_game();
+    let shoal = g.add_card_to_hand(0, catalog::nourishing_shoal());
+    let pitch = g.add_card_to_hand(0, catalog::body_of_jukai()); // MV 9
+    assert!(
+        g.perform_action(GameAction::CastSpellAlternative {
+            card_id: shoal,
+            pitch_card: Some(pitch),
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: Some(3),
+        })
+        .is_err(),
+        "MV 9 doesn't pay for X=3"
+    );
+}
+
+/// Every batch-3 card is registered.
+#[test]
+fn bok_batch3_is_registered() {
+    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+        .map(|f| f().name)
+        .collect();
+    for f in [
+        catalog::blademane_baku as fn() -> crabomination::card::CardDefinition,
+        catalog::petalmane_baku,
+        catalog::quillmane_baku,
+        catalog::skullmane_baku,
+        catalog::waxmane_baku,
+        catalog::baku_altar,
+        catalog::blazing_shoal,
+        catalog::sickening_shoal,
+        catalog::nourishing_shoal,
+        catalog::disrupting_shoal,
+    ] {
+        let name = f().name;
+        assert!(names.contains(&name), "{name} is not registered");
+    }
+}
