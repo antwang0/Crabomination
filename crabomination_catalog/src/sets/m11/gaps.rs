@@ -444,6 +444,40 @@ pub fn cyclops_gladiator() -> CardDefinition {
     }
 }
 
+/// Demon of Death's Gate — {6}{B}{B}{B} 9/9 Demon with flying and trample;
+/// 6 life and three black creatures get it out early.
+pub fn demon_of_deaths_gate() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        alternative_cost: Some(crate::card::AlternativeCost {
+            life_cost: 6,
+            sacrifice_permanents: Some((
+                R::Creature.and(R::HasColor(Color::Black)).and(R::ControlledByYou),
+                3,
+            )),
+            ..Default::default()
+        }),
+        ..creature(
+            "Demon of Death's Gate",
+            cost(&[generic(6), b(), b(), b()]),
+            vec![CreatureType::Demon],
+            9,
+            9,
+        )
+    }
+}
+
+/// Fire Servant — {3}{R}{R} 4/3 Elemental that doubles your red burn.
+pub fn fire_servant() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Your red instant and sorcery spells deal double damage.",
+            effect: StaticEffect::YourColorSpellDamageDoubled { color: Color::Red },
+        }],
+        ..creature("Fire Servant", cost(&[generic(3), r(), r()]), vec![CreatureType::Elemental], 4, 3)
+    }
+}
+
 /// Gaea's Revenge — {5}{G}{G} 8/5 Elemental with haste that green alone can
 /// answer.
 pub fn gaeas_revenge() -> CardDefinition {

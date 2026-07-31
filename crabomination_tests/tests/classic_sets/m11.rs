@@ -753,3 +753,59 @@ fn m11_cards_are_registered() {
     }
     assert!(catalog::stone_golem().card_types.contains(&CardType::Artifact));
 }
+
+/// Fire Servant doubles your red burn — but only spells, and only red ones.
+#[test]
+fn fire_servant_doubles_red_spell_damage() {
+    let burn = |servant: bool, spell: fn() -> crabomination::card::CardDefinition| {
+        let mut g = two_player_game();
+        if servant {
+            g.add_card_to_battlefield(0, catalog::fire_servant());
+        }
+        let id = g.add_card_to_hand(0, spell());
+        g.players[0].mana_pool.add(Color::Red, 2);
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        cast(&mut g, id, Some(Target::Player(1)));
+        20 - g.players[1].life
+    };
+    assert_eq!(burn(false, catalog::lightning_bolt), 3);
+    assert_eq!(burn(true, catalog::lightning_bolt), 6, "red burn is doubled");
+    // Its own combat damage is untouched — the static only reads spells.
+    let mut g = two_player_game();
+    let servant = g.add_card_to_battlefield(0, catalog::fire_servant());
+    let mut ev = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(1),
+        4,
+        Some(servant),
+        &mut ev,
+    );
+    assert_eq!(g.players[1].life, 16, "combat damage from the body isn't doubled");
+}
+
+/// Demon of Death's Gate comes down for 6 life and three black creatures.
+#[test]
+fn demon_of_deaths_gate_alternative_cost() {
+    let try_alt = |blacks: usize| {
+        let mut g = two_player_game();
+        for _ in 0..blacks {
+            g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
+        }
+        let demon = g.add_card_to_hand(0, catalog::demon_of_deaths_gate());
+        let ok = g
+            .perform_action(GameAction::CastSpellAlternative {
+                card_id: demon,
+                pitch_card: None,
+                target: None,
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            })
+            .is_ok();
+        drain_stack(&mut g);
+        (ok, g.players[0].life, g.battlefield_find(demon).is_some())
+    };
+    assert!(!try_alt(2).0, "two black creatures isn't enough");
+    assert_eq!(try_alt(3), (true, 14, true), "6 life and three bodies");
+}

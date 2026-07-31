@@ -9487,6 +9487,8 @@ static M11: &[Factory] = &[
     super::m11::hoarding_dragon,
     super::m11::ancient_hellkite,
     super::m11::cyclops_gladiator,
+    super::m11::demon_of_deaths_gate,
+    super::m11::fire_servant,
     super::m11::gaeas_revenge,
     super::m11::ajanis_mantra,
     super::m11::dark_tutelage,

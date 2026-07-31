@@ -1091,6 +1091,11 @@ pub enum StaticEffect {
     /// permanent or player (not only opponents') and excludes the static's own
     /// source permanent. Applied in `scale_damage_to` before the doublers.
     YourColorSourcesDealExtraDamage { color: crate::mana::Color, amount: u32 },
+    /// CR 614 — "If a [color] instant or sorcery spell you control would deal
+    /// damage, it deals double that damage instead" (Fire Servant). Applies
+    /// only while the damage source is a *spell* of that color with one of the
+    /// listed card types, controlled by this static's controller.
+    YourColorSpellDamageDoubled { color: crate::mana::Color },
     /// CR 614.x — "Permanents entering the battlefield don't cause
     /// abilities of permanents your opponents control to trigger. If a
     /// permanent entering the battlefield causes a triggered ability of

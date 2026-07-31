@@ -905,7 +905,8 @@ pub struct GameState {
     /// source-aware damage replacements (Torbran) can read the controller and
     /// colors of a card that's in no visible zone mid-resolution. Transient.
     #[serde(skip)]
-    pub(crate) resolving_source: Option<(CardId, usize, Vec<crate::mana::Color>)>,
+    pub(crate) resolving_source:
+        Option<(CardId, usize, Vec<crate::mana::Color>, Vec<crate::card::CardType>)>,
     /// Reentrancy guard: true while `gather_continuous_effects` runs, so
     /// layer-aware type filters (`evaluate_requirement_static`) fall back to
     /// printed types instead of recursing through `computed_permanent`.
@@ -3607,7 +3608,7 @@ impl GameState {
         let Some(src_ctrl) = source.and_then(|s| {
             self.computed_permanent(s).map(|cp| cp.controller).or_else(|| {
                 match &self.resolving_source {
-                    Some((id, caster, _)) if *id == s => Some(*caster),
+                    Some((id, caster, _, _)) if *id == s => Some(*caster),
                     _ => None,
                 }
             })
@@ -3654,7 +3655,7 @@ impl GameState {
         let Some(src_ctrl) = source.and_then(|s| {
             self.computed_permanent(s).map(|cp| cp.controller).or_else(|| {
                 match &self.resolving_source {
-                    Some((id, caster, _)) if *id == s => Some(*caster),
+                    Some((id, caster, _, _)) if *id == s => Some(*caster),
                     _ => None,
                 }
             })
@@ -3829,7 +3830,7 @@ impl GameState {
             self.computed_permanent(s)
                 .map(|cp| (cp.controller, cp.colors.clone()))
                 .or_else(|| match &self.resolving_source {
-                    Some((id, caster, colors)) if *id == s => {
+                    Some((id, caster, colors, _)) if *id == s => {
                         Some((*caster, colors.clone()))
                     }
                     _ => None,
@@ -3883,6 +3884,25 @@ impl GameState {
                                 && src_colors.contains(color)
                             {
                                 amount = amount.saturating_add(*bonus);
+                            }
+                        }
+                        StaticEffect::YourColorSpellDamageDoubled { color } => {
+                            // The source must be a *spell* (no battlefield
+                            // permanent behind it) of that color, cast by this
+                            // static's controller.
+                            if let Some((src_ctrl, src_colors)) = &source_info
+                                && *src_ctrl == c.controller
+                                && src_colors.contains(color)
+                                && matches!(
+                                    &self.resolving_source,
+                                    Some((id, _, _, types))
+                                        if Some(*id) == source
+                                            && (types.contains(&crate::card::CardType::Instant)
+                                                || types
+                                                    .contains(&crate::card::CardType::Sorcery))
+                                )
+                            {
+                                d += 1;
                             }
                         }
                         StaticEffect::YourColorSourcesDealExtraDamage { color, amount: bonus } => {
@@ -14542,6 +14562,7 @@ impl GameState {
             card.id,
             caster,
             card.definition.printed_colors(),
+            card.definition.card_types.clone(),
         ));
         let res = self.resolve_effect(&effect, &ctx);
         self.resolving_source = prev_src;
@@ -15812,6 +15833,7 @@ fn static_effect_to_effects(
             | StaticEffect::AddDamageToOpponentsPerCounter { .. }
             | StaticEffect::AddDamageFromColorToPlayers { .. }
             | StaticEffect::YourColorSourcesDealExtraDamage { .. }
+            | StaticEffect::YourColorSpellDamageDoubled { .. }
             | StaticEffect::ControlledCreatureTypesDealExtraDamage { .. }
             | StaticEffect::OpponentMillDoubled
             // GrantAffinityToISSpells / GrantAffinityToSpells — read at cast

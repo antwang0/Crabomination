@@ -588,7 +588,7 @@ impl GameState {
             self.battlefield_find(s)
                 .map(|c| c.controller)
                 .or_else(|| match &self.resolving_source {
-                    Some((id, caster, _)) if *id == s => Some(*caster),
+                    Some((id, caster, _, _)) if *id == s => Some(*caster),
                     _ => None,
                 })
         });
@@ -780,7 +780,7 @@ impl GameState {
         if !source_has_deathtouch
             && self.resolving_spell_deathtouch_seat.is_some()
             && match (source, &self.resolving_source) {
-                (Some(s), Some((rid, _, _))) => *rid == s,
+                (Some(s), Some((rid, _, _, _))) => *rid == s,
                 _ => false,
             }
         {
@@ -1049,7 +1049,7 @@ impl GameState {
             return;
         }
         let Some(seat) = self.resolving_spell_caster else { return };
-        if let (Some(src), Some((res_id, _, _))) = (source, &self.resolving_source)
+        if let (Some(src), Some((res_id, _, _, _))) = (source, &self.resolving_source)
             && src != *res_id
         {
             return;
@@ -1094,7 +1094,7 @@ impl GameState {
         }
         let Some(seat) = self.resolving_spell_caster else { return };
         // The damage must be dealt by the resolving spell itself.
-        if let (Some(src), Some((res_id, _, _))) = (source, &self.resolving_source)
+        if let (Some(src), Some((res_id, _, _, _))) = (source, &self.resolving_source)
             && src != *res_id
         {
             return;
