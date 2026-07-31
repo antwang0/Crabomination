@@ -8704,7 +8704,10 @@ impl GameState {
             if pitch_id == card_id {
                 return Err(GameError::InvalidPitchCard(pitch_id));
             }
-            if !self.evaluate_requirement_on_card(filter, pitch_card_inst, p) {
+            // CR 601.2b — the Shoal cycle's "exile a [color] card with mana
+            // value X": the filter's X atoms read the declared X.
+            let filter = filter.resolve_x(x_value.unwrap_or(0));
+            if !self.evaluate_requirement_on_card(&filter, pitch_card_inst, p) {
                 return Err(GameError::InvalidPitchCard(pitch_id));
             }
         }
@@ -12439,6 +12442,33 @@ impl GameState {
                 Some(c) if c.attached_to.is_some() => c.attached_to = None,
                 _ => return Err(GameError::SelectionRequirementViolated),
             }
+        }
+        // "Return a [filter] you control to its owner's hand" as a cost
+        // (Floodbringer). Bounce the cheapest match so a bot doesn't throw
+        // away its best permanent.
+        if let Some(filter) = &ability.return_permanent_cost {
+            let pick = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == p
+                        && self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            Some(card_id),
+                        )
+                })
+                .min_by_key(|c| c.definition.cost.cmc())
+                .map(|c| c.id)
+                .ok_or(GameError::SelectionRequirementViolated)?;
+            let ctx = crate::game::effects::EffectContext::for_ability(card_id, p, None);
+            self.move_card_to(
+                pick,
+                &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
+                &ctx,
+                &mut events,
+            );
         }
         if ability.sac_cost {
             let is_creature = self.permanent_is_creature(card_id);

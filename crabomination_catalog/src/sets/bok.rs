@@ -2,7 +2,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility, Subtypes,
+    EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R, StaticAbility, Subtypes,
     TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::{
@@ -996,5 +996,401 @@ pub fn heart_of_light() -> CardDefinition {
             effect: StaticEffect::PreventAllDamageToAndFromEnchanted,
         }],
         ..Default::default()
+    }
+}
+
+// ── The Genju cycle ─────────────────────────────────────────────────────────
+
+/// A Genju: an Aura on a land that can animate its host for {2} and climbs back
+/// out of the graveyard when the land dies.
+fn genju(
+    name: &'static str,
+    c: crate::mana::ManaCost,
+    land: LandType,
+    (p, t): (i32, i32),
+    keywords: Vec<Keyword>,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Land.and(R::HasLandType(land))),
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::BecomeCreature {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                power: Value::Const(p),
+                toughness: Value::Const(t),
+                creature_types: vec![CreatureType::Spirit],
+                keywords,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        // The printed trigger is "when enchanted land is put into a graveyard";
+        // modeled as the Aura's own LTB, which is the same event in practice
+        // (an orphaned Aura is swept the moment its land leaves).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::MayDo {
+                description: "Return the Genju to your hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Genju of the Cedars — {G}. The Forest swings as a 4/4.
+pub fn genju_of_the_cedars() -> CardDefinition {
+    genju(
+        "Genju of the Cedars",
+        cost(&[g()]),
+        LandType::Forest,
+        (4, 4),
+        vec![],
+    )
+}
+
+/// Genju of the Falls — {U}. The Island swings as a 3/2 flier.
+pub fn genju_of_the_falls() -> CardDefinition {
+    genju(
+        "Genju of the Falls",
+        cost(&[u()]),
+        LandType::Island,
+        (3, 2),
+        vec![Keyword::Flying],
+    )
+}
+
+/// Genju of the Spires — {R}. The Mountain swings as a 6/1.
+pub fn genju_of_the_spires() -> CardDefinition {
+    genju(
+        "Genju of the Spires",
+        cost(&[r()]),
+        LandType::Mountain,
+        (6, 1),
+        vec![],
+    )
+}
+
+/// Genju of the Fens — {B}. The Swamp swings as a 2/2. (Its granted
+/// "{B}: +1/+1" is dropped — `BecomeCreature` grants keywords, not abilities.)
+pub fn genju_of_the_fens() -> CardDefinition {
+    genju(
+        "Genju of the Fens",
+        cost(&[b()]),
+        LandType::Swamp,
+        (2, 2),
+        vec![],
+    )
+}
+
+/// Genju of the Fields — {W}. The Plains swings as a 2/5 with lifelink (the
+/// printed "gain that much life" trigger, modeled as the keyword).
+pub fn genju_of_the_fields() -> CardDefinition {
+    genju(
+        "Genju of the Fields",
+        cost(&[w()]),
+        LandType::Plains,
+        (2, 5),
+        vec![Keyword::Lifelink],
+    )
+}
+
+/// Genju of the Realm — {W}{U}{B}{R}{G}. Any land swings as a legendary 8/12
+/// trampler.
+pub fn genju_of_the_realm() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        ..genju(
+            "Genju of the Realm",
+            cost(&[w(), u(), b(), r(), g()]),
+            LandType::Plains,
+            (8, 12),
+            vec![Keyword::Trample],
+        )
+    }
+}
+
+// ── Moonfolk ────────────────────────────────────────────────────────────────
+
+/// Floodbringer — {1}{U} 1/2 flier. Bounce a land to tap one down.
+pub fn floodbringer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            return_permanent_cost: Some(R::Land),
+            effect: Effect::Tap { what: target_filtered(R::Land) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Floodbringer",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Moonfolk, CreatureType::Wizard],
+            1,
+            2,
+        )
+    }
+}
+
+/// Soratami Mindsweeper — {3}{U} 1/4 flier. Bounce a land to mill two.
+pub fn soratami_mindsweeper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            return_permanent_cost: Some(R::Land),
+            effect: Effect::Mill {
+                who: target_filtered(R::Player),
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Soratami Mindsweeper",
+            cost(&[generic(3), u()]),
+            vec![CreatureType::Moonfolk, CreatureType::Wizard],
+            1,
+            4,
+        )
+    }
+}
+
+// ── More creatures ──────────────────────────────────────────────────────────
+
+/// Kaijin of the Vanishing Touch — {1}{U} 0/3 Defender that bounces whatever it
+/// blocks at end of combat.
+pub fn kaijin_of_the_vanishing_touch() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+            effect: Effect::DelayUntilWithCapture {
+                kind: crate::effect::DelayedTriggerKind::EndOfCombat,
+                capture: Selector::BlockedAttacker,
+                body: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            },
+        }],
+        ..creature(
+            "Kaijin of the Vanishing Touch",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Spirit],
+            0,
+            3,
+        )
+    }
+}
+
+/// Kitsune Palliator — {2}{W} 0/2 that soaks 1 off every creature and player.
+pub fn kitsune_palliator() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PreventNextDamage {
+                target: Selector::EachPermanent(R::Creature),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Kitsune Palliator",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Fox, CreatureType::Cleric],
+            0,
+            2,
+        )
+    }
+}
+
+/// Lifespinner — {3}{G} 3/3. Feed it three Spirits for a legendary Spirit
+/// permanent off the top of your library.
+pub fn lifespinner() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::HasCreatureType(CreatureType::Spirit), 3)),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasSupertype(crate::card::Supertype::Legendary)
+                    .and(R::HasCreatureType(CreatureType::Spirit)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Lifespinner",
+            cost(&[generic(3), g()]),
+            vec![CreatureType::Spirit],
+            3,
+            3,
+        )
+    }
+}
+
+/// Shizuko, Caller of Autumn — {1}{G}{G} 2/3. Every player's upkeep banks
+/// {G}{G}{G} for them.
+pub fn shizuko_caller_of_autumn() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::AddManaKeptThisTurnCount {
+                who: PlayerRef::ActivePlayer,
+                color: Color::Green,
+                amount: Value::Const(3),
+            },
+        }],
+        ..legend(
+            "Shizuko, Caller of Autumn",
+            cost(&[generic(1), g(), g()]),
+            vec![CreatureType::Snake, CreatureType::Shaman],
+            2,
+            3,
+        )
+    }
+}
+
+// ── Artifacts ───────────────────────────────────────────────────────────────
+
+/// That Which Was Taken — {5} Legendary Artifact. Divinity counters hand out
+/// indestructibility.
+pub fn that_which_was_taken() -> CardDefinition {
+    CardDefinition {
+        name: "That Which Was Taken",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(R::OtherThanSource),
+                kind: CounterType::Divinity,
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Each permanent with a divinity counter on it has indestructible.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(R::WithCounter(CounterType::Divinity)),
+                keyword: Keyword::Indestructible,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ronin Warclub — {3} Equipment. +2/+1, and it leaps onto each creature you
+/// deploy.
+pub fn ronin_warclub() -> CardDefinition {
+    CardDefinition {
+        name: "Ronin Warclub",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(5)]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            toughness: 1,
+            ..Default::default()
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                }),
+            effect: Effect::Attach { what: Selector::This, to: Selector::TriggerSource },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Spells ──────────────────────────────────────────────────────────────────
+
+/// Stream of Consciousness — {1}{U} Arcane instant. Shuffle up to four cards
+/// from a graveyard back into its owner's library.
+pub fn stream_of_consciousness() -> CardDefinition {
+    arcane_instant(
+        "Stream of Consciousness",
+        cost(&[generic(1), u()]),
+        Effect::ApplyToTargets {
+            max_targets: 4,
+            min_targets: 0,
+            filter: R::InGraveyard,
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: LibraryPosition::Shuffled,
+                },
+            }),
+        },
+    )
+}
+
+/// Toils of Night and Day — {2}{U} Arcane instant. Tap or untap two permanents.
+pub fn toils_of_night_and_day() -> CardDefinition {
+    let flip = |slot: u8| {
+        Effect::ChooseMode(vec![
+            Effect::Tap { what: Selector::Target(slot) },
+            Effect::Untap { what: Selector::Target(slot), up_to: None },
+        ])
+    };
+    arcane_instant(
+        "Toils of Night and Day",
+        cost(&[generic(2), u()]),
+        Effect::Seq(vec![flip(0), flip(1)]),
+    )
+}
+
+/// Call for Blood — {4}{B} Arcane instant. Feed it a creature to shrink another
+/// by the eaten creature's power.
+pub fn call_for_blood() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature,
+            count: 1,
+        }],
+        ..arcane_instant(
+            "Call for Blood",
+            cost(&[generic(4), b()]),
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Times(
+                    Box::new(Value::SacrificedPower),
+                    Box::new(Value::Const(-1)),
+                ),
+                toughness: Value::Times(
+                    Box::new(Value::SacrificedPower),
+                    Box::new(Value::Const(-1)),
+                ),
+                duration: Duration::EndOfTurn,
+            },
+        )
     }
 }

@@ -730,3 +730,217 @@ fn bok_stat_lines() {
     assert!(catalog::day_of_destiny().supertypes.contains(&Supertype::Legendary));
     assert!(catalog::orb_of_dreams().card_types.contains(&CardType::Artifact));
 }
+
+// ── Batch 2 ─────────────────────────────────────────────────────────────────
+
+/// The Genju cycle is registered and enchants its own basic type.
+#[test]
+fn genju_cycle_is_registered() {
+    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+        .map(|f| f().name)
+        .collect();
+    for f in [
+        catalog::genju_of_the_cedars as fn() -> crabomination::card::CardDefinition,
+        catalog::genju_of_the_falls,
+        catalog::genju_of_the_spires,
+        catalog::genju_of_the_fens,
+        catalog::genju_of_the_fields,
+        catalog::genju_of_the_realm,
+    ] {
+        let d = f();
+        assert!(names.contains(&d.name), "{} is not registered", d.name);
+        assert_eq!(d.activated_abilities.len(), 1, "{} animates for {{2}}", d.name);
+    }
+}
+
+/// Genju of the Spires turns its Mountain into a 6/1 for the turn.
+#[test]
+fn genju_of_the_spires_animates_its_mountain() {
+    let mut g = two_player_game();
+    let mountain = g.add_card_to_battlefield(0, catalog::mountain());
+    let genju = g.add_card_to_hand(0, catalog::genju_of_the_spires());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, genju, Some(Target::Permanent(mountain)));
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: genju,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(mountain).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 1));
+    assert!(cp.card_types.contains(&CardType::Land), "still a land");
+}
+
+/// A Genju climbs back out of the graveyard when its land dies.
+#[test]
+fn genju_returns_when_its_land_dies() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let genju = g.add_card_to_hand(0, catalog::genju_of_the_cedars());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, genju, Some(Target::Permanent(forest)));
+    always_yes(&mut g);
+    let evs = g.remove_to_graveyard_with_triggers(forest);
+    g.dispatch_triggers_for_events(&evs);
+    // The orphaned Aura is swept by SBA; its "when enchanted land dies"
+    // trigger fires off that sweep.
+    let sba = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&sba);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == genju), "the Genju came home");
+}
+
+/// Floodbringer's bounce cost really returns a land.
+#[test]
+fn floodbringer_pays_with_a_land() {
+    let mut g = two_player_game();
+    let bringer = g.add_card_to_battlefield(0, catalog::floodbringer());
+    g.clear_sickness(bringer);
+    let mine = g.add_card_to_battlefield(0, catalog::island());
+    let theirs = g.add_card_to_battlefield(1, catalog::forest());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bringer,
+        ability_index: 0,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "my land bounced as the cost");
+    assert_eq!(g.battlefield_find(theirs).map(|c| c.tapped), Some(true));
+}
+
+/// Lifespinner eats three Spirits for a legendary Spirit.
+#[test]
+fn lifespinner_trades_three_spirits() {
+    let mut g = two_player_game();
+    let spinner = g.add_card_to_battlefield(0, catalog::lifespinner());
+    g.clear_sickness(spinner);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::scaled_hulk());
+    }
+    let prize = g.add_card_to_library(0, catalog::oyobi_who_split_the_heavens());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(prize))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spinner,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Scaled Hulk").count(), 0);
+    assert!(g.battlefield_find(prize).is_some(), "Oyobi hit the battlefield");
+}
+
+/// That Which Was Taken hands out indestructibility with its divinity counters.
+#[test]
+fn that_which_was_taken_grants_indestructible() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_battlefield(0, catalog::that_which_was_taken());
+    g.clear_sickness(relic);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: relic,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).map(|c| c.counter_count(CounterType::Divinity)), Some(1));
+    assert!(
+        g.computed_permanent(bear)
+            .is_some_and(|c| c.keywords.contains(&Keyword::Indestructible))
+    );
+}
+
+/// Ronin Warclub jumps onto each creature you deploy.
+#[test]
+fn ronin_warclub_leaps_to_new_arrivals() {
+    let mut g = two_player_game();
+    let club = g.add_card_to_battlefield(0, catalog::ronin_warclub());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bear, None);
+    assert_eq!(g.battlefield_find(club).and_then(|c| c.attached_to), Some(bear));
+    assert_eq!(g.computed_permanent(bear).map(|c| (c.power, c.toughness)), Some((4, 3)));
+}
+
+/// Shizuko banks {G}{G}{G} for whoever's upkeep it is.
+#[test]
+fn shizuko_pays_the_active_player() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::shizuko_caller_of_autumn());
+    g.active_player_idx = 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].mana_pool.amount(Color::Green), 3, "the opponent gets it too");
+}
+
+/// Call for Blood shrinks by the sacrificed creature's power.
+#[test]
+fn call_for_blood_scales_off_the_sacrifice() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::body_of_jukai()); // 8/5
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::call_for_blood());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, spell, Some(Target::Permanent(victim)));
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(fodder).is_none(), "the sacrifice was paid");
+    assert!(g.battlefield_find(victim).is_none(), "-8/-8 killed it");
+}
+
+/// Stream of Consciousness shuffles graveyard cards back in.
+#[test]
+fn stream_of_consciousness_recycles() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::stream_of_consciousness());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, spell, Some(Target::Permanent(a)));
+    assert!(g.players[1].library.iter().any(|c| c.id == a));
+}
+
+/// Kaijin sends its blocking victim home at end of combat.
+#[test]
+fn kaijin_bounces_what_it_blocks() {
+    let mut g = two_player_game();
+    let kaijin = g.add_card_to_battlefield(0, catalog::kaijin_of_the_vanishing_touch());
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareBlockers(vec![(kaijin, atk)])).expect("block");
+    drain_stack(&mut g);
+    g.step = TurnStep::EndCombat;
+    g.fire_step_triggers(TurnStep::EndCombat);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == atk), "the attacker bounced");
+}

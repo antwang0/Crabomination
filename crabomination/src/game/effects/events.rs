@@ -471,7 +471,9 @@ pub(crate) fn event_matches_spec(
             // Death or exile of the enchanted host both consult the
             // leaves-battlefield snapshot (`auras_at_death`), since the host is
             // already gone by dispatch time (Minion's Return, Kaya's Ghostform).
-            GameEvent::CreatureDied { card_id } | GameEvent::PermanentExiled { card_id } => state
+            GameEvent::CreatureDied { card_id }
+            | GameEvent::PermanentDied { card_id, .. }
+            | GameEvent::PermanentExiled { card_id } => state
                 .auras_at_death
                 .get(card_id)
                 .is_some_and(|auras| auras.iter().any(|(a, _)| *a == source.id)),

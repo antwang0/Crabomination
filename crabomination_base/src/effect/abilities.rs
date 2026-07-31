@@ -2144,6 +2144,11 @@ pub struct ActivatedAbility {
     /// like Mind Stone (`{1}, {T}, Sacrifice this: Draw a card`),
     /// Cathar Commando, Greater Good, Zuran Orb, etc.
     pub sac_cost: bool,
+    /// "Return a [filter] you control to its owner's hand" as an activation
+    /// cost (Floodbringer, Soratami Mindsweeper). Paid before the ability goes
+    /// on the stack; activation is rejected when nothing matches.
+    #[serde(default)]
+    pub return_permanent_cost: Option<SelectionRequirement>,
     /// CR 702.6 — "Unattach this Equipment" as an activation cost: the source
     /// must currently be attached, and detaching it is part of the cost
     /// (Sunforger). Paid alongside `sac_cost` in `activate_ability`.
