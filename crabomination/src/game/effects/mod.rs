@@ -21433,10 +21433,9 @@ impl GameState {
                     let StackItem::Spell { card, caster, .. } = self.stack.remove(pos) else {
                         return Ok(());
                     };
-                    let (name, owner) = (card.definition.name, card.owner);
+                    let name = card.definition.name;
                     self.exile.push(*card);
                     events.push(GameEvent::PermanentExiled { card_id: cid });
-                    let _ = owner;
                     (name, caster)
                 } else if let Some(c) = self.battlefield_find(cid) {
                     let (name, victim) = (c.definition.name, c.controller);
@@ -21527,11 +21526,9 @@ impl GameState {
                 else {
                     return Ok(());
                 };
-                let Some(owner) =
-                    self.players.iter().position(|pl| pl.graveyard.iter().any(|c| c.id == aura_id))
-                else {
+                if !self.players.iter().any(|pl| pl.graveyard.iter().any(|c| c.id == aura_id)) {
                     return Ok(());
-                };
+                }
                 self.move_card_to(
                     aura_id,
                     &ZoneDest::Battlefield {
@@ -21541,7 +21538,6 @@ impl GameState {
                     ctx,
                     events,
                 );
-                let _ = owner;
                 if let Some(c) = self.battlefield_find_mut(aura_id) {
                     c.attached_to = Some(host_id);
                 }

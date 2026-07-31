@@ -160,3 +160,47 @@ fn cr_611_2c_while_source_tapped_locks_its_set_and_expires_on_untap() {
     g.check_state_based_actions();
     assert_eq!(g.computed_permanent(early).unwrap().power, 2);
 }
+
+// ── CR 209 / 210 — loyalty and defense ──────────────────────────────────────
+
+/// CR 209.1 / 306.5b — a planeswalker enters with loyalty counters equal to its
+/// printed loyalty, and that number is its loyalty off the battlefield too.
+#[test]
+fn cr_209_1_planeswalker_enters_with_its_printed_loyalty() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let def = catalog::saheeli_sublime_artificer();
+    let printed = def.base_loyalty;
+    assert!(printed > 0, "the printed loyalty is the off-battlefield value");
+    let pw = g.add_card_to_battlefield(0, def);
+    assert_eq!(g.battlefield_find(pw).unwrap().counter_count(CounterType::Loyalty), printed);
+}
+
+/// CR 210.1 / 310.4b — a battle enters with defense counters equal to its
+/// printed defense.
+#[test]
+fn cr_210_1_battle_enters_with_its_printed_defense() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let def = catalog::invasion_of_zendikar();
+    let printed = def.defense;
+    assert!(printed > 0);
+    let battle = g.add_card_to_battlefield(0, def);
+    assert_eq!(g.battlefield_find(battle).unwrap().counter_count(CounterType::Defense), printed);
+}
+
+// ── CR 308 — Kindred ────────────────────────────────────────────────────────
+
+/// CR 308.1/308.2 — a kindred card has another card type and carries creature
+/// types, so a type lord's anthem sees it as a Goblin without it being a
+/// creature.
+#[test]
+fn cr_308_2_kindred_permanents_carry_creature_types_without_being_creatures() {
+    use crabomination::card::{CardType, CreatureType};
+    let mut g = two_player_game();
+    let altar = g.add_card_to_battlefield(0, catalog::altar_of_the_goyf());
+    let cp = g.computed_permanent(altar).unwrap();
+    assert!(cp.card_types.contains(&CardType::Artifact));
+    assert!(!cp.card_types.contains(&CardType::Creature), "a kindred artifact isn't a creature");
+    assert!(cp.subtypes.creature_types.contains(&CreatureType::Lhurgoyf), "but it has the type");
+}
