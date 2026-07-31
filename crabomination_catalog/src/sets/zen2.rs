@@ -1409,3 +1409,600 @@ pub fn armament_master() -> CardDefinition {
         )
     }
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Blade of the Bloodchief — {1} Equipment. Every creature death grows the
+/// bearer; a Vampire bearer grows twice as fast. Equip {1}.
+pub fn blade_of_the_bloodchief() -> CardDefinition {
+    let counters = |n: i32| Effect::AddCounter {
+        what: Selector::This,
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(n),
+    };
+    CardDefinition {
+        name: "Blade of the Bloodchief",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+                effect: Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: R::HasCreatureType(CreatureType::Vampire),
+                    },
+                    then: Box::new(counters(2)),
+                    else_: Box::new(counters(1)),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Grappling Hook — {4} Equipment. Double strike, and the bearer picks its own
+/// blocker. Equip {4}.
+pub fn grappling_hook() -> CardDefinition {
+    CardDefinition {
+        name: "Grappling Hook",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::DoubleStrike],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Target creature blocks this creature if able".into(),
+                    body: Box::new(Effect::MustBlockSource {
+                        what: target_filtered(R::Creature),
+                    }),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Explorer's Scope — {1} Equipment. Attacking turns a land off the top into a
+/// tapped land drop. Equip {1}.
+pub fn explorers_scope() -> CardDefinition {
+    CardDefinition {
+        name: "Explorer's Scope",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::RevealTopLandToBattlefieldElseHand { who: PlayerRef::You },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Celestial Mantle — {3}{W}{W}{W} Aura. +3/+3, and connecting doubles its
+/// controller's life total.
+pub fn celestial_mantle() -> CardDefinition {
+    CardDefinition {
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 3,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::DoubleLife { who: Selector::You },
+            }],
+            ..Default::default()
+        }),
+        ..aura("Celestial Mantle", cost(&[generic(3), w(), w(), w()]), EquipBonus::default())
+    }
+}
+
+/// Savage Silhouette — {2}{G} Aura. +2/+2 and a {1}{G} regeneration.
+pub fn savage_silhouette() -> CardDefinition {
+    aura(
+        "Savage Silhouette",
+        cost(&[generic(2), g()]),
+        EquipBonus {
+            power: 2,
+            toughness: 2,
+            activated_abilities: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(1), g()]),
+                effect: Effect::Regenerate { what: Selector::This },
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    )
+}
+
+/// Predatory Urge — {3}{G} Aura. The enchanted creature can tap to fight.
+pub fn predatory_urge() -> CardDefinition {
+    aura(
+        "Predatory Urge",
+        cost(&[generic(3), g()]),
+        EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Fight {
+                    attacker: Selector::This,
+                    defender: target_filtered(R::Creature),
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    )
+}
+
+/// Cosi's Trickster — {U} 1/1 Merfolk Wizard that grows whenever an opponent
+/// shuffles.
+pub fn cosis_trickster() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LibraryShuffled, EventScope::OpponentControl),
+            effect: Effect::MayDo {
+                description: "Put a +1/+1 counter on Cosi's Trickster".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        ..creature(
+            "Cosi's Trickster",
+            cost(&[u()]),
+            vec![CreatureType::Merfolk, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Scute Mob — {G} 1/1 Insect that jumps four counters each upkeep once you
+/// have five lands.
+pub fn scute_mob() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+                n: Value::Const(5),
+            }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(4),
+            },
+        }],
+        ..creature("Scute Mob", cost(&[g()]), vec![CreatureType::Insect], 1, 1)
+    }
+}
+
+/// Scythe Tiger — {G} 3/2 Cat with shroud; it eats a land on the way in or
+/// dies.
+pub fn scythe_tiger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Shroud],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SelectorExists(Selector::EachPermanent(
+                R::Land.and(R::ControlledByYou),
+            )),
+            then: Box::new(Effect::MayDoElse {
+                description: "Sacrifice a land".into(),
+                body: Box::new(Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: R::Land,
+                }),
+                else_: Box::new(Effect::SacrificeSource),
+            }),
+            else_: Box::new(Effect::SacrificeSource),
+        })],
+        ..creature("Scythe Tiger", cost(&[g()]), vec![CreatureType::Cat], 3, 2)
+    }
+}
+
+/// Living Tsunami — {2}{U}{U} 4/4 Elemental with flying; each upkeep it wants a
+/// land back in your hand or it dies.
+pub fn living_tsunami() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    R::Land.and(R::ControlledByYou),
+                )),
+                then: Box::new(Effect::MayDoElse {
+                    description: "Return a land you control to its owner's hand".into(),
+                    body: Box::new(Effect::MoveChosen {
+                        from: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+                        filter: None,
+                        count: Value::Const(1),
+                        up_to: false,
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
+                    else_: Box::new(Effect::SacrificeSource),
+                }),
+                else_: Box::new(Effect::SacrificeSource),
+            },
+        }],
+        ..creature("Living Tsunami", cost(&[generic(2), u(), u()]), vec![CreatureType::Elemental], 4, 4)
+    }
+}
+
+/// Merfolk Seastalkers — {3}{U} 2/3 Merfolk Scout with islandwalk and a
+/// {2}{U} ground-tapper.
+pub fn merfolk_seastalkers() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Landwalk(LandType::Island)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    R::Creature.and(R::Not(Box::new(R::HasKeyword(Keyword::Flying)))),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Merfolk Seastalkers",
+            cost(&[generic(3), u()]),
+            vec![CreatureType::Merfolk, CreatureType::Scout],
+            2,
+            3,
+        )
+    }
+}
+
+/// Merfolk Wayfinder — {2}{U} 1/2 Merfolk Scout with flying. ETB digs three for
+/// Islands.
+pub fn merfolk_wayfinder() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::RevealTopTakeMatchingToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            filter: R::HasLandType(LandType::Island),
+        })],
+        ..creature(
+            "Merfolk Wayfinder",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Merfolk, CreatureType::Scout],
+            1,
+            2,
+        )
+    }
+}
+
+/// Sea Gate Loremaster — {4}{U} 1/3 Merfolk Wizard Ally. {T}: draw one card per
+/// Ally.
+pub fn sea_gate_loremaster() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: ally_count() },
+            ..Default::default()
+        }],
+        ..ally(
+            "Sea Gate Loremaster",
+            cost(&[generic(4), u()]),
+            vec![CreatureType::Merfolk, CreatureType::Wizard],
+            1,
+            3,
+        )
+    }
+}
+
+/// Seascape Aerialist — {4}{U} 2/3 Merfolk Wizard Ally; Rally grants flying.
+pub fn seascape_aerialist() -> CardDefinition {
+    rally_grant_allies(
+        ally(
+            "Seascape Aerialist",
+            cost(&[generic(4), u()]),
+            vec![CreatureType::Merfolk, CreatureType::Wizard],
+            2,
+            3,
+        ),
+        Keyword::Flying,
+        "Allies you control gain flying",
+    )
+}
+
+/// Noble Vestige — {2}{W} 1/2 Spirit with flying. {T}: shield a player for 1.
+pub fn noble_vestige() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PreventNextDamage {
+                target: target_filtered(R::Player.or(R::Planeswalker)),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..creature("Noble Vestige", cost(&[generic(2), w()]), vec![CreatureType::Spirit], 1, 2)
+    }
+}
+
+/// Ruinous Minotaur — {1}{R}{R} 5/2 Minotaur Warrior that eats one of your
+/// lands whenever it connects.
+pub fn ruinous_minotaur() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::Const(1),
+                filter: R::Land,
+            },
+        }],
+        ..creature(
+            "Ruinous Minotaur",
+            cost(&[generic(1), r(), r()]),
+            vec![CreatureType::Minotaur, CreatureType::Warrior],
+            5,
+            2,
+        )
+    }
+}
+
+/// Hellkite Charger — {4}{R}{R} 5/5 Dragon with flying and haste. Attacking, it
+/// buys an extra combat for {5}{R}{R}.
+pub fn hellkite_charger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {5}{R}{R} for an additional combat phase".into(),
+                mana_cost: cost(&[generic(5), r(), r()]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Untap { what: attackers(), up_to: None },
+                    Effect::AdditionalCombatPhase { count: Value::Const(1) },
+                ])),
+                else_: None,
+            },
+        }],
+        ..creature("Hellkite Charger", cost(&[generic(4), r(), r()]), vec![CreatureType::Dragon], 5, 5)
+    }
+}
+
+/// Lorthos, the Tidemaker — {5}{U}{U}{U} 8/8 Octopus. Attacking, {8} locks down
+/// eight permanents.
+pub fn lorthos_the_tidemaker() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {8} to tap up to eight permanents".into(),
+                mana_cost: cost(&[generic(8)]),
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: R::Permanent,
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::Tap { what: Selector::Target(0) },
+                        Effect::SkipNextUntap { what: Selector::Target(0) },
+                    ])),
+                }),
+                else_: None,
+            },
+        }],
+        ..creature("Lorthos, the Tidemaker", cost(&[generic(5), u(), u(), u()]), vec![CreatureType::Octopus], 8, 8)
+    }
+}
+
+/// Electropotence — {2}{R} Enchantment. Each of your creatures entering may pay
+/// {2}{R} to shoot for its power.
+pub fn electropotence() -> CardDefinition {
+    CardDefinition {
+        name: "Electropotence",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                }),
+            effect: Effect::MayPay {
+                description: "Pay {2}{R} to have it deal damage equal to its power".into(),
+                mana_cost: cost(&[generic(2), r()]),
+                body: Box::new(Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Eldrazi Monument — {5} Artifact. Your team flies and is indestructible, but
+/// it eats a creature each upkeep.
+pub fn eldrazi_monument() -> CardDefinition {
+    let team = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+    CardDefinition {
+        name: "Eldrazi Monument",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control get +1/+1",
+                effect: StaticEffect::PumpPT { applies_to: team(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Creatures you control have flying",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: team(),
+                    keyword: Keyword::Flying,
+                },
+            },
+            StaticAbility {
+                description: "Creatures you control have indestructible",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: team(),
+                    keyword: Keyword::Indestructible,
+                },
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(team()),
+                then: Box::new(Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: R::Creature,
+                }),
+                else_: Box::new(Effect::SacrificeSource),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sadistic Sacrament — {B}{B}{B} Sorcery with kicker {7}. Strip three cards
+/// out of a library, or fifteen when kicked.
+pub fn sadistic_sacrament() -> CardDefinition {
+    let strip = |n: i32| Effect::Repeat {
+        count: Value::Const(n),
+        body: Box::new(Effect::SearchPickedBy {
+            who: PlayerRef::Target(0),
+            picker: PlayerRef::You,
+            filter: R::Any,
+            to: ZoneDest::Exile,
+        }),
+    };
+    CardDefinition {
+        name: "Sadistic Sacrament",
+        cost: cost(&[b(), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Kicker(cost(&[generic(7)]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(strip(15)),
+            else_: Box::new(strip(3)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Grim Discovery — {1}{B} Sorcery. Choose one or both: a creature card and/or
+/// a land card back from your graveyard.
+pub fn grim_discovery() -> CardDefinition {
+    let back = |filter: R, slot: u8| Effect::Move {
+        what: Selector::TargetFiltered { slot, filter: filter.and(R::InYourGraveyard) },
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
+    CardDefinition {
+        name: "Grim Discovery",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![back(R::Creature, 0), back(R::Land, 0)],
+        },
+        ..Default::default()
+    }
+}
+
+/// Crypt of Agadeem — enters tapped, taps for {B}; {2},{T} taps for {B} per
+/// black creature card in your graveyard.
+pub fn crypt_of_agadeem() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Black]),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(
+                        Color::Black,
+                        Value::count(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: crate::card::Zone::Graveyard,
+                            filter: R::Creature.and(R::HasColor(Color::Black)),
+                        }),
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        name: "Crypt of Agadeem",
+        card_types: vec![CardType::Land],
+        ..Default::default()
+    }
+}
+
+/// Emeria, the Sky Ruin — enters tapped, taps for {W}; each upkeep with seven
+/// Plains it reanimates.
+pub fn emeria_the_sky_ruin() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    R::HasLandType(LandType::Plains).and(R::ControlledByYou),
+                ),
+                n: Value::Const(7),
+            }),
+            effect: Effect::MayDo {
+                description: "Return a creature card from your graveyard to the battlefield".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+        }],
+        ..super::wwk::tapped_etb_land("Emeria, the Sky Ruin", Color::White, Effect::Noop)
+    }
+}

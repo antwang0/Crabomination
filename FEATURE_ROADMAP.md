@@ -1322,7 +1322,7 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `Effect::CopyForEachOtherTargetableCreature` (Zada, Hedron Grinder — a spell
   targeting only the source is copied once per other creature it could target).
   Emblem `AnthemForFilter` statics now reach the live anthem gather, so Gideon,
-  Ally of Zendikar's −4 actually pumps. **Zendikar (ZEN) 150 → 80 gaps** (`sets::zen2`, 70 cards): the seven
+  Ally of Zendikar's −4 actually pumps. **Zendikar (ZEN) 150 → 56 gaps** (`sets::zen2`, 94 cards): the seven
   board-state Traps, the Rally Allies, the landfall commons, the kicker
   creatures/spells, the Refuge land cycle and the small statics. New:
   `Predicate::{DamagedByCreaturesThisTurnAtLeast, LandsEnteredThisTurnAtLeast}`
@@ -1330,7 +1330,10 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `StaticEffect::PumpTeamPerAttachmentOnSource` (Armament Master — an anthem
   scaled by the *source's own* attachments) and
   `CardDefinition.dies_to_library_bottom` (CR 614.6, the library sibling of
-  `dies_to_exile` — Nissa's Chosen). Tests in `classic_sets/zen2`.
+  `dies_to_exile` — Nissa's Chosen). Wave 2 needed no new engine: the
+  Equipment triggers, the upkeep sacrifice-unless riders, Hellkite Charger's
+  extra combat, Eldrazi Monument's three statics and Emeria's seven-Plains
+  reanimation all ride existing primitives. Tests in `classic_sets/zen2`.
 - **Worldwake is complete** (`set_gaps.py wwk` at zero — `sets::wwk`
   rides the same landfall/Rally shapes plus Multikicker and
   `Effect::SwitchPT` / `BecomeCreature`; `sets::wwk2` closes the last 43).

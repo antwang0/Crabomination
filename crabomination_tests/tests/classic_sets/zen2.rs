@@ -519,3 +519,256 @@ fn zen2_stat_lines() {
     }
     assert!(catalog::hedron_scrabbler().card_types.contains(&CardType::Artifact));
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Blade of the Bloodchief grows the bearer on any creature death — twice as
+/// fast on a Vampire.
+#[test]
+fn blade_of_the_bloodchief_feeds_on_deaths() {
+    let grew_by = |vampire: bool| {
+        let mut g = two_player_game();
+        let bearer = if vampire {
+            g.add_card_to_battlefield(0, catalog::vampire_nighthawk())
+        } else {
+            g.add_card_to_battlefield(0, catalog::grizzly_bears())
+        };
+        let blade = g.add_card_to_battlefield(0, catalog::blade_of_the_bloodchief());
+        g.battlefield_find_mut(blade).unwrap().attached_to = Some(bearer);
+        let fodder = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let mut ev = vec![];
+        g.destroy_permanent(fodder, false, &mut ev);
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+        g.battlefield_find(bearer).unwrap().counter_count(CounterType::PlusOnePlusOne)
+    };
+    assert_eq!(grew_by(false), 1);
+    assert_eq!(grew_by(true), 2, "a Vampire bearer takes two");
+}
+
+/// Celestial Mantle doubles its controller's life on connect.
+#[test]
+fn celestial_mantle_doubles_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mantle = g.add_card_to_hand(0, catalog::celestial_mantle());
+    g.players[0].mana_pool.add(Color::White, 3);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, mantle, Some(Target::Permanent(bear)));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 5, "2/2 plus 3/3");
+    g.clear_sickness(bear);
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 40);
+}
+
+/// Scute Mob jumps four counters each upkeep once you have five lands.
+#[test]
+fn scute_mob_needs_five_lands() {
+    let grew = |lands: usize| {
+        let mut g = two_player_game();
+        let mob = g.add_card_to_battlefield(0, catalog::scute_mob());
+        for _ in 0..lands {
+            g.add_card_to_battlefield(0, catalog::forest());
+        }
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        g.battlefield_find(mob).unwrap().counter_count(CounterType::PlusOnePlusOne)
+    };
+    assert_eq!(grew(4), 0);
+    assert_eq!(grew(5), 4);
+}
+
+/// Scythe Tiger eats a land on the way in, or itself when you have none.
+#[test]
+fn scythe_tiger_eats_a_land() {
+    let mut g = two_player_game();
+    always_yes(&mut g);
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let tiger = g.add_card_to_hand(0, catalog::scythe_tiger());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, tiger, None);
+    assert!(g.battlefield_find(tiger).is_some(), "the Tiger stays");
+    assert!(g.battlefield_find(land).is_none(), "the land is gone");
+
+    let mut g = two_player_game();
+    let tiger = g.add_card_to_hand(0, catalog::scythe_tiger());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, tiger, None);
+    assert!(g.battlefield_find(tiger).is_none(), "no land, no Tiger");
+}
+
+/// Cosi's Trickster grows when an opponent shuffles.
+#[test]
+fn cosis_trickster_watches_shuffles() {
+    let mut g = two_player_game();
+    always_yes(&mut g);
+    let trick = g.add_card_to_battlefield(0, catalog::cosis_trickster());
+    g.dispatch_triggers_for_events(&[GameEvent::LibraryShuffled { player: 1 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(trick).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Hellkite Charger buys an extra combat and untaps the attackers.
+#[test]
+fn hellkite_charger_buys_another_combat() {
+    let mut g = two_player_game();
+    always_yes(&mut g);
+    let kite = g.add_card_to_battlefield(0, catalog::hellkite_charger());
+    g.clear_sickness(kite);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: kite,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.additional_combat_phases, 1, "an extra combat is banked");
+    assert!(!g.battlefield_find(kite).unwrap().tapped, "and the attackers untapped");
+}
+
+/// Sea Gate Loremaster draws one card per Ally.
+#[test]
+fn sea_gate_loremaster_draws_per_ally() {
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let sage = g.add_card_to_battlefield(0, catalog::sea_gate_loremaster());
+    g.clear_sickness(sage);
+    g.add_card_to_battlefield(0, catalog::joraga_bard());
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sage,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 2, "two Allies, two cards");
+}
+
+/// Eldrazi Monument flies the team and eats a creature each upkeep.
+#[test]
+fn eldrazi_monument_flies_and_feeds() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mon = g.add_card_to_battlefield(0, catalog::eldrazi_monument());
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3);
+    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords.contains(&Keyword::Indestructible));
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the bear feeds it");
+    assert!(g.battlefield_find(mon).is_some(), "the Monument survives");
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mon).is_none(), "with no creatures left it eats itself");
+}
+
+/// Merfolk Wayfinder pulls the Islands out of the top three.
+#[test]
+fn merfolk_wayfinder_finds_islands() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::island());
+    let scout = g.add_card_to_hand(0, catalog::merfolk_wayfinder());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[0].hand.len();
+    cast(&mut g, scout, None);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2, "both Islands, not the Bolt");
+}
+
+/// Emeria, the Sky Ruin reanimates each upkeep once you have seven Plains.
+#[test]
+fn emeria_needs_seven_plains() {
+    let reanimated = |plains: usize| {
+        let mut g = two_player_game();
+        always_yes(&mut g);
+        let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(0, catalog::emeria_the_sky_ruin());
+        for _ in 0..plains {
+            g.add_card_to_battlefield(0, catalog::plains());
+        }
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        g.battlefield_find(dead).is_some()
+    };
+    assert!(!reanimated(6));
+    assert!(reanimated(7));
+}
+
+/// Crypt of Agadeem's second ability scales with black creature cards in your
+/// graveyard.
+#[test]
+fn crypt_of_agadeem_scales_with_the_graveyard() {
+    let mut g = two_player_game();
+    let crypt = g.add_card_to_battlefield(0, catalog::crypt_of_agadeem());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::vampire_nighthawk());
+    }
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crypt,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap for black");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 3);
+}
+
+/// Grappling Hook lets the bearer name its own blocker.
+#[test]
+fn grappling_hook_picks_the_blocker() {
+    let mut g = two_player_game();
+    always_yes(&mut g);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hook = g.add_card_to_battlefield(0, catalog::grappling_hook());
+    g.battlefield_find_mut(hook).unwrap().attached_to = Some(bear);
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(theirs).unwrap().must_block, Some(bear));
+}
+
+/// Living Tsunami sacrifices itself when you decline the land bounce.
+#[test]
+fn living_tsunami_wants_a_land_back() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    let tsu = g.add_card_to_battlefield(0, catalog::living_tsunami());
+    always_yes(&mut g);
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tsu).is_some(), "paid with the Island");
+    assert!(g.battlefield_find(land).is_none());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.add_card_to_battlefield(0, catalog::island());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(tsu).is_none(), "declining sacrifices it");
+}
