@@ -16739,6 +16739,8 @@ static ULG: &[Factory] = &[
     super::ulg::opal_champion,
     super::ulg::hidden_gibbons,
     super::ulg::lurking_skirge,
+    super::ulg::crawlspace,
+    super::ulg::treacherous_link,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,

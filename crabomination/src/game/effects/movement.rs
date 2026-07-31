@@ -725,6 +725,16 @@ impl GameState {
             });
             return;
         }
+        // CR 614.9 — Treacherous Link: damage bound for the host lands on its
+        // controller instead. Applied before shields so the host's own
+        // protection can't soak damage it never receives.
+        if let EntityRef::Permanent(tgt) = ent
+            && amount > 0
+            && let Some(owner) = self.creature_redirects_damage_to_controller(tgt)
+        {
+            self.deal_damage_to_from(EntityRef::Player(owner), amount, source, events);
+            return;
+        }
         // CR 615 — Sekki, Seasons' Guide: prevent the damage, trading that
         // many +1/+1 counters for that many Spirit tokens.
         if let EntityRef::Permanent(tgt) = ent

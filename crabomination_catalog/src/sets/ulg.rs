@@ -1710,3 +1710,37 @@ pub fn lurking_skirge() -> CardDefinition {
         vec![Keyword::Flying],
     )
 }
+
+/// Crawlspace — {3}. No more than two creatures can attack you each combat.
+pub fn crawlspace() -> CardDefinition {
+    CardDefinition {
+        name: "Crawlspace",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "No more than two creatures can attack you each combat.",
+            effect: StaticEffect::AttackerCapAgainstController { n: 2 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Treacherous Link — {1}{B} Aura. Damage aimed at the host lands on its
+/// controller instead.
+pub fn treacherous_link() -> CardDefinition {
+    CardDefinition {
+        name: "Treacherous Link",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::DamageToThisGoesToItsController],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

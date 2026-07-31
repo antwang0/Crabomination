@@ -1248,6 +1248,11 @@ pub enum StaticEffect {
     /// Underworld Breach: each nonland card in the controller's graveyard
     /// has escape — its own mana cost plus exile `exile_count` other cards.
     GraveyardCardsHaveEscape { exile_count: u32 },
+    /// CR 508.1 — "No more than `n` creatures can attack you each combat"
+    /// (Crawlspace). Enforced when attacks are declared against the source's
+    /// controller; planeswalker and battle attacks are unaffected, matching
+    /// the printed "attack you".
+    AttackerCapAgainstController { n: usize },
     /// "Each creature card in your graveyard has the chosen creature type in
     /// addition to its other types" — the type comes from the source's
     /// as-enters `chosen_creature_type`. Ashes of the Fallen. Read by the

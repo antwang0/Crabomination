@@ -187,6 +187,30 @@ impl GameState {
             }
         }
 
+        // CR 508.1 — Crawlspace: no more than N creatures can attack a player
+        // who controls an `AttackerCapAgainstController` permanent.
+        for p in 0..self.players.len() {
+            let Some(cap) = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .filter_map(|c| {
+                    c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                        crate::effect::StaticEffect::AttackerCapAgainstController { n } => Some(n),
+                        _ => None,
+                    })
+                })
+                .min()
+            else {
+                continue;
+            };
+            let against =
+                attacks.iter().filter(|a| a.target == AttackTarget::Player(p)).count();
+            if against > cap {
+                return Err(GameError::InvalidAttackTarget(p));
+            }
+        }
+
         // CR 701.15b — a goaded creature "attacks a player other than the
         // controller of the [goad source] if able." Enforce the player-target
         // half: a goaded attacker may not attack one of its own goaders while
@@ -2747,6 +2771,16 @@ impl GameState {
         if dealt <= 0 {
             return dealt;
         }
+        // CR 614.9 — Treacherous Link redirects combat damage too.
+        if let Some(owner) = self.creature_redirects_damage_to_controller(recipient) {
+            self.deal_damage_to_from(
+                crate::game::effects::EntityRef::Player(owner),
+                dealt as u32,
+                None,
+                events,
+            );
+            return 0;
+        }
         // Sekki trades counters for tokens instead of growing (CR 615).
         if self.trade_counters_for_damage(recipient, dealt as u32, events) {
             return 0;
@@ -2770,6 +2804,16 @@ impl GameState {
             count: grow,
         });
         0
+    }
+
+    /// CR 614.9 — Treacherous Link: does `id` redirect damage aimed at it onto
+    /// its controller? Returns that controller when it does.
+    pub(crate) fn creature_redirects_damage_to_controller(&self, id: CardId) -> Option<usize> {
+        let c = self.battlefield_find(id)?;
+        self.computed_permanent(id)?
+            .keywords
+            .contains(&crate::card::Keyword::DamageToThisGoesToItsController)
+            .then_some(c.controller)
     }
 
     /// Sekki, Seasons' Guide (CR 615) — prevent `dealt` damage to `recipient`,

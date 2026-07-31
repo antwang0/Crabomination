@@ -7690,14 +7690,13 @@ zero `set_gaps.py` gaps. Urza's Legacy went 106 -> 13 across two waves.
   receiver-side wording), leaving the dealer-side kinds binding the damaged
   player. No Mercy ships, and Michiko Konda's edict now hits only the damage
   source's controller instead of every opponent.
-- **Remaining ULG gaps (8), each blocked on one primitive:** Angel's Trumpet
+- **Remaining ULG gaps (6), each blocked on one primitive:** Angel's Trumpet
   (tap-all-that-didn't-attack + damage per tapped), Aura Flux (grant an upkeep
-  tax to OTHER enchantments), Crawlspace (per-combat attacker cap against a
-  player), Damping Engine (a permanent-leader lock with a sacrifice-to-ignore
-  out — `Predicate::PlayerControlsMostOf` is the read half), Martyr's Cause
-  (a chosen-source damage shield), Memory Jar (exile-hand, draw-seven, return
-  at the next end step), Thran Weaponry (a while-this-stays-tapped anthem),
-  Treacherous Link (damage to the host is dealt to its controller).
+  tax to OTHER enchantments), Damping Engine (a permanent-leader lock with a
+  sacrifice-to-ignore out — `Predicate::PlayerControlsMostOf` is the read
+  half), Martyr's Cause (a chosen-source damage shield), Memory Jar
+  (exile-hand, draw-seven, return at the next end step), Thran Weaponry (a
+  while-this-stays-tapped anthem).
 - **`EventSpec::with_filter` silently REPLACES.** Every shared card-builder
   that adds a gate has to fold the caller's filter in by hand (the ULG Opal
   cycle's `opal()` helper does). A `with_extra_filter` that `All`-composes

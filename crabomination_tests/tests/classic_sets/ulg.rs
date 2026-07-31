@@ -1043,3 +1043,50 @@ fn lurking_skirge_wakes_on_an_opponents_creature_dying() {
     assert_eq!((cp.power, cp.toughness), (3, 2));
     assert!(cp.keywords.contains(&Keyword::Flying));
 }
+
+/// Crawlspace caps attackers against its controller at two.
+#[test]
+fn crawlspace_caps_attackers_at_two() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::crawlspace());
+    let attackers: Vec<CardId> = (0..3)
+        .map(|_| {
+            let id = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+            g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+            id
+        })
+        .collect();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    let attack = |ids: &[CardId]| {
+        ids.iter()
+            .map(|id| crabomination::game::types::Attack {
+                attacker: *id,
+                target: crabomination::game::types::AttackTarget::Player(0),
+            })
+            .collect::<Vec<_>>()
+    };
+    assert!(g.declare_attackers(attack(&attackers)).is_err(), "three is over the cap");
+    g.declare_attackers(attack(&attackers[..2])).expect("two is legal");
+}
+
+/// Treacherous Link moves the host's damage onto its controller.
+#[test]
+fn treacherous_link_redirects_damage_to_the_hosts_controller() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::treacherous_link());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let life = g.players[1].life;
+    let mut ev = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(bear),
+        3,
+        None,
+        &mut ev,
+    );
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "the controller took it");
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "the 2/2 is unmarked");
+}

@@ -16351,6 +16351,9 @@ fn static_effect_to_effects(
             | StaticEffect::GraveyardLockdown
             | StaticEffect::GraveyardExileLockdown
             | StaticEffect::GraveyardCardsHaveEscape { .. }
+            // AttackerCapAgainstController — enforced in `declare_attackers`;
+            // no layer effect.
+            | StaticEffect::AttackerCapAgainstController { .. }
             // YourGraveyardCreaturesHaveChosenType — read by the hidden-zone
             // card evaluator (`graveyard_type_grants`); no layer effect.
             | StaticEffect::YourGraveyardCreaturesHaveChosenType

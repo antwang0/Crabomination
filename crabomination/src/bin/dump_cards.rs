@@ -131,7 +131,9 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Buyback(_) => "Buyback",
         Keyword::Echo(_) | Keyword::EchoDiscard => "Echo",
         Keyword::ProtectionFromCardType(_) => "Protection",
-        Keyword::DoesntUntapWhileCounter(_) | Keyword::MayChooseNotToUntap => return None,
+        Keyword::DoesntUntapWhileCounter(_)
+        | Keyword::MayChooseNotToUntap
+        | Keyword::DamageToThisGoesToItsController => return None,
         Keyword::CumulativeUpkeep(_) => "Cumulative upkeep",
         Keyword::Fading(_) => "Fading",
         Keyword::Vanishing(_) => "Vanishing",

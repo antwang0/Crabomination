@@ -951,6 +951,10 @@ pub enum Keyword {
     /// (Hisoka's Guard). `do_untap` asks the controller; declining leaves it
     /// tapped without cancelling the untap step for anything else.
     MayChooseNotToUntap,
+    /// CR 614.9 — "All damage that would be dealt to this creature is dealt to
+    /// its controller instead" (Treacherous Link's host). Consulted at both
+    /// damage funnels before shields and marked damage.
+    DamageToThisGoesToItsController,
     /// CR 702.189 — Firebending N. "Whenever this creature attacks, add N {R};
     /// you don't lose this mana as steps and phases end (until end of combat)."
     Firebending(u32),
