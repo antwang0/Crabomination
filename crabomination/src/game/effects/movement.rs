@@ -610,6 +610,14 @@ impl GameState {
         {
             return;
         }
+        // CR 615 — Heart of Light: the enchanted creature deals no damage
+        // either (the receiving half rides
+        // `permanent_prevents_all_damage_to_self`).
+        if let Some(src) = source
+            && self.damage_sealed_by_aura(src)
+        {
+            return;
+        }
         // CR 615 — Light of Sanction: "prevent all damage to creatures you
         // control by sources you control."
         if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)

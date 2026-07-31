@@ -1019,6 +1019,13 @@ pub enum StaticEffect {
     /// on both damage funnels. Wrap in `WhileYourTurn` for turn-gated
     /// protection (Gideon Blackblade during your turn).
     PreventAllDamageToThis,
+    /// "Prevent all damage that would be dealt to and dealt by enchanted
+    /// creature" (Heart of Light) — both directions, any damage type. Read
+    /// off the source Aura's live host.
+    PreventAllDamageToAndFromEnchanted,
+    /// CR 704.5j — "the 'legend rule' doesn't apply" (Mirror Gallery). The
+    /// legend-rule SBA is skipped entirely while this is on the battlefield.
+    LegendRuleDoesntApply,
     /// "Prevent all combat damage that would be dealt to this creature by
     /// creatures blocking it." The narrower sibling of
     /// `PreventAllCombatDamageToThis` — only strikes-back from this creature's

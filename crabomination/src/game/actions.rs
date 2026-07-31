@@ -9242,6 +9242,7 @@ impl GameState {
                 Keyword::Protection(_)
                     | Keyword::ProtectionFromCreatures
                     | Keyword::ProtectionFromCreatureType(_)
+                    | Keyword::ProtectionFromMatching(_)
                     | Keyword::ProtectionFromManaValueExcept(_)
                     | Keyword::ProtectionFromManaValueParity { .. }
                     | Keyword::ProtectionFromMulticolored
@@ -9285,6 +9286,9 @@ impl GameState {
             Keyword::Protection(color) => src.colors.contains(color),
             Keyword::ProtectionFromCreatures => src_is_creature,
             Keyword::ProtectionFromCreatureType(ty) => src.subtypes.creature_types.contains(ty),
+            Keyword::ProtectionFromMatching(f) => {
+                self.evaluate_requirement_static(f, &Target::Permanent(source), tgt_controller, None)
+            }
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
             Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src.colors.len() >= 2,

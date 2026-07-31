@@ -161,6 +161,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::ProtectionFromColoredSpells
         | Keyword::ProtectionFromSpells
         | Keyword::ProtectionFromCreatureType(_)
+        | Keyword::ProtectionFromMatching(_)
         | Keyword::ProtectionFromSpellSubtype(_)
         | Keyword::ProtectionFromManaValueExcept(_)
         | Keyword::ProtectionFromManaValueParity { .. }

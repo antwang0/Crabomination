@@ -3770,6 +3770,24 @@ impl GameState {
                 .static_abilities
                 .iter()
                 .any(|sa| self.self_static_prevents_all_damage_active(&sa.effect, c.controller))
+        }) || self.damage_sealed_by_aura(tgt)
+    }
+
+    /// CR 615 — `who` is enchanted by an Aura with
+    /// `StaticEffect::PreventAllDamageToAndFromEnchanted`: all damage in both
+    /// directions is prevented (Heart of Light).
+    pub(crate) fn damage_sealed_by_aura(&self, who: crate::card::CardId) -> bool {
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        self.battlefield.iter().any(|src| {
+            src.attached_to == Some(who)
+                && src.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::PreventAllDamageToAndFromEnchanted
+                    )
+                })
         })
     }
 
@@ -3793,7 +3811,8 @@ impl GameState {
     pub fn combat_damage_prevented_to_self(&self, tgt: crate::card::CardId) -> bool {
         !self.damage_cant_be_prevented_this_turn
             && (self.permanent_prevents_all_combat_damage_to_self(tgt)
-                || self.combat_damage_prevented_to_this_turn.contains(&tgt))
+                || self.combat_damage_prevented_to_this_turn.contains(&tgt)
+                || self.damage_sealed_by_aura(tgt))
     }
 
     /// CR 615 — true when all combat damage `dealer` would *deal* is prevented
@@ -3801,7 +3820,8 @@ impl GameState {
     /// `combat_damage_prevented_to_self`.
     pub fn combat_damage_prevented_from(&self, dealer: crate::card::CardId) -> bool {
         !self.damage_cant_be_prevented_this_turn
-            && self.combat_damage_prevented_by_this_turn.contains(&dealer)
+            && (self.combat_damage_prevented_by_this_turn.contains(&dealer)
+                || self.damage_sealed_by_aura(dealer))
     }
 
     /// Scale a pending damage event by the global doubling/halving
@@ -8185,6 +8205,12 @@ impl GameState {
         tgt.keywords.iter().any(|kw| match kw {
             Keyword::Protection(color) => src_colors.contains(color),
             Keyword::ProtectionFromCreatureType(ty) => src_creature_types.contains(ty),
+            Keyword::ProtectionFromMatching(f) => self.evaluate_requirement_static(
+                f,
+                &Target::Permanent(source),
+                tgt.controller,
+                None,
+            ),
             Keyword::ProtectionFromManaValueExcept(n) => src_mv != *n,
             Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src_colors.len() >= 2,
@@ -8861,7 +8887,32 @@ impl GameState {
         {
             return false;
         }
+        if self.block_barred_by_protection_filter(atk_kws, attacker.controller, blocker.id) {
+            return false;
+        }
         can_block_attacker_computed(blocker, blocker_cp, atk_kws, atk_colors, atk_power)
+    }
+
+    /// CR 702.16 — the state-aware half of the protection block gate: an
+    /// attacker with `Keyword::ProtectionFromMatching` can't be blocked by a
+    /// creature matching that filter (Harbinger of Spring). The keyword's
+    /// filter needs game state, so it lives here rather than in the pure
+    /// `can_block_attacker_computed`.
+    pub(crate) fn block_barred_by_protection_filter(
+        &self,
+        attacker_kws: &[Keyword],
+        attacker_controller: usize,
+        blocker_id: CardId,
+    ) -> bool {
+        attacker_kws.iter().any(|kw| {
+            matches!(kw, Keyword::ProtectionFromMatching(f)
+                if self.evaluate_requirement_static(
+                    f,
+                    &Target::Permanent(blocker_id),
+                    attacker_controller,
+                    None,
+                ))
+        })
     }
 
     // ── Main action dispatch ──────────────────────────────────────────────────
@@ -15955,6 +16006,10 @@ fn static_effect_to_effects(
             | StaticEffect::AttackTaxToController { .. }
             // CreaturesCantAttackController — consulted in declare_attackers; no layer.
             | StaticEffect::CreaturesCantAttackController { .. }
+            // LegendRuleDoesntApply (Mirror Gallery) — read by the CR 704.5j
+            // SBA; PreventAllDamageToAndFrom — read by the damage funnel.
+            | StaticEffect::LegendRuleDoesntApply
+            | StaticEffect::PreventAllDamageToAndFromEnchanted
             // Angelic Arbiter's pair — consulted in declare_attackers and at
             // the cast dispatch; no layer.
             | StaticEffect::OpponentsWhoCastCantAttack

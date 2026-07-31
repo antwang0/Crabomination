@@ -1132,6 +1132,13 @@ impl GameState {
             ) {
                 return Err(GameError::CannotBlock(blocker_id));
             }
+            if self.block_barred_by_protection_filter(
+                kws_of(attacker_id),
+                attacker.controller,
+                blocker_id,
+            ) {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
 
             // CR 701.54c (level 1+) — a Ring-bearer can't be blocked by
             // creatures with greater power.

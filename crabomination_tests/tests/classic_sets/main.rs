@@ -9,6 +9,7 @@ mod avatar_water;
 mod blight;
 mod bfz;
 mod bng;
+mod bok;
 mod bro;
 mod chk;
 mod chk2;

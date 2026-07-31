@@ -754,6 +754,11 @@ pub enum Keyword {
     /// CR 702.16 — "protection from creatures" (Spirit Mantle): can't be
     /// blocked, and all damage from creature sources is prevented.
     ProtectionFromCreatures,
+    /// CR 702.16 — protection from every source matching `filter`, the
+    /// general form of the fixed protection keywords ("protection from
+    /// non-Spirit creatures" — Harbinger of Spring). Checked wherever
+    /// `ProtectionFromCreatureType` is.
+    ProtectionFromMatching(Box<SelectionRequirement>),
     /// CR 702.16e — protection from a creature type (Kitsune Riftwalker's
     /// "protection from Spirits"): can't be blocked by, damaged by, enchanted
     /// or equipped by, or targeted by a permanent of that creature type.

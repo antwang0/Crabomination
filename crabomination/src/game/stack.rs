@@ -3285,6 +3285,14 @@ impl GameState {
                             .computed_permanent(c.id)
                             .is_some_and(|cp| cp.supertypes.contains(&Supertype::Legendary)))
             };
+            // CR 704.5j — Mirror Gallery turns the legend rule off entirely.
+            if self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::LegendRuleDoesntApply)
+                })
+            }) {
+                return Vec::new();
+            }
             // Walk descending by id so each group's vec is newest-first.
             let mut by_id: Vec<_> = self
                 .battlefield
