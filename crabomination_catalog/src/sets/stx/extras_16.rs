@@ -1266,6 +1266,7 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
                         to: ZoneDest::Exile,
                     },
                     Effect::CastWithoutPayingImmediate {
+                        reduce_generic: 0,
                         what: Selector::LastMoved,
                         source_zone: crate::card::Zone::Exile,
                         exile_after: false,

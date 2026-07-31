@@ -2843,13 +2843,15 @@ fn tezzeret_ult_deploys_artifacts() {
 }
 
 /// God-Eternal Kefnet copies the first instant/sorcery drawn each turn; you may
-/// cast the (free) copy.
+/// cast the copy for {2} less.
 #[test]
 fn kefnet_copies_first_drawn_instant() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::god_eternal_kefnet());
     g.add_card_to_library(0, catalog::lightning_bolt());
     g.players[0].cards_drawn_this_turn = 0;
+    // {R} minus {2} generic is still {R} — the copy isn't free.
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
     let opp_life = g.players[1].life;
     // Accept the copy cast (OptionalTrigger).
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
@@ -2857,9 +2859,25 @@ fn kefnet_copies_first_drawn_instant() {
     g.draw_one(0, &mut evs);
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp_life - 3, "the free Bolt copy hit the opponent");
+    assert_eq!(g.players[1].life, opp_life - 3, "the discounted Bolt copy hit the opponent");
     // The drawn Bolt itself is still in hand (only a copy was cast).
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"), "original stays in hand");
+}
+
+/// An unpayable discounted copy is simply skipped.
+#[test]
+fn kefnet_copy_needs_the_discounted_mana() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::god_eternal_kefnet());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].cards_drawn_this_turn = 0;
+    let opp_life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut evs = Vec::new();
+    g.draw_one(0, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life, "no red mana, no copy");
 }
 
 /// The second draw of the turn doesn't retrigger Kefnet.

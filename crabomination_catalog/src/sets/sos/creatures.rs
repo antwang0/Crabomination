@@ -5073,6 +5073,7 @@ pub fn the_dawning_archaic() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::CastWithoutPayingImmediate {
+                reduce_generic: 0,
                 what: target_filtered(
                     SelectionRequirement::HasCardType(CardType::Instant)
                         .or(SelectionRequirement::HasCardType(CardType::Sorcery))

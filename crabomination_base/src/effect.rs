@@ -5527,6 +5527,12 @@ pub enum Effect {
         /// (Capricious Hellraiser, CR 707.12).
         #[serde(default)]
         copy: bool,
+        /// When non-zero the cast isn't free: the controller pays the card's
+        /// own mana cost reduced by this much generic ("that copy costs {2}
+        /// less to cast" — God-Eternal Kefnet). Declining, or being unable to
+        /// pay, skips the cast.
+        #[serde(default)]
+        reduce_generic: u32,
     },
     /// "You may cast any number of spells from among them without paying
     /// their mana costs" — repeatedly offers the remaining castable cards

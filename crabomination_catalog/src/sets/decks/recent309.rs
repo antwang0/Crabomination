@@ -1355,6 +1355,7 @@ pub fn kaervek_the_punisher() -> CardDefinition {
             event: EventSpec::new(EventKind::CommittedCrime, EventScope::YourControl),
             effect: Effect::Seq(vec![
                 Effect::CastWithoutPayingImmediate {
+                    reduce_generic: 0,
                     what: target_filtered(R::InYourGraveyard.and(R::HasColor(Color::Black))),
                     source_zone: crate::card::Zone::Graveyard,
                     exile_after: true,
@@ -1386,6 +1387,7 @@ pub fn tinybones_the_pickpocket() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::CastWithoutPayingImmediate {
+                reduce_generic: 0,
                 what: target_filtered(
                     R::PermanentCard
                         .and(R::Not(Box::new(R::Land)))

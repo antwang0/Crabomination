@@ -5581,8 +5581,7 @@ pub fn tezzeret_master_of_the_bridge() -> CardDefinition {
 
 /// God-Eternal Kefnet — {2}{U}{U} 4/5 Zombie God with flying. The first card
 /// you draw each turn: if it's an instant or sorcery, copy it and you may cast
-/// the copy. Dies or is exiled → third from the top. (Residual: the copy is
-/// cast free rather than for {2} less.)
+/// the copy for {2} less. Dies or is exiled → third from the top.
 pub fn god_eternal_kefnet() -> CardDefinition {
     let [dies, exiled] = god_eternal_recur();
     CardDefinition {
@@ -5599,6 +5598,7 @@ pub fn god_eternal_kefnet() -> CardDefinition {
                     source_zone: crate::card::Zone::Hand,
                     exile_after: false,
                     copy: true,
+                    reduce_generic: 2,
                 },
             },
             dies,

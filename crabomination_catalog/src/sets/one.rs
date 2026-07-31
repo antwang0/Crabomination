@@ -7867,6 +7867,7 @@ pub fn capricious_hellraiser() -> CardDefinition {
             },
             // Cast a *copy* — the exiled original stays put (CR 707.12).
             Effect::CastWithoutPayingImmediate {
+                reduce_generic: 0,
                 what: Selector::ExiledThisResolution {
                     filter: SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
                 },

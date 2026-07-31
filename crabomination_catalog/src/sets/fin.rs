@@ -3140,6 +3140,7 @@ pub fn clives_hideaway() -> CardDefinition {
                     n: Value::Const(4),
                 }),
                 effect: Effect::CastWithoutPayingImmediate {
+                    reduce_generic: 0,
                     what: Selector::CardExiledWithSource,
                     source_zone: crate::card::Zone::Exile,
                     exile_after: false,
@@ -5237,6 +5238,7 @@ pub fn quistis_trepe() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::CastWithoutPayingImmediate {
+            reduce_generic: 0,
             what: target_filtered(
                 SelectionRequirement::HasCardType(CardType::Instant)
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
@@ -5890,6 +5892,7 @@ pub fn seifer_almasy() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::CastWithoutPayingImmediate {
+                    reduce_generic: 0,
                     what: target_filtered(
                         SelectionRequirement::HasCardType(CardType::Instant)
                             .or(SelectionRequirement::HasCardType(CardType::Sorcery))

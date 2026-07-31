@@ -144,6 +144,7 @@ pub fn diluvian_primordial() -> CardDefinition {
                 .or(R::HasCardType(CardType::Sorcery))
                 .and(R::InOpponentGraveyard),
             effect: Box::new(Effect::CastWithoutPayingImmediate {
+                reduce_generic: 0,
                 what: Selector::Target(0),
                 source_zone: crate::card::Zone::Graveyard,
                 exile_after: true,

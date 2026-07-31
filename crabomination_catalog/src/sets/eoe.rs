@@ -7494,6 +7494,7 @@ pub fn roving_actuator() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CastWithoutPayingImmediate {
+                reduce_generic: 0,
                 what: target_filtered(
                     SelectionRequirement::InYourGraveyard
                         .and(SelectionRequirement::ManaValueAtMost(2))

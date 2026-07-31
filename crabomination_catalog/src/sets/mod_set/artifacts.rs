@@ -1617,6 +1617,7 @@ pub fn isochron_scepter() -> CardDefinition {
             // Instant)` resolves the exiled instant directly (the imprinted card
             // is the relevant one in practice); no explicit target needed.
             effect: Effect::CastWithoutPayingImmediate {
+                reduce_generic: 0,
                 what: Selector::CardsInZone {
                     who: PlayerRef::You,
                     zone: Zone::Exile,

@@ -544,6 +544,7 @@ pub fn shelldock_isle() -> CardDefinition {
                     life: 20,
                 }),
                 effect: Effect::CastWithoutPayingImmediate {
+                    reduce_generic: 0,
                     what: Selector::CardExiledWithSource,
                     source_zone: crate::card::Zone::Exile,
                     exile_after: false,
@@ -584,6 +585,7 @@ fn lorwyn_hideaway_land(
                 mana_cost: cost(&[pip]),
                 condition: Some(gate),
                 effect: Effect::CastWithoutPayingImmediate {
+                    reduce_generic: 0,
                     what: Selector::CardExiledWithSource,
                     source_zone: crate::card::Zone::Exile,
                     exile_after: false,

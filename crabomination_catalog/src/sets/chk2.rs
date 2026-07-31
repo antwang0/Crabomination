@@ -1869,6 +1869,7 @@ pub fn shell_of_the_last_kappa() -> CardDefinition {
                 tap_cost: true,
                 sac_cost: true,
                 effect: Effect::CastWithoutPayingImmediate {
+                    reduce_generic: 0,
                     what: Selector::CardExiledWithSource,
                     source_zone: crate::card::Zone::Exile,
                     exile_after: false,

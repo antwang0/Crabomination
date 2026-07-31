@@ -34598,6 +34598,7 @@ pub fn daring_waverider() -> CardDefinition {
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::CastWithoutPayingImmediate {
+            reduce_generic: 0,
             what: target_filtered(
                 SelectionRequirement::HasCardType(CardType::Instant)
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery))
@@ -56698,6 +56699,7 @@ pub fn bring_to_light() -> CardDefinition {
                 to: ZoneDest::Exile,
             },
             Effect::CastWithoutPayingImmediate {
+                reduce_generic: 0,
                 what: Selector::LastMoved,
                 source_zone: crate::card::Zone::Exile,
                 exile_after: false,
@@ -61869,6 +61871,7 @@ pub fn vadrok_apex_of_thunder() -> CardDefinition {
             r(),
         ])),
         triggered_abilities: vec![on_mutate(Effect::CastWithoutPayingImmediate {
+            reduce_generic: 0,
             what: target_filtered(
                 SelectionRequirement::InYourGraveyard
                     .and(SelectionRequirement::Not(Box::new(

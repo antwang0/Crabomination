@@ -2157,6 +2157,7 @@ impl GameState {
                     // "You may cast it without paying" — from the library, so
                     // declining leaves it on top.
                     let cast = Effect::CastWithoutPayingImmediate {
+                        reduce_generic: 0,
                         what: top_sel,
                         source_zone: crate::card::Zone::Library,
                         exile_after: false,
@@ -11228,6 +11229,7 @@ impl GameState {
                 };
                 self.run_effect(
                     &Effect::CastWithoutPayingImmediate {
+                        reduce_generic: 0,
                         what: Selector::Target(0),
                         source_zone: crate::card::Zone::Hand,
                         exile_after: false,
@@ -11480,6 +11482,7 @@ impl GameState {
                 if let Some(cid) = pick {
                     self.run_effect(
                         &Effect::CastWithoutPayingImmediate {
+                            reduce_generic: 0,
                             what: Selector::Target(0),
                             source_zone: crate::card::Zone::Library,
                             exile_after: false,
@@ -11646,6 +11649,7 @@ impl GameState {
                 for cid in pile {
                     self.run_effect(
                         &Effect::CastWithoutPayingImmediate {
+                            reduce_generic: 0,
                             what: Selector::Target(0),
                             source_zone: crate::card::Zone::Exile,
                             exile_after: false,
@@ -15697,6 +15701,7 @@ impl GameState {
                 self.exile.push(copy);
                 self.run_effect(
                     &Effect::CastWithoutPayingImmediate {
+                        reduce_generic: 0,
                         what: Selector::Target(0),
                         source_zone: crate::card::Zone::Exile,
                         exile_after: false,
@@ -16035,6 +16040,7 @@ impl GameState {
                 self.exile.push(copy);
                 self.run_effect(
                     &Effect::CastWithoutPayingImmediate {
+                        reduce_generic: 0,
                         what: Selector::Take {
                             inner: Box::new(Selector::CardsInZone {
                                 who: crate::effect::PlayerRef::Seat(ctx.controller),
@@ -22595,6 +22601,7 @@ impl GameState {
                 source_zone,
                 exile_after,
                 copy,
+                reduce_generic,
             } => {
                 // Resolve `what` to a single card in `source_zone`, ask
                 // the controller via OptionalTrigger, and on yes hand
@@ -22636,7 +22643,11 @@ impl GameState {
                     _ => matches!(
                         self.decider.decide(&Decision::OptionalTrigger {
                             source: source_for_ask,
-                            description: "Cast without paying?".to_string(),
+                            description: if *reduce_generic > 0 {
+                                format!("Cast for {{{reduce_generic}}} less?")
+                            } else {
+                                "Cast without paying?".to_string()
+                            },
                         }),
                         DecisionAnswer::Bool(true)
                     ),
@@ -22670,6 +22681,22 @@ impl GameState {
                 } else {
                     card_id
                 };
+                // "That copy costs {N} less to cast" — pay the discounted
+                // cost up front; an unaffordable discount declines the cast.
+                if *reduce_generic > 0 {
+                    let mut discounted = card_def.cost.clone();
+                    discounted.reduce_generic(*reduce_generic);
+                    let forced_only = self.players[ctx.controller].wants_ui;
+                    match self.try_pay_with_auto_tap_mode(ctx.controller, &discounted, forced_only) {
+                        Ok(receipt) => self.pay_life_cost(ctx.controller, receipt.side_effects.life_lost),
+                        Err(_) => {
+                            if *copy {
+                                self.players[ctx.controller].hand.retain(|c| c.id != cast_id);
+                            }
+                            return Ok(());
+                        }
+                    }
+                }
                 let cast_zone = if *copy { crate::card::Zone::Hand } else { *source_zone };
                 let cast_events = self.cast_card_for_free(
                     ctx.controller,

@@ -4131,6 +4131,7 @@ pub fn torrential_gearhulk() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CastWithoutPayingImmediate {
+                reduce_generic: 0,
                 what: target_filtered(SelectionRequirement::HasCardType(CardType::Instant)),
                 source_zone: Zone::Graveyard,
                 exile_after: true,

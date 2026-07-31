@@ -34,6 +34,7 @@ pub fn efreet_flamepainter() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::CastWithoutPayingImmediate {
+                reduce_generic: 0,
                 what: target_filtered(
                     SelectionRequirement::InGraveyard.and(
                         SelectionRequirement::HasCardType(CardType::Instant)

@@ -540,6 +540,7 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
                         miss_dest: crate::effect::RevealMissDest::BottomRandom,
                     },
                     Effect::CastWithoutPayingImmediate {
+                        reduce_generic: 0,
                         what: Selector::LastMoved,
                         source_zone: crate::card::Zone::Exile,
                         exile_after: false,
