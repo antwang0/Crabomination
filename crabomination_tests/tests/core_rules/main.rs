@@ -72,3 +72,4 @@ mod cr_recent46;
 mod cr_recent47;
 mod cr_recent48;
 mod cr_recent49;
+mod cr_recent50;

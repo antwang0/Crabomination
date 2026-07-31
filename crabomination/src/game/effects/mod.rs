@@ -8939,6 +8939,21 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     if self.battlefield_find(cid).is_none() {
+                        // CR 112.4 — a permanent spell pumped on the stack
+                        // keeps the bonus once it resolves (the stack card is
+                        // the same object that becomes the permanent).
+                        if let Some(card) = self.stack.iter_mut().find_map(|si| match si {
+                            StackItem::Spell { card, .. } if card.id == cid => Some(card),
+                            _ => None,
+                        }) {
+                            card.power_bonus += p;
+                            card.toughness_bonus += t;
+                            events.push(GameEvent::PumpApplied {
+                                card_id: cid,
+                                power: p,
+                                toughness: t,
+                            });
+                        }
                         continue;
                     }
                     match duration {
@@ -21706,7 +21721,7 @@ impl GameState {
                     bound_token: None,
                     // Carry the scheduling trigger's subject so a body naming
                     // "that card" still resolves at fire time (Shirei).
-                    bound_subject: ctx.trigger_source.clone(),
+                    bound_subject: ctx.trigger_source,
                     fires_once: true,
                 });
                 Ok(())

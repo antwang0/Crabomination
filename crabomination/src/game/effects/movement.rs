@@ -1509,6 +1509,14 @@ impl GameState {
         // `leaves_bf_lki` LKI caches, not the new zone's object.
         card.counters.clear();
         card.keyword_counters.clear();
+        // CR 710.4 — a flip card has only its normal characteristics off the
+        // battlefield, and keeps no memory of having flipped. (The
+        // replacement-redirect path does this in `place_card_at_resolved_zone`;
+        // this is the direct path. The DFC/prototype reverts stay on that path
+        // only — a defeated battle transforms *through* exile.)
+        if intended != crate::card::Zone::Battlefield {
+            card.revert_flip();
+        }
         match dest {
             ZoneDest::Hand(who) => {
                 let ctx = EffectContext::for_spell(default_player, None, 0, 0);

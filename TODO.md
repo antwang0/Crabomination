@@ -7654,11 +7654,36 @@ stalled games via `eval_material`.
   the printed card lets each player build their own three piles. Wants a
   `Decision::PartitionPermanents`.
 - **CR coverage gaps.** `scripts/cr_coverage.py` → `CR_COVERAGE.md` maps CR
-  section → conformance test; 75 numbered sections still have none (610 and 612
-  came off the list this run). 82 sections are covered, 65 still have none;
-  406/501/513 came off the list this run. The highest-value untested blocks
-  left are 403/407/408 (the remaining zones), 503/512 (the last turn steps),
-  714/717–721 (Sagas and the newer card types) and the 8xx multiplayer rules.
+  section → conformance test; 92 sections are covered, 55 still have none
+  (112/403/710 came off the list this run). The highest-value untested blocks
+  left are 407/408 (the remaining zones), 503/512 (the last turn steps),
+  717–720 (the newer card types) and the 8xx multiplayer rules.
+
+## Noticed this run (modern_decks — Betrayers of Kamigawa closure)
+
+- **CR 712.4 doesn't fire on the direct move path.** `place_card_in_dest`
+  reverts a flip card (CR 710.4) but deliberately leaves `revert_transform` /
+  `revert_prototype` to `place_card_at_resolved_zone`: a defeated battle
+  transforms *through* exile, and reverting there would undo it. Wants the
+  battle-defeat path to stamp the back face after the hop rather than before.
+- **Opal-Eye's redirect is team-scoped.** `PreventNextFromChosenSourceToTeam`
+  shields the controller and their permanents; the printed card moves the
+  chosen source's next damage onto Opal-Eye no matter who it was aimed at.
+  Wants a shield whose target set is "any", not `PlayerAndPermanents`.
+- **Flames of the Blood Hand's unpreventable rider is global.**
+  `DamageCantBePreventedThisTurn` suppresses every shield for the turn, not
+  just the Flames damage. Wants a per-source prevention lock.
+- **Neko-Te and Kumano's Blessing only watch combat damage.** Both printed
+  cards read "deals damage"; the engine's nearest event is
+  `DealsCombatDamageToCreature`. Wants a general `DealtDamageToCreature`
+  event scoped to the damage source.
+- **The splice picker can't pre-pick per-clause targets.** The client's
+  `HelperMechanic::Splice` submits an empty `additional_targets` and lets
+  `cast_spell_spliced` auto-aim each spliced clause. A UI seat should get one
+  targeting pass per targeting splicer.
+- **Shirei's return isn't gated on Shirei still being around.** The printed
+  card checks at the delayed trigger's resolution; the engine schedules the
+  return unconditionally.
 
 ## Noticed this run (modern_decks — OGW closure + BFZ)
 

@@ -63,8 +63,29 @@ exercising each) was elided in a compaction pass; recover it from
   Tenza, Hankyu. New: `StaticEffect::MaxOneArtifactUntap` (CR 502.3 — Imi
   Statue) and `SpendRestriction::LegendarySpell` + `SpellKind.legendary`
   (Untaidake). Tests in `classic_sets/chk::gaps1`.
-- **Betrayers of Kamigawa opened** (`sets::bok`, 71 cards — `set_gaps.py bok`
-  112 → 41): the Genju cycle, the Spirit/Arcane spiritcraft payoffs, the
+- **Betrayers of Kamigawa complete** (`sets::bok` + `sets::bok2`, 112 cards —
+  `set_gaps.py bok` at zero). The `bok2` closure added: `Keyword::
+  CounterFirstTargetingEachTurn` (the Glasskite cycle, enforced alongside Ward
+  at the targeting hooks but firing on its own controller's spells too),
+  non-mana Splice costs (`CardDefinition.splice_extra_cost` +
+  `AdditionalCastCost::OpponentGainsLife`), `SelectionRequirement::
+  SharesColorWithPermanentYouControl`, `WardCost::RemoveCounterFromPermanent`,
+  `StaticEffect::{GenericAlternativeCostForFilter (CR 118.9 — Kentaro),
+  ReplaceDrawWithLookN (CR 121.2a — Tomorrow)}`, `Effect::{
+  ShuffleEverythingOwnedIntoLibrary, ExchangeCreatureControlWith,
+  DoubleDamageFromSourceThisTurn, EnchantmentsBiteControllersAndHosts,
+  CounterSpellDiscardSplicedNames}`, `Value::LastDiscardedManaValue`,
+  `PreventNextFromChosenSourceToTeam.one_event`, and
+  `DelayedTrigger.bound_subject` (a delayed body naming "that card" resolves
+  at fire time — Shirei). Correctness: CR 702.6e (an equipment-GRANTED
+  unattach cost detaches the granter), CR 710.1c/710.4 (a flip keeps its cost
+  and colour; a flipped permanent reverts on any zone change) and CR 112.4 (a
+  permanent spell pumped on the stack keeps the bonus). **Splice onto Arcane
+  now ships end-to-end** — `HandAffordances.spliceable` /
+  `ClientView.spliceable_hand`, the client's helper-tap picker under
+  `HelperMechanic::Splice`, auto-aimed spliced clause targets, and bot
+  candidates. Tests in `classic_sets/{bok,bok2}`, `core_rules/cr_recent50`.
+- **Betrayers of Kamigawa, first wave** (`sets::bok`, 71 cards): the Genju cycle, the Spirit/Arcane spiritcraft payoffs, the
   soulshift bodies, the Samurai/bushido shells, and the utility spells. New:
   `Keyword::ProtectionFromMatching` (CR 702.16 — the general filtered form,
   gated at cast / damage / block, with the state-aware half in
@@ -1983,7 +2004,7 @@ Each a small targeted feature; sweep batch by batch.
 - ✅ **Reminder text & rules tooltips** — hover info panel from the catalog
   (type line, P/T, keyword reminders, oracle-ish ability panel).
 - 🟡 **Hotkey legend** ✅ (F1 / `?`); remappable keys ⏳.
-- 🟡 **Highlight legal plays** — `ClientView` carries castable/pitchable/kickable
+- 🟡 **Highlight legal plays** — `ClientView` carries castable/pitchable/kickable/spliceable
   hand, activatable permanents, legal attackers/blockers (step-aware). Remaining:
   per-target hint layers.
 - ⏳ **Animations & SFX** polish; board-state pings/alerts.

@@ -5164,8 +5164,15 @@ impl CardInstance {
         if self.flipped {
             return None;
         }
-        let flip = self.definition.flip_face.as_ref().map(|f| (**f).clone())?;
+        let mut flip = self.definition.flip_face.as_ref().map(|f| (**f).clone())?;
         let name = flip.name;
+        // CR 710.1c — a flip card's colour and mana cost don't change when it
+        // flips, so the bottom half inherits the top's cost (catalog flip
+        // faces are written costless).
+        if flip.cost.cmc() == 0 && !self.definition.cost.symbols.is_empty() {
+            flip.cost = self.definition.cost.clone();
+            flip.color_indicator = self.definition.printed_colors();
+        }
         self.unflipped_def = Some(self.definition.clone());
         self.definition = Arc::new(flip);
         self.flipped = true;

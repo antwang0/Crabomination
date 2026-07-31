@@ -713,7 +713,7 @@ impl GameState {
                     dt.effect.clone(),
                     dt.controller,
                     dt.target.clone(),
-                    dt.bound_subject.clone().or_else(|| {
+                    dt.bound_subject.or_else(|| {
                         dt.bound_token.map(crate::game::effects::EntityRef::Permanent)
                     }),
                 ));
