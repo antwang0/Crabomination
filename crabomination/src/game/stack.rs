@@ -2181,8 +2181,51 @@ impl GameState {
             }
             set
         };
+        // Storage Matrix — while an untapped one is out, each untapping player
+        // picks artifact / creature / land and untaps only that type this step.
+        // The auto pick is whichever type would free the most permanents.
+        let matrix_choice: std::collections::HashMap<usize, crate::card::CardType> = {
+            let live = self.battlefield.iter().any(|c| {
+                !c.tapped
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, StaticEffect::UntapOnlyChosenTypeWhileUntapped)
+                    })
+            });
+            let mut out = std::collections::HashMap::new();
+            if live {
+                use crate::card::CardType;
+                for seat in &untappers {
+                    let count = |t: &CardType| {
+                        self.battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == *seat
+                                    && c.tapped
+                                    && c.definition.card_types.contains(t)
+                            })
+                            .count()
+                    };
+                    let best = [CardType::Land, CardType::Creature, CardType::Artifact]
+                        .into_iter()
+                        .max_by_key(|t| count(t))
+                        .unwrap();
+                    out.insert(*seat, best);
+                }
+            }
+            out
+        };
         let prevented: std::collections::HashSet<crate::card::CardId> = {
             let mut blocked = std::collections::HashSet::new();
+            // Storage Matrix's off-type permanents are simply blocked.
+            if !matrix_choice.is_empty() {
+                for c in &self.battlefield {
+                    if let Some(t) = matrix_choice.get(&c.controller)
+                        && !c.definition.card_types.contains(t)
+                    {
+                        blocked.insert(c.id);
+                    }
+                }
+            }
             // Walk static abilities in play and OR each PreventUntap
             // selector's match set into the blocked set. `Selector::This`
             // blocks the static's own source (Basalt/Grim Monolith);
@@ -2753,6 +2796,9 @@ impl GameState {
     /// CR 514.2 — the cleanup wear-off: clears "until end of turn" / "this
     /// turn" state and removes marked damage.
     fn cleanup_wear_off(&mut self) {
+        // Bubbling Muck's floating "Swamps add an extra {B}" grant is a
+        // "until end of turn" effect (CR 514.2).
+        self.extra_mana_on_land_tap_this_turn.clear();
         // CR 514.2 — Second, the following actions happen simultaneously:
         // all damage marked on permanents is removed and all "until end of
         // turn" and "this turn" effects end.

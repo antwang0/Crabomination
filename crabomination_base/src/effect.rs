@@ -4526,6 +4526,21 @@ pub enum Effect {
     /// owner's control at the beginning of your next upkeep. It gains haste."
     /// An optional self-flicker whose return is deferred to the controller's
     /// next upkeep (CR 603.4). Obzedat, Ghost Council's end-step ability.
+    /// "You may exile this card. If you do, [body]." The source is moved from
+    /// wherever it now sits (a death trigger sees it in the graveyard) into
+    /// exile, and only then does `body` run — Academy Rector, Gamekeeper.
+    MayExileSelfThen { body: Box<Effect> },
+    /// Scrying Glass — "choose a number greater than 0 and a color; `who`
+    /// reveals their hand; if they reveal exactly that many cards of that
+    /// colour, draw a card." The guess is made by the effect's controller.
+    GuessColorCountInHand { who: PlayerRef, max: u32 },
+    /// "Attach target Aura card from a graveyard to this creature" — the Aura
+    /// returns to the battlefield already attached (Iridescent Drake).
+    AttachAuraFromGraveyardTo { aura: Selector, host: Selector },
+    /// "Until end of turn, whenever a player taps a `land` for mana, that
+    /// player adds an additional `extra`" (Bubbling Muck). The turn-scoped
+    /// sibling of `StaticEffect::ExtraManaOnLandTap`.
+    ExtraManaOnLandTapThisTurn { land: crate::card::LandType, extra: crate::mana::Color },
     MayExileSelfReturnNextUpkeepHaste,
     /// "Return this card to the battlefield tapped under its owner's control
     /// at the beginning of their next upkeep" (Phytotitan). Fired from a

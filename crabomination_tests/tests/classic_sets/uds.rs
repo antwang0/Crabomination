@@ -595,3 +595,130 @@ fn compost_draws_off_opposing_black_cards() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), 1);
 }
+
+// ── Wave 3: the last of the set ─────────────────────────────────────────────
+
+fn say_yes(g: &mut GameState) {
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+}
+
+/// Academy Rector exiles itself to fetch an enchantment onto the battlefield.
+#[test]
+fn academy_rector_trades_itself_for_an_enchantment() {
+    let mut g = two_player_game();
+    let rector = g.add_card_to_battlefield(0, catalog::academy_rector());
+    let fetched = g.add_card_to_library(0, catalog::attrition());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+        crabomination::decision::DecisionAnswer::Search(Some(fetched)),
+    ]));
+    let ctx = crabomination::game::effects::EffectContext::for_ability(rector, 0, None);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::This },
+            &ctx,
+        )
+        .expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.definition.name == "Academy Rector"));
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Attrition"));
+}
+
+/// Gamekeeper digs past the chaff for the first creature.
+#[test]
+fn gamekeeper_reanimates_off_the_top() {
+    let mut g = two_player_game();
+    say_yes(&mut g);
+    let keeper = g.add_card_to_battlefield(0, catalog::gamekeeper());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::hill_giant());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(keeper, 0, None);
+    let evs = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::This },
+            &ctx,
+        )
+        .expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Hill Giant"));
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Island"));
+}
+
+/// Body Snatcher exiles itself on arrival when there's no creature to pitch.
+#[test]
+fn body_snatcher_exiles_itself_without_a_creature_to_discard() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::body_snatcher());
+    mana(&mut g, 0);
+    cast(&mut g, spell, None);
+    assert!(g.exile.iter().any(|c| c.definition.name == "Body Snatcher"));
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Body Snatcher"));
+}
+
+/// Iridescent Drake arrives wearing an Aura off the graveyard.
+#[test]
+fn iridescent_drake_wears_a_dead_aura() {
+    let mut g = two_player_game();
+    let aura = g.add_card_to_graveyard(0, catalog::twisted_experiment());
+    let drake = g.add_card_to_battlefield(0, catalog::iridescent_drake());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(
+        drake,
+        0,
+        Some(Target::Permanent(aura)),
+    );
+    let def = catalog::iridescent_drake();
+    g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).expect("etb");
+    assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(drake));
+    let cp = g.computed_permanent(drake).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 1), "+3/-1 from the Aura");
+}
+
+/// Bubbling Muck doubles Swamps for the turn and stops at cleanup.
+#[test]
+fn bubbling_muck_doubles_swamps_for_the_turn() {
+    let mut g = two_player_game();
+    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
+    let spell = g.add_card_to_hand(0, catalog::bubbling_muck());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast(&mut g, spell, None);
+    g.players[0].mana_pool = Default::default();
+    activate(&mut g, swamp, 0, None);
+    assert_eq!(g.players[0].mana_pool.total(), 2, "the Swamp paid twice");
+}
+
+/// Storage Matrix lets a player untap only one card type per untap step.
+#[test]
+fn storage_matrix_limits_the_untap_step_to_one_type() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::storage_matrix());
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land2 = g.add_card_to_battlefield(0, catalog::island());
+    for id in [land, bear, land2] {
+        g.battlefield_find_mut(id).unwrap().tapped = true;
+    }
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(!g.battlefield_find(land).unwrap().tapped, "lands were the biggest pile");
+    assert!(!g.battlefield_find(land2).unwrap().tapped);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "the creature stayed down");
+}
+
+/// Goblin Festival pings, and a lost flip hands it to an opponent.
+#[test]
+fn goblin_festival_changes_hands_on_a_lost_flip() {
+    let mut g = two_player_game();
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(false), // lose the flip
+    ]));
+    let festival = g.add_card_to_battlefield(0, catalog::goblin_festival());
+    mana(&mut g, 0);
+    let life = g.players[1].life;
+    activate(&mut g, festival, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 1);
+    assert_eq!(g.battlefield_find(festival).unwrap().controller, 1);
+}

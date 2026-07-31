@@ -16865,6 +16865,14 @@ static ULG: &[Factory] = &[
     super::uds::pattern_of_rebirth,
     super::uds::archery_training,
     super::uds::yavimaya_hollow,
+    super::uds::academy_rector,
+    super::uds::gamekeeper,
+    super::uds::body_snatcher,
+    super::uds::iridescent_drake,
+    super::uds::goblin_festival,
+    super::uds::bubbling_muck,
+    super::uds::storage_matrix,
+    super::uds::scrying_glass,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,

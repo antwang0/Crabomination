@@ -16,8 +16,8 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **Urza block complete-ish** — `set_gaps.py ulg` is at zero and `uds` at 8
-  (`sets::ulg`, `sets::uds`, ~120 cards). New primitives: `Duration::
+- **Urza block complete** — `set_gaps.py ulg` and `uds` both at zero
+  (`sets::ulg`, `sets::uds`, 126 UDS cards). New primitives: `Duration::
   WhileSourceTapped` (CR 611.2c), `Value::{PermanentsTappedThisEffect,
   CardsRevealedThisEffect}`, `PreventionTarget::Anything` +
   `Effect::PreventNextEventFromChosenSourceAnywhere` (Martyr's Cause),
@@ -28,7 +28,11 @@ exercising each) was elided in a compaction pass; recover it from
   MostPermanentsCantPlay, ControllerSkipsDrawStep}`,
   `ActivatedAbility.any_player` (CR 113.3d — surfaced end-to-end through
   `AbilityView.any_player` and the client's ability menu), and
-  `CounterType::{Arrow, Infection}`. Correctness: CR 120.4a excess damage is
+  `CounterType::{Arrow, Infection}`, plus the closing wave's
+  `Effect::{MayExileSelfThen, AttachAuraFromGraveyardTo,
+  ExtraManaOnLandTapThisTurn, GuessColorCountInHand}`,
+  `StaticEffect::UntapOnlyChosenTypeWhileUntapped` (Storage Matrix, gated in
+  `do_untap`) and `WardCost::DiscardMatching`. Correctness: CR 120.4a excess damage is
   now a *split* (the creature takes exactly lethal) rather than full damage
   plus a bonus. Tests in `classic_sets/{ulg,uds}`, `core_rules/cr_recent53`.
 - **Mirrodin (MRD) complete** (`set_gaps.py mrd` at zero). The

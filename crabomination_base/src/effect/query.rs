@@ -1139,7 +1139,13 @@ impl Effect {
             Effect::GenesisWave => false,
             Effect::ShuffleHandsDrawSame { who } => player_has_target(who),
             Effect::RevealAnyNumberFromHand { then, .. } => then.requires_target(),
-            Effect::DestroyEachMatchingWithManaValue { .. } => false,
+            Effect::DestroyEachMatchingWithManaValue { .. }
+            | Effect::ExtraManaOnLandTapThisTurn { .. } => false,
+            Effect::GuessColorCountInHand { who, .. } => player_has_target(who),
+            Effect::MayExileSelfThen { body } => body.requires_target(),
+            Effect::AttachAuraFromGraveyardTo { aura, host } => {
+                sel_has_target(aura) || sel_has_target(host)
+            }
             Effect::DestroyAllSharingNameWith { what } => sel_has_target(what),
             Effect::SkipPlayerDrawStep { player } => player_has_target(player),
             Effect::ExileAllCopiesOfTargetName { what }
@@ -1422,6 +1428,7 @@ impl Effect {
             // cast prompt narrows correctly when the inner effect needs
             // a target (e.g. "you may sacrifice [target permanent]").
             Effect::RevealAnyNumberFromHand { then: body, .. }
+            | Effect::MayExileSelfThen { body }
             | Effect::MayDo { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::CapTargetsAtX { body }
@@ -2504,6 +2511,8 @@ impl Effect {
                 | Effect::DealDamageExcessToController { to, amount } => {
                     sel_find(to, slot).or_else(|| val_find(amount, slot))
                 }
+                Effect::MayExileSelfThen { body } => eff_find(body, slot, mode, kicked),
+                Effect::AttachAuraFromGraveyardTo { aura, .. } => sel_find(aura, slot),
                 Effect::ExileAllCopiesOfTargetName { what }
                 | Effect::DestroyAllSharingNameWith { what }
                 | Effect::ExileAndReturnToOwner { what } => sel_find(what, slot),

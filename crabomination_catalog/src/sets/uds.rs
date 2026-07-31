@@ -2046,3 +2046,150 @@ pub fn yavimaya_hollow() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Wave 3: the last of the set ─────────────────────────────────────────────
+
+/// Academy Rector — {3}{W} 1/2 that trades itself for any enchantment.
+pub fn academy_rector() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_dies(Effect::MayExileSelfThen {
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: R::Enchantment,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+        })],
+        ..creature(
+            "Academy Rector",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            2,
+        )
+    }
+}
+
+/// Gamekeeper — {3}{G} 2/2 that digs a creature out of the top of your library.
+pub fn gamekeeper() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_dies(Effect::MayExileSelfThen {
+            body: Box::new(Effect::RevealUntilFind {
+                who: PlayerRef::You,
+                find: R::Creature,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                cap: Value::Const(100),
+                life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::Graveyard,
+            }),
+        })],
+        ..creature("Gamekeeper", cost(&[generic(3), g()]), vec![CreatureType::Elf], 2, 2)
+    }
+}
+
+/// Body Snatcher — {2}{B}{B} 2/2 that swaps itself for something better.
+pub fn body_snatcher() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::UnlessPlayerPays {
+                    who: PlayerRef::You,
+                    cost: WardCost::DiscardMatching(Box::new(R::Creature), 1),
+                    then: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Exile }),
+                },
+            },
+            on_dies(Effect::MayExileSelfThen {
+                body: Box::new(Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.and(R::InGraveyard),
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            }),
+        ],
+        ..creature(
+            "Body Snatcher",
+            cost(&[generic(2), b(), b()]),
+            vec![CreatureType::Phyrexian, CreatureType::Minion],
+            2,
+            2,
+        )
+    }
+}
+
+/// Iridescent Drake — {3}{U} 2/2 flier that arrives wearing a dead Aura.
+pub fn iridescent_drake() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AttachAuraFromGraveyardTo {
+                aura: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                        .and(R::InGraveyard),
+                },
+                host: Selector::This,
+            },
+        }],
+        ..creature("Iridescent Drake", cost(&[generic(3), u()]), vec![CreatureType::Drake], 2, 2)
+    }
+}
+
+/// Goblin Festival — {1}{R}. A pinger you keep only as long as the coin says so.
+pub fn goblin_festival() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Seq(vec![
+                deal(1, target_any()),
+                Effect::FlipCoin {
+                    count: Value::ONE,
+                    on_heads: Box::new(Effect::Noop),
+                    on_tails: Box::new(Effect::GainControl {
+                        what: Selector::This,
+                        to: Some(PlayerRef::EachOpponent),
+                        duration: Duration::Permanent,
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..enchantment("Goblin Festival", cost(&[generic(1), r()]))
+    }
+}
+
+/// Bubbling Muck — {B}. Swamps pay double for the turn.
+pub fn bubbling_muck() -> CardDefinition {
+    sorcery(
+        "Bubbling Muck",
+        cost(&[b()]),
+        Effect::ExtraManaOnLandTapThisTurn { land: LandType::Swamp, extra: Color::Black },
+    )
+}
+
+/// Storage Matrix — {3}. While it's untapped, each player untaps only one card
+/// type per untap step.
+pub fn storage_matrix() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "As long as this artifact is untapped, each player chooses artifact, creature, or land during their untap step. That player can untap only permanents of the chosen type this step.",
+            effect: StaticEffect::UntapOnlyChosenTypeWhileUntapped,
+        }],
+        ..artifact("Storage Matrix", cost(&[generic(3)]))
+    }
+}
+
+/// Scrying Glass — {2}. Guess a colour count in an opponent's hand for a card.
+pub fn scrying_glass() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            effect: Effect::GuessColorCountInHand { who: PlayerRef::Target(0), max: 7 },
+            ..Default::default()
+        }],
+        ..artifact("Scrying Glass", cost(&[generic(2)]))
+    }
+}

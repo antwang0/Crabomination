@@ -600,6 +600,10 @@ pub struct GameState {
     /// within the current resolution (`Value::CardsRevealedThisEffect`).
     #[serde(skip)]
     pub(crate) cards_revealed_this_resolution: u32,
+    /// Turn-scoped `(land type, extra color)` mana grants from
+    /// `Effect::ExtraManaOnLandTapThisTurn` (Bubbling Muck). Cleared at cleanup.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) extra_mana_on_land_tap_this_turn: Vec<(crate::card::LandType, crate::mana::Color)>,
     /// Transient: count of *creature* cards discarded within the current
     /// effect resolution. Bumped alongside `cards_discarded_this_resolution`
     /// when the discarded card carries `CardType::Creature`. Read by
@@ -1517,6 +1521,7 @@ impl Clone for GameState {
             permanents_returned_this_resolution: self.permanents_returned_this_resolution,
             permanents_tapped_this_resolution: self.permanents_tapped_this_resolution,
             cards_revealed_this_resolution: self.cards_revealed_this_resolution,
+            extra_mana_on_land_tap_this_turn: self.extra_mana_on_land_tap_this_turn.clone(),
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             greatest_discarded_mv_this_resolution: self.greatest_discarded_mv_this_resolution,
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
@@ -1744,6 +1749,7 @@ impl GameState {
             permanents_returned_this_resolution: 0,
             permanents_tapped_this_resolution: 0,
             cards_revealed_this_resolution: 0,
+            extra_mana_on_land_tap_this_turn: Vec::new(),
             creature_cards_discarded_this_resolution: 0,
             greatest_discarded_mv_this_resolution: 0,
             cards_discarded_per_player_this_resolution: HashMap::new(),
@@ -16193,6 +16199,7 @@ fn static_effect_to_effects(
             // the convoke cast path); no layer effect.
             | StaticEffect::ControllerCantPlayLands
             | StaticEffect::ControllerSkipsDrawStep
+            | StaticEffect::UntapOnlyChosenTypeWhileUntapped
             | StaticEffect::MostPermanentsCantPlay
             | StaticEffect::GrantConvokeToSpells { .. }
             | StaticEffect::DoubleDamageToOpponents

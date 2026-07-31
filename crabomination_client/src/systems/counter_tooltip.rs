@@ -968,6 +968,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
                 format!("Ward—{}, Pay {n} life", c.summary())
             }
             crabomination::card::WardCost::Discard(n) => format!("Ward—Discard {n}"),
+            crabomination::card::WardCost::DiscardMatching(_, n) => {
+                format!("Ward—Discard {n} matching")
+            }
             crabomination::card::WardCost::DiscardHand => "Ward—Discard your hand".into(),
             crabomination::card::WardCost::Blight(n) => format!("Ward—Blight {n}"),
             crabomination::card::WardCost::RemoveCounterFromPermanent => {

@@ -13340,6 +13340,32 @@ impl GameState {
                             ok
                         }
                     }
+                    WardCost::DiscardMatching(filter, n) => {
+                        // Body Snatcher — the discard must match `filter`, so
+                        // the auto-pay takes the first N matching cards.
+                        let n = *n as usize;
+                        let hand = self.players[affected_controller].hand.clone();
+                        let picks: Vec<CardId> = hand
+                            .iter()
+                            .filter(|c| {
+                                self.evaluate_requirement_on_card(
+                                    filter,
+                                    c,
+                                    affected_controller,
+                                )
+                            })
+                            .take(n)
+                            .map(|c| c.id)
+                            .collect();
+                        if picks.len() == n {
+                            for id in picks {
+                                self.discard_card(affected_controller, id, events);
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    }
                     WardCost::Discard(n) => {
                         // Ward—Discard N cards. Payable only if the
                         // controller has ≥ N cards in hand. Auto-pay
@@ -21457,6 +21483,107 @@ impl GameState {
                 for id in ids {
                     self.destroy_permanent(id, false, events);
                 }
+                Ok(())
+            }
+
+            Effect::MayExileSelfThen { body } => {
+                // Academy Rector / Gamekeeper — the source is in its owner's
+                // graveyard when the death trigger resolves; exile it first and
+                // only then run the body.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    ctx.controller,
+                    "Exile this card?".to_string(),
+                    src,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if !yes || self.find_card_anywhere(src).is_none() {
+                    return Ok(());
+                }
+                self.move_card_to(src, &ZoneDest::Exile, ctx, events);
+                if !self.exile.iter().any(|c| c.id == src) {
+                    return Ok(());
+                }
+                self.run_effect(body, ctx, events)
+            }
+
+            Effect::AttachAuraFromGraveyardTo { aura, host } => {
+                // Iridescent Drake — the Aura comes back attached, so it never
+                // hits the battlefield unattached and falls off to SBAs.
+                let Some(host_id) = self
+                    .resolve_selector(host, ctx)
+                    .iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let Some(aura_id) =
+                    self.resolve_selector(aura, ctx).iter().find_map(|e| e.as_card_id())
+                else {
+                    return Ok(());
+                };
+                let Some(owner) =
+                    self.players.iter().position(|pl| pl.graveyard.iter().any(|c| c.id == aura_id))
+                else {
+                    return Ok(());
+                };
+                self.move_card_to(
+                    aura_id,
+                    &ZoneDest::Battlefield {
+                        controller: PlayerRef::Seat(ctx.controller),
+                        tapped: false,
+                    },
+                    ctx,
+                    events,
+                );
+                let _ = owner;
+                if let Some(c) = self.battlefield_find_mut(aura_id) {
+                    c.attached_to = Some(host_id);
+                }
+                Ok(())
+            }
+
+            Effect::GuessColorCountInHand { who, max } => {
+                // Scrying Glass. The guesser can't see the hand, so the auto
+                // policy guesses the most common colour in the guesser's own
+                // hand at a count of one — a real seat gets both prompts.
+                let Some(victim) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let src = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let Some(n) = self.ask_seat_amount(
+                    &mut cursor,
+                    ctx.controller,
+                    "Choose a number greater than 0".to_string(),
+                    src,
+                    *max,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                let guess = n.max(1);
+                let color = self.best_color_for_hand(ctx.controller);
+                self.clear_answer_log();
+                if !self.hands_revealed_to.contains(&(victim, ctx.controller)) {
+                    self.hands_revealed_to.push((victim, ctx.controller));
+                }
+                let actual = self.players[victim]
+                    .hand
+                    .iter()
+                    .filter(|c| self.card_colors_anywhere(c.id).contains(&color))
+                    .count() as u32;
+                if actual == guess {
+                    self.draw_one(ctx.controller, events);
+                }
+                Ok(())
+            }
+
+            Effect::ExtraManaOnLandTapThisTurn { land, extra } => {
+                self.extra_mana_on_land_tap_this_turn.push((*land, *extra));
                 Ok(())
             }
 

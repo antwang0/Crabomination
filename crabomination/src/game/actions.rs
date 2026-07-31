@@ -21,6 +21,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::Life(n) => *n == 0,
         WardCost::ManaAndLife(c, n) => c.cmc() == 0 && *n == 0,
         WardCost::Discard(n) => *n == 0,
+        WardCost::DiscardMatching(_, n) => *n == 0,
         // Discarding your hand is never trivial as a Perplex-style counter cost,
         // but as a Ward tax it's free when the hand is already empty.
         WardCost::DiscardHand => false,
@@ -1907,7 +1908,7 @@ impl crate::game::GameState {
     /// exists to cast things. (A bare `ChooseColor` ask hits AutoDecider and
     /// always yields White, wasting the pip for any non-white deck;
     /// interactive choice is a TODO.md item.)
-    fn best_color_for_hand(&self, p: usize) -> ManaColor {
+    pub(crate) fn best_color_for_hand(&self, p: usize) -> ManaColor {
         let mut best = (0u32, ManaColor::White);
         for c in [
             ManaColor::White,
@@ -2043,6 +2044,13 @@ impl crate::game::GameState {
                     .then_some((src.id, *extra))
             })
             .collect();
+        // Bubbling Muck — the turn-scoped floating version of the same grant.
+        let mut grants = grants;
+        for (land_type, color) in self.extra_mana_on_land_tap_this_turn.clone() {
+            if land.definition.subtypes.land_types.contains(&land_type) {
+                grants.push((land_id, ExtraManaKind::Fixed(color)));
+            }
+        }
         for (src_id, extra) in grants {
             // Colorless-only mirror: fires only when the tap produced {C}.
             if matches!(extra, ExtraManaKind::MirrorColorless) {

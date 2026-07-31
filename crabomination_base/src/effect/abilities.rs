@@ -2156,6 +2156,10 @@ pub enum StaticEffect {
     /// their hands." Drannith Magistrate. Checked in `cast_from_zone_blocked`
     /// for every non-hand cast path (flashback / escape / retrace / free-cast).
     OpponentsCantCastFromAnywhereButHand,
+    /// Storage Matrix — "as long as this is untapped, each player chooses
+    /// artifact, creature, or land during their untap step; they can untap
+    /// only permanents of the chosen type this step." Consulted in `do_untap`.
+    UntapOnlyChosenTypeWhileUntapped,
     /// "Skip your draw step" (Yawgmoth's Bargain, Necropotence). Consulted at
     /// the draw step's turn-based action.
     ControllerSkipsDrawStep,

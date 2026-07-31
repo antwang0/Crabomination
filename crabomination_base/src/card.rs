@@ -585,6 +585,10 @@ pub enum WardCost {
     /// Hellraiser). Both halves must be paid or the spell/ability is countered.
     ManaAndLife(crate::mana::ManaCost, u32),
     Discard(u32),
+    /// "…unless you discard a [filter] card" — the filtered sibling of
+    /// `Discard` (Body Snatcher). Unpayable when the hand holds too few
+    /// matching cards.
+    DiscardMatching(Box<SelectionRequirement>, u32),
     /// "...unless its controller discards their hand." (Perplex.) Payable
     /// even from an empty hand — discarding zero cards is a legal payment.
     DiscardHand,
