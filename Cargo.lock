@@ -2386,6 +2386,7 @@ name = "crabomination_server"
 version = "0.1.0"
 dependencies = [
  "crabomination",
+ "serde_json",
 ]
 
 [[package]]

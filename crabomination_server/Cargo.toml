@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 crabomination = { path = "../crabomination" }
+serde_json = "1.0.150"

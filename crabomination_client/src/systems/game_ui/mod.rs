@@ -6,6 +6,7 @@
 //! see the same flat namespace.
 
 mod buttons;
+mod life_graph;
 mod player_stats;
 mod popups;
 
@@ -15,6 +16,7 @@ pub use buttons::{
     poll_action_buttons, poll_player_chip_clicks, pulse_urgent_pass_button, sync_audit_buttons,
     update_attack_all_visibility, update_attack_button_label, update_pass_button,
 };
+pub use life_graph::{record_life_history, sync_life_graph, toggle_life_graph, LifeHistory};
 pub use player_stats::{
     animate_life_flash, sync_player_hud_seat, trigger_life_flash, update_mana_pips,
     update_opponent_panel_tint, update_opponent_stats_rows, update_player_chip_target_outline,

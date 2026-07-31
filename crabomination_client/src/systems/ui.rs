@@ -454,6 +454,7 @@ const HELP_SECTIONS: &[(&str, &[(&str, &str)])] = &[
             ("X", "Export game state"),
             ("G", "Browse your graveyard (click a pile for others')"),
             ("V", "Browse the exile zone"),
+            ("I", "Per-turn life history graph"),
             ("Click phase chart", "Cycle stop / skip for that step"),
         ],
     ),

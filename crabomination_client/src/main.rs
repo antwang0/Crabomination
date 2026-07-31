@@ -64,7 +64,8 @@ use systems::game_ui::{
     sync_hint_chip_visibility, trigger_reveal_animation, update_attack_all_visibility,
     update_attack_button_label,
     animate_phase_banner, trigger_phase_banner, PhaseBannerTracker,
-    animate_life_flash, trigger_life_flash, LifeFlashTracker,
+    animate_life_flash, record_life_history, sync_life_graph, toggle_life_graph,
+    trigger_life_flash, LifeFlashTracker, LifeHistory,
     update_combat_preview_panel,
     position_log_below_opponents,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
@@ -358,6 +359,7 @@ fn main() {
         .insert_resource(GameLog::default())
         .insert_resource(PhaseBannerTracker::default())
         .insert_resource(LifeFlashTracker::default())
+        .insert_resource(LifeHistory::default())
         .insert_resource(FastForward::default())
         .insert_resource(TargetingState::default())
         .insert_resource(game::LegalTargets::default())
@@ -597,6 +599,9 @@ fn main() {
                 animate_phase_banner,
                 trigger_life_flash,
                 animate_life_flash,
+                record_life_history,
+                toggle_life_graph,
+                sync_life_graph,
                 hover_card_preview,
             )
                 .run_if(in_state(AppState::InGame)),

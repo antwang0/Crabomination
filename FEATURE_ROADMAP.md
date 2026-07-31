@@ -2012,7 +2012,8 @@ Each a small targeted feature; sweep batch by batch.
 - ✅ **Search / Scry / Surveil / Mulligan** picker UIs (top/bottom toggles, reorder
   buttons). Drag-and-drop reorder ⏳.
 - ✅ **London mulligan** bottoming; Serum Powder gets its own button.
-- 🟡 **Floating life deltas** ✅; per-turn life-history graph ⏳.
+- ✅ **Floating life deltas**; per-turn life-history sparkline (`I` toggles a
+  per-seat, one-column-per-turn panel — `game_ui::life_graph`).
 - ✅ **Commander-damage HUD** (903.10a) — per-source `⚔ <cmdr> N/21` chip,
   amber→red near loss.
 - ✅ **P/T + loyalty badges** — modified creatures get a floating `P/T` badge;
@@ -2122,14 +2123,17 @@ Each a small targeted feature; sweep batch by batch.
 
 - ⏳ **Seeded / deterministic RNG** surfaced for reproducible games.
 - ⏳ **Snapshot round-trip property tests** + **action-sequence fuzzing**.
-- ⏳ **Crash-recovery / autosave** from snapshots.
+- 🟡 **Crash-recovery / autosave** — a match that panics writes its pre-match
+  `GameState` plus the panic message to `CRAB_CRASH_DUMP_DIR`
+  (`crabomination_server::crash_dump`, atomic write + newest-N retention).
+  Remaining: periodic mid-match autosave and resume-from-dump.
 - ⏳ **Card-scripting DSL** to reduce catalog boilerplate.
 - ⏳ **Set / Scryfall import pipeline** (`scripts/verify_cards.py` exists — extend).
 - ⏳ **Card art / image pipeline**.
 - ✅ **Rules-engine conformance suite** mapped to CR sections — `scripts/
   cr_coverage.py` generates `CR_COVERAGE.md` (section → title, subrules tested,
   test count, plus the untested-section gap list) from the `cr_<section>_` test
-  names. 66 sections covered, 81 numbered sections still untested.
+  names. 97 sections covered, 50 numbered sections still untested.
 - ✅ **Operator telemetry endpoint** — `CRAB_STATUS_BIND` HTTP `/healthz` +
   `/status` (uptime, rolling match stats, slot accounting).
 

@@ -39,6 +39,7 @@ use crabomination::server::{
 };
 
 mod config;
+mod crash_dump;
 mod history;
 mod slots;
 mod stats;
@@ -435,12 +436,20 @@ fn run_match_caught(
     seats: Vec<SeatOccupant>,
     ctx: &str,
 ) -> Option<MatchOutcome> {
+    // Serialized only when `CRAB_CRASH_DUMP_DIR` is set — the state is
+    // consumed by `run_match`, so a repro has to be taken before the call.
+    let pre_state = crash_dump::capture(&state);
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run_match(state, seats))) {
         Ok(outcome) => Some(outcome),
         Err(payload) => {
+            let msg = panic_message(payload.as_ref());
+            let dumped = pre_state
+                .as_deref()
+                .and_then(|json| crash_dump::write(ctx, &msg, json))
+                .map(|p| format!(", dump {}", p.display()))
+                .unwrap_or_default();
             eprintln!(
-                "match aborted: engine panic ({ctx}): {} — connections dropped, slot released",
-                panic_message(payload.as_ref()),
+                "match aborted: engine panic ({ctx}): {msg} — connections dropped, slot released{dumped}",
             );
             None
         }
