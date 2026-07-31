@@ -7711,12 +7711,10 @@ stalled games via `eval_material`.
   "Sacrifice Blazing Torch" is modeled as `Effect::Sacrifice` with a
   `HasName` filter, so a second Torch you control could be the one sacrificed.
   Wants a `Selector::AttachmentGranting` sacrifice.
-- **Four M11 cards remain**, each blocked on one primitive:
+- **Three M11 cards remain**, each blocked on one primitive:
   - Angelic Arbiter — `CreaturesCantAttackController` has no condition slot,
     and the mirrored "can't cast spells" half wants a per-opponent gate.
   - Conundrum Sphinx — each player names a card, then reveals their top.
-  - Mass Polymorph — exile your creatures, reveal until that many creature
-    cards, deploy them all.
   - Necrotic Plague — a self-recurring Aura that reattaches from the graveyard
     to an opponent's creature.
 - **`Effect::Search { to: Exile }` doesn't stamp `exiled_with`.** Hoarding

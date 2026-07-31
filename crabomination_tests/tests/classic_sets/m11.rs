@@ -888,3 +888,26 @@ fn phylactery_lich_without_an_artifact_dies_immediately() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(lich).is_none());
 }
+
+/// Mass Polymorph swaps your board for the same number of creatures off the
+/// top, shuffling the misses back.
+#[test]
+fn mass_polymorph_trades_the_board_for_the_top() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].library.clear();
+    let angel = g.add_card_to_library(0, catalog::serra_angel());
+    let miss = g.add_card_to_library(0, catalog::island());
+    let drake = g.add_card_to_library(0, catalog::sky_ruin_drake());
+    let id = g.add_card_to_hand(0, catalog::mass_polymorph());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    cast(&mut g, id, None);
+    for old in [a, b] {
+        assert!(g.exile.iter().any(|c| c.id == old), "the old board is exiled");
+    }
+    assert!(g.battlefield_find(angel).is_some());
+    assert!(g.battlefield_find(drake).is_some());
+    assert!(g.players[0].library.iter().any(|c| c.id == miss), "the land is shuffled back");
+}

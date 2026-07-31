@@ -9515,6 +9515,7 @@ static M11: &[Factory] = &[
     super::m11::autumns_veil,
     super::m11::hunters_feast,
     super::m11::destructive_force,
+    super::m11::mass_polymorph,
     super::m11::time_reversal,
     super::m11::vengeful_archon,
     super::m11::mystifying_maze,

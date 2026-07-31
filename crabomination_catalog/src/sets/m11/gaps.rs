@@ -971,6 +971,11 @@ pub fn destructive_force() -> CardDefinition {
     )
 }
 
+/// Mass Polymorph — {5}{U}: trade your board in for whatever's on top.
+pub fn mass_polymorph() -> CardDefinition {
+    sorcery("Mass Polymorph", cost(&[generic(5), u()]), Effect::MassPolymorph)
+}
+
 /// Time Reversal — {3}{U}{U}: everybody reshuffles and draws seven; it exiles
 /// itself.
 pub fn time_reversal() -> CardDefinition {

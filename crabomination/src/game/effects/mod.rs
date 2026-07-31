@@ -8411,6 +8411,48 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MassPolymorph => {
+                let p = ctx.controller;
+                let mine: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                let want = mine.len();
+                for cid in mine {
+                    self.remove_from_battlefield_to_exile(cid);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                }
+                if want == 0 {
+                    return Ok(());
+                }
+                // Reveal from the top until `want` creature cards are seen.
+                let mut deploy: Vec<crate::card::CardInstance> = Vec::new();
+                let mut rest: Vec<crate::card::CardInstance> = Vec::new();
+                while deploy.len() < want && !self.players[p].library.is_empty() {
+                    let card = self.players[p].library.remove(0);
+                    if card.definition.is_creature() {
+                        deploy.push(card);
+                    } else {
+                        rest.push(card);
+                    }
+                }
+                for card in deploy {
+                    self.place_card_in_dest(
+                        card,
+                        p,
+                        &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        events,
+                    );
+                }
+                for card in rest {
+                    self.players[p].library.push(card);
+                }
+                self.shuffle_library(p, events);
+                Ok(())
+            }
+
             Effect::RandomHandCardDeployOrCastFree { who } => {
                 use rand::seq::IteratorRandom;
                 for ent in self.resolve_selector(who, ctx) {

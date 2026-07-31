@@ -5092,6 +5092,11 @@ pub enum Effect {
     /// hand, then discards each nonland card revealed this way. Lands revealed
     /// this way stay in hand.
     RevealRandomDiscardNonland { who: Selector, count: Value },
+    /// Mass Polymorph — "Exile all creatures you control, then reveal cards
+    /// from the top of your library until you reveal that many creature cards.
+    /// Put all creature cards revealed this way onto the battlefield, then
+    /// shuffle the rest of the revealed cards into your library."
+    MassPolymorph,
     /// Wild Evocation — "that player reveals a card at random from their hand.
     /// If it's a land card, the player puts it onto the battlefield. Otherwise,
     /// the player casts it without paying its mana cost if able." The free cast
