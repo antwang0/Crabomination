@@ -87,6 +87,10 @@ pub enum PlayerRef {
     /// The player with the lowest life total, ties broken by the resolving
     /// controller's choice (auto-picks the earliest seat). Loxodon Peacekeeper.
     LowestLife,
+    /// The player with the most cards in hand, ties broken toward the earliest
+    /// seat. Sokenzan Renegade's "the player who has the most cards in hand
+    /// gains control of this."
+    MostCardsInHand,
 }
 
 /// Which players a player-targeted static effect affects. The static

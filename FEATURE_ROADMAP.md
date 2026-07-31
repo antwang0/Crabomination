@@ -63,8 +63,8 @@ exercising each) was elided in a compaction pass; recover it from
   Tenza, Hankyu. New: `StaticEffect::MaxOneArtifactUntap` (CR 502.3 — Imi
   Statue) and `SpendRestriction::LegendarySpell` + `SpellKind.legendary`
   (Untaidake). Tests in `classic_sets/chk::gaps1`.
-- **Saviors of Kamigawa** (`sets::sok` + `sets::sok2`, 119 cards —
-  `set_gaps.py sok` 131 → 12): the Kirin spiritcraft cycle, Channel (an
+- **Saviors of Kamigawa** (`sets::sok` + `sets::sok2`, 122 cards —
+  `set_gaps.py sok` 131 → 9): the Kirin spiritcraft cycle, Channel (an
   ability word — an activated ability with `from_hand` + `discard_self_cost`),
   Sweep, the Shinen channel cycle, the hand-size-matters shell, the Moonfolk
   land-bounce activations, the Ascendant flip cycle, and the Epic sorceries.
@@ -77,7 +77,9 @@ exercising each) was elided in a compaction pass; recover it from
   `CardDefinition::flip_when_predicate` (CR 603.8 state-triggered flip),
   `Value::SpellsCastThisTurnTotal`, `CardInstance::damage_dealt_to_this_turn`,
   `Effect::BecomeBlocked` (CR 509.1h), `Effect::ExileTopUntilNonland` +
-  `Value::LastExiledManaValue`, and `EntersAsCopy::legendary`. Tests in
+  `Value::LastExiledManaValue`, `EntersAsCopy::legendary`,
+  `PlayerRef::MostCardsInHand`, and `ActivatedAbility::sac_all_matching_cost`.
+  Tests in
   `classic_sets/sok` and `classic_sets/sok2`.
 - **Betrayers of Kamigawa complete** (`sets::bok` + `sets::bok2`, 112 cards —
   `set_gaps.py bok` at zero). The `bok2` closure added: `Keyword::

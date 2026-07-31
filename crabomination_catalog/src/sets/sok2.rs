@@ -1959,3 +1959,117 @@ pub fn sakashima_the_impostor() -> CardDefinition {
         )
     }
 }
+
+/// Shape Stealer — {U}{U} 1/1 that copies whatever it meets in combat.
+pub fn shape_stealer() -> CardDefinition {
+    let mimic = |from: Selector| Effect::SetBasePT {
+        what: Selector::This,
+        power: Value::PowerOf(Box::new(from.clone())),
+        toughness: Value::ToughnessOf(Box::new(from)),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        triggered_abilities: vec![
+            crate::card::TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: mimic(Selector::take(Selector::BlockedAttacker, Value::ONE)),
+            },
+            crate::card::TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: mimic(Selector::take(Selector::BlockingCreatures, Value::ONE)),
+            },
+        ],
+        ..creature(
+            "Shape Stealer",
+            cost(&[u(), u()]),
+            vec![CreatureType::Shapeshifter, CreatureType::Spirit],
+            1,
+            1,
+        )
+    }
+}
+
+/// Sokenzan Renegade — {2}{R} 3/3 with bushido 1 that defects to whoever is
+/// holding the most cards.
+pub fn sokenzan_renegade() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Bushido(1)],
+        triggered_abilities: vec![on_upkeep(Effect::If {
+            cond: Predicate::AnOpponentHasMoreCardsInHand,
+            then: Box::new(Effect::GainControl {
+                what: Selector::This,
+                to: Some(PlayerRef::MostCardsInHand),
+                duration: Duration::Permanent,
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..creature(
+            "Sokenzan Renegade",
+            cost(&[generic(2), r()]),
+            vec![CreatureType::Ogre, CreatureType::Samurai, CreatureType::Mercenary],
+            3,
+            3,
+        )
+    }
+}
+
+/// Tomb of Urami — Legendary Land. Painful black mana, or trade your whole
+/// mana base for a 5/5 flying Demon.
+pub fn tomb_of_urami() -> CardDefinition {
+    CardDefinition {
+        name: "Tomb of Urami",
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::Colors(vec![Color::Black]),
+                    },
+                    Effect::If {
+                        cond: Predicate::Not(Box::new(Predicate::SelectorExists(
+                            Selector::ControlledBy {
+                                who: PlayerRef::You,
+                                filter: R::HasCreatureType(CreatureType::Ogre),
+                            },
+                        ))),
+                        then: Box::new(Effect::DealDamage {
+                            to: Selector::You,
+                            amount: Value::ONE,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), b(), b()]),
+                tap_cost: true,
+                sac_cost: true,
+                sac_all_matching_cost: Some(R::Land),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: crate::card::TokenDefinition {
+                        name: "Urami".into(),
+                        card_types: vec![CardType::Creature],
+                        supertypes: vec![crate::card::Supertype::Legendary],
+                        colors: vec![Color::Black],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Demon, CreatureType::Spirit],
+                            ..Default::default()
+                        },
+                        power: 5,
+                        toughness: 5,
+                        keywords: vec![Keyword::Flying],
+                        ..Default::default()
+                    },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

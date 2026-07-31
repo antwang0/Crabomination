@@ -12695,6 +12695,21 @@ impl GameState {
             );
         }
 
+        // "Sacrifice all [filter] you control" as a cost (Tomb of Urami) —
+        // folded into the same payment loop as `sac_other_filter`. The source
+        // is excluded here; pair with `sac_cost` when it also goes.
+        let mut sac_other_picks = sac_other_picks;
+        if let Some(filter) = ability.sac_all_matching_cost.as_ref() {
+            let extra: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.id != card_id && c.controller == p)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| c.id)
+                .collect();
+            sac_other_picks.extend(extra);
+        }
+
         // Sacrifice-another-from-bf-as-cost: with tap/mana/life paid,
         // sacrifice each cost-picked battlefield permanent (already
         // validated to exist via the pre-flight `sac_other_picks`

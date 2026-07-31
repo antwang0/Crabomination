@@ -2330,6 +2330,11 @@ pub struct ActivatedAbility {
     /// shapes).
     #[serde(default)]
     pub sac_other_filter: Option<(SelectionRequirement, u32)>,
+    /// "Sacrifice all [filter] you control" as an activation cost (Tomb of
+    /// Urami's "Sacrifice all lands you control"). Paid alongside
+    /// `sac_other_filter`; the source itself is included when it matches.
+    #[serde(default)]
+    pub sac_all_matching_cost: Option<SelectionRequirement>,
     /// When true, `sac_other_filter`'s count is the activation's X value
     /// ("Sacrifice X [filter]:" costs — Lonis, Genetics Expert). The X is
     /// threaded to the effect as `Value::XFromCost`.

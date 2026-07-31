@@ -7661,7 +7661,7 @@ stalled games via `eval_material`.
 
 ## Noticed this run (modern_decks — Saviors of Kamigawa closure)
 
-- **12 SOK cards remain, each blocked on one primitive:**
+- **9 SOK cards remain, each blocked on one primitive:**
   - Ashes of the Fallen — a graveyard creature-type grant (above).
   - Choice of Damnations / Pain's Reward — an opponent picks a number, then
     the caster picks a branch; wants `Decision::ChooseAmount` routed to a
@@ -7680,12 +7680,6 @@ stalled games via `eval_material`.
     tokens per nonland exiled; `ExileTopUntilNonland` stops at one card.
   - Sekki, Seasons' Guide — a damage replacement that trades counters for
     tokens 1:1.
-  - Shape Stealer — "change this creature's base power and toughness to that
-    creature's"; wants `Effect::SetBasePtFromTarget`.
-  - Sokenzan Renegade — "the player who has the most cards in hand gains
-    control of this"; wants `PlayerRef::MostCardsInHand`.
-  - Tomb of Urami — "Sacrifice all lands you control" as an activation cost;
-    `sac_other_filter` takes a fixed count.
 - **The Epic copy doesn't re-choose targets.** CR 702.50a's copies "may choose
   new targets"; `process_epic` reuses the original's. Eternal Dominion /
   Neverending Torment / Undying Flames all want it.

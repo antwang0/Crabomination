@@ -840,3 +840,75 @@ fn sakashima_copies_but_keeps_its_name() {
     assert_eq!((cp.power, cp.toughness), (4, 4));
     assert_eq!(g.battlefield_find(saka).unwrap().definition.name, "Sakashima the Impostor");
 }
+
+/// Shape Stealer takes on its blocker's body.
+#[test]
+fn shape_stealer_copies_its_blocker() {
+    let mut g = two_player_game();
+    let thief = g.add_card_to_battlefield(0, catalog::shape_stealer());
+    g.battlefield_find_mut(thief).unwrap().summoning_sick = false;
+    let blocker = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: thief, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, thief)])).expect("block");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(thief).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+}
+
+/// Sokenzan Renegade defects to whoever is holding the most cards.
+#[test]
+fn sokenzan_renegade_defects_to_the_fullest_hand() {
+    let mut g = two_player_game();
+    let ogre = g.add_card_to_battlefield(0, catalog::sokenzan_renegade());
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ogre).unwrap().controller, 1);
+}
+
+/// Tomb of Urami eats your mana base for a 5/5 flier.
+#[test]
+fn tomb_of_urami_trades_your_lands_for_a_demon() {
+    let mut g = two_player_game();
+    let tomb = g.add_card_to_battlefield(0, catalog::tomb_of_urami());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    g.players[0].mana_pool.add(Color::Black, 4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tomb,
+        ability_index: 1,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("make Urami");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.is_land()).count(), 0);
+    let urami = g.battlefield.iter().find(|c| c.definition.name == "Urami").expect("token");
+    assert_eq!((urami.power(), urami.toughness()), (5, 5));
+}
+
+/// The last SOK batch is registered.
+#[test]
+fn sok2_batch5_cards_are_registered() {
+    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
+        .map(|f| f().name)
+        .collect();
+    for f in [
+        catalog::shape_stealer as fn() -> crabomination::card::CardDefinition,
+        catalog::sokenzan_renegade,
+        catalog::tomb_of_urami,
+    ] {
+        let name = f().name;
+        assert!(names.contains(&name), "{name} is not registered");
+    }
+}

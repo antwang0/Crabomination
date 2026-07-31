@@ -24420,6 +24420,12 @@ impl GameState {
             PlayerRef::CounteredSpellController => self.countered_spell_controller,
             // Ties go to the earliest seat (stands in for "you choose one").
             PlayerRef::LowestLife => (0..self.players.len()).min_by_key(|p| self.players[*p].life),
+            // `max_by_key` returns the *last* maximum; fold keeps the earliest.
+            PlayerRef::MostCardsInHand => (0..self.players.len())
+                .fold(None::<usize>, |best, p| match best {
+                    Some(b) if self.players[b].hand.len() >= self.players[p].hand.len() => Some(b),
+                    _ => Some(p),
+                }),
             PlayerRef::Triggerer => ctx.trigger_source.and_then(|e| match e {
                 EntityRef::Player(p) => Some(p),
                 // A card trigger-source (e.g. a SpellCast trigger) resolves to
