@@ -269,3 +269,46 @@ fn cr_601_2b_ability_view_lists_modes() {
     let pv = cv.battlefield.iter().find(|p| p.id == kami).expect("on battlefield");
     assert_eq!(pv.abilities[0].modes.len(), 2, "tap / untap");
 }
+
+// ── Snapshot schema stability ──
+
+/// Every `#[serde(default)]` field this run added survives a full-state
+/// snapshot round-trip, so an in-flight match can be reloaded across a deploy.
+#[test]
+fn new_serde_fields_survive_snapshot_roundtrip() {
+    use crabomination::game::types::{CastProfile, PreventionShield, PreventionTarget, TriggerPush};
+    let mut g = two_player_game();
+    g.players[0].spell_casts_this_turn.push(CastProfile {
+        colors: vec![crabomination::mana::Color::Blue],
+        card_types: vec![CardType::Instant],
+    });
+    g.players[1].lands_entered_this_turn = 2;
+    g.prevention_shields.push(PreventionShield {
+        target: PreventionTarget::PlayerAndPermanents(0),
+        remaining: Some(3),
+        ..Default::default()
+    });
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.stack.push(
+        TriggerPush::new(src, 0, crabomination::effect::Effect::Noop)
+            .trigger_player(Some(1))
+            .build(),
+    );
+
+    let json = serde_json::to_string(&g).expect("serialize");
+    let g2: GameState = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(g2.players[0].spell_casts_this_turn.len(), 1, "cast profiles round-trip");
+    assert_eq!(g2.players[1].lands_entered_this_turn, 2);
+    assert_eq!(
+        g2.prevention_shields[0].target,
+        PreventionTarget::PlayerAndPermanents(0),
+        "the team prevention target round-trips",
+    );
+    assert!(
+        matches!(
+            g2.stack.first(),
+            Some(crabomination::game::types::StackItem::Trigger { trigger_player: Some(1), .. })
+        ),
+        "the trigger's named player round-trips",
+    );
+}

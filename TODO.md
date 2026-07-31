@@ -7499,8 +7499,9 @@ in the topical sections above, are:
 
 ### Server
 - Trigger-filter debug logging (`TriggerFiltered { source, kind, scope, reason }`);
-  snapshot round-trip tests for new `#[serde(default)]` fields; a
-  mana-paid-for-optional audit event; per-cast-face metrics. (Ward is now
+  a mana-paid-for-optional audit event; per-cast-face metrics. (Snapshot
+  round-trip coverage for each run's new `#[serde(default)]` fields now lands
+  with the fields — see `core_rules/cr_recent48`.) (Ward is now
   factored into hostile auto-targeting — un-warded candidates first.)
 
 ## 1v1-collapsed "target player" effects (multiplayer worklist)
