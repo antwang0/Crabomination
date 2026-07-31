@@ -1322,9 +1322,34 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `Effect::CopyForEachOtherTargetableCreature` (Zada, Hedron Grinder — a spell
   targeting only the source is copied once per other creature it could target).
   Emblem `AnthemForFilter` statics now reach the live anthem gather, so Gideon,
-  Ally of Zendikar's −4 actually pumps. Worldwake (`sets::wwk`, 88 → 43 gaps)
-  rides the same landfall/Rally shapes plus the existing Multikicker and
-  `Effect::SwitchPT` / `BecomeCreature` (the Zendikon land animations).
+  Ally of Zendikar's −4 actually pumps. **Worldwake is complete** (`set_gaps.py wwk` at zero — `sets::wwk`
+  rides the same landfall/Rally shapes plus Multikicker and
+  `Effect::SwitchPT` / `BecomeCreature`; `sets::wwk2` closes the last 43).
+  The closure added: the **Trap alternative cost** (`Predicate::{
+  CastSpellThisTurnWith, CreatureEnteredThisTurnMatching}` on the existing
+  `AlternativeCost.condition` gate, backed by a per-turn
+  `Player.spell_casts_this_turn` profile list),
+  `Effect::PreventNextFromChosenSourceToTeam` +
+  `PreventionTarget::PlayerAndPermanents` (CR 615.7 — one shared "next N" pool
+  around a seat *and* its permanents, redirecting the soak; Refraction Trap),
+  `StaticEffect::WhileCountersAtLeast` (CR 611.2 — the Quest cycle's
+  counter gate, peeled by a single `GameState::active_static` helper that
+  replaced three ad-hoc unwrap loops), `Effect::{MustBlockTarget,
+  DestroyThenVictimControllersMakeToken, TapAnyNumberThenCounters}`,
+  `RevealMissDest::WithFind` (Treasure Hunt),
+  `SelectionRequirement::SpellWithSingleTarget`, and
+  `Value::CastSpellTimesKicked`. Correctness along the way: the Multikicker
+  cost is now paid and stamped **before** the cast pipeline fires spell-cast
+  triggers (CR 601.2f/h — Rumbling Aftershocks read a kick count of 0);
+  `Value::TimesKicked` reaches a resolving *spell* via `EffectContext.
+  kick_count` (Spell Contortion); an **animated land that dies is a creature
+  dying** (CR 613.2 layer 4 — `GameState::permanent_is_creature` at the
+  destroy/sacrifice funnels, so the Zendikons hand their land back);
+  a "…deals combat damage to a player" trigger carries the damaged seat
+  through resolution (`StackItem::Trigger.trigger_player`) so
+  `ControlledByTriggerPlayer` target filters survive the CR 608.2b re-check;
+  and a trigger's multi-target fan-out now peels `MayDo` / `CapTargetsAt` /
+  `OptionalTargets` wrappers (Terastodon, Voyager Drake).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an

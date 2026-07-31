@@ -7678,11 +7678,28 @@ stalled games via `eval_material`.
   carries no `mode`, so an `Effect::ChooseMode` in an activated ability always
   runs the first mode (Veteran Warleader is modeled as three abilities
   instead). Loyalty and cast paths do plumb a mode.
-- **Worldwake is half-done** (`set_gaps.py wwk` 88 → 43). What's left clusters
-  on three primitives: the Trap alternative cost ("if [an opponent did X] this
-  turn, you may pay [cheap cost] instead"), "prevent the next N damage from a
-  source of your choice", and the WWK manlands' activate-only-once-per-turn
-  animation riders.
+- ✅ ~~**Worldwake is half-done**~~ — `set_gaps.py wwk` is at zero (`sets::wwk2`).
 - **`Effect::MoveWithinTotalManaValue` auto-picks.** March from the Tomb takes
   the cheapest matches first to maximize the count; the printed card lets the
   caster choose which cards fit the budget.
+
+## Noticed this run (modern_decks — WWK closure)
+
+- **Trap alternative costs are a two-sided read.** `Predicate::
+  CastSpellThisTurnWith` reads `Player.spell_casts_this_turn` (colors + cast-half
+  types, cleared at cleanup); an opponent who casts a spell that is *countered*
+  still turns the Trap on, which matches the printed "cast" wording.
+- **`Effect::ChooseNewTargetsForSpell` picks the new target itself.** Ricochet
+  Trap / Misdirection retarget to the first legal alternative; the printed cards
+  let the caster choose. Wants the `CopySpellMayChooseTargets` prompt shape.
+- **A combat-damage trigger still gets one target slot.** Cards whose body wants
+  a slot beyond the damaged player (Sword of Sinew and Steel-style "and destroy
+  up to one artifact") auto-pick via `auto_target_for_effect_avoiding_set_x`;
+  `fire_combat_damage_triggers` never fills slots 1+.
+- **`Effect::MayDoElse` can't see whether its body did anything.** Vapor Snare
+  gates on "you control a land" before offering the bounce so a landless
+  controller sacrifices; a body that resolves to nothing after an accepted "yes"
+  would still count as done.
+- **Marshal's Anthem / Voyager Drake reanimate-per-kick pick their own targets.**
+  `CapTargetsAt` truncates the auto-filled slot list at resolution; a UI seat
+  never gets to choose *which* graveyard creatures come back.

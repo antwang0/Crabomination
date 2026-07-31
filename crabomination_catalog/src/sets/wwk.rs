@@ -370,13 +370,14 @@ pub fn join_the_ranks() -> CardDefinition {
 
 /// The Zendikon cycle: an Aura that animates the enchanted land and returns it
 /// to hand when it dies.
-fn zendikon(
+pub(crate) fn zendikon(
     name: &'static str,
     c: crate::mana::ManaCost,
     (p, t): (i32, i32),
     types: Vec<CreatureType>,
     keywords: Vec<Keyword>,
 ) -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
         name,
         cost: c,
@@ -386,14 +387,23 @@ fn zendikon(
             ..Default::default()
         },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
-        triggered_abilities: vec![etb(Effect::BecomeCreature {
-            what: Selector::AttachedTo(Box::new(Selector::This)),
-            power: Value::Const(p),
-            toughness: Value::Const(t),
-            creature_types: types,
-            keywords,
-            duration: Duration::Permanent,
-        })],
+        triggered_abilities: vec![
+            etb(Effect::BecomeCreature {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                power: Value::Const(p),
+                toughness: Value::Const(t),
+                creature_types: types,
+                keywords,
+                duration: Duration::Permanent,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+                effect: Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
+                },
+            },
+        ],
         ..Default::default()
     }
 }
@@ -433,7 +443,11 @@ pub fn crusher_zendikon() -> CardDefinition {
 
 // ── Lands ───────────────────────────────────────────────────────────────────
 
-fn tapped_etb_land(name: &'static str, color: Color, trigger: Effect) -> CardDefinition {
+pub(crate) fn tapped_etb_land(
+    name: &'static str,
+    color: Color,
+    trigger: Effect,
+) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land],

@@ -982,6 +982,9 @@ pub enum ResumeContext {
         /// The firing event's amount (`Value::TriggerEventAmount`).
         #[serde(default)]
         event_amount: u32,
+        /// The player the firing event named (`ControlledByTriggerPlayer`).
+        #[serde(default)]
+        trigger_player: Option<usize>,
         /// Extra targets (slots 1+) for two-target activated abilities,
         /// preserved across a mid-resolution suspend.
         #[serde(default)]
@@ -1516,6 +1519,20 @@ pub enum CastFace {
 pub enum PreventionTarget {
     Player(usize),
     Permanent(CardId),
+    /// A team shield with one shared pool: "prevent the next N damage that a
+    /// source of your choice would deal to you and/or permanents you control"
+    /// (Refraction Trap). Matches the seat and everything it controls.
+    PlayerAndPermanents(usize),
+}
+
+/// What a spell looked like when it was cast — the colors of its mana cost and
+/// its card types. Kept per player for the turn (`Player.spell_casts_this_turn`)
+/// so "if an opponent cast a [color] [type] spell this turn" riders can read
+/// back a spell that has long since left the stack.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CastProfile {
+    pub colors: Vec<crate::mana::Color>,
+    pub card_types: Vec<crate::card::CardType>,
 }
 
 impl Default for PreventionTarget {
@@ -2018,6 +2035,13 @@ pub enum StackItem {
         /// (Illusionist's Bracers). Defaults to `false` for snapshot back-compat.
         #[serde(default)]
         activated: bool,
+        /// The player the firing event named — the damaged seat for a
+        /// "…deals combat damage to a player" trigger. Seeds
+        /// `trigger_event_player_scratch` at resolution so
+        /// `ControlledByTriggerPlayer` target filters re-check against the
+        /// right seat (CR 608.2b). `None` for events with no such player.
+        #[serde(default)]
+        trigger_player: Option<usize>,
     },
 }
 
@@ -2040,6 +2064,7 @@ pub struct TriggerPush {
     event_amount: u32,
     intervening_if: Option<crate::card::Predicate>,
     activated: bool,
+    trigger_player: Option<usize>,
 }
 
 impl TriggerPush {
@@ -2058,7 +2083,14 @@ impl TriggerPush {
             event_amount: 0,
             intervening_if: None,
             activated: false,
+            trigger_player: None,
         }
+    }
+    /// The player the firing event named (the damaged seat for a combat-damage
+    /// trigger), read back by `ControlledByTriggerPlayer` at resolution.
+    pub fn trigger_player(mut self, p: Option<usize>) -> Self {
+        self.trigger_player = p;
+        self
     }
     /// Mark this item as an activated ability (CR 602) rather than a trigger.
     pub fn activated(mut self, v: bool) -> Self {
@@ -2116,6 +2148,7 @@ impl TriggerPush {
             intervening_if: self.intervening_if,
             additional_targets: self.additional_targets,
             activated: self.activated,
+            trigger_player: self.trigger_player,
         }
     }
 }

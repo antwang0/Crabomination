@@ -2012,7 +2012,7 @@ fn paradigm_free_copy_resolves_with_scripted_yes() {
         0,
         crabomination::effect::Effect::CastFreeParadigmCopy,
         None,
-        0, 0, 0, 0, None, 0,
+        0, 0, 0, 0, None, 0, None,
         Vec::new(),
     ).expect("paradigm copy effect resolves");
     drain_stack(&mut g);

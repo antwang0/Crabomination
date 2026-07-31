@@ -1155,6 +1155,7 @@ fn cr_608_2b_trigger_with_illegal_target_fizzles() {
         trigger_source: None,
         mana_spent: 0,
         event_amount: 0,
+        trigger_player: None,
         intervening_if: None,
         additional_targets: Vec::new(),
         activated: false,

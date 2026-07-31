@@ -171,6 +171,10 @@ pub enum StaticEffect {
     /// Street Innkeeper's "during turns other than yours, tapped creatures you
     /// control have hexproof"). Emitted only while `active_player != controller`.
     WhileNotYourTurn { inner: Box<StaticEffect> },
+    /// CR 611.2 — "As long as there are `n` or more `kind` counters on this,
+    /// [inner]." The counter-gated wrapper behind the Quest enchantment cycle
+    /// (Quest for Renewal, Quest for Ula's Temple).
+    WhileCountersAtLeast { kind: CounterType, n: u32, inner: Box<StaticEffect> },
     /// CR 702.122e / 702.171 — "crews Vehicles and saddles Mounts as though
     /// its power were N greater." Adds `amount` to each affected creature's
     /// power *only* when summing crew / saddle totals (it is not a real P/T

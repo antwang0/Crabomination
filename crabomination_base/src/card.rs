@@ -57,7 +57,7 @@ pub enum CreatureType {
     Sheep, Trilobite, Beaver,
     Basilisk, Cockatrice,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
-    Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold,
+    Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold, Surrakar,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Archon, Aetherborn,
     Construct, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought,
     Ooze, Plant, Saproling,
@@ -1704,6 +1704,9 @@ pub enum SelectionRequirement {
     /// source — one target slot, filled with the source (Ink-Treader
     /// Nephilim's "if that spell targets only this creature").
     SpellTargetsOnlySource,
+    /// CR 115.7 — a stack spell with exactly one target ("target spell with a
+    /// single target" — Ricochet Trap, Deflection).
+    SpellWithSingleTarget,
     /// A stack spell that was NOT cast from its owner's hand (Wash Away's
     /// bracketed base mode — flashback/graveyard/exile casts qualify).
     SpellNotCastFromHand,

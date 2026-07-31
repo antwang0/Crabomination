@@ -848,6 +848,7 @@ impl GameState {
                     cast_from_hand: true,
                     event_amount: 0,
                     kicked: false,
+                    kick_count: 0,
                     bargained: false,
                     cast_via_mayhem: false,
                     cast_via_waterbend: false,
@@ -3459,6 +3460,13 @@ impl GameState {
             }
         }
 
+        // "…deals combat damage to a player" bodies that act on something
+        // *that player* controls (Hammer of Ruin, Mordant Dragon) read the
+        // damaged seat through `ControlledByTriggerPlayer`, both here (target
+        // enumeration) and again at resolution.
+        if let Target::Player(p) = default_target {
+            self.trigger_event_player_scratch = Some(p);
+        }
         for (trig_source, effect, controller, filter, bind_dealer) in triggers {
             // CR 603.4 — intervening-'if' on combat-damage triggers ("whenever
             // a creature you control *with toxic* deals combat damage…" —
@@ -3513,6 +3521,10 @@ impl GameState {
                 TriggerPush::new(trig_source, controller, effect)
                     .target(target)
                     .trigger_source(dealer)
+                    .trigger_player(match default_target {
+                        Target::Player(p) => Some(p),
+                        _ => None,
+                    })
                     // The damage dealt doubles as the trigger's X so
                     // `…XFromCost` filters read the hit at resolution too.
                     .x_value(damage_amount)

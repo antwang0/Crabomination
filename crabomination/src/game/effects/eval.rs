@@ -665,10 +665,24 @@ impl GameState {
                 .and_then(|s| self.battlefield_find(s))
                 .map(|c| c.squad_count as i32)
                 .unwrap_or(0),
+            // A permanent reads its own stamped count; a resolving spell
+            // (Spell Contortion) reads the count threaded onto the context.
             Value::TimesKicked => ctx
                 .source
                 .and_then(|s| self.battlefield_find(s))
                 .map(|c| c.kick_count as i32)
+                .unwrap_or(ctx.kick_count as i32),
+            Value::CastSpellTimesKicked => ctx
+                .trigger_source
+                .and_then(|e| e.as_card_id())
+                .and_then(|cid| {
+                    self.stack.iter().find_map(|si| match si {
+                        StackItem::Spell { card, .. } if card.id == cid => {
+                            Some(card.kick_count as i32)
+                        }
+                        _ => None,
+                    })
+                })
                 .unwrap_or(0),
             Value::CastSpellManaSpent => {
                 // Prefer the spell stack item's stored `mana_spent` when
@@ -1360,6 +1374,27 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].cast_blue_or_black_this_turn),
+            Predicate::CastSpellThisTurnWith { who, colors, types } => {
+                self.resolve_players(who, ctx).into_iter().any(|p| {
+                    self.players[p].spell_casts_this_turn.iter().any(|c| {
+                        (colors.is_empty() || colors.iter().any(|k| c.colors.contains(k)))
+                            && (types.is_empty()
+                                || types.iter().any(|t| c.card_types.contains(t)))
+                    })
+                })
+            }
+            Predicate::CreatureEnteredThisTurnMatching { who, filter } => {
+                self.resolve_players(who, ctx).into_iter().any(|p| {
+                    self.players[p].creatures_entered_this_turn.iter().any(|&cid| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::types::Target::Permanent(cid),
+                            p,
+                            ctx.source,
+                        )
+                    })
+                })
+            }
             Predicate::DiscardedNonlandThisEffect { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()
@@ -2283,6 +2318,10 @@ impl GameState {
                         .battlefield_find(*cid)
                         .map(|c| c.controller)
                         .or_else(|| self.stack_spell_caster(*cid))
+                        // CR 108.4 — a card in a hidden/terminal zone has no
+                        // controller; its owner stands in (Wrexial's "target
+                        // instant or sorcery card in that player's graveyard").
+                        .or_else(|| self.find_card_anywhere(*cid).map(|c| c.owner))
                         .is_some_and(|ctrl| ctrl == who),
                     Target::Player(p) => *p == who,
                 }
@@ -2633,6 +2672,15 @@ impl GameState {
                                 && *target
                                     == Some(crate::game::types::Target::Permanent(src))
                         })
+                    }),
+                    // CR 115.7 — "target spell with a single target": exactly
+                    // one filled slot (Ricochet Trap).
+                    R::SpellWithSingleTarget => self.stack.iter().any(|si| {
+                        matches!(
+                            si,
+                            StackItem::Spell { card: c, target: Some(_), additional_targets, .. }
+                                if c.id == card.id && additional_targets.is_empty()
+                        )
                     }),
                     // Wash Away's base mode: a stack spell cast from
                     // anywhere but its owner's hand (CR 702.148 bracket).
@@ -3257,6 +3305,7 @@ impl GameState {
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
             | R::SpellTargetsOnlySource
+            | R::SpellWithSingleTarget
             | R::DealtDamageToControllerThisTurn | R::IsBestowed
             | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
             | R::DamagedBySourceThisTurn | R::PlayerDamagedBySourceThisTurn => false,

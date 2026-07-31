@@ -720,6 +720,13 @@ pub struct Player {
     /// snapshot back-compat.
     #[serde(default)]
     pub cast_blue_or_black_this_turn: bool,
+    /// Colors + card types of each spell this player cast this turn, in cast
+    /// order. Stamped in `finalize_cast` and cleared alongside
+    /// `cast_blue_or_black_this_turn`; read by
+    /// `Predicate::CastSpellThisTurnWith` — the Trap alternative costs
+    /// ("if an opponent cast a blue spell this turn", Ricochet Trap).
+    #[serde(default)]
+    pub spell_casts_this_turn: Vec<crate::game::types::CastProfile>,
     /// True while this player has hexproof until the start of their next
     /// turn (Blossoming Calm). Set by `Effect::GainHexproofUntilYourNextTurn`;
     /// cleared at this player's `do_untap`. `#[serde(default)]`.
@@ -860,6 +867,7 @@ impl Player {
             hexproof_from_colors_this_turn: Vec::new(),
             hexproof_until_next_turn: false,
             cast_blue_or_black_this_turn: false,
+            spell_casts_this_turn: Vec::new(),
             cant_cast_noncreature_this_turn: false,
             free_spells_from_hand_this_turn: false,
             play_from_graveyard_this_turn: false,

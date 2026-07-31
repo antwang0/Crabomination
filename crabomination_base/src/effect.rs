@@ -723,6 +723,10 @@ pub enum Value {
     /// cost was paid (`CardInstance.kick_count`). Reads `ctx.source`. Zero
     /// off-source (Everflowing Chalice).
     TimesKicked,
+    /// CR 702.33c — how many times the *triggering* spell was kicked, read off
+    /// the trigger's subject on the stack (Rumbling Aftershocks). Zero when the
+    /// subject isn't a spell.
+    CastSpellTimesKicked,
     /// Total mana spent paying the originating spell's cost. Stashed on
     /// `StackItem::Spell.mana_spent` at cast time, propagated onto
     /// spell-cast `StackItem::Trigger.mana_spent`, and read from
@@ -1200,6 +1204,20 @@ pub enum Predicate {
     /// True if any player `who` resolves to has cast a blue or black spell
     /// this turn (Veil of Summer's conditional cantrip).
     CastBlueOrBlackThisTurn { who: PlayerRef },
+    /// "[who] cast a [colors] [types] spell this turn." Both lists are
+    /// disjunctive and an empty list matches anything, so `{colors: [Blue],
+    /// types: []}` is Ricochet Trap and `{colors: [Red], types: [Instant,
+    /// Sorcery]}` is Refraction Trap. Reads `Player.spell_casts_this_turn`.
+    CastSpellThisTurnWith {
+        who: PlayerRef,
+        colors: Vec<Color>,
+        types: Vec<crate::card::CardType>,
+    },
+    /// "[who] had a creature matching `filter` enter the battlefield under
+    /// their control this turn" (Permafrost Trap). Matches over
+    /// `Player.creatures_entered_this_turn`, so a creature that has since left
+    /// the battlefield still counts.
+    CreatureEnteredThisTurnMatching { who: PlayerRef, filter: SelectionRequirement },
     /// True if any player `who` resolves to discarded a *nonland* card within
     /// the current effect resolution. Backed by
     /// `GameState.nonland_cards_discarded_per_player_this_resolution`. Gates
@@ -1776,6 +1794,10 @@ pub enum RevealMissDest {
     /// Misses are shuffled into the controller's library after the find
     /// resolves (Transmogrify, Indomitable Creativity).
     ShuffleIntoLibrary,
+    /// Misses join the found card in its destination — "reveal cards from the
+    /// top of your library until you reveal a nonland card, then put all cards
+    /// revealed this way into your hand" (Treasure Hunt).
+    WithFind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -4365,6 +4387,10 @@ pub enum Effect {
         power: i32,
         toughness: i32,
     },
+    /// "You may tap any number of untapped `filter` you control. If you do, put
+    /// a `counter` counter on each of those" (Urge to Feed). The counter-payout
+    /// sibling of `TapAnyNumberThenPumpPerTapped`.
+    TapAnyNumberThenCounters { filter: SelectionRequirement, counter: crate::card::CounterType },
     /// Entrancing Lyre — tap `what` and lock it from untapping for as long as
     /// the source permanent stays tapped (`CardInstance.untap_locked_by`).
     TapAndUntapLock { what: Selector },
@@ -6576,6 +6602,11 @@ pub enum Effect {
         #[serde(default)]
         reflect: bool,
     },
+    /// CR 615.7 — "Prevent the next `amount` damage that a source of your
+    /// choice would deal to you and/or permanents you control this turn. If
+    /// damage is prevented this way, deal that much damage to `to`."
+    /// One shared pool across the whole team (Refraction Trap).
+    PreventNextFromChosenSourceToTeam { amount: Value, to: Selector },
     /// "Reveal the top `count` cards of your library. For each of those
     /// cards, put that card into your hand unless any opponent pays
     /// `life` life. Then exile the rest." (Sword-Point Diplomacy.)
@@ -6730,6 +6761,18 @@ pub enum Effect {
     /// Sets the target's `must_block` to the ability source (like Provoke
     /// but without untapping the target). Matsu-Tribe Decoy.
     MustBlockSource { what: Selector },
+
+    /// CR 509.1c — the two-slot sibling: "`blocker` blocks `attacker` this
+    /// turn if able", where the attacker is itself chosen (Feral Contest).
+    MustBlockTarget { blocker: Selector, attacker: Selector },
+
+    /// "Destroy `what`. For each permanent put into a graveyard this way, its
+    /// controller creates a token" (Terastodon). Victims that survive the
+    /// destroy (indestructible, a replacement) pay nothing.
+    DestroyThenVictimControllersMakeToken {
+        what: Selector,
+        definition: crate::card::TokenDefinition,
+    },
 
     /// "Prevent the next N damage that would be dealt to `target` this
     /// turn." (CR 615.7) Pushes a per-target prevention shield consumed

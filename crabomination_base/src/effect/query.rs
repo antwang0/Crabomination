@@ -240,6 +240,7 @@ impl Effect {
             | Effect::SecondSunrise
             | Effect::PlayerTapsUntapped { .. }
             | Effect::TapAnyNumberThenPumpPerTapped { .. }
+            | Effect::TapAnyNumberThenCounters { .. }
             | Effect::GrantExtraPlusOneCountersThisTurn { .. }
             // Amount is a scratch read (CounteredSpellManaSpent), no slots.
             | Effect::AddManaAtNextMainPhase { .. }
@@ -754,7 +755,14 @@ impl Effect {
             | Effect::CounterSpellOrAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::CounterUnless { what, .. }
+            | Effect::DestroyThenVictimControllersMakeToken { what, .. }
             | Effect::MakeSpellUncounterable { what } => sel_has_target(what),
+            Effect::MustBlockTarget { blocker, attacker } => {
+                sel_has_target(blocker) || sel_has_target(attacker)
+            }
+            Effect::PreventNextFromChosenSourceToTeam { amount, to } => {
+                value_has_target(amount) || sel_has_target(to)
+            }
             Effect::UnlessPlayerPays { then, .. } => then.requires_target(),
             Effect::PumpPT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
@@ -1129,6 +1137,7 @@ impl Effect {
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
+            Effect::MustBlockTarget { attacker, .. } => sel_filter(attacker),
             Effect::DealDamageEqualToPower { target, .. } => sel_filter(target),
             // Land hosing targets the land slot (Tide Shaper's kicked mode).
             Effect::BecomeBasicLand { what, .. }
@@ -1143,6 +1152,7 @@ impl Effect {
             Effect::RedirectNextDamage { target, to, .. } => {
                 sel_filter(target).or_else(|| sel_filter(to))
             }
+            Effect::PreventNextFromChosenSourceToTeam { to, .. } => sel_filter(to),
             Effect::ExchangeControlChoosing { with, .. } => sel_filter(with),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
             Effect::LoseHalfLife { who, .. }
@@ -1174,6 +1184,7 @@ impl Effect {
             | Effect::ExileReturnToOwnerNextEndStep { what }
             | Effect::Provoke { what }
             | Effect::MustBlockSource { what }
+            | Effect::DestroyThenVictimControllersMakeToken { what, .. }
             | Effect::Suspect { what }
             | Effect::ClearSuspected { what }
             | Effect::Detain { what }
@@ -1987,6 +1998,10 @@ impl Effect {
             Effect::DealDamageDivided { filter, .. }
             | Effect::DealDamageDividedEvenly { filter, .. } => filter.can_match_player(),
             Effect::ApplyToTargets { filter, .. } => filter.can_match_player(),
+            // Refraction Trap's redirect slot is "any target".
+            Effect::PreventNextFromChosenSourceToTeam { to, .. } => {
+                matches!(to, Selector::TargetFiltered { filter, .. } if filter.can_match_player())
+            }
             Effect::DeliverUntoEvil { filter, .. } => filter.can_match_player(),
             // Support / distribute put counters on creatures only — never players.
             Effect::SupportCounters { .. } => false,
@@ -2380,6 +2395,9 @@ impl Effect {
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }
+                Effect::MustBlockTarget { blocker, attacker } => {
+                    sel_find(blocker, slot).or_else(|| sel_find(attacker, slot))
+                }
                 Effect::DealDamageEqualToPower { source, target } => {
                     sel_find(source, slot).or_else(|| sel_find(target, slot))
                 }
@@ -2395,6 +2413,7 @@ impl Effect {
                 Effect::RedirectNextDamage { target, to, .. } => {
                     sel_find(target, slot).or_else(|| sel_find(to, slot))
                 }
+                Effect::PreventNextFromChosenSourceToTeam { to, .. } => sel_find(to, slot),
                 Effect::ExchangeControlChoosing { with, .. } => sel_find(with, slot),
                 // `amount` may read a target's power (Soul's Grace gains life
                 // equal to target creature's power).
@@ -2560,6 +2579,7 @@ impl Effect {
                 | Effect::Detain { what }
                 | Effect::Provoke { what }
                 | Effect::MustBlockSource { what }
+                | Effect::DestroyThenVictimControllersMakeToken { what, .. }
                 | Effect::Transform { what }
                 | Effect::Flip { what }
                 | Effect::LoseAllAbilities { what, .. }

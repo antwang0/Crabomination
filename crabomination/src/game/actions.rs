@@ -3560,23 +3560,20 @@ impl GameState {
             .find(|c| c.id == card_id)
             .and_then(|c| c.definition.has_multikicker().cloned())
             .ok_or(GameError::CardNotInHand(card_id))?;
-        let events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        // CR 601.2f/h — the kicker cost is paid as part of casting, so pay it
+        // and stamp the count BEFORE the cast pipeline fires its spell-cast
+        // triggers (Rumbling Aftershocks reads the kick count off the stack).
         if times > 0 {
             let mut combined = crate::mana::ManaCost { symbols: Vec::new() };
             for _ in 0..times {
                 combined.symbols.extend(kick.symbols.iter().cloned());
             }
             self.try_pay_with_auto_tap(p, &combined)?;
-            for si in self.stack.iter_mut() {
-                if let StackItem::Spell { card, .. } = si
-                    && card.id == card_id
-                {
-                    card.kicked = true;
-                    card.kick_count = times;
-                }
-            }
         }
-        Ok(events)
+        self.cast_kick_count = times;
+        let events = self.cast_spell(card_id, target, additional_targets, mode, x_value);
+        self.cast_kick_count = 0;
+        events
     }
 
     /// CR 702.107 — cast an instant/sorcery paying its optional Replicate cost
@@ -6922,7 +6919,8 @@ impl GameState {
             self.players[p].nonartifact_spells_cast_this_game_turn += 1;
         }
         // Veil of Summer gate: note when a player casts a blue or black
-        // spell (color read off the printed mana cost).
+        // spell (color read off the printed mana cost). The full profile
+        // (colors + cast half's types) backs the Trap alternative costs.
         {
             let colors = card.definition.cost.colors();
             if colors.contains(&crate::mana::Color::Blue)
@@ -6930,6 +6928,10 @@ impl GameState {
             {
                 self.players[p].cast_blue_or_black_this_turn = true;
             }
+            self.players[p].spell_casts_this_turn.push(crate::game::types::CastProfile {
+                colors,
+                card_types: cast_types.clone(),
+            });
         }
         consume_first_spell_tax(self, p);
 
@@ -7010,6 +7012,10 @@ impl GameState {
             &target,
             Some(Target::Permanent(tid)) if self.battlefield_find(*tid).is_some()
         );
+        if self.cast_kick_count > 0 {
+            card.kicked = true;
+            card.kick_count = self.cast_kick_count;
+        }
         self.stack.push(StackItem::Spell {
             card: Box::new(card),
             caster: p,
@@ -7327,6 +7333,7 @@ impl GameState {
                     cast_from_hand: true,
                     event_amount: 0,
                     kicked: false,
+                    kick_count: 0,
                     bargained: false,
                     cast_via_mayhem: false,
                     cast_via_waterbend: false,
@@ -8525,6 +8532,7 @@ impl GameState {
                 cast_from_hand: true,
                 event_amount: 0,
                 kicked: false,
+                kick_count: 0,
                 bargained: false,
                 cast_via_mayhem: false,
                 cast_via_waterbend: false,
@@ -9595,6 +9603,7 @@ impl GameState {
                     cast_from_hand,
                     event_amount: 0,
                     kicked: false,
+                    kick_count: 0,
                     bargained: false,
                     cast_via_mayhem: false,
                     cast_via_waterbend: false,
@@ -11336,6 +11345,7 @@ impl GameState {
                 cast_from_hand: true,
                 event_amount: 0,
                 kicked: false,
+                kick_count: 0,
                 bargained: false,
                 cast_via_mayhem: false,
                 cast_via_waterbend: false,
@@ -12394,10 +12404,7 @@ impl GameState {
             }
         }
         if ability.sac_cost {
-            let is_creature = self
-                .battlefield_find(card_id)
-                .map(|c| c.definition.is_creature())
-                .unwrap_or(false);
+            let is_creature = self.permanent_is_creature(card_id);
             // The activator is the player paying the cost; the
             // sacrifice attribution should match the controller of the
             // sacrificed permanent, which is `p` (priority player) for

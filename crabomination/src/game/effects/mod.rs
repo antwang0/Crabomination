@@ -136,6 +136,10 @@ pub struct EffectContext {
     /// `Predicate::SpellWasKicked`. Defaults to `false` for non-spell
     /// contexts.
     pub kicked: bool,
+    /// CR 702.33c — how many times the resolving spell's Multikicker cost was
+    /// paid. Read by `Value::TimesKicked` when the source is a spell rather
+    /// than a battlefield permanent (Spell Contortion). Defaults to 0.
+    pub kick_count: u32,
     /// True if the resolving spell was bargained (CR 702.176). Stamped from
     /// the resolving `CardInstance.bargained` flag; read by
     /// `Predicate::SpellWasBargained`. Defaults to `false`.
@@ -177,6 +181,7 @@ impl EffectContext {
             cast_from_hand: true,
             event_amount: 0,
             kicked: false,
+            kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
@@ -260,6 +265,7 @@ impl EffectContext {
             cast_from_hand,
             event_amount: 0,
             kicked: false,
+            kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
@@ -288,6 +294,7 @@ impl EffectContext {
             cast_from_hand: true,
             event_amount: 0,
             kicked: false,
+            kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
@@ -315,6 +322,7 @@ impl EffectContext {
             cast_from_hand: true,
             event_amount: 0,
             kicked: false,
+            kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
             cast_via_waterbend: false,
@@ -1210,10 +1218,7 @@ impl GameState {
             self.sacrificed_toughness = Some(stats.1);
             self.sacrificed_mana_value = Some(stats.2);
         }
-        let is_creature = self
-            .battlefield_find(id)
-            .map(|c| c.definition.is_creature())
-            .unwrap_or(false);
+        let is_creature = self.permanent_is_creature(id);
         // Cache a snapshot for AnotherOfYours / death-matters triggers and the
         // per-turn artifact-sacrifice tally (which reads the sacrificed
         // permanent's type after it has left the battlefield). Snapshot every
@@ -1356,10 +1361,7 @@ impl GameState {
         if self.apply_umbra_armor(cid, events) {
             return false;
         }
-        let is_creature = self
-            .battlefield_find(cid)
-            .map(|c| c.definition.is_creature())
-            .unwrap_or(false);
+        let is_creature = self.permanent_is_creature(cid);
         // Cache the dying card's snapshot for AnotherOfYours-scope triggers,
         // type filter predicates (token deaths vanish before dispatch) and
         // post-destruction LKI reads of its counters (CR 603.10 — Dismantle).
@@ -6296,6 +6298,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MustBlockTarget { blocker, attacker } => {
+                // CR 509.1c — "another target creature blocks it this turn if
+                // able", where "it" is a chosen attacker rather than the
+                // ability's source (Feral Contest).
+                let Some(att) =
+                    self.resolve_selector(attacker, ctx).into_iter().find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                for ent in self.resolve_selector(blocker, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid)
+                        && c.definition.is_creature()
+                    {
+                        c.must_block = Some(att);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Explore { who } => {
                 // CR 701.40 — each resolved permanent explores: reveal the
                 // top card of its controller's library; a land goes to hand,
@@ -6792,6 +6814,32 @@ impl GameState {
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::DestroyThenVictimControllersMakeToken { what, definition } => {
+                // Terastodon — destroy the chosen permanents, then each one
+                // that actually reached a graveyard pays its controller a
+                // token (indestructible / replaced victims pay nothing).
+                let victims: Vec<(crate::card::CardId, usize)> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter_map(|cid| self.battlefield_find(cid).map(|c| (cid, c.controller)))
+                    .collect();
+                for (cid, _) in &victims {
+                    self.destroy_permanent(*cid, false, events);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                for (cid, seat) in victims {
+                    if self.players[seat].graveyard.iter().any(|c| c.id == cid)
+                        || self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == cid))
+                    {
+                        let def = crabomination_base::tokens::token_to_card_definition(definition);
+                        self.mint_token_onto_battlefield(def, seat, false, events);
+                    }
+                }
                 Ok(())
             }
 
@@ -7833,6 +7881,60 @@ impl GameState {
                         power: power * tapped,
                         toughness: toughness * tapped,
                     });
+                }
+                Ok(())
+            }
+
+            Effect::TapAnyNumberThenCounters { filter, counter } => {
+                // "You may tap any number of untapped [filter] you control. If
+                // you do, put a counter on each of those" (Urge to Feed).
+                let seat = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && !c.tapped)
+                    .filter(|c| crate::game::layers::requirement_matches_card(filter, c, seat))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let auto_default: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                let n_cands = candidates.len() as u32;
+                let Some(chosen) = self.choose_up_to_cards(
+                    seat,
+                    "Tap any number of untapped creatures you control".to_string(),
+                    source,
+                    candidates.clone(),
+                    n_cands,
+                    effect,
+                    auto_default,
+                ) else {
+                    return Ok(());
+                };
+                for cid in chosen {
+                    if !candidates.iter().any(|(id, _)| *id == cid) {
+                        continue;
+                    }
+                    if self.battlefield_find(cid).is_some_and(|c| !c.tapped) {
+                        if let Some(c) = self.battlefield_find_mut(cid) {
+                            c.tapped = true;
+                        }
+                        events.push(GameEvent::PermanentTapped {
+                            card_id: cid,
+                            actor: Some(seat),
+                            as_attacker: false,
+                        });
+                        if let Some(c) = self.battlefield_find_mut(cid) {
+                            c.add_counters(*counter, 1);
+                        }
+                        events.push(GameEvent::CounterAdded {
+                            card_id: cid,
+                            counter_type: *counter,
+                            count: 1,
+                        });
+                    }
                 }
                 Ok(())
             }
@@ -19166,6 +19268,11 @@ impl GameState {
                             // Re-shuffled below once the find is placed.
                             self.players[p].library.push(card);
                         }
+                        crate::effect::RevealMissDest::WithFind => {
+                            let cid = card.id;
+                            self.place_card_in_dest(card, p, &resolved_dest, events);
+                            self.last_moved_cards.push(cid);
+                        }
                     }
                 }
                 // If we found a match, take it off the (now-shifted) top
@@ -20321,6 +20428,39 @@ impl GameState {
                     source_controller: src_ctrl,
                     ..Default::default()
                 });
+                Ok(())
+            }
+
+            Effect::PreventNextFromChosenSourceToTeam { amount, to } => {
+                // CR 615.7 — one shared "next N" pool around the controller and
+                // everything they control, restricted to a chosen source; the
+                // soaked damage is redirected to `to` (Refraction Trap).
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let Some(chosen) =
+                    self.choose_damage_prevention_source(&crate::card::SelectionRequirement::Any, ctx)
+                else {
+                    return Ok(());
+                };
+                let (mut dst, mut dst_player) = (None, None);
+                for e in self.resolve_selector(to, ctx) {
+                    match e {
+                        EntityRef::Permanent(c) => dst = dst.or(Some(c)),
+                        EntityRef::Player(p) => dst_player = dst_player.or(Some(p)),
+                        _ => {}
+                    }
+                }
+                if n > 0 {
+                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                        target: crate::game::types::PreventionTarget::PlayerAndPermanents(
+                            ctx.controller,
+                        ),
+                        remaining: Some(n),
+                        source: Some(chosen),
+                        redirect_to: dst,
+                        redirect_to_player: dst_player,
+                        ..Default::default()
+                    });
+                }
                 Ok(())
             }
 

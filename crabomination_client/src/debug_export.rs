@@ -335,21 +335,14 @@ mod tests {
         let forest = g.add_card_to_hand(0, catalog::forest());
         g.priority.player_with_priority = 0;
         g.active_player_idx = 0;
-        g.stack.push(StackItem::Trigger {
-            source: crabomination::card::CardId(99),
-            controller: 0,
-            effect: Box::new(Effect::Noop),
-            target: None,
-            mode: None,
-            x_value: 0,
-            converged_value: 0,
-            trigger_source: None,
-            mana_spent: 0,
-            event_amount: 0,
-            intervening_if: None,
-            additional_targets: Vec::new(),
-            activated: false,
-        });
+        g.stack.push(
+            crabomination::game::types::TriggerPush::new(
+                crabomination::card::CardId(99),
+                0,
+                Effect::Noop,
+            )
+            .build(),
+        );
 
         let cv = empty_view();
         let path = export_full(&cv, "full state RT", None, Some(g)).expect("export_full");

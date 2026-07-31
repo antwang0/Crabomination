@@ -1668,6 +1668,7 @@ impl GameState {
                 intervening_if,
                 additional_targets,
                 activated: _,
+                trigger_player,
             } => {
                 // CR 603.4 — re-check the intervening 'if' clause as the
                 // ability resolves. "If the condition isn't true at that
@@ -1724,6 +1725,7 @@ impl GameState {
                     mana_spent,
                     trigger_source,
                     event_amount,
+                    trigger_player,
                     additional_targets,
                 )?;
                 if had_lki {
@@ -2061,7 +2063,10 @@ impl GameState {
                 if c.controller != p
                     && !u.contains(&c.controller)
                     && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, StaticEffect::UntapAllYoursEachUntapStep)
+                        matches!(
+                            self.active_static(&sa.effect, c),
+                            Some(StaticEffect::UntapAllYoursEachUntapStep)
+                        )
                     })
                 {
                     u.push(c.controller);
@@ -2077,9 +2082,9 @@ impl GameState {
                 .iter()
                 .filter(|c| c.controller != p && !untappers.contains(&c.controller))
                 .flat_map(|c| {
-                    c.definition.static_abilities.iter().filter_map(move |sa| {
-                        match &sa.effect {
-                            StaticEffect::UntapYoursEachUntapStepFiltered(f) => {
+                    c.definition.static_abilities.iter().filter_map(|sa| {
+                        match self.active_static(&sa.effect, c) {
+                            Some(StaticEffect::UntapYoursEachUntapStepFiltered(f)) => {
                                 Some((c.controller, f.clone()))
                             }
                             _ => None,
@@ -2479,6 +2484,7 @@ impl GameState {
             pl.creature_spells_uncounterable_this_turn = false;
             pl.hexproof_from_colors_this_turn.clear();
             pl.cast_blue_or_black_this_turn = false;
+            pl.spell_casts_this_turn.clear();
             pl.cant_cast_noncreature_this_turn = false;
             pl.free_spells_from_hand_this_turn = false;
             pl.play_from_graveyard_this_turn = false;

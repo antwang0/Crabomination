@@ -530,6 +530,12 @@ pub struct GameState {
     /// payment, consumed by `finalize_cast`.
     #[serde(skip)]
     pub(crate) cast_paid_uncounterable: bool,
+    /// CR 601.2f/702.33c — the Multikicker count paid for the spell currently
+    /// being cast. Set before the cast pipeline runs so `finalize_cast` stamps
+    /// the stack object *before* spell-cast triggers fire (Rumbling
+    /// Aftershocks reads "the number of times that spell was kicked").
+    #[serde(skip)]
+    pub(crate) cast_kick_count: u32,
     /// Transient: ids of all tokens created within the current effect
     /// resolution. Set by `Effect::CreateToken`
     /// alongside `last_created_token` and read by
@@ -1446,6 +1452,7 @@ impl Clone for GameState {
             last_die_roll: self.last_die_roll,
             extra_cast_reduction: self.extra_cast_reduction,
             cast_paid_uncounterable: self.cast_paid_uncounterable,
+            cast_kick_count: self.cast_kick_count,
             last_created_tokens: self.last_created_tokens.clone(),
             last_moved_cards: self.last_moved_cards.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
@@ -1662,6 +1669,7 @@ impl GameState {
             last_die_roll: 0,
             extra_cast_reduction: 0,
             cast_paid_uncounterable: false,
+            cast_kick_count: 0,
             last_created_tokens: Vec::new(),
             last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
@@ -2614,26 +2622,61 @@ impl GameState {
                 c.definition
                     .static_abilities
                     .iter()
-                    .filter(|sa| Self::static_is_active_double_counters(&sa.effect, c))
+                    .filter(|sa| {
+                        matches!(
+                            self.active_static(&sa.effect, c),
+                            Some(crate::effect::StaticEffect::DoubleCounters)
+                        )
+                    })
                     .count() as u32
             })
             .sum()
     }
 
-    /// Whether a static effect is an *active* `DoubleCounters`, peeling the
-    /// level gate (CR 716.2) so a Class's level-3 "counters are put on twice"
-    /// (Innkeeper's Talent) only doubles once the Class reaches that level.
-    fn static_is_active_double_counters(
-        effect: &crate::effect::StaticEffect,
+    /// CR 613.2 layer 4 — is this battlefield permanent a creature *right now*?
+    /// An animated land (a Zendikon, a manland, an Awaken land) is, even though
+    /// its printed type line isn't, so its death is a creature dying (CR 700.4).
+    /// Falls back to the printed types mid-layer-recompute.
+    pub(crate) fn permanent_is_creature(&self, cid: crate::card::CardId) -> bool {
+        if let Some(cp) = self.computed_permanent(cid) {
+            return cp.card_types.contains(&crate::card::CardType::Creature);
+        }
+        self.battlefield_find(cid).is_some_and(|c| c.definition.is_creature())
+    }
+
+    /// Peel the gating wrappers (`WhileClassLevelAtLeast`, `WhileYourTurn`,
+    /// `WhileNotYourTurn`, `WhileCountersAtLeast`) off a static effect,
+    /// returning the inner effect only while every gate is open. The single
+    /// entry point for the non-layer consumers that match on `StaticEffect`
+    /// directly; the layer path peels the same wrappers in
+    /// `static_effect_to_effects`.
+    pub(crate) fn active_static<'a>(
+        &self,
+        effect: &'a crate::effect::StaticEffect,
         card: &CardInstance,
-    ) -> bool {
+    ) -> Option<&'a crate::effect::StaticEffect> {
         use crate::effect::StaticEffect;
-        match effect {
-            StaticEffect::DoubleCounters => true,
-            StaticEffect::WhileClassLevelAtLeast { n, inner } => {
-                card.class_level >= *n && Self::static_is_active_double_counters(inner, card)
+        let mut eff = effect;
+        loop {
+            let (open, inner) = match eff {
+                StaticEffect::WhileClassLevelAtLeast { n, inner } => {
+                    (card.class_level >= *n, inner)
+                }
+                StaticEffect::WhileYourTurn { inner } => {
+                    (self.active_player_idx == card.controller, inner)
+                }
+                StaticEffect::WhileNotYourTurn { inner } => {
+                    (self.active_player_idx != card.controller, inner)
+                }
+                StaticEffect::WhileCountersAtLeast { kind, n, inner } => {
+                    (card.counter_count(*kind) >= *n, inner)
+                }
+                _ => return Some(eff),
+            };
+            if !open {
+                return None;
             }
-            _ => false,
+            eff = inner;
         }
     }
 
@@ -5593,37 +5636,10 @@ impl GameState {
         // path, so there's no double application.
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
-                // CR 716.2 / 720 — peel level- and turn-gated Class wrappers to
-                // the inner grant (Blacksmith's Talent's level-3 "during your
+                // CR 716.2 / 611.2 — peel the level/turn/counter gates to the
+                // inner grant (Blacksmith's Talent's level-3 "during your
                 // turn, equipped creatures … have double strike and haste").
-                let mut eff = &sa.effect;
-                let mut gated_out = false;
-                loop {
-                    match eff {
-                        crate::effect::StaticEffect::WhileClassLevelAtLeast { n, inner } => {
-                            if card.class_level < *n {
-                                gated_out = true;
-                            }
-                            eff = inner;
-                        }
-                        crate::effect::StaticEffect::WhileYourTurn { inner } => {
-                            if self.active_player_idx != card.controller {
-                                gated_out = true;
-                            }
-                            eff = inner;
-                        }
-                        crate::effect::StaticEffect::WhileNotYourTurn { inner } => {
-                            if self.active_player_idx == card.controller {
-                                gated_out = true;
-                            }
-                            eff = inner;
-                        }
-                        _ => break,
-                    }
-                }
-                if gated_out {
-                    continue;
-                }
+                let Some(eff) = self.active_static(&sa.effect, card) else { continue };
                 let crate::effect::StaticEffect::GrantKeyword { applies_to, keyword } = eff
                 else {
                     continue;
@@ -11264,6 +11280,7 @@ impl GameState {
                                 cast_from_hand: true,
                                 event_amount: self.event_amount_for(ev),
                                 kicked: false,
+                                kick_count: 0,
                                 bargained: false,
                                 cast_via_mayhem: false,
                                 cast_via_waterbend: false,
@@ -11811,6 +11828,7 @@ impl GameState {
                     cast_from_hand: true,
                     event_amount,
                     kicked: false,
+                    kick_count: 0,
                     bargained: false,
                     cast_via_mayhem: false,
                     cast_via_waterbend: false,
@@ -12241,11 +12259,34 @@ impl GameState {
         controller: usize,
         primary: Option<Target>,
     ) -> Vec<Target> {
+        // Peel the transparent wrappers a multi-target body sits under — a
+        // trigger's "you may" (`MayDo`) and the resolution-time slot caps
+        // (`CapTargetsAt` / `TargetsExactlyX` / `OptionalTargets`) — so
+        // Terastodon and Voyager Drake fan out like a bare `ApplyToTargets`.
+        let mut eff = eff;
+        let mut cap = usize::MAX;
+        loop {
+            eff = match eff {
+                Effect::MayDo { body, .. } | Effect::OptionalTargets { body, .. } => body,
+                Effect::TargetsExactlyX { body } => body,
+                Effect::CapTargetsAt { amount, body } => {
+                    let ctx = crate::game::effects::EffectContext::for_trigger(
+                        source,
+                        controller,
+                        primary.clone(),
+                        0,
+                    );
+                    cap = cap.min(self.evaluate_value(amount, &ctx).max(0) as usize);
+                    body
+                }
+                _ => break,
+            };
+        }
         let max = match eff {
             Effect::ApplyToTargets { max_targets, .. }
             // CR 701.32 — a trigger-side "support N" spreads over up to N
             // *other* target creatures, not just the one auto-bound slot.
-            | Effect::SupportCounters { max_targets, .. } => *max_targets as usize,
+            | Effect::SupportCounters { max_targets, .. } => (*max_targets as usize).min(cap),
             // Effects whose slots carry *distinct* per-slot filters (Kor
             // Outfitter's ETB `Attach { what: target Equipment, to: target
             // creature }`) can't be filled by the same-filter loop below —
@@ -12703,12 +12744,14 @@ impl GameState {
                 mana_spent,
                 trigger_source_ent,
                 event_amount,
+                trigger_player,
                 additional_targets,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
                 let mut more = self.continue_trigger_resolution_with_source(
                     source, controller, remaining, target, mode, x_value, converged_value,
-                    mana_spent, trigger_source_ent, event_amount, additional_targets,
+                    mana_spent, trigger_source_ent, event_amount, trigger_player,
+                    additional_targets,
                 )?;
                 evs.append(&mut more);
                 evs
@@ -14339,6 +14382,7 @@ impl GameState {
             card.cast_from_hand,
         );
         ctx.kicked = card.kicked;
+        ctx.kick_count = card.kick_count;
         ctx.bargained = card.bargained;
         ctx.cast_via_mayhem = card.cast_via_mayhem;
         ctx.cast_via_waterbend = card.cast_via_waterbend;
@@ -14608,6 +14652,7 @@ impl GameState {
     /// `Value::TriggerEventAmount` — used by Light of Promise's
     /// "Whenever you gain life, put that many +1/+1 counters …".
     #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)]
     pub fn continue_trigger_resolution_with_source(
         &mut self,
         source: CardId,
@@ -14620,15 +14665,24 @@ impl GameState {
         mana_spent: u32,
         trigger_source_ent: Option<crate::game::effects::EntityRef>,
         event_amount: u32,
+        trigger_player: Option<usize>,
         additional_targets: Vec<Target>,
     ) -> Result<Vec<GameEvent>, GameError> {
         // Event-amount-relative filters re-checked at resolution
         // (ManaValueLessThanEventAmount) read this scratch.
         self.trigger_event_amount_scratch = event_amount;
-        self.trigger_event_player_scratch = match trigger_source_ent {
-            Some(crate::game::effects::EntityRef::Player(p)) => Some(p),
-            _ => None,
-        };
+        // The seat the firing event named: the stamped `trigger_player` (the
+        // damaged seat for a combat-damage trigger), else a player subject or
+        // a player target. Read back by `ControlledByTriggerPlayer`.
+        self.trigger_event_player_scratch = trigger_player
+            .or(match trigger_source_ent {
+                Some(crate::game::effects::EntityRef::Player(p)) => Some(p),
+                _ => None,
+            })
+            .or(match target.as_ref() {
+                Some(Target::Player(p)) => Some(*p),
+                _ => None,
+            });
         // CR 608.2b — if the trigger's stored sole target is no longer legal
         // at resolution (left the zone, stopped matching the filter), the
         // ability doesn't resolve: none of its effects happen. It must NOT
@@ -14661,6 +14715,7 @@ impl GameState {
         // riders (Goblin Bushwhacker) can branch on `SpellWasKicked`.
         if let Some(src) = self.battlefield.iter().find(|c| c.id == source) {
             ctx.kicked = src.kicked;
+            ctx.kick_count = src.kick_count;
             ctx.bargained = src.bargained;
             // "Escapes with …" / cast-zone riders (Tizerus Charger) read
             // the source's cast zone through `Predicate::CastFromGraveyard`.
@@ -14690,6 +14745,7 @@ impl GameState {
                     mana_spent,
                     trigger_source_ent,
                     event_amount,
+                    trigger_player,
                     additional_targets,
                 },
             });
@@ -15179,6 +15235,15 @@ fn static_effect_to_effects(
                     vec![]
                 } else {
                     static_effect_to_effects(inner, card, timestamp, your_turn)
+                }
+            }
+            // CR 611.2 — the counter gate: emit the inner effect only while the
+            // source carries `n` or more `kind` counters (the Quest cycle).
+            StaticEffect::WhileCountersAtLeast { kind, n, inner } => {
+                if card.counter_count(*kind) >= *n {
+                    static_effect_to_effects(inner, card, timestamp, your_turn)
+                } else {
+                    vec![]
                 }
             }
             StaticEffect::PumpPT { applies_to, power, toughness } => {
