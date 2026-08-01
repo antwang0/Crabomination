@@ -1176,6 +1176,7 @@ pub fn blustersquall() -> CardDefinition {
             impending: 0,
             offering: None,
             warp: false,
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -1227,6 +1228,7 @@ pub fn electrickery() -> CardDefinition {
             impending: 0,
             offering: None,
             warp: false,
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -1297,6 +1299,7 @@ pub fn teleportal() -> CardDefinition {
             impending: 0,
             offering: None,
             warp: false,
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -1353,6 +1356,7 @@ pub fn street_spasm() -> CardDefinition {
             impending: 0,
             offering: None,
             warp: false,
+            ..Default::default()
         }),
         ..Default::default()
     }

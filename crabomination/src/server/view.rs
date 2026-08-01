@@ -957,10 +957,28 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
                 .sacrifice_permanents
                 .as_ref()
                 .is_none_or(|(f, n)| controls_at_least(f, *n));
+            // Orim's Cure — the tapped creatures must actually be untapped.
+            let tap_ok = a.tap_creatures.as_ref().is_none_or(|(filter, n)| {
+                st.battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == card.owner
+                            && !c.tapped
+                            && st.evaluate_requirement_static(
+                                filter,
+                                &crate::game::types::Target::Permanent(c.id),
+                                card.owner,
+                                None,
+                            )
+                    })
+                    .count() as u32
+                    >= *n
+            });
             cond_ok
                 && offering_ok
                 && return_ok
                 && sac_ok
+                && tap_ok
                 && !(a.not_your_turn_only && st.active_player_idx == card.owner)
         }),
         back_face_name: card
@@ -1104,8 +1122,14 @@ fn format_alt_cost_label(a: &crate::card::AlternativeCost) -> String {
     if a.exile_filter.is_some() {
         parts.push("Exile a card from hand".to_string());
     }
+    if let Some((_, n)) = &a.tap_creatures {
+        parts.push(format!("Tap {n} creature{}", if *n == 1 { "" } else { "s" }));
+    }
     if a.life_cost > 0 {
         parts.push(format!("Pay {} life", a.life_cost));
+    }
+    if a.opponent_gains_life > 0 {
+        parts.push(format!("Opponent gains {} life", a.opponent_gains_life));
     }
     parts.join(" + ")
 }

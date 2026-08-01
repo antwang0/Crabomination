@@ -1856,6 +1856,11 @@ pub enum StaticEffect {
     /// sibling of `PreventAllDamageToYourCreatureTokens`; consulted on both
     /// the combat and noncombat damage paths.
     PreventAllDamageToYourCreatures,
+    /// CR 615 — "Prevent all combat damage that would be dealt to and dealt by
+    /// creatures you control" (Statecraft). The controller-scoped,
+    /// both-directions sibling of `PreventAllDamageToAndFromEnchanted`;
+    /// consulted at both combat-damage funnels.
+    PreventAllCombatDamageToAndFromYourCreatures,
     /// CR 615 — "Prevent all damage that the source would deal to creatures of
     /// the given color" (Indentured Oaf — prevents its own damage to red
     /// creatures). Keyed on the damage source having this static.

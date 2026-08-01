@@ -10171,6 +10171,22 @@ static MMQ4: &[Factory] = &[
     super::mmq4::righteous_indignation,
     super::mmq4::sand_squid,
 ];
+static MMQ5: &[Factory] = &[
+    super::mmq5::statecraft,
+    super::mmq5::insubordination,
+    super::mmq5::barbed_wire,
+    super::mmq5::battle_squadron,
+    super::mmq5::bribery,
+    super::mmq5::extortion,
+    super::mmq5::renounce,
+    super::mmq5::invigorate,
+    super::mmq5::orims_cure,
+    super::mmq5::ramosian_rally,
+    super::mmq5::ferocity,
+    super::mmq5::volcanic_wind,
+    super::mmq5::puppets_verdict,
+    super::mmq5::nether_spirit,
+];
 static MOD_SET: &[Factory] = &[
     super::mod_set::ornithopter,
     super::mod_set::ornithopter_of_paradise,
@@ -17905,6 +17921,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("mmq2", MMQ2),
     ("mmq3", MMQ3),
     ("mmq4", MMQ4),
+    ("mmq5", MMQ5),
     ("mod_set", MOD_SET),
     ("ogw", OGW),
     ("one", ONE),

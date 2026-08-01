@@ -7151,6 +7151,11 @@ pub enum Effect {
     /// Test of Faith — the counter rider rides the shield
     /// (`counters_on_target`).
     PreventNextDamageWithCounters { target: Selector, amount: Value },
+    /// CR 615.7 — "Prevent the next N damage that would be dealt *by* this
+    /// permanent this turn" (Barbed Wire). The deal-side mirror of
+    /// `PreventNextDamage`: a floating shield keyed to the source, soaking the
+    /// next N damage it deals to anything.
+    PreventNextDamageFromSourceThisTurn { amount: Value },
 
     /// "The next `amount` damage that would be dealt to `target` this turn is
     /// dealt to `to` instead." (CR 614.9 — Carom, Razia's redirect.) Pushes a

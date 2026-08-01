@@ -235,6 +235,7 @@ impl Effect {
             | Effect::ChooseStepToSkipThisTurn { .. }
             | Effect::SearchExileThenTokensPerCard { .. }
             | Effect::SearchAuraAttachToSource
+            | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::GrantExtraLoyaltyActivations
             | Effect::GuessManaValueAboveElseCastFree { .. }
             | Effect::EachPlayerSplitsAndSacrificesRandomPile { .. }

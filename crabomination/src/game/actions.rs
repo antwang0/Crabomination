@@ -8798,6 +8798,35 @@ impl GameState {
             Vec::new()
         };
 
+        // Tap-N-creatures additional cost (Orim's Cure). Same up-front pick /
+        // late commit discipline; the auto-picker taps the lowest-power
+        // untapped matches so the good attackers stay up.
+        let tap_picks: Vec<CardId> = if let Some((filter, count)) = &alt.tap_creatures {
+            let n = *count as usize;
+            let mut matches: Vec<(CardId, i32)> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == p
+                        && !c.tapped
+                        && self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            None,
+                        )
+                })
+                .map(|c| (c.id, self.computed_permanent(c.id).map_or(0, |cp| cp.power)))
+                .collect();
+            matches.sort_by_key(|(_, pow)| *pow);
+            if matches.len() < n {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            matches.into_iter().take(n).map(|(cid, _)| cid).collect()
+        } else {
+            Vec::new()
+        };
+
         // CR 702.119 — Emerge: pick the creature to sacrifice (auto: highest
         // MV for max cost reduction) and record its MV. Rejected up front if
         // the caster controls no matching creature. Sacrificed after payment.
@@ -9097,6 +9126,33 @@ impl GameState {
             auto_events.push(GameEvent::PermanentSacrificed { card_id: *sac_cid, who: p });
             let mut die_evs = self.remove_to_graveyard_with_triggers(*sac_cid);
             auto_events.append(&mut die_evs);
+        }
+
+        // Tap additional cost: tap the picked creatures now that mana/life
+        // are paid.
+        for tap_cid in &tap_picks {
+            if let Some(c) = self.battlefield_find_mut(*tap_cid) {
+                c.tapped = true;
+                auto_events.push(GameEvent::PermanentTapped {
+                    card_id: *tap_cid,
+                    actor: Some(p),
+                    as_attacker: false,
+                });
+            }
+        }
+
+        // "Have an opponent gain N life" additional cost (Invigorate). The
+        // auto-picker feeds the opponent who's furthest behind.
+        if alt.opponent_gains_life > 0
+            && let Some(opp) = (0..self.players.len())
+                .filter(|&o| o != p && !self.players[o].eliminated)
+                .min_by_key(|&o| self.players[o].life)
+        {
+            let applied = self.adjust_life_applied(opp, alt.opponent_gains_life as i32);
+            if applied > 0 {
+                auto_events
+                    .push(GameEvent::LifeGained { player: opp, amount: applied as u32 });
+            }
         }
 
         // Sacrifice additional cost: sacrifice the picked permanents now

@@ -22042,6 +22042,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventNextDamageFromSourceThisTurn { amount } => {
+                // CR 615.7 — Barbed Wire. A floating shield keyed to the
+                // source itself, soaking the next N damage it deals.
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n > 0 && let Some(src) = ctx.source {
+                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                        target: crate::game::types::PreventionTarget::Anything,
+                        remaining: Some(n),
+                        source: Some(src),
+                        ..Default::default()
+                    });
+                }
+                Ok(())
+            }
+
             Effect::PreventNextEventFromChosenSourceAnywhere => {
                 // CR 615.7 — Martyr's Cause. One floating shield keyed to the
                 // chosen source; the first damage event it deals to anything is

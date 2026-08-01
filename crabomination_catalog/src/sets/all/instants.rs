@@ -32,6 +32,7 @@ pub fn force_of_will() -> CardDefinition {
             impending: 0,
             offering: None,
             warp: false,
+            ..Default::default()
         }),
         ..Default::default()
     }

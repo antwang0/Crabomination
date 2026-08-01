@@ -358,6 +358,7 @@ pub fn force_of_negation() -> CardDefinition {
             impending: 0,
             offering: None,
             warp: false,
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -570,6 +571,7 @@ pub fn mystical_dispute() -> CardDefinition {
             impending: 0,
             offering: None,
             warp: false,
+            ..Default::default()
         }),
         ..Default::default()
     }

@@ -374,6 +374,7 @@ pub mod mmq;
 pub mod mmq2;
 pub mod mmq3;
 pub mod mmq4;
+pub mod mmq5;
 pub mod mod_set;
 pub mod ogw;
 pub mod one;

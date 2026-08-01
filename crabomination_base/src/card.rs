@@ -3863,6 +3863,21 @@ pub struct AlternativeCost {
     /// highest-MV match for maximum reduction. The five Kamigawa Patrons.
     #[serde(default)]
     pub offering: Option<SelectionRequirement>,
+    /// Optional additional cost: tap N untapped creatures the caster controls
+    /// matching the filter ("you may tap an untapped creature you control
+    /// rather than pay this spell's mana cost" — the MMQ Mercadian cycle:
+    /// Orim's Cure, Ramosian Rally). Rejected with
+    /// `SelectionRequirementViolated` if fewer than N untapped matches exist;
+    /// the auto-picker taps the lowest-power ones. Tapping as a cost doesn't
+    /// trigger "becomes tapped" abilities the way `Effect::Tap` does.
+    #[serde(default)]
+    pub tap_creatures: Option<(SelectionRequirement, u32)>,
+    /// Optional additional cost: an opponent gains N life ("rather than pay
+    /// this spell's mana cost, you may have an opponent gain 3 life" —
+    /// Invigorate). The auto-picker gives the life to the opponent with the
+    /// lowest life total.
+    #[serde(default)]
+    pub opponent_gains_life: u32,
     /// EOE Warp (CR 702.x). When `true`, casting via this alternative cost
     /// stamps the resolving permanent `warped`: at the beginning of the next
     /// end step it's exiled and gains a `WhileExiled` may-play permission so

@@ -3948,7 +3948,8 @@ impl GameState {
         !self.damage_cant_be_prevented_this_turn
             && (self.permanent_prevents_all_combat_damage_to_self(tgt)
                 || self.combat_damage_prevented_to_this_turn.contains(&tgt)
-                || self.damage_sealed_by_aura(tgt, true))
+                || self.damage_sealed_by_aura(tgt, true)
+                || self.combat_damage_sealed_for_your_creatures(tgt))
     }
 
     /// CR 615 — true when all combat damage `dealer` would *deal* is prevented
@@ -3957,7 +3958,8 @@ impl GameState {
     pub fn combat_damage_prevented_from(&self, dealer: crate::card::CardId) -> bool {
         !self.damage_cant_be_prevented_this_turn
             && (self.combat_damage_prevented_by_this_turn.contains(&dealer)
-                || self.damage_sealed_by_aura(dealer, false))
+                || self.damage_sealed_by_aura(dealer, false)
+                || self.combat_damage_sealed_for_your_creatures(dealer))
     }
 
     /// Scale a pending damage event by the global doubling/halving
@@ -8438,6 +8440,23 @@ impl GameState {
                     )
                 })
         })
+    }
+
+    /// CR 615 — Statecraft: "prevent all combat damage that would be dealt to
+    /// and dealt by creatures you control." True when `who` is a creature whose
+    /// controller has the static; both combat funnels consult it.
+    pub(crate) fn combat_damage_sealed_for_your_creatures(&self, who: CardId) -> bool {
+        let Some(c) = self.battlefield_find(who) else { return false };
+        c.definition.is_creature()
+            && self.battlefield.iter().any(|s| {
+                s.controller == c.controller
+                    && s.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::PreventAllCombatDamageToAndFromYourCreatures
+                        )
+                    })
+            })
     }
 
     /// CR 615 — Light of Sanction: "prevent all damage to creatures you
@@ -16609,6 +16628,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllDamageToAndFromEnchanted
             | StaticEffect::PreventAllDamageToEnchanted
             | StaticEffect::PreventAllDamageByEnchanted
+            | StaticEffect::PreventAllCombatDamageToAndFromYourCreatures
             // Angelic Arbiter's pair — consulted in declare_attackers and at
             // the cast dispatch; no layer.
             | StaticEffect::OpponentsWhoCastCantAttack

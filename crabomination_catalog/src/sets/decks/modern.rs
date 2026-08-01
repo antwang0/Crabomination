@@ -2493,6 +2493,7 @@ pub fn snuff_out() -> CardDefinition {
             impending: 0,
             offering: None,
             warp: false,
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -3980,6 +3981,7 @@ pub fn cyclonic_rift() -> CardDefinition {
             impending: 0,
             offering: None,
             warp: false,
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -6911,7 +6913,7 @@ pub fn volcanic_fallout() -> CardDefinition {
 
 /// Rout — {3}{W}{W} Sorcery. Destroy all creatures. You may cast Rout as
 /// though it had flash if you pay {2} more ({5}{W}{W}, instant speed) — wired
-/// via an `AlternativeCost { flash: true }` at the higher cost.
+/// via an `AlternativeCost { flash: true, .. }` at the higher cost.
 pub fn rout() -> CardDefinition {
     use crate::card::AlternativeCost;
     CardDefinition {
@@ -59414,7 +59416,7 @@ pub fn quickling() -> CardDefinition {
 }
 
 // ── Cleave (CR 702.148) ─────────────────────────────────────────────────────
-// Cleave rides `AlternativeCost { mana_cost, effect_override }`: the cleave
+// Cleave rides `AlternativeCost { mana_cost, effect_override, .. }`: the cleave
 // cast pays the alternative cost and resolves the bracket-stripped text
 // (CR 702.148b text-changing effect, baked as the override effect).
 

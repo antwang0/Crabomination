@@ -68,6 +68,7 @@ pub use sets::mmq::*;
 pub use sets::mmq2::*;
 pub use sets::mmq3::*;
 pub use sets::mmq4::*;
+pub use sets::mmq5::*;
 pub use sets::curses::*;
 pub use sets::decks::*;
 pub use sets::dgm::*;
