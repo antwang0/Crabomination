@@ -4526,41 +4526,13 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
     }
     // Candidates, in the order they're scored. Index 0 is greedy and wins
     // every tie.
-    // An attacker no opposing creature can legally block is free damage:
-    // holding it back forfeits that damage and buys a blocker the defender
-    // can never make it trade with. The search has no way to see this on its
-    // own — its simulation asks "does this body survive to block", and a
-    // flier facing a ground board always does — so it held back roughly a
-    // third of the dimir deck's evasive threats, which is exactly where
-    // `attack_search` measured -5.2 against the greedy declaration that
-    // swings with 99 % of them.
-    //
-    // Measured, not reasoned: `bot_probe --deck dimir --profile atk --vs
-    // holdsick+combat` put the searched profile at 68-75 % of eligible
-    // attackers against the greedy profile's 99 %, winning 73 of 150 where
-    // greedy won 89.
-    let unblockable = |a: &Attack| {
-        !state.battlefield.iter().any(|c| {
-            c.controller != seat
-                && bot_can_block(c)
-                && state.blocker_can_block_attacker(c.id, a.attacker)
-        })
-    };
-    // The floor is "swing with the free damage", not "swing with nobody" —
-    // declining an unblockable attacker is dominated, never a real option.
-    let floor: Vec<Attack> = greedy.iter().filter(|a| unblockable(a)).cloned().collect();
-    let mut candidates: Vec<Vec<Attack>> = vec![greedy.clone()];
-    if floor.len() < greedy.len() {
-        candidates.push(floor);
-    }
+    let mut candidates: Vec<Vec<Attack>> = vec![greedy.clone(), Vec::new()];
     if greedy.len() > 1 {
         // Which attacker to consider holding back? Order by toughness
         // ascending: the cheapest body to keep home is also the one most
         // likely to die attacking, so the front of this list is where both
-        // halves of the trade are largest. Unblockable attackers are never
-        // candidates for dropping.
-        let mut order: Vec<usize> =
-            (0..greedy.len()).filter(|&i| !unblockable(&greedy[i])).collect();
+        // halves of the trade are largest.
+        let mut order: Vec<usize> = (0..greedy.len()).collect();
         order.sort_by_key(|&i| {
             state.battlefield_find(greedy[i].attacker).map(|c| c.toughness()).unwrap_or(0)
         });

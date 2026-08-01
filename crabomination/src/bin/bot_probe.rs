@@ -120,48 +120,8 @@ fn variant_name(dbg: &str) -> String {
     dbg.split(|ch: char| !(ch.is_alphanumeric() || ch == '_')).next().unwrap_or("?").to_string()
 }
 
-/// Per-game aggregates kept separately for the games seat 0 won and the
-/// games it lost. A mirror probe averages the two together and shows
-/// nothing; the question "what does the losing profile do differently" is
-/// only answerable once the two populations are held apart.
-#[derive(Default)]
-struct Split {
-    games: usize,
-    turns: u32,
-    attacks_eligible: usize,
-    attacks_declared: usize,
-    casts: usize,
-    /// Life totals when the game ended, summed. Seat 0 is "us".
-    our_life: i64,
-    opp_life: i64,
-    /// Creatures on the battlefield at game end.
-    our_creatures: usize,
-    opp_creatures: usize,
-}
-
-impl Split {
-    fn row(&self, label: &str) -> String {
-        let g = self.games.max(1) as f64;
-        format!(
-            "  {label:<10} {:>5} games  {:>5.1} turns  attacked {:>4.0}% of eligible               {:>4.2} casts/turn  life {:>5.1} vs {:>5.1}  creatures {:>4.1} vs {:>4.1}",
-            self.games,
-            self.turns as f64 / g,
-            100.0 * self.attacks_declared as f64 / self.attacks_eligible.max(1) as f64,
-            self.casts as f64 / self.turns.max(1) as f64,
-            self.our_life as f64 / g,
-            self.opp_life as f64 / g,
-            self.our_creatures as f64 / g,
-            self.opp_creatures as f64 / g,
-        )
-    }
-}
-
 #[derive(Default)]
 struct Counts {
-    /// Seat 0's per-game aggregates, keyed by "won" / "lost" / "drawn".
-    by_outcome: BTreeMap<&'static str, Split>,
-    /// This game's running tallies, folded into `by_outcome` at game end.
-    cur: Split,
     /// Priority windows on an opponent's turn, and how many had mana up.
     opp_windows: usize,
     opp_windows_with_mana: usize,
@@ -251,13 +211,7 @@ fn is_play(a: &GameAction) -> bool {
     )
 }
 
-fn run(
-    deck: &[CardFactory],
-    games: usize,
-    weights: EvalWeights,
-    weights_b: EvalWeights,
-    c: &mut Counts,
-) {
+fn run(deck: &[CardFactory], games: usize, weights: EvalWeights, c: &mut Counts) {
     for _ in 0..games {
         let mut g = GameState::new(vec![Player::new(0, "A"), Player::new(1, "B")]);
         let mut r = rand::rng();
@@ -270,14 +224,8 @@ fn run(
             g.players[seat].wants_ui = true;
         }
         g.start_mulligan_phase();
-        // Seat 0 is the profile under study; seat 1 is what it is being
-        // measured against, so a head-to-head reproduces the ladder pairing
-        // rather than a mirror.
-        c.cur = Split::default();
-        let mut bots: Vec<Box<dyn Bot>> = vec![
-            Box::new(RandomBot::with_weights(weights)),
-            Box::new(RandomBot::with_weights(weights_b)),
-        ];
+        let mut bots: Vec<Box<dyn Bot>> =
+            (0..2).map(|_| -> Box<dyn Bot> { Box::new(RandomBot::with_weights(weights)) }).collect();
 
         let (mut actions, mut stale) = (0usize, 0usize);
         while !g.is_game_over() && actions < 20_000 && stale < 8 {
@@ -380,8 +328,6 @@ fn run(
                         .filter(|cr| cr.controller == s && cr.can_attack())
                         .count();
                     if eligible > 0 {
-                        c.cur.attacks_eligible += eligible;
-                        c.cur.attacks_declared += atks.len();
                         c.attack_combats += 1;
                         c.attacks_eligible += eligible;
                         c.attacks_declared += atks.len();
@@ -400,7 +346,6 @@ fn run(
                         *c.actions.entry(format!("{step}{suffix} / {kind}")).or_default() += 1;
                         if play {
                             *c.plays_by_step.entry(format!("{step}{suffix}")).or_default() += 1;
-                            c.cur.casts += 1;
                         }
                     }
                     any = true;
@@ -426,50 +371,8 @@ fn run(
         } else {
             c.ended_action_cap += 1;
         }
-        let label = match g.game_over.flatten() {
-            Some(0) => "won",
-            Some(_) => "lost",
-            None => "drawn",
-        };
-        c.cur.games = 1;
-        c.cur.turns = g.turn_number;
-        c.cur.our_life = g.players[0].life as i64;
-        c.cur.opp_life = g.players[1].life as i64;
-        c.cur.our_creatures =
-            g.battlefield.iter().filter(|x| x.controller == 0 && x.definition.is_creature()).count();
-        c.cur.opp_creatures =
-            g.battlefield.iter().filter(|x| x.controller == 1 && x.definition.is_creature()).count();
-        let e = c.by_outcome.entry(label).or_default();
-        e.games += 1;
-        e.turns += c.cur.turns;
-        e.attacks_eligible += c.cur.attacks_eligible;
-        e.attacks_declared += c.cur.attacks_declared;
-        e.casts += c.cur.casts;
-        e.our_life += c.cur.our_life;
-        e.opp_life += c.cur.opp_life;
-        e.our_creatures += c.cur.our_creatures;
-        e.opp_creatures += c.cur.opp_creatures;
         c.turns += g.turn_number;
         c.games += 1;
-    }
-}
-
-fn profile_weights(name: &str) -> EvalWeights {
-    match name {
-        "baseline" => EvalWeights::baseline(),
-        "combat" => EvalWeights::combat_aware(),
-        "pretap" => EvalWeights::legacy_mana(),
-        "holdsick" => EvalWeights::hold_sick(),
-        "default" => EvalWeights::default(),
-        "atk" => EvalWeights::attack_search(),
-        "planner" => EvalWeights::planner(),
-        "lookahead" => EvalWeights::lookahead1(),
-        "holdsick+combat" => EvalWeights::hold_sick_combat(),
-        "blk" => EvalWeights::block_search(),
-        other => {
-            eprintln!("unknown profile {other}");
-            std::process::exit(2);
-        }
     }
 }
 
@@ -479,7 +382,6 @@ fn main() {
     let mut which: Option<String> = None;
     let mut profile = "baseline".to_string();
     let mut seed = 23u64;
-    let mut vs: Option<String> = None;
     let mut i = 0;
     while i < argv.len() {
         let val = || argv.get(i + 1).cloned().unwrap_or_default();
@@ -488,12 +390,10 @@ fn main() {
             "--deck" => which = Some(val()),
             "--profile" => profile = val(),
             "--seed" => seed = val().parse().unwrap_or(seed),
-            "--vs" => vs = Some(val()),
             "-h" | "--help" => {
                 println!(
                     "bot_probe [--deck NAME] [--games N] [--profile baseline|combat]\n\
                      [--seed N, matches bot_ladder's cube decks]\n\
-                     [--vs PROFILE puts a different bot in seat 1]\n\
                      decks: {}",
                     DECKS.join(", ")
                 );
@@ -506,9 +406,20 @@ fn main() {
         }
         i += 2;
     }
-    let lookup = |name: &str| -> EvalWeights { profile_weights(name) };
-    let weights = lookup(&profile);
-    let weights_b = vs.as_deref().map(lookup).unwrap_or(weights);
+    let weights = match profile.as_str() {
+        "baseline" => EvalWeights::baseline(),
+        "combat" => EvalWeights::combat_aware(),
+        "pretap" => EvalWeights::legacy_mana(),
+        "holdsick" => EvalWeights::hold_sick(),
+        "default" => EvalWeights::default(),
+        "atk" => EvalWeights::attack_search(),
+        "planner" => EvalWeights::planner(),
+        "lookahead" => EvalWeights::lookahead1(),
+        other => {
+            eprintln!("unknown profile {other}");
+            std::process::exit(2);
+        }
+    };
 
     if which.as_deref() == Some("cube") {
         // Same construction the ladder uses, so stall rates are comparable
@@ -519,7 +430,7 @@ fn main() {
             let colors = random_color_pair(&mut rng);
             let d = cube_deck(colors, &mut rng);
             let mut one = Counts::default();
-            run(&d, games, weights, weights_b, &mut one);
+            run(&d, games, weights, &mut one);
             println!(
                 "pair {i} {colors:?}: {} decided, {} cap, {} DEADLOCKED",
                 one.ended_decided, one.ended_action_cap, one.ended_stale
@@ -552,7 +463,7 @@ fn main() {
             eprintln!("unknown deck {name}; known: {}", DECKS.join(", "));
             std::process::exit(2);
         };
-        run(&d, games, weights, weights_b, &mut c);
+        run(&d, games, weights, &mut c);
     }
 
     report(&decks.join("+"), &c, &profile);
@@ -605,12 +516,6 @@ fn report(decks: &str, c: &Counts, profile: &str) {
     // block well" but "is there room to" — a search over block assignments
     // can only pay where the defender had a real choice, so the shape
     // histogram sizes the ceiling before any work goes into the search.
-    if c.by_outcome.len() > 1 {
-        println!("\nseat 0 ({profile}) by outcome:");
-        for (label, sp) in &c.by_outcome {
-            println!("{}", sp.row(label));
-        }
-    }
     println!("\ncombats as defender: {}", c.combats);
     let pct = |n: usize, d: usize| 100.0 * n as f64 / d.max(1) as f64;
     println!(
