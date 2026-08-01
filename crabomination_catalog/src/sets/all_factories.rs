@@ -10219,6 +10219,8 @@ static MMQ5: &[Factory] = &[
     super::mmq5::ley_line,
     super::mmq5::story_circle,
     super::mmq5::chameleon_spirit,
+    super::mmq5::conspiracy,
+    super::mmq5::cornered_market,
 ];
 static MOD_SET: &[Factory] = &[
     super::mod_set::ornithopter,

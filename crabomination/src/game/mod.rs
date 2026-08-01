@@ -8471,6 +8471,26 @@ impl GameState {
         })
     }
 
+    /// CR 601.3 — Cornered Market: true when `card` shares its name with a
+    /// nontoken permanent on the battlefield while the lock is active.
+    pub(crate) fn name_locked_by_a_permanent(&self, card: Option<CardId>) -> bool {
+        let Some(name) = card.and_then(|id| self.find_card_anywhere(id)).map(|c| c.definition.name)
+        else {
+            return false;
+        };
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::NoSpellOrNonbasicLandSharingAPermanentName
+                    )
+                })
+        }) && self.battlefield.iter().any(|c| !c.is_token && c.definition.name == name)
+    }
+
     /// CR 615 — Statecraft: "prevent all combat damage that would be dealt to
     /// and dealt by creatures you control." True when `who` is a creature whose
     /// controller has the static; both combat funnels consult it.
@@ -9433,6 +9453,10 @@ impl GameState {
                 })
             });
             if blocked {
+                return Err(GameError::SpellLimitReached);
+            }
+            // Cornered Market — no spell may share a nontoken permanent's name.
+            if self.name_locked_by_a_permanent(action.cast_card_id()) {
                 return Err(GameError::SpellLimitReached);
             }
             // Single Combat — while any lock is active, no player may cast a
@@ -16294,6 +16318,30 @@ fn static_effect_to_effects(
                     None => vec![],
                 }
             }
+            StaticEffect::CreaturesYouControlAreChosenType => {
+                // Conspiracy — a layer-4 subtype *replacement* on every
+                // creature the source's controller controls.
+                match card.chosen_creature_type {
+                    Some(ct) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected: AffectedPermanents::All {
+                            controller: Some(card.controller),
+                            card_types: vec![CardType::Creature],
+                            exclude_source: false,
+                            color: None,
+                            token: None,
+                            colorless: false,
+                            owned_by_controller: None,
+                        },
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetCreatureTypes(vec![ct]),
+                    }],
+                    None => vec![],
+                }
+            }
             StaticEffect::LandsYouControlAreChosenType => {
                 // Realmwright — lands the source's controller controls are the
                 // chosen basic type in addition (layer-4 additive). No-op until
@@ -17068,6 +17116,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerDoesntLoseFromLife
             // Consulted at the damage-to-player life sites.
             | StaticEffect::DamageWontReduceControllerLifeBelowOne { .. }
+            | StaticEffect::NoSpellOrNonbasicLandSharingAPermanentName
             | StaticEffect::OneSpellPerTurn
             | StaticEffect::EnchantedPlayerOneSpellPerTurn
             | StaticEffect::DoubleDamageToEnchantedPlayer

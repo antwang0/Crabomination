@@ -25,7 +25,7 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (modern_decks — Mercadian Masques, wave 5)
 
-`set_gaps.py mmq` is down from **283 → 65 → 18** (`sets::mmq` … `sets::mmq5`,
+`set_gaps.py mmq` is down from **283 → 65 → 16** (`sets::mmq` … `sets::mmq5`,
 tests in `classic_sets/mmq{,2,3,4,5}`). The three cards the previous run
 deferred (Statecraft, Insubordination, Barbed Wire) are shipped, each with the
 primitive it wanted.
@@ -47,15 +47,15 @@ Residuals in what shipped this wave:
   their choice" pick is the auto-picker's.
 - **Toymaker / Karn's Touch animate at printed mana value**; a cost-changing
   effect on the artifact wouldn't move the body.
+- **Conspiracy drops its off-battlefield half** — creature *spells* you control
+  and creature cards you own outside the battlefield keep their printed types.
 
-Remaining MMQ (18), grouped by the primitive each wants:
+Remaining MMQ (16), grouped by the primitive each wants:
 
 - **Chooser routing:** Charm Peddler, Cho-Arrim Alchemist, General's Regalia —
   "the next time a source of your choice would deal damage to *target*"
   (`PreventNextDamageFromChosenSource` is controller-scoped) and the
   redirect-to-a-creature variant.
-- **Name / type locks:** Conspiracy (your creatures are the chosen type),
-  Cornered Market (can't cast a spell sharing a nontoken permanent's name).
 - **Cost shapes:** Bargaining Table (a `Value`-scaled generic activation cost),
   Food Chain (exile-a-creature-you-control as a cost + a mana value read off
   the exiled card), Caller of the Hunt (choose a creature type as an

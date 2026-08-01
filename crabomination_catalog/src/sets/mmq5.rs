@@ -985,3 +985,29 @@ pub fn chameleon_spirit() -> CardDefinition {
         )
     }
 }
+
+/// Conspiracy — {3}{B}{B}. Your whole board becomes one creature type.
+pub fn conspiracy() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::NameCreatureType { what: Selector::This },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control are the chosen type.",
+            effect: StaticEffect::CreaturesYouControlAreChosenType,
+        }],
+        ..enchantment("Conspiracy", cost(&[generic(3), b(), b()]))
+    }
+}
+
+/// Cornered Market — {2}{W}. Nobody may double up on a name already in play.
+pub fn cornered_market() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Players can't cast spells or play nonbasic lands with the same name as a nontoken permanent.",
+            effect: StaticEffect::NoSpellOrNonbasicLandSharingAPermanentName,
+        }],
+        ..enchantment("Cornered Market", cost(&[generic(2), w()]))
+    }
+}

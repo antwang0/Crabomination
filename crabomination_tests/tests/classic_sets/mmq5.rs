@@ -863,3 +863,59 @@ fn chameleon_spirit_counts_opposing_permanents_of_the_color() {
     g.add_card_to_battlefield(1, catalog::grizzly_bears());
     assert_eq!(g.computed_permanent(spirit).unwrap().power, 2);
 }
+
+/// Conspiracy retypes your whole board.
+#[test]
+fn conspiracy_retypes_your_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let con = g.add_card_to_battlefield(0, catalog::conspiracy());
+    script(
+        &mut g,
+        vec![DecisionAnswer::CreatureType(crabomination::card::CreatureType::Zombie)],
+    );
+    g.fire_self_etb_triggers(con, 0);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.computed_permanent(bear).unwrap().subtypes.creature_types,
+        vec![crabomination::card::CreatureType::Zombie]
+    );
+    assert_eq!(
+        g.computed_permanent(theirs).unwrap().subtypes.creature_types,
+        vec![crabomination::card::CreatureType::Bear]
+    );
+}
+
+/// Cornered Market stops a second copy of a name already on the battlefield.
+#[test]
+fn cornered_market_blocks_a_duplicate_name() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cornered_market());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dup = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let ok = g.add_card_to_hand(1, catalog::savannah_lions());
+    mana(&mut g, 1);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: dup,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "name already in play"
+    );
+    g.perform_action(GameAction::CastSpell {
+        card_id: ok,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("fresh name is fine");
+}

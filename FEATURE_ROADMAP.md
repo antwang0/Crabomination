@@ -1533,7 +1533,11 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   (Credit Voucher, Clear the Land), `Effect::MayDoBy` ("that player may …",
   routed to another seat — Ley Line),
   `DynamicPt::PermanentsOfChosenColorOpponentsControl` (Chameleon Spirit) and
-  `SelectionRequirement::HasChosenColorOfSource` (Story Circle). Correctness:
+  `SelectionRequirement::HasChosenColorOfSource` (Story Circle),
+  `StaticEffect::CreaturesYouControlAreChosenType` (Conspiracy — the
+  creature-subtype sibling of Realmwright's land-type replacement) and
+  `StaticEffect::NoSpellOrNonbasicLandSharingAPermanentName` (Cornered Market,
+  gated at both the cast and land-play funnels). Correctness:
   a triggered ability now carries the seat that **caused** its firing event
   (`TriggerCandidate`/`PendingTriggerPush.actor`, stamped from `event_actor`,
   read through `PlayerRef::TriggerEventPlayer`), so "that spell or ability's

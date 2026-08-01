@@ -2177,6 +2177,13 @@ impl GameState {
         if !self.can_player_play_land(p) {
             return Err(GameError::AlreadyPlayedLand);
         }
+        // Cornered Market — a nonbasic land sharing a nontoken permanent's
+        // name can't be played.
+        if !self.find_card_anywhere(card_id).is_some_and(|c| c.definition.is_basic())
+            && self.name_locked_by_a_permanent(Some(card_id))
+        {
+            return Err(GameError::AlreadyPlayedLand);
+        }
         // CR 401.6 — a PlayFromLibraryTop static (Courser of Kruphix,
         // Oracle of Mul Daya) lets the land be played off the library top.
         let from_top = !self.players[p].has_in_hand(card_id)

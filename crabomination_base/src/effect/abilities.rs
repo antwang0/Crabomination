@@ -1328,6 +1328,16 @@ pub enum StaticEffect {
     /// adds that basic land type to every land the source's controller
     /// controls (layer-4, additive). No-op until a type is chosen. Realmwright.
     LandsYouControlAreChosenType,
+    /// CR 205.3 — "Creatures you control are the chosen type" (Conspiracy).
+    /// Reads the source's `chosen_creature_type` (stamped as it entered) and
+    /// *replaces* every controlled creature's subtypes with it at layer 4.
+    /// No-op until a type is chosen. The printed rider covering creature
+    /// spells and creature cards you own off the battlefield is not modeled.
+    CreaturesYouControlAreChosenType,
+    /// CR 601.3 — "Players can't cast spells with the same name as a nontoken
+    /// permanent" and can't play nonbasic lands sharing such a name (Cornered
+    /// Market). Symmetric; checked at the cast and land-play gates.
+    NoSpellOrNonbasicLandSharingAPermanentName,
     /// CR 305.7 — a `LandTypeChanger` gated on the source carrying at least `n`
     /// counters of `kind`. The layer effect only materializes while the
     /// threshold holds (Zhao, the Moon Slayer — "As long as Zhao has a
