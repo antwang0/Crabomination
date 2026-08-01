@@ -26,6 +26,46 @@
 //! search affordable at all here. [`MctsConfig`] exposes the knobs so the
 //! trade can be re-measured rather than argued about.
 //!
+//! ## Measured result
+//!
+//! **It loses, and it isn't close.** Against the heuristic bot over 1000
+//! ladder games it wins 41.5 % [38.5 %, 44.6 %], consistently across all
+//! four archetypes, while costing about 33x as much wall clock (1.25
+//! games/sec against ~41). Nothing here is adopted; it exists as a
+//! measured, reproducible answer to "what about Monte Carlo".
+//!
+//! `heuristic_rollouts` narrows it — 45.0 % [38.8 %, 51.3 %] over 240
+//! games, inconclusive at that size but clearly better than 41.5 % — at
+//! ~54x cost. That direction is the diagnosis confirming itself: rollout
+//! quality is the binding constraint, not the number of samples.
+//!
+//! The result is what the theory predicts for this shape of game, and the
+//! reasons are worth writing down because they are properties of Magic and
+//! of this engine, not bugs to be fixed:
+//!
+//! * **The rollout policy is the estimator.** Monte Carlo replaces domain
+//!   knowledge with sampling, so a uniform-random rollout is only as good
+//!   as the law of large numbers makes it — and 24 samples over a two-turn
+//!   horizon is a *very* noisy estimate. The heuristic evaluator it is
+//!   competing against is not noisy at all; it encodes years of accreted
+//!   knowledge about what a board is worth. Beating it by sampling needs
+//!   either far more samples or far better rollouts.
+//! * **Rollouts can't reach a result.** In games where MCTS shines, a
+//!   playout ends in a win or a loss and the reward is ground truth. Here a
+//!   playout is truncated after a couple of turns and scored with... the
+//!   same heuristic evaluator. So the search is not escaping the
+//!   evaluator's opinion, it is averaging noisy samples *of* that opinion.
+//! * **Branching is enormous and mostly irrelevant.** Most legal actions in
+//!   a Magic priority window are passes and mana taps; the interesting
+//!   branching is narrow but deep, which is the worst shape for a search
+//!   that spends its budget at the root.
+//!
+//! The productive directions from here, in the order the evidence supports:
+//! give rollouts a strong policy (`heuristic_rollouts`) so each sample is
+//! worth more, and get the cost down enough to afford real depth — which in
+//! this engine means the release build the project deliberately doesn't
+//! use for bots. Both are measurable with the knobs already here.
+//!
 //! ## Hidden information
 //!
 //! Rollouts re-shuffle every library first. Without that, a rollout draws
