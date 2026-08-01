@@ -100,6 +100,9 @@ pub enum PlayerRef {
     /// seat. Sokenzan Renegade's "the player who has the most cards in hand
     /// gains control of this."
     MostCardsInHand,
+    /// The player controlling the most creatures; ties go to the earliest seat
+    /// (Wild Mammoth's upkeep defection).
+    MostCreatures,
 }
 
 /// Which players a player-targeted static effect affects. The static
@@ -7184,6 +7187,11 @@ pub enum Effect {
     /// Adds the target to `GameState.combat_damage_prevented_by_this_turn`.
     /// Azorius Ploy.
     PreventCombatDamageByTargetThisTurn { target: Selector },
+
+    /// "You may have `dealer` deal damage equal to its power to `to`. If you
+    /// do, `dealer` assigns no combat damage this turn." The Laccolith cycle's
+    /// becomes-blocked trigger; declining leaves combat untouched.
+    MayDealPowerThenNoCombatDamage { dealer: Selector, to: Selector },
 
     /// "Target creature can't block `source` this turn." Records a
     /// `(target, source)` pair in `GameState.cant_block_pairs`; the

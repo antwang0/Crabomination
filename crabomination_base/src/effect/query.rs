@@ -425,6 +425,9 @@ impl Effect {
                 sel_has_target(win) || sel_has_target(lose)
             }
             Effect::ThievesAuction => false,
+            Effect::MayDealPowerThenNoCombatDamage { dealer, to } => {
+                sel_has_target(dealer) || sel_has_target(to)
+            }
             Effect::SearchSameNameAs { who, subject, .. } => {
                 player_has_target(who) || sel_has_target(subject)
             }
@@ -1211,6 +1214,7 @@ impl Effect {
             }
         }
         match self {
+            Effect::MayDealPowerThenNoCombatDamage { to, .. } => sel_filter(to),
             // Prefer the damage target's own filter; fall back to a filter
             // hidden in the damage amount (Rabid Bite: `PowerOf(slot 0)`).
             Effect::DealDamage { to, amount }

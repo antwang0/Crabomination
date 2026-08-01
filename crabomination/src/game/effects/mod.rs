@@ -22065,6 +22065,54 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayDealPowerThenNoCombatDamage { dealer, to } => {
+                // Laccolith — trade the combat hit for a targeted ping equal to
+                // the dealer's power.
+                let Some(src) = self
+                    .resolve_selector(dealer, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Permanent(c) => Some(c),
+                        _ => None,
+                    })
+                else {
+                    return Ok(());
+                };
+                let victims: Vec<CardId> = self
+                    .resolve_selector(to, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Permanent(c) => Some(c),
+                        _ => None,
+                    })
+                    .collect();
+                if victims.is_empty() {
+                    return Ok(());
+                }
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    ctx.controller,
+                    "Deal damage equal to its power instead of combat damage?".to_string(),
+                    src,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if !yes {
+                    return Ok(());
+                }
+                let power = self.computed_permanent(src).map_or(0, |cp| cp.power).max(0) as u32;
+                for v in victims {
+                    self.deal_damage_to_from(EntityRef::Permanent(v), power, Some(src), events);
+                }
+                if !self.combat_damage_prevented_by_this_turn.contains(&src) {
+                    self.combat_damage_prevented_by_this_turn.push(src);
+                }
+                Ok(())
+            }
+
             Effect::PreventCombatDamageByTargetThisTurn { target } => {
                 // CR 615.1 — Azorius Ploy: prevent all combat damage the target
                 // would *deal* this turn (it still takes damage normally).
@@ -26023,6 +26071,19 @@ impl GameState {
                     Some(b) if self.players[b].hand.len() >= self.players[p].hand.len() => Some(b),
                     _ => Some(p),
                 }),
+            // `max_by_key` returns the *last* maximum; fold keeps the earliest.
+            PlayerRef::MostCreatures => {
+                let count = |p: usize| {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.controller == p && c.definition.is_creature())
+                        .count()
+                };
+                (0..self.players.len()).fold(None::<usize>, |best, p| match best {
+                    Some(b) if count(b) >= count(p) => Some(b),
+                    _ => Some(p),
+                })
+            }
             PlayerRef::TriggerEventPlayer => self.trigger_event_player_scratch,
             PlayerRef::Triggerer => ctx.trigger_source.and_then(|e| match e {
                 EntityRef::Player(p) => Some(p),
