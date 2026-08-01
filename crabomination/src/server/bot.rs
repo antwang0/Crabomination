@@ -57,6 +57,9 @@ pub struct EvalWeights {
     /// life linearly. Life near zero is worth far more per point than life
     /// near the starting total; a linear term prices them the same.
     pub concave_life: bool,
+    /// Hold a play whose only gain this turn is a summoning-sick body until
+    /// the postcombat main (see [`eval_material_summon_sick_blind`]).
+    pub hold_sick: bool,
     /// Score a candidate on the board *after* this turn's combat rather
     /// than the instant it resolves (see [`simulate_through_combat`]).
     pub combat_aware: bool,
@@ -85,6 +88,7 @@ impl EvalWeights {
             toughness: 1,
             keyword_pct: 0,
             concave_life: false,
+            hold_sick: false,
             combat_aware: false,
             legacy_pretap: false,
         }
@@ -130,6 +134,7 @@ impl EvalWeights {
             toughness: 10,
             keyword_pct: 100,
             concave_life: true,
+            hold_sick: false,
             combat_aware: false,
             legacy_pretap: false,
         }
@@ -158,9 +163,28 @@ impl EvalWeights {
             toughness: 10,
             keyword_pct: 0,
             concave_life: false,
+            hold_sick: false,
             combat_aware: false,
             legacy_pretap: false,
         }
+    }
+
+    /// Baseline + Forge's summon-sick gate, for laddering it on its own.
+    ///
+    /// **Measured 50.8 % over 8000 games** (50.8 % and 50.9 % on two
+    /// independent seeds), i.e. about +0.9 points — directionally positive
+    /// and consistent, but the pooled interval [49.7 %, 51.9 %] still
+    /// touches 50 %, so it is not adopted as the default on this evidence
+    /// alone. A run several times larger would settle it.
+    ///
+    /// It is the first *reasoned* change in this series with a positive
+    /// signal, and its behavioral effect is large and verifiable: plays in
+    /// the postcombat main go from 0.5 % to 37.7 % of all plays
+    /// (`bot_probe`), which is simply what correct sequencing looks like.
+    /// It also costs ~30 % more CPU per decision, since the gate resolves
+    /// the winning line a second time.
+    pub const fn hold_sick() -> Self {
+        Self { hold_sick: true, ..Self::baseline() }
     }
 
     /// Baseline + the combat-aware evaluation.
@@ -2624,6 +2648,23 @@ fn main_phase_action_with(
                 }
             }
             if let Some(best) = pick_by_outcome(state, seat, finalists, w) {
+                // Forge's summon-sick gate (`SpellAbilityPicker`): if the
+                // winning line's only gain this turn is a body that can't
+                // attack, it is worth exactly as much after combat — and
+                // played then it costs the opponent a turn of information
+                // and leaves the mana up in between. Hold it.
+                //
+                // Applied to the *winner* only, deliberately. Screening
+                // every candidate this way would have the bot pick some
+                // lesser non-creature line now and then have no mana left
+                // for the creature it actually wanted in the second main.
+                if w.hold_sick
+                    && state.step == TurnStep::PreCombatMain
+                    && state.active_player_idx == seat
+                    && !improves_this_turn(state, seat, &best, w)
+                {
+                    return GameAction::PassPriority;
+                }
                 return best;
             }
         }
@@ -5332,6 +5373,30 @@ fn first_damage_amount(effect: &Effect, x: u32) -> Option<i32> {
 /// Deliberately coarse — it's compared between candidate *outcomes* of the
 /// same tick, so shared terms cancel and only the action's delta matters.
 fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
+    eval_material_inner(state, seat, w, false)
+}
+
+/// [`eval_material`] with `seat`'s own summoning-sick creatures counted as
+/// worth nothing.
+///
+/// Forge's `GameStateEvaluator` carries this alongside the real score as
+/// `summonSickValue`, and uses it to answer one question: does this line
+/// achieve anything *this turn*, or does it only add a body that can't
+/// attack yet? A creature deployed in the precombat main and a creature
+/// deployed after combat are worth the same at end of turn, but the second
+/// one was played with a turn's more information and left the mana up in
+/// between. Only the first reads as progress to a greedy evaluator, which
+/// is why this bot puts 95 % of its plays in the precombat main.
+fn eval_material_summon_sick_blind(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
+    eval_material_inner(state, seat, w, true)
+}
+
+fn eval_material_inner(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    blind_to_sick: bool,
+) -> i32 {
     if let Some(over) = state.game_over {
         return match over {
             Some(winner) if winner == seat => 100_000 * w.unit,
@@ -5359,6 +5424,14 @@ fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
             }
             3 * pv
         };
+        // A body that can't attack yet isn't this turn's progress -- see
+        // `eval_material_summon_sick_blind`.
+        let sick = blind_to_sick
+            && c.controller == seat
+            && c.definition.is_creature()
+            && c.summoning_sick
+            && !c.has_keyword(&crate::card::Keyword::Haste);
+        let pv = if sick { 0 } else { pv };
         if c.controller == seat {
             v += pv;
         } else if !state.same_team(c.controller, seat) {
@@ -5571,6 +5644,44 @@ fn evaluate_action_outcome(
         }
     }
     Some(eval_material(&g, seat, w))
+}
+
+/// Does `action` achieve anything *this turn*, ignoring bodies that can't
+/// attack yet? See [`eval_material_summon_sick_blind`]. `true` when the
+/// question can't be answered (the outcome probe bailed), so an
+/// unevaluable line is never held back.
+fn improves_this_turn(
+    state: &GameState,
+    seat: usize,
+    action: &GameAction,
+    w: &EvalWeights,
+) -> bool {
+    let before = eval_material_summon_sick_blind(state, seat, w);
+    let mut g = state.clone();
+    if g.perform_action(action.clone()).is_err() {
+        return true;
+    }
+    let mut fuel = 64u32;
+    while !g.is_game_over() {
+        if g.pending_decision.is_some() {
+            let answer = {
+                let pending = g.pending_decision.as_ref().unwrap();
+                AutoDecider.decide(&pending.decision)
+            };
+            if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
+                return true;
+            }
+        } else if g.stack.is_empty() {
+            break;
+        } else if g.perform_action(GameAction::PassPriority).is_err() {
+            return true;
+        }
+        fuel = match fuel.checked_sub(1) {
+            Some(f) => f,
+            None => return true,
+        };
+    }
+    eval_material_summon_sick_blind(&g, seat, w) > before
 }
 
 /// Final pick among the validated finalists `(jittered static score,
@@ -8748,6 +8859,79 @@ mod tests {
         assert!(eval_material(&g, 1, &EvalWeights::default()) < 0);
         g.game_over = Some(Some(1));
         assert!(eval_material(&g, 1, &EvalWeights::default()) > eval_material(&g, 0, &EvalWeights::default()), "a won game beats any material");
+    }
+
+    /// Forge's summon-sick gate: a creature that can't attack this turn is
+    /// worth the same after combat, so the bot should deploy it in the
+    /// second main and keep the mana up in between. Measured by `bot_probe`
+    /// to move plays in the postcombat main from 0.5 % to 37.7 %.
+    #[test]
+    fn hold_sick_gate_defers_a_vanilla_creature_to_the_second_main() {
+        let w = EvalWeights::hold_sick();
+        let mut g = two_player_game();
+        for _ in 0..3 {
+            let land = g.add_card_to_battlefield(0, catalog::forest());
+            g.clear_sickness(land);
+        }
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        let cast = GameAction::CastSpell {
+            card_id: bear,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        // The body is all it does, and it can't attack -- no progress today.
+        assert!(
+            !improves_this_turn(&g, 0, &cast, &w),
+            "a vanilla creature achieves nothing on the turn it lands",
+        );
+        // So the gated bot passes in the first main...
+        let mut bot = RandomBot::with_weights(w);
+        assert!(
+            matches!(bot.next_action(&g, 0), Some(GameAction::PassPriority)),
+            "gated bot holds the creature in the precombat main",
+        );
+        // ...and deploys it in the second, where holding costs nothing.
+        g.step = TurnStep::PostCombatMain;
+        let mut bot2 = RandomBot::with_weights(w);
+        assert!(
+            matches!(bot2.next_action(&g, 0), Some(GameAction::CastSpell { card_id, .. }) if card_id == bear),
+            "gated bot casts it postcombat",
+        );
+        // The ungated bot casts it immediately, which is the behavior the
+        // gate exists to change.
+        let mut plain = RandomBot::new();
+        let mut pre = g.clone();
+        pre.step = TurnStep::PreCombatMain;
+        assert!(
+            matches!(plain.next_action(&pre, 0), Some(GameAction::CastSpell { .. })),
+            "the default profile still front-loads",
+        );
+    }
+
+    /// The gate must not hold a line that *does* something now: a hasty
+    /// body can attack, so deploying it precombat is real progress.
+    #[test]
+    fn hold_sick_gate_lets_through_a_play_that_matters_now() {
+        let w = EvalWeights::hold_sick();
+        let mut g = two_player_game();
+        for _ in 0..3 {
+            let land = g.add_card_to_battlefield(0, catalog::mountain());
+            g.clear_sickness(land);
+        }
+        let guide = g.add_card_to_hand(0, catalog::goblin_guide());
+        let cast = GameAction::CastSpell {
+            card_id: guide,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        assert!(
+            improves_this_turn(&g, 0, &cast, &w),
+            "a haste creature is progress the turn it lands",
+        );
     }
 
     /// After a London mulligan the bot puts cards back on the library.

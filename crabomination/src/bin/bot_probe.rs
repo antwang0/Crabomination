@@ -254,6 +254,7 @@ fn main() {
         "baseline" => EvalWeights::baseline(),
         "combat" => EvalWeights::combat_aware(),
         "pretap" => EvalWeights::legacy_mana(),
+        "holdsick" => EvalWeights::hold_sick(),
         other => {
             eprintln!("unknown profile {other}");
             std::process::exit(2);
