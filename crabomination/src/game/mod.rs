@@ -2301,6 +2301,27 @@ impl GameState {
         self.players[seat].life
     }
 
+    /// CR 810.5 — poison counters are a shared team resource in Two-Headed
+    /// Giant (identified here by the shared life pool): a team's poison total
+    /// is the sum over its members. Solo teams just report the seat's own.
+    pub fn effective_poison(&self, seat: usize) -> u32 {
+        match self.teams.iter().find(|t| t.members.contains(&seat)) {
+            Some(t) if t.shared_life.is_some() => {
+                t.members.iter().map(|&m| self.players[m].poison_counters).sum()
+            }
+            _ => self.players[seat].poison_counters,
+        }
+    }
+
+    /// CR 704.5c / 810.8d — the poison total that loses the game: ten for a
+    /// solo player, fifteen for a shared-pool (2HG) team.
+    pub fn poison_loss_threshold(&self, seat: usize) -> u32 {
+        match self.teams.iter().find(|t| t.members.contains(&seat)) {
+            Some(t) if t.shared_life.is_some() => 15,
+            _ => 10,
+        }
+    }
+
     /// Number of Equipment currently attached to permanent `id` (CR 301.5).
     /// The single source of truth for equipped-state checks — `IsEquipped`,
     /// `EquippedByAtLeast`, `SourceIsEquipped`, and the per-Equipment CDA all
@@ -5242,13 +5263,17 @@ impl GameState {
                 return Err(crate::team::TeamError::MissingSeat(seat));
             }
         }
+        // A re-partition of a shared-life format (2HG) keeps the shared pool:
+        // each new team is seeded from its first member's effective life, so
+        // re-seating players doesn't silently drop the format's life rules.
+        let shared = self.teams.iter().any(|t| t.shared_life.is_some());
         self.teams = partitions
             .into_iter()
             .enumerate()
             .map(|(i, members)| crate::team::Team {
                 id: crate::team::TeamId(i),
+                shared_life: shared.then(|| self.effective_life(members[0])),
                 members,
-                shared_life: None,
             })
             .collect();
         Ok(())

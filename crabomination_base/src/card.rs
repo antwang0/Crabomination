@@ -5367,6 +5367,9 @@ impl CardInstance {
             }
         }
         self.definition = Arc::new(def);
+        // CR 730.2d — the merged permanent is a token only if its *topmost*
+        // component is one.
+        self.is_token = top.is_token;
     }
 
     pub fn can_attack(&self) -> bool {

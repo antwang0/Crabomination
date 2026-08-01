@@ -979,24 +979,6 @@ fn two_headed_giant_zero_shared_life_eliminates_both_teammates() {
     assert!(events.iter().any(|e| matches!(e, GameEvent::GameOver { winner: Some(2) })));
 }
 
-/// 2HG: poison stays per-player (CR 810.7b). One teammate hitting 10
-/// poison loses individually; the other survives unless the shared
-/// pool also runs out. Locks in the asymmetry between life (shared)
-/// and poison (per-player).
-#[test]
-fn two_headed_giant_poison_is_per_player_not_shared() {
-    let mut g = game_with_format(Format::TwoHeadedGiant, 4);
-
-    g.players[0].poison_counters = 10;
-    g.check_state_based_actions();
-
-    assert!(g.players[0].eliminated, "10 poison loses individually");
-    assert!(!g.players[1].eliminated, "teammate survives 0 poison");
-    assert_eq!(g.teams[0].shared_life, Some(30), "shared life unaffected");
-    // Game continues — team A still has seat 1 in.
-    assert!(g.game_over.is_none());
-}
-
 // ── Phase H — zone-change replacement effects ─────────────────────────────
 
 /// Baseline: with no replacement registered, a destroyed creature
@@ -1746,4 +1728,57 @@ fn cr_702_115_myriad_copies_attack_each_other_opponent_then_exile() {
     // exist as a state-based action (CR 111.7), so it's gone entirely.
     assert!(!g.battlefield.iter().any(|c| c.id == copy_id), "copy left the battlefield");
     assert!(!g.exile.iter().any(|c| c.id == copy_id), "exiled token ceased to exist");
+}
+
+// ── CR 810 — Two-Headed Giant ────────────────────────────────────────────────
+
+/// CR 810.4/810.9 — a team shares one 30-life pool, and damage dealt to each
+/// player individually lands on it twice.
+#[test]
+fn cr_810_9_damage_to_each_teammate_hits_the_shared_pool_twice() {
+    let mut g = game_with_format(Format::TwoHeadedGiant, 4);
+    g.assign_teams(vec![vec![0, 1], vec![2, 3]]).expect("2v2");
+    assert_eq!(g.effective_life(0), 30);
+    g.adjust_life(0, -4);
+    g.adjust_life(1, -4);
+    assert_eq!(g.effective_life(0), 22, "both hits landed on the one pool");
+    assert_eq!(g.effective_life(1), 22, "teammates read the same total");
+    assert_eq!(g.effective_life(2), 30, "the other team is untouched");
+}
+
+/// CR 810.8c — the shared pool hitting 0 eliminates the whole team at once.
+#[test]
+fn cr_810_8c_zero_shared_life_eliminates_both_teammates() {
+    let mut g = game_with_format(Format::TwoHeadedGiant, 4);
+    g.assign_teams(vec![vec![0, 1], vec![2, 3]]).expect("2v2");
+    g.adjust_life(0, -30);
+    g.check_state_based_actions();
+    assert!(g.players[0].eliminated && g.players[1].eliminated, "the team lost together");
+    assert!(!g.players[2].eliminated && !g.players[3].eliminated);
+}
+
+/// CR 810.5/810.8d — poison is a shared team resource with a fifteen-counter
+/// threshold, so a teammate at 10 doesn't lose on their own.
+#[test]
+fn cr_810_8d_team_poison_is_shared_and_loses_at_fifteen() {
+    let mut g = game_with_format(Format::TwoHeadedGiant, 4);
+    g.assign_teams(vec![vec![0, 1], vec![2, 3]]).expect("2v2");
+    g.players[0].poison_counters = 10;
+    g.check_state_based_actions();
+    assert!(!g.players[0].eliminated, "ten is the solo threshold, not the team's");
+    assert_eq!(g.effective_poison(1), 10, "the teammate reads the team total");
+
+    g.players[1].poison_counters = 5;
+    g.check_state_based_actions();
+    assert!(g.players[0].eliminated && g.players[1].eliminated, "fifteen between them");
+}
+
+/// A solo-team (FFA) seat keeps the plain ten-counter threshold.
+#[test]
+fn cr_704_5c_solo_player_still_loses_at_ten_poison() {
+    let mut g = game_with_format(Format::Commander, 4);
+    g.players[0].poison_counters = 10;
+    g.check_state_based_actions();
+    assert!(g.players[0].eliminated);
+    assert!(!g.players[1].eliminated);
 }

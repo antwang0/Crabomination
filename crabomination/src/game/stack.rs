@@ -4167,9 +4167,10 @@ impl GameState {
         // shared-pool (2HG) cases. When `Team.shared_life` is `Some(n)`,
         // both teammates' effective life is `n`, so dropping the pool
         // to ≤ 0 eliminates both members simultaneously (CR 810.8 +
-        // 704.5a). Poison stays per-player (CR 810.7b — 2HG shares
-        // life but not poison; an individual teammate hitting 10
-        // poison still loses).
+        // 704.5a). CR 810.5/810.8d — poison is likewise a shared team
+        // resource in 2HG: the members' counters are summed and the
+        // threshold is fifteen (`effective_poison` /
+        // `poison_loss_threshold` collapse both modes).
         let mut newly_eliminated: Vec<usize> = Vec::new();
         for i in 0..self.players.len() {
             if self.players[i].eliminated {
@@ -4188,7 +4189,7 @@ impl GameState {
             // (poison / commander losses still apply).
             let unlife = self.player_unlife_active(i);
             let lost = (self.effective_life(i) <= 0 && !unlife)
-                || self.players[i].poison_counters >= 10
+                || self.effective_poison(i) >= self.poison_loss_threshold(i)
                 || lost_to_commander;
             // CR 104.3d — a player who can't lose (Angel's Grace, Platinum
             // Angel, an opponent's Abyssal Persecutor) skips the loss SBAs;
@@ -4202,7 +4203,7 @@ impl GameState {
                 use crate::player::LossCause;
                 let cause = if self.effective_life(i) <= 0 && !unlife {
                     LossCause::LifeDepleted
-                } else if self.players[i].poison_counters >= 10 {
+                } else if self.effective_poison(i) >= self.poison_loss_threshold(i) {
                     LossCause::Poison
                 } else {
                     LossCause::CommanderDamage
