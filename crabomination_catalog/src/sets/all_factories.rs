@@ -10393,6 +10393,18 @@ static PLS: &[Factory] = &[
     super::pls::gainsay,
     super::pls::gerrards_command,
     super::pls::hobble,
+    super::pls::dralnus_crusade,
+    super::pls::falling_timber,
+    super::pls::honorable_scout,
+    super::pls::horned_kavu,
+    super::pls::hull_breach,
+    super::pls::hunting_drake,
+    super::pls::implode,
+    super::pls::insolence,
+    super::pls::kavu_recluse,
+    super::pls::keldon_mantle,
+    super::pls::lava_zombie,
+    super::pls::maggot_carrier,
 ];
 static APC2: &[Factory] = &[
     super::apc2::living_airship,

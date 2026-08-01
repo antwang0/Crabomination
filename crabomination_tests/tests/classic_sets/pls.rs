@@ -524,3 +524,150 @@ fn fleetfoot_panther_rebuys_a_green_creature() {
     cast(&mut g, 0, panther, None);
     assert!(g.players[0].hand.iter().any(|c| c.id == bears));
 }
+
+/// Dralnu's Crusade rebuilds every Goblin.
+#[test]
+fn dralnus_crusade_reshapes_goblins() {
+    let mut g = main_phase();
+    let goblin = g.add_card_to_battlefield(0, catalog::goblin_guide());
+    g.add_card_to_battlefield(0, catalog::dralnus_crusade());
+    let cp = g.computed_permanent(goblin).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert_eq!(cp.colors, vec![Color::Black]);
+    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Zombie));
+}
+
+/// Falling Timber fogs a second creature when kicked.
+#[test]
+fn falling_timber_kicked_fogs_two() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::forest());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let timber = g.add_card_to_hand(0, catalog::falling_timber());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: timber,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(0) },
+        Attack { attacker: b, target: AttackTarget::Player(0) },
+    ]))
+    .expect("attack");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "both attackers were fogged");
+}
+
+/// Honorable Scout pays two per black-or-red creature they have.
+#[test]
+fn honorable_scout_gains_per_black_or_red_creature() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::goblin_guide());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let scout = g.add_card_to_hand(0, catalog::honorable_scout());
+    cast(&mut g, 0, scout, Some(Target::Player(1)));
+    assert_eq!(g.players[0].life, 22, "one red creature");
+}
+
+/// Hunting Drake decks a red creature.
+#[test]
+fn hunting_drake_tucks_a_red_creature() {
+    let mut g = main_phase();
+    let goblin = g.add_card_to_battlefield(1, catalog::goblin_guide());
+    let drake = g.add_card_to_hand(0, catalog::hunting_drake());
+    cast(&mut g, 0, drake, Some(Target::Permanent(goblin)));
+    assert!(g.players[1].library.iter().any(|c| c.id == goblin));
+}
+
+/// Insolence bites the controller whenever the creature taps.
+#[test]
+fn insolence_bites_on_tap() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    let insolence = g.add_card_to_hand(0, catalog::insolence());
+    cast(&mut g, 0, insolence, Some(Target::Permanent(bears)));
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bears,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "tapping to attack cost them 2");
+}
+
+/// Kavu Recluse turns a land into a Forest.
+#[test]
+fn kavu_recluse_makes_a_forest() {
+    let mut g = main_phase();
+    let recluse = g.add_card_to_battlefield(0, catalog::kavu_recluse());
+    g.clear_sickness(recluse);
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    activate(&mut g, 0, recluse, 0, Some(Target::Permanent(island)));
+    assert!(
+        g.computed_permanent(island)
+            .unwrap()
+            .subtypes
+            .land_types
+            .contains(&crabomination::card::LandType::Forest)
+    );
+}
+
+/// Keldon Mantle lends trample for {G}.
+#[test]
+fn keldon_mantle_grants_trample() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mantle = g.add_card_to_hand(0, catalog::keldon_mantle());
+    cast(&mut g, 0, mantle, Some(Target::Permanent(bears)));
+    let mantle = g.battlefield.iter().find(|c| c.definition.name == "Keldon Mantle").unwrap().id;
+    activate(&mut g, 0, mantle, 2, None);
+    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::Trample));
+}
+
+/// Maggot Carrier bleeds the whole table.
+#[test]
+fn maggot_carrier_drains_everyone() {
+    let mut g = main_phase();
+    let carrier = g.add_card_to_hand(0, catalog::maggot_carrier());
+    cast(&mut g, 0, carrier, None);
+    assert_eq!(g.players[0].life, 19);
+    assert_eq!(g.players[1].life, 19);
+}
+
+/// Hull Breach's third mode gets both.
+#[test]
+fn hull_breach_both_mode() {
+    let mut g = main_phase();
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let pacifism = g.add_card_to_battlefield(1, catalog::pacifism());
+    let breach = g.add_card_to_hand(0, catalog::hull_breach());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: breach,
+        target: Some(Target::Permanent(ring)),
+        additional_targets: vec![Target::Permanent(pacifism)],
+        mode: Some(2),
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != ring && c.id != pacifism));
+}

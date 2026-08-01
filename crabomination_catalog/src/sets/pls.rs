@@ -8,7 +8,7 @@ use crate::card::{
     Value,
 };
 use crate::effect::{
-    Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest,
+    Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector, ZoneDest,
     shortcut::{draw, etb, target_any, target_filtered},
 };
 use crate::game::TurnStep;
@@ -665,5 +665,254 @@ pub fn hobble() -> CardDefinition {
             ..Default::default()
         }),
         ..enchantment("Hobble", cost(&[generic(2), w()]))
+    }
+}
+
+/// Dralnu's Crusade — {1}{B}{R}. Every Goblin is a bigger black Zombie.
+pub fn dralnus_crusade() -> CardDefinition {
+    let goblins = || Selector::EachPermanent(R::HasCreatureType(CreatureType::Goblin));
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "All Goblins get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: goblins(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "All Goblins are black.",
+                effect: StaticEffect::SetColorOfMatching {
+                    applies_to: goblins(),
+                    color: Color::Black,
+                },
+            },
+            StaticAbility {
+                description: "All Goblins are Zombies in addition to their other types.",
+                effect: StaticEffect::AddCreatureTypeToMatching {
+                    applies_to: goblins(),
+                    creature_type: CreatureType::Zombie,
+                },
+            },
+        ],
+        ..enchantment("Dralnu's Crusade", cost(&[generic(1), b(), r()]))
+    }
+}
+
+/// Falling Timber — {2}{G}. Kicker—Sacrifice a land for a second fog.
+pub fn falling_timber() -> CardDefinition {
+    CardDefinition {
+        kicker_action_cost: Some(AdditionalCastCost::SacrificePermanent {
+            filter: R::Land,
+            count: 1,
+        }),
+        ..instant(
+            "Falling Timber",
+            cost(&[generic(2), g()]),
+            Effect::Seq(vec![
+                Effect::PreventCombatDamageByTargetThisTurn { target: target_filtered(R::Creature) },
+                Effect::If {
+                    cond: Predicate::SpellWasKicked,
+                    then: Box::new(Effect::PreventCombatDamageByTargetThisTurn {
+                        target: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )
+    }
+}
+
+/// Honorable Scout — {W} 1/1 that punishes a black-red board.
+pub fn honorable_scout() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Times(
+                Box::new(Value::Const(2)),
+                Box::new(Value::PermanentCountControlledByMatching(
+                    PlayerRef::Target(0),
+                    R::Creature.and(R::HasColor(Color::Black).or(R::HasColor(Color::Red))),
+                )),
+            ),
+        })],
+        ..creature(
+            "Honorable Scout",
+            cost(&[w()]),
+            vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Scout],
+            1,
+            1,
+        )
+    }
+}
+
+/// Horned Kavu — {R}{G} 3/4 that rebuys an ETB.
+pub fn horned_kavu() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                R::Creature
+                    .and(R::ControlledByYou)
+                    .and(R::HasColor(Color::Red).or(R::HasColor(Color::Green))),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..creature("Horned Kavu", cost(&[r(), g()]), vec![CreatureType::Kavu], 3, 4)
+    }
+}
+
+/// Hull Breach — {R}{G}. One, the other, or both.
+pub fn hull_breach() -> CardDefinition {
+    sorcery(
+        "Hull Breach",
+        cost(&[r(), g()]),
+        Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(R::Artifact) },
+            Effect::Destroy { what: target_filtered(R::Enchantment) },
+            Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(R::Artifact) },
+                Effect::Destroy {
+                    what: Selector::TargetFiltered { slot: 1, filter: R::Enchantment },
+                },
+            ]),
+        ]),
+    )
+}
+
+/// Hunting Drake — {4}{U} 2/2 flier that decks a red or green creature.
+pub fn hunting_drake() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                R::Creature.and(R::HasColor(Color::Red).or(R::HasColor(Color::Green))),
+            ),
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                pos: LibraryPosition::Top,
+            },
+        })],
+        ..creature("Hunting Drake", cost(&[generic(4), u()]), vec![CreatureType::Drake], 2, 2)
+    }
+}
+
+/// Implode — {4}{R}. Land destruction that replaces itself.
+pub fn implode() -> CardDefinition {
+    sorcery(
+        "Implode",
+        cost(&[generic(4), r()]),
+        Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Land) },
+            draw(1),
+        ]),
+    )
+}
+
+/// Insolence — {2}{R} Aura. Tapping it costs its controller two.
+pub fn insolence() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::EnchantedBySource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::attached_to(
+                    Selector::This,
+                )))),
+                amount: Value::Const(2),
+            },
+        }],
+        ..enchantment("Insolence", cost(&[generic(2), r()]))
+    }
+}
+
+/// Kavu Recluse — {2}{R} 2/2 that turns a land into a Forest.
+pub fn kavu_recluse() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::BecomeBasicLand {
+                what: target_filtered(R::Land),
+                land_type: LandType::Forest,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Kavu Recluse", cost(&[generic(2), r()]), vec![CreatureType::Kavu], 2, 2)
+    }
+}
+
+/// Keldon Mantle — {1}{R} Aura. Three colours, three modes.
+pub fn keldon_mantle() -> CardDefinition {
+    let enchanted = || Selector::attached_to(Selector::This);
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[b()]),
+                effect: Effect::Regenerate { what: enchanted() },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[r()]),
+                effect: Effect::PumpPT {
+                    what: enchanted(),
+                    power: Value::ONE,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                effect: Effect::GrantKeyword {
+                    what: enchanted(),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..enchantment("Keldon Mantle", cost(&[generic(1), r()]))
+    }
+}
+
+/// Lava Zombie — {1}{B}{R} 4/3 that rebuys an ETB and firebreathes.
+pub fn lava_zombie() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                R::Creature
+                    .and(R::ControlledByYou)
+                    .and(R::HasColor(Color::Black).or(R::HasColor(Color::Red))),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Lava Zombie", cost(&[generic(1), b(), r()]), vec![CreatureType::Zombie], 4, 3)
+    }
+}
+
+/// Maggot Carrier — {B} 1/1 that bleeds the table on arrival.
+pub fn maggot_carrier() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::ONE,
+        })],
+        ..creature("Maggot Carrier", cost(&[b()]), vec![CreatureType::Zombie], 1, 1)
     }
 }

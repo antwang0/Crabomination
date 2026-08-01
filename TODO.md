@@ -25,14 +25,15 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Planeshift — in progress
 
-`set_gaps.py pls` is at **98** (132 → 112 → 98; `sets::pls`, tests in
+`set_gaps.py pls` is at **86** (132 → 112 → 98 → 86; `sets::pls`, tests in
 `classic_sets/pls`). New primitives: `LandType::Lair` and
 `Effect::SacrificeSourceUnlessReturn` (the bounce sibling of
 `SacrificeSourceUnlessSacrifice` — the Lair land cycle). Remaining is mostly the
 rest of the Lair cycle (Mossfire Valley, Rith's Grove), Draco's domain cost
-reduction and domain upkeep, Dralnu's Pet's discard-a-creature kicker, the
-Kavu / Rhystic cycle tails, Goblin Game and Guard Dogs' shares-a-color
-prevention.
+reduction and domain upkeep, Dralnu's Pet's discard-a-creature kicker, Forsaken
+City's exile-to-untap, Guard Dogs' shares-a-color prevention, Lashknife
+Barrier's damage-minus-one replacement, Keldon Twilight's no-attacks end step,
+and Goblin Game.
 
 ## Apocalypse — closed
 
