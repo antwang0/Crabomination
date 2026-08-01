@@ -1095,14 +1095,18 @@ fn opposition_taps_a_creature_to_tap_a_permanent() {
     assert!(g.battlefield_find(target).unwrap().tapped, "target permanent tapped");
 }
 
-/// CR 602.5b — a `wants_ui` activator chooses *which* of their creatures to
+/// CR 602.5b — a hand-paying activator chooses *which* of their creatures to
 /// tap for Opposition's "Tap an untapped creature you control" cost, rather
 /// than the engine auto-tapping the weakest. Activation suspends on a
 /// `ChooseTarget`; the chosen creature is the one tapped.
+///
+/// Gated on `manual_mana` rather than `wants_ui`; see
+/// `ashnods_altar_ui_activator_chooses_creature_to_sacrifice` for why.
 #[test]
 fn opposition_ui_activator_chooses_creature_to_tap() {
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
     let opp = g.add_card_to_battlefield(0, catalog::opposition());
     let tapper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let keep = g.add_card_to_battlefield(0, catalog::grizzly_bears());

@@ -23,14 +23,22 @@ fn ashnods_altar_sacrifices_a_creature_for_two_colorless() {
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "added two colorless");
 }
 
-/// CR 602.5b — a `wants_ui` activator chooses which creature to sacrifice for
+/// CR 602.5b — a hand-paying activator chooses which creature to sacrifice for
 /// an activated ability's "Sacrifice a creature" cost (Ashnod's Altar) instead
 /// of the engine auto-dumping the weakest. Activation suspends on a
 /// `ChooseTarget`; the chosen creature is the one sacrificed.
+///
+/// Gated on `manual_mana`, not `wants_ui` — bot seats set `wants_ui` to get
+/// their decisions surfaced, and offering *them* a cost-payment modal
+/// deadlocked games outright (the suspend returns `Ok`, so the bot committed
+/// an activation it couldn't pay for, and the failed replay was rolled back
+/// with the decision restored). A human seat sets both, as `run_match_inner`
+/// does.
 #[test]
 fn ashnods_altar_ui_activator_chooses_creature_to_sacrifice() {
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
     let altar = g.add_card_to_battlefield(0, catalog::ashnods_altar());
     let sacked = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let kept = g.add_card_to_battlefield(0, catalog::grizzly_bears());

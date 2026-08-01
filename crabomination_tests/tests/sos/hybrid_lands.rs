@@ -894,10 +894,17 @@ fn spirit_guide_activates_from_hand() {
 
 #[test]
 fn ui_player_x_spell_prompts_choose_amount() {
-    // A wants_ui player casting an {X} spell with no x_value gets a
+    // A hand-paying player casting an {X} spell with no x_value gets a
     // ChooseAmount suspend; the answered amount is the cast's X.
+    //
+    // Gated on `manual_mana`, not `wants_ui`: choosing X is paying a cost,
+    // and bot seats set `wants_ui` to get their decisions surfaced. Prompting
+    // them deadlocked games — the suspend returns `Ok`, so `would_accept`
+    // reported an unaffordable X spell as castable, and the failed replay was
+    // rolled back with the decision restored. A human seat sets both.
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
     let id = g.add_card_to_hand(0, catalog::wild_hypothesis());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(3);

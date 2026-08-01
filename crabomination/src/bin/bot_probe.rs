@@ -253,7 +253,10 @@ fn run(deck: &[CardFactory], games: usize, weights: EvalWeights, c: &mut Counts)
                 // passing, so one un-castable candidate deadlocks the game.
                 if stale >= 4 && let Err(e) = g.clone().perform_action(a.clone()) {
                     let ctx = match &g.pending_decision {
-                        Some(pd) => variant_name(&format!("{:?}", pd.decision)),
+                        Some(pd) => {
+                            let d = format!("{:?}", pd.decision);
+                            d.chars().take(150).collect::<String>()
+                        }
                         None => "no-decision".to_string(),
                     };
                     *c.stuck_actions

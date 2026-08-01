@@ -2146,15 +2146,18 @@ fn grim_lavamancer_activated_ability_deals_two_damage() {
     assert!(g.exile.len() >= 2, "Exile zone gained both cost-paid cards");
 }
 
-/// CR 602.5b — a `wants_ui` activator chooses which graveyard cards to exile
+/// CR 602.5b — a hand-paying activator chooses which graveyard cards to exile
 /// for Grim Lavamancer's "exile two cards from your graveyard" cost, via a
 /// `ChooseCards` modal, instead of the engine auto-exiling the cheapest.
+/// Gated on `manual_mana` rather than `wants_ui`; see
+/// `ashnods_altar_ui_activator_chooses_creature_to_sacrifice`.
 #[test]
 fn grim_lavamancer_ui_activator_chooses_graveyard_cards_to_exile() {
     let mut g = two_player_game();
     let lava = g.add_card_to_battlefield(0, catalog::grim_lavamancer());
     g.clear_sickness(lava);
     g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
     g.players[0].mana_pool.add(Color::Red, 1);
     // Three graveyard cards → a genuine choice (exile two of three).
     let a = g.add_card_to_graveyard(0, catalog::lightning_bolt());

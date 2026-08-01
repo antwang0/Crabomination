@@ -2984,15 +2984,27 @@ impl GameState {
                 }
             }
         }
-        // {X} cast costs: a `wants_ui` caster who didn't send an X picks one
-        // via a `ChooseAmount` modal (suspend + clean replay — nothing has
-        // been paid yet). Without this the client's `x_value: None` resolved
-        // every human-cast X spell at X=0 (a 0/0 Fractal Summoning token,
-        // a 0-card Mind Twist, …). Bots pass an explicit X.
+        // {X} cast costs: a hand-paying caster who didn't send an X picks
+        // one via a `ChooseAmount` modal (suspend + clean replay — nothing
+        // has been paid yet). Without this the client's `x_value: None`
+        // resolved every human-cast X spell at X=0 (a 0/0 Fractal Summoning
+        // token, a 0-card Mind Twist, …).
+        //
+        // Gated on [`manual_mana`], not `wants_ui`. Choosing X *is* paying a
+        // cost, so it belongs to the same population as hand-picking lands —
+        // and the two are not the same set, because bot seats set `wants_ui`
+        // to get their decisions surfaced. The old gate deadlocked bot games
+        // outright: the suspend returns `Ok`, so `would_accept` reported an
+        // unaffordable X spell as castable; the bot committed it, answered
+        // the modal, and the replayed cast then failed on mana or on timing.
+        // `perform_action`'s rollback restored the pending decision along
+        // with everything else, so the bot answered the same decision the
+        // same way forever. That livelocked ~14 % of cube games, and they
+        // were dropped from every ladder and recommender measurement.
         {
             let p = self.priority.player_with_priority;
             if x_value.is_none()
-                && self.players[p].wants_ui
+                && self.players[p].manual_mana
                 && let Some(card) = self.find_card_anywhere(card_id)
                 && (card.definition.cost.has_x() || card.definition.additional_cost_pay_x_life)
             {
@@ -7686,10 +7698,11 @@ impl GameState {
             },
         };
 
-        // {X} flashback costs: a `wants_ui` caster who didn't send an X
+        // {X} flashback costs: a hand-paying caster who didn't send an X
         // picks one via `ChooseAmount` (suspend + clean replay — nothing
-        // has been paid yet). Mirrors the cast_spell X prompt.
-        if flashback_cost.has_x() && x_value.is_none() && self.players[p].wants_ui {
+        // has been paid yet). Mirrors the cast_spell X prompt, including its
+        // [`manual_mana`] gate and the reason for it.
+        if flashback_cost.has_x() && x_value.is_none() && self.players[p].manual_mana {
             let max = self.max_prompt_x(p, &flashback_cost);
             let source_name = card.definition.name.to_string();
             self.pending_decision = Some(crate::game::types::PendingDecision {
@@ -11287,14 +11300,15 @@ impl GameState {
             }
         };
 
-        // {X} activation costs ({X}, {T}: … — Berta, Imbraham): a `wants_ui`
-        // activator who didn't send an X picks one via a `ChooseAmount`
-        // modal (suspend + clean replay — nothing has been paid yet).
-        // Bots pass an explicit X; the auto path keeps `x_value` as-is
-        // (unwrapped to 0 downstream, the historical behavior).
+        // {X} activation costs ({X}, {T}: … — Berta, Imbraham): a
+        // hand-paying activator who didn't send an X picks one via a
+        // `ChooseAmount` modal (suspend + clean replay — nothing has been
+        // paid yet). The auto path keeps `x_value` as-is (unwrapped to 0
+        // downstream, the historical behavior). [`manual_mana`] rather than
+        // `wants_ui` for the same reason as the cast_spell X prompt.
         if ability.mana_cost.has_x()
             && x_value.is_none()
-            && self.players[p].wants_ui
+            && self.players[p].manual_mana
         {
             let max = self.max_prompt_x(p, &ability.mana_cost);
             let source_name = self
@@ -11867,7 +11881,7 @@ impl GameState {
                     picks.extend(self.auto_pick_lowest_cmc_gy(p, &extra, count - picks.len()));
                 }
                 picks
-            } else if candidates.len() > count && self.players[p].wants_ui {
+            } else if candidates.len() > count && self.players[p].manual_mana {
                 let source_name = self
                     .battlefield_find(card_id)
                     .map(|c| c.definition.name.to_string())
@@ -12010,7 +12024,7 @@ impl GameState {
                 } else {
                     self.auto_pick_lowest_power(&candidates, count)
                 }
-            } else if count == 1 && candidates.len() > 1 && self.players[p].wants_ui {
+            } else if count == 1 && candidates.len() > 1 && self.players[p].manual_mana {
                 let source_name = self
                     .battlefield_find(card_id)
                     .map(|c| c.definition.name.to_string())
@@ -12043,7 +12057,7 @@ impl GameState {
 
         // Pre-flight tap-another gate (CR 602.5b): confirm an untapped
         // permanent (other than the source) the activator controls matches the
-        // cost's filter. A `wants_ui` activator with more than one candidate
+        // cost's filter. A hand-paying activator with more than one candidate
         // chooses which to tap (suspend + replay, like the sacrifice cost);
         // bots and the no-real-choice case tap the lowest-power match so
         // higher-value creatures stay open — *unless* the payoff scales with the
@@ -12083,7 +12097,7 @@ impl GameState {
                 } else {
                     auto_tap_pick(self, &candidates)
                 }
-            } else if candidates.len() > 1 && self.players[p].wants_ui {
+            } else if candidates.len() > 1 && self.players[p].manual_mana {
                 let source_name = self
                     .battlefield_find(card_id)
                     .map(|c| c.definition.name.to_string())
