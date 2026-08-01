@@ -4934,6 +4934,11 @@ pub struct CardInstance {
     /// creature"). Unlike `exiled_by`, the card never returns — this is a
     /// pure association used by counting effects. `None` for ordinary exile.
     pub exiled_with: Option<CardId>,
+    /// CR 706.8a — die results "stored" on this permanent (Centaur of
+    /// Attention). Every stored result on a card in the wild is a d6, so only
+    /// the value is noted; `Effect::RerollStoredResults` rolls the same kind
+    /// again.
+    pub stored_die_results: Vec<u8>,
     /// CR 702.46 — Cipher. While this card is exiled "encoded on" a creature,
     /// `encoded_on` holds that creature's id. Whenever the encoded creature
     /// deals combat damage to a player, the controller may cast a free copy of
@@ -5232,6 +5237,7 @@ impl CardInstance {
             must_block: None,
             exiled_by: None,
             exiled_with: None,
+            stored_die_results: Vec::new(),
             encoded_on: None,
             granted_flashback_eot: None,
             granted_harmonize_eot: None,

@@ -4423,6 +4423,7 @@ static DECKS: &[Factory] = &[
     super::decks::goblin_welder,
     super::decks::paradox_haze,
     super::decks::gilt_leaf_archdruid,
+    super::decks::centaur_of_attention,
     super::decks::squee_the_immortal,
     super::decks::dark_depths,
     super::decks::smokestack,

@@ -522,6 +522,16 @@ impl GameState {
     /// Shares `ask_seat_bool`'s replay-log contract — pass one `cursor` per
     /// run, keep side effects after the final ask, and `clear_answer_log()`
     /// on every completing path.
+    /// CR 706.1 — one die roll routed through the decider, clamped to the
+    /// die's face range. Shared by `Effect::RollDie` and the CR 706.8 stored-
+    /// result effects.
+    pub(crate) fn roll_one_die(&mut self, player: usize, sides: u8) -> u8 {
+        match self.decider.decide(&crate::decision::Decision::DieRoll { player, sides }) {
+            crate::decision::DecisionAnswer::DieRoll(face) => face.clamp(1, sides),
+            _ => (sides as u32).div_ceil(2) as u8,
+        }
+    }
+
     pub(crate) fn ask_seat_amount(
         &mut self,
         cursor: &mut usize,
@@ -1854,6 +1864,58 @@ impl GameState {
                     }
                     if !found {
                         break;
+                    }
+                }
+                Ok(())
+            }
+
+            // CR 706.8a — roll and note the results on the permanent.
+            Effect::RollAndStoreDice { what, count, sides } => {
+                let n = self.evaluate_value(count, ctx).max(0);
+                let sides = (*sides).max(2);
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    for _ in 0..n {
+                        let face = self.roll_one_die(ctx.controller, sides);
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.stored_die_results.push(face);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            // CR 706.8b — reroll any number of the stored results. An auto
+            // seat keeps the most common value and rerolls everything else.
+            Effect::RerollStoredResults { what } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    let Some(stored) =
+                        self.battlefield_find(id).map(|c| c.stored_die_results.clone())
+                    else {
+                        continue;
+                    };
+                    let keep = (1..=20u8)
+                        .max_by_key(|f| stored.iter().filter(|r| *r == f).count())
+                        .unwrap_or(1);
+                    let mut next: Vec<u8> = Vec::with_capacity(stored.len());
+                    for face in stored {
+                        if face == keep {
+                            next.push(face);
+                        } else {
+                            next.push(self.roll_one_die(ctx.controller, 6));
+                        }
+                    }
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.stored_die_results = next;
                     }
                 }
                 Ok(())

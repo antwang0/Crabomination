@@ -278,9 +278,26 @@ pub struct HandAffordances {
     pub spliceable: Vec<(CardId, Vec<CardId>)>,
 }
 
+/// CR 802 / 803 — the multiplayer attack option in force.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum AttackOption {
+    /// CR 802 — every opponent is a defending player (the default).
+    #[default]
+    MultiplePlayers,
+    /// CR 803.1a — only the nearest living opponent to your left.
+    AttackLeft,
+    /// CR 803.1b — only the nearest living opponent to your right.
+    AttackRight,
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct GameState {
     pub players: Vec<Player>,
+    /// CR 802 / 803 — which opponents the active player may attack. Free-for-All
+    /// defaults to `AttackMultiplePlayers` (CR 806.2b); the seat-order options
+    /// restrict every attack to the nearest living opponent in one direction.
+    #[serde(default)]
+    pub attack_option: AttackOption,
     /// Partition of seats into teams. Every seat appears in exactly one
     /// entry; free-for-all formats have one singleton team per seat,
     /// team formats (Two-Headed Giant) have multiple seats per team.
@@ -1530,6 +1547,7 @@ impl Clone for GameState {
     fn clone(&self) -> Self {
         Self {
             players: self.players.clone(),
+            attack_option: self.attack_option,
             teams: self.teams.clone(),
             battlefield: self.battlefield.clone(),
             phased_out: self.phased_out.clone(),
@@ -1773,6 +1791,7 @@ impl GameState {
             .collect();
         Self {
             players,
+            attack_option: AttackOption::default(),
             teams,
             battlefield: CowBox::default(),
             phased_out: CowBox::default(),

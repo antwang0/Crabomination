@@ -153,6 +153,12 @@ impl GameState {
         }
         let p = self.active_player_idx;
 
+        // CR 803.1a/b — under the attack-left / attack-right option, the only
+        // legal defending player is the nearest living opponent in that
+        // direction (and "more than one seat away" means you can't attack at
+        // all, which falls out of the same walk).
+        let seat_restriction = self.attack_left_right_defender();
+
         // Validate every attack target up-front. The defender must be an
         // *opponent* — not self, not a teammate. `same_team` returns true
         // for `a == b`, so this single check rules out both cases. In
@@ -165,6 +171,7 @@ impl GameState {
                     if target_player >= self.players.len()
                         || self.same_team(self.active_player_idx, target_player)
                         || !self.players[target_player].is_alive()
+                        || seat_restriction.is_some_and(|only| only != Some(target_player))
                     {
                         return Err(GameError::InvalidAttackTarget(target_player));
                     }
@@ -176,6 +183,7 @@ impl GameState {
                     if !pw.definition.is_planeswalker()
                         || self.same_team(self.active_player_idx, pw.controller)
                         || !self.players[pw.controller].is_alive()
+                        || seat_restriction.is_some_and(|only| only != Some(pw.controller))
                     {
                         return Err(GameError::InvalidPlaneswalkerAttackTarget(pw_id));
                     }
@@ -1921,6 +1929,46 @@ impl GameState {
     /// CR 702.15 — does `defender` control a land with the given land type?
     /// Reads printed land subtypes (Forest/Island/…), so dual lands and
     /// nonbasics with the type count.
+    /// CR 802 / 803 — the seats `seat` may legally declare attacks against
+    /// right now. Empty when it isn't `seat`'s combat, and narrowed to one
+    /// entry (or none) by the attack-left / attack-right option.
+    pub fn attackable_players_for(&self, seat: usize) -> Vec<usize> {
+        if self.active_player_idx != seat {
+            return Vec::new();
+        }
+        let restriction = self.attack_left_right_defender();
+        (0..self.players.len())
+            .filter(|p| {
+                self.players[*p].is_alive()
+                    && !self.same_team(seat, *p)
+                    && restriction.is_none_or(|only| only == Some(*p))
+            })
+            .collect()
+    }
+
+    /// CR 803.1a/b — the single seat the active player may attack under the
+    /// attack-left / attack-right option. `None` means no restriction (CR 802);
+    /// `Some(None)` means "no legal defender" (the nearest living opponent is
+    /// more than one seat away, so this player can't attack at all).
+    fn attack_left_right_defender(&self) -> Option<Option<usize>> {
+        let step: isize = match self.attack_option {
+            crate::game::AttackOption::MultiplePlayers => return None,
+            crate::game::AttackOption::AttackLeft => 1,
+            crate::game::AttackOption::AttackRight => -1,
+        };
+        let n = self.players.len() as isize;
+        if n < 2 {
+            return Some(None);
+        }
+        let me = self.active_player_idx as isize;
+        let neighbor = ((me + step).rem_euclid(n)) as usize;
+        // "More than one seat away" — the adjacent seat has to be a living
+        // opponent, otherwise this player has no legal defender.
+        (self.players[neighbor].is_alive() && !self.same_team(self.active_player_idx, neighbor))
+            .then_some(Some(neighbor))
+            .or(Some(None))
+    }
+
     fn defender_controls_land_type(
         &self,
         defender: usize,

@@ -546,6 +546,10 @@ pub enum Value {
     /// `Effect::RevealRandomFromHand` (the Planeswalker's cycle's X). 0 when
     /// nothing was revealed this resolution.
     LastRevealedManaValue,
+    /// CR 706.8c — the greatest number of `Selector::This`'s stored die
+    /// results that share a value (Centaur of Attention's +X/+X). 0 with no
+    /// stored results.
+    GreatestSameStoredResult,
     /// Distinct card types across every graveyard (Altar of the Goyf,
     /// Lhurgoyf-style counts as a spell value).
     CardTypesInAllGraveyards,
@@ -7163,6 +7167,13 @@ pub enum Effect {
     /// "Choose a card at random that was exiled with this source. Put it into
     /// its owner's hand" (Skyship Weatherlight's `{4}, {T}`).
     ReturnRandomExiledWithSource,
+    /// CR 706.8a — "roll `count` `sides`-sided dice and store those results on
+    /// `what`" (Centaur of Attention's ETB).
+    RollAndStoreDice { what: Selector, count: Value, sides: u8 },
+    /// CR 706.8b — "you may reroll any number of `what`'s stored results."
+    /// The chooser is asked yes/no per result; an auto seat rerolls anything
+    /// below the current most-common value.
+    RerollStoredResults { what: Selector },
     /// CR 614.9 — "The next time damage would be dealt to `what` this turn,
     /// that damage is dealt to `to` instead" (Mirrorwood Treefolk). A one-shot
     /// per-permanent redirect consumed by the first damage event.

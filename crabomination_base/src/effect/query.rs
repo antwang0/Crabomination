@@ -1222,6 +1222,10 @@ impl Effect {
             Effect::SearchExileLinked { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
+            Effect::RollAndStoreDice { what, count, .. } => {
+                sel_has_target(what) || value_has_target(count)
+            }
+            Effect::RerollStoredResults { what } => sel_has_target(what),
             Effect::RedirectNextDamageTo { what, to } => {
                 sel_has_target(what) || sel_has_target(to)
             }

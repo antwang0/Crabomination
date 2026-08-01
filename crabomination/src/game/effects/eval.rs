@@ -721,6 +721,18 @@ impl GameState {
                 self.distinct_card_types_in_all_graveyards() as i32
             }
             Value::LastDiscardedCardTypes => self.last_discarded_card_types as i32,
+            Value::GreatestSameStoredResult => ctx
+                .source
+                .and_then(|id| self.battlefield_find(id))
+                .map(|c| {
+                    let mut best = 0;
+                    for face in 1..=20u8 {
+                        let n = c.stored_die_results.iter().filter(|r| **r == face).count();
+                        best = best.max(n);
+                    }
+                    best as i32
+                })
+                .unwrap_or(0),
             Value::LastRevealedManaValue => {
                 self.last_revealed_from_hand.map(|(_, mv)| mv).unwrap_or(0) as i32
             }

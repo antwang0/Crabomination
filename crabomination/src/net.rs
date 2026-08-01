@@ -254,6 +254,12 @@ pub struct ClientView {
     /// for snapshot back-compat.
     #[serde(default)]
     pub extra_phase: bool,
+    /// CR 802 / 803 — the seats the viewer may legally declare attacks
+    /// against right now (empty off your own turn, or when the attack-left /
+    /// attack-right option leaves you no legal defender). Lets the client grey
+    /// out illegal defenders instead of round-tripping a rejected declaration.
+    #[serde(default)]
+    pub attackable_players: Vec<usize>,
     pub players: Vec<PlayerView>,
     pub battlefield: Vec<PermanentView>,
     pub stack: Vec<StackItemView>,
@@ -1401,6 +1407,10 @@ pub struct PermanentView {
     pub owner: usize,
     pub card_types: Vec<CardType>,
     pub tapped: bool,
+    /// CR 706.8a — die results stored on this permanent (Centaur of
+    /// Attention), so the client can render the noted faces.
+    #[serde(default)]
+    pub stored_die_results: Vec<u8>,
     pub damage: u32,
     /// True if this permanent was dealt damage this turn (distinct from
     /// currently-*marked* `damage`, which clears on heal/regen). Lets the

@@ -165,6 +165,7 @@ mod tests {
             step: TurnStep::PreCombatMain,
             turn: 1,
             extra_phase: false,
+            attackable_players: Vec::new(),
             permanents_to_graveyard_this_turn: 0,
             players: vec![PlayerView {
                 prevention_remaining: None,

@@ -176,3 +176,49 @@ pub fn gilt_leaf_archdruid() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Centaur of Attention — {3}{G}{G} 3/3. CR 706.8: it stores five d6 results,
+/// rerolls them each combat, and grows by its biggest matching set.
+pub fn centaur_of_attention() -> CardDefinition {
+    CardDefinition {
+        name: "Centaur of Attention",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Performer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::RollAndStoreDice {
+                    what: Selector::This,
+                    count: Value::Const(5),
+                    sides: 6,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::MayDo {
+                    description: "Reroll any number of stored results?".into(),
+                    body: Box::new(Effect::RerollStoredResults { what: Selector::This }),
+                },
+            },
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "Centaur of Attention gets +X/+X, where X is the greatest number of \
+                          stored results on it of the same value.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::GreatestSameStoredResult,
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}

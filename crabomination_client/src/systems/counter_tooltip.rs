@@ -183,6 +183,18 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(String::from("Legendary"));
     }
 
+    // CR 706.8 — die results stored on the permanent (Centaur of Attention).
+    // The faces themselves are the board read: the card's P/T bonus is the
+    // size of its biggest matching set, so show both.
+    if !p.stored_die_results.is_empty() {
+        let faces: Vec<String> = p.stored_die_results.iter().map(|r| r.to_string()).collect();
+        let best = (1..=20u8)
+            .map(|f| p.stored_die_results.iter().filter(|r| **r == f).count())
+            .max()
+            .unwrap_or(0);
+        lines.push(format!("Stored rolls: {} (best set ×{best})", faces.join(" ")));
+    }
+
     // Chosen color for "choose-a-color" mana rocks (Coldsteel Heart): show
     // which color this source now taps for.
     if let Some(c) = p.chosen_color {
@@ -1468,6 +1480,7 @@ mod tests {
 
     fn make_permanent_view(damage: u32, toughness: i32) -> PermanentView {
         PermanentView {
+            stored_die_results: Vec::new(),
             prevention_remaining: None,
             prevention_source_colors: Vec::new(),
             prevention_next_instances: 0,
@@ -2098,5 +2111,15 @@ mod tests {
     fn modular_and_sunburst_have_reminders() {
         assert!(keyword_reminder(&Keyword::Modular(3)).unwrap().contains("+1/+1 counters"));
         assert!(keyword_reminder(&Keyword::Sunburst).unwrap().contains("color of mana spent"));
+    }
+
+    /// CR 706.8 — stored die results show their faces and the biggest set.
+    #[test]
+    fn stored_die_results_show_faces_and_best_set() {
+        let mut p = make_permanent_view(0, 2);
+        p.stored_die_results = vec![3, 5, 3, 1, 3];
+        let body = build_tooltip_body(&p).unwrap();
+        assert!(body.contains("Stored rolls: 3 5 3 1 3"), "{body}");
+        assert!(body.contains("best set ×3"), "{body}");
     }
 }

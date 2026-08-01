@@ -751,7 +751,10 @@ pub fn update_player_chip_target_outline(
         } else if targeting_active {
             true
         } else if attack_pick {
-            panel.seat != your_seat
+            // CR 802 / 803 — only the seats the server says are legal
+            // defenders pulse (excludes teammates, and the single legal seat
+            // under the attack-left / attack-right options).
+            cv.attackable_players.contains(&panel.seat)
         } else {
             false
         };

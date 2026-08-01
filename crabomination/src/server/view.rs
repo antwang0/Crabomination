@@ -58,6 +58,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         step: state.step,
         turn: state.turn_number,
         extra_phase: is_extra_phase(state),
+        attackable_players: viewer.map(|s| state.attackable_players_for(s)).unwrap_or_default(),
         players: state
             .players
             .iter()
@@ -1270,6 +1271,7 @@ fn project_permanent(
         .iter()
         .any(|s| s.target == PreventionTarget::Permanent(card.id) && s.destroy);
     PermanentView {
+        stored_die_results: card.stored_die_results.clone(),
         id: card.id,
         name: card.definition.name.to_string(),
         controller: card.controller,
