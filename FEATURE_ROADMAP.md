@@ -1744,6 +1744,23 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `CountersOn`'s LKI/zone fallback chain and counts keyword counters, and
   `Keyword::CantBeBlockedIfDefenderControls` is mirrored into
   `blocker_can_block_attacker`.
+- **Masques block complete, and the Apocalypse opening (modern_decks —
+  Prophecy wave 4 + APC waves 1-2):** MMQ / NMS / PCY all report zero
+  `set_gaps.py` gaps. The Prophecy closure added
+  `Keyword::AttackBlockCostTapAnother` (CR 508.1g/509.1b — a tap-a-spare-body
+  attack/block cost, honoured by `legal_attackers` / `legal_blockers` too),
+  `StaticEffect::ActivationAdditionalSacrifice` (CR 602.5b — a static that
+  bolts "Sacrifice a [filter]" onto matching permanents' activations),
+  `StaticEffect::GrantKeywordWhileControllerControlsAtMost` (a grant gated on
+  each recipient's *own* controller's board),
+  `Effect::{HighestLifeWinsElseDraw, ExileTokensSharingNameWith,
+  RedirectNextDamageBackAtSource}` and `CounterType::Omen`. APC added
+  `CardDefinition.opponent_discard_deploys` (CR 614) and
+  `Effect::BecomeChosenCreatureType`. Also new: CR 702.161 living metal and
+  CR 702.162 / 701.28 convert (`AlternativeCost.converted` — `sets::bot`).
+  Structural: the eight attacker-independent blocker gates now live in one
+  `blocker_side_gates_allow_block`, shared by the affordance scan and the
+  per-pair check (the scan had been missing all of them, Decayed included).
 
 ## Tier 1 — High-leverage engine primitives
 
