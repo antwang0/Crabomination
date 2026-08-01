@@ -5232,7 +5232,7 @@ impl GameState {
             return Err(GameError::SpellNameLocked);
         }
 
-        // CR 601.2b — interactive additional-cost choices for a `wants_ui`
+        // CR 601.2b — interactive additional-cost choices for a hand-paying
         // caster on the plain cast path: which permanent to sacrifice
         // ("sacrifice a …" — Crop Rotation, Reckless Abandon) or which card to
         // discard ("discard a card" — Big Score, Illuminate History) instead of
@@ -5243,7 +5243,14 @@ impl GameState {
         // choice is surfaced (more legal options than required); lone options
         // and multi-count costs keep the auto-pick. The alt-cost / convoke /
         // delve paths are excluded so their own choice plumbing isn't disturbed.
-        if self.players[p].wants_ui
+        //
+        // [`manual_mana`], not `wants_ui`: an additional cost is a cost, and
+        // prompting a bot for one livelocks the game (see the {X} prompt in
+        // `cast_spell` for the full chain). This was the residual 1-in-96
+        // deadlock left after the {X} and ability-cost gates were fixed —
+        // Bonfire of the Damned and friends, whose discard cost suspended a
+        // cast the bot could not actually pay for.
+        if self.players[p].manual_mana
             && convoke_creatures.is_empty()
             && delve_cards.is_empty()
             && !buyback

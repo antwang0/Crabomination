@@ -260,7 +260,10 @@ fn big_score_discards_one_creates_two_treasures_draws_two() {
 #[test]
 fn big_score_ui_caster_chooses_which_card_to_discard() {
     let mut g = two_player_game();
+    // See `crop_rotation_ui_player_picks_which_land_to_sacrifice` — the
+    // CR 601.2b additional-cost prompt keys on `manual_mana`.
     g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
     g.add_card_to_library(0, catalog::island());
     g.add_card_to_library(0, catalog::forest());
     // Two discardable cards → a genuine choice (the card being cast is excluded).

@@ -354,7 +354,12 @@ fn crop_rotation_sacrifices_land_and_searches_for_one() {
 #[test]
 fn crop_rotation_ui_player_picks_which_land_to_sacrifice() {
     let mut g = two_player_game();
+    // A human seat sets both, as `run_match_inner` does. The CR 601.2b
+    // additional-cost prompt is gated on `manual_mana`, not `wants_ui`:
+    // bot seats set `wants_ui` to get their decisions surfaced, and
+    // prompting them for a *cost* livelocked games.
     g.players[0].wants_ui = true;
+    g.players[0].manual_mana = true;
     // Two legal lands → a real choice.
     let forest = g.add_card_to_battlefield(0, catalog::forest());
     let island = g.add_card_to_battlefield(0, catalog::island());
