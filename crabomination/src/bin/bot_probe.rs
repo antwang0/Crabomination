@@ -21,10 +21,12 @@
 use std::collections::BTreeMap;
 
 use crabomination::card::CardDefinition;
-use crabomination::cube::CardFactory;
+use crabomination::cube::{CardFactory, cube_deck, random_color_pair};
 use crabomination::game::{GameAction, GameState};
 use crabomination::player::Player;
 use crabomination::server::{Bot, EvalWeights, RandomBot};
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 
 /// Decision variants the bot answers with its own policy. Everything else
@@ -161,6 +163,19 @@ struct Counts {
     /// How often we held back at least one eligible attacker.
     attack_combats: usize,
     attack_combats_all_in: usize,
+    /// How each game ended. `stale` is the one that matters: eight
+    /// consecutive rounds in which *neither* bot could act is a deadlock,
+    /// not a long game, and it silently drops the game from every
+    /// measurement built on simulated play — the ladder's win rates and the
+    /// card recommender's per-slot attribution alike.
+    ended_decided: usize,
+    ended_action_cap: usize,
+    ended_stale: usize,
+    /// Where the deadlocked games got stuck, keyed by "step / turn band".
+    stall_sites: BTreeMap<String, usize>,
+    /// What the bot kept proposing once a game was wedged, and the engine's
+    /// rejection reason.
+    stuck_actions: BTreeMap<String, usize>,
     /// How many combats had a given (attackers x available blockers) size.
     /// The search only has room to work where this product exceeds 1.
     combat_shapes: BTreeMap<(usize, usize), usize>,
@@ -226,7 +241,25 @@ fn run(deck: &[CardFactory], games: usize, weights: EvalWeights, c: &mut Counts)
                         .entry(variant_name(&format!("{:?}", pd.decision)))
                         .or_default() += 1;
                 }
-                let Some(a) = bot.next_action(&g, s) else { continue };
+                let Some(a) = bot.next_action(&g, s) else {
+                    if stale >= 4 {
+                        *c.stuck_actions.entry(format!("seat{s} -> None")).or_default() += 1;
+                    }
+                    continue;
+                };
+                // Once the game is visibly wedged, record what the bot keeps
+                // proposing and why the engine keeps refusing it. A rejected
+                // action leaves `any` false, and the bot never falls back to
+                // passing, so one un-castable candidate deadlocks the game.
+                if stale >= 4 && let Err(e) = g.clone().perform_action(a.clone()) {
+                    let ctx = match &g.pending_decision {
+                        Some(pd) => variant_name(&format!("{:?}", pd.decision)),
+                        None => "no-decision".to_string(),
+                    };
+                    *c.stuck_actions
+                        .entry(format!("{:?} / {} / {:?} -> {e:?}", g.step, ctx, action_kind(&a)))
+                        .or_default() += 1;
+                }
                 if observing && g.pending_decision.is_none() && g.active_player_idx != s {
                     c.opp_windows += 1;
                     if g
@@ -321,6 +354,20 @@ fn run(deck: &[CardFactory], games: usize, weights: EvalWeights, c: &mut Counts)
             }
             if any { stale = 0 } else { stale += 1 }
         }
+        if g.is_game_over() {
+            c.ended_decided += 1;
+        } else if stale >= 8 {
+            c.ended_stale += 1;
+            let band = match g.turn_number {
+                0..=10 => "t<=10",
+                11..=25 => "t11-25",
+                26..=60 => "t26-60",
+                _ => "t>60",
+            };
+            *c.stall_sites.entry(format!("{:?} / {band}", g.step)).or_default() += 1;
+        } else {
+            c.ended_action_cap += 1;
+        }
         c.turns += g.turn_number;
         c.games += 1;
     }
@@ -331,6 +378,7 @@ fn main() {
     let mut games = 40usize;
     let mut which: Option<String> = None;
     let mut profile = "baseline".to_string();
+    let mut seed = 23u64;
     let mut i = 0;
     while i < argv.len() {
         let val = || argv.get(i + 1).cloned().unwrap_or_default();
@@ -338,9 +386,11 @@ fn main() {
             "--games" => games = val().parse().unwrap_or(games),
             "--deck" => which = Some(val()),
             "--profile" => profile = val(),
+            "--seed" => seed = val().parse().unwrap_or(seed),
             "-h" | "--help" => {
                 println!(
                     "bot_probe [--deck NAME] [--games N] [--profile baseline|combat]\n\
+                     [--seed N, matches bot_ladder's cube decks]\n\
                      decks: {}",
                     DECKS.join(", ")
                 );
@@ -368,6 +418,38 @@ fn main() {
         }
     };
 
+    if which.as_deref() == Some("cube") {
+        // Same construction the ladder uses, so stall rates are comparable
+        // between the two tools.
+        let mut rng = StdRng::seed_from_u64(seed ^ 0xC0BE_5EED);
+        let mut c = Counts::default();
+        for i in 0..8 {
+            let colors = random_color_pair(&mut rng);
+            let d = cube_deck(colors, &mut rng);
+            let mut one = Counts::default();
+            run(&d, games, weights, &mut one);
+            println!(
+                "pair {i} {colors:?}: {} decided, {} cap, {} DEADLOCKED",
+                one.ended_decided, one.ended_action_cap, one.ended_stale
+            );
+            for (k, v) in &one.stall_sites {
+                println!("    stuck at {k:<28} {v:>5}");
+            }
+            c.ended_decided += one.ended_decided;
+            c.ended_action_cap += one.ended_action_cap;
+            c.ended_stale += one.ended_stale;
+            c.games += one.games;
+            c.turns += one.turns;
+            for (k, v) in one.stall_sites {
+                *c.stall_sites.entry(k).or_default() += v;
+            }
+            for (k, v) in one.stuck_actions {
+                *c.stuck_actions.entry(k).or_default() += v;
+            }
+        }
+        report("cube", &c, &profile);
+        return;
+    }
     let decks: Vec<&str> = match &which {
         Some(n) => vec![n.as_str()],
         None => DECKS.to_vec(),
@@ -381,12 +463,29 @@ fn main() {
         run(&d, games, weights, &mut c);
     }
 
+    report(&decks.join("+"), &c, &profile);
+}
+
+fn report(decks: &str, c: &Counts, profile: &str) {
+    println!("profile={profile} decks={decks} games={} turns={}\n", c.games, c.turns);
     println!(
-        "profile={profile} decks={} games={} turns={}\n",
-        decks.join("+"),
-        c.games,
-        c.turns
+        "games ended: {} decided, {} action cap, {} DEADLOCKED ({:.1}%)",
+        c.ended_decided,
+        c.ended_action_cap,
+        c.ended_stale,
+        100.0 * c.ended_stale as f64 / c.games.max(1) as f64,
     );
+    for (k, v) in &c.stall_sites {
+        println!("  stuck at {k:<28} {v:>5}");
+    }
+    if !c.stuck_actions.is_empty() {
+        println!("  what the bot kept proposing while wedged:");
+        let mut v: Vec<_> = c.stuck_actions.iter().collect();
+        v.sort_by_key(|(_, n)| std::cmp::Reverse(**n));
+        for (k, n) in v.iter().take(12) {
+            println!("    {k:<70} {n:>6}");
+        }
+    }
     println!(
         "opponent-turn priority windows: {} ({} with mana up, {:.0}%)",
         c.opp_windows,
