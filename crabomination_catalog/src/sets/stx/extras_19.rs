@@ -1027,6 +1027,7 @@ fn journey_to_the_oracle() -> CardDefinition {
                 tapped: false,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
             Effect::If {
                 cond: Predicate::SelectorCountAtLeast {

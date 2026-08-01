@@ -4003,6 +4003,7 @@ pub fn pupu_ufo() -> CardDefinition {
                     tapped: false,
                     haste: false,
                     sacrifice_eot: false,
+                return_eot: false,
                 },
                 ..Default::default()
             },
@@ -7580,6 +7581,7 @@ pub fn summoners_grimoire() -> CardDefinition {
                     tapped: false,
                     haste: false,
                     sacrifice_eot: false,
+                return_eot: false,
                 },
             }],
             ..Default::default()

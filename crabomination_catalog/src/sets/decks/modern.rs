@@ -40498,6 +40498,7 @@ pub fn sneak_attack() -> CardDefinition {
                 tapped: false,
                 haste: true,
                 sacrifice_eot: true,
+                return_eot: false,
             },
             ..Default::default()
         }],
@@ -40520,6 +40521,7 @@ pub fn through_the_breach() -> CardDefinition {
             tapped: false,
             haste: true,
             sacrifice_eot: true,
+                return_eot: false,
         },
         ..Default::default()
     }
@@ -40548,6 +40550,7 @@ pub fn elvish_piper() -> CardDefinition {
                 tapped: false,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
             ..Default::default()
         }],
@@ -40572,6 +40575,7 @@ pub fn quicksilver_amulet() -> CardDefinition {
                 tapped: false,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
             ..Default::default()
         }],
@@ -40620,6 +40624,7 @@ pub fn goblin_lackey() -> CardDefinition {
                 tapped: false,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
         }],
         ..Default::default()
@@ -40650,6 +40655,7 @@ pub fn warren_instigator() -> CardDefinition {
                 tapped: false,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
         }],
         ..Default::default()
@@ -44685,6 +44691,7 @@ pub fn uro_titan_of_natures_wrath() -> CardDefinition {
             tapped: false,
             haste: false,
             sacrifice_eot: false,
+                return_eot: false,
         },
     ]);
     CardDefinition {
@@ -48103,6 +48110,7 @@ pub fn tooth_and_nail() -> CardDefinition {
                 tapped: false,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
         ]),
         ..Default::default()
@@ -52028,6 +52036,7 @@ pub fn aether_vial() -> CardDefinition {
                 tapped: false,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
             ..Default::default()
         }],
@@ -53497,6 +53506,7 @@ pub fn ugin_the_spirit_dragon() -> CardDefinition {
                         tapped: false,
                         haste: false,
                         sacrifice_eot: false,
+                return_eot: false,
                     },
                 ]),
                 ..Default::default()
@@ -53776,6 +53786,7 @@ pub fn sorin_imperious_bloodlord() -> CardDefinition {
                     tapped: false,
                     haste: false,
                     sacrifice_eot: false,
+                return_eot: false,
                 },
                 ..Default::default()
             },

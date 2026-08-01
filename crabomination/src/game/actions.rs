@@ -1292,7 +1292,8 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce
         | ManaPayload::AnyTypeTriggerSourceProduces
-        | ManaPayload::AnyColorAmongLegendaries => true,
+        | ManaPayload::AnyColorAmongLegendaries
+        | ManaPayload::AnyColorAmongYourPermanents => true,
         ManaPayload::Colors(cs) => cs.len() > 1,
         ManaPayload::OfColors(cs, _) => cs.len() > 1,
         ManaPayload::OfColor(_, _)
@@ -2137,6 +2138,7 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             | ManaPayload::AnyColorYouCouldProduce => true,
             // Color set depends on live board state — not auto-tapped.
             ManaPayload::AnyColorAmongLegendaries
+            | ManaPayload::AnyColorAmongYourPermanents
             | ManaPayload::AnyTypeTriggerSourceProduces => false,
             // Devotion-scaled: it can make `color`, but only the controller
             // should choose to tap it (devotion may be 0). Not auto-tapped.

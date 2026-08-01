@@ -2945,6 +2945,7 @@ impl GameState {
         self.attack_tax_this_turn = 0;
         self.block_tax_this_turn = 0;
         self.damage_redirect_this_turn.clear();
+        self.next_damage_redirect.clear();
         self.combat_damage_redirect_this_turn.clear();
         self.doubled_damage_sources_this_turn.clear();
         self.damaged_creatures_die_this_turn = false;

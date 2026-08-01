@@ -133,6 +133,7 @@ pub fn walking_atlas() -> CardDefinition {
                 tapped: false,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
             ..Default::default()
         }],

@@ -229,6 +229,7 @@ pub fn patron_of_the_moon() -> CardDefinition {
                 tapped: true,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
             ..Default::default()
         }],
@@ -3880,6 +3881,7 @@ pub fn loam_dweller() -> CardDefinition {
                 tapped: true,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
         )],
         ..Default::default()
@@ -5924,6 +5926,7 @@ pub fn budoka_gardener() -> CardDefinition {
                     tapped: false,
                     haste: false,
                     sacrifice_eot: false,
+                return_eot: false,
                 },
                 Effect::If {
                     cond: Predicate::ValueAtLeast(lands_you_control(), Value::Const(10)),

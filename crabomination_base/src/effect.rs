@@ -2044,6 +2044,9 @@ pub enum ManaPayload {
     /// you control (Mox Amber). The legal-color set is the union of those
     /// permanents' colors; produces nothing when empty.
     AnyColorAmongLegendaries,
+    /// "Choose a color of a permanent you control. Add one mana of that color"
+    /// (Meteor Crater). Colorless-only boards produce nothing.
+    AnyColorAmongYourPermanents,
     /// Player chooses a color, then adds mana of that color equal to their
     /// devotion to it (CR 700.5). Nykthos, Shrine to Nyx's second ability.
     DevotionOfChosenColor,
@@ -6315,6 +6318,11 @@ pub enum Effect {
         tapped: bool,
         haste: bool,
         sacrifice_eot: bool,
+        /// "At the beginning of the next end step, return that permanent to
+        /// its owner's hand" (Surprise Deployment). The gentler sibling of
+        /// `sacrifice_eot`; both may be set, but the bounce wins.
+        #[serde(default)]
+        return_eot: bool,
     },
 
     /// "Players can't cast creature or planeswalker spells until the end of
@@ -7143,6 +7151,36 @@ pub enum Effect {
     /// recipient, so it soaks whichever damage event the chosen source deals
     /// first (Martyr's Cause).
     PreventNextEventFromChosenSourceAnywhere,
+    /// "Creatures `what` gain protection from the colors of `of` until
+    /// `duration`" (Samite Elder). Reads the live colors of the permanent(s)
+    /// `of` resolves to and grants one `Keyword::Protection` per color.
+    GrantProtectionFromColorsOf { what: Selector, of: Selector, duration: Duration },
+    /// "Search your library for any number of cards matching `filter`, exile
+    /// them stamped with this source, then shuffle" (Skyship Weatherlight).
+    /// The linked exile is readable by `Selector::ExiledWithSource` and
+    /// [`Effect::ReturnRandomExiledWithSource`].
+    SearchExileLinked { who: PlayerRef, filter: SelectionRequirement, count: Value },
+    /// "Choose a card at random that was exiled with this source. Put it into
+    /// its owner's hand" (Skyship Weatherlight's `{4}, {T}`).
+    ReturnRandomExiledWithSource,
+    /// CR 614.9 — "The next time damage would be dealt to `what` this turn,
+    /// that damage is dealt to `to` instead" (Mirrorwood Treefolk). A one-shot
+    /// per-permanent redirect consumed by the first damage event.
+    RedirectNextDamageTo { what: Selector, to: Selector },
+    /// Goblin Game (CR 720-adjacent silliness) — each player secretly hides at
+    /// least one item, all are revealed, each player loses life equal to their
+    /// own count, and the player(s) with the fewest then lose half their life
+    /// rounded up. Counts are asked per seat (`ask_seat_amount`); an auto seat
+    /// hides one.
+    GoblinGame,
+    /// "Each player reveals their hand, chooses one card of each color from
+    /// it, then discards all other nonland cards" (Noxious Vapors). The keep
+    /// set is one card per color present; multicolored cards count for every
+    /// colour they carry, so a gold card can be the only keep.
+    EachPlayerKeepsOneOfEachColorDiscardsRest,
+    /// "Each player chooses a land they control of each basic land type.
+    /// Return those lands to their owners' hands" (Planar Overlay).
+    EachPlayerReturnsALandOfEachBasicType,
     /// "Reveal any number of `filter` cards in your hand, then [`then`]" — the
     /// Urza's Destiny Scent / Seer cycle and Metalworker. The revealed count is
     /// published as `Value::CardsRevealedThisEffect` for the body to read.

@@ -1193,6 +1193,12 @@ pub struct GameState {
     /// `damage_redirect_target` and cleared at cleanup.
     #[serde(default)]
     pub damage_redirect_this_turn: Vec<(usize, CardId)>,
+    /// CR 614.9 — one-shot per-permanent redirects: "the next time damage
+    /// would be dealt to `.0` this turn, it's dealt to `.1` instead"
+    /// (Mirrorwood Treefolk). Consumed by the first damage event and cleared
+    /// at cleanup.
+    #[serde(default)]
+    pub next_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
     /// CR — Shadow of Doubt: no player may search a library this turn.
     pub no_search_this_turn: bool,
     /// CR 701.19 — `(viewer, owner)` pairs where `viewer` has looked at
@@ -1687,6 +1693,7 @@ impl Clone for GameState {
             attack_tax_this_turn: self.attack_tax_this_turn,
             block_tax_this_turn: self.block_tax_this_turn,
             damage_redirect_this_turn: self.damage_redirect_this_turn.clone(),
+            next_damage_redirect: self.next_damage_redirect.clone(),
             combat_damage_redirect_this_turn: self.combat_damage_redirect_this_turn.clone(),
             damaged_creatures_die_this_turn: self.damaged_creatures_die_this_turn,
             creature_deaths_drain_toughness_this_turn: self.creature_deaths_drain_toughness_this_turn,
@@ -1927,6 +1934,7 @@ impl GameState {
             attack_tax_this_turn: 0,
             block_tax_this_turn: 0,
             damage_redirect_this_turn: Vec::new(),
+            next_damage_redirect: Vec::new(),
             combat_damage_redirect_this_turn: Vec::new(),
             damaged_creatures_die_this_turn: false,
             creature_deaths_drain_toughness_this_turn: false,

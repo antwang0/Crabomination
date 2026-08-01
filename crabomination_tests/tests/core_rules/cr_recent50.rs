@@ -113,6 +113,7 @@ fn cr_403_4_reentering_permanent_is_a_new_object() {
             tapped: false,
             haste: false,
             sacrifice_eot: false,
+            return_eot: false,
         },
         &ctx,
     )

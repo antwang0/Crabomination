@@ -1581,6 +1581,7 @@ pub fn arboreal_grazer() -> CardDefinition {
             tapped: true,
             haste: false,
             sacrifice_eot: false,
+                return_eot: false,
         })],
         ..vanilla(
             "Arboreal Grazer",

@@ -1523,6 +1523,7 @@ pub fn dragon_arch() -> CardDefinition {
                 tapped: false,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
             ..Default::default()
         }],

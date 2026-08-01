@@ -1630,6 +1630,7 @@ pub fn zimone_quandrix_prodigy() -> CardDefinition {
                     tapped: true,
                     haste: false,
                     sacrifice_eot: false,
+                return_eot: false,
                 },
                 ..Default::default()
             },

@@ -265,6 +265,7 @@ pub fn mercadian_lift() -> CardDefinition {
                     tapped: false,
                     haste: false,
                     sacrifice_eot: false,
+                return_eot: false,
                 },
                 ..Default::default()
             },

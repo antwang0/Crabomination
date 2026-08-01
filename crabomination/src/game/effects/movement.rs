@@ -638,6 +638,18 @@ impl GameState {
                     _ => None,
                 })
         });
+        // CR 614.9 — Mirrorwood Treefolk's one-shot: the next damage aimed at
+        // a registered permanent goes somewhere else instead. Consumed here.
+        if !self.in_damage_redirect
+            && let EntityRef::Permanent(hit) = ent
+            && let Some(idx) = self.next_damage_redirect.iter().position(|(c, _)| *c == hit)
+        {
+            let (_, to) = self.next_damage_redirect.remove(idx);
+            self.in_damage_redirect = true;
+            self.deal_damage_to_from(to, amount, source, events);
+            self.in_damage_redirect = false;
+            return;
+        }
         // CR 614.9 — redirect the whole event to a Palisade-Giant-style
         // permanent. One redirect per event (CR 614.5; the flag also stops
         // two redirectors ping-ponging).

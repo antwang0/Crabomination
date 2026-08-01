@@ -1346,3 +1346,454 @@ pub fn tahngarth_talruum_hero() -> CardDefinition {
         )
     }
 }
+
+/// The Battlemage cycle (CR 702.32b) — "Kicker {A} and/or {B}", each half an
+/// intervening-'if' ETB trigger.
+fn battlemage(
+    name: &'static str,
+    c: ManaCost,
+    types: Vec<CreatureType>,
+    kickers: [ManaCost; 2],
+    riders: [Effect; 2],
+) -> CardDefinition {
+    let [first, second] = riders;
+    let rider = |option: u8, body: Effect| TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+            .with_filter(Predicate::SpellWasKickedWith(option)),
+        effect: body,
+    };
+    CardDefinition {
+        kicker_options: kickers.to_vec(),
+        triggered_abilities: vec![rider(0, first), rider(1, second)],
+        ..creature(name, c, types, 2, 2)
+    }
+}
+
+/// Nightscape Battlemage — {2}{B} 2/2. Kicker {2}{U} and/or {2}{R}.
+pub fn nightscape_battlemage() -> CardDefinition {
+    battlemage(
+        "Nightscape Battlemage",
+        cost(&[generic(2), b()]),
+        vec![CreatureType::Zombie, CreatureType::Wizard],
+        [cost(&[generic(2), u()]), cost(&[generic(2), r()])],
+        [
+            Effect::ApplyToTargets {
+                filter: R::Creature.and(R::Not(Box::new(R::HasColor(Color::Black)))),
+                max_targets: 2,
+                min_targets: 0,
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                }),
+            },
+            Effect::Destroy { what: target_filtered(R::Land) },
+        ],
+    )
+}
+
+/// Stormscape Battlemage — {2}{U} 2/2. Kicker {W} and/or {2}{B}.
+pub fn stormscape_battlemage() -> CardDefinition {
+    battlemage(
+        "Stormscape Battlemage",
+        cost(&[generic(2), u()]),
+        vec![CreatureType::Metathran, CreatureType::Wizard],
+        [cost(&[w()]), cost(&[generic(2), b()])],
+        [
+            Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            Effect::DestroyNoRegen {
+                what: target_filtered(R::Creature.and(R::Not(Box::new(R::HasColor(Color::Black))))),
+            },
+        ],
+    )
+}
+
+/// Sunscape Battlemage — {2}{W} 2/2. Kicker {1}{G} and/or {2}{U}.
+pub fn sunscape_battlemage() -> CardDefinition {
+    battlemage(
+        "Sunscape Battlemage",
+        cost(&[generic(2), w()]),
+        vec![CreatureType::Human, CreatureType::Wizard],
+        [cost(&[generic(1), g()]), cost(&[generic(2), u()])],
+        [
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))) },
+            draw(2),
+        ],
+    )
+}
+
+/// Thornscape Battlemage — {2}{G} 2/2. Kicker {R} and/or {W}.
+pub fn thornscape_battlemage() -> CardDefinition {
+    battlemage(
+        "Thornscape Battlemage",
+        cost(&[generic(2), g()]),
+        vec![CreatureType::Elf, CreatureType::Wizard],
+        [cost(&[r()]), cost(&[w()])],
+        [
+            deal(2, target_any()),
+            Effect::Destroy { what: target_filtered(R::Artifact) },
+        ],
+    )
+}
+
+/// Thunderscape Battlemage — {2}{R} 2/2. Kicker {1}{B} and/or {G}.
+pub fn thunderscape_battlemage() -> CardDefinition {
+    battlemage(
+        "Thunderscape Battlemage",
+        cost(&[generic(2), r()]),
+        vec![CreatureType::Human, CreatureType::Wizard],
+        [cost(&[generic(1), b()]), cost(&[g()])],
+        [
+            Effect::Discard {
+                who: Selector::TargetFiltered { slot: 0, filter: R::Player },
+                amount: Value::Const(2),
+                random: false,
+            },
+            Effect::Destroy { what: target_filtered(R::Enchantment) },
+        ],
+    )
+}
+
+/// Meteor Crater — a land that only works once you've painted the board.
+pub fn meteor_crater() -> CardDefinition {
+    CardDefinition {
+        name: "Meteor Crater",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyColorAmongYourPermanents,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Samite Elder — {2}{W} 1/2 that lends the team protection off one permanent.
+pub fn samite_elder() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantProtectionFromColorsOf {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                of: target_filtered(R::Permanent.and(R::ControlledByYou)),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Samite Elder",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            2,
+        )
+    }
+}
+
+/// Samite Pilgrim — {1}{W} 1/1. Domain-sized damage prevention.
+pub fn samite_pilgrim() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PreventNextDamage {
+                target: target_filtered(R::Creature),
+                amount: Value::DomainCount(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Samite Pilgrim",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            1,
+        )
+    }
+}
+
+/// Skyship Weatherlight — {4}. Stocks an exile pile, then hands it back at
+/// random.
+pub fn skyship_weatherlight() -> CardDefinition {
+    CardDefinition {
+        name: "Skyship Weatherlight",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(Effect::SearchExileLinked {
+            who: PlayerRef::You,
+            filter: R::Artifact.or(R::Creature),
+            count: Value::LibrarySizeOf(PlayerRef::You),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            effect: Effect::ReturnRandomExiledWithSource,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Noxious Vapors — {1}{B}{B}. Everyone keeps one card of each color.
+pub fn noxious_vapors() -> CardDefinition {
+    sorcery(
+        "Noxious Vapors",
+        cost(&[generic(1), b(), b()]),
+        Effect::EachPlayerKeepsOneOfEachColorDiscardsRest,
+    )
+}
+
+/// Planar Overlay — {2}{U}. One land of each basic type goes home.
+pub fn planar_overlay() -> CardDefinition {
+    sorcery(
+        "Planar Overlay",
+        cost(&[generic(2), u()]),
+        Effect::EachPlayerReturnsALandOfEachBasicType,
+    )
+}
+
+/// Surprise Deployment — {3}{W}. A combat-only ambush that goes back to hand.
+pub fn surprise_deployment() -> CardDefinition {
+    CardDefinition {
+        cast_condition: Some(Predicate::Any(vec![
+            Predicate::CurrentStepIs(TurnStep::BeginCombat),
+            Predicate::CurrentStepIs(TurnStep::DeclareAttackers),
+            Predicate::CurrentStepIs(TurnStep::DeclareBlockers),
+            Predicate::CurrentStepIs(TurnStep::CombatDamage),
+            Predicate::CurrentStepIs(TurnStep::EndCombat),
+        ])),
+        ..instant(
+            "Surprise Deployment",
+            cost(&[generic(3), w()]),
+            Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::Not(Box::new(R::HasColor(Color::White)))),
+                count: Value::ONE,
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+                return_eot: true,
+            },
+        )
+    }
+}
+
+/// Dralnu's Pet — {1}{U}{U} 2/2. Kicker—{2}{B}, discard a creature card.
+pub fn dralnus_pet() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), b()]))],
+        kicker_action_cost: Some(AdditionalCastCost::Discard {
+            count: 1,
+            filter: Some(R::Creature),
+        }),
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Flying,
+                    duration: Duration::Permanent,
+                },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::LastDiscardedManaValue,
+                },
+            ])),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..creature(
+            "Dralnu's Pet",
+            cost(&[generic(1), u(), u()]),
+            vec![CreatureType::Shapeshifter],
+            2,
+            2,
+        )
+    }
+}
+
+/// Questing Phelddagrif — {1}{G}{W}{U} 4/4. Every upside pays an opponent.
+pub fn questing_phelddagrif() -> CardDefinition {
+    let hippo = crate::card::TokenDefinition {
+        name: "Hippo".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hippo], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::ONE,
+                        toughness: Value::ONE,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::CreateToken {
+                        who: PlayerRef::Target(0),
+                        count: Value::ONE,
+                        definition: hippo,
+                    },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[w()]),
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::Protection(Color::Black),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::Protection(Color::Red),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GainLife {
+                        who: Selector::TargetFiltered { slot: 0, filter: R::OpponentPlayer },
+                        amount: Value::Const(2),
+                    },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[u()]),
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::Flying,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::MayDoBy {
+                        who: PlayerRef::Target(0),
+                        description: "Draw a card?".into(),
+                        body: Box::new(draw(1)),
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..creature(
+            "Questing Phelddagrif",
+            cost(&[generic(1), g(), w(), u()]),
+            vec![CreatureType::Phelddagrif],
+            4,
+            4,
+        )
+    }
+}
+
+/// Guard Dogs — {3}{W} 2/2. Blanks an attacker that shares a color with your
+/// board. (The printed "choose a permanent you control" is modeled as "any
+/// permanent you control".)
+pub fn guard_dogs() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            tap_cost: true,
+            effect: Effect::If {
+                cond: Predicate::TargetSharesColorWithControlled {
+                    slot: 0,
+                    filter: R::Permanent,
+                },
+                then: Box::new(Effect::PreventCombatDamageByTargetThisTurn {
+                    target: Selector::Target(0),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            ..Default::default()
+        }],
+        ..creature("Guard Dogs", cost(&[generic(3), w()]), vec![CreatureType::Dog], 2, 2)
+    }
+}
+
+/// Keldon Twilight — {1}{B}{R}. A quiet turn costs everyone a creature.
+pub fn keldon_twilight() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
+                .with_filter(Predicate::Not(Box::new(Predicate::AttackedWithCountAtLeast {
+                    who: PlayerRef::ActivePlayer,
+                    at_least: 1,
+                }))),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::ActivePlayer),
+                count: Value::ONE,
+                filter: R::Creature,
+            },
+        }],
+        ..enchantment("Keldon Twilight", cost(&[generic(1), b(), r()]))
+    }
+}
+
+/// Mirrorwood Treefolk — {3}{G} 2/4 that bats the next hit somewhere else.
+pub fn mirrorwood_treefolk() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r(), w()]),
+            effect: Effect::RedirectNextDamageTo { what: Selector::This, to: target_any() },
+            ..Default::default()
+        }],
+        ..creature(
+            "Mirrorwood Treefolk",
+            cost(&[generic(3), g()]),
+            vec![CreatureType::Treefolk],
+            2,
+            4,
+        )
+    }
+}
+
+/// Goblin Game — {5}{R}{R}. Everyone hides items; the stingiest player pays.
+pub fn goblin_game() -> CardDefinition {
+    sorcery("Goblin Game", cost(&[generic(5), r(), r()]), Effect::GoblinGame)
+}
+
+/// Planeswalker's Mischief — {2}{U}. Steals an instant or sorcery for a turn.
+pub fn planeswalkers_mischief() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::RevealRandomFromHand { who: target_filtered(R::OpponentPlayer) },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::LastRevealedCard,
+                        filter: R::HasCardType(CardType::Instant)
+                            .or(R::HasCardType(CardType::Sorcery)),
+                    },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Exile { what: Selector::LastRevealedCard },
+                        Effect::GrantMayPlay {
+                            what: Selector::LastMoved,
+                            duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                            to_owner: false,
+                            exile_after: false,
+                            pay_own_cost: false,
+                            any_color: false,
+                        },
+                        Effect::AtNextEndStep {
+                            body: Box::new(Effect::Move {
+                                what: Selector::LastMoved,
+                                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                            }),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..enchantment("Planeswalker's Mischief", cost(&[generic(2), u()]))
+    }
+}

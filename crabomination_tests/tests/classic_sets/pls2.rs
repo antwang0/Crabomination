@@ -372,3 +372,188 @@ fn sunken_hope_bounces_each_upkeep() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().all(|c| c.id != bears));
 }
+
+/// Sunscape Battlemage's two kickers fire independently.
+#[test]
+fn sunscape_battlemage_kicker_options_are_independent() {
+    let mut g = main_phase();
+    let flier = g.add_card_to_battlefield(1, catalog::silver_drake());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let mage = g.add_card_to_hand(0, catalog::sunscape_battlemage());
+    mana(&mut g, 0);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellKickers {
+        card_id: mage,
+        target: Some(Target::Permanent(flier)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        kickers: vec![0, 1],
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != flier), "{{1}}{{G}} kicker killed the flier");
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2, "{{2}}{{U}} kicker drew two");
+}
+
+/// Thornscape Battlemage only fires the halves that were paid for.
+#[test]
+fn thornscape_battlemage_unkicked_half_stays_quiet() {
+    let mut g = main_phase();
+    let rock = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let mage = g.add_card_to_hand(0, catalog::thornscape_battlemage());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKickers {
+        card_id: mage,
+        target: Some(Target::Permanent(rock)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        kickers: vec![1],
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != rock), "the {{W}} half shattered it");
+    assert_eq!(g.players[1].life, 20, "the unpaid {{R}} half dealt nothing");
+}
+
+/// Samite Elder hands the team protection off one permanent's colors.
+#[test]
+fn samite_elder_grants_protection_from_a_permanents_colors() {
+    let mut g = main_phase();
+    let elder = g.add_card_to_battlefield(0, catalog::samite_elder());
+    g.clear_sickness(elder);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, 0, elder, 0, Some(Target::Permanent(bears)));
+    assert!(
+        g.computed_permanent(bears)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::Protection(Color::Green))
+    );
+}
+
+/// Meteor Crater only produces colors already on your board.
+#[test]
+fn meteor_crater_taps_for_a_color_you_control() {
+    let mut g = main_phase();
+    let crater = g.add_card_to_battlefield(0, catalog::meteor_crater());
+    let tap = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: crater,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("activate");
+    };
+    tap(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "colorless board makes nothing");
+    g.battlefield.iter_mut().find(|c| c.id == crater).unwrap().tapped = false;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    tap(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
+/// Skyship Weatherlight stocks an exile pile and hands one back.
+#[test]
+fn skyship_weatherlight_stocks_and_returns() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Search(Some(bears)),
+        DecisionAnswer::Search(None),
+    ]));
+    let ship = g.add_card_to_hand(0, catalog::skyship_weatherlight());
+    cast(&mut g, 0, ship, None);
+    let id = g.battlefield.iter().find(|c| c.definition.name == "Skyship Weatherlight").unwrap().id;
+    assert!(g.exile.iter().any(|c| c.id == bears && c.exiled_with == Some(id)));
+    g.clear_sickness(id);
+    activate(&mut g, 0, id, 0, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears));
+}
+
+/// Planar Overlay bounces one land of each basic type per player.
+#[test]
+fn planar_overlay_bounces_one_land_per_basic_type() {
+    let mut g = main_phase();
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(1, catalog::swamp());
+    let overlay = g.add_card_to_hand(0, catalog::planar_overlay());
+    cast(&mut g, 0, overlay, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 1, "one Forest left");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 0);
+}
+
+/// Noxious Vapors keeps one card of each color and bins the rest.
+#[test]
+fn noxious_vapors_keeps_one_of_each_color() {
+    let mut g = main_phase();
+    for _ in 0..2 {
+        g.add_card_to_hand(1, catalog::grizzly_bears()); // green
+    }
+    g.add_card_to_hand(1, catalog::lightning_bolt()); // red
+    g.add_card_to_hand(1, catalog::forest()); // land — always kept
+    let vapors = g.add_card_to_hand(0, catalog::noxious_vapors());
+    cast(&mut g, 0, vapors, None);
+    assert_eq!(g.players[1].hand.len(), 3, "one green, one red, the land");
+    assert_eq!(g.players[1].graveyard.len(), 1);
+}
+
+/// Mirrorwood Treefolk bats the next hit at someone else.
+#[test]
+fn mirrorwood_treefolk_redirects_the_next_damage() {
+    let mut g = main_phase();
+    let tree = g.add_card_to_battlefield(0, catalog::mirrorwood_treefolk());
+    activate(&mut g, 0, tree, 0, Some(Target::Player(1)));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Permanent(tree)));
+    assert_eq!(g.battlefield_find(tree).map(|c| c.damage), Some(0));
+    assert_eq!(g.players[1].life, 17, "the bolt bounced back at its caster");
+}
+
+/// Surprise Deployment can only be cast in combat, and the creature goes home.
+#[test]
+fn surprise_deployment_is_combat_only_and_temporary() {
+    let mut g = main_phase();
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let deploy = g.add_card_to_hand(0, catalog::surprise_deployment());
+    mana(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: deploy,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "main phase is too early"
+    );
+    g.step = TurnStep::DeclareBlockers;
+    cast(&mut g, 0, deploy, None);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"));
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}
+
+/// Goblin Game bleeds everyone and hits the stingiest player hardest.
+#[test]
+fn goblin_game_punishes_the_fewest_items() {
+    let mut g = main_phase();
+    let game = g.add_card_to_hand(0, catalog::goblin_game());
+    cast(&mut g, 0, game, None);
+    // Both auto seats hide one item, so both tie for fewest: −1 then −half.
+    assert_eq!(g.players[0].life, 9);
+    assert_eq!(g.players[1].life, 9);
+}

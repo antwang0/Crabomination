@@ -276,6 +276,7 @@ pub fn myojin_of_lifes_web() -> CardDefinition {
             tapped: false,
             haste: false,
             sacrifice_eot: false,
+                return_eot: false,
         },
     )
 }

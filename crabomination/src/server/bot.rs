@@ -1829,7 +1829,8 @@ fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::mana::ColorSet
         // potentially any color for the bot's mana-base reasoning.
         ManaPayload::ChosenColorOfSource
         | ManaPayload::ImprintedCardColor
-        | ManaPayload::AnyColorAmongLegendaries => *set = crate::mana::ColorSet::all(),
+        | ManaPayload::AnyColorAmongLegendaries
+        | ManaPayload::AnyColorAmongYourPermanents => *set = crate::mana::ColorSet::all(),
         ManaPayload::Restricted(inner, _) | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner) => {
             accumulate_payload_colors(inner, set)

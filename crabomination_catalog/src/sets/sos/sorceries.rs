@@ -1144,6 +1144,7 @@ pub fn mind_into_matter() -> CardDefinition {
                 tapped: true,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
         ]),
         ..Default::default()

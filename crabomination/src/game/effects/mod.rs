@@ -1800,6 +1800,192 @@ impl GameState {
         match effect {
             Effect::Noop => Ok(()),
 
+            // Samite Elder — read the live colors of `of` and hand each one
+            // out as a separate Protection keyword.
+            Effect::GrantProtectionFromColorsOf { what, of, duration } => {
+                let colors: Vec<Color> = self
+                    .resolve_selector(of, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter_map(|id| self.computed_permanent(id))
+                    .flat_map(|cp| cp.colors.clone())
+                    .fold(Vec::new(), |mut acc, c| {
+                        if !acc.contains(&c) {
+                            acc.push(c);
+                        }
+                        acc
+                    });
+                for color in colors {
+                    self.run_effect(
+                        &Effect::GrantKeyword {
+                            what: what.clone(),
+                            keyword: crate::card::Keyword::Protection(color),
+                            duration: *duration,
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
+            // Skyship Weatherlight — a search chain whose picks are stamped
+            // `exiled_with` so the `{4}, {T}` half can find them (CR 607.2).
+            Effect::SearchExileLinked { who, filter, count } => {
+                let n = self.evaluate_value(count, ctx).max(0);
+                let source = ctx.source;
+                for _ in 0..n {
+                    let before: Vec<CardId> = self.exile.iter().map(|c| c.id).collect();
+                    self.run_effect(
+                        &Effect::Search {
+                            who: who.clone(),
+                            filter: filter.clone(),
+                            to: ZoneDest::Exile,
+                        },
+                        ctx,
+                        events,
+                    )?;
+                    let mut found = false;
+                    for c in self.exile.iter_mut() {
+                        if !before.contains(&c.id) {
+                            c.exiled_with = source;
+                            found = true;
+                        }
+                    }
+                    if !found {
+                        break;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::RedirectNextDamageTo { what, to } => {
+                let Some(dest) = self.resolve_selector(to, ctx).into_iter().next() else {
+                    return Ok(());
+                };
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.next_damage_redirect.retain(|(c, _)| *c != cid);
+                        self.next_damage_redirect.push((cid, dest));
+                    }
+                }
+                Ok(())
+            }
+
+            // Goblin Game — everyone hides at least one item; the fewest
+            // hidden pays half their life on top of the per-item bleed.
+            Effect::GoblinGame => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let mut counts: Vec<u32> = Vec::new();
+                for seat in 0..self.players.len() {
+                    let hidden = self
+                        .ask_seat_amount(
+                            &mut cursor,
+                            seat,
+                            "How many items do you hide?".to_string(),
+                            source,
+                            5,
+                            effect,
+                        )
+                        .unwrap_or(1)
+                        .max(1);
+                    counts.push(hidden);
+                }
+                self.clear_answer_log();
+                let fewest = counts.iter().copied().min().unwrap_or(1);
+                let bleed = |g: &mut Self, seat: usize, n: i32, evs: &mut Vec<GameEvent>| {
+                    let e = Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Seat(seat)),
+                        amount: crate::effect::Value::Const(n),
+                    };
+                    let _ = g.run_effect(&e, ctx, evs);
+                };
+                for (seat, hidden) in counts.clone().into_iter().enumerate() {
+                    bleed(self, seat, hidden as i32, events);
+                    if hidden == fewest {
+                        let life = self.players[seat].life.max(0);
+                        bleed(self, seat, (life + 1) / 2, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ReturnRandomExiledWithSource => {
+                use rand::seq::IteratorRandom;
+                let Some(source) = ctx.source else { return Ok(()) };
+                let picked = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(source))
+                    .map(|c| c.id)
+                    .choose(&mut rand::rng());
+                if let Some(cid) = picked {
+                    self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::OwnerOfMoved), ctx, events);
+                }
+                Ok(())
+            }
+
+            // Noxious Vapors — keep one card per colour present in hand, bin
+            // every other nonland. A gold card covers all its colours.
+            Effect::EachPlayerKeepsOneOfEachColorDiscardsRest => {
+                for p in 0..self.players.len() {
+                    let mut kept: Vec<CardId> = Vec::new();
+                    let mut covered: Vec<Color> = Vec::new();
+                    let hand: Vec<(CardId, Vec<Color>, bool)> = self.players[p]
+                        .hand
+                        .iter()
+                        .map(|c| {
+                            (c.id, c.definition.cost.colors(), c.definition.is_land())
+                        })
+                        .collect();
+                    // Multicolored first so one gold card can cover two needs.
+                    let mut order: Vec<usize> = (0..hand.len()).collect();
+                    order.sort_by_key(|i| std::cmp::Reverse(hand[*i].1.len()));
+                    for i in order {
+                        let (id, colors, _) = &hand[i];
+                        if colors.iter().any(|c| !covered.contains(c)) {
+                            covered.extend(colors.iter().copied());
+                            kept.push(*id);
+                        }
+                    }
+                    let bin: Vec<CardId> = hand
+                        .iter()
+                        .filter(|(id, _, is_land)| !is_land && !kept.contains(id))
+                        .map(|(id, ..)| *id)
+                        .collect();
+                    for cid in bin {
+                        self.discard_card(p, cid, events);
+                    }
+                }
+                Ok(())
+            }
+
+            // Planar Overlay — one land per basic type, per player, bounced.
+            Effect::EachPlayerReturnsALandOfEachBasicType => {
+                let mut bounce: Vec<CardId> = Vec::new();
+                for p in 0..self.players.len() {
+                    for lt in crate::card::LandType::BASICS {
+                        if let Some(id) = self
+                            .battlefield
+                            .iter()
+                            .find(|c| {
+                                c.controller == p
+                                    && c.definition.has_land_type(lt)
+                                    && !bounce.contains(&c.id)
+                            })
+                            .map(|c| c.id)
+                        {
+                            bounce.push(id);
+                        }
+                    }
+                }
+                for cid in bounce {
+                    self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::OwnerOfMoved), ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::Seq(steps) => {
                 for (idx, step) in steps.iter().enumerate() {
                     self.run_effect(step, ctx, events)?;
@@ -7474,6 +7660,44 @@ impl GameState {
                         let n = self.devotion_to(p, &[color]).max(0) as u32;
                         for _ in 0..n {
                             self.players[p].mana_pool.add(color, mult);
+                            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                        }
+                    }
+                    ManaPayload::AnyColorAmongYourPermanents => {
+                        // Meteor Crater — union of the computed colors among
+                        // permanents you control; no mana off a colorless board.
+                        let mut legal: Vec<Color> = Vec::new();
+                        let mine: Vec<CardId> = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == p)
+                            .map(|c| c.id)
+                            .collect();
+                        for id in mine {
+                            if let Some(cp) = self.computed_permanent(id) {
+                                for col in &cp.colors {
+                                    if !legal.contains(col) {
+                                        legal.push(*col);
+                                    }
+                                }
+                            }
+                        }
+                        if !legal.is_empty() {
+                            let color = if legal.len() == 1 {
+                                legal[0]
+                            } else {
+                                match self.decider.decide(
+                                    &crate::decision::Decision::ChooseColor {
+                                        source: ctx.source.unwrap_or(CardId(0)),
+                                        legal: legal.clone(),
+                                    },
+                                ) {
+                                    crate::decision::DecisionAnswer::Color(c)
+                                        if legal.contains(&c) => c,
+                                    _ => legal[0],
+                                }
+                            };
+                            add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
@@ -15420,7 +15644,15 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PutFromHandOntoBattlefield { who, filter, count, tapped, haste, sacrifice_eot } => {
+            Effect::PutFromHandOntoBattlefield {
+                who,
+                filter,
+                count,
+                tapped,
+                haste,
+                sacrifice_eot,
+                return_eot,
+            } => {
                 
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let max = self.evaluate_value(count, ctx).max(0) as u32;
@@ -15489,12 +15721,19 @@ impl GameState {
                     if *haste {
                         self.grant_keyword_eot(cid, Keyword::Haste);
                     }
-                    if *sacrifice_eot {
+                    if *sacrifice_eot || *return_eot {
                         self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                             controller: ctx.controller,
                             source: cid,
                             kind: crate::game::types::DelayedKind::NextEndStep,
-                            effect: Effect::SacrificeSource,
+                            effect: if *return_eot {
+                                Effect::Move {
+                                    what: Selector::This,
+                                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                                }
+                            } else {
+                                Effect::SacrificeSource
+                            },
                             target: None,
                             bound_token: None,
                             bound_subject: None,

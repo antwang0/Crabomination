@@ -773,7 +773,8 @@ impl Effect {
                     | ManaPayload::AnyOneColor(v)
                     | ManaPayload::AnyColors(v) => value_has_target(v),
                     ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => value_has_target(v),
-                    ManaPayload::AnyTypeTriggerSourceProduces => false,
+                    ManaPayload::AnyTypeTriggerSourceProduces
+                    | ManaPayload::AnyColorAmongYourPermanents => false,
                     ManaPayload::Restricted(inner, _)
                     | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner) => match inner.as_ref() {
@@ -1213,7 +1214,20 @@ impl Effect {
             Effect::EachPlayerExilesHandDrawsSeven
             | Effect::EachPlayerDiscardsHandReturnsExiledWithSource
             | Effect::IgnoreStaticFromSourceThisTurn
-            | Effect::PreventNextEventFromChosenSourceAnywhere => false,
+            | Effect::PreventNextEventFromChosenSourceAnywhere
+            | Effect::ReturnRandomExiledWithSource
+            | Effect::GoblinGame
+            | Effect::EachPlayerKeepsOneOfEachColorDiscardsRest
+            | Effect::EachPlayerReturnsALandOfEachBasicType => false,
+            Effect::SearchExileLinked { who, count, .. } => {
+                player_has_target(who) || value_has_target(count)
+            }
+            Effect::RedirectNextDamageTo { what, to } => {
+                sel_has_target(what) || sel_has_target(to)
+            }
+            Effect::GrantProtectionFromColorsOf { what, of, .. } => {
+                sel_has_target(what) || sel_has_target(of)
+            }
         }
     }
 

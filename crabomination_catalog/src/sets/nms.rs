@@ -1398,6 +1398,7 @@ pub fn belbes_portal() -> CardDefinition {
                 tapped: false,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
             ..Default::default()
         }],
@@ -1592,6 +1593,7 @@ pub fn terrain_generator() -> CardDefinition {
                     tapped: true,
                     haste: false,
                     sacrifice_eot: false,
+                return_eot: false,
                 },
                 ..Default::default()
             },

@@ -86,6 +86,7 @@ pub fn quest_for_ulas_temple() -> CardDefinition {
                     tapped: false,
                     haste: false,
                     sacrifice_eot: false,
+                return_eot: false,
                 },
             },
         ],

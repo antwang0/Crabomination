@@ -873,6 +873,7 @@ pub fn fold_into_aether() -> CardDefinition {
                 tapped: false,
                 haste: false,
                 sacrifice_eot: false,
+                return_eot: false,
             },
         ]),
         ..Default::default()
