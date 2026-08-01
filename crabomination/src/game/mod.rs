@@ -10316,6 +10316,27 @@ impl GameState {
                 .or_insert(0) += 1;
         }
 
+        // CR 614 — Dodecapod: an opponent's effect deploys it instead of
+        // binning it. Checked before Madness (the card never reaches a
+        // graveyard, so neither replacement can also apply).
+        if let Some((kind, n)) = card.definition.opponent_discard_deploys
+            && self.discard_causer.is_some_and(|c| self.opponents_of(p).contains(&c))
+        {
+            self.place_card_in_dest(
+                card,
+                p,
+                &crate::effect::ZoneDest::Battlefield {
+                    controller: crate::effect::PlayerRef::You,
+                    tapped: false,
+                },
+                events,
+            );
+            if let Some(c) = self.battlefield_find_mut(card_id) {
+                c.add_counters(kind, n);
+            }
+            return true;
+        }
+
         let is_land = !was_nonland;
         match madness {
             None => {

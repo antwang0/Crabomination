@@ -2863,6 +2863,12 @@ pub struct CardDefinition {
     /// the cast `kicked`, which `Predicate::SpellWasKicked` reads.
     #[serde(default)]
     pub kicker_action_cost: Option<AdditionalCastCost>,
+    /// CR 614 — "If a spell or ability an opponent controls causes you to
+    /// discard this card, put it onto the battlefield with N `CounterType`
+    /// counters on it instead of putting it into your graveyard" (Dodecapod).
+    /// A discard-destination replacement, applied in `discard_card`.
+    #[serde(default)]
+    pub opponent_discard_deploys: Option<(CounterType, u32)>,
     /// CR 702.103 — Bestow alternative cost. When `Some(cost)`, the card may
     /// be cast as an Aura spell targeting a creature for this cost (via
     /// `GameAction::CastBestow`); it enters attached, grants its

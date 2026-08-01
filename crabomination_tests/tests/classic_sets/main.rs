@@ -4,6 +4,7 @@
 #![allow(clippy::type_complexity)]
 
 mod afr;
+mod apc;
 mod akh;
 mod avatar_water;
 mod blight;
