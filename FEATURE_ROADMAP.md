@@ -1160,6 +1160,21 @@ exercising each) was elided in a compaction pass; recover it from
   `CardDefinition.cast_only_before_blockers`, `Value::HalfLifeRoundedUp`, and
   `GameState::may_choose_to_draw` (CR 121.2b/121.3 — a capped player is never
   offered an optional draw, and the cap now gates `draw_one` itself).
+- **And/or kicker + the Flagbearer requirement (modern_decks — Apocalypse):**
+  CR 702.32b "Kicker {A} and/or {B}" ships end to end —
+  `CardDefinition.kicker_options`, `CardInstance.kicked_options`,
+  `GameAction::CastSpellKickers`, `Predicate::SpellWasKickedWith`, a per-subset
+  affordance (`ClientView.kicker_option_sets`), and bot + client casts that take
+  the largest payable subset (the Volver cycle, Illuminate). CR 601.2c "must be
+  chosen as a target" ships as `StaticEffect::FlagbearersMustBeTargeted`,
+  enforced at cast and activation, preferred by the auto-targeter, and surfaced
+  as `PermanentView.is_flagbearer`. Also: `Effect::SearchEachBasicLandType`,
+  `Effect::ColoredManaBecomesThisTurn`, `Effect::SpellBecomesChosenColor` +
+  `CardDefinition.color_override`, `Effect::OtherPlayerMayPayToCounter`,
+  `Predicate::{TargetsHaveIdenticalColors, TargetSharesColorWithControlled}`,
+  `SelectionRequirement::SharesColorWithSacrificed`,
+  `DelayedTriggerKind::TargetsNextEndStep`, and `FlipCoinsChooseCount
+  .stop_on_loss` (with the chosen count exposed as X).
 - **Scry/Surveil-matters + graveyard CDA (modern_decks — FIN):**
   `EventKind::ScriedOrSurveiled` (CR 701.22/701.42 — "whenever you scry or
   surveil"; emitted from the scry/surveil resolution alongside

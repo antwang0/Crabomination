@@ -23,12 +23,23 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
-## Noticed this run (modern_decks — Apocalypse)
+## Apocalypse — closed
 
-`set_gaps.py apc` is at **123 → 88 → 55 → 43** across three waves (`sets::apc`,
-tests in `classic_sets/apc`). New primitives: `CardDefinition.opponent_discard_deploys`
-(CR 614 — Dodecapod's discard-destination replacement) and
-`Effect::BecomeChosenCreatureType` (Unnatural Selection).
+`set_gaps.py apc` is at **zero** (123 → 88 → 55 → 43 → 26 → 11 → 0; `sets::apc`
++ `sets::apc2`, tests in `classic_sets/apc{,2}`). Primitives across the run:
+`CardDefinition.opponent_discard_deploys` (CR 614 — Dodecapod),
+`Effect::BecomeChosenCreatureType`, `StaticEffect::FlagbearersMustBeTargeted`
+(CR 601.2c — enforced at cast and activation, preferred by the auto-targeter,
+surfaced as `PermanentView.is_flagbearer`), the **and/or kicker** mechanic
+(CR 702.32b — `CardDefinition.kicker_options`, `CardInstance.kicked_options`,
+`GameAction::CastSpellKickers`, `Predicate::SpellWasKickedWith`, an affordance
+per payable subset, plus bot and client casts),
+`Predicate::{TargetsHaveIdenticalColors, TargetSharesColorWithControlled}`,
+`Effect::{SearchEachBasicLandType, ColoredManaBecomesThisTurn,
+SpellBecomesChosenColor, OtherPlayerMayPayToCounter}`,
+`CardDefinition.color_override`, `SelectionRequirement::SharesColorWithSacrificed`,
+`DelayedTriggerKind::TargetsNextEndStep`, `FlipCoinsChooseCount.stop_on_loss`,
+and `CreatureType::{Metathran, Flagbearer, Volver}`.
 
 Residuals in what shipped:
 
@@ -39,20 +50,15 @@ Residuals in what shipped:
   decider; Tundra Kavu's printed "Plains or Island" isn't narrowed to two.
 - **Suffocating Blast's two targets are one slot each**, so it can't be cast
   with only the counter half legal (the printed spell needs both).
-- **Powerstone Minefield's bite needs the unified dispatcher** — a caller that
-  invokes `declare_attackers` directly instead of
-  `perform_action(DeclareAttackers)` won't see it. That is true of every
-  non-`SelfSource` Attacks trigger, not this card.
-
-Remaining APC (43) is mostly the Volver cycle (kicker-scaled ETB abilities),
-the Flagbearer targeting-restriction static (Standard Bearer, Coalition Honor
-Guard), the split cards (Night // Day, Order // Chaos), Dead Ringers'
-colour-symmetry gate, Emblazoned Golem's colored-{X}, Captain's Maneuver's
-X-damage redirect, Suppress's exile-hand-until-their-next-end-step, Zombie
-Boa's chosen-colour blocker kill, Legacy Weapon's shuffle-instead-of-graveyard
-replacement, Jaded Response's shares-a-colour-with-your-board counter gate,
-Gaea's Balance's one-of-each-basic search, Wild Research and Symbiotic
-Deployment.
+- **Emblazoned Golem's `{X}` kicker takes any mana** — the printed "spend only
+  colored mana on X, at most one of each color" spend restriction isn't modeled.
+- **Tahngarth's Glare's second rearrangement is made by the library's owner**,
+  not by the opponent as printed.
+- **Ice Cave asks each other seat in turn order** and takes the first willing
+  payer rather than running a real "any other player may" window.
+- **The client's and/or kicker cast takes the largest payable subset** on
+  right-click; a per-subset picker modal is still open (`ClientView
+  .kicker_option_sets` already carries every payable combination).
 
 ## Prophecy — closed
 
@@ -4697,8 +4703,9 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   discard-down now emits the batch too (both the deterministic and UI-resume
   paths; `cr_514_3_cleanup_discard_fires_batch_trigger`). Activation-cost discards
   (`discard_cost`, `discard_hand_cost`) emit the batch from `activate_ability`
-  (`cr_701_9_cost_payment_discard_fires_the_batch`). Remaining: cycling and the
-  other spell-level "discard this card" costs.
+  (`cr_701_9_cost_payment_discard_fires_the_batch`). Cycling and landcycling
+  emit it too (`cr_701_9_cycling_fires_the_discard_batch`). Remaining: the other
+  spell-level "discard this card" costs.
 - ✅ CR 701.13 — Mill (incl. `Effect::MillThenToHand { amount, filter }` — mill,
   then pick one card matching `filter` from those milled this way to hand;
   Cache Grab, `SelectionRequirement::PermanentCard`; test
@@ -4979,7 +4986,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f). **509.3a–e ✅**: "whenever this blocks" / "becomes blocked" fire ONCE per creature (the `BlockerDeclared` fan-out dedupes on the trigger's own side of the pair), `Selector::BlockedAttacker` resolves every attacker a multi-blocker is blocking so the per-object wordings (509.3b/d) reach all of them from one instance, and `EventKind::{BlocksNOrMore,BecomesBlockedByNOrMore}` gate on the finished block assignment (509.3e — Lairwatch Giant). Tests `core_rules/cr_recent35::cr_509_3*`. **Multi-block ✅** (509.1b — `block_map` is blocker → `Vec<attacker>`; `Keyword::CanBlockAdditional(n)` / `CanBlockAnyNumber` set the per-combat cap; Guardian of the Gateless, Knight of Sorrows, Valor Made Real; tests `core_rules/cr_recent35`). Put-onto-battlefield-blocking (509.4) ✅ — `Effect::CreateTokenBlocking` + the `cast_only_after_blockers` gate (Flash Foliage; test `cr_509_4_flash_foliage_blocks_the_attacker`). Blocker legality now reads the computed view ✅ (509.1a — animated manlands / crewed Vehicles block). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas). Power-based block restriction ✅ (`Keyword::CantBeBlockedByPowerLess` — Formation Breaker; inverse of Skulk, `formation_breaker_blocks_only_by_equal_or_greater_power`). The bot's block planner now satisfies the minimum-blocker count for Menace **and** `CantBeBlockedExceptByN(n)` (tops up or drops the block), so it never submits an illegal under-filled multi-block. Protection-by-mana-value block restriction ✅ (`Keyword::ProtectionFromManaValueExcept` — Haktos can't be blocked by a creature whose MV isn't the chosen number; test `cr_509_1b_protection_from_mv_restricts_blockers`). Protection-by-mana-value-**parity** ✅ (`Keyword::ProtectionFromManaValueParity { odd }` — Lavabrink Venturer's ETB odd/even choice; gates targeting, blocking, and combat-damage prevention CR 702.16e; tests `lavabrink_venturer_parity_protection`, `cr_702_16e_parity_protection_prevents_combat_damage`). Blocker-side "can block only creatures with flying" ✅ (`Keyword::CanBlockOnlyFlying` — Wanderlight Spirit, Shacklegeist, Pinnacle Emissary's Drone; test `cr_509_1b_can_block_only_flying_restriction`). Conditional attack/block gates (509.1a / 508.1a) ✅ — `Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n)` (Hazoret the Fervent), `Keyword::CantAttackOrBlockUnlessDelirium` (Patchwork Beastie, via `GameState::delirium_active`), and `Keyword::CantAttackOrBlockUnlessDescend(n)` (The Ancient One, via `GameState::descend_count`), enforced in `declare_attackers` + `blocker_can_block_attacker` + `legal_attackers`/affordances and surfaced as client chips. "Can't attack or block alone" (509.1c) ✅ — `Keyword::CantAttackOrBlockAlone` rejects a lone-attacker / lone-blocker batch (Toby's Beast token; tests `cant_attack_or_block_alone_*`, `cant_block_alone_*`).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6). Board-conditional self cost reduction ✅ (CR 601.2f — `StaticEffect::SelfCostReducedIfControlEach`, discounts a spell while you control a permanent matching each filter — Of One Mind's Human + non-Human). Opponent target-tax ✅ (`StaticEffect::TaxOpponentSpellsTargeting`, threaded through `extra_cost_for_spell` with the spell's chosen target — Jubilant Skybonder, Callaphe Beloved of the Sea). Mana-spent-vs-MV gate ✅ (`Effect::CounterSpellDrawIfUnderpaid` reads the countered spell's stored `mana_spent` against its mana value — Unravel draws only on a cost-reduced/alt-cast spell). Total-power self-reduction ✅ (`StaticEffect::SelfCostReducedByTotalPower` — Ghalta, Primal Hunger; `ghalta_costs_less_per_total_power`). Per-graveyard-creature self-reduction ✅ (`StaticEffect::SelfCostReducedPerCreatureInGraveyard` — Ghoultree; `ghoultree_costs_less_per_graveyard_creature`). Death-gated self-reduction ✅ (`StaticEffect::SelfCostReducedIfCreatureDiedThisTurn` — Bone Picker; `bone_picker_is_cheap_after_a_death`). Player-wide predicate-gated reduction ✅ (`StaticEffect::CostReductionWhile { filter, amount, condition }` — Gran-Gran's "noncreature spells you cast cost {1} less while 3+ Lessons in your gy"; generic-only clamp tested in `cr_601_2f_gran_gran_lesson_discount_is_generic_only`). Source-power-scaled reduction ✅ (`StaticEffect::CostReductionBySourcePower` — "Aura and Equipment spells cost {X} less, X = this creature's power" — Golden-Tail Trainer). Board-count "affinity for [type]" reduction (`SelfCostReducedPerPermanentMatching`) now evaluates board-state filters (`IsModified`, tapped, …) through `evaluate_requirement_static`, so Walking Skyscraper's "costs {1} less per modified creature" works; `tests/recent100.rs`. **CR 107.16 variable {E} cost ✅** — `ActivatedAbility.energy_x_cost` spends the activation's chosen `x_value` in energy and threads that X into resolution so `ManaValueExactlyXFromCost` gates the target (Chthonian Nightmare; `cr_107_16_variable_energy_cost_pays_chosen_x`). Value-amount energy pay/upkeep ✅ (`Effect::PayEnergyValue`, `Effect::PayEnergyOrElseValue` — Jolted Awake, Volatile Stormdrake). **CR 107.16 variable life cost ✅** — `ActivatedAbility.x_life_cost` drains the chosen X in life and threads that X into resolution (Krumar Initiate's "Pay X life: endure X"; `cr_107_16_pay_x_life_variable_activation_cost`). Card-level "costs {N} less if you've cast another spell this turn" ✅ (`self_cost_reduction_if_cast_spell` — Rally the Monastery).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); full ability removal (113.10b); "can't have" anti-grant (113.11). Counter-target-ability (113.9) ✅ — `Effect::CounterAbility` (Consign to Memory, Stifle) with precise targeting via `SelectionRequirement::HasAbilityOnStack`.
-- 🟡 **CR 115 — Targets** — Aura subtype (115.1b); zero-target cast-time gate (115.6 — **blocked**: many targeted spells are cast with `target: None` and auto-target at resolution (counterspells → top of stack; "target player" discard → an opponent), so a naive "requires_target ⇒ reject None" gate breaks Pact of Negation / Pyroblast / Cabal Therapy / Metallurgic Summonings. A real fix must make cast-time supply the target for every targeted spell first); change-target corners (115.7a-d, cross-spell exchange). Same-target rejection *within one multi-target instance* (115.3) ✅ — `Effect::distinct_target_count` + a cast-time duplicate check reject the same object filling two divide/support slots (Forked Bolt); cross-clause sharing stays legal. "Up to N target" triggers now fill every slot ✅ (115.1c) on both the **Attacks** path (combat.rs — Lagorin's "up to two Mounts/Vehicles"; `cr_115_1c_attack_trigger_fills_all_target_slots`) and the **ETB** path (stack.rs's `auto_extra_targets_for` — Azorius Justiciar detains two; `cr_115_1c_etb_trigger_fills_all_target_slots`). "Counter target spell that targets you or a permanent you control" ✅ via `SelectionRequirement::SpellTargetsControllerOrControlled`, which reads a stack spell's chosen targets (Hindering Light).
+- 🟡 **CR 115 — Targets** — Aura subtype (115.1b); zero-target cast-time gate (115.6 — **blocked**: many targeted spells are cast with `target: None` and auto-target at resolution (counterspells → top of stack; "target player" discard → an opponent), so a naive "requires_target ⇒ reject None" gate breaks Pact of Negation / Pyroblast / Cabal Therapy / Metallurgic Summonings. A real fix must make cast-time supply the target for every targeted spell first); change-target corners (115.7a-d, cross-spell exchange). Same-target rejection *within one multi-target instance* (115.3) ✅ — `Effect::distinct_target_count` + a cast-time duplicate check reject the same object filling two divide/support slots (Forked Bolt); cross-clause sharing stays legal. "Up to N target" triggers now fill every slot ✅ (115.1c) on both the **Attacks** path (combat.rs — Lagorin's "up to two Mounts/Vehicles"; `cr_115_1c_attack_trigger_fills_all_target_slots`) and the **ETB** path (stack.rs's `auto_extra_targets_for` — Azorius Justiciar detains two; `cr_115_1c_etb_trigger_fills_all_target_slots`). "Counter target spell that targets you or a permanent you control" ✅ via `SelectionRequirement::SpellTargetsControllerOrControlled`, which reads a stack spell's chosen targets per CR 115.9b (Hindering Light; `cr_115_9b_target_filter_reads_the_current_targets`). **CR 601.2c "must be chosen as a target" ✅** — `StaticEffect::FlagbearersMustBeTargeted` + `flagbearer_violation` gate both the cast and activation paths, the auto-targeter prefers a Flagbearer, and `PermanentView.is_flagbearer` explains the rejection client-side (Standard Bearer, Coalition Honor Guard, Coalition Flag; `cr_recent60::cr_601_2c_*`).
 - 🟡 **CR 116 — Special Actions** — Companion ✅ (116.2g / 702.139 —
   `GameAction::CompanionToHand`, {3} sorcery-speed sideboard→hand; deck-build
   restriction ✅ via `CardDefinition.companion` + `format::companion_restriction_met`,
