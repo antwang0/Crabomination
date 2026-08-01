@@ -292,6 +292,14 @@ pub struct ClientView {
     pub max_attackers_per_combat: Option<u32>,
     #[serde(default)]
     pub max_blockers_per_combat: Option<u32>,
+    /// CR 508.1 / 509.1d — the turn-scoped symmetric combat tolls (War Tax,
+    /// War Cadence): {N} per attacker / per blocker the acting player
+    /// declares. `0` when no toll is up. Surfaced so the attack/block UI can
+    /// warn before the engine rejects an unpayable declaration.
+    #[serde(default)]
+    pub attack_tax_this_turn: u32,
+    #[serde(default)]
+    pub block_tax_this_turn: u32,
     /// CR 731 — the game's day/night designation: `None` = neither (the
     /// starting state), `Some(true)` = day, `Some(false)` = night. Surfaced
     /// so UIs can show a day/night indicator. `#[serde(default)]` for

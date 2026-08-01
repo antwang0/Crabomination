@@ -935,7 +935,8 @@ pub fn ley_line() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
-            effect: Effect::MayDo {
+            effect: Effect::MayDoBy {
+                who: PlayerRef::ActivePlayer,
                 description: "Put a +1/+1 counter on target creature?".into(),
                 body: Box::new(Effect::AddCounter {
                     what: target_filtered(R::Creature),

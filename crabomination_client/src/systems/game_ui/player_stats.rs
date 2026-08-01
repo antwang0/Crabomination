@@ -1078,6 +1078,20 @@ pub fn update_player_stats_chips(
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::CombatCap, label);
             }
         }
+        // CR 508.1 / 509.1d — a turn-scoped symmetric combat toll; surface it
+        // once, on the active player's row, so neither seat plans a
+        // declaration they can't pay for.
+        if p.seat == cv.active_player {
+            let toll = match (cv.attack_tax_this_turn, cv.block_tax_this_turn) {
+                (0, 0) => None,
+                (a, 0) => Some(format!("⚔ {a} per attacker")),
+                (0, b) => Some(format!("⚔ {b} per blocker")),
+                (a, b) => Some(format!("⚔ {a} per atk / {b} per blk")),
+            };
+            if let Some(label) = toll {
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::CombatCap, label);
+            }
+        }
         // CR 615 — blanket damage immunity (Glacial Chasm) on the viewer.
         if p.damage_fully_prevented {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Shield, "🛡 immune".to_string());

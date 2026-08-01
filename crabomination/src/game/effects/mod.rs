@@ -3153,6 +3153,35 @@ impl GameState {
                 self.run_effect(&modes[pick].clone(), ctx, events)
             }
 
+            Effect::MayDoBy { who, description, body } => {
+                // "That player may …" — ask `who`, then run the body as them.
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                if seat == ctx.controller {
+                    return self.run_effect(
+                        &Effect::MayDo { description: description.clone(), body: body.clone() },
+                        ctx,
+                        events,
+                    );
+                }
+                let mut cursor = 0;
+                let Some(yes) = self.ask_seat_bool(
+                    &mut cursor,
+                    seat,
+                    description.clone(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if !yes {
+                    return Ok(());
+                }
+                let mut sub = ctx.clone();
+                sub.controller = seat;
+                self.run_effect(body, &sub, events)
+            }
+
             Effect::MayDo { description, body } => {
                 // CR 121.2b / 121.3 — an optional draw isn't offered at all to
                 // a player who can't take it (Spirit of the Labyrinth, Narset).

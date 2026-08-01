@@ -118,6 +118,8 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
         spend_mana_as_any_color: state.spend_mana_as_any_color_active(),
         combat_damage_prevented_this_turn: state.prevent_combat_damage_this_turn,
+        attack_tax_this_turn: state.attack_tax_this_turn,
+        block_tax_this_turn: state.block_tax_this_turn,
         combat_chooser: state.combat_chooser,
         max_attackers_per_combat: state.combat_participation_cap(false),
         max_blockers_per_combat: state.combat_participation_cap(true),

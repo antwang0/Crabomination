@@ -542,7 +542,7 @@ impl Effect {
             | Effect::Tiered { .. }
             | Effect::ChooseModesCast { .. }
             | Effect::ChooseUnchosenMode { .. } => false,
-            Effect::MayDo { body, .. }
+            Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. } => body.requires_target(),
@@ -1457,7 +1457,7 @@ impl Effect {
             // a target (e.g. "you may sacrifice [target permanent]").
             Effect::RevealAnyNumberFromHand { then: body, .. }
             | Effect::MayExileSelfThen { body }
-            | Effect::MayDo { body, .. }
+            | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
@@ -1614,7 +1614,7 @@ impl Effect {
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. } => body.prefers_friendly_target(),
             Effect::ForEach { body, .. }
-            | Effect::MayDo { body, .. }
+            | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
@@ -1688,7 +1688,7 @@ impl Effect {
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. }
-            | Effect::MayDo { body, .. }
+            | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
@@ -2034,7 +2034,7 @@ impl Effect {
                     else_.effect_short_text()
                 }
             }
-            Effect::MayDo { body, .. }
+            Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
@@ -2285,7 +2285,7 @@ impl Effect {
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
-            Effect::MayDo { body, .. }
+            Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
@@ -2519,7 +2519,7 @@ impl Effect {
                     _ => modes.iter().find_map(|m| eff_find(m, slot, None, kicked)),
                 },
                 Effect::RevealAnyNumberFromHand { then: body, .. }
-                | Effect::MayDo { body, .. }
+                | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
                 | Effect::CapTargetsAtX { body }
                 | Effect::TargetsExactlyX { body }
                 | Effect::CapTargetsAt { body, .. }
@@ -2982,7 +2982,7 @@ impl Effect {
                 Some(m) => modes.get(m).and_then(|e| e.min_targets_in_mode(None)),
                 None => modes.iter().find_map(|e| e.min_targets_in_mode(None)),
             },
-            Effect::MayDo { body, .. }
+            Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }
@@ -3005,7 +3005,7 @@ impl Effect {
     pub fn target_slot_optional_x(&self, slot: u8, mode: Option<usize>, x: u32) -> bool {
         match self {
             Effect::TargetsExactlyX { .. } => u32::from(slot) >= x,
-            Effect::MayDo { body, .. }
+            Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
@@ -3046,7 +3046,7 @@ impl Effect {
                 Some(m) => modes.get(m).and_then(|e| e.distinct_target_count(None)),
                 None => modes.iter().find_map(|e| e.distinct_target_count(None)),
             },
-            Effect::MayDo { body, .. }
+            Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. }

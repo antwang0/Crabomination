@@ -2831,6 +2831,12 @@ pub enum Effect {
     /// `GameState`. Card factories pass `"…".into()` which is a no-cost
     /// `&str → String` move at construction time.
     MayDo { description: String, body: Box<Effect> },
+    /// "[Player] may [body]" — [`Effect::MayDo`] routed to another seat. The
+    /// yes/no goes to `who` and `body` runs with `who` as its controller, so
+    /// its "you" and its target choice belong to that player (Ley Line's
+    /// "that player may put a +1/+1 counter on target creature of their
+    /// choice").
+    MayDoBy { who: PlayerRef, description: String, body: Box<Effect> },
 
     /// "You may [body]. If you don't, [else_]." The two-sided sibling of
     /// [`Effect::MayDo`] (Dakra Mystic). Shares MayPay's seat-routed yes/no

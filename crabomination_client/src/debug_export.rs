@@ -253,6 +253,8 @@ mod tests {
             damage_cant_be_prevented_this_turn: false,
             spend_mana_as_any_color: false,
             combat_damage_prevented_this_turn: false,
+            attack_tax_this_turn: 0,
+            block_tax_this_turn: 0,
             combat_chooser: None,
             max_attackers_per_combat: None,
             max_blockers_per_combat: None,
