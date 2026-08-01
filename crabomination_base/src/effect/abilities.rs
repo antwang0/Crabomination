@@ -719,6 +719,12 @@ pub enum StaticEffect {
     /// library find nothing (CR 701.19 "can't search"). Checked in the
     /// `Effect::Search` resolver alongside Shadow of Doubt's turn-wide lock.
     OpponentsCantSearchLibraries,
+    /// CR 115.9 — the Flagbearer restriction (Standard Bearer, Coalition Honor
+    /// Guard, Coalition Flag): while an opponent of this permanent's controller
+    /// chooses targets for a spell or ability they control, they must choose at
+    /// least one Flagbearer on the battlefield if able. Enforced at cast /
+    /// activation time by `flagbearer_violation`.
+    FlagbearersMustBeTargeted,
     /// CR 119.7 — Targeted players can't gain life while this static is
     /// active. The `applies_to` selector resolves to one or more
     /// `PlayerView`-style entries; each matching player has their

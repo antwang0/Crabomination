@@ -685,6 +685,10 @@ pub enum DelayedKind {
     YourNextUpkeep,
     /// At the beginning of the next end step (any player's).
     NextEndStep,
+    /// "At the beginning of the end step of that player's next turn" — fires
+    /// on seat `player`'s End step, but only on a turn after `after_turn`
+    /// (Suppress).
+    PlayersNextEndStep { player: usize, after_turn: u32 },
     /// At the beginning of the next cleanup step (Waylay). Fires after the end
     /// step, so the affected objects survive it.
     NextCleanupStep,

@@ -2475,7 +2475,14 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::FlipCoinsChooseCount { max, per_win, per_loss, all_won, all_won_min } => {
+            Effect::FlipCoinsChooseCount {
+                max,
+                per_win,
+                per_loss,
+                all_won,
+                all_won_min,
+                stop_on_loss,
+            } => {
                 // Yusri — choose 1..=max, flip that many coins, run the
                 // per-flip bodies, and the jackpot body on max wins.
                 use crate::decision::{Decision, DecisionAnswer};
@@ -2511,10 +2518,17 @@ impl GameState {
                     } else {
                         events.push(GameEvent::CoinFlipLost { player: me });
                         self.run_effect(per_loss, ctx, events)?;
+                        if *stop_on_loss {
+                            return Ok(());
+                        }
                     }
                 }
                 if n >= *all_won_min && wins == n {
-                    self.run_effect(all_won, ctx, events)?;
+                    // The chosen number rides in as X so the payout can scale
+                    // off it (Squee's Revenge draws two per flip).
+                    let mut won_ctx = ctx.clone();
+                    won_ctx.x_value = n;
+                    self.run_effect(all_won, &won_ctx, events)?;
                 }
                 Ok(())
             }
@@ -12190,9 +12204,9 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileHandLinked => {
+            Effect::ExileHandLinked { who } => {
                 let Some(src) = ctx.source else { return Ok(()) };
-                let p = ctx.controller;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
                 let hand: Vec<CardInstance> = std::mem::take(&mut *self.players[p].hand);
                 for mut card in hand {
                     card.exiled_with = Some(src);
@@ -12204,9 +12218,9 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ReturnLinkedExilesToHand => {
+            Effect::ReturnLinkedExilesToHand { who } => {
                 let Some(src) = ctx.source else { return Ok(()) };
-                let p = ctx.controller;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
                 let ids: Vec<CardId> = self
                     .exile
                     .iter()
@@ -15947,6 +15961,43 @@ impl GameState {
                 let answer = self.decider.decide(&decision);
                 let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
                 events.append(&mut applied);
+                Ok(())
+            }
+
+            // Gaea's Balance — one land per basic type, each picked from the
+            // cards carrying that type. Types with no match are skipped.
+            Effect::SearchEachBasicLandType { who, tapped } => {
+                use crate::card::LandType;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                if self.no_search_this_turn || self.player_search_locked_by_opponent(p) {
+                    return Ok(());
+                }
+                self.players[p].searched_library_this_turn = true;
+                events.push(GameEvent::PlayerSearchedLibrary { player: p });
+                let dest = ZoneDest::Battlefield {
+                    controller: crate::effect::PlayerRef::Seat(p),
+                    tapped: *tapped,
+                };
+                for lt in [
+                    LandType::Plains,
+                    LandType::Island,
+                    LandType::Swamp,
+                    LandType::Mountain,
+                    LandType::Forest,
+                ] {
+                    let pick = self.players[p]
+                        .library
+                        .iter()
+                        .find(|c| c.definition.subtypes.land_types.contains(&lt))
+                        .map(|c| c.id);
+                    if let Some(id) = pick
+                        && let Some(card) = Self::take_card(&mut self.players[p].library, id)
+                    {
+                        self.place_card_in_dest(card, p, &dest, events);
+                        self.last_moved_cards.push(id);
+                    }
+                }
+                self.shuffle_library(p, events);
                 Ok(())
             }
 
@@ -20267,7 +20318,14 @@ impl GameState {
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
                     source,
-                    kind: delayed_kind_from_effect(*kind),
+                    kind: delayed_kind_from_effect(
+                        *kind,
+                        match target {
+                            Some(Target::Player(p)) => Some(p),
+                            _ => None,
+                        },
+                        self.turn_number,
+                    ),
                     effect: (**body).clone(),
                     target,
                     // Bind a token minted earlier in this resolution so the
@@ -20290,7 +20348,7 @@ impl GameState {
                 self.delayed_triggers.push(DelayedTrigger {
                     controller: ctx.controller,
                     source: ctx.source.unwrap_or(crate::card::CardId(0)),
-                    kind: delayed_kind_from_effect(*kind),
+                    kind: delayed_kind_from_effect(*kind, None, self.turn_number),
                     effect: (**body).clone(),
                     target,
                     bound_token: self.last_created_token,

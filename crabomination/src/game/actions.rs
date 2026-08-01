@@ -5612,6 +5612,25 @@ impl GameState {
             }
         }
 
+        // CR 115.9 — an opponent's Flagbearer must be chosen if any declared
+        // slot could take it (Standard Bearer).
+        {
+            let chosen: Vec<Target> =
+                target.iter().cloned().chain(additional_targets.iter().cloned()).collect();
+            let slots: Vec<Option<crate::card::SelectionRequirement>> = (0..chosen.len())
+                .map(|i| {
+                    card.definition
+                        .effect
+                        .target_filter_for_slot_in_mode_kicked(i as u8, mode, kicked)
+                        .cloned()
+                })
+                .collect();
+            if self.flagbearer_violation(p, &chosen, &slots) {
+                self.players[p].hand.push(card);
+                return Err(GameError::InvalidTarget);
+            }
+        }
+
         // CR 115.3 — within a *single* multi-target instance ("up to N / any
         // number of / N target …"), the same object can't be chosen twice.
         // Separate "target" clauses (a Seq of single-target effects) may share
@@ -9451,6 +9470,60 @@ impl GameState {
         })
     }
 
+    /// CR 115.9 — Flagbearer. Every battlefield Flagbearer `actor` could
+    /// legally target, when an opponent of `actor` has the restriction up.
+    /// Empty when the restriction is inactive, so callers can treat "no
+    /// candidates" as "no restriction".
+    pub(crate) fn flagbearer_candidates(&self, actor: usize) -> Vec<CardId> {
+        use crate::effect::StaticEffect;
+        let restricted = self.battlefield.iter().any(|c| {
+            !self.same_team(c.controller, actor)
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::FlagbearersMustBeTargeted))
+        });
+        if !restricted {
+            return Vec::new();
+        }
+        self.battlefield
+            .iter()
+            .filter(|c| {
+                self.computed_permanent(c.id)
+                    .is_some_and(|cp| cp.subtypes.creature_types.contains(&crate::card::CreatureType::Flagbearer))
+                    && self.check_target_legality(&Target::Permanent(c.id), actor).is_ok()
+            })
+            .map(|c| c.id)
+            .collect()
+    }
+
+    /// CR 115.9 — true when `chosen` skips an available Flagbearer that one of
+    /// `slot_filters` would have accepted ("must choose at least one … if able").
+    pub(crate) fn flagbearer_violation(
+        &self,
+        actor: usize,
+        chosen: &[Target],
+        slot_filters: &[Option<crate::card::SelectionRequirement>],
+    ) -> bool {
+        let candidates = self.flagbearer_candidates(actor);
+        if candidates.is_empty() {
+            return false;
+        }
+        if chosen.iter().any(|t| matches!(t, Target::Permanent(c) if candidates.contains(c))) {
+            return false;
+        }
+        // "If able": only a violation when some declared slot would have
+        // accepted a Flagbearer.
+        slot_filters.iter().any(|f| {
+            candidates.iter().any(|&fb| match f {
+                Some(filter) => {
+                    self.evaluate_requirement(filter, &Target::Permanent(fb), actor)
+                }
+                None => true,
+            })
+        })
+    }
+
     /// True while `player` controls a `ControllerCantCastPermanentSpells`
     /// source (Codie, Vociferous Codex).
     pub(crate) fn player_cant_cast_permanent_spells(&self, player: usize) -> bool {
@@ -11758,6 +11831,17 @@ impl GameState {
                 && !self.evaluate_requirement_static(&filter, tgt, p, Some(card_id))
             {
                 return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+        // CR 115.9 — Flagbearer applies to activated abilities too.
+        {
+            let chosen: Vec<Target> =
+                target.iter().cloned().chain(additional_targets.iter().cloned()).collect();
+            let slots: Vec<Option<crate::card::SelectionRequirement>> = (0..chosen.len())
+                .map(|i| ability.effect.target_filter_for_slot_in_mode(i as u8, chosen_mode).cloned())
+                .collect();
+            if self.flagbearer_violation(p, &chosen, &slots) {
+                return Err(GameError::InvalidTarget);
             }
         }
         // Reject when the effect still references a target slot we weren't

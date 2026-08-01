@@ -363,6 +363,7 @@ pub fn yusri_fortunes_flame() -> CardDefinition {
                 }),
                 all_won: Box::new(Effect::FreeSpellsFromHandThisTurn),
                 all_won_min: 5,
+                stop_on_loss: false,
             },
         }],
         ..Default::default()

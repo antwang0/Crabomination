@@ -2,16 +2,18 @@
 //! the split cards and the remaining wedge utility. Tests in `classic_sets/apc2`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
-    EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R,
-    StaticAbility, StaticEffect, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
+    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
+    SelectionRequirement as R, SplitCard, SplitHalf, StaticAbility, StaticEffect, Subtypes,
+    Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::{
-    Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest,
-    shortcut::{draw, etb, target_filtered},
+    DelayedTriggerKind, Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector,
+    ZoneDest,
+    shortcut::{draw, etb, target_any, target_filtered},
 };
 use crate::game::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 
 fn creature(
     name: &'static str,
@@ -439,4 +441,358 @@ pub fn last_stand() -> CardDefinition {
             },
         ]),
     )
+}
+
+/// The Flagbearer restriction line (CR 115.9), printed on every Flagbearer.
+fn flagbearer_static() -> StaticAbility {
+    StaticAbility {
+        description: "An opponent choosing targets must choose a Flagbearer if able.",
+        effect: StaticEffect::FlagbearersMustBeTargeted,
+    }
+}
+
+/// Standard Bearer — {1}{W} 1/1 Flagbearer. Soaks up targeted removal.
+pub fn standard_bearer() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![flagbearer_static()],
+        ..creature(
+            "Standard Bearer",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Human, CreatureType::Flagbearer],
+            1,
+            1,
+        )
+    }
+}
+
+/// Coalition Honor Guard — {3}{W} 2/4 Flagbearer, sized to survive the soak.
+pub fn coalition_honor_guard() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![flagbearer_static()],
+        ..creature(
+            "Coalition Honor Guard",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Human, CreatureType::Flagbearer],
+            2,
+            4,
+        )
+    }
+}
+
+/// Coalition Flag — {W} Aura. Turns one of your creatures into the lightning rod.
+pub fn coalition_flag() -> CardDefinition {
+    CardDefinition {
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(R::Creature.and(R::ControlledByYou)),
+        },
+        static_abilities: vec![
+            StaticAbility {
+                description: "Enchanted creature is a Flagbearer.",
+                effect: StaticEffect::AddCreatureTypeToMatching {
+                    applies_to: Selector::attached_to(Selector::This),
+                    creature_type: CreatureType::Flagbearer,
+                },
+            },
+            flagbearer_static(),
+        ],
+        ..aura("Coalition Flag", cost(&[w()]))
+    }
+}
+
+/// Life // Death — {G} // {1}{B}. Your lands swing, or your graveyard does.
+pub fn life_death() -> CardDefinition {
+    CardDefinition {
+        name: "Life // Death",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::BecomeCreature {
+            what: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+            power: Value::ONE,
+            toughness: Value::ONE,
+            creature_types: Vec::new(),
+            keywords: Vec::new(),
+            duration: Duration::EndOfTurn,
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(1), b()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::TargetFiltered {
+                            slot: 0,
+                            filter: R::Creature.and(R::InGraveyard),
+                        },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                    },
+                ]),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Night // Day — {B} // {2}{W}. A shrink, or a team pump.
+pub fn night_day() -> CardDefinition {
+    CardDefinition {
+        name: "Night // Day",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), w()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::PumpPT {
+                    what: Selector::ControlledBy {
+                        who: PlayerRef::Target(0),
+                        filter: R::Creature,
+                    },
+                    power: Value::ONE,
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Order // Chaos — {3}{W} // {2}{R}. Exile an attacker, or turn off blocks.
+pub fn order_chaos() -> CardDefinition {
+    CardDefinition {
+        name: "Order // Chaos",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(R::Creature.and(R::IsAttacking)),
+            to: ZoneDest::Exile,
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), r()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::GrantKeywordToMatchingThisTurn {
+                    filter: R::Creature,
+                    keyword: Keyword::CantBlock,
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Cromat — {W}{U}{B}{R}{G} 5/5 with a mode for every guild pair.
+pub fn cromat() -> CardDefinition {
+    let ability = |pips: &[crate::mana::ManaSymbol], effect| ActivatedAbility {
+        mana_cost: cost(pips),
+        effect,
+        ..Default::default()
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![
+            ability(
+                &[w(), b()],
+                Effect::Destroy { what: target_filtered(R::Creature.and(R::InCombatWithSource)) },
+            ),
+            ability(
+                &[u(), r()],
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+            ),
+            ability(&[b(), g()], Effect::Regenerate { what: Selector::This }),
+            ability(
+                &[r(), w()],
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::ONE,
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+            ),
+            ability(
+                &[g(), u()],
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOf(Box::new(Selector::This)),
+                        pos: LibraryPosition::Top,
+                    },
+                },
+            ),
+        ],
+        ..creature(
+            "Cromat",
+            cost(&[w(), u(), b(), r(), g()]),
+            vec![CreatureType::Illusion],
+            5,
+            5,
+        )
+    }
+}
+
+/// Dead Ringers — {4}{B}. Kills two nonblack creatures, but only a matched pair.
+pub fn dead_ringers() -> CardDefinition {
+    let nonblack = || R::Creature.and(R::Not(Box::new(R::HasColor(Color::Black))));
+    sorcery(
+        "Dead Ringers",
+        cost(&[generic(4), b()]),
+        Effect::If {
+            cond: Predicate::TargetsHaveIdenticalColors(0, 1),
+            then: Box::new(Effect::Seq(vec![
+                Effect::DestroyNoRegen {
+                    what: Selector::TargetFiltered { slot: 0, filter: nonblack() },
+                },
+                Effect::DestroyNoRegen {
+                    what: Selector::TargetFiltered { slot: 1, filter: nonblack() },
+                },
+            ])),
+            else_: Box::new(Effect::Noop),
+        },
+    )
+}
+
+/// Jaded Response — {1}{U}. A counter that only answers your own colours.
+pub fn jaded_response() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Instant],
+        ..sorcery(
+            "Jaded Response",
+            cost(&[generic(1), u()]),
+            Effect::If {
+                cond: Predicate::TargetSharesColorWithControlled { slot: 0, filter: R::Creature },
+                then: Box::new(Effect::CounterSpell {
+                    what: target_filtered(R::IsSpellOnStack),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        )
+    }
+}
+
+/// Gaea's Balance — {3}{G}. Five lands in, one of each basic type out.
+pub fn gaeas_balance() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: R::Land,
+            count: 5,
+        }],
+        ..sorcery(
+            "Gaea's Balance",
+            cost(&[generic(3), g()]),
+            Effect::SearchEachBasicLandType { who: PlayerRef::You, tapped: false },
+        )
+    }
+}
+
+/// Squee's Revenge — {1}{U}{R}. Name a number, win every flip, draw double.
+pub fn squees_revenge() -> CardDefinition {
+    sorcery(
+        "Squee's Revenge",
+        cost(&[generic(1), u(), r()]),
+        Effect::FlipCoinsChooseCount {
+            max: 5,
+            per_win: Box::new(Effect::Noop),
+            per_loss: Box::new(Effect::Noop),
+            all_won: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)),
+            }),
+            all_won_min: 1,
+            stop_on_loss: true,
+        },
+    )
+}
+
+/// Captain's Maneuver — {X}{R}{W}. Hands the next X damage to someone else.
+pub fn captains_maneuver() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Instant],
+        ..sorcery(
+            "Captain's Maneuver",
+            cost(&[x(), r(), w()]),
+            Effect::RedirectNextDamage {
+                target: target_any(),
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                },
+                amount: Value::XFromCost,
+            },
+        )
+    }
+}
+
+/// Legacy Weapon — {7}. Exiles anything, and never stays dead.
+pub fn legacy_weapon() -> CardDefinition {
+    CardDefinition {
+        name: "Legacy Weapon",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        shuffles_into_library_instead: true,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w(), u(), b(), r(), g()]),
+            effect: Effect::Move {
+                what: target_filtered(R::Permanent),
+                to: ZoneDest::Exile,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Suppress — {2}{B}. Their hand goes away for a turn.
+pub fn suppress() -> CardDefinition {
+    sorcery(
+        "Suppress",
+        cost(&[generic(2), b()]),
+        Effect::Seq(vec![
+            Effect::ExileHandLinked { who: PlayerRef::Target(0) },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::TargetsNextEndStep,
+                body: Box::new(Effect::ReturnLinkedExilesToHand { who: PlayerRef::Target(0) }),
+            },
+        ]),
+    )
+}
+
+/// Emblazoned Golem — {2} 1/2. Kicker {X} pays out in +1/+1 counters.
+/// The printed "one mana of each color" spend restriction isn't modeled.
+pub fn emblazoned_golem() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Kicker(cost(&[x()]))],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::XFromCost,
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..creature("Emblazoned Golem", cost(&[generic(2)]), vec![CreatureType::Golem], 1, 2)
+    }
 }

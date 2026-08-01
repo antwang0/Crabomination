@@ -286,3 +286,242 @@ fn putrid_warrior_drains_on_damage() {
 }
 
 
+
+/// Standard Bearer soaks up an opponent's targeted removal.
+#[test]
+fn flagbearer_must_be_targeted() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::standard_bearer());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bears = find(&g, "Grizzly Bears");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    mana(&mut g, 0);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(err.is_err(), "the Flagbearer has to be the target");
+    let bearer = find(&g, "Standard Bearer");
+    cast(&mut g, 0, bolt, Some(Target::Permanent(bearer)));
+    assert!(g.battlefield.iter().all(|c| c.definition.name != "Standard Bearer"));
+}
+
+/// Coalition Flag turns one of your own creatures into the lightning rod.
+#[test]
+fn coalition_flag_makes_a_flagbearer() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bears = find(&g, "Grizzly Bears");
+    let flag = g.add_card_to_hand(1, catalog::coalition_flag());
+    g.active_player_idx = 1;
+    cast(&mut g, 1, flag, Some(Target::Permanent(bears)));
+    g.active_player_idx = 0;
+    assert!(
+        g.computed_permanent(bears)
+            .unwrap()
+            .subtypes
+            .creature_types
+            .contains(&crabomination::card::CreatureType::Flagbearer)
+    );
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    let giant = find(&g, "Hill Giant");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Permanent(giant)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err()
+    );
+}
+
+/// Order exiles an attacker; Chaos turns off blocking.
+#[test]
+fn order_chaos_split_halves() {
+    let def = catalog::order_chaos();
+    let split = def.split.as_ref().expect("split");
+    assert!(split.right.is_instant_speed());
+    let mut g = main_phase();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    let order = g.add_card_to_hand(0, catalog::order_chaos());
+    cast(&mut g, 0, order, Some(Target::Permanent(attacker)));
+    assert!(g.exile.iter().any(|c| c.id == attacker));
+}
+
+/// Life animates your lands; Death reanimates for life.
+#[test]
+fn life_death_split_halves() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::forest());
+    let forest = find(&g, "Forest");
+    let life = g.add_card_to_hand(0, catalog::life_death());
+    cast(&mut g, 0, life, None);
+    assert_eq!(power_of(&g, forest), 1, "the land is a 1/1");
+    assert!(g.computed_permanent(forest).unwrap().card_types.contains(&CardType::Land));
+}
+
+/// Cromat picks off whatever it's tangling with.
+#[test]
+fn cromat_kills_its_blocker() {
+    let mut g = main_phase();
+    let cromat = g.add_card_to_battlefield(0, catalog::cromat());
+    g.clear_sickness(cromat);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: cromat,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, cromat)])).expect("block");
+    activate(&mut g, 0, cromat, 0, Some(Target::Permanent(blocker)));
+    assert!(g.battlefield.iter().all(|c| c.id != blocker), "the blocker is gone");
+}
+
+/// Dead Ringers only fires on a matched colour pair.
+#[test]
+fn dead_ringers_needs_identical_colors() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::savannah_lions());
+    let ringers = g.add_card_to_hand(0, catalog::dead_ringers());
+    cast_with(&mut g, 0, ringers, Some(Target::Permanent(a)), vec![Target::Permanent(b)]);
+    assert_eq!(g.battlefield.iter().filter(|c| c.id == a || c.id == b).count(), 2, "green vs white");
+
+    let c = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ringers = g.add_card_to_hand(0, catalog::dead_ringers());
+    cast_with(&mut g, 0, ringers, Some(Target::Permanent(a)), vec![Target::Permanent(c)]);
+    assert!(g.battlefield.iter().all(|p| p.id != a && p.id != c), "both green — both die");
+}
+
+/// Jaded Response only answers a colour you already have on board.
+#[test]
+fn jaded_response_needs_a_shared_color() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(1, catalog::giant_growth());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let response = g.add_card_to_hand(0, catalog::jaded_response());
+    cast(&mut g, 0, response, Some(Target::Permanent(spell)));
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == spell),
+        "green spell, green creature — countered"
+    );
+}
+
+/// Gaea's Balance eats five lands and returns one of each basic type.
+#[test]
+fn gaeas_balance_fetches_one_of_each_basic() {
+    let mut g = main_phase();
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    for land in [catalog::plains, catalog::island, catalog::swamp, catalog::mountain] {
+        g.add_card_to_library(0, land());
+    }
+    let balance = g.add_card_to_hand(0, catalog::gaeas_balance());
+    cast(&mut g, 0, balance, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.is_land()).count(), 4);
+    assert!(g.players[0].library.is_empty(), "all four were found");
+}
+
+/// Captain's Maneuver moves X damage to the second target.
+#[test]
+fn captains_maneuver_redirects_damage() {
+    let mut g = main_phase();
+    let ox = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let maneuver = g.add_card_to_hand(0, catalog::captains_maneuver());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: maneuver,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(ox)],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Player(0)));
+    assert_eq!(g.players[0].life, 20, "the burn went elsewhere");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == ox).map(|c| c.damage), Some(3));
+}
+
+/// Legacy Weapon shuffles back rather than dying.
+#[test]
+fn legacy_weapon_shuffles_instead_of_dying() {
+    let mut g = main_phase();
+    let weapon = g.add_card_to_battlefield(0, catalog::legacy_weapon());
+    let mut events = Vec::new();
+    g.destroy_permanent(weapon, false, &mut events);
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty());
+    assert!(g.players[0].library.iter().any(|c| c.id == weapon));
+}
+
+/// Suppress banks their hand until the end of their next turn.
+#[test]
+fn suppress_exiles_then_returns_the_hand() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    let suppress = g.add_card_to_hand(0, catalog::suppress());
+    cast(&mut g, 0, suppress, Some(Target::Player(1)));
+    assert_eq!(g.players[1].hand.len(), 0, "hand is in exile");
+    g.turn_number += 1;
+    g.active_player_idx = 1;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 3, "returned at their end step");
+}
+
+/// Emblazoned Golem grows by its kicker.
+#[test]
+fn emblazoned_golem_enters_with_x_counters() {
+    let mut g = main_phase();
+    let golem = g.add_card_to_hand(0, catalog::emblazoned_golem());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: golem,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(power_of(&g, golem), 4);
+}

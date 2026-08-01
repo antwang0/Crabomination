@@ -1190,6 +1190,26 @@ impl GameState {
             .count()
     }
 
+    /// The printed colours of the object in target slot `slot`, wherever it
+    /// currently is (battlefield, stack, or a terminal zone). `None` when the
+    /// slot is empty or holds a player.
+    fn target_colors(&self, ctx: &EffectContext, slot: u8) -> Option<Vec<crate::mana::Color>> {
+        let Some(crate::game::types::Target::Permanent(cid)) = ctx.targets.get(slot as usize)
+        else {
+            return None;
+        };
+        self.find_card_anywhere(*cid)
+            .or_else(|| {
+                self.stack.iter().find_map(|si| match si {
+                    crate::game::types::StackItem::Spell { card, .. } if card.id == *cid => {
+                        Some(&**card)
+                    }
+                    _ => None,
+                })
+            })
+            .map(|c| c.definition.printed_colors())
+    }
+
     pub fn evaluate_predicate(&self, p: &Predicate, ctx: &EffectContext) -> bool {
         match p {
             Predicate::True => true,
@@ -1234,6 +1254,25 @@ impl GameState {
             Predicate::ValueIsPrime(v) => {
                 let n = self.evaluate_value(v, ctx) as i64;
                 n >= 2 && (2..=((n as f64).sqrt() as i64)).all(|d| n % d != 0)
+            }
+            // CR 105 — Dead Ringers' "unless either one is a color the other
+            // isn't": both slots must carry exactly the same colour set.
+            Predicate::TargetsHaveIdenticalColors(a, b) => {
+                match (self.target_colors(ctx, *a), self.target_colors(ctx, *b)) {
+                    (Some(x), Some(y)) => {
+                        x.iter().all(|c| y.contains(c)) && y.iter().all(|c| x.contains(c))
+                    }
+                    _ => false,
+                }
+            }
+            Predicate::TargetSharesColorWithControlled { slot, filter } => {
+                let Some(colors) = self.target_colors(ctx, *slot) else { return false };
+                !colors.is_empty()
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == ctx.controller
+                            && self.evaluate_requirement_on_card(filter, c, ctx.controller)
+                            && c.definition.printed_colors().iter().any(|x| colors.contains(x))
+                    })
             }
             Predicate::PlayerSacrificedThisResolution(pref) => self
                 .resolve_player(pref, ctx)

@@ -1075,6 +1075,14 @@ pub enum Predicate {
     /// All-Questioning's "if you control a prime number of lands". 0 and 1
     /// are not prime.
     ValueIsPrime(Value),
+    /// CR 105 — the two named target slots have exactly the same colour set
+    /// ("unless either one is a color the other isn't" — Dead Ringers).
+    TargetsHaveIdenticalColors(u8, u8),
+    /// The object in target slot `0` shares a colour with a permanent the
+    /// controller controls matching `filter` (Jaded Response's "if it shares a
+    /// color with a creature you control"). Reads the target wherever it is —
+    /// stack spell or permanent.
+    TargetSharesColorWithControlled { slot: u8, filter: crate::card::SelectionRequirement },
     /// True if `who` sacrificed at least one permanent during the current
     /// resolution. Backed by `GameState::players_sacrificed_this_resolution`.
     /// Gates "if you sacrificed a permanent this way, …" (Deadly Brew).
@@ -4137,6 +4145,11 @@ pub enum Effect {
     /// graveyard for an artifact card …, put it into your hand"). Candidates
     /// pool both zones; the pick is taken from whichever zone holds it.
     SearchLibraryOrGraveyard { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
+    /// "Search your library for a land card of each basic land type, put those
+    /// cards onto the battlefield, then shuffle" (Gaea's Balance). One card per
+    /// basic type, each chosen from the cards carrying that type; a type with
+    /// no match is simply skipped.
+    SearchEachBasicLandType { who: PlayerRef, tapped: bool },
     /// "Search your library for up to `count` cards matching `filter` and put
     /// them into `to`." Resolves as a chain of single `Search` picks (each
     /// reuses the `SearchPending` suspend), shrinking `count` per pick.
@@ -4514,10 +4527,10 @@ pub enum Effect {
     ExileHand { who: PlayerRef },
     /// Exile the controller's whole hand face down, stamped
     /// `exiled_with = source` (Bottled Cloister, Moonring Mirror).
-    ExileHandLinked,
+    ExileHandLinked { who: PlayerRef },
     /// Return every card the controller owns stamped `exiled_with = source`
     /// from exile to their hand (Bottled Cloister's upkeep half).
-    ReturnLinkedExilesToHand,
+    ReturnLinkedExilesToHand { who: PlayerRef },
     /// "Look at the top `count` cards of `who`'s library. Exile any number of
     /// them, then put the rest back in any order." Dimir Machinations. The
     /// headless pick exiles the priciest nonland cards.
@@ -5126,12 +5139,17 @@ pub enum Effect {
     /// Yusri, Fortune's Flame — choose a number 1..=`max`, flip that many
     /// coins; run `per_win` per won flip and `per_loss` per lost flip, then
     /// `all_won` if the chosen number was `all_won_min`+ and every flip won.
+    /// With `stop_on_loss` the flipping stops at the first lost flip ("flip a
+    /// coin that many times or until you lose a flip" — Squee's Revenge).
+    /// `all_won` reads the chosen number as `Value::XFromCost`.
     FlipCoinsChooseCount {
         max: u32,
         per_win: Box<Effect>,
         per_loss: Box<Effect>,
         all_won: Box<Effect>,
         all_won_min: u32,
+        #[serde(default)]
+        stop_on_loss: bool,
     },
     /// Vraska, Betrayal's Sting's −2 — "[what] becomes a Treasure artifact
     /// with '{T}, Sacrifice: add one mana of any color' and loses all other
@@ -7523,6 +7541,9 @@ pub enum DelayedTriggerKind {
     CreatureAttacksYouUntilYourNextTurn,
     YourNextUpkeep,
     NextEndStep,
+    /// "At the beginning of the end step of target player's next turn"
+    /// (Suppress). `Effect::DelayUntil` reads the player from target slot 0.
+    TargetsNextEndStep,
     /// "At end of combat, …" — fires once at the current turn's end-of-combat
     /// step (Fortune, Loyal Steed's saddle blink).
     EndOfCombat,

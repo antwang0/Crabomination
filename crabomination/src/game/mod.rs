@@ -14395,7 +14395,7 @@ impl GameState {
                         // Card stays in hand; register a delayed trigger that
                         // fires later (next upkeep / first main / end step).
                         use crate::game::types::DelayedTrigger;
-                        let dk = crate::game::effects::delayed_kind_from_effect(kind);
+                        let dk = crate::game::effects::delayed_kind_from_effect(kind, None, self.turn_number);
                         self.delayed_triggers.push(DelayedTrigger {
                             controller: p,
                             source: cid,
@@ -16831,6 +16831,9 @@ fn static_effect_to_effects(
             | StaticEffect::IgnoreOpponentsHexproof
             | StaticEffect::LandsUntargetableByOpponents
             | StaticEffect::OpponentsCantSearchLibraries
+            // FlagbearersMustBeTargeted — consulted at cast/activation time
+            // via `flagbearer_violation`; no layer effect.
+            | StaticEffect::FlagbearersMustBeTargeted
             | StaticEffect::LandsTapColorlessOnly
             // PlayersMaySpendManaAsAnyColor — read by the payment funnel via
             // `relax_cost_colors` (Mycosynth Lattice); no layer effect.

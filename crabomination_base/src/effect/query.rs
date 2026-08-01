@@ -228,6 +228,7 @@ impl Effect {
         }
         match self {
             Effect::Noop
+            | Effect::SearchEachBasicLandType { .. }
             | Effect::HighestLifeWinsElseDraw
             | Effect::ReplaceLandManaThisTurn { .. }
             | Effect::ExileTopThenRevealUntilNamed { .. }
@@ -882,8 +883,8 @@ impl Effect {
             Effect::RevealLibraryNamedCountPunish { who, .. }
             | Effect::AlternatingExileFromHand { who } => sel_has_target(who),
             Effect::ExileHandThenReclaimLinked
-            | Effect::ExileHandLinked
-            | Effect::ReturnLinkedExilesToHand => false,
+            | Effect::ExileHandLinked { .. }
+            | Effect::ReturnLinkedExilesToHand { .. } => false,
             Effect::LookExileAnyNumberRestBack { who, count } => {
                 sel_has_target(who) || value_has_target(count)
             }
@@ -2783,8 +2784,8 @@ impl Effect {
                 Effect::RevealLibraryNamedCountPunish { who, .. }
                 | Effect::AlternatingExileFromHand { who } => sel_find(who, slot),
                 Effect::ExileHandThenReclaimLinked
-                | Effect::ExileHandLinked
-                | Effect::ReturnLinkedExilesToHand => None,
+                | Effect::ExileHandLinked { .. }
+                | Effect::ReturnLinkedExilesToHand { .. } => None,
                 Effect::LookExileAnyNumberRestBack { who, .. }
                 | Effect::PutTopOnBottom { who }
                 | Effect::LookAtHandCastFree { who } => sel_find(who, slot),
@@ -2810,6 +2811,8 @@ impl Effect {
                 | Effect::RevealUntilFind { who, .. }
                 | Effect::RearrangeTop { who, .. }
                 | Effect::ShuffleHandsDrawSame { who }
+                | Effect::ExileHandLinked { who }
+                | Effect::ReturnLinkedExilesToHand { who }
                 | Effect::DiscardUnlessKind { who, .. } => implicit_player_for_ref_slot(who, slot),
                 Effect::PhaseOut { what, .. }
                 | Effect::GrantSuspend { what, .. }

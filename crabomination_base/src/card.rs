@@ -117,8 +117,9 @@ pub enum CreatureType {
     Peasant,
     // Bloomburrow (2024) animal-folk subtypes.
     Rabbit, Raccoon, Mouse, Wolverine, Mole, Possum, Skunk, Hamster,
-    // Invasion block Metathran (Living Airship, Metathran Zombie).
-    Metathran,
+    // Invasion block Metathran (Living Airship, Metathran Zombie) and
+    // Apocalypse Flagbearers (Standard Bearer, Coalition Honor Guard).
+    Metathran, Flagbearer,
     // The Last Airbender (2026).
     Lemur, Kangaroo, Seal,
     // The Lost Caverns of Ixalan (2023).

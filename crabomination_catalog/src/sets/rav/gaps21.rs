@@ -61,7 +61,7 @@ pub fn bottled_cloister() -> CardDefinition {
                     EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                     EventScope::OpponentControl,
                 ),
-                effect: Effect::ExileHandLinked,
+                effect: Effect::ExileHandLinked { who: PlayerRef::You },
             },
             TriggeredAbility {
                 event: EventSpec::new(
@@ -69,7 +69,7 @@ pub fn bottled_cloister() -> CardDefinition {
                     EventScope::YourControl,
                 ),
                 effect: Effect::Seq(vec![
-                    Effect::ReturnLinkedExilesToHand,
+                    Effect::ReturnLinkedExilesToHand { who: PlayerRef::You },
                     Effect::Draw {
                         who: Selector::You,
                         amount: Value::ONE,

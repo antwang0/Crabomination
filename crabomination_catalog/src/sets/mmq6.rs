@@ -230,7 +230,7 @@ pub fn kyren_archive() -> CardDefinition {
             mana_cost: cost(&[generic(5)]),
             discard_hand_cost: true,
             sac_cost: true,
-            effect: Effect::ReturnLinkedExilesToHand,
+            effect: Effect::ReturnLinkedExilesToHand { who: PlayerRef::You },
             ..Default::default()
         }],
         ..artifact("Kyren Archive", cost(&[generic(3)]))
