@@ -825,10 +825,9 @@ fn project_hand_card(
     viewer_seat: usize,
 ) -> HandCardView {
     // CR 701.19 — a hand the viewer has looked at stays visible to them
-    // (Wanderguard Sentry, Thought Prison).
-    if owner_seat == viewer_seat
-        || state.hands_revealed_to.contains(&(viewer_seat, owner_seat))
-    {
+    // (Wanderguard Sentry, Thought Prison), as is one a live static reveals
+    // (Telepathy).
+    if state.hand_visible_to(viewer_seat, owner_seat) {
         HandCardView::Known(known_card_in(card, Some(state)))
     } else {
         HandCardView::Hidden { id: card.id }
@@ -840,13 +839,23 @@ fn known_card(card: &CardInstance) -> KnownCard {
 }
 
 fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) -> KnownCard {
-    let cycling_cost = card.definition.keywords.iter().find_map(|kw| {
-        if let crate::card::Keyword::Cycling(c) = kw {
-            Some(c.clone())
-        } else {
-            None
-        }
-    });
+    let cycling_cost = card
+        .definition
+        .keywords
+        .iter()
+        .find_map(|kw| {
+            if let crate::card::Keyword::Cycling(c) = kw { Some(c.clone()) } else { None }
+        })
+        // Fluctuator — the label must show what the player will actually pay.
+        .map(|mut c| {
+            if let Some(st) = state {
+                let discount = st.cycling_cost_reduction(card.controller);
+                if discount > 0 {
+                    c.reduce_generic(discount);
+                }
+            }
+            c
+        });
     let cycling_life = card.definition.keywords.iter().find_map(|kw| {
         if let crate::card::Keyword::CyclingLife(n) = kw { Some(*n) } else { None }
     });

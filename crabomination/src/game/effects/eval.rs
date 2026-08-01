@@ -2868,6 +2868,7 @@ impl GameState {
                         Some(src_id) => *cid != src_id,
                         None => true,
                     },
+                    R::IsSource => source == Some(*cid),
                     R::ManaValueAtMostCastManaSpent => source
                         .and_then(|s| self.battlefield_find(s))
                         .is_some_and(|s| card.definition.cost.cmc() <= s.cast_mana_spent),
@@ -3341,6 +3342,8 @@ impl GameState {
             // (a card in a graveyard search can't be the source on the
             // battlefield).
             R::OtherThanSource => true,
+            // A card in another zone is never the battlefield source.
+            R::IsSource => false,
             R::InGraveyard => self
                 .players
                 .iter()

@@ -203,6 +203,8 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackUnlessLandTypeOnBattlefield(_)
         | Keyword::CantAttackUnlessLandCount(_, _)
         | Keyword::CantAttackUnlessOpponentDamaged
+        | Keyword::CantAttackUnlessGreaterPowerAttacks
+        | Keyword::CantBlockUnlessGreaterPowerBlocks
         | Keyword::DealsNoCombatDamage | Keyword::AssignsCombatDamageByToughness
         | Keyword::CantBeBlockedExceptBy(_) | Keyword::CantBeBlockedBy(_)
         | Keyword::CantBeBlockedByMoreThanOne | Keyword::CantBeBlockedExceptByN(_)

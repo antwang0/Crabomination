@@ -408,7 +408,9 @@ impl Effect {
             Effect::PlayersMayAccept { otherwise, .. } => otherwise.requires_target(),
             Effect::OnEachSpellCastThisTurn { .. } => false,
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
-            Effect::ExileHand { who } => player_has_target(who),
+            Effect::ExileHand { who }
+            | Effect::PlayerReturnsPermanentUnlessPaysLife { who, .. }
+            | Effect::ReturnCreaturesWithPowerGreaterThanHand { who } => player_has_target(who),
             Effect::ExileChosenFromHandOrGraveyard { who, .. } => player_has_target(who),
             Effect::DiscardUnlessKind { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
@@ -1139,6 +1141,7 @@ impl Effect {
             Effect::DoubleAllCountersOn { what } => sel_has_target(what),
             Effect::SacrificePermanent { what } => sel_has_target(what),
             Effect::ExileLastCreatedTokensAtNextEndStep
+            | Effect::ExileLastCreatedTokensAtNextCleanup
             | Effect::SacrificeLastCreatedTokensAtNextEndStep => false,
             Effect::EchoPayOrSacrifice { .. } => false,
             Effect::CumulativeUpkeepPayOrSacrifice { .. } => false,

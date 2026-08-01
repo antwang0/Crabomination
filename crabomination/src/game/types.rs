@@ -685,6 +685,9 @@ pub enum DelayedKind {
     YourNextUpkeep,
     /// At the beginning of the next end step (any player's).
     NextEndStep,
+    /// At the beginning of the next cleanup step (Waylay). Fires after the end
+    /// step, so the affected objects survive it.
+    NextCleanupStep,
     /// At the beginning of `controller`'s next pre-combat main phase.
     /// Used by Chancellor of the Tangle ("at the beginning of your first
     /// main phase, add {G}"). Fires once on the controller's PreCombatMain

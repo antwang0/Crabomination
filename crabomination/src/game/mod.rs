@@ -1351,6 +1351,12 @@ pub struct GameState {
     /// as soon as the controller has a matching permanent again.
     #[serde(default)]
     pub no_other_sacrifice_armed: std::collections::HashSet<CardId>,
+    /// CR 603.8 latch for `CardDefinition::state_trigger`: permanents whose
+    /// state trigger has already been put on the stack while its condition
+    /// holds. Cleared for a card as soon as the condition is false again, so
+    /// the ability can trigger anew (Hidden Predators, Veiled Crocodile).
+    #[serde(default)]
+    pub state_trigger_armed: std::collections::HashSet<CardId>,
     /// CR 702.170d — cards plotted *this* turn can't be cast until a later
     /// turn. Cleared at cleanup. `#[serde(default)]` for back-compat.
     #[serde(default)]
@@ -1640,6 +1646,7 @@ impl Clone for GameState {
             plotted_cards: self.plotted_cards.clone(),
             steal_penalty_armed: self.steal_penalty_armed.clone(),
             no_other_sacrifice_armed: self.no_other_sacrifice_armed.clone(),
+            state_trigger_armed: self.state_trigger_armed.clone(),
             plotted_this_turn: self.plotted_this_turn.clone(),
             triggered_once_per_turn_used: self.triggered_once_per_turn_used.clone(),
             per_subject_trigger_uses: self.per_subject_trigger_uses.clone(),
@@ -1866,6 +1873,7 @@ impl GameState {
             plotted_cards: std::collections::HashSet::new(),
             steal_penalty_armed: std::collections::HashSet::new(),
             no_other_sacrifice_armed: std::collections::HashSet::new(),
+            state_trigger_armed: std::collections::HashSet::new(),
             plotted_this_turn: std::collections::HashSet::new(),
             triggered_once_per_turn_used: std::collections::HashSet::new(),
             per_subject_trigger_uses: std::collections::HashMap::new(),
@@ -3942,6 +3950,25 @@ impl GameState {
         let mut amount = amount;
         let mut d = self.damage_doublers();
         let mut h = self.damage_halvers();
+        // Sulfuric Vapors — "if a [color] SPELL would deal damage to a
+        // permanent or player". Recipient-agnostic, so it sits outside the
+        // player-only block below; the source must be a resolving spell
+        // (no battlefield permanent behind it).
+        if let Some(s) = source
+            && self.computed_permanent(s).is_none()
+            && let Some((_, spell_colors)) = &source_info
+        {
+            for c in &self.battlefield {
+                for sa in &c.definition.static_abilities {
+                    if let StaticEffect::AddDamageFromColorSpells { color, amount: bonus } =
+                        &sa.effect
+                        && spell_colors.contains(color)
+                    {
+                        amount = amount.saturating_add(*bonus);
+                    }
+                }
+            }
+        }
         // Overblaze — this source's damage is doubled for the rest of the turn.
         if let Some(s) = source {
             d += self.doubled_damage_sources_this_turn.iter().filter(|c| **c == s).count() as u32;
@@ -4268,6 +4295,37 @@ impl GameState {
                 self.hands_revealed_to.push((controller, seat));
             }
         }
+    }
+
+    /// Controller of a damage source: the battlefield permanent's controller,
+    /// else the caster of the spell currently resolving under that id.
+    pub(crate) fn damage_source_controller(&self, id: crate::card::CardId) -> Option<usize> {
+        self.computed_permanent(id).map(|cp| cp.controller).or_else(|| {
+            match &self.resolving_source {
+                Some((sid, caster, _, _)) if *sid == id => Some(*caster),
+                _ => None,
+            }
+        })
+    }
+
+    /// True when `viewer` may see `owner`'s hand — either because they looked
+    /// at it earlier (`hands_revealed_to`) or because a live
+    /// `OpponentsPlayWithHandsRevealed` static they control covers it
+    /// (Telepathy).
+    pub fn hand_visible_to(&self, viewer: usize, owner: usize) -> bool {
+        if viewer == owner || self.hands_revealed_to.contains(&(viewer, owner)) {
+            return true;
+        }
+        !self.same_team(viewer, owner)
+            && self.battlefield.iter().any(|c| {
+                c.controller == viewer
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::OpponentsPlayWithHandsRevealed
+                        )
+                    })
+            })
     }
 
     pub(crate) fn step_skipped_for(&self, player: usize, step: TurnStep) -> bool {
@@ -10010,6 +10068,20 @@ impl GameState {
     /// from the discarded zone (graveyard); the engine emits
     /// `GameEvent::CardDiscarded` from `discard_card_from_hand` so
     /// discard-matters triggers see the cycle.
+    /// Total "cycling abilities you activate cost {N} less to activate"
+    /// discount active for `seat` (Fluctuator).
+    pub(crate) fn cycling_cost_reduction(&self, seat: usize) -> u32 {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::CyclingCostReduction(n) => Some(n),
+                _ => None,
+            })
+            .sum()
+    }
+
     fn cycle_card(
         &mut self,
         card_id: crate::card::CardId,
@@ -10038,7 +10110,12 @@ impl GameState {
         // cost (Shark Typhoon's {X}{1}{U}) is paid as `x_value` generic.
         let x = x_value.unwrap_or(0);
         if let Some(mc) = &cycling_cost {
-            let mc = if mc.has_x() { mc.with_x_value(x) } else { mc.clone() };
+            let mut mc = if mc.has_x() { mc.with_x_value(x) } else { mc.clone() };
+            // "Cycling abilities you activate cost {N} less" (Fluctuator).
+            let discount = self.cycling_cost_reduction(seat);
+            if discount > 0 {
+                mc.reduce_generic(discount);
+            }
             self.players[seat].mana_pool.pay(&mc).map_err(GameError::Mana)?;
         }
         if life_cost > 0 {
@@ -16266,6 +16343,13 @@ fn static_effect_to_effects(
             // `apply_prevention_shields`; no layer effect.
             | StaticEffect::PreventDamageToAttachedPerPermanent { .. }
             | StaticEffect::PreventAllButOneDamageToYouAndYourPlaneswalkers
+            | StaticEffect::PreventAllDamageToControllerFromOthersSources
+            | StaticEffect::AddDamageFromColorSpells { .. }
+            // Read where the matching action happens: the hand-reveal
+            // projection, the Cycling cost path, and `tap_for_mana`.
+            | StaticEffect::OpponentsPlayWithHandsRevealed
+            | StaticEffect::CyclingCostReduction(_)
+            | StaticEffect::LandsProduceColorInstead(_)
             // Gated at their action dispatch (`can_player_play_land`,
             // the convoke cast path); no layer effect.
             | StaticEffect::ControllerCantPlayLands

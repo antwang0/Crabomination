@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 
 pub use crate::effect::{
     ActivatedAbility, Effect, EventKind, EventScope, EventSpec, LoyaltyAbility, OpeningHandEffect,
-    Predicate, Selector, StaticAbility, StaticEffect, TriggeredAbility, Value,
+    Predicate, Selector, StateTriggeredAbility, StaticAbility, StaticEffect, TriggeredAbility,
+    Value,
 };
 use crate::mana::{Color, ManaCost};
 
@@ -1125,6 +1126,13 @@ pub enum Keyword {
     /// has been dealt damage this turn" (Bloodcrazed Goblin). Reads the
     /// per-turn `was_dealt_damage_this_turn` flag on each opponent.
     CantAttackUnlessOpponentDamaged,
+    /// CR 508.1a restriction — "This creature can't attack unless a creature
+    /// with greater power also attacks" (Okk). Checked against the whole
+    /// declared batch, so it needs a partner big enough in the same combat.
+    CantAttackUnlessGreaterPowerAttacks,
+    /// CR 509.1b restriction — the blocking half of Okk: "can't block unless a
+    /// creature with greater power also blocks."
+    CantBlockUnlessGreaterPowerBlocks,
     /// CR 508.1g — "This creature can't attack unless you return a [filter]
     /// you control to its owner's hand." An additional cost paid as attackers
     /// are declared (Floodtide Serpent); enforced in `declare_attackers`,
@@ -1900,6 +1908,10 @@ pub enum SelectionRequirement {
     /// targeting filters it routes through `evaluate_requirement_*`
     /// which read the source id from the resolution context.
     OtherThanSource,
+    /// The mirror of [`SelectionRequirement::OtherThanSource`] — the candidate
+    /// *is* the ability's source. Lets a cost name the permanent itself
+    /// ("Return this enchantment to its owner's hand:" — Attunement).
+    IsSource,
     /// True when the candidate card is currently in some player's graveyard
     /// zone. Used to restrict zone-spanning trigger targets — e.g.
     /// Ascendant Dustspeaker / Lorehold Acolyte's "exile up to one target
@@ -2423,6 +2435,13 @@ pub struct CardDefinition {
     /// the observable outcome for the cards that use it (Phylactery Lich).
     #[serde(default)]
     pub sacrifice_when: Option<crate::effect::Predicate>,
+    /// CR 603.8 state trigger — "When [condition], [effect]." Checked once per
+    /// state-based-action pass; the ability goes on the stack and doesn't
+    /// trigger again until the condition has been false (`CardInstance
+    /// ::state_trigger_armed`). The Hidden/Veiled animations that key on a
+    /// board state rather than an event (Hidden Predators, Veiled Crocodile).
+    #[serde(default)]
+    pub state_trigger: Option<StateTriggeredAbility>,
     /// CR 614 — "As this enters, choose [mode A] or [mode B]." A *persistent*
     /// mode choice (unlike `enters_as_choice`, which only sets P/T): the
     /// controller picks one mode as the permanent enters and that mode's

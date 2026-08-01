@@ -5871,6 +5871,77 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PlayerReturnsPermanentUnlessPaysLife { who, life } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let source = ctx.source.unwrap_or(CardId(0));
+                let seats = self.apnap_sort(self.resolve_players(who, ctx));
+                let mut cursor = 0;
+                let mut picks: Vec<CardId> = Vec::new();
+                for p in seats {
+                    let mine: Vec<(CardId, String)> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p)
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let Some(&(first, _)) = mine.first() else { continue };
+                    // CR 118.6 — only offer the payment when it's payable.
+                    let paid = self.players[p].life > *life as i32
+                        && match self.ask_seat_bool(
+                            &mut cursor,
+                            p,
+                            format!("Pay {life} life to keep your permanents?"),
+                            source,
+                            effect,
+                        ) {
+                            Some(yes) => yes,
+                            None => return Ok(()),
+                        };
+                    if paid {
+                        self.pay_life_cost(p, *life);
+                        continue;
+                    }
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Choose a permanent to return to its owner's hand".into(),
+                        candidates: mine,
+                        min: 1,
+                        max: 1,
+                    });
+                    picks.push(match answer {
+                        DecisionAnswer::Cards(picked) if !picked.is_empty() => picked[0],
+                        _ => first,
+                    });
+                }
+                self.clear_answer_log();
+                let dest = ZoneDest::Hand(PlayerRef::OwnerOfMoved);
+                for cid in picks {
+                    self.move_card_to(cid, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::ReturnCreaturesWithPowerGreaterThanHand { who } => {
+                let dest = ZoneDest::Hand(PlayerRef::OwnerOfMoved);
+                for p in self.apnap_sort(self.resolve_players(who, ctx)) {
+                    let hand = self.players[p].hand.len() as i32;
+                    let doomed: Vec<CardId> = self
+                        .compute_battlefield()
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p
+                                && c.card_types.contains(&crate::card::CardType::Creature)
+                                && c.power > hand
+                        })
+                        .map(|c| c.id)
+                        .collect();
+                    for cid in doomed {
+                        self.move_card_to(cid, &dest, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::DealDamageToEachPlayerPerPermanent { filter, amount, flat } => {
                 let per = self.evaluate_value(amount, ctx);
                 let source = ctx.source;
@@ -6608,6 +6679,24 @@ impl GameState {
                     Some(r) => state.players[p].mana_pool.add_restricted(c, mult, r),
                     None => state.players[p].mana_pool.add(c, mult),
                 };
+                // Contamination — "if a land is tapped for mana, it produces
+                // [color] instead of any other type and amount." Replaces the
+                // whole payload for a land source.
+                if ctx
+                    .source
+                    .and_then(|s| self.battlefield_find(s))
+                    .is_some_and(|c| c.definition.is_land())
+                    && let Some(color) = self.battlefield.iter().find_map(|c| {
+                        c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                            crate::effect::StaticEffect::LandsProduceColorInstead(col) => Some(col),
+                            _ => None,
+                        })
+                    })
+                {
+                    add_one(self, p, color);
+                    events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                    return Ok(());
+                }
                 match pool {
                     ManaPayload::Colors(colors) => {
                         for c in colors {
@@ -20138,6 +20227,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileLastCreatedTokensAtNextCleanup => {
+                for tok in self.last_created_tokens.clone() {
+                    self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                        controller: ctx.controller,
+                        source: tok,
+                        kind: crate::game::types::DelayedKind::NextCleanupStep,
+                        effect: Effect::Exile { what: Selector::This },
+                        target: None,
+                        bound_token: Some(tok),
+                        bound_subject: None,
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::SacrificeLastCreatedTokensAtNextEndStep => {
                 for tok in self.last_created_tokens.clone() {
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
@@ -24920,6 +25025,14 @@ impl GameState {
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
                 .collect(),
+            Selector::LeastToughnessAmongAll => self
+                .battlefield
+                .iter()
+                .filter(|c| c.definition.is_creature())
+                .min_by_key(|c| c.toughness())
+                .map(|c| EntityRef::Permanent(c.id))
+                .into_iter()
+                .collect(),
 
             Selector::AttachedTo(inner) => self
                 .resolve_selector(inner, ctx)
@@ -25279,6 +25392,13 @@ impl GameState {
             PlayerRef::CounteredSpellController => self.countered_spell_controller,
             // Ties go to the earliest seat (stands in for "you choose one").
             PlayerRef::LowestLife => (0..self.players.len()).min_by_key(|p| self.players[*p].life),
+            // `max_by_key` returns the *last* maximum; fold keeps the earliest.
+            PlayerRef::HighestLife => (0..self.players.len()).fold(None::<usize>, |best, p| {
+                match best {
+                    Some(b) if self.players[b].life >= self.players[p].life => Some(b),
+                    _ => Some(p),
+                }
+            }),
             // `max_by_key` returns the *last* maximum; fold keeps the earliest.
             PlayerRef::MostCardsInHand => (0..self.players.len())
                 .fold(None::<usize>, |best, p| match best {

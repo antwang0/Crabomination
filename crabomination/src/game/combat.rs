@@ -486,6 +486,23 @@ impl GameState {
                         .any(|(i, pl)| !self.same_team(i, p) && pl.was_dealt_damage_this_turn),
                     _ => false,
                 });
+                // CR 508.1a — Okk: needs a strictly bigger partner in the same
+                // declared batch (already-declared attackers count too).
+                let okk_locked = kws.contains(&Keyword::CantAttackUnlessGreaterPowerAttacks) && {
+                    let mine = computed
+                        .iter()
+                        .find(|c| c.id == id)
+                        .map(|c| c.power)
+                        .unwrap_or(0);
+                    !attacks
+                        .iter()
+                        .map(|a| a.attacker)
+                        .chain(self.attacking.iter().map(|a| a.attacker))
+                        .filter(|other| *other != id)
+                        .any(|other| {
+                            computed.iter().find(|c| c.id == other).is_some_and(|c| c.power > mine)
+                        })
+                };
                 let defender_locked =
                     kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(card);
                 let can_attack = is_creature_now
@@ -501,6 +518,7 @@ impl GameState {
                     && !creature_died_locked
                     && !descend_locked
                     && !blessing_locked
+                    && !okk_locked
                     && (!card.summoning_sick || kws.contains(&Keyword::Haste));
                 if !can_attack {
                     if card.tapped {
@@ -516,6 +534,7 @@ impl GameState {
                         || delirium_locked
                         || descend_locked
                         || blessing_locked
+                        || okk_locked
                     {
                         return Err(GameError::CannotAttack(id));
                     }
@@ -1268,6 +1287,20 @@ impl GameState {
             if all_blockers.len() == 1 {
                 for &(blocker_id, _) in &assignments {
                     if kws_of(blocker_id).contains(&Keyword::CantAttackOrBlockAlone) {
+                        return Err(GameError::CannotBlock(blocker_id));
+                    }
+                }
+            }
+            // CR 509.1b — Okk's blocking half: needs a strictly bigger partner
+            // among the whole combat's blockers.
+            let computed_pow = self.compute_battlefield();
+            let power_of = |id: CardId| {
+                computed_pow.iter().find(|c| c.id == id).map(|c| c.power).unwrap_or(0)
+            };
+            for &(blocker_id, _) in &assignments {
+                if kws_of(blocker_id).contains(&Keyword::CantBlockUnlessGreaterPowerBlocks) {
+                    let mine = power_of(blocker_id);
+                    if !all_blockers.iter().any(|&o| o != blocker_id && power_of(o) > mine) {
                         return Err(GameError::CannotBlock(blocker_id));
                     }
                 }

@@ -2193,6 +2193,24 @@ pub enum StaticEffect {
     /// "If a source would deal damage to you or a planeswalker you control,
     /// prevent all but 1 of that damage." Ajani Steadfast's emblem.
     PreventAllButOneDamageToYouAndYourPlaneswalkers,
+    /// "Your opponents play with their hands revealed" (Telepathy). Publishes
+    /// each opponent's hand to the controller through
+    /// `GameState.hands_revealed_to` while the source is on the battlefield.
+    OpponentsPlayWithHandsRevealed,
+    /// "Cycling abilities you activate cost {N} less to activate"
+    /// (Fluctuator). Consulted where the Cycling keyword's cost is paid.
+    CyclingCostReduction(u32),
+    /// CR 614.x — "If a `color` spell would deal damage to a permanent or
+    /// player, it deals that much damage plus `amount` instead" (Sulfuric
+    /// Vapors). Unlike `AddDamageFromColorToPlayers` the source must be a
+    /// spell, but the recipient may be a permanent.
+    AddDamageFromColorSpells { color: crate::mana::Color, amount: u32 },
+    /// "If a land is tapped for mana, it produces `color` instead of any other
+    /// type and amount" (Contamination).
+    LandsProduceColorInstead(crate::mana::Color),
+    /// "Prevent all damage that would be dealt to you by sources you don't
+    /// control" (Energy Field).
+    PreventAllDamageToControllerFromOthersSources,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
@@ -2200,6 +2218,15 @@ pub enum StaticEffect {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TriggeredAbility {
     pub event: EventSpec,
+    pub effect: Effect,
+}
+
+/// CR 603.8 — a state-triggered ability: "When [condition], [effect]." It
+/// triggers as soon as the condition holds and won't trigger again until the
+/// condition has been false in between.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StateTriggeredAbility {
+    pub condition: Predicate,
     pub effect: Effect,
 }
 

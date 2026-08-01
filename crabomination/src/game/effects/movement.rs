@@ -384,6 +384,31 @@ impl GameState {
             );
             return 0;
         }
+        // Energy Field — "prevent all damage that would be dealt to you by
+        // sources you don't control." The source's controller is read from the
+        // battlefield, falling back to the resolving spell's caster.
+        if let EntityRef::Player(p) = ent
+            && amount > 0
+            && self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::PreventAllDamageToControllerFromOthersSources
+                        )
+                    })
+            })
+        {
+            let src_ctrl = source.and_then(|id| self.damage_source_controller(id));
+            if src_ctrl != Some(p) {
+                events.push(GameEvent::DamagePrevented {
+                    amount,
+                    to_player: Some(p),
+                    to_card: None,
+                });
+                return 0;
+            }
+        }
         if self.prevention_shields.is_empty() {
             return amount;
         }

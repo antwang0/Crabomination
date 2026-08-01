@@ -513,6 +513,10 @@ impl GameState {
                 }
                 self.mana_spent_on_spells_this_turn = 0;
                 self.permanents_to_graveyard_this_turn = 0;
+                // CR 514.3 — "at the beginning of the next cleanup step"
+                // delayed triggers (Waylay) go on the stack here; the
+                // `finish_cleanup` check below then grants priority.
+                self.fire_step_triggers(TurnStep::Cleanup);
                 // CR 514.3 — no player receives priority during cleanup
                 // unless its turn-based actions fire triggers or SBAs act;
                 // run them immediately on entering the step.
@@ -731,6 +735,7 @@ impl GameState {
                     dt.controller == active
                 }
                 (DelayedKind::NextEndStep, TurnStep::End) => true,
+                (DelayedKind::NextCleanupStep, TurnStep::Cleanup) => true,
                 (DelayedKind::EachCombatThisTurn, TurnStep::BeginCombat) => {
                     dt.controller == active
                 }
@@ -3199,6 +3204,36 @@ impl GameState {
             let ctx = crate::game::effects::EffectContext::for_ability(id, ctrl, None);
             if self.evaluate_predicate(&pred, &ctx) {
                 self.sacrifice_one(id, ctrl, &mut events);
+            }
+        }
+
+        // CR 603.8 — the general state trigger: "When [condition], [effect]."
+        // Latched per permanent so it goes on the stack once while the
+        // condition holds and re-arms once it's false again.
+        let state_triggers: Vec<(CardId, usize)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.state_trigger.is_some())
+            .map(|c| (c.id, c.controller))
+            .collect();
+        for (id, ctrl) in state_triggers {
+            let Some(st) =
+                self.battlefield_find(id).and_then(|c| c.definition.state_trigger.clone())
+            else {
+                continue;
+            };
+            let ctx = crate::game::effects::EffectContext::for_ability(id, ctrl, None);
+            if !self.evaluate_predicate(&st.condition, &ctx) {
+                self.state_trigger_armed.remove(&id);
+                continue;
+            }
+            if self.state_trigger_armed.insert(id) {
+                let target = self.auto_target_for_effect(&st.effect, ctrl);
+                self.stack.push(
+                    crate::game::types::TriggerPush::new(id, ctrl, st.effect)
+                        .target(target)
+                        .build(),
+                );
             }
         }
 

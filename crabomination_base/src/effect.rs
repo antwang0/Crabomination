@@ -87,6 +87,9 @@ pub enum PlayerRef {
     /// The player with the lowest life total, ties broken by the resolving
     /// controller's choice (auto-picks the earliest seat). Loxodon Peacekeeper.
     LowestLife,
+    /// The player with the highest life total, ties broken toward the earliest
+    /// seat. Wild Dogs' "the player with the most life gains control".
+    HighestLife,
     /// The player with the most cards in hand, ties broken toward the earliest
     /// seat. Sokenzan Renegade's "the player who has the most cards in hand
     /// gains control of this."
@@ -274,6 +277,10 @@ pub enum Selector {
     /// battlefield, any controller (first in battlefield order on a tie —
     /// stands in for "you choose one"). Porphyry Nodes' upkeep destroy.
     LeastPowerAmongAll,
+    /// The creature with the least toughness on the battlefield, any
+    /// controller (first in battlefield order on a tie — stands in for "you
+    /// choose one"). Purging Scythe's upkeep ping.
+    LeastToughnessAmongAll,
     /// The permanent this one is attached to (for Auras/Equipment).
     AttachedTo(Box<Selector>),
     /// All permanents attached to `anchor`.
@@ -5144,6 +5151,9 @@ pub enum Effect {
     /// a `CreateToken` inside a `Seq` for "create N transient tokens, exile
     /// them at the next end step" (Valduk, Keeper of the Flame).
     ExileLastCreatedTokensAtNextEndStep,
+    /// The cleanup-step sibling: "Exile them at the beginning of the next
+    /// cleanup step" (Waylay), so the tokens survive the end step.
+    ExileLastCreatedTokensAtNextCleanup,
     /// Sacrifice-flavored sibling: "Sacrifice that token at the beginning of
     /// the next end step" (Urabrask's Forge) — dies-triggers fire, unlike the
     /// exile variant.
@@ -7225,6 +7235,17 @@ pub enum Effect {
     /// without paying its mana cost." Master of Predicaments. The guess is a
     /// `Decision::OptionalTrigger` on the guesser's seat (true = "greater").
     GuessManaValueAboveElseCastFree { who: PlayerRef, threshold: u32 },
+
+    /// "`who` may pay `life`. If they don't, they return a permanent they
+    /// control to its owner's hand." Umbilicus — one pay-or-bounce decision per
+    /// affected player, asked of that player.
+    PlayerReturnsPermanentUnlessPaysLife { who: PlayerRef, life: u32 },
+
+    /// "Return to its owner's hand each creature `who` controls with power
+    /// greater than the number of cards in their hand" (Noetic Scales). The
+    /// comparison is re-read per player, which a single `Value` filter can't
+    /// express.
+    ReturnCreaturesWithPowerGreaterThanHand { who: PlayerRef },
 }
 
 /// CR 702.172 — one Spree mode: an additional mana cost paired with the
@@ -7258,6 +7279,10 @@ pub enum DelayedTriggerKind {
     /// the pool before the player can spend it (mana pools clear on
     /// step transition, MTG rule 500.4).
     YourNextMainPhase,
+    /// "At the beginning of the next cleanup step" (Waylay). Fires in the
+    /// cleanup step of the turn it was registered in, so the objects it
+    /// touches survive the end step.
+    NextCleanupStep,
 }
 
 /// Opening-hand ("if this is in your opening hand, you may ...") effect.
