@@ -23,18 +23,18 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
-## Noticed this run (modern_decks — Prophecy)
+## Prophecy — closed
 
-`set_gaps.py pcy` is at **134 → 98 → 68 → 43** across three waves
-(`sets::pcy{,2,3}`, tests in `classic_sets/pcy{,2,3}`). New primitives this run:
-`CardDefinition.self_cost_reduction_if` (a general predicate-gated flat
-discount — the Avatar cycle), `AlternativeCost.discard_filters` (CR 601.2b
-"discard a [filter] card rather than pay this spell's mana cost" — Abolish,
-Foil, Flameshot), `WardCost::GenericXFromCost` (Excise's "unless its
-controller pays {X}"), `Effect::TurnOffDamagePreventionThisTurn` +
-`CardInstance.damage_prevention_off_eot` (the Glittering cycle's any-player
-escape hatch), and `Keyword::{CantAttackIfDefenderHasUntappedLand,
-CantBlockIfYouHaveUntappedLand}` (Branded Brawlers).
+`set_gaps.py pcy` is at **zero** (134 → 98 → 68 → 43 → 0; `sets::pcy` …
+`sets::pcy4`, tests in `classic_sets/pcy{,2,3,4}`). Primitives across the four
+waves: `CardDefinition.self_cost_reduction_if`, `AlternativeCost.discard_filters`
+(CR 601.2b), `WardCost::GenericXFromCost`,
+`Effect::TurnOffDamagePreventionThisTurn`,
+`Keyword::{CantAttackIfDefenderHasUntappedLand, CantBlockIfYouHaveUntappedLand}`,
+then the closing wave's `Keyword::AttackBlockCostTapAnother` (CR 508.1g/509.1b),
+`StaticEffect::{ActivationAdditionalSacrifice, GrantKeywordWhileControllerControlsAtMost}`,
+`Effect::{HighestLifeWinsElseDraw, ExileTokensSharingNameWith,
+RedirectNextDamageBackAtSource}` and `CounterType::Omen`.
 
 Residuals in what shipped:
 
@@ -43,23 +43,21 @@ Residuals in what shipped:
 - **Endbringer's Revel's "as a sorcery" is `sorcery_speed`**, which also
   requires an empty stack — right in practice, stricter than printed for the
   non-active player.
-- **Excise's tax is auto-declined by bots** (the `UnlessPlayerPays` policy),
-  so the exile always happens under AutoDecider.
-
-Residuals in what wave 3 shipped:
-
 - **Every `UnlessPlayerPays` tax auto-declines under AutoDecider**, so bots
-  never buy off a Rhystic card. Engine-wide policy, not a card gap.
+  never buy off a Rhystic card (Excise, Wild Might, Withdraw). Engine-wide
+  policy, not a card gap.
 - **`PlayerRef::EachOpponent` resolves to the first opponent**, so "any
   player may pay" is exact heads-up only.
 - **Rhystic Cave's "activate only as an instant"** is dropped (a mana ability
   has no timing gate to hang it on).
 - **Reveille Squad's untap is a `MayDo`**, so a headless seat declines it.
-
-Remaining PCY (43) is mostly the Rebel/Mercenary tutor chains plus Dual
-Nature / Coffin Puppets / Celestial Convergence / Hollow Warrior (each wants
-one primitive: token-lineage exile, an upkeep-only graveyard activation, an
-alternate win condition, and a tap-a-creature attack cost).
+- **Slicer, Hired Muscle drops "it can't be sacrificed this turn"** — there is
+  no sacrifice lock (the card lives in `sets::bot`, not PCY, but the gap is
+  the same shape).
+- **Forgotten Harvest exiles "one or more" lands** (`MayExileFromYourGraveyard`
+  has no count), rather than exactly one.
+- **Denying Wind / Search for Survivors auto-decline under AutoDecider** —
+  the shared `Effect::Search` bot policy.
 
 ## Nemesis — closed
 
@@ -4623,6 +4621,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   (`DelayedKind::CreatureYouControlDies/DealsCombatDamageThisTurn` +
   `Effect::CreaturesYouControlDying/DealingCombatDamageThisTurn`, expiring at
   cleanup) — Waltz of Rage, Mistway Spy. Tests in `recent240`/`recent241`.
+- ✅ CR 702.161 — Living metal (`Keyword::LivingMetal` emits a layer-4 Creature
+  type while the controller is the active player, no crew — Slicer's Vehicle
+  side; `cr_702_161_living_metal_animates_on_your_turn_only`)
+- ✅ CR 702.162 / 701.28 — More Than Meets the Eye / convert
+  (`AlternativeCost.converted` → `CardInstance.cast_converted`, flipped to the
+  back face at ETB before the first SBA; `cr_702_162_*`)
 - ✅ CR 702.148 — Cleave
 - ✅ CR 701.15g — "it can't be regenerated this turn". `Effect::CantBeRegeneratedThisTurn`
   sets a transient `CardInstance.cant_regenerate_this_turn` consulted at both
@@ -4660,9 +4664,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   `cards_discarded_per_player_this_resolution` scratch; test
   `cr_701_9_discard_batch_fires_once_with_count`. The CR 514.1 cleanup
   discard-down now emits the batch too (both the deterministic and UI-resume
-  paths; `cr_514_3_cleanup_discard_fires_batch_trigger`). Remaining: cost-payment
-  discards (cycling, other "discard this card" costs) still don't route through
-  `resolve_effect`, so they emit no batch.
+  paths; `cr_514_3_cleanup_discard_fires_batch_trigger`). Activation-cost discards
+  (`discard_cost`, `discard_hand_cost`) emit the batch from `activate_ability`
+  (`cr_701_9_cost_payment_discard_fires_the_batch`). Remaining: cycling and the
+  other spell-level "discard this card" costs.
 - ✅ CR 701.13 — Mill (incl. `Effect::MillThenToHand { amount, filter }` — mill,
   then pick one card matching `filter` from those milled this way to hand;
   Cache Grab, `SelectionRequirement::PermanentCard`; test
