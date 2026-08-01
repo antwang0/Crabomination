@@ -46,7 +46,7 @@ use crate::draft::{
 use crate::game::GameState;
 use crate::mana::Color;
 use crate::player::Player;
-use crate::server::{Bot, EvalWeights, RandomBot};
+use crate::server::{Bot, EvalWeights, MctsBot, MctsConfig, RandomBot};
 
 /// Everything tunable about a recommender run. Maps 1:1 onto the client's
 /// simulation-settings panel; engine callers use `SimConfig::default()`.
@@ -764,12 +764,14 @@ pub fn generate_gauntlet(cfg: &SimConfig) -> Vec<GauntletDeck> {
 /// bot and the uniform control, but the bot ladder pits two *evaluation
 /// profiles* against each other, so the seat pilot is a value rather than
 /// a bool.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub enum Pilot {
     /// The scored bot with a specific evaluation profile.
     Scored(EvalWeights),
     /// The pre-scoring uniform-random pick. Ladder control.
     Uniform,
+    /// The Monte Carlo search bot.
+    Mcts(MctsConfig),
 }
 
 impl Pilot {
@@ -777,6 +779,7 @@ impl Pilot {
         match self {
             Pilot::Scored(w) => Box::new(RandomBot::with_weights(w)),
             Pilot::Uniform => Box::new(RandomBot::uniform_baseline()),
+            Pilot::Mcts(cfg) => Box::new(MctsBot::new(cfg)),
         }
     }
 }

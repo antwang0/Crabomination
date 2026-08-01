@@ -66,6 +66,7 @@ impl SnapshotSinkState {
 
 pub type SnapshotSink = Arc<Mutex<SnapshotSinkState>>;
 
+pub mod mcts;
 pub mod bot;
 pub mod lobby;
 mod replay;
@@ -76,6 +77,7 @@ pub mod view;
 pub mod ws;
 
 pub use bot::{Bot, EvalWeights, RandomBot};
+pub use mcts::{MctsBot, MctsConfig};
 pub use lobby::{serve_lobbies, ConnId, LobbyManager};
 #[cfg(not(target_arch = "wasm32"))]
 pub use tcp::{tcp_client, tcp_seat};

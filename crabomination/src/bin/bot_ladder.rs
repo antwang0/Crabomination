@@ -33,9 +33,11 @@
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crabomination::cube::CardFactory;
+use crabomination::cube::{CardFactory, color_pair_name, cube_deck, random_color_pair};
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 use crabomination::recommend::{Pilot, simulate_match_games_piloted};
-use crabomination::server::EvalWeights;
+use crabomination::server::{EvalWeights, MctsConfig};
 
 /// One archetype in the ladder. Mirror-matched, so this is the deck *both*
 /// profiles pilot.
@@ -134,6 +136,31 @@ fn archetypes() -> Vec<Archetype> {
     ]
 }
 
+/// Seeded random two-color decks drawn from the full cube pool.
+///
+/// The four hand-built archetypes above are a narrow slice: vanilla
+/// creatures, basic removal, and — importantly — not one card that scries,
+/// mills, makes a token or ticks a planeswalker. A change can only be
+/// measured on cards the deck set actually contains, so measuring solely
+/// on them both risks overfitting to that slice and leaves whole families
+/// of known bot gaps unexercised.
+///
+/// Seeded from `--seed` so a run is reproducible, and each pair plays a
+/// mirror of itself for the same reason the fixed decks do: deck strength
+/// cancels and only the pilots differ.
+fn cube_archetypes(seed: u64, count: usize) -> Vec<Archetype> {
+    let mut rng = StdRng::seed_from_u64(seed ^ 0xC0BE_5EED);
+    (0..count)
+        .map(|_| {
+            let colors = random_color_pair(&mut rng);
+            Archetype {
+                name: Box::leak(format!("cube {}", color_pair_name(colors)).into_boxed_str()),
+                deck: cube_deck(colors, &mut rng),
+            }
+        })
+        .collect()
+}
+
 fn parse_profile(name: &str) -> Option<Pilot> {
     match name {
         "baseline" => Some(Pilot::Scored(EvalWeights::baseline())),
@@ -153,13 +180,23 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "base+kw" => Some(Pilot::Scored(EvalWeights::base_and_keywords())),
         "life" => Some(Pilot::Scored(EvalWeights::life_only())),
         "power" => Some(Pilot::Scored(EvalWeights::power_emphasis_only())),
+        "mcts" => Some(Pilot::Mcts(MctsConfig::default())),
+        "mcts-heur" => Some(Pilot::Mcts(MctsConfig {
+            heuristic_rollouts: true,
+            ..MctsConfig::default()
+        })),
+        "mcts-deep" => Some(Pilot::Mcts(MctsConfig {
+            iterations: 64,
+            horizon_turns: 3,
+            ..MctsConfig::default()
+        })),
         "uniform" => Some(Pilot::Uniform),
         _ => None,
     }
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, lookahead, holdinst, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform";
 
 /// Wilson score interval for `wins` out of `n` at `z`. Chosen over the
 /// normal approximation because it stays sane at small n and at p̂ = 0 or 1,
@@ -185,6 +222,7 @@ struct Args {
     games: usize,
     seed: u64,
     threads: usize,
+    deck_set: String,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -193,6 +231,7 @@ fn parse_args() -> Result<Args, String> {
     let mut games = 200usize;
     let mut seed = 0u64;
     let mut threads = 0usize;
+    let mut deck_set = "fixed".to_string();
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < argv.len() {
@@ -207,11 +246,13 @@ fn parse_args() -> Result<Args, String> {
             "--games" => games = need(i)?.parse().map_err(|_| "--games must be a number")?,
             "--seed" => seed = need(i)?.parse().map_err(|_| "--seed must be a number")?,
             "--threads" => threads = need(i)?.parse().map_err(|_| "--threads must be a number")?,
+            "--decks" => deck_set = need(i)?,
             "-h" | "--help" => {
                 println!(
                     "bot_ladder [--a PROFILE] [--b PROFILE] [--games N] [--seed N] [--threads N]\n\
                      \n\
                      PROFILE is one of: {PROFILES}\n\
+                     --decks fixed (4 hand-built archetypes) | cube (8 random cube pairs) | both\n\
                      --games is per archetype, split evenly across seats."
                 );
                 std::process::exit(0);
@@ -232,6 +273,7 @@ fn parse_args() -> Result<Args, String> {
         games,
         seed,
         threads,
+        deck_set,
     })
 }
 
@@ -252,7 +294,20 @@ fn main() {
         }
     };
 
-    let field = archetypes();
+    const CUBE_PAIRS: usize = 8;
+    let field: Vec<Archetype> = match args.deck_set.as_str() {
+        "fixed" => archetypes(),
+        "cube" => cube_archetypes(args.seed, CUBE_PAIRS),
+        "both" => {
+            let mut f = archetypes();
+            f.extend(cube_archetypes(args.seed, CUBE_PAIRS));
+            f
+        }
+        other => {
+            eprintln!("unknown --decks {other}; expected fixed, cube or both");
+            std::process::exit(2);
+        }
+    };
     let threads = if args.threads > 0 {
         args.threads
     } else {
@@ -262,11 +317,12 @@ fn main() {
     };
 
     println!(
-        "ladder: {} (A) vs {} (B) — {} games x {} archetypes on {threads} threads, seed {}",
+        "ladder: {} (A) vs {} (B) — {} games x {} {} decks on {threads} threads, seed {}",
         args.a_name,
         args.b_name,
         args.games,
         field.len(),
+        args.deck_set,
         args.seed,
     );
 

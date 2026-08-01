@@ -6274,6 +6274,57 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
     score + variant_bonus * w.unit
 }
 
+
+// ── Accessors for the Monte Carlo bot ────────────────────────────────────
+//
+// `mcts` needs the same candidate enumeration and leaf evaluation the
+// heuristic bot uses, so the two are compared on identical inputs and any
+// ladder difference is the *search*, not a second opinion about what is
+// castable or what a board is worth.
+
+/// The main-phase plays worth searching from `state`, validated.
+pub(crate) fn main_phase_candidates_for_mcts(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+) -> Vec<GameAction> {
+    let probe = state.affordance_probe_template();
+    let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(state, seat, &probe, w)
+        .into_iter()
+        .map(|(a, ok)| (score_candidate(state, seat, &a, w), a, ok))
+        .collect();
+    ranked.sort_by_key(|(s, _, _)| std::cmp::Reverse(*s));
+    // Cap the arms. Every candidate costs at least one rollout to seed, so
+    // a wide root eats the whole budget before UCB1 gets to allocate any of
+    // it; better to search the plausible plays properly than every play
+    // badly.
+    const MAX_ARMS: usize = 6;
+    let mut out = Vec::with_capacity(MAX_ARMS);
+    for (_, a, ok) in ranked {
+        if out.len() >= MAX_ARMS {
+            break;
+        }
+        if ok || GameState::would_accept_on(&probe, a.clone()) {
+            out.push(a);
+        }
+    }
+    // A land drop is a real option and is enumerated separately.
+    if state.can_player_play_land(seat)
+        && let Some(land) = pick_land_to_play(state, seat)
+    {
+        let action = GameAction::PlayLand(land);
+        if GameState::would_accept_on(&probe, action.clone()) {
+            out.push(action);
+        }
+    }
+    out
+}
+
+/// The heuristic bot's board evaluation, for scoring a rollout leaf.
+pub(crate) fn eval_material_for_mcts(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
+    eval_material(state, seat, w)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
