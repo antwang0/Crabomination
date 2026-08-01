@@ -690,6 +690,9 @@ pub enum Value {
     /// Mana value of the permanent exiled to pay this activation's
     /// `ActivatedAbility::exile_permanent_cost` (Food Chain).
     ExiledForCostManaValue,
+    /// Number of cards in *every* graveyard sharing the resolving source's
+    /// name (Accumulated Knowledge).
+    CardsNamedLikeSourceInAllGraveyards,
     /// Number of cards discarded so far within the current effect
     /// resolution. Bumped by every `GameEvent::CardDiscarded` emission
     /// in `Effect::Discard` / `Effect::DiscardChosen`. Used by Borrowed

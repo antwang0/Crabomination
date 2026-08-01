@@ -1640,6 +1640,8 @@ pub enum SelectionRequirement {
     /// Has the same name as the card exiled with the ability's source
     /// (Extraplanar Lens' imprint).
     SameNameAsExiledWithSource,
+    /// The candidate shares a name with the effect's first target (Pack Hunt).
+    SameNameAsTarget,
     /// Shares a colour with the card exiled with the ability's source
     /// (Mourner's Shield's imprint).
     SharesColorWithExiledBySource,
@@ -2082,6 +2084,27 @@ impl SelectionRequirement {
     /// Concretize `IsSourceChosenCreatureType` against the source's stamped
     /// choice (`HasCreatureType(ct)`, or "matches nothing" when unchosen),
     /// recursing through And/Or/Not. Belbe's Portal.
+    /// Concretize `SameNameAsTarget` against the effect's target name
+    /// (`HasName`, or "matches nothing" with no target), recursing through
+    /// And/Or/Not. Pack Hunt.
+    pub fn resolve_target_name(&self, name: Option<&str>) -> Self {
+        match self {
+            Self::SameNameAsTarget => match name {
+                Some(n) => Self::HasName(n.to_string()),
+                None => Self::Not(Box::new(Self::Any)),
+            },
+            Self::And(a, b) => Self::And(
+                Box::new(a.resolve_target_name(name)),
+                Box::new(b.resolve_target_name(name)),
+            ),
+            Self::Or(a, b) => {
+                Self::Or(Box::new(a.resolve_target_name(name)), Box::new(b.resolve_target_name(name)))
+            }
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_target_name(name))),
+            other => other.clone(),
+        }
+    }
+
     pub fn resolve_chosen_creature_type(&self, chosen: Option<CreatureType>) -> Self {
         match self {
             Self::IsSourceChosenCreatureType => match chosen {

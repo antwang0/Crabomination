@@ -378,6 +378,7 @@ pub mod mmq5;
 pub mod mmq6;
 pub mod nms;
 pub mod nms2;
+pub mod nms3;
 pub mod mod_set;
 pub mod ogw;
 pub mod one;

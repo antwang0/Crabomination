@@ -10171,6 +10171,14 @@ static MMQ4: &[Factory] = &[
     super::mmq4::righteous_indignation,
     super::mmq4::sand_squid,
 ];
+static NMS3: &[Factory] = &[
+    super::nms3::parallax_wave,
+    super::nms3::parallax_inhibitor,
+    super::nms3::accumulated_knowledge,
+    super::nms3::pack_hunt,
+    super::nms3::mind_slash,
+    super::nms3::rising_waters,
+];
 static NMS2: &[Factory] = &[
     super::nms2::laccolith_whelp,
     super::nms2::laccolith_grunt,
@@ -18089,6 +18097,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("mmq6", MMQ6),
     ("nms", NMS),
     ("nms2", NMS2),
+    ("nms3", NMS3),
     ("mod_set", MOD_SET),
     ("ogw", OGW),
     ("one", ONE),

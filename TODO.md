@@ -23,6 +23,46 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
+## Noticed this run (modern_decks — Nemesis)
+
+`set_gaps.py nms` is at **129 → 16** across three waves (`sets::nms{,2,3}`,
+tests in `classic_sets/nms{,2,3}`). New primitives this run:
+`Effect::LoseLifePerControlled`, `Effect::MayDealPowerThenNoCombatDamage`
+(the Laccolith cycle), `DynamicPt::LandsOfTypeInPlayPower`,
+`PlayerRef::MostCreatures`, `Value::CardsNamedLikeSourceInAllGraveyards`,
+`SelectionRequirement::{IsSourceChosenCreatureType, SameNameAsTarget}` with
+their `resolve_*` concretizations.
+
+Residuals in what shipped:
+
+- **Angelic Favor drops "cast this spell only during combat"** — there's no
+  combat-only cast window.
+- **Wandering Eye uses `OpponentsPlayWithHandsRevealed`**, so its controller's
+  own hand stays hidden (the printed line is symmetric).
+- **Blinding Angel's skip is `SkipNextCombatPhase`**, which is exact heads-up.
+- **Rising Waters' upkeep untap auto-picks the land** (an `up_to: 1` untap),
+  rather than prompting the active player.
+
+Remaining NMS (16), grouped by the primitive each wants:
+
+- **Combat-set memory:** Defiant Vanguard ("destroy it and all creatures it
+  blocked this turn" needs the blocked set captured at block time and read at
+  end of combat; `Selector::CreaturesInCombatWith` is already torn down by
+  then). Fog Patch wants "attacking creatures become blocked".
+- **Reveal-then-route:** Eye of Yawgmoth (`LookPickToHand` can route the rest
+  to the graveyard but not to exile), Divining Witch, Stronghold Gambit.
+- **Mana-replacement:** Harvest Mage / Pale Moon ("if a player taps a land for
+  mana it produces X instead"), Overlaid Terrain, Mana Cache.
+- **Tapped-duration statics:** Kill Switch and Flowstone Armor need
+  "you may choose not to untap this" plus an effect that lasts only while the
+  source stays tapped.
+- **Misc:** Mogg Toady (a can't-attack/block gate comparing creature counts
+  with the defending player), Oracle's Attendants (a chosen-source *all-damage*
+  redirect — the shield exists, but `PreventNextDamageFromChosenSource` is
+  one-event only), Rootwater Thief (pay-{2}-then-search-their-library on combat
+  damage), Saproling Burst, Sivvi's Valor (redirect all damage from a creature
+  to a player).
+
 ## Mercadian Masques — closed
 
 `set_gaps.py mmq` is at **zero** (283 → 65 → 13 → 0; `sets::mmq` … `sets::mmq6`,

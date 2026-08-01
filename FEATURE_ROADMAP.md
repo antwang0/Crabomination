@@ -1573,6 +1573,23 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   and `SelectionRequirement::IsBlocked` (a blocked attacker — Smite). Battalion
   rides the existing `Predicate::AttackingWithAtLeast(3)` gate on a SelfSource
   Attacks trigger; Bloodrush reuses `from_hand` + `discard_self_cost`.
+- **Prevention / cost / CDA primitives (modern_decks — MMQ closure + NMS):**
+  `Effect::PreventNextDamageFromChosenSource` gained `to` / `gain_life` /
+  `redirect_to` (Charm Peddler, Cho-Arrim Alchemist, General's Regalia) and now
+  rechecks the chosen source's colour at damage time (CR 615.9), with CR 609.7b
+  last-known-information for a source that has left every zone;
+  `ActivatedAbility::{generic_cost_value, exile_permanent_cost}` +
+  `Value::ExiledForCostManaValue` (Bargaining Table, Food Chain);
+  `EventKind::OpponentCausedYouToDiscard` (Spiritual Focus);
+  `Effect::{ChooseCardTypeRevealHandDamage, CoinFlipDestroyLoop, ThievesAuction,
+  LoseLifePerControlled, MayDealPowerThenNoCombatDamage}`;
+  `DynamicPt::{CreaturesOfSourceChosenType, LandsOfTypeInPlayPower}`;
+  `PlayerRef::MostCreatures`; `Value::CardsNamedLikeSourceInAllGraveyards`;
+  `SelectionRequirement::{IsSourceChosenCreatureType, SameNameAsTarget}` with
+  `resolve_chosen_creature_type` / `resolve_target_name` concretizations;
+  `CounterType::Winch`. `PlayerView`/`PermanentView` gained
+  `prevention_next_instances` + `prevention_source_names` so a one-event shield
+  no longer reads as a blanket fog.
 - **Selectors/filters:** `Selector::BlockingCreatures` (every creature blocking
   the source attacker — Grasping Giant), `SelectionRequirement::HasPlaneswalkerType`
   (Sunlit Hoplite / Swimmer's Elspeth/Ashiok riders),

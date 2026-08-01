@@ -15532,6 +15532,14 @@ impl GameState {
 
             Effect::SearchUpToN { who, filter, to, count } => {
                 let n = self.evaluate_value(count, ctx).max(0);
+                // Pack Hunt — "cards with the same name as target creature".
+                let target_name = ctx.targets.iter().find_map(|t| match t {
+                    crate::game::Target::Permanent(id) => {
+                        self.find_card_anywhere(*id).map(|c| c.definition.name)
+                    }
+                    _ => None,
+                });
+                let filter = &filter.resolve_target_name(target_name);
                 // Iterate rather than recurse: Grozoth chains 20 picks and
                 // `run_effect`'s frame is fat enough that recursion overflows a
                 // test thread's stack.

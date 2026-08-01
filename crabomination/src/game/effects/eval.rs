@@ -567,6 +567,21 @@ impl GameState {
             }
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
             Value::ExiledForCostManaValue => self.exiled_for_cost_mana_value.unwrap_or(0),
+            Value::CardsNamedLikeSourceInAllGraveyards => {
+                let Some(name) = ctx
+                    .source
+                    .and_then(|id| self.find_card_anywhere(id))
+                    .map(|c| c.definition.name)
+                    .or(ctx.source_name)
+                else {
+                    return 0;
+                };
+                self.players
+                    .iter()
+                    .flat_map(|p| p.graveyard.iter())
+                    .filter(|c| c.definition.name == name)
+                    .count() as i32
+            }
             Value::RevealedForCostPower => self.revealed_for_cost_power.unwrap_or(0),
             Value::GreatestManaValueAmongPermanents(who) => self
                 .resolve_player(who, ctx)
@@ -3055,6 +3070,7 @@ impl GameState {
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.chosen_card_type.clone())
                         .is_some_and(|t| card.definition.card_types.contains(&t)),
+                    R::SameNameAsTarget => false,
                     R::IsSourceChosenCreatureType => source
                         .and_then(|sid| self.find_card_anywhere(sid))
                         .and_then(|s| s.chosen_creature_type)
@@ -3442,6 +3458,7 @@ impl GameState {
             R::NamedBySource => false,
             R::IsSourceChosenCardType => false,
             R::IsSourceChosenCreatureType => false,
+            R::SameNameAsTarget => false,
             // Count walks the battlefield for the evaluating controller's
             // matching permanents; the candidate's own zone is irrelevant.
             R::ManaValueAtMostControllerHand => {
