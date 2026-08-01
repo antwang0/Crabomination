@@ -25,8 +25,8 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (modern_decks — Prophecy)
 
-`set_gaps.py pcy` is at **134 → 98** after wave 1 (`sets::pcy`, tests in
-`classic_sets/pcy`). New primitives this run:
+`set_gaps.py pcy` is at **134 → 98 → 68** across two waves (`sets::pcy{,2}`,
+tests in `classic_sets/pcy{,2}`). New primitives this run:
 `CardDefinition.self_cost_reduction_if` (a general predicate-gated flat
 discount — the Avatar cycle), `AlternativeCost.discard_filters` (CR 601.2b
 "discard a [filter] card rather than pay this spell's mana cost" — Abolish,
@@ -46,7 +46,7 @@ Residuals in what shipped:
 - **Excise's tax is auto-declined by bots** (the `UnlessPlayerPays` policy),
   so the exile always happens under AutoDecider.
 
-Remaining PCY (98) is mostly the Rebel/Mercenary tutor chains, the rhystic
+Remaining PCY (68) is mostly the Rebel/Mercenary tutor chains, the rhystic
 "unless a player pays" cycle, and Dual Nature / Coffin Puppets / Celestial
 Convergence (each wants one primitive).
 

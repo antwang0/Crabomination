@@ -3112,6 +3112,7 @@ impl GameState {
                     R::IsSourceChosenCreatureType => source
                         .and_then(|sid| self.find_card_anywhere(sid))
                         .and_then(|s| s.chosen_creature_type)
+                        .or(self.chosen_creature_type_scratch)
                         .is_some_and(|ct| {
                             card.definition.subtypes.creature_types.contains(&ct)
                                 || card.has_keyword(&crate::card::Keyword::Changeling)

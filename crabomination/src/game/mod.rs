@@ -800,6 +800,12 @@ pub struct GameState {
     #[serde(default)]
     pub(crate) turn_granted_triggers:
         Vec<(crate::card::SelectionRequirement, crate::card::TriggeredAbility)>,
+    /// The creature type an `Effect::NameCreatureType` picked during the
+    /// current resolution, for sources that aren't battlefield permanents (an
+    /// instant/sorcery is off the stack by the time its body runs — Outbreak).
+    /// Read as a fallback by `IsSourceChosenCreatureType`.
+    #[serde(skip)]
+    pub(crate) chosen_creature_type_scratch: Option<crate::card::CreatureType>,
     /// Transient: the card name chosen by an `Effect::NameCard` within the
     /// current resolution. Read by `SelectionRequirement::NamedBySource` so a
     /// reveal-until-the-named-card chain (Spoils of the Vault) can match even
@@ -1603,6 +1609,7 @@ impl Clone for GameState {
             countered_spell_controller: self.countered_spell_controller,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             cards_sacrificed_this_resolution: self.cards_sacrificed_this_resolution.clone(),
+            chosen_creature_type_scratch: self.chosen_creature_type_scratch,
             turn_granted_triggers: self.turn_granted_triggers.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
             names_this_resolution: self.names_this_resolution.clone(),
@@ -1841,6 +1848,7 @@ impl GameState {
             countered_spell_controller: None,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             cards_sacrificed_this_resolution: Vec::new(),
+            chosen_creature_type_scratch: None,
             turn_granted_triggers: Vec::new(),
             named_card_this_resolution: None,
             names_this_resolution: HashMap::new(),
@@ -9431,6 +9439,24 @@ impl GameState {
         let atk_kws = atk_cp.as_ref().map(|c| c.keywords.as_slice()).unwrap_or(&[]);
         let atk_colors = atk_cp.as_ref().map(|c| c.colors.as_slice()).unwrap_or(&[]);
         let atk_power = atk_cp.as_ref().map(|c| c.power).unwrap_or_else(|| attacker.power());
+        // CR 509.1b — "can't be blocked as long as defending player controls a
+        // [filter]" (Neurok Spy, Hazy Homunculus). Enforced in
+        // `declare_blockers` too; mirrored here so the UI/bot never offers the
+        // block.
+        if atk_kws.iter().any(|kw| match kw {
+            Keyword::CantBeBlockedIfDefenderControls(f) => self.battlefield.iter().any(|c| {
+                c.controller == blocker.controller
+                    && self.evaluate_requirement_static(
+                        f.as_ref(),
+                        &Target::Permanent(c.id),
+                        blocker.controller,
+                        None,
+                    )
+            }),
+            _ => false,
+        }) {
+            return false;
+        }
         // CR 701.54c (level 1+) — "Your Ring-bearer … can't be blocked by
         // creatures with greater power." Same shape as Skulk, but keyed on the
         // attacker being its controller's Ring-bearer.
@@ -14893,9 +14919,12 @@ impl GameState {
                 let DecisionAnswer::CreatureType(ct) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                if let Some(card) = self.battlefield_find_mut(target_id) {
+                if let Some(card) = self.find_card_anywhere_mut(target_id) {
                     card.chosen_creature_type = Some(*ct);
                 }
+                // A resolving instant/sorcery is already off the stack, so the
+                // stamp has nowhere to live — keep it as resolution scratch.
+                self.chosen_creature_type_scratch = Some(*ct);
                 Ok(Vec::new())
             }
             PendingEffectState::PutFromZonesPending { player } => {

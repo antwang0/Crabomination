@@ -1199,6 +1199,7 @@ impl GameState {
         // "Tokens created with this permanent" (Saproling Burst) — stamp the
         // resolving source on every token this resolution mints.
         self.token_minting_source = ctx.source;
+        self.chosen_creature_type_scratch = None;
         // Reset last-moved-cards scratch — `Selector::LastMoved` only
         // refers to cards moved by *this* resolution (Practiced
         // Scrollsmith's ETB chains Move → GrantMayPlay on the same
@@ -5854,6 +5855,28 @@ impl GameState {
                             },
                             events,
                         );
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerSacrificesDownTo { filter, keep } => {
+                // CR 701.16 — each player keeps their `keep` best matches
+                // (highest mana value) and sacrifices the rest.
+                let keep = self.evaluate_value(keep, ctx).max(0) as usize;
+                for seat in 0..self.players.len() {
+                    let mut mine: Vec<(CardId, u32)> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == seat
+                                && self.evaluate_requirement_on_card(filter, c, seat)
+                        })
+                        .map(|c| (c.id, c.definition.cost.cmc()))
+                        .collect();
+                    mine.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.0.cmp(&b.0.0)));
+                    for (cid, _) in mine.into_iter().skip(keep) {
+                        self.sacrifice_one(cid, seat, events);
                     }
                 }
                 Ok(())
@@ -21762,13 +21785,17 @@ impl GameState {
                 // `ChooseCreatureType` decision so a UI player can pick;
                 // bots / AutoDecider resolve synchronously.
                 use crate::decision::Decision;
+                // A resolving instant/sorcery (Outbreak) is the source itself
+                // and resolves as `EntityRef::Card`, not a battlefield
+                // permanent — accept both.
                 let candidate = self
                     .resolve_selector(what, ctx)
                     .into_iter()
                     .find_map(|e| match e {
-                        EntityRef::Permanent(c) => Some(c),
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
                         _ => None,
-                    });
+                    })
+                    .or(ctx.source);
                 let Some(target_id) = candidate else { return Ok(()); };
                 let chooser = ctx.controller;
                 let decision = Decision::ChooseCreatureType {

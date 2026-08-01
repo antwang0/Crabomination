@@ -5983,6 +5983,10 @@ pub enum Effect {
     /// matching `filter` — no choice involved (CR 701.16). All Is Dust's
     /// "each player sacrifices all colored permanents they control".
     SacrificeAllMatching { who: Selector, filter: SelectionRequirement },
+    /// CR 701.16 — "Each player sacrifices all [`filter`] they control except
+    /// for `keep`" (Keldon Firebombers). Each player keeps their `keep`
+    /// highest-mana-value matches; the rest go.
+    EachPlayerSacrificesDownTo { filter: SelectionRequirement, keep: Value },
     /// Living Death (CR — mass reanimation swap): each player exiles all
     /// creature cards from their graveyard, then sacrifices all creatures they
     /// control, then puts the cards they exiled this way onto the battlefield

@@ -234,6 +234,7 @@ impl Effect {
             | Effect::AttackingCreaturesBecomeBlocked
             | Effect::GrantTriggeredAbilityThisTurnToMatching { .. }
             | Effect::TurnOffDamagePreventionThisTurn { .. }
+            | Effect::EachPlayerSacrificesDownTo { .. }
             | Effect::MassPolymorph
             | Effect::CopyForEachOtherTargetableCreature
             | Effect::SearchRevealPunishSameNameCasters { .. }
