@@ -721,6 +721,9 @@ impl GameState {
                 self.distinct_card_types_in_all_graveyards() as i32
             }
             Value::LastDiscardedCardTypes => self.last_discarded_card_types as i32,
+            Value::LastRevealedManaValue => {
+                self.last_revealed_from_hand.map(|(_, mv)| mv).unwrap_or(0) as i32
+            }
             Value::LastDiscardedManaValue => self
                 .last_discarded_mana_value
                 .or(self.cost_discarded_mana_value)

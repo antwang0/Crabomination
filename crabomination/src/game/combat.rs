@@ -1290,6 +1290,17 @@ impl GameState {
                 {
                     return Err(GameError::CannotBlock(blocker_id));
                 }
+                // CR 702.43 — domain landwalk: one landwalk per basic land
+                // type among the attacker's controller's lands.
+                if matches!(kw, Keyword::DomainLandwalk)
+                    && crate::card::LandType::BASICS.iter().any(|lt| {
+                        self.battlefield.iter().any(|c| {
+                            c.controller == attacker.controller && c.definition.has_land_type(*lt)
+                        }) && self.defender_controls_land_type(defender_idx, lt)
+                    })
+                {
+                    return Err(GameError::CannotBlock(blocker_id));
+                }
             }
 
             // CR 509.1b — "can't be blocked if you've cast N+ spells this turn"

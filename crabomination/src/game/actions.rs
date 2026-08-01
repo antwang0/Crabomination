@@ -865,6 +865,13 @@ pub fn cost_reduction_for_spell_full(
             reduction = reduction.saturating_add(*amount);
         }
     }
+    // Card-intrinsic scaled discount — "{per} less for each [value]" (Domain:
+    // Draco, Stratadon). Generic-only, clamped by the caller.
+    if let Some((value, per)) = &card.definition.self_cost_reduction_per {
+        let ctx = crate::game::effects::EffectContext::for_spell(caster, None, 0, 0);
+        let units = state.evaluate_value(value, &ctx).max(0) as u32;
+        reduction = reduction.saturating_add(units.saturating_mul(*per));
+    }
     // Card-intrinsic "costs {amount} less if evidence was collected" (Bite Down
     // on Crime, CR 701.59). The collect is an optional additional cost announced
     // during casting; the auto-decider collects whenever the graveyard can

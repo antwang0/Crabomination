@@ -1195,6 +1195,7 @@ impl GameState {
         self.sacrificed_toughness = None;
         self.sacrificed_mana_value = None;
         self.last_discarded_mana_value = None;
+        self.last_revealed_from_hand = None;
         self.tapped_for_cost_power = None;
         // Every discard from this resolution is caused by this spell/ability
         // (Pure Intentions' "a spell or ability an opponent controls").
@@ -3321,6 +3322,28 @@ impl GameState {
                 ctx,
                 events,
             ),
+
+            Effect::MayPayBy { who, description, mana_cost, body, else_ } => {
+                let Some(seat) = self.resolve_players(who, ctx).first().copied() else {
+                    return Ok(());
+                };
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let Some(yes) =
+                    self.ask_seat_bool(&mut cursor, seat, description.clone(), source, effect)
+                else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                let sub = EffectContext { controller: seat, ..ctx.clone() };
+                let pay = yes && self.players[seat].mana_pool.pay(mana_cost).is_ok();
+                if pay {
+                    self.run_effect(body, &sub, events)?;
+                } else if let Some(e) = else_ {
+                    self.run_effect(e, &sub, events)?;
+                }
+                Ok(())
+            }
 
             Effect::MayPay {
                 description,
@@ -6069,6 +6092,47 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutCardsFromHandOnBottom { who, count } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let players: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for p in players {
+                    let want = n.min(self.players[p].hand.len());
+                    if want == 0 {
+                        continue;
+                    }
+                    let cands: Vec<(CardId, String)> = self.players[p]
+                        .hand
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Put which cards from your hand on the bottom of your library?"
+                            .to_string(),
+                        candidates: cands,
+                        min: want as u32,
+                        max: want as u32,
+                    });
+                    if let DecisionAnswer::Cards(picked) = answer {
+                        for cid in picked.iter().take(want) {
+                            if let Some(card) = Self::take_card(&mut self.players[p].hand, *cid) {
+                                self.players[p].library.push(card);
+                            }
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::BottomHandThenDrawThatMany { who } => {
                 for p in self.resolve_players(who, ctx) {
                     let n = self.players[p].hand.len();
@@ -7678,7 +7742,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::DestroyThenVictimControllersMakeToken { what, definition } => {
+            Effect::DestroyThenVictimControllersMakeToken { what, definition, no_regen } => {
                 // Terastodon — destroy the chosen permanents, then each one
                 // that actually reached a graveyard pays its controller a
                 // token (indestructible / replaced victims pay nothing).
@@ -7689,7 +7753,7 @@ impl GameState {
                     .filter_map(|cid| self.battlefield_find(cid).map(|c| (cid, c.controller)))
                     .collect();
                 for (cid, _) in &victims {
-                    self.destroy_permanent(*cid, false, events);
+                    self.destroy_permanent(*cid, *no_regen, events);
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
@@ -9488,6 +9552,20 @@ impl GameState {
                         ctx,
                         events,
                     )?;
+                }
+                Ok(())
+            }
+
+            Effect::RevealRandomFromHand { who } => {
+                use rand::seq::IteratorRandom;
+                for ent in self.resolve_selector(who, ctx) {
+                    let EntityRef::Player(p) = ent else { continue };
+                    let Some(card) =
+                        self.players[p].hand.iter().choose(&mut rand::rng()) else {
+                        continue;
+                    };
+                    let (id, mv) = (card.id, card.definition.cost.cmc());
+                    self.last_revealed_from_hand = Some((id, mv));
                 }
                 Ok(())
             }
@@ -26076,6 +26154,10 @@ impl GameState {
                 .filter(|c| ctx.source.is_some() && c.exiled_with == ctx.source)
                 .map(|c| EntityRef::Permanent(c.id))
                 .collect(),
+            Selector::LastRevealedCard => self
+                .last_revealed_from_hand
+                .map(|(id, _)| vec![EntityRef::Card(id)])
+                .unwrap_or_default(),
             Selector::LastCreatedToken => self
                 .last_created_token
                 // Delayed-trigger fire: the scheduling resolution's token

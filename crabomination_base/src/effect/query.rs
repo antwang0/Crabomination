@@ -470,6 +470,7 @@ impl Effect {
             Effect::SacrificeAllButOnePerType { who } => sel_has_target(who),
             Effect::EachPlayerKeepsOneSacrificeRest { who, .. } => sel_has_target(who),
             Effect::RevealRandomDiscardNonland { who, .. }
+            | Effect::RevealRandomFromHand { who }
             | Effect::RandomHandCardDeployOrCastFree { who } => sel_has_target(who),
             // Search-library / counter-all effects pick no cast-time target.
             Effect::SearchLibraryCreaturesUpToTotalManaValue { .. }
@@ -582,7 +583,9 @@ impl Effect {
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),
-            Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => body.requires_target(),
+            Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
+            | Effect::MayPayLife { body, .. } => body.requires_target(),
             Effect::MaySacrifice { then, else_, .. }
             | Effect::MaySacrificeSource { then, else_, .. }
             | Effect::MayTap { then, else_, .. }
@@ -681,6 +684,9 @@ impl Effect {
             Effect::SetNoMaxHandSize { who }
             | Effect::LookAtHand { who }
             | Effect::PutCardFromHandOnTopOfLibrary { who } => sel_has_target(who),
+            Effect::PutCardsFromHandOnBottom { who, count } => {
+                sel_has_target(who) || value_has_target(count)
+            }
             Effect::LookTopExileOneOfN { who, .. }
             | Effect::NameCardRevealUntilThenBin { who }
             | Effect::BottomHandThenDrawThatMany { who } => {
@@ -1493,7 +1499,9 @@ impl Effect {
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. } => body.primary_target_filter(),
-            Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => {
+            Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
+            | Effect::MayPayLife { body, .. } => {
                 body.primary_target_filter()
             }
             Effect::PayEnergy { then, .. }
@@ -1726,6 +1734,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
             | Effect::MayPayLife { body, .. } => body.prefers_graveyard_target(),
             Effect::Process { then, .. } => then.prefers_graveyard_target(),
             // Recasting a target card *from the graveyard* (Efreet Flamepainter,
@@ -2072,6 +2081,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
             | Effect::MayPayLife { body, .. }
             | Effect::DelayUntilWithCapture { body, .. }
             | Effect::DelayUntil { body, .. }
@@ -2323,6 +2333,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
             | Effect::MayPayLife { body, .. } => body.accepts_player_target(),
             Effect::Process { then, .. } => then.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
@@ -2557,6 +2568,7 @@ impl Effect {
                 | Effect::CapTargetsAt { body, .. }
                 | Effect::MayPayX { body, .. }
                 | Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
                 | Effect::MayPayLife { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::CollectEvidence { then, .. } | Effect::CollectEvidenceX { then } => {
                     eff_find(then, slot, mode, kicked)
@@ -3032,6 +3044,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
             | Effect::MayPayLife { body, .. } => body.min_targets_in_mode(mode),
             _ => None,
         }
@@ -3054,6 +3067,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
             | Effect::MayPayLife { body, .. } => body.target_slot_optional_x(slot, mode, x),
             Effect::ChooseMode(modes) => match mode {
                 Some(m) => modes
@@ -3096,6 +3110,7 @@ impl Effect {
             | Effect::CapTargetsAt { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
             | Effect::MayPayLife { body, .. } => body.distinct_target_count(mode),
             _ => None,
         }

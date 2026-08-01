@@ -505,6 +505,11 @@ pub struct GameState {
     /// Mana value of the last card discarded during the current resolution
     /// (Argentum Masticore's "MV ≤ the discarded card" reflexive gate).
     pub(crate) last_discarded_mana_value: Option<u32>,
+    /// The card `Effect::RevealRandomFromHand` last revealed this resolution,
+    /// with its mana value (`Value::LastRevealedManaValue` /
+    /// `Selector::LastRevealedCard`).
+    #[serde(default)]
+    pub(crate) last_revealed_from_hand: Option<(CardId, u32)>,
     /// Mana value of the card discarded to pay the activation cost currently
     /// resolving (Slumbering Tora). Unlike `last_discarded_mana_value` this
     /// survives `resolve_effect`'s per-resolution scratch reset.
@@ -1572,6 +1577,7 @@ impl Clone for GameState {
             exiled_for_cost_mana_value: self.exiled_for_cost_mana_value,
             prevention_source_color_scratch: self.prevention_source_color_scratch,
             last_discarded_mana_value: self.last_discarded_mana_value,
+            last_revealed_from_hand: self.last_revealed_from_hand,
             cost_discarded_mana_value: self.cost_discarded_mana_value,
             block_poison_this_turn: self.block_poison_this_turn,
             tapped_for_cost_power: self.tapped_for_cost_power,
@@ -1813,6 +1819,7 @@ impl GameState {
             exiled_for_cost_mana_value: None,
             prevention_source_color_scratch: None,
             last_discarded_mana_value: None,
+            last_revealed_from_hand: None,
             cost_discarded_mana_value: None,
             block_poison_this_turn: 0,
             tapped_for_cost_power: None,
@@ -4179,6 +4186,13 @@ impl GameState {
                         StaticEffect::ReduceDamageToYouBy(n)
                             if c.controller == p
                                 && matches!(ent, EntityRef::Player(_)) =>
+                        {
+                            amount = amount.saturating_sub(*n);
+                        }
+                        // Lashknife Barrier — the creature-side shave.
+                        StaticEffect::ReduceDamageToYourCreaturesBy(n)
+                            if c.controller == p
+                                && matches!(ent, EntityRef::Permanent(_)) =>
                         {
                             amount = amount.saturating_sub(*n);
                         }
@@ -16710,6 +16724,47 @@ fn static_effect_to_effects(
                     None => vec![],
                 }
             }
+            StaticEffect::MatchingLandsAreCreatures { filter, power, toughness, keywords } => {
+                let affected = AffectedPermanents::CardMatch {
+                    source_controller: card.controller,
+                    requirement: Box::new(filter.clone()),
+                };
+                let mk = |layer, sublayer, modification| ContinuousEffect {
+                    timestamp,
+                    source,
+                    affected: affected.clone(),
+                    layer,
+                    sublayer,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification,
+                };
+                let mut out = vec![
+                    mk(Layer::L4Type, None, Modification::AddCardType(CardType::Creature)),
+                    mk(
+                        Layer::L7PowerTough,
+                        Some(PtSublayer::SetValue),
+                        Modification::SetPowerToughness(*power, *toughness),
+                    ),
+                ];
+                out.extend(keywords.iter().map(|kw| {
+                    mk(Layer::L6Ability, None, Modification::AddKeyword(kw.clone()))
+                }));
+                out
+            }
+            StaticEffect::SetColorOfMatchingToChosen { applies_to } => {
+                match (selector_to_affected(applies_to, card), card.chosen_color) {
+                    (Some(affected), Some(color)) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L5Color,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetColors(vec![color]),
+                    }],
+                    _ => vec![],
+                }
+            }
             StaticEffect::GrantAllColors { applies_to } => {
                 use crate::mana::Color;
                 match selector_to_affected(applies_to, card) {
@@ -16935,6 +16990,7 @@ fn static_effect_to_effects(
             | StaticEffect::NoncombatDamageToOpponentsBonus { .. }
             | StaticEffect::HalveDamageToYou
             | StaticEffect::ReduceDamageToYouBy(_)
+            | StaticEffect::ReduceDamageToYourCreaturesBy(_)
             | StaticEffect::AddDamageToOpponents { .. }
             | StaticEffect::AddDamageToOpponentsPerCounter { .. }
             | StaticEffect::AddDamageFromColorToPlayers { .. }

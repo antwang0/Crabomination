@@ -119,7 +119,7 @@ pub enum CreatureType {
     Rabbit, Raccoon, Mouse, Wolverine, Mole, Possum, Skunk, Hamster,
     // Invasion block Metathran (Living Airship, Metathran Zombie) and
     // Apocalypse Flagbearers (Standard Bearer, Coalition Honor Guard).
-    Metathran, Flagbearer, Volver,
+    Metathran, Flagbearer, Volver, Phelddagrif,
     // The Last Airbender (2026).
     Lemur, Kangaroo, Seal,
     // The Lost Caverns of Ixalan (2023).
@@ -236,6 +236,10 @@ pub enum LandType {
 }
 
 impl LandType {
+    /// CR 205.3i — the five basic land types, in WUBRG order.
+    pub const BASICS: [LandType; 5] =
+        [Self::Plains, Self::Island, Self::Swamp, Self::Mountain, Self::Forest];
+
     /// CR 205.3i — one of the five basic land types (the only ones that carry an
     /// intrinsic mana ability and can be rewritten by a CR 612 text change).
     pub fn is_basic_type(self) -> bool {
@@ -722,6 +726,10 @@ pub enum Keyword {
     /// defending player controls a land matching the filter (artifact
     /// landwalk — Vectis Gloves; nonbasic/snow landwalk variants).
     LandwalkFiltered(Box<SelectionRequirement>),
+    /// Domain landwalk (CR 702.15 + 702.43) — "for each basic land type among
+    /// lands you control, this creature has landwalk of that type"
+    /// (Magnigoth Treefolk). Evaluated live against both players' lands.
+    DomainLandwalk,
     /// Flanking (CR 702.25) — a creature without flanking that blocks this gets -1/-1 until EOT.
     Flanking,
     /// Bushido N (CR 702.45) — when this blocks or becomes blocked, it gets +N/+N until EOT.
@@ -2763,6 +2771,13 @@ pub struct CardDefinition {
     /// caller. `None` by default.
     #[serde(default)]
     pub self_cost_reduction_if_collect_evidence: Option<u32>,
+    /// "This spell costs `{per}` less to cast for each [`Value`]" — the
+    /// scaled sibling of `self_cost_reduction_if` (Domain: Draco's `{2}` and
+    /// Stratadon's `{1}` per basic land type among lands you control).
+    /// Generic-only, clamped by the caller; the value is evaluated from the
+    /// caster's seat with no source or target.
+    #[serde(default)]
+    pub self_cost_reduction_per: Option<(crate::effect::Value, u32)>,
     /// "Equipped creature gets +P/+T and has [keywords]." Read by
     /// `compute_battlefield` for any Equipment whose `attached_to` points at
     /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)

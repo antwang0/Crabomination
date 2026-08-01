@@ -205,6 +205,9 @@ pub enum Selector {
     /// Applied Geometry). Resets between resolution roots — within a
     /// single `Effect::Seq`, the latest CreateToken's id is visible.
     LastCreatedToken,
+    /// The card `Effect::RevealRandomFromHand` last revealed this resolution
+    /// (Planeswalker's Mischief exiles it). Empty when nothing was revealed.
+    LastRevealedCard,
 
     /// All tokens created by `Effect::CreateToken` in the current
     /// resolution (the multi-token variant of `LastCreatedToken`). Used
@@ -539,6 +542,10 @@ pub enum Value {
     /// discarded to pay the resolving ability's cost (Slumbering Tora's X).
     /// 0 when nothing has been discarded.
     LastDiscardedManaValue,
+    /// Mana value of the card most recently revealed at random from a hand by
+    /// `Effect::RevealRandomFromHand` (the Planeswalker's cycle's X). 0 when
+    /// nothing was revealed this resolution.
+    LastRevealedManaValue,
     /// Distinct card types across every graveyard (Altar of the Goyf,
     /// Lhurgoyf-style counts as a spell value).
     CardTypesInAllGraveyards,
@@ -2879,6 +2886,20 @@ pub enum Effect {
     /// choice").
     MayDoBy { who: PlayerRef, description: String, body: Box<Effect> },
 
+    /// "[Player] may pay [cost]. If they do, `body`; otherwise `else_`" —
+    /// [`Effect::MayPay`] routed to another seat (Phyrexian Tyranny's
+    /// "that player loses 2 life unless they pay {2}"). The yes/no and the
+    /// payment both belong to `who`, and `body`/`else_` run with `who` as
+    /// their controller.
+    MayPayBy {
+        who: PlayerRef,
+        description: String,
+        mana_cost: crate::mana::ManaCost,
+        body: Box<Effect>,
+        #[serde(default)]
+        else_: Option<Box<Effect>>,
+    },
+
     /// "You may [body]. If you don't, [else_]." The two-sided sibling of
     /// [`Effect::MayDo`] (Dakra Mystic). Shares MayPay's seat-routed yes/no
     /// suspend with an empty cost.
@@ -3430,6 +3451,12 @@ pub enum Effect {
     /// (CR 701). No-op if the hand is empty. Enter the Infinite's "then put a
     /// card from your hand on top of your library."
     PutCardFromHandOnTopOfLibrary { who: Selector },
+    /// "Put `count` cards from your hand on the bottom of your library"
+    /// (Sawtooth Loon's "draw two cards, then put two cards from your hand on
+    /// the bottom"). Chain after a `Draw` in a `Seq`. Same auto-pick residual
+    /// as [`Effect::PutCardFromHandOnTopOfLibrary`] — the picker is the
+    /// synchronous decider, so a UI seat isn't prompted.
+    PutCardsFromHandOnBottom { who: Selector, count: Value },
     /// CR 701.19 — "Look at [who]'s hand." The resolving controller sees the
     /// hand for the rest of the game (`GameState.hands_revealed_to`), so the
     /// server view and client mirror it. Wanderguard Sentry, Thought Prison.
@@ -5470,6 +5497,12 @@ pub enum Effect {
     /// hand, then discards each nonland card revealed this way. Lands revealed
     /// this way stay in hand.
     RevealRandomDiscardNonland { who: Selector, count: Value },
+    /// "Target opponent reveals a card at random from their hand" (the
+    /// Planeswalker's cycle). The card stays in hand; its mana value is
+    /// stamped for `Value::LastRevealedManaValue` and the card itself for
+    /// `Selector::LastRevealedCard`, so a follow-up clause in the same `Seq`
+    /// can scale off it or exile it.
+    RevealRandomFromHand { who: Selector },
     /// Mass Polymorph — "Exile all creatures you control, then reveal cards
     /// from the top of your library until you reveal that many creature cards.
     /// Put all creature cards revealed this way onto the battlefield, then
@@ -7347,6 +7380,10 @@ pub enum Effect {
     DestroyThenVictimControllersMakeToken {
         what: Selector,
         definition: crate::card::TokenDefinition,
+        /// "They can't be regenerated" (March of Souls). Defaults to false
+        /// (Terastodon lets its victims regenerate).
+        #[serde(default)]
+        no_regen: bool,
     },
 
     /// "Prevent the next N damage that would be dealt to `target` this

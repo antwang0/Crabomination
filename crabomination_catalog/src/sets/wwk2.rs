@@ -869,6 +869,7 @@ pub fn terastodon() -> crate::card::CardDefinition {
                         },
                         ..Default::default()
                     },
+                    no_regen: false,
                 }),
             }),
         })],

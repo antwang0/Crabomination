@@ -46,6 +46,7 @@ mod nms2;
 mod nms3;
 mod nms4;
 mod pls;
+mod pls2;
 mod pcy;
 mod pcy2;
 mod pcy3;

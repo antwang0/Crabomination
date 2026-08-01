@@ -371,6 +371,16 @@ pub enum StaticEffect {
     /// (layer 4) with base power and toughness each equal to its mana value
     /// (layer 7b). March of the Machines.
     NoncreatureArtifactsAreCreatures,
+    /// CR 613 — "Lands you control are `power`/`toughness` creatures with
+    /// [keywords]. They're still lands" (Natural Emergence). Layer 4 adds the
+    /// Creature type, layer 7b sets the base P/T, layer 6 grants the keywords.
+    MatchingLandsAreCreatures {
+        filter: SelectionRequirement,
+        power: i32,
+        toughness: i32,
+        #[serde(default)]
+        keywords: Vec<Keyword>,
+    },
     /// CR 613 layer 4 — "All nonland permanents are legendary" (Leyline of
     /// Singularity). Adds the Legendary supertype to every nonland permanent
     /// on the battlefield, so the legend rule (CR 704.5j) collapses duplicates
@@ -934,6 +944,10 @@ pub enum StaticEffect {
     /// CR 613 layer 5 — "[applies_to] are [color]" (Darkest Hour). Sets the
     /// colour outright rather than adding to it.
     SetColorOfMatching { applies_to: Selector, color: crate::mana::Color },
+    /// The as-enters-chosen sibling of `SetColorOfMatching` — "all nonland
+    /// permanents are the chosen color" (Shifting Sky, CR 613 layer 5). Reads
+    /// the source's `chosen_color`; inert until one is stamped.
+    SetColorOfMatchingToChosen { applies_to: Selector },
     /// CR 704.7 — "If you would lose the game, instead shuffle your hand, your
     /// graveyard, and all permanents you own into your library, then draw seven
     /// cards and your life total becomes 20" (Lich's Mirror). One application
@@ -1130,6 +1144,11 @@ pub enum StaticEffect {
     /// (Urza's Armor). Applied per damage event to the static controller's own
     /// life total, after the additive bonuses and before the doublers.
     ReduceDamageToYouBy(u32),
+    /// "If a source would deal damage to a creature you control, it deals that
+    /// much damage minus N to that creature instead" (Lashknife Barrier).
+    /// The creature-side sibling of `ReduceDamageToYouBy`; applied in
+    /// `GameState::scale_damage_to` before the doublers.
+    ReduceDamageToYourCreaturesBy(u32),
     /// CR 614.5 — "If a [color] source you control would deal damage to an
     /// opponent or a permanent an opponent controls, it deals that much
     /// damage plus `amount` instead." (Torbran, Thane of Red Fell.)
