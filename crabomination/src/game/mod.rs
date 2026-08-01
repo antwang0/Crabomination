@@ -7783,6 +7783,12 @@ impl GameState {
                     }).count() as i32;
                     (base + n, base + n)
                 }
+                crate::card::DynamicPt::LandsOfTypeInPlayPower { land_type, base_t } => {
+                    let n = self.battlefield.iter()
+                        .filter(|c| c.definition.subtypes.land_types.contains(&land_type))
+                        .count() as i32;
+                    (n, base_t)
+                }
                 crate::card::DynamicPt::ForestsInPlay { base_p } => {
                     let n = self.battlefield.iter()
                         .filter(|c| c.definition.subtypes.land_types.contains(&crate::card::LandType::Forest))

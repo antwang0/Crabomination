@@ -3163,6 +3163,10 @@ pub enum Effect {
     /// to each target's own total. Stingerback Terror ("each opponent loses
     /// half their life, rounded up").
     LoseHalfLife { who: Selector, rounded_up: bool },
+    /// "Each player loses `per` life for each [`filter`] they control"
+    /// (Stronghold Discipline). Per-player evaluation, so each seat's own
+    /// board sets its own loss.
+    LoseLifePerControlled { who: Selector, filter: SelectionRequirement, per: Value },
     /// Deal each player the selector resolves to damage equal to half their
     /// *own* current life total (rounded up when `rounded_up`, else down).
     /// Per-player evaluation, routed through the damage funnel (so doubling /

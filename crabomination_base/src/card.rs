@@ -2029,6 +2029,10 @@ pub enum SelectionRequirement {
     /// "each player sacrifices a permanent of their choice of that type").
     /// Falls back to "no match" when the source hasn't chosen one.
     IsSourceChosenCardType,
+    /// True when the candidate shares the creature type the resolving source
+    /// chose via `Effect::NameCreatureType` (Belbe's Portal). Changeling
+    /// satisfies any type; no match when nothing was chosen.
+    IsSourceChosenCreatureType,
     /// True when the candidate's mana value is ≤ the number of permanents
     /// the evaluating player controls that match the inner filter. Powers
     /// "with mana value less than or equal to the number of [X] you
@@ -2075,6 +2079,28 @@ impl SelectionRequirement {
     /// (`ManaValueAtMostXFromCost` → `ManaValueAtMost(x)`), recursing
     /// through And/Or/Not. Called by `Effect::Search` with the resolving
     /// spell's paid X (Chord of Calling, CR 601.2b).
+    /// Concretize `IsSourceChosenCreatureType` against the source's stamped
+    /// choice (`HasCreatureType(ct)`, or "matches nothing" when unchosen),
+    /// recursing through And/Or/Not. Belbe's Portal.
+    pub fn resolve_chosen_creature_type(&self, chosen: Option<CreatureType>) -> Self {
+        match self {
+            Self::IsSourceChosenCreatureType => match chosen {
+                Some(ct) => Self::HasCreatureType(ct),
+                None => Self::Not(Box::new(Self::Any)),
+            },
+            Self::And(a, b) => Self::And(
+                Box::new(a.resolve_chosen_creature_type(chosen)),
+                Box::new(b.resolve_chosen_creature_type(chosen)),
+            ),
+            Self::Or(a, b) => Self::Or(
+                Box::new(a.resolve_chosen_creature_type(chosen)),
+                Box::new(b.resolve_chosen_creature_type(chosen)),
+            ),
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_chosen_creature_type(chosen))),
+            other => other.clone(),
+        }
+    }
+
     pub fn resolve_x(&self, x: u32) -> Self {
         match self {
             Self::ManaValueAtMostXFromCost => Self::ManaValueAtMost(x),
@@ -3636,6 +3662,9 @@ pub enum DynamicPt {
     /// controller) sharing the source's `chosen_creature_type`. Caller of
     /// the Hunt.
     CreaturesOfSourceChosenType,
+    /// Power = the number of lands of `land_type` on the battlefield (any
+    /// controller); toughness = `base_t`. Coiling Woodworm (`*`/1).
+    LandsOfTypeInPlayPower { land_type: LandType, base_t: i32 },
     /// Power = `base_p` + the controller's experience counters; toughness =
     /// `base_t` + that count. Daxos the Returned's Spirit token (0/0 base) and
     /// Kalemne, Disciple of Iroas (2/4 base, "+1/+1 for each experience").

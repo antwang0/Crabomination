@@ -631,6 +631,7 @@ impl Effect {
                 sel_has_target(who) || value_has_target(amount)
             }
             Effect::LoseHalfLife { who, .. }
+            | Effect::LoseLifePerControlled { who, .. }
             | Effect::MillHalf { who, .. }
             | Effect::MillThenDrawPerType { who, .. }
             | Effect::DiscardHalf { who, .. }
@@ -1260,6 +1261,7 @@ impl Effect {
             Effect::ExchangeControlChoosing { with, .. } => sel_filter(with),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
             Effect::LoseHalfLife { who, .. }
+            | Effect::LoseLifePerControlled { who, .. }
             | Effect::MillHalf { who, .. }
             | Effect::MillThenDrawPerType { who, .. }
             | Effect::DiscardHalf { who, .. }
@@ -2681,6 +2683,7 @@ impl Effect {
                     sel_find(who, slot).or_else(|| val_find(amount, slot))
                 }
                 Effect::LoseHalfLife { who, .. }
+                | Effect::LoseLifePerControlled { who, .. }
                 | Effect::MillHalf { who, .. }
                 | Effect::MillThenDrawPerType { who, .. }
                 | Effect::DiscardHalf { who, .. }

@@ -4369,6 +4369,47 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LoseLifePerControlled { who, filter, per } => {
+                // Per-player: each seat's own board sets its own loss
+                // (Stronghold Discipline).
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                    .collect();
+                let per = self.evaluate_value(per, ctx).max(0);
+                for p in self.apnap_sort(seats) {
+                    let ids: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p)
+                        .map(|c| c.id)
+                        .collect();
+                    let n = ids
+                        .into_iter()
+                        .filter(|id| {
+                            self.evaluate_requirement_static(
+                                filter,
+                                &crate::game::Target::Permanent(*id),
+                                p,
+                                ctx.source,
+                            )
+                        })
+                        .count() as i32;
+                    let amt = (n * per).max(0) as u32;
+                    if amt == 0 {
+                        continue;
+                    }
+                    let applied = self.adjust_life_applied(p, -(amt as i32));
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::LoseHalfLife { who, rounded_up } => {
                 // Per-player: each loses half of their *own* total.
                 let seats: Vec<usize> = self
@@ -14958,7 +14999,14 @@ impl GameState {
                 };
                 // Concretize X-relative MV gates (Mind into Matter's
                 // "permanent card with mana value X or less").
-                let filter = filter.resolve_source_counters(&src_counts).resolve_x(ctx.x_value);
+                let chosen_type = ctx
+                    .source
+                    .and_then(|sid| self.find_card_anywhere(sid))
+                    .and_then(|c| c.chosen_creature_type);
+                let filter = filter
+                    .resolve_source_counters(&src_counts)
+                    .resolve_x(ctx.x_value)
+                    .resolve_chosen_creature_type(chosen_type);
                 let candidates: Vec<(CardId, String)> = self.players[p]
                     .hand
                     .iter()

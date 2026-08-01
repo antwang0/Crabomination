@@ -3055,6 +3055,13 @@ impl GameState {
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.chosen_card_type.clone())
                         .is_some_and(|t| card.definition.card_types.contains(&t)),
+                    R::IsSourceChosenCreatureType => source
+                        .and_then(|sid| self.find_card_anywhere(sid))
+                        .and_then(|s| s.chosen_creature_type)
+                        .is_some_and(|ct| {
+                            card.definition.subtypes.creature_types.contains(&ct)
+                                || card.has_keyword(&crate::card::Keyword::Changeling)
+                        }),
                     // Extraplanar Lens — "a land with the same name as the
                     // exiled card".
                     R::SameNameAsExiledWithSource => source.is_some_and(|sid| {
@@ -3434,6 +3441,7 @@ impl GameState {
             // source in hand (RevealUntilFind); vacuously false otherwise.
             R::NamedBySource => false,
             R::IsSourceChosenCardType => false,
+            R::IsSourceChosenCreatureType => false,
             // Count walks the battlefield for the evaluating controller's
             // matching permanents; the candidate's own zone is irrelevant.
             R::ManaValueAtMostControllerHand => {
