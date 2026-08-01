@@ -274,9 +274,32 @@ impl EvalWeights {
         Self { combat_aware: true, ..Self::hold_sick() }
     }
 
-    /// The adopted default plus the searched attack declaration. See
-    /// [`attack_search`](Self::attack_search) for what it is and why it is
-    /// a flag; this is the profile the ladder measures it with.
+    /// The adopted default: [`hold_sick_combat`](Self::hold_sick_combat)
+    /// plus the searched attack declaration.
+    ///
+    /// **Measured, and the largest gain since the tap-out fix**: 52.4 %
+    /// [51.3 %, 53.5 %] over 8 000 fixed-deck games, and 53.8 %
+    /// [53.0 %, 54.6 %] over 13 695 decided cube games, at about +36 %
+    /// wall clock.
+    ///
+    /// The fixed-deck aggregate badly understates how *deck-dependent* it
+    /// is, which is the more useful finding:
+    ///
+    /// | mirror | searched attacks win % |
+    /// |---|---|
+    /// | mono-red aggro | 59.6 % |
+    /// | azorius skies | 56.7 % |
+    /// | golgari midrange | 48.5 % |
+    /// | dimir control | 44.8 % |
+    ///
+    /// Restraint is worth nearly ten points in the aggro mirror and *costs*
+    /// five in the control mirror, where somebody has to actually close the
+    /// game and the passive side doesn't. The search has a one-turn-cycle
+    /// horizon, so it can see "this creature survives to block" and cannot
+    /// see "this is the race I need to win"; a deck whose plan is inevitable
+    /// card advantage is exactly where that blind spot bites. Adopted on the
+    /// aggregate, but a profile that scales restraint to the board — or a
+    /// horizon that reaches a win — is the obvious next thing to measure.
     pub const fn attack_search() -> Self {
         Self { attack_search: 6, ..Self::hold_sick_combat() }
     }
@@ -388,12 +411,20 @@ impl EvalWeights {
 impl Default for EvalWeights {
     /// The adopted profile. [`baseline`](EvalWeights::baseline) stays the
     /// historical *control* — it is what ladder runs measure against — but
-    /// it is no longer what the bot plays. The summon-sick gate beat it
-    /// 51.5 % [50.8 %, 52.3 %] over 16 000 games, and the combat-aware
-    /// evaluation then beat *that* 51.3 % [50.4 %, 52.2 %] over 12 000, so
-    /// the default is both.
+    /// it is no longer what the bot plays. Each layer had to beat the
+    /// previous one on the ladder before it was added:
+    ///
+    /// | layer | vs. the one before | games |
+    /// |---|---|---|
+    /// | summon-sick gate | 51.5 % [50.8 %, 52.3 %] | 16 000 |
+    /// | combat-aware evaluation | 51.3 % [50.4 %, 52.2 %] | 12 000 |
+    /// | searched attacks | 52.4 % [51.3 %, 53.5 %] | 8 000 |
+    ///
+    /// The attack search was additionally confirmed on cube decks —
+    /// 53.8 % [53.0 %, 54.6 %] over 13 695 decided games — where the fixed
+    /// four archetypes could not have shown its deck-dependence.
     fn default() -> Self {
-        Self::hold_sick_combat()
+        Self::attack_search()
     }
 }
 
@@ -9884,6 +9915,16 @@ mod monarch_tests {
         g.monarch = Some(2);
         let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         g.clear_sickness(atk);
+        // Every seat needs a library. The bot now simulates the attack
+        // forward before committing to it, and on an empty library taking
+        // the crown is *lethal* — the monarch draws at their end step (CR
+        // 724) and decks out. Declining would be the right play; the test
+        // means to check target selection, not deck-out.
+        for seat in 0..3 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, catalog::forest());
+            }
+        }
 
         let mut bot = RandomBot::new();
         match bot.next_action(&g, 0).expect("an action") {
