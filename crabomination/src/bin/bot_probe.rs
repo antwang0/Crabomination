@@ -131,6 +131,39 @@ struct Counts {
     decisions: BTreeMap<String, usize>,
     turns: u32,
     games: usize,
+    /// Combats where we were the defender and something was attacking us.
+    combats: usize,
+    /// ...of those, how many we had at least one untapped creature for.
+    combats_with_blockers: usize,
+    /// ...of those, how many we actually declared a block in.
+    combats_blocked: usize,
+    /// Attackers faced / left unblocked, summed over all combats.
+    attackers_faced: usize,
+    attackers_unblocked: usize,
+    /// Blockers available / assigned, summed over all combats.
+    blockers_available: usize,
+    blockers_used: usize,
+    /// Creatures we controlled at DeclareBlockers, and how many of those
+    /// were unavailable because they were tapped. A creature that attacked
+    /// on our turn is still tapped on theirs (it untaps in *our* untap
+    /// step), so this separates "empty board" from "we alpha-struck and
+    /// have nothing left to block with".
+    creatures_at_block: usize,
+    creatures_tapped_at_block: usize,
+    /// Combats with no available blocker, split by cause.
+    no_blocker_empty: usize,
+    no_blocker_tapped: usize,
+    /// Our own combats: creatures eligible to attack vs actually declared.
+    /// A bot that swings with everything every turn is the direct cause of
+    /// the tapped-out blocking picture above.
+    attacks_eligible: usize,
+    attacks_declared: usize,
+    /// How often we held back at least one eligible attacker.
+    attack_combats: usize,
+    attack_combats_all_in: usize,
+    /// How many combats had a given (attackers x available blockers) size.
+    /// The search only has room to work where this product exceeds 1.
+    combat_shapes: BTreeMap<(usize, usize), usize>,
 }
 
 fn action_kind(a: &GameAction) -> &'static str {
@@ -202,6 +235,69 @@ fn run(deck: &[CardFactory], games: usize, weights: EvalWeights, c: &mut Counts)
                         .any(|p| p.controller == s && p.definition.is_land() && !p.tapped)
                     {
                         c.opp_windows_with_mana += 1;
+                    }
+                }
+                // Combat shape, sampled at the moment the bot commits its
+                // blocks. `attacking()` is only populated between the two
+                // declaration steps, so this is the one place the defender's
+                // real option set is visible.
+                if observing && let GameAction::DeclareBlockers(blocks) = &a {
+                    let faced: Vec<_> = g
+                        .attacking()
+                        .iter()
+                        .filter(|atk| g.defender_for(atk.target) == Some(s))
+                        .collect();
+                    if !faced.is_empty() {
+                        let avail = g
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == s && c.can_block())
+                            .count();
+                        c.combats += 1;
+                        c.attackers_faced += faced.len();
+                        c.blockers_available += avail;
+                        c.blockers_used += blocks.len();
+                        c.attackers_unblocked += faced
+                            .iter()
+                            .filter(|atk| !blocks.iter().any(|(_, a)| *a == atk.attacker))
+                            .count();
+                        let mine: Vec<_> = g
+                            .battlefield
+                            .iter()
+                            .filter(|cr| cr.controller == s && cr.definition.is_creature())
+                            .collect();
+                        let tapped = mine.iter().filter(|cr| cr.tapped).count();
+                        c.creatures_at_block += mine.len();
+                        c.creatures_tapped_at_block += tapped;
+                        if avail > 0 {
+                            c.combats_with_blockers += 1;
+                        } else if tapped > 0 {
+                            c.no_blocker_tapped += 1;
+                        } else {
+                            c.no_blocker_empty += 1;
+                        }
+                        if !blocks.is_empty() {
+                            c.combats_blocked += 1;
+                        }
+                        *c.combat_shapes.entry((faced.len(), avail)).or_default() += 1;
+                    }
+                }
+                if observing && let GameAction::DeclareAttackers(atks) = &a {
+                    // `can_attack()` is the engine's eligibility gate; the
+                    // bot layers its own restraint on top, and the gap
+                    // between the two is the whole question.
+                    let eligible = g
+                        .battlefield
+                        .iter()
+                        .filter(|cr| cr.controller == s && cr.can_attack())
+                        .count();
+                    if eligible > 0 {
+                        c.attack_combats += 1;
+                        c.attacks_eligible += eligible;
+                        c.attacks_declared += atks.len();
+                        if atks.len() >= eligible {
+                            c.attack_combats_all_in += 1;
+                        }
                     }
                 }
                 let step = format!("{:?}", g.step);
@@ -309,6 +405,70 @@ fn main() {
     );
     for (k, v) in &c.plays_by_step {
         println!("  {k:<34} {v:>6}  {:>5.1}%", 100.0 * *v as f64 / total_plays.max(1) as f64);
+    }
+
+    // Combat is the highest-frequency surface the bot has and the only one
+    // never laddered. The question this section answers is not "does the bot
+    // block well" but "is there room to" — a search over block assignments
+    // can only pay where the defender had a real choice, so the shape
+    // histogram sizes the ceiling before any work goes into the search.
+    println!("\ncombats as defender: {}", c.combats);
+    let pct = |n: usize, d: usize| 100.0 * n as f64 / d.max(1) as f64;
+    println!(
+        "  with any untapped creature   {:>6}  {:>5.1}%\n  \
+         we declared a block in       {:>6}  {:>5.1}% (of those)",
+        c.combats_with_blockers,
+        pct(c.combats_with_blockers, c.combats),
+        c.combats_blocked,
+        pct(c.combats_blocked, c.combats_with_blockers),
+    );
+    println!(
+        "  no blocker available: {} board was empty, {} all tapped\n  \
+         creatures on board at DeclareBlockers {} ({} tapped, {:.0}%)",
+        c.no_blocker_empty,
+        c.no_blocker_tapped,
+        c.creatures_at_block,
+        c.creatures_tapped_at_block,
+        pct(c.creatures_tapped_at_block, c.creatures_at_block),
+    );
+    println!(
+        "  attackers faced {} / unblocked {} ({:.0}%)\n  \
+         blockers available {} / used {} ({:.0}%)",
+        c.attackers_faced,
+        c.attackers_unblocked,
+        pct(c.attackers_unblocked, c.attackers_faced),
+        c.blockers_available,
+        c.blockers_used,
+        pct(c.blockers_used, c.blockers_available),
+    );
+    // A combat with one attacker and one blocker is a yes/no choice the
+    // greedy rule already gets right or wrong on its own merits; anything
+    // larger is where an assignment search has something to search.
+    let (mut trivial, mut real) = (0usize, 0usize);
+    for (&(atk, blk), &n) in &c.combat_shapes {
+        if atk * blk.min(1) <= 1 && blk <= 1 { trivial += n } else { real += n }
+    }
+    println!(
+        "  trivial shapes (<=1 attacker and <=1 blocker) {trivial}, \
+         searchable {real} ({:.0}%)",
+        pct(real, trivial + real),
+    );
+    println!(
+        "\nour own combats with an eligible attacker: {}\n  \
+         attacked with {} of {} eligible ({:.0}%)\n  \
+         swung with everything in {} ({:.0}%)",
+        c.attack_combats,
+        c.attacks_declared,
+        c.attacks_eligible,
+        pct(c.attacks_declared, c.attacks_eligible),
+        c.attack_combats_all_in,
+        pct(c.attack_combats_all_in, c.attack_combats),
+    );
+    println!("\n  top shapes (attackers x blockers available):");
+    let mut shapes: Vec<_> = c.combat_shapes.iter().collect();
+    shapes.sort_by_key(|(_, n)| std::cmp::Reverse(**n));
+    for &(&(atk, blk), &n) in shapes.iter().take(10) {
+        println!("    {atk} x {blk:<3} {n:>6}  {:>5.1}%", pct(n, c.combats));
     }
 
     println!("\nactions by step and kind:");
