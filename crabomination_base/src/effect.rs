@@ -6093,6 +6093,10 @@ pub enum Effect {
     /// keeps the source by sacrificing the weakest matching permanent when one
     /// is available.
     SacrificeSourceUnlessSacrifice { filter: SelectionRequirement },
+    /// "Sacrifice this permanent unless you return a [`filter`] you control to
+    /// its owner's hand" (the Invasion-block Lair lands). The bounce sibling of
+    /// `SacrificeSourceUnlessSacrifice`.
+    SacrificeSourceUnlessReturn { filter: SelectionRequirement },
     /// "Sacrifice any number of [filter]. [payoff] for each one." The
     /// controller chooses how many to sacrifice via `Decision::ChooseAmount`
     /// (AutoDecider sacrifices none). For each sacrifice, `per_each` runs

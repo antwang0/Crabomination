@@ -226,6 +226,8 @@ pub enum LandType {
     Planet,
     // Lost Caverns of Ixalan — "Land — Cave" (Caves-matter payoffs).
     Cave,
+    // Invasion block — "Land — Lair" (the bounce-a-land tri-lands).
+    Lair,
     // Final Fantasy — "Land — Town" (Towns-matter: Affinity for Towns, etc.).
     Town,
     // Phyrexia: All Will Be One — "Land — Sphere" (the enters-tapped cycle +

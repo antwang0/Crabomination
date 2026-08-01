@@ -309,3 +309,218 @@ fn dominarias_judgment_grants_domain_protection() {
     assert!(kws.contains(&Keyword::Protection(Color::Blue)));
     assert!(!kws.contains(&Keyword::Protection(Color::Green)), "no Forest, no pro-green");
 }
+
+/// A Lair stays only if you bounce a real land.
+#[test]
+fn lair_bounces_a_land_to_stay() {
+    let mut g = main_phase();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let lair = g.add_card_to_hand(0, catalog::dromars_cavern());
+    g.perform_action(GameAction::PlayLand(lair)).expect("play");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == lair), "the Lair stayed");
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "the Forest bounced");
+}
+
+/// With no other land, the Lair sacrifices itself.
+#[test]
+fn lair_sacrifices_itself_with_nothing_to_bounce() {
+    let mut g = main_phase();
+    let lair = g.add_card_to_hand(0, catalog::crosiss_catacombs());
+    g.perform_action(GameAction::PlayLand(lair)).expect("play");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == lair));
+}
+
+/// Ertai's Trickery only answers a kicked spell.
+#[test]
+fn ertais_trickery_only_counters_a_kicked_spell() {
+    let mut g = main_phase();
+    let angel = g.add_card_to_hand(1, catalog::desolation_angel());
+    g.active_player_idx = 1;
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: angel,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let trickery = g.add_card_to_hand(0, catalog::ertais_trickery());
+    cast(&mut g, 0, trickery, Some(Target::Permanent(angel)));
+    assert!(g.battlefield.iter().any(|c| c.id == angel), "unkicked — it resolved");
+}
+
+/// Ertai eats an enchantment to counter.
+#[test]
+fn ertai_the_corrupted_counters_by_sacrificing() {
+    let mut g = main_phase();
+    let ertai = g.add_card_to_battlefield(0, catalog::ertai_the_corrupted());
+    g.clear_sickness(ertai);
+    g.add_card_to_battlefield(0, catalog::pacifism());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    activate(&mut g, 0, ertai, 0, Some(Target::Permanent(bolt)));
+    assert_eq!(g.players[0].life, 20, "the Bolt never resolved");
+}
+
+/// Exotic Disease drains by domain.
+#[test]
+fn exotic_disease_drains_by_domain() {
+    let mut g = main_phase();
+    for land in [catalog::plains, catalog::island, catalog::swamp, catalog::mountain] {
+        g.add_card_to_battlefield(0, land());
+    }
+    let disease = g.add_card_to_hand(0, catalog::exotic_disease());
+    cast(&mut g, 0, disease, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 16);
+    assert_eq!(g.players[0].life, 24);
+}
+
+/// Gaea's Herald stops a counterspell aimed at a creature.
+#[test]
+fn gaeas_herald_protects_creature_spells() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::gaeas_herald());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let counter = g.add_card_to_hand(1, catalog::counterspell());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    let _ = g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bears), "the creature resolved anyway");
+}
+
+/// Gaea's Might scales with your basic land types.
+#[test]
+fn gaeas_might_scales_with_domain() {
+    let mut g = main_phase();
+    for land in [catalog::forest, catalog::mountain] {
+        g.add_card_to_battlefield(0, land());
+    }
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let might = g.add_card_to_hand(0, catalog::gaeas_might());
+    cast(&mut g, 0, might, Some(Target::Permanent(bears)));
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 4);
+}
+
+/// Gainsay only hits blue.
+#[test]
+fn gainsay_counters_a_blue_spell() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(1, catalog::counterspell());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let gainsay = g.add_card_to_hand(0, catalog::gainsay());
+    cast(&mut g, 0, gainsay, Some(Target::Permanent(spell)));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == spell));
+}
+
+/// Gerrard's Command untaps and pumps in one.
+#[test]
+fn gerrards_command_untaps_and_pumps() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bears).unwrap().tapped = true;
+    let command = g.add_card_to_hand(0, catalog::gerrards_command());
+    cast(&mut g, 0, command, Some(Target::Permanent(bears)));
+    assert!(!g.battlefield.iter().find(|c| c.id == bears).unwrap().tapped);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 5);
+}
+
+/// Hobble pins a creature and cantrips.
+#[test]
+fn hobble_pins_and_draws() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let hobble = g.add_card_to_hand(0, catalog::hobble());
+    let before = g.players[0].hand.len();
+    cast(&mut g, 0, hobble, Some(Target::Permanent(bears)));
+    assert_eq!(g.players[0].hand.len(), before, "aura out, card in");
+    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::CantAttack));
+}
+
+/// Escape Routes rebuys a white creature.
+#[test]
+fn escape_routes_returns_a_white_creature() {
+    let mut g = main_phase();
+    let routes = g.add_card_to_battlefield(0, catalog::escape_routes());
+    let lions = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    activate(&mut g, 0, routes, 0, Some(Target::Permanent(lions)));
+    assert!(g.players[0].hand.iter().any(|c| c.id == lions));
+}
+
+/// Dromar's Charm's counter mode works.
+#[test]
+fn dromars_charm_counters() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let charm = g.add_card_to_hand(0, catalog::dromars_charm());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: charm,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20);
+}
+
+/// Fleetfoot Panther bounces one of your own on the way in.
+#[test]
+fn fleetfoot_panther_rebuys_a_green_creature() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let panther = g.add_card_to_hand(0, catalog::fleetfoot_panther());
+    cast(&mut g, 0, panther, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears));
+}

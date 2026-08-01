@@ -15098,6 +15098,68 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SacrificeSourceUnlessReturn { filter } => {
+                // The Lair lands — the controller keeps the source by bouncing
+                // one matching permanent; with no candidate (or a UI seat
+                // declining) the source is sacrificed instead.
+                let Some(src) = ctx.source else { return Ok(()); };
+                let p = ctx.controller;
+                let candidates: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.id != src)
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            Some(src),
+                        )
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                let spare = if candidates.is_empty() {
+                    false
+                } else if self.seat_suspends(p) {
+                    let mut cursor = 0;
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        p,
+                        "Return a land to your hand to keep this one?".to_string(),
+                        src,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    yes
+                } else {
+                    true
+                };
+                if spare {
+                    // Bounce the least useful match: a tapped land first, then
+                    // the lowest mana value.
+                    let pick = candidates
+                        .iter()
+                        .copied()
+                        .min_by_key(|id| {
+                            self.battlefield_find(*id)
+                                .map(|c| (!c.tapped, c.definition.cost.cmc()))
+                                .unwrap_or((true, 0))
+                        })
+                        .expect("non-empty");
+                    self.move_card_to(
+                        pick,
+                        &ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
+                        ctx,
+                        events,
+                    );
+                } else {
+                    self.run_effect(&Effect::SacrificeSource, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::SacrificeGreatestMV { who, count, filter, by_power } => {
                 // Pick the greatest match by mana value (or power, with
                 // `by_power`). Used by Soul Shatter ("greatest mana value") and

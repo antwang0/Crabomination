@@ -3,11 +3,12 @@
 
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
-    EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, SelectionRequirement as R,
-    Subtypes, TriggeredAbility, Value,
+    EnchantmentSubtype, EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
+    SelectionRequirement as R, StaticAbility, StaticEffect, Subtypes, Supertype, TriggeredAbility,
+    Value,
 };
 use crate::effect::{
-    Duration, Effect, PlayerRef, Selector, ZoneDest,
+    Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest,
     shortcut::{draw, etb, target_any, target_filtered},
 };
 use crate::game::TurnStep;
@@ -451,4 +452,218 @@ pub fn dominarias_judgment() -> CardDefinition {
             clause(LandType::Forest, Color::Green),
         ]),
     )
+}
+
+/// The Lair cycle: a tri-land that bounces a real land to stay on the field.
+fn lair(name: &'static str, colors: Vec<Color>) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Lair], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::SacrificeSourceUnlessReturn {
+            filter: R::Land.and(R::Not(Box::new(R::HasLandType(LandType::Lair)))),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(colors, Value::ONE),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crosis's Catacombs — the Grixis Lair.
+pub fn crosiss_catacombs() -> CardDefinition {
+    lair("Crosis's Catacombs", vec![Color::Blue, Color::Black, Color::Red])
+}
+
+/// Darigaaz's Caldera — the Jund Lair.
+pub fn darigaazs_caldera() -> CardDefinition {
+    lair("Darigaaz's Caldera", vec![Color::Black, Color::Red, Color::Green])
+}
+
+/// Dromar's Cavern — the Esper Lair.
+pub fn dromars_cavern() -> CardDefinition {
+    lair("Dromar's Cavern", vec![Color::White, Color::Blue, Color::Black])
+}
+
+/// Dromar's Charm — {W}{U}{B}. Life, a counter, or a shrink.
+pub fn dromars_charm() -> CardDefinition {
+    instant(
+        "Dromar's Charm",
+        cost(&[w(), u(), b()]),
+        Effect::ChooseMode(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+    )
+}
+
+/// Ertai's Trickery — {U}. Punishes the kicked spell.
+pub fn ertais_trickery() -> CardDefinition {
+    instant(
+        "Ertai's Trickery",
+        cost(&[u()]),
+        Effect::If {
+            cond: Predicate::CastSpellWasKicked,
+            then: Box::new(Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack),
+            }),
+            else_: Box::new(Effect::Noop),
+        },
+    )
+}
+
+/// Ertai, the Corrupted — {2}{W}{U}{B} 3/4 that eats a permanent per counter.
+pub fn ertai_the_corrupted() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            tap_cost: true,
+            sac_other_filter: Some((R::Creature.or(R::Enchantment), 1)),
+            effect: Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Ertai, the Corrupted",
+            cost(&[generic(2), w(), u(), b()]),
+            vec![CreatureType::Phyrexian, CreatureType::Human, CreatureType::Wizard],
+            3,
+            4,
+        )
+    }
+}
+
+/// Escape Routes — {2}{U}. Rebuys your white and black creatures.
+pub fn escape_routes() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Move {
+                what: target_filtered(
+                    R::Creature
+                        .and(R::ControlledByYou)
+                        .and(R::HasColor(Color::White).or(R::HasColor(Color::Black))),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Escape Routes", cost(&[generic(2), u()]))
+    }
+}
+
+/// Exotic Disease — {4}{B}. Domain drain.
+pub fn exotic_disease() -> CardDefinition {
+    sorcery(
+        "Exotic Disease",
+        cost(&[generic(4), b()]),
+        Effect::Drain {
+            from: Selector::TargetFiltered { slot: 0, filter: R::Player },
+            to: Selector::You,
+            amount: Value::DomainCount(PlayerRef::You),
+        },
+    )
+}
+
+/// Fleetfoot Panther — {1}{G}{W} 3/4 flash that rebuys an ETB.
+pub fn fleetfoot_panther() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                R::Creature
+                    .and(R::ControlledByYou)
+                    .and(R::HasColor(Color::Green).or(R::HasColor(Color::White))),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..creature(
+            "Fleetfoot Panther",
+            cost(&[generic(1), g(), w()]),
+            vec![CreatureType::Cat],
+            3,
+            4,
+        )
+    }
+}
+
+/// Gaea's Herald — {1}{G} 1/1. Creature spells resolve.
+pub fn gaeas_herald() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Creature spells can't be countered.",
+            effect: StaticEffect::CreatureSpellsCantBeCountered,
+        }],
+        ..creature("Gaea's Herald", cost(&[generic(1), g()]), vec![CreatureType::Elf], 1, 1)
+    }
+}
+
+/// Gaea's Might — {G}. Domain pump.
+pub fn gaeas_might() -> CardDefinition {
+    instant(
+        "Gaea's Might",
+        cost(&[g()]),
+        Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::DomainCount(PlayerRef::You),
+            toughness: Value::DomainCount(PlayerRef::You),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Gainsay — {1}{U}. The blue mirror-breaker.
+pub fn gainsay() -> CardDefinition {
+    instant(
+        "Gainsay",
+        cost(&[generic(1), u()]),
+        Effect::CounterSpell {
+            what: target_filtered(R::IsSpellOnStack.and(R::HasColor(Color::Blue))),
+        },
+    )
+}
+
+/// Gerrard's Command — {G}{W}. Untap and pump.
+pub fn gerrards_command() -> CardDefinition {
+    instant(
+        "Gerrard's Command",
+        cost(&[g(), w()]),
+        Effect::Seq(vec![
+            Effect::Untap { what: target_filtered(R::Creature), up_to: None },
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+    )
+}
+
+/// Hobble — {2}{W} Aura. Pins a creature down and cantrips.
+pub fn hobble() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        triggered_abilities: vec![etb(draw(1))],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::CantAttack],
+            ..Default::default()
+        }),
+        ..enchantment("Hobble", cost(&[generic(2), w()]))
+    }
 }

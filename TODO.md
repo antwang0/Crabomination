@@ -23,6 +23,17 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
+## Planeshift — in progress
+
+`set_gaps.py pls` is at **98** (132 → 112 → 98; `sets::pls`, tests in
+`classic_sets/pls`). New primitives: `LandType::Lair` and
+`Effect::SacrificeSourceUnlessReturn` (the bounce sibling of
+`SacrificeSourceUnlessSacrifice` — the Lair land cycle). Remaining is mostly the
+rest of the Lair cycle (Mossfire Valley, Rith's Grove), Draco's domain cost
+reduction and domain upkeep, Dralnu's Pet's discard-a-creature kicker, the
+Kavu / Rhystic cycle tails, Goblin Game and Guard Dogs' shares-a-color
+prevention.
+
 ## Apocalypse — closed
 
 `set_gaps.py apc` is at **zero** (123 → 88 → 55 → 43 → 26 → 11 → 0; `sets::apc`

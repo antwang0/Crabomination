@@ -229,6 +229,7 @@ impl Effect {
         match self {
             Effect::Noop
             | Effect::SearchEachBasicLandType { .. }
+            | Effect::SacrificeSourceUnlessReturn { .. }
             | Effect::ColoredManaBecomesThisTurn { .. }
             | Effect::SpellBecomesChosenColor { .. }
             | Effect::OtherPlayerMayPayToCounter { .. }
