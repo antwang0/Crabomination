@@ -953,6 +953,10 @@ pub enum StaticEffect {
     /// "You may cast [filter] spells as though they had flash." Sigarda's
     /// Aid (Auras + Equipment). Consulted at the cast-timing gate.
     ControllerSpellsHaveFlash { filter: SelectionRequirement },
+    /// The symmetric sibling: "*Any player* may cast [filter] spells as though
+    /// they had flash" (Vernal Equinox). Same cast-timing gate, but the grant
+    /// isn't scoped to the source's controller.
+    AnyPlayerSpellsHaveFlash { filter: SelectionRequirement },
     /// Card-intrinsic "You may cast this spell as though it had flash if
     /// `condition` holds" — consulted at the cast-timing gate against the
     /// card being cast (not a battlefield permanent). Serpent of the Pass's

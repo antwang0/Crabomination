@@ -65,6 +65,7 @@ pub use sets::usg2::*;
 pub use sets::usg3::*;
 pub use sets::chk3::*;
 pub use sets::mmq::*;
+pub use sets::mmq2::*;
 pub use sets::curses::*;
 pub use sets::decks::*;
 pub use sets::dgm::*;

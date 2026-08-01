@@ -9175,14 +9175,17 @@ impl GameState {
             return false;
         }
         self.battlefield.iter().any(|c| {
-            c.controller == player
-                && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                    StaticEffect::ControllerSpellsHaveFlash { filter } => {
-                        self.evaluate_requirement_on_card(filter, card, player)
-                    }
-                    StaticEffect::ControllerSorceriesAsFlash => card.definition.is_sorcery(),
-                    _ => false,
-                })
+            c.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                StaticEffect::AnyPlayerSpellsHaveFlash { filter } => {
+                    self.evaluate_requirement_on_card(filter, card, player)
+                }
+                _ if c.controller != player => false,
+                StaticEffect::ControllerSpellsHaveFlash { filter } => {
+                    self.evaluate_requirement_on_card(filter, card, player)
+                }
+                StaticEffect::ControllerSorceriesAsFlash => card.definition.is_sorcery(),
+                _ => false,
+            })
         })
     }
 

@@ -16457,6 +16457,7 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsSorceryTimingOnly
             | StaticEffect::ControllerSorceriesAsFlash
             | StaticEffect::ControllerSpellsHaveFlash { .. }
+            | StaticEffect::AnyPlayerSpellsHaveFlash { .. }
             // DoubleTokens — read at `Effect::CreateToken` resolution time
             // via `GameState::token_doublers_for(seat)`; no layer effect.
             | StaticEffect::DoubleTokens

@@ -2860,6 +2860,8 @@ impl Effect {
                 | Effect::LockTargetNameUntilYourNextTurn { what }
                 | Effect::Explore { who: what } => sel_find(what, slot),
                 Effect::CantBlockSourceThisTurn { target } => sel_find(target, slot),
+                Effect::LandsDontUntapNextUntapStep { who }
+                | Effect::CreaturesDontUntapNextUntapStep { who } => sel_find(who, slot),
                 Effect::MoveAllCounters { from, to } | Effect::MoveCounter { from, to, .. } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
