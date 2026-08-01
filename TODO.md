@@ -5024,7 +5024,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   Daya, Mystic Forge). Remaining: the mid-cast "new top stays hidden until
   the spell finishes" timing nuance (401.5 second sentence); multi-card
   same-position picker (401.4). (401.7 `LibraryPosition::FromTop` ✅.)
-- 🟡 **CR 706 — Rolling a Die** — stored rolls (706.8); ignore-roll riders. Roll trigger (706.6) ✅ — `EventKind::RolledDice`/`GameEvent::DiceRolled { player, count, high }` fires once per roll instruction ("whenever you roll one or more dice"). Result-referencing effects ✅ via `Value::LastDieRoll` (706.4 — Ancient Copper Dragon). **Result-gated triggers ✅** — `Predicate::DieResultAtLeast(n)` filters a roll trigger on the roll's greatest result (Ground Pounder's "roll a 5+ → trample"), reading `DiceRolled.high` through `event_amount`. (modifier / reroll-at-most / doubles ✅.) Remaining ⏳: stored rolls (706.8), ignore/reroll-replacement riders.
+- 🟡 **CR 706 — Rolling a Die** — ignore-roll riders. Stored rolls (706.8) ✅
+  (`CardInstance.stored_die_results`, `Effect::{RollAndStoreDice,
+  RerollStoredResults}`, `Value::GreatestSameStoredResult` — Centaur of
+  Attention; `cr_706_8_*`). Roll trigger (706.6) ✅ — `EventKind::RolledDice`/`GameEvent::DiceRolled { player, count, high }` fires once per roll instruction ("whenever you roll one or more dice"). Result-referencing effects ✅ via `Value::LastDieRoll` (706.4 — Ancient Copper Dragon). **Result-gated triggers ✅** — `Predicate::DieResultAtLeast(n)` filters a roll trigger on the roll's greatest result (Ground Pounder's "roll a 5+ → trample"), reading `DiceRolled.high` through `event_amount`. (modifier / reroll-at-most / doubles ✅.) Remaining ⏳: ignore/reroll-replacement riders; the CR 706.8b reroll is auto-chosen (keep the most common face, reroll the rest) rather than prompting per result.
 - 🟡 **CR 707 — Copying Objects** — in-place copy (707.4); MDFC-face copy (707.8); static copy effects (707.2c); copied "as enters" choices (707.6); spell-copy exceptions (707.9). (Enter-as-copy "except it's also [type]" ✅ via `EntersAsCopy.extra_card_types` — Phyrexian Metamorph copies any artifact/creature and stays an artifact. Token-copies with haste + delayed sacrifice ✅ via `Effect::CreateTokenCopiesHasteSac` — Devastating Onslaught's X copies, CR 707.2 + 111 + 701.16. `CreateTokenCopyOf` now takes `override_colors` (exact-color copy — Ardyn's 5/5 black Demon) and `enters_tapped` (Sin's tapped copies; `cr_707_2_token_copy_enters_tapped`).)
 - 🟡 **CR 205 / 613.4 — Adding subtypes** — `Effect::AddCreatureTypes` grants
   creature types *in addition* to a permanent's own via a layer-4 additive
@@ -7920,10 +7923,11 @@ stalled games via `eval_material`.
   the printed card lets each player build their own three piles. Wants a
   `Decision::PartitionPermanents`.
 - **CR coverage gaps.** `scripts/cr_coverage.py` → `CR_COVERAGE.md` maps CR
-  section → conformance test; 97 sections are covered, 50 still have none
-  (408/718/720 came off the list this run). The highest-value untested blocks
-  left are 407 (Ante), 600, 713/717/719 (the remaining card types), 727–733
-  (restart / subgames / merge / shortcuts) and the 8xx multiplayer rules.
+  section → conformance test; 113 sections are covered, 33 still have none.
+  The highest-value untested blocks left are 407 (Ante), 713/717 (substitute /
+  Attraction cards), 727–732 (restart / subgames / shortcuts), the rest of the
+  8xx multiplayer rules (801 limited range, 804-809/811) and the 9xx casual
+  variants.
 
 ## Noticed this run (modern_decks — Kamigawa closure + Urza's Legacy)
 
@@ -8090,9 +8094,40 @@ zero `set_gaps.py` gaps. Urza's Legacy went 106 -> 13 across two waves.
 - ✅ ~~**Three M11 cards remain**~~ — shipped; `set_gaps.py m11` is at zero.
   Residual: Conundrum Sphinx's name prompt feeds a bot the densest library
   name (the same auto-pick residual as the rest of the `NameCard` family).
-- **`Effect::Search { to: Exile }` doesn't stamp `exiled_with`.** Hoarding
-  Dragon pairs it with `ExileWithSource { LastMoved }` to link the two halves
-  (CR 607.2); a `stamp_exiled_with` flag on `Search` would be tidier.
+- ✅ ~~**`Effect::Search { to: Exile }` doesn't stamp `exiled_with`**~~ —
+  `Effect::SearchExileLinked` runs the search chain and stamps each pick
+  (CR 607.2). Plain `Search { to: Exile }` still doesn't; Hoarding Dragon's
+  `ExileWithSource { LastMoved }` pairing is unchanged.
 - **`Effect::RevealHandDiscardAllMatching` reveals nothing visible.** The
   discard is correct but the reveal is knowledge-only — no `hands_revealed_to`
   entry, so a UI seat never sees the hand it just stripped.
+
+## Noticed this run (modern_decks — Planeshift closure + CR 802/803/706.8)
+
+Planeshift is at zero `set_gaps.py` gaps (86 cards this run).
+
+- **`Effect::PutCardsFromHandOnBottom` auto-picks.** Sawtooth Loon's "put two
+  cards from your hand on the bottom" uses the synchronous decider, so a UI
+  seat is never prompted — the same residual as
+  `PutCardFromHandOnTopOfLibrary`. Both want the `ask_seat_cards` suspend, but
+  they sit after a `Draw` in a `Seq`, and the stash-and-rerun resume would
+  replay the draw.
+- **`Effect::RevealRandomFromHand` reveals nothing visible.** The mana value is
+  stamped for `Value::LastRevealedManaValue`, but nothing enters
+  `hands_revealed_to` (that field is whole-hand and permanent, so it's the
+  wrong shape for a single-card reveal). Wants a per-card revealed set.
+- **Guard Dogs' chosen permanent is collapsed.** The printed "choose a
+  permanent you control, prevent the damage if the target shares a color with
+  it" is modeled as `Predicate::TargetSharesColorWithControlled` over *any*
+  permanent you control — strictly more permissive.
+- **Goblin Game's hidden counts aren't hidden.** `Effect::GoblinGame` asks each
+  seat in turn order via `ask_seat_amount`, so a later seat could in principle
+  see an earlier answer through the replay log. Simultaneous reveal wants a
+  batched ask.
+- **CR 806/807 seat rotation isn't modeled.** `AttackOption::{AttackLeft,
+  AttackRight}` reads seat index order; Grand Melee's rotating range of
+  influence (CR 807) and the limited-range option (CR 801) are still open.
+- ✅ ~~**CR 600 is a bare heading**~~ — `scripts/cr_coverage.py` now drops
+  sections with no numbered clauses of their own (600, 802/803 came off the
+  gap list by being tested), so the untested list is 33 real gaps rather than
+  34 with a phantom.

@@ -2179,6 +2179,14 @@ Each a small targeted feature; sweep batch by batch.
   multiplayer goad-target clause.
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
 - ✅ **Goad**, **Lure**, **Provoke**, **Ninjutsu swap**.
+- ✅ **Multiplayer attack options** (CR 802 / 803) — `GameState.attack_option`
+  picks between "every opponent is a defending player" (the Free-for-All
+  default) and attack-left / attack-right, which narrow the legal defender to
+  the nearest living opponent in that direction (a dead neighbour means no
+  legal attack at all). Surfaced as `ClientView.attackable_players` and honored
+  by the client's attacker-pick highlight. Tests `cr_802_*` / `cr_803_*`.
+  Remaining ⏳: CR 801's limited range of influence and CR 807's rotating
+  Grand Melee ranges.
 
 ## Tier 7 — UI / UX core (the Arena "feel" gap)
 
@@ -2361,3 +2369,20 @@ Each a small targeted feature; sweep batch by batch.
 6. Then the **Tier-4 mechanic sweep** and **Tier-3 object-model** features, batch
    by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
+
+## Recently closed (this push)
+
+- **Planeshift (PLS) complete** — `set_gaps.py pls` at zero (`sets::pls`,
+  `sets::pls2`). New primitives: `CardDefinition.self_cost_reduction_per`
+  (Domain-scaled discounts), `Keyword::DomainLandwalk`,
+  `Effect::{PutCardsFromHandOnBottom, RevealRandomFromHand,
+  GrantProtectionFromColorsOf, SearchExileLinked, ReturnRandomExiledWithSource,
+  EachPlayerKeepsOneOfEachColorDiscardsRest, EachPlayerReturnsALandOfEachBasicType,
+  RedirectNextDamageTo, GoblinGame, MayPayBy, RollAndStoreDice,
+  RerollStoredResults}`, `StaticEffect::{ReduceDamageToYourCreaturesBy,
+  SetColorOfMatchingToChosen, MatchingLandsAreCreatures}`,
+  `ManaPayload::AnyColorAmongYourPermanents`,
+  `Value::{LastRevealedManaValue, GreatestSameStoredResult}`,
+  `Selector::LastRevealedCard`, `PutFromHandOntoBattlefield.return_eot`,
+  `DestroyThenVictimControllersMakeToken.no_regen`. Tests in
+  `classic_sets/pls2`, `core_rules/cr_recent61`.

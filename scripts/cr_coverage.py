@@ -27,8 +27,15 @@ RULE_RE = re.compile(r"^(\d{3})\.(\d+[a-z]?)?\.?\s+(.*)$")
 
 
 def rule_titles() -> dict[str, str]:
-    """Section number → the section's opening sentence."""
+    """Section number → the section's opening sentence.
+
+    Sections that are bare headings with no numbered clauses of their own
+    (e.g. "600. General", which only groups 601-616) are dropped: there is
+    nothing under them to conform to, so listing them as untested would be a
+    permanent phantom gap.
+    """
     titles: dict[str, str] = {}
+    has_clauses: set[str] = set()
     if not RULES.exists():
         return titles
     for line in RULES.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -36,9 +43,11 @@ def rule_titles() -> dict[str, str]:
         if not m:
             continue
         section, sub, text = m.groups()
-        if sub is None and section not in titles:
-            titles[section] = text.strip()
-    return titles
+        if sub is None:
+            titles.setdefault(section, text.strip())
+        else:
+            has_clauses.add(section)
+    return {s: t for s, t in titles.items() if s in has_clauses}
 
 
 def main() -> None:
