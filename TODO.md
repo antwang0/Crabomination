@@ -8104,7 +8104,8 @@ zero `set_gaps.py` gaps. Urza's Legacy went 106 -> 13 across two waves.
 
 ## Noticed this run (modern_decks — Planeshift closure + CR 802/803/706.8)
 
-Planeshift is at zero `set_gaps.py` gaps (86 cards this run).
+Planeshift is at zero `set_gaps.py` gaps (86 cards this run); Invasion went
+280 → 233 (47 cards, `sets::inv::gaps`).
 
 - **`Effect::PutCardsFromHandOnBottom` auto-picks.** Sawtooth Loon's "put two
   cards from your hand on the bottom" uses the synchronous decider, so a UI
@@ -8131,3 +8132,15 @@ Planeshift is at zero `set_gaps.py` gaps (86 cards this run).
   sections with no numbered clauses of their own (600, 802/803 came off the
   gap list by being tested), so the untested list is 33 real gaps rather than
   34 with a phantom.
+- **Invasion's remaining 233 gaps** are mostly the rare/uncommon shell: the
+  Dragon legends and their Lairs' payoffs, the "most common color among all
+  permanents" cycle (Barrin's Unmaking, Goham/Halam Djinn — wants a
+  `Value::MostCommonColorAmongPermanents` read), Aether Rift, Bend or Break,
+  Cauldron Dance (a combat-only double reanimate) and the Blind Seer /
+  Atalya utility rares.
+- **Addle's colour choice is collapsed.** The printed card names a colour
+  before the reveal; the catalog models it as `DiscardChosen` over the whole
+  revealed hand, which is the same card whenever one of that colour is there.
+  `Effect::ChooseColorForSelf` doesn't stamp from a resolving *spell* source
+  (it wants a battlefield permanent), which is what blocked the faithful
+  wording.

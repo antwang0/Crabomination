@@ -2386,3 +2386,9 @@ Each a small targeted feature; sweep batch by batch.
   `Selector::LastRevealedCard`, `PutFromHandOntoBattlefield.return_eot`,
   `DestroyThenVictimControllersMakeToken.no_regen`. Tests in
   `classic_sets/pls2`, `core_rules/cr_recent61`.
+- **Invasion (INV) opened** — `set_gaps.py inv` 280 → 233 (`sets::inv::gaps`,
+  47 cards): the two-colour tapland and sac-land cycles, the Cameo rocks, the
+  Attendant Golems, the kicker commons and the multicolour utility shell. No
+  new primitives were needed. Tests in `classic_sets/inv_gaps`.
+- **CR 802 / 803 multiplayer attack options** and **CR 706.8 stored die
+  results** — see Tier 6 and the CR audit in TODO.md.
