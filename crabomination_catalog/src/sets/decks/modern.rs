@@ -9826,7 +9826,7 @@ pub fn wee_dragonauts() -> CardDefinition {
 }
 
 /// Palace Sentinels — {3}{W} Creature — Human Soldier 2/4. When it enters, you
-/// become the monarch (CR 724).
+/// become the monarch (CR 725).
 pub fn palace_sentinels() -> CardDefinition {
     use crate::effect::shortcut::etb;
     CardDefinition {
@@ -46943,7 +46943,7 @@ pub fn exalted_angel() -> CardDefinition {
     }
 }
 
-// ── End the turn (CR 728) ────────────────────────────────────────────────────
+// ── End the turn (CR 724) ────────────────────────────────────────────────────
 
 /// Sundial of the Infinite — {2} Artifact. {1}, {T}: End the turn. Activate
 /// only during your turn.

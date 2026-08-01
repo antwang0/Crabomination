@@ -8089,7 +8089,7 @@ impl GameState {
             }
 
             Effect::ExileUntilOpponentMonarch { what } => {
-                // CR 724 — exile until the monarchy leaves the controller
+                // CR 725 — exile until the monarchy leaves the controller
                 // (Palace Jailer). Guarded by the controller seat rather than
                 // the source, so `return_linked_exiles` skips it.
                 let source = ctx.source;
@@ -18482,6 +18482,16 @@ impl GameState {
                 let answer = self.decider.decide(&decision);
                 let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
                 events.append(&mut applied);
+                Ok(())
+            }
+
+            Effect::RememberPermanentOnSource { what } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let pick =
+                    self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_permanent_id());
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.chosen_permanent = pick;
+                }
                 Ok(())
             }
 

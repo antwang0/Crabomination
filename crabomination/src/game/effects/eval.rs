@@ -1304,6 +1304,20 @@ impl GameState {
                     })
                 })
             }
+            Predicate::TriggerSourceIsSourcesChosenPermanent => {
+                let stamped = ctx
+                    .source
+                    .and_then(|s| {
+                        self.battlefield_find(s)
+                            .or_else(|| self.died_card_snapshots.get(&s))
+                            .or_else(|| self.leaves_bf_lki.get(&s))
+                    })
+                    .and_then(|c| c.chosen_permanent);
+                match (stamped, ctx.trigger_source) {
+                    (Some(want), Some(e)) => e.as_card_id() == Some(want),
+                    _ => false,
+                }
+            }
             Predicate::SourceAttackedThisTurn => ctx
                 .source
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))

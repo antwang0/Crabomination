@@ -670,7 +670,7 @@ pub struct GameState {
     /// damage are separate batches).
     #[serde(skip)]
     pub(crate) gy_combat_trigger_fired_this_step: Vec<CardId>,
-    /// CR 728 — set by `Effect::EndTheTurn`; consumed after the current
+    /// CR 724 — set by `Effect::EndTheTurn`; consumed after the current
     /// stack item finishes resolving (exile the stack, clear combat, jump
     /// to cleanup).
     #[serde(skip)]
@@ -1371,7 +1371,7 @@ pub struct GameState {
     /// turn, keyed by (watcher, event subject). Cleared at cleanup.
     #[serde(default)]
     pub(crate) per_subject_trigger_uses: std::collections::HashMap<(CardId, CardId), u8>,
-    /// CR 724 — the monarch (if any). The monarch draws a card at the
+    /// CR 725 — the monarch (if any). The monarch draws a card at the
     /// beginning of their end step, and a creature dealing combat damage to
     /// the monarch makes its controller the new monarch. `#[serde(default)]`
     /// (None = no monarch) for snapshot back-compat.
@@ -1886,7 +1886,7 @@ impl GameState {
         }
     }
 
-    /// CR 724 — make `player` the monarch. No-op if they already are; emits
+    /// CR 725 — make `player` the monarch. No-op if they already are; emits
     /// `MonarchChanged` on a real change.
     pub fn set_monarch(&mut self, player: usize, events: &mut Vec<GameEvent>) {
         if self.monarch == Some(player) {
@@ -15358,7 +15358,7 @@ impl GameState {
             self.exile.push(card);
             return Ok(events);
         }
-        // CR 728.1a — a spell that ended the turn is exiled along with the
+        // CR 724.1a — a spell that ended the turn is exiled along with the
         // rest of the stack instead of going to the graveyard (Day's
         // Undoing). The flag stays set; `resolve_top_of_stack` consumes it.
         if self.end_turn_requested {

@@ -4308,7 +4308,7 @@ pub enum ExileReturnZone {
 pub struct ExileLink {
     pub source: CardId,
     pub return_to: ExileReturnZone,
-    /// CR 724 — Palace Jailer's "until an opponent becomes the monarch". When
+    /// CR 725 — Palace Jailer's "until an opponent becomes the monarch". When
     /// `Some(p)`, the card returns as soon as the monarchy leaves player `p`
     /// (not when `source` leaves the battlefield), so `return_linked_exiles`
     /// skips it and `set_monarch` drives the return instead.

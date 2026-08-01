@@ -7831,7 +7831,7 @@ pub fn genji_glove() -> CardDefinition {
 }
 
 /// Ultima — {3}{W}{W} sorcery. Destroy all artifacts and creatures, then end
-/// the turn (CR 728).
+/// the turn (CR 724).
 pub fn ultima() -> CardDefinition {
     CardDefinition {
         name: "Ultima",

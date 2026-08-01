@@ -2064,7 +2064,7 @@ impl GameState {
         }
     }
 
-    /// CR 724 — after the monarchy moves to `new_monarch`, return every
+    /// CR 725 — after the monarchy moves to `new_monarch`, return every
     /// monarch-guarded exile (Palace Jailer) whose guard player is no longer
     /// the monarch, to the battlefield under its owner's control.
     pub(crate) fn return_monarch_guarded_exiles(

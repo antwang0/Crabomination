@@ -871,3 +871,36 @@ fn temporal_aperture_frees_the_new_top_card() {
         "the revealed card is castable for free"
     );
 }
+
+/// Diabolic Servitude rents a creature back, then takes it with it.
+#[test]
+fn diabolic_servitude_exiles_its_tenant_when_it_leaves() {
+    let mut g = two_player_game();
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let servitude = g.add_card_to_hand(0, catalog::diabolic_servitude());
+    mana(&mut g, 0);
+    cast(&mut g, servitude, Some(Target::Permanent(corpse)));
+    assert!(g.battlefield_find(corpse).is_some(), "reanimated");
+    assert_eq!(g.battlefield_find(servitude).and_then(|c| c.chosen_permanent), Some(corpse));
+    let mut ev = vec![];
+    g.destroy_permanent(servitude, false, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == corpse), "the tenant left with it");
+}
+
+/// The tenant dying instead exiles the tenant and buys the enchantment back.
+#[test]
+fn diabolic_servitude_returns_to_hand_when_its_tenant_dies() {
+    let mut g = two_player_game();
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let servitude = g.add_card_to_hand(0, catalog::diabolic_servitude());
+    mana(&mut g, 0);
+    cast(&mut g, servitude, Some(Target::Permanent(corpse)));
+    let mut ev = vec![];
+    g.destroy_permanent(corpse, false, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == corpse), "exiled, not binned");
+    assert!(g.players[0].hand.iter().any(|c| c.id == servitude), "the rental came back");
+}

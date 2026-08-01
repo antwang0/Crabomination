@@ -1810,7 +1810,7 @@ impl GameState {
             }
         }
 
-        // CR 728 — Effect::EndTheTurn fired during this resolution: exile
+        // CR 724 — Effect::EndTheTurn fired during this resolution: exile
         // the rest of the stack, clear combat, and jump to cleanup.
         if self.end_turn_requested {
             self.end_turn_requested = false;
@@ -1823,7 +1823,7 @@ impl GameState {
         Ok(events)
     }
 
-    /// CR 728.1 — end the turn: exile every spell and ability still on the
+    /// CR 724.1 — end the turn: exile every spell and ability still on the
     /// stack (real cards go to exile; trigger items and token copies cease),
     /// remove everything from combat, then advance from the end step
     /// straight into cleanup (damage wear-off, "this turn" expiry, and the
@@ -1841,12 +1841,12 @@ impl GameState {
                 events.push(GameEvent::PermanentExiled { card_id: cid });
             }
         }
-        // CR 728.1b — remove all attackers and blockers from combat.
+        // CR 724.1b — remove all attackers and blockers from combat.
         self.attacking.clear();
         self.block_map.clear();
         self.blocked_attackers.clear();
         self.blockers_declared = false;
-        // CR 728.1d — the turn skips straight to the cleanup step.
+        // CR 724.1d — the turn skips straight to the cleanup step.
         self.step = TurnStep::End;
         self.advance_step(events)
     }

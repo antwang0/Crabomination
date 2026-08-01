@@ -1105,7 +1105,7 @@ pub enum Predicate {
     /// Gates "whenever you roll a 5 or higher" triggers off a `RolledDice`
     /// event via `EffectContext.event_amount` (Ground Pounder's trample rider).
     DieResultAtLeast(u8),
-    /// CR 724 — `who` is the monarch ("as long as you're the monarch, …").
+    /// CR 725 — `who` is the monarch ("as long as you're the monarch, …").
     IsMonarch { who: PlayerRef },
     /// CR 702.179 — `who`'s speed is at least `speed` (0–4). "Max speed —"
     /// abilities use `speed: 4`; "as long as your speed is N or higher" uses
@@ -1163,6 +1163,10 @@ pub enum Predicate {
     /// one of their opponents. Geyadrone Dihada's "if you have less life than
     /// an opponent" loyalty-reset rider.
     PlayerHasLessLifeThanOpponent { who: PlayerRef },
+    /// The trigger's subject is the permanent stamped on the ability source's
+    /// `chosen_permanent` slot (Diabolic Servitude's "when the creature put
+    /// onto the battlefield with this enchantment dies").
+    TriggerSourceIsSourcesChosenPermanent,
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
@@ -4518,7 +4522,7 @@ pub enum Effect {
     /// controller picks the subset (`Decision::ChooseCards`, min 0); each pick
     /// is linked to the source exactly like `ExileUntilSourceLeaves`.
     ExileAnyNumberUntilSourceLeaves { filter: SelectionRequirement },
-    /// CR 724 — Palace Jailer's "exile [what] until an opponent becomes the
+    /// CR 725 — Palace Jailer's "exile [what] until an opponent becomes the
     /// monarch". Exiles the resolved permanent(s) with a `monarch_guard` set to
     /// the controller (who has just become the monarch); the card returns to the
     /// battlefield the moment the monarchy leaves that player, not when the
@@ -6802,7 +6806,7 @@ pub enum Effect {
     /// counter; `advance_step` consumes it when their turn would enter Begin
     /// Combat, jumping to the postcombat main.
     SkipNextCombatPhase { who: PlayerRef },
-    /// CR 724 — `who` becomes the monarch. "You become the monarch."
+    /// CR 725 — `who` becomes the monarch. "You become the monarch."
     BecomeMonarch { who: PlayerRef },
     /// CR 701.54 — "the Ring tempts you." Increments `who`'s ring-temptation
     /// count (capped at 4) and lets them designate a creature they control as
@@ -6860,7 +6864,7 @@ pub enum Effect {
     /// this turn." The affected player picks draw step / main phase / combat
     /// phase (`Decision::ChooseModes`); the pick is turn-scoped. Fatespinner.
     ChooseStepToSkipThisTurn { who: PlayerRef },
-    /// CR 728 — "End the turn." Exiles all spells and abilities from the
+    /// CR 724 — "End the turn." Exiles all spells and abilities from the
     /// stack (including the resolving card), removes everything from combat,
     /// and skips straight to the cleanup step. Sundial of the Infinite,
     /// Day's Undoing.
@@ -7255,6 +7259,13 @@ pub enum Effect {
     /// reveal it, put it into `to`, then shuffle" (Remembrance). The name is
     /// read at resolution from the (possibly already-dead) subject's LKI.
     SearchSameNameAs { who: PlayerRef, subject: Selector, to: ZoneDest },
+
+    /// Stamp `what`'s first resolved permanent on the source's
+    /// `chosen_permanent` slot, so a later `Selector::ChosenPermanentOfSource`
+    /// can name it. The resolution-time sibling of
+    /// `Effect::ChoosePermanentForSource` (which picks by filter at ETB) —
+    /// Diabolic Servitude remembers the creature it reanimated.
+    RememberPermanentOnSource { what: Selector },
 
     /// "You may put an Aura card from your hand onto the battlefield attached
     /// to `host`" (Academy Researchers). The Aura's own enchant filter is

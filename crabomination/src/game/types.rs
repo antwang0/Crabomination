@@ -1887,7 +1887,7 @@ pub enum GameEvent {
     /// a Case" triggers (Case File Auditor).
     CaseSolved { case: CardId, controller: usize },
     PoisonAdded { player: usize, amount: u32 },
-    /// CR 724 — `player` became the monarch.
+    /// CR 725 — `player` became the monarch.
     MonarchChanged { player: usize },
     /// CR 700.6 — `player` got the city's blessing (Ascend).
     CityBlessingGained { player: usize },

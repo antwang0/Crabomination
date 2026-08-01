@@ -3145,7 +3145,7 @@ impl GameState {
                 if self.is_commander(atk.id) {
                     self.record_commander_damage(p, atk.id, amount);
                 }
-                // CR 724 — a creature dealing combat damage to the monarch
+                // CR 725 — a creature dealing combat damage to the monarch
                 // makes its controller the new monarch.
                 if amount > 0 && self.monarch == Some(p) {
                     let ctrl = self.battlefield.iter()

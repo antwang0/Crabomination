@@ -821,7 +821,7 @@ pub struct PlayerView {
     /// for snapshot back-compat (defaults to all-zero).
     #[serde(default)]
     pub devotion: [u32; 5],
-    /// CR 724 — true when this player is the monarch. Surfaced so UIs can
+    /// CR 725 — true when this player is the monarch. Surfaced so UIs can
     /// show a crown on the monarch's portrait. `#[serde(default)]` for
     /// snapshot back-compat.
     #[serde(default)]

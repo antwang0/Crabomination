@@ -575,7 +575,7 @@ mod recent53 {
         assert_eq!(g.monarch, Some(0), "controller became the monarch");
         assert!(g.battlefield_find(victim).is_none(), "opponent's creature exiled");
 
-        // CR 724 — when an opponent takes the crown, the creature comes back.
+        // CR 725 — when an opponent takes the crown, the creature comes back.
         let mut events = vec![];
         g.set_monarch(1, &mut events);
         assert!(g.battlefield_find(victim).is_some(), "creature returns when the monarchy moves");

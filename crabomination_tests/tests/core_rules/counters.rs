@@ -487,7 +487,7 @@ fn disowned_ancestor_and_citadel_castellan_renown_bodies() {
 
 // ── CR 728.2 / 122.1i — Rad counters ───────────────────────────────────────
 
-/// CR 728.2 — at the start of a player's precombat main phase, if they have
+/// CR 724.2 — at the start of a player's precombat main phase, if they have
 /// rad counters they mill that many cards; for each *nonland* milled they
 /// lose 1 life and shed a rad counter.
 #[test]

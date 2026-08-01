@@ -701,12 +701,12 @@ fn cr_702_103_jump_start_requires_a_discard() {
     }).is_err(), "no card to discard → can't jump-start");
 }
 
-// ── CR 728 — Ending the Turn ──────────────────────────────────────────────────
+// ── CR 724 — Ending the Turn ──────────────────────────────────────────────────
 
 /// Sundial of the Infinite ends the turn: a spell still on the stack is
 /// exiled (not resolved), combat state clears, and play skips to cleanup.
 #[test]
-fn cr_728_sundial_exiles_the_stack_and_skips_to_cleanup() {
+fn cr_724_sundial_exiles_the_stack_and_skips_to_cleanup() {
     let mut g = two_player_game();
     let sundial = g.add_card_to_battlefield(0, catalog::sundial_of_the_infinite());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -722,7 +722,7 @@ fn cr_728_sundial_exiles_the_stack_and_skips_to_cleanup() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bolt), "bolt exiled off the stack (728.1a)");
     assert_eq!(g.players[1].life, 20, "bolt never resolved");
-    // CR 728.1d + 514.3 — the turn skips to cleanup, which grants no
+    // CR 724.1d + 514.3 — the turn skips to cleanup, which grants no
     // priority and ends the turn: play resumes in the opponent's upkeep.
     assert_eq!(g.active_player_idx, 1, "turn ended (728.1d)");
     assert_eq!(g.step, TurnStep::Upkeep, "no cleanup priority (514.3)");
@@ -730,7 +730,7 @@ fn cr_728_sundial_exiles_the_stack_and_skips_to_cleanup() {
 
 /// Sundial's "activate only during your turn" gate rejects an off-turn use.
 #[test]
-fn cr_728_sundial_rejects_activation_on_opponents_turn() {
+fn cr_724_sundial_rejects_activation_on_opponents_turn() {
     let mut g = two_player_game();
     let sundial = g.add_card_to_battlefield(1, catalog::sundial_of_the_infinite());
     g.players[1].mana_pool.add_colorless(1);
@@ -744,7 +744,7 @@ fn cr_728_sundial_rejects_activation_on_opponents_turn() {
 /// library, draw seven) and, on the caster's turn, ends the turn — the
 /// sorcery itself is exiled with the stack (728.1a).
 #[test]
-fn cr_728_days_undoing_wheels_then_ends_the_turn() {
+fn cr_724_days_undoing_wheels_then_ends_the_turn() {
     let mut g = two_player_game();
     let du = g.add_card_to_hand(0, catalog::days_undoing());
     g.add_card_to_hand(0, catalog::grizzly_bears());
@@ -4808,7 +4808,7 @@ fn cr_509_1b_can_block_only_flying_restriction() {
     );
 }
 
-// ── CR 726 — Day and Night (spell-driven) ────────────────────────────────────
+// ── CR 731 — Day and Night (spell-driven) ────────────────────────────────────
 
 /// A spell with "It becomes night" sets the day/night state to night from
 /// outside the upkeep transition.
@@ -9430,11 +9430,11 @@ fn cr_603_10a_self_death_trigger_fires() {
     assert_eq!(g.players[1].life, opp - 1, "Zulaport drained on its own death");
 }
 
-// ── CR 728 — "End the turn" ends "until end of turn" effects ─────────────────
-/// CR 728.2 — Time Stop ends the turn, so a resolved "until end of turn" pump
+// ── CR 724 — "End the turn" ends "until end of turn" effects ─────────────────
+/// CR 724.2 — Time Stop ends the turn, so a resolved "until end of turn" pump
 /// wears off immediately as the turn is cleaned up.
 #[test]
-fn cr_728_end_the_turn_ends_until_eot_effects() {
+fn cr_724_end_the_turn_ends_until_eot_effects() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.step = TurnStep::PreCombatMain;

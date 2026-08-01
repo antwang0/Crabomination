@@ -1053,3 +1053,44 @@ pub fn temporal_aperture() -> CardDefinition {
         ..artifact("Temporal Aperture", cost(&[generic(2)]))
     }
 }
+
+/// Diabolic Servitude — {3}{B}. Rents a creature out of your graveyard; the
+/// two of them leave together.
+pub fn diabolic_servitude() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::And(
+                        Box::new(R::Creature),
+                        Box::new(R::InYourGraveyard),
+                    )),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::OwnerOfMoved,
+                        tapped: false,
+                    },
+                },
+                Effect::RememberPermanentOnSource { what: Selector::LastMoved },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                    .with_filter(Predicate::TriggerSourceIsSourcesChosenPermanent),
+                effect: Effect::Seq(vec![
+                    Effect::Exile { what: Selector::TriggerSource },
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                    },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Exile { what: Selector::ChosenPermanentOfSource },
+            },
+        ],
+        ..enchantment("Diabolic Servitude", cost(&[generic(3), b()]))
+    }
+}
