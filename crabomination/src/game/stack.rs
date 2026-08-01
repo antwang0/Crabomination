@@ -1305,6 +1305,9 @@ impl GameState {
                     }
                     // CR 702.32 / 702.62 — Fading / Vanishing enter-with-counters.
                     self.apply_fading_vanishing_etb(card_id, &mut events);
+                    // CR 701.28 — a spell cast converted (More Than Meets the
+                    // Eye) enters with its back face up.
+                    self.apply_cast_converted_etb(card_id, &mut events);
                     // CR 702.183 — Impending: a permanent cast for its impending
                     // cost enters with N time counters (and isn't a creature
                     // until they tick off).

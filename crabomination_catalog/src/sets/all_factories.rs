@@ -10276,6 +10276,10 @@ static PCY: &[Factory] = &[
     super::pcy::gulf_squid,
     super::pcy::elephant_resurgence,
 ];
+static BOT: &[Factory] = &[
+    super::bot::slicer_hired_muscle,
+    super::bot::slicer_high_speed_antagonist,
+];
 static PCY4: &[Factory] = &[
     super::pcy4::spur_grappler,
     super::pcy4::vintara_snapper,
@@ -18263,6 +18267,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("pcy2", PCY2),
     ("pcy3", PCY3),
     ("pcy4", PCY4),
+    ("bot", BOT),
     ("mod_set", MOD_SET),
     ("ogw", OGW),
     ("one", ONE),

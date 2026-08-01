@@ -1149,6 +1149,10 @@ pub enum Keyword {
     /// CR 509.1b restriction — the blocking half of Branded Brawlers: "can't
     /// block if you control an untapped land."
     CantBlockIfYouHaveUntappedLand,
+    /// CR 702.161 — Living metal: "During your turn, this permanent is an
+    /// artifact creature in addition to its other types." A Vehicle that
+    /// animates itself on its controller's turn, no crew needed.
+    LivingMetal,
     /// CR 508.1g / 509.1b cost — "can't attack or block unless you tap an
     /// untapped [filter] you control not declared as an attacking or blocking
     /// creature this combat" (Hollow Warrior). Paid as attackers / blockers
@@ -3990,6 +3994,10 @@ pub struct AlternativeCost {
     /// its owner can recast it from exile (paying its full mana cost).
     #[serde(default)]
     pub warp: bool,
+    /// CR 702.162 / 701.28 — More Than Meets the Eye: the spell is cast
+    /// *converted*, so the permanent enters with its back face up.
+    #[serde(default)]
+    pub converted: bool,
 }
 
 impl CardDefinition {
@@ -4644,6 +4652,10 @@ pub struct CardInstance {
     /// it arms a delayed exile-at-next-end-step that grants a `WhileExiled`
     /// may-play so it can be recast from exile.
     pub warped: bool,
+    /// CR 701.28 — this permanent spell was cast *converted* (its More Than
+    /// Meets the Eye alternative cost), so it enters with its back face up.
+    /// Consumed at ETB resolution, then irrelevant.
+    pub cast_converted: bool,
     /// CR 702.183 — number of time counters this permanent should enter with
     /// because it was cast for its Impending cost. Consumed at ETB (the
     /// counters are added to the permanent), then irrelevant. 0 = cast
@@ -5125,6 +5137,7 @@ impl CardInstance {
             cast_from_escape: false,
             blitzed: false,
             warped: false,
+            cast_converted: false,
             impending_counters: 0,
             cast_from_hand: false,
             cast_target_was_battlefield: false,

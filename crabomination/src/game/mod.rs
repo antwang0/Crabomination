@@ -3336,6 +3336,25 @@ impl GameState {
 
     /// CR 702.183 — a permanent cast for its Impending cost enters with N
     /// time counters (stamped on `CardInstance.impending_counters` at cast).
+    /// CR 701.28 — a permanent spell cast *converted* (More Than Meets the
+    /// Eye) enters with its back face up. Applied at ETB, before the first SBA
+    /// sweep, so the back face's characteristics are what the game ever sees.
+    pub(crate) fn apply_cast_converted_etb(
+        &mut self,
+        cid: CardId,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) {
+        let Some(card) = self.battlefield_find_mut(cid) else { return };
+        if !std::mem::take(&mut card.cast_converted) || card.definition.back_face.is_none() {
+            return;
+        }
+        let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
+        card.front_face = Some(card.definition.clone());
+        card.definition = std::sync::Arc::new(back);
+        card.transformed = true;
+        events.push(crate::game::GameEvent::Transformed { card_id: cid });
+    }
+
     pub(crate) fn apply_impending_etb(
         &mut self,
         cid: CardId,
@@ -8222,6 +8241,21 @@ impl GameState {
                         modification: Modification::AddKeyword(keyword.clone()),
                     });
                 }
+            }
+            // CR 702.161 — Living metal: a Vehicle with this keyword is an
+            // artifact creature during its controller's turn, no crew needed.
+            if card.definition.keywords.contains(&Keyword::LivingMetal)
+                && card.controller == self.active_player_idx
+            {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L4Type,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddCardType(crate::card::CardType::Creature),
+                });
             }
             // CR 701.60 — a suspected creature has menace and can't block.
             // Injected as computed keywords so combat-legality enforcement

@@ -8998,6 +8998,10 @@ impl GameState {
             card.warped = true;
             self.players[p].warped_spell_this_turn = true;
         }
+        if alt.converted {
+            // CR 701.28 — cast converted: the permanent enters transformed.
+            card.cast_converted = true;
+        }
         if alt.impending > 0 {
             // CR 702.183 — enters with N time counters; stamped now, applied
             // at ETB resolution.
@@ -13211,14 +13215,22 @@ impl GameState {
         // cost-picked hand card (validated via the `discard_picks` pre-flight).
         // Fauna Shaman's "Discard a creature card:" cost runs here.
         let mut discarded_for_cost_mv = None;
+        let mut discarded_for_cost = 0u32;
         for cid in discard_picks {
             let mv = self.players[p]
                 .hand
                 .iter()
                 .find(|c| c.id == cid)
                 .map(|c| c.definition.cost.cmc());
-            self.discard_card(p, cid, &mut events);
+            if self.discard_card(p, cid, &mut events) {
+                discarded_for_cost += 1;
+            }
             discarded_for_cost_mv = discarded_for_cost_mv.max(mv);
+        }
+        // CR 701.9 — the batch fires for a cost payment too; nothing routes a
+        // cost through `resolve_effect`, so emit it here.
+        if discarded_for_cost > 0 {
+            events.push(GameEvent::DiscardedBatch { player: p, count: discarded_for_cost });
         }
         // Slumbering Tora reads the cost-discarded card's mana value at
         // resolution; `last_discarded_mana_value` is per-resolution scratch and
@@ -13236,8 +13248,14 @@ impl GameState {
         // Discard-your-hand-as-cost (Diamond Lion / Lion's Eye Diamond).
         if ability.discard_hand_cost {
             let hand: Vec<CardId> = self.players[p].hand.iter().map(|c| c.id).collect();
+            let mut dumped = 0u32;
             for cid in hand {
-                self.discard_card(p, cid, &mut events);
+                if self.discard_card(p, cid, &mut events) {
+                    dumped += 1;
+                }
+            }
+            if dumped > 0 {
+                events.push(GameEvent::DiscardedBatch { player: p, count: dumped });
             }
         }
 
