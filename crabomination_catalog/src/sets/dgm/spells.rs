@@ -152,6 +152,7 @@ pub fn riot_control() -> CardDefinition {
             },
             Effect::PreventAllDamageThisTurn {
                 target: Selector::Player(PlayerRef::You),
+                redirect_to: None,
             },
         ]),
         ..Default::default()
@@ -274,6 +275,7 @@ pub fn uncovered_clues() -> CardDefinition {
             gain_life_greatest_power_rest: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }

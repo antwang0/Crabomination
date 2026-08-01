@@ -696,6 +696,7 @@ fn rune(name: &'static str, filter: R) -> CardDefinition {
                 to: None,
                 gain_life: false,
                 redirect_to: None,
+                whole_turn: false,
             },
             ..Default::default()
         }],

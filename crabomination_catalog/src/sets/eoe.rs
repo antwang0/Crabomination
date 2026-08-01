@@ -396,6 +396,7 @@ pub fn codecracker_hound() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         alternative_cost: Some(warp(cost(&[generic(2), u()]))),
         ..Default::default()
@@ -5654,6 +5655,7 @@ pub fn pulsar_squadron_ace() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }

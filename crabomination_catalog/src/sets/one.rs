@@ -2341,6 +2341,7 @@ pub fn experimental_augury() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             Effect::Proliferate,
         ]),
@@ -4413,6 +4414,7 @@ pub fn testament_bearer() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }
@@ -6877,6 +6879,7 @@ pub fn green_suns_twilight() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             }),
         },
         ..Default::default()
@@ -7165,6 +7168,7 @@ pub fn contagious_vorrac() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         };
         match extra {
             Some(e) => Effect::Seq(vec![look, e]),

@@ -57,7 +57,7 @@ fn cr_615_6_prevention_shield_soaks_damage() {
     let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2
     // Resolve Shielded Passage's effect on the bear.
     let ctx = EffectContext::for_ability(crabomination::card::CardId(0), 0, Some(Target::Permanent(bear)));
-    g.resolve_effect(&Effect::PreventAllDamageThisTurn { target: Selector::Target(0) }, &ctx).unwrap();
+    g.resolve_effect(&Effect::PreventAllDamageThisTurn { target: Selector::Target(0), redirect_to: None }, &ctx).unwrap();
     // Now deal 5 noncombat damage — the shield prevents all of it.
     let dctx = EffectContext::for_ability(crabomination::card::CardId(0), 0, Some(Target::Permanent(bear)));
     g.resolve_effect(&Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(5) }, &dctx).unwrap();

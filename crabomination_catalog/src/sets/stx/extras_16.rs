@@ -43,6 +43,7 @@ pub fn basic_conjuration() -> CardDefinition {
                 optional: true,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: true,
+                rest_to_exile: false,
             },
             gain_life(3),
         ]),
@@ -598,6 +599,7 @@ pub fn bond_of_flourishing() -> CardDefinition {
                 optional: true,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             gain_life(3),
         ]),
@@ -1320,6 +1322,7 @@ pub fn the_biblioplex() -> CardDefinition {
                     optional: true,
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: false,
+                    rest_to_exile: false,
                 },
                 ..Default::default()
             },

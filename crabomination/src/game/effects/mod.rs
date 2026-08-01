@@ -1196,6 +1196,9 @@ impl GameState {
         // to tokens created by *this* resolution.
         self.last_created_token = None;
         self.last_created_tokens.clear();
+        // "Tokens created with this permanent" (Saproling Burst) — stamp the
+        // resolving source on every token this resolution mints.
+        self.token_minting_source = ctx.source;
         // Reset last-moved-cards scratch — `Selector::LastMoved` only
         // refers to cards moved by *this* resolution (Practiced
         // Scrollsmith's ETB chains Move → GrantMayPlay on the same
@@ -5743,6 +5746,129 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTopThenRevealUntilNamed { exile_count } => {
+                // Divining Witch — the six exiled cards are gone whether or
+                // not the named card ever shows up.
+                let p = ctx.controller;
+                let n = self.evaluate_value(exile_count, ctx).max(0) as usize;
+                for _ in 0..n.min(self.players[p].library.len()) {
+                    let card = self.players[p].library.remove(0);
+                    self.exile.push(card);
+                }
+                let named = ctx
+                    .source
+                    .and_then(|s| self.battlefield_find(s))
+                    .and_then(|c| c.named_card.clone());
+                let Some(named) = named else { return Ok(()) };
+                while let Some(top) = self.players[p].library.first() {
+                    let (hit, name, is_land) = (
+                        top.definition.name == named,
+                        top.definition.name,
+                        top.definition.is_land(),
+                    );
+                    let card = self.players[p].library.remove(0);
+                    events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
+                    if hit {
+                        self.players[p].hand.push(card);
+                        return Ok(());
+                    }
+                    self.exile.push(card);
+                }
+                Ok(())
+            }
+
+            Effect::RevealChosenCardsLowestCreaturesEnter => {
+                // Stronghold Gambit — every player picks and reveals one card;
+                // the cheapest revealed creature card(s) hit the battlefield.
+                use crate::decision::{Decision, DecisionAnswer};
+                let mut revealed: Vec<(usize, CardId)> = Vec::new();
+                for seat in 0..self.players.len() {
+                    if self.players[seat].hand.is_empty() {
+                        continue;
+                    }
+                    let candidates: Vec<(CardId, String)> = self.players[seat]
+                        .hand
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let auto = self.players[seat]
+                        .hand
+                        .iter()
+                        .filter(|c| c.definition.is_creature())
+                        .min_by_key(|c| c.definition.cost.cmc())
+                        .or_else(|| {
+                            self.players[seat].hand.iter().min_by_key(|c| c.definition.cost.cmc())
+                        })
+                        .map(|c| c.id);
+                    let picked = match self.decider.decide(&Decision::ChooseCards {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        prompt: "Choose a card in your hand".to_string(),
+                        candidates: candidates.clone(),
+                        min: 1,
+                        max: 1,
+                    }) {
+                        DecisionAnswer::Cards(v) => v
+                            .into_iter()
+                            .find(|id| candidates.iter().any(|(c, _)| c == id))
+                            .or(auto),
+                        _ => auto,
+                    };
+                    if let Some(id) = picked {
+                        if let Some(c) = self.players[seat].hand.iter().find(|c| c.id == id) {
+                            events.push(GameEvent::TopCardRevealed {
+                                player: seat,
+                                card_name: c.definition.name,
+                                is_land: c.definition.is_land(),
+                            });
+                        }
+                        revealed.push((seat, id));
+                    }
+                }
+                let lowest = revealed
+                    .iter()
+                    .filter_map(|(seat, id)| {
+                        let c = self.players[*seat].hand.iter().find(|c| c.id == *id)?;
+                        c.definition.is_creature().then(|| c.definition.cost.cmc())
+                    })
+                    .min();
+                let Some(lowest) = lowest else { return Ok(()) };
+                for (seat, id) in revealed {
+                    let qualifies = self.players[seat]
+                        .hand
+                        .iter()
+                        .find(|c| c.id == id)
+                        .is_some_and(|c| c.definition.is_creature() && c.definition.cost.cmc() == lowest);
+                    if !qualifies {
+                        continue;
+                    }
+                    if let Some(pos) = self.players[seat].hand.iter().position(|c| c.id == id) {
+                        let card = self.players[seat].hand.remove(pos);
+                        self.place_card_in_dest(
+                            card,
+                            seat,
+                            &crate::effect::ZoneDest::Battlefield {
+                                controller: crate::effect::PlayerRef::Seat(seat),
+                                tapped: false,
+                            },
+                            events,
+                        );
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::AttackingCreaturesBecomeBlocked => {
+                // CR 509 — Fog Patch. No blocker is assigned; the attackers
+                // are simply blocked, so they deal no damage to the defender.
+                let attackers: Vec<CardId> = self.attacking.iter().map(|a| a.attacker).collect();
+                for id in attackers {
+                    if !self.blocked_attackers.contains(&id) {
+                        self.blocked_attackers.push(id);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::RevealTopDeployIfMatch { filter, haste, sacrifice_at_next_end_step } => {
                 let p = ctx.controller;
                 let Some(top) = self.players[p].library.first() else { return Ok(()) };
@@ -7019,6 +7145,55 @@ impl GameState {
                     add_one(self, p, color);
                     events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                     return Ok(());
+                }
+                // CR 614 — the turn-scoped land-tap replacements (Pale Moon,
+                // Harvest Mage). Same "instead of any other type and amount"
+                // shape as Contamination, but installed by a spell.
+                if let Some(land) = ctx.source.and_then(|s| self.battlefield_find(s))
+                    && land.definition.is_land()
+                {
+                    let basic = land.definition.is_basic();
+                    let out = self
+                        .land_mana_replacements_this_turn
+                        .iter()
+                        .find(|r| r.who.is_none_or(|w| w == p) && !(r.nonbasic_only && basic))
+                        .map(|r| r.output);
+                    if let Some(out) = out {
+                        match out {
+                            crate::game::types::LandManaOutput::Colorless => {
+                                self.players[p].mana_pool.add_colorless(mult);
+                                events.push(GameEvent::ColorlessManaAdded {
+                                    player: p,
+                                    source: ctx.source,
+                                });
+                            }
+                            crate::game::types::LandManaOutput::ColorOfChoice => {
+                                let legal = vec![
+                                    Color::White,
+                                    Color::Blue,
+                                    Color::Black,
+                                    Color::Red,
+                                    Color::Green,
+                                ];
+                                let color = match self.decider.decide(
+                                    &crate::decision::Decision::ChooseColor {
+                                        source: ctx.source.unwrap_or(CardId(0)),
+                                        legal,
+                                    },
+                                ) {
+                                    crate::decision::DecisionAnswer::Color(c) => c,
+                                    _ => Color::White,
+                                };
+                                add_one(self, p, color);
+                                events.push(GameEvent::ManaAdded {
+                                    player: p,
+                                    color,
+                                    source: ctx.source,
+                                });
+                            }
+                        }
+                        return Ok(());
+                    }
                 }
                 match pool {
                     ManaPayload::Colors(colors) => {
@@ -16071,7 +16246,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random } => {
+            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take, to_battlefield, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -16144,7 +16319,7 @@ impl GameState {
                     optional: *optional,
                     picked_lands_to_battlefield: *picked_lands_to_battlefield,
                     rest_bottom_random: *rest_bottom_random,
-                    rest_to_exile: false,
+                    rest_to_exile: *rest_to_exile,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));
@@ -18450,6 +18625,20 @@ impl GameState {
 
             Effect::EndTheTurn => {
                 self.end_turn_requested = true;
+                Ok(())
+            }
+
+            Effect::ReplaceLandManaThisTurn { mine_only, nonbasic_only, color_of_choice } => {
+                use crate::game::types::{LandManaOutput, LandManaReplacement};
+                self.land_mana_replacements_this_turn.push(LandManaReplacement {
+                    who: mine_only.then_some(ctx.controller),
+                    nonbasic_only: *nonbasic_only,
+                    output: if *color_of_choice {
+                        LandManaOutput::ColorOfChoice
+                    } else {
+                        LandManaOutput::Colorless
+                    },
+                });
                 Ok(())
             }
 
@@ -22167,6 +22356,7 @@ impl GameState {
                 to,
                 gain_life,
                 redirect_to,
+                whole_turn,
             } => {
                 // CR 615.7 — Circle of Protection: a one-event shield around
                 // the controller, restricted to the chosen source. With
@@ -22217,7 +22407,7 @@ impl GameState {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
                         target,
                         source: Some(chosen),
-                        one_event: true,
+                        one_event: !*whole_turn,
                         reflect: *reflect,
                         gain_life: *gain_life,
                         redirect_to: redirect_perm,
@@ -22871,11 +23061,24 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventAllDamageThisTurn { target } => {
-                // CR 615 — a fog scoped to one player/permanent.
+            Effect::PreventAllDamageThisTurn { target, redirect_to } => {
+                // CR 615 — a fog scoped to one player/permanent, optionally
+                // redirecting what it soaks (CR 614.9 — Sivvi's Valor).
+                let (mut dst, mut dst_player) = (None, None);
+                if let Some(sel) = redirect_to {
+                    for e in self.resolve_selector(sel, ctx) {
+                        match e {
+                            EntityRef::Permanent(c) => dst = dst.or(Some(c)),
+                            EntityRef::Player(p) => dst_player = dst_player.or(Some(p)),
+                            _ => {}
+                        }
+                    }
+                }
                 for s in self.prevention_targets(target, ctx) {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
+                        redirect_to: dst,
+                        redirect_to_player: dst_player,
                         ..Default::default()
                     });
                 }
@@ -25425,6 +25628,32 @@ impl GameState {
                         .collect()
                 })
                 .unwrap_or_default(),
+            Selector::CreatorOfSource => ctx
+                .source
+                .and_then(|s| self.battlefield_find(s))
+                .and_then(|c| c.created_by)
+                .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                .map(|id| vec![EntityRef::Permanent(id)])
+                .unwrap_or_default(),
+            Selector::TokensCreatedBySource => self
+                .battlefield
+                .iter()
+                .filter(|c| ctx.source.is_some() && c.created_by == ctx.source)
+                .map(|c| EntityRef::Permanent(c.id))
+                .collect(),
+            Selector::CreaturesBlockedBySourceThisTurn => {
+                // Read off `blocks_declared_this_turn`, not the blocker's own
+                // field: by the end-of-combat sweep the blocker is usually
+                // already dead (Defiant Vanguard).
+                let Some(src) = ctx.source else { return vec![] };
+                self.blocks_declared_this_turn
+                    .iter()
+                    .filter(|(b, _)| *b == src)
+                    .map(|(_, a)| *a)
+                    .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                    .map(EntityRef::Permanent)
+                    .collect()
+            }
             Selector::CreaturesInCombatWith(subject) => {
                 let Some(EntityRef::Permanent(subj)) =
                     self.resolve_selector(subject, ctx).into_iter().next()

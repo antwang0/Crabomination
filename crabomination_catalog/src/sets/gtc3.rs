@@ -357,6 +357,7 @@ pub fn shielded_passage() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::PreventAllDamageThisTurn {
             target: target_filtered(R::Creature),
+            redirect_to: None,
         },
         ..Default::default()
     }

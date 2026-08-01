@@ -182,6 +182,18 @@ pub enum Selector {
     /// the symmetric combat-partner set. Trial // Error's "return all creatures
     /// blocking or blocked by target creature". Excludes the subject itself.
     CreaturesInCombatWith(Box<Selector>),
+    /// The permanent whose ability created the source token
+    /// (`CardInstance.created_by`) — empty once it has left the battlefield.
+    /// Backs a token CDA that reads counters on its creator (Saproling Burst).
+    CreatorOfSource,
+    /// Every battlefield token the source's abilities created
+    /// (`CardInstance.created_by`) — "all tokens created with this
+    /// enchantment" (Saproling Burst).
+    TokensCreatedBySource,
+    /// Every creature the source blocked *this turn*, read from
+    /// `CardInstance.blocked_attackers_this_turn` — so it still resolves after
+    /// combat has been torn down (Defiant Vanguard's end-of-combat sweep).
+    CreaturesBlockedBySourceThisTurn,
     /// CR 702.76 — the card hidden (exiled) by the source via Hideaway: the
     /// exile-zone card stamped `exiled_with == ctx.source`. Resolves to that
     /// single card so the activated ability can play it from exile.
@@ -919,6 +931,10 @@ pub enum Value {
     /// always read the spell's controller instead of the iterated
     /// player.
     PermanentCountControlledBy(PlayerRef),
+    /// The filtered sibling of `PermanentCountControlledBy` — how many
+    /// permanents the resolved player controls that match the filter
+    /// (Mana Cache's "for each untapped land that player controls").
+    PermanentCountControlledByMatching(PlayerRef, crate::card::SelectionRequirement),
     /// Number of players still in the game (not eliminated). "For each player"
     /// riders — Benediction of Moons's "gain 1 life for each player".
     PlayerCount,
@@ -3712,6 +3728,10 @@ pub enum Effect {
         /// (printed "in a random order") instead of revealed order.
         #[serde(default)]
         rest_bottom_random: bool,
+        /// "Put one into your hand and exile the rest" (Eye of Yawgmoth).
+        /// Takes precedence over `rest_to_graveyard`.
+        #[serde(default)]
+        rest_to_exile: bool,
     },
     /// "Look at the top `count` cards; put one back on top and the rest into
     /// your graveyard" (Sage of Days). The controller (via the `SearchLibrary`
@@ -3799,6 +3819,21 @@ pub enum Effect {
     /// revealed cards go to their graveyard and the named card goes back on
     /// top. Otherwise they shuffle." Tunnel Vision.
     NameCardRevealUntilThenBin { who: PlayerRef },
+    /// "Exile the top `exile_count` cards of your library, then reveal cards
+    /// from the top until you reveal a card with the name a preceding
+    /// `Effect::NameCard` stamped on the source. Put that card into your hand
+    /// and exile all other cards revealed this way." Divining Witch.
+    ExileTopThenRevealUntilNamed { exile_count: Value },
+    /// "Each player chooses a card in their hand, then reveals it. The owner
+    /// of each creature card revealed this way with the lowest mana value
+    /// puts it onto the battlefield." Stronghold Gambit. Each player's pick
+    /// routes through `Decision::ChooseCards` (auto-pick: their cheapest
+    /// creature card, else their cheapest card).
+    RevealChosenCardsLowestCreaturesEnter,
+    /// CR 509 — "Attacking creatures become blocked" (Fog Patch), even ones
+    /// that can't be blocked. No blocker is assigned, so nothing deals or is
+    /// dealt combat damage by the block.
+    AttackingCreaturesBecomeBlocked,
     /// Gonti, Lord of Luxury's ETB: look at the top `count` cards of `who`'s
     /// library, exile one face down (auto-pick: highest MV) with a
     /// while-exiled cast permission for you, and bottom the rest randomly.
@@ -6921,6 +6956,19 @@ pub enum Effect {
     /// and skips straight to the cleanup step. Sundial of the Infinite,
     /// Day's Undoing.
     EndTheTurn,
+    /// CR 614 — "Until end of turn, if a player taps a land for mana, it
+    /// produces [something else] instead of any other type and amount."
+    /// `mine_only` scopes it to the controller's own land taps (Harvest
+    /// Mage); `nonbasic_only` to nonbasic lands (Pale Moon).
+    ReplaceLandManaThisTurn {
+        #[serde(default)]
+        mine_only: bool,
+        #[serde(default)]
+        nonbasic_only: bool,
+        /// The tapping player picks a color instead of getting {C}.
+        #[serde(default)]
+        color_of_choice: bool,
+    },
     /// CR 615.7 — "Prevent all damage a [filter] source of your choice would
     /// deal this turn." The source is chosen as the effect resolves among
     /// battlefield permanents and stack spells matching `filter` (AutoDecider
@@ -6976,6 +7024,11 @@ pub enum Effect {
         /// (General's Regalia).
         #[serde(default)]
         redirect_to: Option<Selector>,
+        /// "ALL damage … this turn by a source of your choice" — the shield
+        /// stays up for the whole turn instead of soaking one event
+        /// (Oracle's Attendants).
+        #[serde(default)]
+        whole_turn: bool,
     },
     /// CR 615.7 — "Prevent the next `amount` damage that a source of your
     /// choice would deal to you and/or permanents you control this turn. If
@@ -7250,7 +7303,13 @@ pub enum Effect {
     /// "Prevent all damage that would be dealt to `target` this turn."
     /// (CR 615) A fog scoped to one player/permanent — Pradesh Gypsies,
     /// "you don't lose / prevent all damage to you". Non-combat path.
-    PreventAllDamageThisTurn { target: Selector },
+    /// With `redirect_to` set the prevented damage is dealt to that
+    /// entity instead (CR 614.9 — Sivvi's Valor).
+    PreventAllDamageThisTurn {
+        target: Selector,
+        #[serde(default)]
+        redirect_to: Option<Selector>,
+    },
     /// "Prevent all damage that would be dealt to `target` this turn. For each
     /// 1 damage prevented this way, put a +1/+1 counter on it." Brace for
     /// Impact — the counter rider rides the shield (`counters_on_target`).

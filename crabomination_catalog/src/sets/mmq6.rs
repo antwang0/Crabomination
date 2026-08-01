@@ -53,6 +53,7 @@ pub fn charm_peddler() -> CardDefinition {
                 to: Some(target_filtered(R::Creature)),
                 gain_life: false,
                 redirect_to: None,
+                whole_turn: false,
             },
             ..Default::default()
         },
@@ -73,6 +74,7 @@ pub fn cho_arrim_alchemist() -> CardDefinition {
                 to: None,
                 gain_life: true,
                 redirect_to: None,
+                whole_turn: false,
             },
             ..Default::default()
         },
@@ -94,6 +96,7 @@ pub fn generals_regalia() -> CardDefinition {
                     Box::new(R::Creature),
                     Box::new(R::ControlledByYou),
                 ))),
+                whole_turn: false,
             },
             ..Default::default()
         }],

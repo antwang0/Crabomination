@@ -376,6 +376,7 @@ pub fn sivvis_ruse() -> CardDefinition {
             cost(&[generic(2), w(), w()]),
             Effect::PreventAllDamageThisTurn {
                 target: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                redirect_to: None,
             },
         )
     }

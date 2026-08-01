@@ -1482,6 +1482,7 @@ pub fn bucolic_ranch() -> CardDefinition {
                     optional: true,
                     rest_bottom_random: false,
                     picked_lands_to_battlefield: false,
+                    rest_to_exile: false,
                 },
                 ..Default::default()
             },

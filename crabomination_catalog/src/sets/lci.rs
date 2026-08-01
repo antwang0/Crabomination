@@ -2557,6 +2557,7 @@ pub fn staunch_crewmate() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }
@@ -4499,6 +4500,7 @@ pub fn confounding_riddle() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             Effect::CounterUnlessPaid {
                 what: crate::effect::shortcut::target(),
@@ -4616,6 +4618,7 @@ pub fn in_the_presence_of_ages() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -5273,6 +5276,7 @@ pub fn sinuous_benthisaur() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }
@@ -5476,6 +5480,7 @@ pub fn orazca_puzzle_door() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             ..Default::default()
         }],
@@ -5864,6 +5869,7 @@ pub fn akal_pakal_first_among_equals() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()

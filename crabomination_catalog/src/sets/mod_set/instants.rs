@@ -807,6 +807,7 @@ pub fn dig_through_time() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -1763,6 +1764,7 @@ pub fn teferis_protection() -> CardDefinition {
             Effect::PreventAllCombatDamageThisTurn,
             Effect::PreventAllDamageThisTurn {
                 target: Selector::You,
+                redirect_to: None,
             },
             Effect::LifeLockThisTurn { who: Selector::You },
             Effect::PhaseOut {
@@ -1787,6 +1789,7 @@ pub fn comeuppance() -> CardDefinition {
             Effect::PreventAllCombatDamageThisTurn,
             Effect::PreventAllDamageThisTurn {
                 target: Selector::You,
+                redirect_to: None,
             },
         ]),
         ..Default::default()

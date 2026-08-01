@@ -3476,6 +3476,7 @@ pub fn kitsune_healer() -> CardDefinition {
                         SelectionRequirement::Creature
                             .and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
                     ),
+                    redirect_to: None,
                 },
                 ..Default::default()
             },
@@ -4779,6 +4780,7 @@ pub fn faithful_squire() -> CardDefinition {
             remove_counter_cost: Some((CounterType::Ki, 1)),
             effect: Effect::PreventAllDamageThisTurn {
                 target: target_filtered(SelectionRequirement::Creature),
+                redirect_to: None,
             },
             ..Default::default()
         }],

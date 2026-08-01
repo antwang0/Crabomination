@@ -524,7 +524,7 @@ pub fn gideon_ally_of_zendikar() -> CardDefinition {
                         keywords: vec![Keyword::Indestructible],
                         duration: Duration::EndOfTurn,
                     },
-                    Effect::PreventAllDamageThisTurn { target: Selector::This },
+                    Effect::PreventAllDamageThisTurn { target: Selector::This, redirect_to: None },
                 ]),
                 ..Default::default()
             },
@@ -737,6 +737,7 @@ pub fn kiora_master_of_the_depths() -> CardDefinition {
                     optional: true,
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: false,
+                    rest_to_exile: false,
                 },
                 ..Default::default()
             },

@@ -446,6 +446,7 @@ pub fn nessian_game_warden() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..creature(
             "Nessian Game Warden",
@@ -642,6 +643,7 @@ pub fn ajani_mentor_of_heroes() -> CardDefinition {
                     optional: true,
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: false,
+                    rest_to_exile: false,
                 },
                 ..Default::default()
             },

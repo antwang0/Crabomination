@@ -10179,6 +10179,24 @@ static NMS3: &[Factory] = &[
     super::nms3::mind_slash,
     super::nms3::rising_waters,
 ];
+static NMS4: &[Factory] = &[
+    super::nms4::defiant_vanguard,
+    super::nms4::divining_witch,
+    super::nms4::eye_of_yawgmoth,
+    super::nms4::flowstone_armor,
+    super::nms4::fog_patch,
+    super::nms4::harvest_mage,
+    super::nms4::kill_switch,
+    super::nms4::mana_cache,
+    super::nms4::mogg_toady,
+    super::nms4::oracles_attendants,
+    super::nms4::overlaid_terrain,
+    super::nms4::pale_moon,
+    super::nms4::rootwater_thief,
+    super::nms4::saproling_burst,
+    super::nms4::sivvis_valor,
+    super::nms4::stronghold_gambit,
+];
 static NMS2: &[Factory] = &[
     super::nms2::laccolith_whelp,
     super::nms2::laccolith_grunt,
@@ -18098,6 +18116,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("nms", NMS),
     ("nms2", NMS2),
     ("nms3", NMS3),
+    ("nms4", NMS4),
     ("mod_set", MOD_SET),
     ("ogw", OGW),
     ("one", ONE),

@@ -228,6 +228,10 @@ impl Effect {
         }
         match self {
             Effect::Noop
+            | Effect::ReplaceLandManaThisTurn { .. }
+            | Effect::ExileTopThenRevealUntilNamed { .. }
+            | Effect::RevealChosenCardsLowestCreaturesEnter
+            | Effect::AttackingCreaturesBecomeBlocked
             | Effect::MassPolymorph
             | Effect::CopyForEachOtherTargetableCreature
             | Effect::SearchRevealPunishSameNameCasters { .. }
@@ -1110,7 +1114,7 @@ impl Effect {
             | Effect::PreventNextDamageAndGainLife { target, amount } => {
                 sel_has_target(target) || value_has_target(amount)
             }
-            Effect::PreventAllDamageThisTurn { target }
+            Effect::PreventAllDamageThisTurn { target, .. }
             | Effect::TurnFaceDown { what: target }
             | Effect::PreventAllDamageThisTurnWithCounters { target }
             | Effect::PreventAllDamageFromChosenColorThisTurn { target }
@@ -2637,7 +2641,7 @@ impl Effect {
                 Effect::PreventNextDamage { target, .. }
                 | Effect::PreventNextDamageWithCounters { target, .. }
                 | Effect::PreventNextDamageAndGainLife { target, .. }
-                | Effect::PreventAllDamageThisTurn { target }
+                | Effect::PreventAllDamageThisTurn { target, .. }
                 | Effect::PreventAllDamageThisTurnWithCounters { target }
                 | Effect::PreventAllDamageFromChosenColorThisTurn { target }
                 | Effect::PreventDamageToAndByUntilYourNextTurn { target }

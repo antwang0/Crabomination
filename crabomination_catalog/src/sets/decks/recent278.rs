@@ -145,6 +145,7 @@ pub fn commune_with_spirits() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: true,
+            rest_to_exile: false,
         },
         ..Default::default()
     }

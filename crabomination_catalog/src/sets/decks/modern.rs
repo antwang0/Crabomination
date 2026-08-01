@@ -141,6 +141,7 @@ pub fn sleight_of_hand() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: true,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -2924,6 +2925,7 @@ pub fn satyr_wayfinder() -> CardDefinition {
                 optional: true,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()
@@ -5832,6 +5834,7 @@ pub fn anticipate() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -8439,6 +8442,7 @@ pub fn vivien_reid() -> CardDefinition {
                     optional: true,
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: false,
+                    rest_to_exile: false,
                 },
             },
             LoyaltyAbility {
@@ -9130,6 +9134,7 @@ pub fn forbidden_alchemy() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -10008,6 +10013,7 @@ pub fn glint_nest_crane() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }
@@ -11492,6 +11498,7 @@ pub fn strategic_planning() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -13659,6 +13666,7 @@ pub fn faerie_snoop() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()
@@ -25338,6 +25346,7 @@ pub fn impulse() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -26859,6 +26868,7 @@ pub fn consult_the_star_charts() -> CardDefinition {
         optional: false,
         picked_lands_to_battlefield: false,
         rest_bottom_random: false,
+        rest_to_exile: false,
     };
     CardDefinition {
         name: "Consult the Star Charts",
@@ -28724,6 +28734,7 @@ pub fn narset_parter_of_veils() -> CardDefinition {
                 optional: true,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()
@@ -28963,6 +28974,7 @@ pub fn ancient_stirrings() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -32051,6 +32063,7 @@ pub fn turntimber_symbiosis() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         back_face: Some(Box::new(znr_painland_back(
             "Turntimber, Serpentine Wood",
@@ -32440,6 +32453,7 @@ pub fn adventure_awaits() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -33136,6 +33150,7 @@ pub fn search_for_azcanta() -> CardDefinition {
                     optional: false,
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: false,
+                    rest_to_exile: false,
                 },
                 ..Default::default()
             },
@@ -33222,6 +33237,7 @@ pub fn growing_rites_of_itlimoc() -> CardDefinition {
                     optional: false,
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: false,
+                    rest_to_exile: false,
                 },
             },
             TriggeredAbility {
@@ -43119,6 +43135,7 @@ pub fn prophetic_bolt() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         ]),
         ..Default::default()
@@ -45129,6 +45146,7 @@ pub fn rediscover_the_way() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         }
     }
     CardDefinition {
@@ -48770,6 +48788,7 @@ pub fn memory_deluge() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -49221,6 +49240,7 @@ fn circle_of_protection(name: &'static str, color: Color) -> CardDefinition {
                 to: None,
                 gain_life: false,
                 redirect_to: None,
+                whole_turn: false,
             },
             ..Default::default()
         }],
@@ -49507,6 +49527,7 @@ pub fn collected_company() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -52142,6 +52163,7 @@ pub fn peer_through_depths() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -52174,6 +52196,7 @@ pub fn malevolent_rumble() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -54413,6 +54436,7 @@ pub fn six() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         static_abilities: vec![StaticAbility {
             description: "During your turn, nonland permanent cards in your graveyard have retrace.",
@@ -58448,6 +58472,7 @@ pub fn thieves_fortune() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -59855,6 +59880,7 @@ pub fn militia_bugler() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }
@@ -60366,6 +60392,7 @@ pub fn deflecting_palm() -> CardDefinition {
             to: None,
             gain_life: false,
             redirect_to: None,
+            whole_turn: false,
         },
         ..Default::default()
     }
@@ -63380,6 +63407,7 @@ pub fn glimpse_the_cosmos() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -63807,6 +63835,7 @@ pub fn dark_bargain() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::You),

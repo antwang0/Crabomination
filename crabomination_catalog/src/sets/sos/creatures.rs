@@ -853,6 +853,7 @@ pub fn stirring_honormancer() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()
@@ -3174,6 +3175,7 @@ pub fn geometers_arthropod() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: true,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }
@@ -4156,6 +4158,7 @@ pub fn paradox_surveyor() -> CardDefinition {
                 optional: true,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()

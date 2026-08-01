@@ -65,6 +65,7 @@ pub fn sigarda_champion_of_light() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()
@@ -3025,6 +3026,7 @@ pub fn star_charter() -> CardDefinition {
                 optional: true,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()
@@ -4381,6 +4383,7 @@ pub fn stock_up() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -6518,6 +6521,7 @@ pub fn gurmag_drowner() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }
@@ -10044,6 +10048,7 @@ pub fn corpse_appraiser() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         ]))],
         ..Default::default()
@@ -12895,6 +12900,7 @@ pub fn recruitment_officer() -> CardDefinition {
                 optional: true,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             ..Default::default()
         }],

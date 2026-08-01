@@ -783,6 +783,7 @@ pub fn quandrix_quickener() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             Effect::Untap {
                 what: target_filtered(

@@ -147,6 +147,7 @@ pub fn favored_hoplite() -> CardDefinition {
             },
             Effect::PreventAllDamageThisTurn {
                 target: Selector::This,
+                redirect_to: None,
             },
         ]))],
         ..creature(

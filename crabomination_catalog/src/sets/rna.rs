@@ -1930,6 +1930,7 @@ pub fn shimmer_of_possibility() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: true,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -3740,6 +3741,7 @@ pub fn incubation_incongruity() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: true,
+            rest_to_exile: false,
         },
         split: Some(Box::new(crate::card::SplitCard {
             right: crate::card::SplitHalf {

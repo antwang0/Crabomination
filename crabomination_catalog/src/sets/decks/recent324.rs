@@ -265,6 +265,7 @@ pub fn vedalken_orrery() -> CardDefinition {
 /// Vedalken Shackles — holds a creature for as long as it stays tapped.
 pub fn vedalken_shackles() -> CardDefinition {
     CardDefinition {
+        keywords: vec![crate::card::Keyword::MayChooseNotToUntap],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,

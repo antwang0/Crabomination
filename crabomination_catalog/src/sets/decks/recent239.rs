@@ -629,6 +629,7 @@ pub fn lupinflower_village() -> CardDefinition {
                     optional: true,
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: true,
+                    rest_to_exile: false,
                 },
                 ..Default::default()
             },
@@ -772,6 +773,7 @@ pub fn whiskervale_forerunner() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: true,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }

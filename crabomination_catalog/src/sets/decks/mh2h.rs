@@ -282,6 +282,7 @@ pub fn carth_the_lion() -> CardDefinition {
         optional: false,
         picked_lands_to_battlefield: false,
         rest_bottom_random: false,
+        rest_to_exile: false,
     };
     CardDefinition {
         name: "Carth the Lion",

@@ -1432,6 +1432,7 @@ pub fn professor_onyx() -> CardDefinition {
                         optional: false,
                         picked_lands_to_battlefield: false,
                         rest_bottom_random: false,
+                        rest_to_exile: false,
                     },
                 ]),
             },
@@ -1682,6 +1683,7 @@ pub fn adventurous_impulse() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }

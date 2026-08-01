@@ -382,6 +382,14 @@ impl GameState {
                         return Err(GameError::CannotAttack(id));
                     }
                 }
+                // CR 508.1a — Mogg Toady: strictly more creatures than the
+                // defending player.
+                if computed_kw(id).contains(&Keyword::CantAttackUnlessMoreCreaturesThanDefender)
+                    && let Some(d) = self.defender_for(atk.target)
+                    && self.creature_count(p) <= self.creature_count(d)
+                {
+                    return Err(GameError::CannotAttack(id));
+                }
                 // "Can't attack unless you control a [filter]" (Lovestruck Beast).
                 if let Some(req) = computed_kw(id).iter().find_map(|kw| match kw {
                     Keyword::CanAttackOnlyIfYouControl(r) => Some(r.clone()),
@@ -1169,6 +1177,15 @@ impl GameState {
                 .battlefield_find(attacker_id)
                 .ok_or(GameError::CardNotOnBattlefield(attacker_id))?;
 
+            // CR 509.1b — Mogg Toady: strictly more creatures than the
+            // attacker's controller.
+            if kws_of(blocker_id).contains(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)
+                && self.creature_count(blocker.controller)
+                    <= self.creature_count(attacker.controller)
+            {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
             let blocker_cp = cp_of(blocker_id).ok_or(GameError::CannotBlock(blocker_id))?;
             let atk_colors = cp_of(attacker_id).map(|c| c.colors.as_slice()).unwrap_or(&[]);
             let atk_power = cp_of(attacker_id).map(|c| c.power).unwrap_or_else(|| attacker.power());
@@ -1673,6 +1690,9 @@ impl GameState {
                 if !b.blocked_attackers_this_turn.contains(&attacker_id) {
                     b.blocked_attackers_this_turn.push(attacker_id);
                 }
+            }
+            if !self.blocks_declared_this_turn.contains(&(blocker_id, attacker_id)) {
+                self.blocks_declared_this_turn.push((blocker_id, attacker_id));
             }
             // CR 510.1c — once blocked, the attacker stays blocked for this
             // combat even if every blocker later leaves combat.

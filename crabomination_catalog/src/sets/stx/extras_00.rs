@@ -474,7 +474,7 @@ pub fn curate() -> CardDefinition {
 //
 // Strategic Planning is wired in
 // `catalog::sets::decks::modern::strategic_planning` as the faithful
-// `Effect::LookPickToHand { count: 3, rest_to_graveyard: true }` — look at
+// `Effect::LookPickToHand { count: 3, rest_to_graveyard: true, rest_to_exile: false }` — look at
 // the top three, put your pick into your hand, rest to the graveyard.
 
 // ── Solve the Equation ─────────────────────────────────────────────────────
@@ -1454,6 +1454,7 @@ pub fn expressive_iteration() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
@@ -2365,6 +2366,7 @@ pub fn wandering_archaic() -> CardDefinition {
                         optional: true,
                         picked_lands_to_battlefield: false,
                         rest_bottom_random: true,
+                        rest_to_exile: false,
                     },
                     Effect::GainLife {
                         who: Selector::Player(PlayerRef::Triggerer),

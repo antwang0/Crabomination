@@ -100,6 +100,7 @@ pub fn dovin_grand_arbiter() -> CardDefinition {
                     optional: false,
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: true,
+                    rest_to_exile: false,
                 },
                 ..Default::default()
             },
@@ -154,6 +155,7 @@ pub fn gideon_champion_of_justice() -> CardDefinition {
                     },
                     Effect::PreventAllDamageThisTurn {
                         target: Selector::This,
+                        redirect_to: None,
                     },
                 ]),
                 ..Default::default()

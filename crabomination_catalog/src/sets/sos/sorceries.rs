@@ -956,7 +956,7 @@ pub fn rapturous_moment() -> CardDefinition {
 /// (`elemental_token()`); the `{2}, Discard this card:` line is a real
 /// FROM-HAND activated ability (`from_hand: true` +
 /// `discard_self_cost: true`), whose body is the Strategic-Planning
-/// look-2 split (`LookPickToHand { count: 2, rest_to_graveyard }` — one
+/// look-2 split (`LookPickToHand { count: 2, rest_to_graveyard, rest_to_exile: false }` — one
 /// to hand, the other to the graveyard).
 pub fn visionarys_dance() -> CardDefinition {
     use crate::effect::ActivatedAbility;
@@ -986,6 +986,7 @@ pub fn visionarys_dance() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             ..Default::default()
         }],
@@ -1835,6 +1836,7 @@ pub fn zimones_experiment() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: true,
             rest_bottom_random: true,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -1882,6 +1884,7 @@ pub fn flow_state() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: true,
+                rest_to_exile: false,
             }),
             else_: Box::new(Effect::LookPickToHand {
                 who: PlayerRef::You,
@@ -1896,6 +1899,7 @@ pub fn flow_state() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             }),
         },
         ..Default::default()
@@ -2071,6 +2075,7 @@ pub fn follow_the_lumarets() -> CardDefinition {
         optional: true,
         picked_lands_to_battlefield: false,
         rest_bottom_random: true,
+        rest_to_exile: false,
     };
     CardDefinition {
         name: "Follow the Lumarets",

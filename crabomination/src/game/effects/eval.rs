@@ -1057,6 +1057,25 @@ impl GameState {
                         .count() as i32
                 })
                 .unwrap_or(0),
+            Value::PermanentCountControlledByMatching(p, filter) => self
+                .resolve_player(p, ctx)
+                .map(|seat| {
+                    // `evaluate_requirement_static` (not `..._on_card`) so
+                    // battlefield-state filters like `Untapped` are live.
+                    self.battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == seat
+                                && self.evaluate_requirement_static(
+                                    filter,
+                                    &crate::game::types::Target::Permanent(c.id),
+                                    seat,
+                                    None,
+                                )
+                        })
+                        .count() as i32
+                })
+                .unwrap_or(0),
             Value::PlayerCount => self.alive_count() as i32,
             Value::CreatureCountControlledBy(p) => self
                 .resolve_player(p, ctx)

@@ -322,6 +322,7 @@ pub fn case_file_auditor() -> CardDefinition {
         optional: true,
         picked_lands_to_battlefield: false,
         rest_bottom_random: true,
+        rest_to_exile: false,
     };
     CardDefinition {
         name: "Case File Auditor",

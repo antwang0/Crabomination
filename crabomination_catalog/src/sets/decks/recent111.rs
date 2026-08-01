@@ -355,6 +355,7 @@ pub fn harald_king_of_skemfar() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()
@@ -494,6 +495,7 @@ pub fn oath_of_nissa() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()

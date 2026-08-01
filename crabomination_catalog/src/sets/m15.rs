@@ -1869,6 +1869,7 @@ pub fn genesis_hydra() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: true,
+            rest_to_exile: false,
         })],
         ..creature(
             "Genesis Hydra",

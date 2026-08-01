@@ -408,6 +408,7 @@ pub fn haazda_shield_mate() -> CardDefinition {
                 to: None,
                 gain_life: false,
                 redirect_to: None,
+                whole_turn: false,
             },
             ..Default::default()
         }],

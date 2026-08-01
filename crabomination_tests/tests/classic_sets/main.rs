@@ -42,6 +42,7 @@ mod mmq6;
 mod nms;
 mod nms2;
 mod nms3;
+mod nms4;
 mod mom;
 mod ogw;
 mod one;

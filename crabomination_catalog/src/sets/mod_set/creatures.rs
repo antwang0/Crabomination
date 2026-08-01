@@ -2103,6 +2103,7 @@ pub fn augur_of_bolas() -> CardDefinition {
                 optional: true,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()
@@ -2399,6 +2400,7 @@ pub fn sea_gate_oracle() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
         }],
         ..Default::default()

@@ -250,6 +250,7 @@ pub fn squad_rallier() -> CardDefinition {
                 optional: true,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             ..Default::default()
         }],

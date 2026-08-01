@@ -1075,6 +1075,20 @@ pub struct GameState {
     /// CR 615.8). Cleared at cleanup.
     #[serde(default)]
     pub(crate) damage_prevented_sources: Vec<(CardId, Option<usize>, bool)>,
+    /// CR 614 — turn-scoped replacements of what a land tap produces
+    /// (Pale Moon, Harvest Mage). Applied at the mana-ability chokepoint;
+    /// cleared at cleanup.
+    #[serde(default)]
+    pub(crate) land_mana_replacements_this_turn: Vec<crate::game::types::LandManaReplacement>,
+    /// `(blocker, attacker)` pairs declared this turn, kept off the permanents
+    /// so it survives the blocker's death — "destroy it and all creatures it
+    /// blocked this turn" (Defiant Vanguard). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) blocks_declared_this_turn: Vec<(CardId, CardId)>,
+    /// The permanent currently resolving an effect, stamped onto every token
+    /// it mints (`CardInstance.created_by`). Resolution-scoped scratch.
+    #[serde(default, skip)]
+    pub(crate) token_minting_source: Option<CardId>,
     /// Shriveling Rot mode 1 — "until end of turn, whenever a creature is
     /// dealt damage, destroy it". Any creature with damage marked on it is
     /// destroyed by the lethal-damage SBA while set. Cleared at cleanup.
@@ -1624,6 +1638,9 @@ impl Clone for GameState {
             doubled_damage_sources_this_turn: self.doubled_damage_sources_this_turn.clone(),
             creature_pw_cast_locks: self.creature_pw_cast_locks.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
+            land_mana_replacements_this_turn: self.land_mana_replacements_this_turn.clone(),
+            blocks_declared_this_turn: self.blocks_declared_this_turn.clone(),
+            token_minting_source: self.token_minting_source,
             cant_block_pairs: self.cant_block_pairs.clone(),
             attack_despite_defender_this_turn: self.attack_despite_defender_this_turn.clone(),
             damage_locked_until_turn_of: self.damage_locked_until_turn_of.clone(),
@@ -1855,6 +1872,9 @@ impl GameState {
             doubled_damage_sources_this_turn: Vec::new(),
             creature_pw_cast_locks: Vec::new(),
             damage_prevented_sources: Vec::new(),
+            land_mana_replacements_this_turn: Vec::new(),
+            blocks_declared_this_turn: Vec::new(),
+            token_minting_source: None,
             cant_block_pairs: Vec::new(),
             attack_despite_defender_this_turn: Vec::new(),
             damage_locked_until_turn_of: Vec::new(),
@@ -2779,6 +2799,16 @@ impl GameState {
             return cp.card_types.contains(&crate::card::CardType::Creature);
         }
         self.battlefield_find(cid).is_some_and(|c| c.definition.is_creature())
+    }
+
+    /// How many creatures `seat` controls right now (layer-aware, so animated
+    /// lands count). Backs the CR 508.1a/509.1b "more creatures than the
+    /// defending/attacking player" gates (Mogg Toady).
+    pub(crate) fn creature_count(&self, seat: usize) -> usize {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat && self.permanent_is_creature(c.id))
+            .count()
     }
 
     /// Peel the gating wrappers (`WhileClassLevelAtLeast`, `WhileYourTurn`,
@@ -4723,6 +4753,11 @@ impl GameState {
                     self.permanents_gained_counter_this_turn.insert(id);
                 }
             }
+        }
+        if let Some(src) = self.token_minting_source
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id)
+        {
+            c.created_by = Some(src);
         }
         events.push(crate::game::GameEvent::TokenCreated { card_id: id });
         events.push(crate::game::GameEvent::PermanentEntered { card_id: id });
@@ -9297,6 +9332,13 @@ impl GameState {
         {
             return false;
         }
+        // CR 509.1b — Mogg Toady: strictly more creatures than the attacker's
+        // controller.
+        if blocker_cp.keywords.contains(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)
+            && self.creature_count(blocker.controller) <= self.creature_count(attacker.controller)
+        {
+            return false;
+        }
         // "Can't block unless you control N+ [filter]" (Topiary Stomper).
         // Attack-only gates (Lambholt Pacifist) don't restrict blocking.
         if let Some((req, min, excl)) = blocker_cp.keywords.iter().find_map(|kw| match kw {
@@ -10716,6 +10758,7 @@ impl GameState {
                     optional: false,
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: false,
+                    rest_to_exile: false,
                 },
                 &ctx,
             ) {

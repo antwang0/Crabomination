@@ -87,6 +87,7 @@ pub fn chromescale_drake() -> CardDefinition {
             optional: false,
             rest_bottom_random: false,
             picked_lands_to_battlefield: false,
+            rest_to_exile: false,
         })],
         ..creature(
             "Chromescale Drake",

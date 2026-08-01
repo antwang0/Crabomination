@@ -141,6 +141,7 @@ pub fn stoneforge_acolyte() -> CardDefinition {
             gain_life_greatest_power_rest: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..ally(
             "Stoneforge Acolyte",

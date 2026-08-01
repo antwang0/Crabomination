@@ -1649,6 +1649,27 @@ pub struct PreventionShield {
     pub redirect_to_player: Option<usize>,
 }
 
+/// CR 614 — "until end of turn, if a player taps a land for mana, it produces
+/// `output` instead of any other type and amount" (Pale Moon, Harvest Mage).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct LandManaReplacement {
+    /// Only this seat's land taps are replaced ("if **you** tap a land");
+    /// `None` replaces every player's.
+    pub who: Option<usize>,
+    /// Only nonbasic lands (Pale Moon).
+    pub nonbasic_only: bool,
+    /// What the land produces instead.
+    pub output: LandManaOutput,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum LandManaOutput {
+    /// One colorless mana (Pale Moon).
+    Colorless,
+    /// One mana of a color the tapping player picks (Harvest Mage).
+    ColorOfChoice,
+}
+
 /// CR 731 — the game's day/night designation. The game starts as neither
 /// (`GameState.day_night == None`); once it becomes day or night it has
 /// exactly one of these from then on.

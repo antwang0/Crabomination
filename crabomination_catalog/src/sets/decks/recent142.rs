@@ -340,6 +340,7 @@ pub fn farsight_ritual() -> CardDefinition {
         optional: false,
         picked_lands_to_battlefield: false,
         rest_bottom_random: false,
+        rest_to_exile: false,
     };
     CardDefinition {
         name: "Farsight Ritual",

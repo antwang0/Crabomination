@@ -1138,6 +1138,12 @@ pub enum Keyword {
     /// has been dealt damage this turn" (Bloodcrazed Goblin). Reads the
     /// per-turn `was_dealt_damage_this_turn` flag on each opponent.
     CantAttackUnlessOpponentDamaged,
+    /// CR 508.1a restriction — "This creature can't attack unless you control
+    /// more creatures than the defending player" (Mogg Toady).
+    CantAttackUnlessMoreCreaturesThanDefender,
+    /// CR 509.1b restriction — the blocking half of Mogg Toady: "can't block
+    /// unless you control more creatures than the attacking player."
+    CantBlockUnlessMoreCreaturesThanAttacker,
     /// CR 508.1a restriction — "This creature can't attack unless a creature
     /// with greater power also attacks" (Okk). Checked against the whole
     /// declared batch, so it needs a partner big enough in the same combat.
@@ -4826,6 +4832,10 @@ pub struct CardInstance {
     /// battlefield the engine returns this card to `ExileLink::return_to`.
     /// `None` for ordinary (permanent) exile.
     pub exiled_by: Option<ExileLink>,
+    /// The permanent whose ability created this token — "tokens created with
+    /// this enchantment" (Saproling Burst). `None` for cards and for tokens
+    /// minted outside a permanent's ability.
+    pub created_by: Option<CardId>,
     /// CR 720-style "exiled with [a permanent]": a permanent tag stamped on a
     /// card in exile that some source put there and keeps caring about (e.g.
     /// Keen-Eyed Curator's "card types among cards exiled with this
@@ -5116,6 +5126,7 @@ impl CardInstance {
             cant_regenerate_this_turn: false,
             skip_next_untap: false,
             untap_locked_by: None,
+            created_by: None,
             untap_locked_while_present: None,
             attacked_this_turn: false,
             blocked_this_turn: false,
@@ -5861,6 +5872,10 @@ struct CardInstanceWire {
     /// CR 310.6 Battle protector. `#[serde(default)]` for back-compat.
     #[serde(default)]
     protected_by: Option<usize>,
+    /// The permanent whose ability minted this token. `#[serde(default)]`
+    /// for back-compat.
+    #[serde(default)]
+    created_by: Option<CardId>,
     /// Spell-copy riders (haste, sac-at-end-step). `#[serde(default)]`
     /// for back-compat.
     #[serde(default)]
@@ -5989,6 +6004,7 @@ impl serde::Serialize for CardInstance {
             mutate_stack: self.mutate_stack.clone(),
             mutate_onto: self.mutate_onto,
             untap_locked_by: self.untap_locked_by,
+            created_by: self.created_by,
             protected_by: self.protected_by,
             resolve_riders: self.resolve_riders,
         };
@@ -6156,6 +6172,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             c.rebuild_mutate_definition();
         }
         c.untap_locked_by = wire.untap_locked_by;
+        c.created_by = wire.created_by;
         c.protected_by = wire.protected_by;
         c.resolve_riders = wire.resolve_riders;
         Ok(c)

@@ -1468,6 +1468,7 @@ pub fn master_piandao() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }
@@ -1950,6 +1951,7 @@ pub fn seismic_sense() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -2985,6 +2987,7 @@ pub fn guru_pathik() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }
@@ -4649,6 +4652,7 @@ pub fn accumulate_wisdom() -> CardDefinition {
         optional: false,
         picked_lands_to_battlefield: false,
         rest_bottom_random: false,
+        rest_to_exile: false,
     };
     CardDefinition {
         name: "Accumulate Wisdom",

@@ -964,6 +964,7 @@ pub fn story_circle() -> CardDefinition {
                 to: None,
                 gain_life: false,
                 redirect_to: None,
+                whole_turn: false,
             },
             ..Default::default()
         }],

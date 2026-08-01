@@ -173,6 +173,7 @@ pub fn entrancing_lyre() -> CardDefinition {
         name: "Entrancing Lyre",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
+        keywords: vec![crate::card::Keyword::MayChooseNotToUntap],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[x()]),
             tap_cost: true,
@@ -4031,6 +4032,7 @@ pub fn nessian_wanderer() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         })],
         ..Default::default()
     }
@@ -5694,6 +5696,7 @@ pub fn thassas_intervention() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             Effect::CounterUnlessPaid {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
@@ -5729,6 +5732,7 @@ pub fn relentless_pursuit() -> CardDefinition {
             optional: false,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
         ..Default::default()
     }
@@ -6213,6 +6217,7 @@ pub fn calix_destinys_hand() -> CardDefinition {
                     optional: false,
                     picked_lands_to_battlefield: false,
                     rest_bottom_random: false,
+                    rest_to_exile: false,
                 },
                 ..Default::default()
             },
@@ -6852,6 +6857,7 @@ pub fn siona_captain_of_the_pyleas() -> CardDefinition {
                 optional: true,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::AuraAttached, EventScope::YourControl),

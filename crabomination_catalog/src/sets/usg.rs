@@ -813,7 +813,7 @@ pub fn redeem() -> CardDefinition {
             max_targets: 2,
             min_targets: 0,
             filter: R::Creature,
-            effect: Box::new(Effect::PreventAllDamageThisTurn { target: Selector::Target(0) }),
+            effect: Box::new(Effect::PreventAllDamageThisTurn { target: Selector::Target(0), redirect_to: None }),
         },
     )
 }

@@ -2308,6 +2308,9 @@ impl GameState {
         // locked permanent skips its untap while its source remains tapped.
         // Vedalken Shackles joins the same set: while it holds a stolen
         // creature it stays tapped ("you may choose not to untap this").
+        // Only a source that actually prints "you may choose not to untap
+        // this" holds itself down; one without the clause (Kill Switch)
+        // untaps normally and releases its lock.
         let lock_sources: std::collections::HashSet<crate::card::CardId> = self
             .battlefield
             .iter()
@@ -2318,6 +2321,11 @@ impl GameState {
                     .filter(|tc| tc.while_source_tapped)
                     .filter_map(|tc| tc.source),
             )
+            .filter(|id| {
+                self.battlefield_find(*id).is_some_and(|c| {
+                    c.definition.keywords.contains(&crate::card::Keyword::MayChooseNotToUntap)
+                })
+            })
             .collect();
         let tapped_now_set: std::collections::HashSet<crate::card::CardId> =
             self.battlefield.iter().filter(|c| c.tapped).map(|c| c.id).collect();
@@ -2917,6 +2925,8 @@ impl GameState {
         self.creature_etb_steal_this_turn.clear();
         self.search_tax_paid_this_turn.clear();
         self.damage_prevented_sources.clear();
+        self.land_mana_replacements_this_turn.clear();
+        self.blocks_declared_this_turn.clear();
         self.cant_block_pairs.clear();
         self.attack_despite_defender_this_turn.clear();
         // CR 615 — prevention shields and the "can't be prevented" rider

@@ -600,6 +600,7 @@ pub fn harvestguard_alseids() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![constellation(Effect::PreventAllDamageThisTurn {
             target: target_filtered(R::Creature),
+            redirect_to: None,
         })],
         ..nyx_creature(
             "Harvestguard Alseids",
@@ -1432,6 +1433,7 @@ pub fn kruphixs_insight() -> CardDefinition {
             optional: true,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
+            rest_to_exile: false,
         },
     )
 }

@@ -1600,6 +1600,7 @@ pub fn commune_with_evil() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             gain_life(3),
         ]),

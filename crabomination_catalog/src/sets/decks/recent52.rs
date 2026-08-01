@@ -223,6 +223,7 @@ pub fn loot_exuberant_explorer() -> CardDefinition {
                 optional: true,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: false,
+                rest_to_exile: false,
             },
             ..Default::default()
         }],
@@ -690,6 +691,7 @@ pub fn trail_of_crumbs() -> CardDefinition {
                         optional: false,
                         picked_lands_to_battlefield: false,
                         rest_bottom_random: false,
+                        rest_to_exile: false,
                     }),
                     else_: None,
                 },

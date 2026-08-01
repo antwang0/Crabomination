@@ -913,6 +913,7 @@ pub fn stress_dream() -> CardDefinition {
                 optional: false,
                 picked_lands_to_battlefield: false,
                 rest_bottom_random: true,
+                rest_to_exile: false,
             },
         ]),
         ..Default::default()

@@ -560,6 +560,7 @@ pub fn prophetic_titan() -> CardDefinition {
         optional: false,
         picked_lands_to_battlefield: false,
         rest_bottom_random: false,
+        rest_to_exile: false,
     };
     CardDefinition {
         name: "Prophetic Titan",
