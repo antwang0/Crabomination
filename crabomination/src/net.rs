@@ -596,6 +596,10 @@ pub struct SpellCastLock {
     pub off_turn_locked: bool,
 }
 
+fn default_poison_threshold() -> u32 {
+    10
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerView {
     pub seat: usize,
@@ -607,7 +611,14 @@ pub struct PlayerView {
     /// Heavens, Righteous Valkyrie). Defaults to 20 for pre-field snapshots.
     #[serde(default = "default_view_starting_life")]
     pub starting_life: i32,
+    /// CR 810.5 — in a shared-pool format (2HG) this is the *team's* poison
+    /// total, matching `life`. `poison_loss_threshold` says what it loses at.
     pub poison_counters: u32,
+    /// CR 704.5c / 810.8d — the poison total that loses the game for this
+    /// seat: ten normally, fifteen for a shared-pool team. Surfaced so the HUD
+    /// can render "N/15" without knowing the format.
+    #[serde(default = "default_poison_threshold")]
+    pub poison_loss_threshold: u32,
     /// CR 122 energy counters ({E}) this player has. Surfaced so the
     /// client HUD can show an energy chip alongside life/poison.
     #[serde(default)]

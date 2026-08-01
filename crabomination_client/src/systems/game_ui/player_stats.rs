@@ -581,19 +581,27 @@ fn spawn_commander_tax_chips(
 /// CR 104.3c / 704.5c lethal threshold of 10 poison counters. A sickly green
 /// while low, ambering as it climbs, danger-red once one more Toxic/Infect hit
 /// from a typical source could be lethal. Pure helper.
-fn poison_chip_style(count: u32) -> (Color, Color) {
-    match count {
+/// Colour the poison chip by how far along the tally is toward its threshold,
+/// which is ten normally and fifteen for a shared-pool 2HG team (CR 810.8d).
+fn poison_chip_style(count: u32, threshold: u32) -> (Color, Color) {
+    match count * 10 / threshold.max(1) {
         0..=4 => (Color::srgba(0.20, 0.32, 0.14, 1.0), theme::TEXT_PRIMARY),
         5..=7 => (Color::srgba(0.40, 0.26, 0.10, 1.0), Color::srgb(1.0, 0.80, 0.42)),
         _ => (Color::srgb(0.52, 0.12, 0.12), theme::TEXT_PRIMARY),
     }
 }
 
-/// Spawn the poison chip — `☠ N/10` — coloured by how close the tally is to a
-/// poison-out. Its own spawn fn (rather than a flat `StatChipKind`) so the
-/// colour can track the count, mirroring [`spawn_commander_damage_chip`].
-fn spawn_poison_chip(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, count: u32) {
-    let (bg, fg) = poison_chip_style(count);
+/// Spawn the poison chip — `☠ N/10` (`N/15` on a 2HG team) — coloured by how
+/// close the tally is to a poison-out. Its own spawn fn (rather than a flat
+/// `StatChipKind`) so the colour can track the count, mirroring
+/// [`spawn_commander_damage_chip`].
+fn spawn_poison_chip(
+    parent: &mut ChildSpawnerCommands,
+    ui_fonts: &UiFonts,
+    count: u32,
+    threshold: u32,
+) {
+    let (bg, fg) = poison_chip_style(count, threshold);
     parent
         .spawn((
             Node {
@@ -608,7 +616,7 @@ fn spawn_poison_chip(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, coun
         ))
         .with_children(|chip| {
             chip.spawn((
-                Text::new(format!("\u{2620} {count}/10")),
+                Text::new(format!("\u{2620} {count}/{threshold}")),
                 ui_fonts.tf(12.0),
                 TextColor(fg),
                 Pickable::IGNORE,
@@ -809,7 +817,7 @@ pub fn update_player_stats_chips(
         // the chip once the player has actually been poisoned to avoid
         // cluttering the HUD in non-infect games.
         if p.poison_counters > 0 {
-            spawn_poison_chip(row, &ui_fonts, p.poison_counters);
+            spawn_poison_chip(row, &ui_fonts, p.poison_counters, p.poison_loss_threshold);
         }
         // CR 122 energy — only surface once the player has banked any {E}.
         if p.energy > 0 {
@@ -1328,7 +1336,7 @@ pub fn update_opponent_stats_rows(
                 }
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
                 if p.poison_counters > 0 {
-                    spawn_poison_chip(row, &ui_fonts, p.poison_counters);
+                    spawn_poison_chip(row, &ui_fonts, p.poison_counters, p.poison_loss_threshold);
                 }
                 if p.energy > 0 {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
@@ -1562,17 +1570,21 @@ mod tests {
     }
 
     #[test]
-    fn poison_chip_reddens_as_it_nears_ten() {
+    fn poison_chip_reddens_as_it_nears_its_threshold() {
         // Distinct backgrounds at the safe / warning / danger bands.
-        let safe = poison_chip_style(2).0;
-        let warn = poison_chip_style(6).0;
-        let danger = poison_chip_style(9).0;
+        let safe = poison_chip_style(2, 10).0;
+        let warn = poison_chip_style(6, 10).0;
+        let danger = poison_chip_style(9, 10).0;
         assert_ne!(safe, warn, "warning band differs from safe");
         assert_ne!(warn, danger, "danger band differs from warning");
         // The danger band is the reddest (highest red, lowest green).
         let to_lin = |c: bevy::prelude::Color| c.to_srgba();
         assert!(to_lin(danger).red > to_lin(safe).red);
         assert!(to_lin(danger).green < to_lin(warn).green);
+        // The bands scale with the threshold: 9 of 15 (2HG) is still only the
+        // warning band, not danger.
+        assert_eq!(poison_chip_style(9, 15).0, warn);
+        assert_eq!(poison_chip_style(14, 15).0, danger);
     }
 
     #[test]

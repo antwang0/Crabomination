@@ -1782,3 +1782,21 @@ fn cr_704_5c_solo_player_still_loses_at_ten_poison() {
     assert!(g.players[0].eliminated);
     assert!(!g.players[1].eliminated);
 }
+
+/// The server view reports the *team's* life and poison to both members of a
+/// shared pool, along with the threshold the HUD should render against.
+#[test]
+fn two_headed_giant_view_reports_the_shared_pool() {
+    let mut g = game_with_format(Format::TwoHeadedGiant, 4);
+    g.adjust_life(0, -7);
+    g.players[1].poison_counters = 4;
+    for seat in [0, 1] {
+        let v = crabomination::server::view::project(&g, seat);
+        assert_eq!(v.players[seat].life, 23, "seat {seat} reads the team pool");
+        assert_eq!(v.players[seat].poison_counters, 4, "team poison, not the seat's own");
+        assert_eq!(v.players[seat].poison_loss_threshold, 15);
+    }
+    let v = crabomination::server::view::project(&g, 2);
+    assert_eq!(v.players[2].life, 30, "the other team is untouched");
+    assert_eq!(v.players[2].poison_counters, 0);
+}

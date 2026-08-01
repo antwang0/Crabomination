@@ -620,9 +620,12 @@ fn project_player(
     PlayerView {
         seat: player_seat,
         name: player.name.clone(),
-        life: player.life,
+        // CR 810.4/810.5 — under a shared team pool both members read the
+        // team's totals, not their untouched per-player fields.
+        life: state.effective_life(player_seat),
         starting_life: player.starting_life,
-        poison_counters: player.poison_counters,
+        poison_counters: state.effective_poison(player_seat),
+        poison_loss_threshold: state.poison_loss_threshold(player_seat),
         energy: player.energy,
         experience: player.experience,
         speed: player.speed,
