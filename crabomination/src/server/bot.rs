@@ -2091,7 +2091,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
