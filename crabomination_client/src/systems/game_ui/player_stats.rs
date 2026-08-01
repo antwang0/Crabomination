@@ -19,12 +19,33 @@ use super::{
 
 // ── Stat chips ───────────────────────────────────────────────────────────────
 
-/// Per-stat visual style for a player stat chip: (background, text colour).
-/// Picked to mirror the mana-pip palette — saturated enough to register
-/// as distinct chips, dim enough not to compete with the action buttons.
-/// "👁 Ponder, Swamp" for an opponent hand the viewer has looked at; `None`
-/// when the hand is still hidden (or empty).
-fn revealed_hand_label(hand: &[crabomination::net::HandCardView]) -> Option<String> {
+/// How many revealed hand cards the chip names before collapsing the tail
+/// into a "+N more" — a seven-card hand of long names would otherwise push
+/// the rest of the stat row off screen.
+const REVEALED_HAND_NAMES: usize = 4;
+
+/// Format the revealed-hand chip body. `always` is
+/// `PlayerView::hand_revealed_to_viewer`: with it set the chip shows even for
+/// an empty hand, so "Telepathy is on and they're hellbent" reads as such
+/// rather than as "no chip, who knows".
+fn revealed_hand_body(names: &[&str], always: bool) -> Option<String> {
+    if names.is_empty() {
+        return always.then(|| "\u{1f441} (empty)".to_string());
+    }
+    if names.len() <= REVEALED_HAND_NAMES {
+        return Some(format!("\u{1f441} {}", names.join(", ")));
+    }
+    let shown = names[..REVEALED_HAND_NAMES].join(", ");
+    Some(format!("\u{1f441} {shown} +{} more", names.len() - REVEALED_HAND_NAMES))
+}
+
+/// CR 701.19 — the chip listing a hand the viewer can see, either because
+/// they looked at it (Thought Prison) or because a static reveals it
+/// (Telepathy).
+fn revealed_hand_label(
+    hand: &[crabomination::net::HandCardView],
+    always: bool,
+) -> Option<String> {
     let names: Vec<&str> = hand
         .iter()
         .filter_map(|c| match c {
@@ -32,9 +53,12 @@ fn revealed_hand_label(hand: &[crabomination::net::HandCardView]) -> Option<Stri
             crabomination::net::HandCardView::Hidden { .. } => None,
         })
         .collect();
-    (!names.is_empty()).then(|| format!("👁 {}", names.join(", ")))
+    revealed_hand_body(&names, always)
 }
 
+/// Per-stat visual style for a player stat chip: (background, text colour).
+/// Picked to mirror the mana-pip palette — saturated enough to register
+/// as distinct chips, dim enough not to compete with the action buttons.
 fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
     match kind {
         StatChipKind::Name => (Color::srgba(0.18, 0.22, 0.34, 1.0), theme::TEXT_INFO),
@@ -1299,7 +1323,7 @@ pub fn update_opponent_stats_rows(
                 }
                 // CR 701.19 — a hand we've looked at comes across as Known
                 // cards; list them so the knowledge is actually usable.
-                if let Some(label) = revealed_hand_label(&p.hand) {
+                if let Some(label) = revealed_hand_label(&p.hand, p.hand_revealed_to_viewer) {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::RevealedHand, label);
                 }
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
@@ -1502,7 +1526,25 @@ pub fn animate_life_flash(
 
 #[cfg(test)]
 mod tests {
-    use super::{commander_damage_style, commander_short_name, commander_tax_label, deck_chip_kind, hand_chip_label, land_drop_chip_body, poison_chip_style, storm_chip_visible, StatChipKind};
+    use super::{commander_damage_style, commander_short_name, commander_tax_label, deck_chip_kind, hand_chip_label, land_drop_chip_body, poison_chip_style, revealed_hand_body, storm_chip_visible, StatChipKind};
+
+    #[test]
+    fn revealed_hand_chip_shows_empty_and_truncates_long_hands() {
+        // Nothing known and no standing reveal → no chip at all.
+        assert_eq!(revealed_hand_body(&[], false), None);
+        // A standing reveal (Telepathy) still reports an empty hand.
+        assert_eq!(revealed_hand_body(&[], true).as_deref(), Some("\u{1f441} (empty)"));
+        // Short hands list in full.
+        assert_eq!(
+            revealed_hand_body(&["Forest", "Island"], false).as_deref(),
+            Some("\u{1f441} Forest, Island")
+        );
+        // Long hands collapse the tail so the stat row can't overflow.
+        assert_eq!(
+            revealed_hand_body(&["C0", "C1", "C2", "C3", "C4", "C5"], true).as_deref(),
+            Some("\u{1f441} C0, C1, C2, C3 +2 more")
+        );
+    }
 
     #[test]
     fn hand_chip_flags_no_max_and_over_cap() {

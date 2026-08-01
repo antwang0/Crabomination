@@ -23,52 +23,37 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
-## Noticed this run (modern_decks — Urza's Saga wave 2/3)
+## Noticed this run (modern_decks — Urza's Saga closure)
 
-`set_gaps.py usg` is 254 → **50**. What the last 52 want, grouped by the
-primitive that blocks them:
+`set_gaps.py usg` is at **zero**: the whole Urza block (USG / ULG / UDS) is
+closed. Residuals in what the last three waves shipped:
 
-- **A cycling-cost reduction hook** (Fluctuator — "cycling abilities you
-  activate cost {2} less"). Wants a `StaticEffect` consulted where the Cycling
-  keyword's cost is paid.
-- **Flat damage prevention statics**: Energy Field ("prevent all damage from
-  sources you don't control") and the five Runes of Protection ("the next time
-  a [filter] source of your choice would deal damage to you this turn, prevent
-  it" — a `PreventionTarget`-filtered shield). Serra's Hymn wants the divided
-  form. (Urza's Armor shipped as `StaticEffect::ReduceDamageToYouBy`.)
-- **A spell-source damage bonus** (Sulfuric Vapors). `AddDamageFromColorToPlayers`
-  covers "any source, any player"; the printed card is spell-only and hits
-  permanents too.
-- **Colour/type rewrites as statics**: Contamination (every land taps for
-  {B}) and Telepathy (opponents play with hands revealed — the state is there
-  in `hands_revealed_to`, the static isn't). (Darkest Hour shipped as
-  `StaticEffect::SetColorOfMatching`.)
-- **State triggers** (CR 603.8) for Hidden Predators and Veiled Crocodile
-  ("when an opponent controls a creature with power 4 or greater, …").
-  `flip_when_predicate` is the closest existing shape.
-- **`SelectionRequirement::IsSource`** — "Return this enchantment to its
-  owner's hand" as an activation cost (Attunement). `return_permanent_cost`
-  can only name *another* permanent today.
-- **A cleanup-step delayed trigger** (Waylay's "exile them at the beginning of
-  the next cleanup step"). `AtNextEndStep` / the new `AtEndOfCombat` cover the
-  other two windows.
-- **Per-player "choose one you control" moves**: Umbilicus, Noetic Scales.
-  `EachPlayerReturnsAMatchingPermanent` covers the unconditional shape;
-  these want a per-player predicate/cost gate.
-- **Reanimation with two chosen graveyard cards** (Victimize) and
-  return-all-basics-from-all-graveyards (Planar Birth).
-- The rest are one-offs: Abundance (draw replacement), Academy Researchers
-  (put an Aura from hand attached), Argothian Wurm, Brand, Carpet of Flowers,
-  Copper Gnomes, Defensive Formation, Diabolic Servitude, Discordant Dirge,
-  Electryte, Greener Pastures, Ill-Gotten Gains, Lifeline, No Rest for the
-  Wicked, Okk ("can't attack unless a creature with greater power also
-  attacks"), Outmaneuver, Persecute, Phyrexian Processor, Power Taint,
-  Purging Scythe, Remembrance, Sporogenesis, Temporal Aperture, Thran Turbine
-  (mana that can't be spent on spells), Time Spiral, Viashino Sandswimmer,
-  Wild Dogs, Yawgmoth's Will, Veiled Apparition.
-
-Residuals in what shipped:
-
+- **Serra's Hymn's shield is single-target**, not "divided as you choose among
+  any number of targets" — there's no divided form of `PreventNextDamage`
+  (`DealDamageDivided` is the damage-side analogue to copy).
+- **Temporal Aperture's free cast rides the card, not the library top.**
+  `GrantMayPlay` stamps `may_play_until` on the card, so drawing it or moving
+  it off the top doesn't revoke the permission the way "for as long as that
+  card remains on top" should.
+- **Abundance's land/nonland pick is a bot policy** (dig for whichever kind the
+  hand is short on) rather than a real per-draw prompt; the yes/no is a real
+  decision, the *kind* is not.
+- **Phyrexian Processor's Minion is a 0/0 with X +1/+1 counters**, not a
+  printed X/X — `TokenDefinition.dynamic_pt` would evaluate in the token's own
+  context, where `Value::ChosenNumberOfSource` reads the token, not the
+  Processor.
+- **Contamination replaces every land's mana**, including its controller's, and
+  is not restricted to the first active static (multiple copies are
+  idempotent, which is right, but a second colour would be ignored).
+- **Okk's partner check reads the declared batch**, so a creature that gains
+  power *after* attackers are declared can't retroactively free it (correct)
+  but one that loses power can't retroactively lock it either (CR 508.1a is a
+  declaration-time check, so this is right — noted only because it looks
+  asymmetric).
+- **`Effect::UnlessPlayerPays` auto-declines for bots**, so the upkeep-tax
+  bodies (Endless Wurm, Child of Gaea, Drifting Djinn, Contamination, Veiled
+  Apparition, Power Taint) always take the punishment under AutoDecider. Same
+  policy gap as Masticore.
 - **Opal Titan's protection rider is dropped** — "protection from each of that
   spell's colours" needs a keyword grant computed from the trigger's spell.
 - **Soul Sculptor's blanking is indefinite**, not "until a player casts a
@@ -80,9 +65,22 @@ Residuals in what shipped:
 - **`Effect::GrantKeywordToMatchingThisTurn` matches card-locally**, so a
   creature granted flying by an Aura is still stopped by Falter (CR 613.8
   dependency ordering isn't modeled).
-- **`Effect::UnlessPlayerPays` auto-declines for bots**, so the upkeep-tax
-  bodies (Endless Wurm, Child of Gaea, Drifting Djinn, Contamination) always
-  sacrifice under the AutoDecider. Same policy gap as Masticore.
+
+Worth doing next, in rough order of leverage:
+
+- **A divided-prevention primitive** (`PreventNextDamageDivided`) — Serra's
+  Hymn today, and every "prevent the next X damage divided as you choose"
+  printing after it. It can share `Decision::DivideDamage` with
+  `DealDamageDivided`.
+- **`Value` in `TokenDefinition.power/toughness`**, evaluated in the *creating*
+  effect's context. Unblocks printed X/X tokens (Phyrexian Processor, and the
+  many "create an X/X" cards currently modeled with counters).
+- **A real "for as long as it remains on top" permission** — a library-top
+  linked `may_play` that revokes on any zone/order change.
+- **The client cannot be built in this environment** (`wayland-sys` needs
+  `wayland-client.pc`, which isn't installed), so client changes are
+  reviewed by hand and covered by pure-function unit tests only. Worth adding
+  the system package to the container image.
 
 ## Noticed this run (modern_decks — Urza block closure)
 

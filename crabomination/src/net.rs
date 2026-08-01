@@ -821,6 +821,12 @@ pub struct PlayerView {
     /// for snapshot back-compat (defaults to all-zero).
     #[serde(default)]
     pub devotion: [u32; 5],
+    /// CR 701.19 — true when the viewer may see this player's whole hand,
+    /// either because they looked at it (Thought Prison) or because a static
+    /// reveals it (Telepathy). Lets a UI badge the hand rather than leaving
+    /// the player to guess why the cards are face up. `#[serde(default)]`.
+    #[serde(default)]
+    pub hand_revealed_to_viewer: bool,
     /// CR 725 — true when this player is the monarch. Surfaced so UIs can
     /// show a crown on the monarch's portrait. `#[serde(default)]` for
     /// snapshot back-compat.

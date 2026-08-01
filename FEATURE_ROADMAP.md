@@ -16,26 +16,41 @@ A terse checklist. The exhaustive primitive-by-primitive list (and every card
 exercising each) was elided in a compaction pass; recover it from
 `git log -p -- FEATURE_ROADMAP.md`.
 
-- **Urza's Saga mostly closed** (`sets::usg` + `sets::usg2`, 201 cards —
-  `set_gaps.py usg` 254 → 50): the echo, cycling-land, verse-counter, Aura
-  recursion and Opal/Hidden/Veiled animation cycles, plus the utility shell.
-  New primitives: `Effect::{BecomeCreatureLosingTypes, SetCardTypesTo}` (CR
-  205.1b — an animation that REPLACES the type line, reverted by timestamp),
-  `Effect::GrantKeywordToMatchingThisTurn` (CR 611.2c — Falter's affected set
-  isn't locked at resolution), `Effect::DealDamageToEachPlayerPerPermanent`
-  (Acidic Soil / Disorder), `Effect::EachPlayerReturnsAMatchingPermanent`
-  (Curfew), `Effect::AtEndOfCombat` (CR 603.7a), `StaticEffect::WhileCondition`
-  (CR 611.2 — the general predicate gate), `WardCost::SacrificeMatching`,
+- **Urza block complete** — `set_gaps.py usg`, `ulg` and `uds` all at zero
+  (`sets::usg`, `usg2`, `usg3`, 246 USG cards). The echo, cycling-land,
+  verse-counter, Aura recursion, Rune-of-Protection and Opal/Hidden/Veiled
+  animation cycles, plus the utility shell. New primitives, by wave:
+  `Effect::{BecomeCreatureLosingTypes, SetCardTypesTo}` (CR 205.1b — an
+  animation that REPLACES the type line, reverted by timestamp),
+  `Effect::GrantKeywordToMatchingThisTurn` (CR 611.2c),
+  `Effect::DealDamageToEachPlayerPerPermanent`,
+  `Effect::EachPlayerReturnsAMatchingPermanent`, `Effect::AtEndOfCombat`
+  (CR 603.7a), `StaticEffect::WhileCondition` (CR 611.2 — the general
+  predicate gate), `WardCost::SacrificeMatching`,
   `ActivatedAbility.half_life_cost` (CR 118.4), `EquipScale.exclude_host`,
-  `CounterType::Petal`, `StaticEffect::{ReduceDamageToYouBy,
-  SetColorOfMatching}`, and `DynamicPt::{ControllerLife,
-  PermanentsControlledMatchingToughness}`. Correctness: CR 300.2a — a land card
-  can only be *played*, never cast (`GameError::CannotCastLand`); the Onslaught
-  cycling lands lost their stray basic land types. Tests in
-  `classic_sets/{usg,usg2}`, `core_rules/cr_recent54`. The remaining 50 gaps
-  and what they want are in TODO.md.
-- **Urza block complete** — `set_gaps.py ulg` and `uds` both at zero
-  (`sets::ulg`, `sets::uds`, 126 UDS cards). New primitives: `Duration::
+  `CounterType::{Petal, Fungus}`, `StaticEffect::{ReduceDamageToYouBy,
+  SetColorOfMatching}`, `DynamicPt::{ControllerLife,
+  PermanentsControlledMatchingToughness}`; then
+  `CardDefinition.state_trigger` (CR 603.8 — the general "When [condition],
+  [effect]" state-triggered ability, latched per permanent),
+  `DelayedKind::NextCleanupStep` (CR 514.3a — cleanup fires its step triggers
+  before `do_cleanup`), `StaticEffect::{OpponentsPlayWithHandsRevealed,
+  CyclingCostReduction, AddDamageFromColorSpells, LandsProduceColorInstead,
+  PreventAllDamageToControllerFromOthersSources,
+  ControllerAssignsAttackersCombatDamage (CR 510.1a),
+  MayReplaceDrawWithRevealUntilKind (CR 121.2a)}`,
+  `Effect::{PlayerReturnsPermanentUnlessPaysLife,
+  ReturnCreaturesWithPowerGreaterThanHand, ExileLastCreatedTokensAtNextCleanup,
+  SearchSameNameAs, ChooseColorThenDiscardMatching, PutAuraFromHandAttachedTo,
+  RememberPermanentOnSource}`, `Selector::LeastToughnessAmongAll`,
+  `PlayerRef::HighestLife`, `SelectionRequirement::IsSource`,
+  `Value::ChosenNumberOfSource`, `Predicate::TriggerSourceIsSourcesChosenPermanent`,
+  and `Keyword::{CantAttackUnlessGreaterPowerAttacks,
+  CantBlockUnlessGreaterPowerBlocks}`. Correctness: CR 300.2a — a land card can
+  only be *played*, never cast; CR 603.10 — `Value::CountersOn` reads the dead
+  *subject's* LKI, not just the resolving source's. Tests in
+  `classic_sets/{usg,usg2,usg3}`, `core_rules/{cr_recent54,cr_recent55}`.
+  ULG / UDS (`sets::ulg`, `sets::uds`, 126 UDS cards) added: `Duration::
   WhileSourceTapped` (CR 611.2c), `Value::{PermanentsTappedThisEffect,
   CardsRevealedThisEffect}`, `PreventionTarget::Anything` +
   `Effect::PreventNextEventFromChosenSourceAnywhere` (Martyr's Cause),
@@ -1641,8 +1656,8 @@ Each unblocks a large swath of cards.
    Counter-placement replacements (Hardened Scales, Doubling Season, Mowu's
    self-scoped `ExtraPlusOneCounterOnSelf`) now also apply on the **proliferate**
    path (CR 614.16), via `scaled_counter_count_on`. The draw branch is closed
-   (skip, exile-and-play, redirect, doubling, empty-hand bonus, dredge and
-   `MayReplaceDrawWithTutor`). Still to generalize: as-a-copy ETB. A *general* as-enters one-shot now
+   (skip, exile-and-play, redirect, doubling, empty-hand bonus, dredge,
+   `MayReplaceDrawWithTutor` and `MayReplaceDrawWithRevealUntilKind`). Still to generalize: as-a-copy ETB. A *general* as-enters one-shot now
    ships (`CardDefinition.as_enters_effect`, resolved pre-SBA — Ixidron). (Devouring Hellion / Rescuer Sphinx's
    as-enters reflexive shape now ship via `devour` / a reflexive ETB.)
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes`;
@@ -1674,7 +1689,9 @@ Each unblocks a large swath of cards.
 - 🟡 **Divided damage / counters** — `Effect::DealDamageDivided` +
   `Effect::DistributeCounters` (Jugan) share `Decision::DivideDamage` (the modal
   is noun-aware). Forked Bolt, Pyrokinesis, Crackle with Power. Remaining:
-  "choose targets as it resolves".
+  "choose targets as it resolves", and the *prevention* sibling — "prevent the
+  next X damage divided as you choose" has no primitive (Serra's Hymn ships
+  single-target).
 - 🟡 **Targeting refinements:** resolution-time legality re-check (608.2b) ships
   for single/multi-target spells and Auras, and now resolves `{X}`-from-cost
   target filters (Hearth Kami's "artifact with mana value X" via

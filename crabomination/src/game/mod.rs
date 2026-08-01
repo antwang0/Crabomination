@@ -8281,7 +8281,14 @@ impl GameState {
         self.battlefield.iter().any(|c| {
             c.controller == player
                 && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::PreventAllDamageToController)
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::PreventAllDamageToController
+                            // Energy Field's shield is total against every
+                            // source the player doesn't control, which is the
+                            // only kind an opponent can point at them.
+                            | crate::effect::StaticEffect::PreventAllDamageToControllerFromOthersSources
+                    )
                 })
         })
     }

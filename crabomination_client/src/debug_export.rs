@@ -214,6 +214,7 @@ mod tests {
                 damage_fully_prevented: false,
                 damage_redirect_to: None,
                 devotion: [0; 5],
+                hand_revealed_to_viewer: false,
                 is_monarch: false,
                 has_city_blessing: false,
                 enchanted_by: Vec::new(),

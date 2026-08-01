@@ -752,6 +752,8 @@ fn project_player(
         damage_fully_prevented,
         damage_redirect_to,
         devotion,
+        hand_revealed_to_viewer: player_seat != viewer_seat
+            && state.hand_visible_to(viewer_seat, player_seat),
         is_monarch,
         // CR 303.4a — Auras enchanting this player (Curses, Psychic Possession).
         enchanted_by: state
@@ -2703,6 +2705,35 @@ mod tests {
         assert_eq!(bear_v.prevention_remaining, Some(2), "the next-2 shield's points");
         assert_eq!(v.players[0].prevention_remaining, None, "a blanket player fog");
         assert!(v.damage_cant_be_prevented_this_turn);
+    }
+
+    /// Telepathy publishes opponents' hands one-way, and the view says so.
+    #[test]
+    fn telepathy_reveals_opponent_hands_one_way() {
+        let mut state = two_player_game();
+        state.add_card_to_hand(1, catalog::grizzly_bears());
+        state.add_card_to_hand(0, catalog::grizzly_bears());
+        let v = project(&state, 0);
+        assert!(!v.players[1].hand_revealed_to_viewer);
+        assert!(matches!(v.players[1].hand[0], crate::net::HandCardView::Hidden { .. }));
+        state.add_card_to_battlefield(0, catalog::telepathy());
+        let v = project(&state, 0);
+        assert!(v.players[1].hand_revealed_to_viewer);
+        assert!(matches!(v.players[1].hand[0], crate::net::HandCardView::Known(_)));
+        // Your own hand isn't "revealed to you"; the opponent still can't see it.
+        assert!(!v.players[0].hand_revealed_to_viewer);
+        let their_view = project(&state, 1);
+        assert!(!their_view.players[0].hand_revealed_to_viewer);
+        assert!(matches!(their_view.players[0].hand[0], crate::net::HandCardView::Hidden { .. }));
+    }
+
+    /// Energy Field's blanket shield reads as full immunity in the view.
+    #[test]
+    fn energy_field_reads_as_full_damage_prevention() {
+        let mut state = two_player_game();
+        assert!(!project(&state, 0).players[0].damage_fully_prevented);
+        state.add_card_to_battlefield(0, catalog::energy_field());
+        assert!(project(&state, 0).players[0].damage_fully_prevented);
     }
 
     /// The Lattice permission and the combat-damage redirect surface per-view.
