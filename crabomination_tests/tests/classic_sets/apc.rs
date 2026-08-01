@@ -433,3 +433,358 @@ fn dodecapod_is_binned_by_your_own_discard() {
     g.discard_card(0, pod, &mut events);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == pod));
 }
+
+/// Necra Sanctuary drains 1, or 3 with both off-colours out.
+#[test]
+fn necra_sanctuary_scales_with_your_colours() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::necra_sanctuary());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    upkeep(&mut g);
+    assert_eq!(g.players[1].life, 19, "green alone is the small mode");
+    g.add_card_to_battlefield(0, catalog::savannah_lions()); // white
+    upkeep(&mut g);
+    assert_eq!(g.players[1].life, 16);
+}
+
+/// Raka Sanctuary pings a creature for 1, or 3 with both out.
+#[test]
+fn raka_sanctuary_pings_for_three_with_both_colours() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::raka_sanctuary());
+    g.add_card_to_battlefield(0, catalog::savannah_lions()); // white
+    g.add_card_to_battlefield(0, catalog::coastal_drake()); // blue
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant());
+    upkeep(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "3 damage killed the 3/3");
+}
+
+/// Orim's Thunder burns for the destroyed permanent's mana value when kicked.
+#[test]
+fn orims_thunder_kicked_burns_for_mana_value() {
+    let mut g = main_phase();
+    let ench = g.add_card_to_battlefield(1, catalog::powerstone_minefield()); // MV 4
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let thunder = g.add_card_to_hand(0, catalog::orims_thunder());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: thunder,
+        target: Some(Target::Permanent(ench)),
+        additional_targets: vec![Target::Permanent(victim)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast kicked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none());
+    assert!(g.battlefield_find(victim).is_none(), "4 damage killed the 3/3");
+}
+
+/// Penumbra Kavu leaves a black body behind.
+#[test]
+fn penumbra_kavu_leaves_a_shadow() {
+    let mut g = main_phase();
+    let kavu = g.add_card_to_battlefield(0, catalog::penumbra_kavu());
+    let mut events = Vec::new();
+    g.destroy_permanent(kavu, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Kavu").expect("token");
+    assert_eq!((token.definition.power, token.definition.toughness), (3, 3));
+}
+
+/// Quagmire Druid trades a creature for an enchantment.
+#[test]
+fn quagmire_druid_eats_an_enchantment() {
+    let mut g = main_phase();
+    let druid = g.add_card_to_battlefield(0, catalog::quagmire_druid());
+    g.clear_sickness(druid);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ench = g.add_card_to_battlefield(1, catalog::powerstone_minefield());
+    activate(&mut g, 0, druid, 0, Some(Target::Permanent(ench)));
+    assert!(g.battlefield_find(ench).is_none());
+}
+
+/// Quicksilver Dagger pings and cantrips off the host.
+#[test]
+fn quicksilver_dagger_pings_and_draws() {
+    let mut g = main_phase();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(host);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let dagger = g.add_card_to_hand(0, catalog::quicksilver_dagger());
+    cast(&mut g, 0, dagger, Some(Target::Permanent(host)));
+    let before = g.players[0].hand.len();
+    activate(&mut g, 0, host, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 19);
+    assert_eq!(g.players[0].hand.len(), before + 1);
+}
+
+/// Savage Gorilla trades itself for a shrink and a card.
+#[test]
+fn savage_gorilla_shrinks_and_draws() {
+    let mut g = main_phase();
+    let ape = g.add_card_to_battlefield(0, catalog::savage_gorilla());
+    g.clear_sickness(ape);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, 0, ape, 0, Some(Target::Permanent(victim)));
+    assert!(g.battlefield_find(victim).is_none(), "-3/-3 killed the 2/2");
+    assert!(g.battlefield_find(ape).is_none(), "it sacrificed itself");
+}
+
+/// Shield of Duty and Reason grants both protections.
+#[test]
+fn shield_of_duty_and_reason_grants_two_protections() {
+    let mut g = main_phase();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::shield_of_duty_and_reason());
+    cast(&mut g, 0, aura, Some(Target::Permanent(host)));
+    let kws = g.computed_permanent(host).unwrap().keywords;
+    assert!(kws.contains(&Keyword::Protection(Color::Green)));
+    assert!(kws.contains(&Keyword::Protection(Color::Blue)));
+}
+
+/// Spiritmonger grows when it bites a creature.
+#[test]
+fn spiritmonger_grows_off_combat_damage() {
+    let mut g = two_player_game();
+    let monger = g.add_card_to_battlefield(0, catalog::spiritmonger());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(monger);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: monger, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, monger)])).expect("block");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(monger).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1
+    );
+}
+
+/// Squee's Embrace hands the host back when it dies.
+#[test]
+fn squees_embrace_returns_the_host() {
+    let mut g = main_phase();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::squees_embrace());
+    cast(&mut g, 0, aura, Some(Target::Permanent(host)));
+    assert_eq!(g.computed_permanent(host).unwrap().power, 4);
+    let mut events = Vec::new();
+    g.destroy_permanent(host, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == host));
+}
+
+/// Strength of Night's kicker stacks on Zombies.
+#[test]
+fn strength_of_night_kicked_stacks_on_zombies() {
+    let mut g = main_phase();
+    let zombie = g.add_card_to_battlefield(0, catalog::mournful_zombie());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pump = g.add_card_to_hand(0, catalog::strength_of_night());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: pump,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast kicked");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(zombie).unwrap().power, 5, "2 + 1 + 2");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "2 + 1");
+}
+
+/// Suffocating Blast counters and burns.
+#[test]
+fn suffocating_blast_counters_and_burns() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let blast = g.add_card_to_hand(0, catalog::suffocating_blast());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: blast,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![Target::Permanent(victim)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the Bolt was countered");
+    assert!(g.battlefield_find(victim).is_none(), "3 damage killed the 2/2");
+}
+
+/// Sylvan Messenger digs four for Elves.
+#[test]
+fn sylvan_messenger_digs_for_elves() {
+    let mut g = main_phase();
+    g.players[0].library.clear();
+    let elf = g.add_card_to_library(0, catalog::urborg_elf());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let messenger = g.add_card_to_hand(0, catalog::sylvan_messenger());
+    cast(&mut g, 0, messenger, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == elf));
+}
+
+/// Temporal Spring puts a permanent on top of its library.
+#[test]
+fn temporal_spring_tucks_a_permanent() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spring = g.add_card_to_hand(0, catalog::temporal_spring());
+    cast(&mut g, 0, spring, Some(Target::Permanent(bear)));
+    assert_eq!(g.players[1].library.first().map(|c| c.id), Some(bear));
+}
+
+/// Tranquil Path sweeps enchantments and cantrips.
+#[test]
+fn tranquil_path_sweeps_enchantments() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(1, catalog::powerstone_minefield());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    let path = g.add_card_to_hand(0, catalog::tranquil_path());
+    cast(&mut g, 0, path, None);
+    assert!(g.battlefield_find(mine).is_none());
+    assert_eq!(g.players[0].hand.len(), before + 1, "the Path left, a card came in");
+}
+
+/// Unnatural Selection rewrites a creature's type.
+#[test]
+fn unnatural_selection_rewrites_a_type() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::unnatural_selection());
+    let sel = g.battlefield.iter().find(|c| c.definition.name == "Unnatural Selection").unwrap().id;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, 0, sel, 0, Some(Target::Permanent(bear)));
+    let types = g.computed_permanent(bear).unwrap().subtypes.creature_types;
+    assert_eq!(types.len(), 1, "the printed Bear type was replaced");
+    assert!(!types.contains(&crabomination::card::CreatureType::Bear));
+}
+
+/// Urborg Uprising returns two creatures and cantrips.
+#[test]
+fn urborg_uprising_returns_two_creatures() {
+    let mut g = main_phase();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(0, catalog::hill_giant());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let uprising = g.add_card_to_hand(0, catalog::urborg_uprising());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: uprising,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == a));
+    assert!(g.players[0].hand.iter().any(|c| c.id == b));
+}
+
+/// Whirlpool Rider refreshes your hand.
+#[test]
+fn whirlpool_rider_refreshes_your_hand() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+    }
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::hill_giant());
+    }
+    let rider = g.add_card_to_hand(0, catalog::whirlpool_rider());
+    let before = g.players[0].hand.len();
+    cast(&mut g, 0, rider, None);
+    assert_eq!(g.players[0].hand.len(), before - 1, "the Rider left the hand, the rest cycled");
+}
+
+/// Overgrown Estate trades lands for life.
+#[test]
+fn overgrown_estate_trades_lands_for_life() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::overgrown_estate());
+    let estate = g.battlefield.iter().find(|c| c.definition.name == "Overgrown Estate").unwrap().id;
+    g.add_card_to_battlefield(0, catalog::forest());
+    activate(&mut g, 0, estate, 0, None);
+    assert_eq!(g.players[0].life, 23);
+}
+
+/// Powerstone Minefield bites everything that fights.
+#[test]
+fn powerstone_minefield_bites_attackers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::powerstone_minefield());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    // Through `perform_action` so the unified dispatcher sees AttackerDeclared
+    // (`declare_attackers` alone only walks the hardcoded SelfSource scope).
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2 damage killed the 2/2");
+}
+
+/// Razorfin Hunter is a straight pinger.
+#[test]
+fn razorfin_hunter_pings() {
+    let mut g = main_phase();
+    let hunter = g.add_card_to_battlefield(0, catalog::razorfin_hunter());
+    g.clear_sickness(hunter);
+    activate(&mut g, 0, hunter, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 19);
+}
+
+/// Urborg Elf taps for the Ana wedge.
+#[test]
+fn urborg_elf_taps_for_mana() {
+    let mut g = main_phase();
+    let elf = g.add_card_to_battlefield(0, catalog::urborg_elf());
+    g.clear_sickness(elf);
+    g.players[0].mana_pool.empty();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elf,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}

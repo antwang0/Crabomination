@@ -300,7 +300,6 @@ impl Effect {
             | Effect::PutResolvingSpellInLibraryFromTop(_)
             // Group / each-player effects with no cast-time target slot.
             | Effect::EachPlayerPutsHandCardOnTop { .. }
-            | Effect::LandsBecomeChosenBasicType { .. }
             | Effect::ChooseBasicLandTypeForSource
             | Effect::ExileTopSelfPumpIfCreature
             | Effect::RandomGraveyardCardToBattlefieldElse { .. }
@@ -871,6 +870,7 @@ impl Effect {
             Effect::EscalatingThisTurn { modes } => modes.iter().any(|e| e.requires_target()),
             Effect::EachPlayerMayPutPermanentFromHand { .. } => false,
             Effect::BecomeChosenColor { what, .. }
+            | Effect::BecomeChosenCreatureType { what, .. }
             | Effect::BecomeColor { what, .. }
             | Effect::BecomeCreatureType { what, .. }
             | Effect::AddCreatureTypes { what, .. }
@@ -955,6 +955,7 @@ impl Effect {
                 player_has_target(who) || value_has_target(amount)
             }
             Effect::BecomeBasicLand { what, .. }
+            | Effect::LandsBecomeChosenBasicType { what, .. }
             | Effect::GainAllBasicLandTypes { what, .. }
             | Effect::GainLandType { what, .. }
             | Effect::ResetCreature { what, .. } => sel_has_target(what),
@@ -1519,6 +1520,7 @@ impl Effect {
             | Effect::AddCardTypeIndefinitely { what, .. }
             | Effect::LoseCardTypeUntilEot { what, .. }
             | Effect::BecomeChosenColor { what, .. }
+            | Effect::BecomeChosenCreatureType { what, .. }
             | Effect::BecomeColor { what, .. }
             | Effect::BecomeCreatureType { what, .. }
             | Effect::AddCreatureTypes { what, .. }
@@ -2842,6 +2844,7 @@ impl Effect {
                 | Effect::RemoveKeywordCounter { what, .. }
                 | Effect::AddRandomMissingCounter { what, .. } => sel_find(what, slot),
                 Effect::BecomeBasicLand { what, .. }
+                | Effect::LandsBecomeChosenBasicType { what, .. }
                 | Effect::GainLandType { what, .. }
                 | Effect::ResetCreature { what, .. } => sel_find(what, slot),
                 Effect::RevealUntilLandDamage { to, .. }
@@ -2892,6 +2895,7 @@ impl Effect {
                 | Effect::BecomeTreasure { what }
                 | Effect::AddCounterOfPresentKind { what }
                 | Effect::BecomeChosenColor { what, .. }
+                | Effect::BecomeChosenCreatureType { what, .. }
                 | Effect::BecomeColor { what, .. }
                 | Effect::BecomeCreatureType { what, .. }
                 | Effect::AddCreatureTypes { what, .. }

@@ -4884,6 +4884,11 @@ pub enum Effect {
     /// controller's choice for `duration` (CR 105 / layer 5 SetColors).
     /// Wild Mongrel ("becomes the color of your choice until end of turn").
     BecomeChosenColor { what: Selector, duration: Duration },
+    /// CR 205.1b — the creature-type sibling of `BecomeChosenColor`: the
+    /// controller names a creature type and every permanent picked by `what`
+    /// becomes exactly that type for `duration` (Unnatural Selection). The
+    /// printed "other than Wall" restriction isn't enforced.
+    BecomeChosenCreatureType { what: Selector, duration: Duration },
     /// Each permanent picked by `what` becomes exactly `colors` (replacing
     /// its colors) for `duration` (CR 105 / layer-5 `SetColors`). The
     /// fixed-color sibling of `BecomeChosenColor`. Crimson Wisps ("becomes

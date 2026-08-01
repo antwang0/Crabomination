@@ -790,3 +790,607 @@ pub fn dodecapod() -> CardDefinition {
         ..creature("Dodecapod", cost(&[generic(4)]), vec![CreatureType::Golem], 3, 3)
     }
 }
+
+/// Necra Disciple — {B} 1/1. Fixes, or a one-point shield.
+pub fn necra_disciple() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            disciple_ability(
+                g(),
+                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::ONE) },
+            ),
+            disciple_ability(
+                w(),
+                Effect::PreventNextDamage { target: target_any(), amount: Value::ONE },
+            ),
+        ],
+        ..creature(
+            "Necra Disciple",
+            cost(&[b()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Raka Disciple — {R} 1/1. A one-point shield, or rented flying.
+pub fn raka_disciple() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            disciple_ability(
+                w(),
+                Effect::PreventNextDamage { target: target_any(), amount: Value::ONE },
+            ),
+            disciple_ability(
+                u(),
+                Effect::GrantKeyword {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+            ),
+        ],
+        ..creature(
+            "Raka Disciple",
+            cost(&[r()]),
+            vec![CreatureType::Minotaur, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Necra Sanctuary — {2}{B}. One life, or three.
+pub fn necra_sanctuary() -> CardDefinition {
+    sanctuary(
+        "Necra Sanctuary",
+        cost(&[generic(2), b()]),
+        Color::Green,
+        Color::White,
+        Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE },
+        Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(3) },
+    )
+}
+
+/// Raka Sanctuary — {2}{R}. One damage, or three.
+pub fn raka_sanctuary() -> CardDefinition {
+    sanctuary(
+        "Raka Sanctuary",
+        cost(&[generic(2), r()]),
+        Color::White,
+        Color::Blue,
+        Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::ONE },
+        Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(3) },
+    )
+}
+
+/// Mournful Zombie — {2}{B} 2/1 that rents out a point of life.
+pub fn mournful_zombie() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![disciple_ability(
+            w(),
+            Effect::GainLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE },
+        )],
+        ..creature("Mournful Zombie", cost(&[generic(2), b()]), vec![CreatureType::Zombie], 2, 1)
+    }
+}
+
+/// Orim's Thunder — {2}{W}. Naturalize that also burns when kicked.
+pub fn orims_thunder() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[r()]))],
+        ..instant(
+            "Orim's Thunder",
+            cost(&[generic(2), w()]),
+            Effect::Seq(vec![
+                Effect::Destroy {
+                    what: target_filtered(R::Artifact.or(R::Enchantment)),
+                },
+                Effect::If {
+                    cond: Predicate::SpellWasKicked,
+                    then: Box::new(Effect::DealDamage {
+                        to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                        amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )
+    }
+}
+
+/// A Penumbra body: it leaves a black copy of itself behind.
+fn penumbra(
+    name: &'static str,
+    token_name: &str,
+    c: ManaCost,
+    types: Vec<CreatureType>,
+    p: i32,
+    t: i32,
+) -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: crate::card::TokenDefinition {
+                    name: token_name.to_string(),
+                    power: p,
+                    toughness: t,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Black],
+                    subtypes: Subtypes { creature_types: types.clone(), ..Default::default() },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..creature(name, c, types, p, t)
+    }
+}
+
+/// Penumbra Bobcat — {2}{G} 2/1 that leaves a black 2/1 Cat.
+pub fn penumbra_bobcat() -> CardDefinition {
+    penumbra("Penumbra Bobcat", "Cat", cost(&[generic(2), g()]), vec![CreatureType::Cat], 2, 1)
+}
+
+/// Penumbra Kavu — {4}{G} 3/3 that leaves a black 3/3 Kavu.
+pub fn penumbra_kavu() -> CardDefinition {
+    penumbra("Penumbra Kavu", "Kavu", cost(&[generic(4), g()]), vec![CreatureType::Kavu], 3, 3)
+}
+
+/// Quagmire Druid — {2}{B} 2/2. A creature buys an enchantment kill.
+pub fn quagmire_druid() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            tap_cost: true,
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Destroy { what: target_filtered(R::Enchantment) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Quagmire Druid",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Zombie, CreatureType::Druid],
+            2,
+            2,
+        )
+    }
+}
+
+/// Quicksilver Dagger — {1}{U}{R}. The host pings and cantrips.
+pub fn quicksilver_dagger() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            activated_abilities: vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::Target(0)),
+                        amount: Value::ONE,
+                    },
+                    draw(1),
+                ]),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..enchantment("Quicksilver Dagger", cost(&[generic(1), u(), r()]))
+    }
+}
+
+/// Razorfin Hunter — {U}{R} 1/1 pinger.
+pub fn razorfin_hunter() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage { to: target_any(), amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature(
+            "Razorfin Hunter",
+            cost(&[u(), r()]),
+            vec![CreatureType::Merfolk, CreatureType::Goblin],
+            1,
+            1,
+        )
+    }
+}
+
+/// Reef Shaman — {U} 0/2. Retypes a land for a turn.
+pub fn reef_shaman() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::LandsBecomeChosenBasicType {
+                what: target_filtered(R::Land),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Reef Shaman",
+            cost(&[u()]),
+            vec![CreatureType::Merfolk, CreatureType::Shaman],
+            0,
+            2,
+        )
+    }
+}
+
+/// Shimmering Mirage — {1}{U}. Retype a land, then cantrip.
+pub fn shimmering_mirage() -> CardDefinition {
+    instant(
+        "Shimmering Mirage",
+        cost(&[generic(1), u()]),
+        Effect::Seq(vec![
+            Effect::LandsBecomeChosenBasicType {
+                what: target_filtered(R::Land),
+                duration: Duration::EndOfTurn,
+            },
+            draw(1),
+        ]),
+    )
+}
+
+/// Smash — {2}{R}. Artifact removal that replaces itself.
+pub fn smash() -> CardDefinition {
+    instant(
+        "Smash",
+        cost(&[generic(2), r()]),
+        Effect::Seq(vec![Effect::Destroy { what: target_filtered(R::Artifact) }, draw(1)]),
+    )
+}
+
+/// Savage Gorilla — {4}{G} 3/3. Trades itself for a shrink and a card.
+pub fn savage_gorilla() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), b()]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: Value::Const(-3),
+                    toughness: Value::Const(-3),
+                    duration: Duration::EndOfTurn,
+                },
+                draw(1),
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Savage Gorilla", cost(&[generic(4), g()]), vec![CreatureType::Ape], 3, 3)
+    }
+}
+
+/// Shield of Duty and Reason — {W}. Protection from green and blue.
+pub fn shield_of_duty_and_reason() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![
+                Keyword::Protection(Color::Green),
+                Keyword::Protection(Color::Blue),
+            ],
+            ..Default::default()
+        }),
+        ..enchantment("Shield of Duty and Reason", cost(&[w()]))
+    }
+}
+
+/// Spectral Lynx — {1}{W} 2/1 pro-green that regenerates for {B}.
+pub fn spectral_lynx() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Protection(Color::Green)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..creature(
+            "Spectral Lynx",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Cat, CreatureType::Spirit],
+            2,
+            1,
+        )
+    }
+}
+
+/// Spiritmonger — {3}{B}{G} 6/6 that grows off combat and dodges removal.
+pub fn spiritmonger() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[b()]),
+                effect: Effect::Regenerate { what: Selector::This },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                effect: Effect::BecomeChosenColor {
+                    what: Selector::This,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature(
+            "Spiritmonger",
+            cost(&[generic(3), b(), g()]),
+            vec![CreatureType::Beast],
+            6,
+            6,
+        )
+    }
+}
+
+/// Squee's Embrace — {R}{W}. +2/+2, and the host comes back when it dies.
+pub fn squees_embrace() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..enchantment("Squee's Embrace", cost(&[r(), w()]))
+    }
+}
+
+/// Strength of Night — {2}{G}. A team pump, bigger on Zombies when kicked.
+pub fn strength_of_night() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[b()]))],
+        ..instant(
+            "Strength of Night",
+            cost(&[generic(2), g()]),
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    power: Value::ONE,
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::If {
+                    cond: Predicate::SpellWasKicked,
+                    then: Box::new(Effect::PumpPT {
+                        what: Selector::EachPermanent(
+                            R::HasCreatureType(CreatureType::Zombie).and(R::ControlledByYou),
+                        ),
+                        power: Value::Const(2),
+                        toughness: Value::Const(2),
+                        duration: Duration::EndOfTurn,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )
+    }
+}
+
+/// Suffocating Blast — {1}{U}{U}{R}. A counter plus three damage.
+pub fn suffocating_blast() -> CardDefinition {
+    instant(
+        "Suffocating Blast",
+        cost(&[generic(1), u(), u(), r()]),
+        Effect::Seq(vec![
+            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                amount: Value::Const(3),
+            },
+        ]),
+    )
+}
+
+/// Sylvan Messenger — {3}{G} 2/2 trample that digs for Elves.
+pub fn sylvan_messenger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![reveal_four_for(R::HasCreatureType(CreatureType::Elf))],
+        ..creature("Sylvan Messenger", cost(&[generic(3), g()]), vec![CreatureType::Elf], 2, 2)
+    }
+}
+
+/// Tidal Courier — {3}{U} 1/2 that digs for Merfolk and can fly.
+pub fn tidal_courier() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![reveal_four_for(R::HasCreatureType(CreatureType::Merfolk))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Tidal Courier", cost(&[generic(3), u()]), vec![CreatureType::Merfolk], 1, 2)
+    }
+}
+
+/// Temporal Spring — {1}{G}{U}. Puts any permanent on top of its library.
+pub fn temporal_spring() -> CardDefinition {
+    sorcery(
+        "Temporal Spring",
+        cost(&[generic(1), g(), u()]),
+        Effect::Move {
+            what: target_filtered(R::Any),
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                pos: crate::effect::LibraryPosition::Top,
+            },
+        },
+    )
+}
+
+/// Tranquil Path — {4}{G}. Sweeps enchantments and replaces itself.
+pub fn tranquil_path() -> CardDefinition {
+    sorcery(
+        "Tranquil Path",
+        cost(&[generic(4), g()]),
+        Effect::Seq(vec![
+            Effect::Destroy { what: Selector::EachPermanent(R::Enchantment) },
+            draw(1),
+        ]),
+    )
+}
+
+/// Tundra Kavu — {2}{R} 2/2. Retypes a land toward Plains or Island.
+pub fn tundra_kavu() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::LandsBecomeChosenBasicType {
+                what: target_filtered(R::Land),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Tundra Kavu", cost(&[generic(2), r()]), vec![CreatureType::Kavu], 2, 2)
+    }
+}
+
+/// Unnatural Selection — {1}{U}. Rewrites a creature's type for a turn.
+pub fn unnatural_selection() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::BecomeChosenCreatureType {
+                what: target_filtered(R::Creature),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Unnatural Selection", cost(&[generic(1), u()]))
+    }
+}
+
+/// Urborg Elf — {1}{G} 1/1 that taps for the Ana wedge.
+pub fn urborg_elf() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(
+                    vec![Color::Black, Color::Green, Color::Blue],
+                    Value::ONE,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Urborg Elf",
+            cost(&[generic(1), g()]),
+            vec![CreatureType::Elf, CreatureType::Druid],
+            1,
+            1,
+        )
+    }
+}
+
+/// Urborg Uprising — {4}{B}. Two creatures back, plus a card.
+pub fn urborg_uprising() -> CardDefinition {
+    sorcery(
+        "Urborg Uprising",
+        cost(&[generic(4), b()]),
+        Effect::Seq(vec![
+            Effect::ApplyToTargets {
+                max_targets: 2,
+                min_targets: 0,
+                filter: R::InGraveyard.and(R::Creature),
+                effect: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                }),
+            },
+            draw(1),
+        ]),
+    )
+}
+
+/// Whirlpool Rider — {1}{U} 1/1 that refreshes your hand.
+pub fn whirlpool_rider() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ShuffleHandsDrawSame { who: PlayerRef::You })],
+        ..creature("Whirlpool Rider", cost(&[generic(1), u()]), vec![CreatureType::Merfolk], 1, 1)
+    }
+}
+
+/// Whirlpool Drake — {3}{U} 2/2 flier that refreshes on the way in and out.
+pub fn whirlpool_drake() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::ShuffleHandsDrawSame { who: PlayerRef::You }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::ShuffleHandsDrawSame { who: PlayerRef::You },
+            },
+        ],
+        ..creature("Whirlpool Drake", cost(&[generic(3), u()]), vec![CreatureType::Drake], 2, 2)
+    }
+}
+
+/// Overgrown Estate — {W}{B}{G}. Lands into life.
+pub fn overgrown_estate() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::Land, 1)),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..enchantment("Overgrown Estate", cost(&[w(), b(), g()]))
+    }
+}
+
+/// Powerstone Minefield — {2}{R}{W}. Combat costs everyone two.
+pub fn powerstone_minefield() -> CardDefinition {
+    let bite = Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(2) };
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer),
+                effect: bite.clone(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::AnyPlayer),
+                effect: bite,
+            },
+        ],
+        ..enchantment("Powerstone Minefield", cost(&[generic(2), r(), w()]))
+    }
+}

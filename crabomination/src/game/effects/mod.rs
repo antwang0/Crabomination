@@ -10848,6 +10848,33 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeChosenCreatureType { what, duration } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let duration_kind = self.effect_duration_for(*duration, ctx.controller);
+                let source = ctx.source.unwrap_or(CardId(0));
+                let chooser = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let decision = Decision::ChooseCreatureType {
+                        source: cid,
+                        suggestions: self.creature_type_suggestions(chooser),
+                    };
+                    let answer = self.decider.decide(&decision);
+                    let DecisionAnswer::CreatureType(ct) = answer else { continue };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::Specific(vec![cid]),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: duration_kind.clone(),
+                        modification: Modification::SetCreatureTypes(vec![ct]),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::ReplaceColorWord { what, duration } => {
                 // CR 612 — two ChooseColor prompts pick the word to replace
                 // and its replacement; applied as a layer-3 text change. The
