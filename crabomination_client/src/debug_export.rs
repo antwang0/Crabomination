@@ -169,6 +169,8 @@ mod tests {
             players: vec![PlayerView {
                 prevention_remaining: None,
                 prevention_source_colors: Vec::new(),
+                prevention_next_instances: 0,
+                prevention_source_names: Vec::new(),
                 seat: 0,
                 name: "Alice".into(),
                 life: 20,

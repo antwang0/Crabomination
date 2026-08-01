@@ -451,6 +451,11 @@ pub struct GameState {
     /// (Food Chain).
     #[serde(default)]
     pub(crate) exiled_for_cost_mana_value: Option<i32>,
+    /// Transient: the colour a just-created chosen-source prevention shield
+    /// must keep re-matching (CR 615.9). Set by
+    /// `choose_damage_prevention_source`, read once by its caller.
+    #[serde(skip)]
+    pub(crate) prevention_source_color_scratch: Option<crate::mana::Color>,
     /// Transient: whether the most-recently-sacrificed cost permanent was an
     /// artifact ("if the sacrificed permanent was an artifact" — Foundry
     /// Helix's `Predicate::SacrificedWasArtifact`). Set on the additional-
@@ -1524,6 +1529,7 @@ impl Clone for GameState {
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
             exiled_for_cost_mana_value: self.exiled_for_cost_mana_value,
+            prevention_source_color_scratch: self.prevention_source_color_scratch,
             last_discarded_mana_value: self.last_discarded_mana_value,
             cost_discarded_mana_value: self.cost_discarded_mana_value,
             block_poison_this_turn: self.block_poison_this_turn,
@@ -1756,6 +1762,7 @@ impl GameState {
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
             exiled_for_cost_mana_value: None,
+            prevention_source_color_scratch: None,
             last_discarded_mana_value: None,
             cost_discarded_mana_value: None,
             block_poison_this_turn: 0,

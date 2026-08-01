@@ -537,8 +537,7 @@ fn project_player(
     let has_prevention_shield = prevention_shields
         .iter()
         .any(|s| s.target == PreventionTarget::Player(player_seat));
-    let (prevention_remaining, prevention_source_colors) =
-        summarize_prevention(state, PreventionTarget::Player(player_seat));
+    let prevention = summarize_prevention(state, PreventionTarget::Player(player_seat));
     let damage_fully_prevented = state.all_damage_to_player_prevented(player_seat);
     // CR 614.9 — Palisade Giant / Turn the Tables: where this seat's incoming
     // damage lands instead.
@@ -753,8 +752,10 @@ fn project_player(
             })
             .collect(),
         has_prevention_shield,
-        prevention_remaining,
-        prevention_source_colors,
+        prevention_remaining: prevention.remaining,
+        prevention_source_colors: prevention.colors.clone(),
+        prevention_next_instances: prevention.next_instances,
+        prevention_source_names: prevention.source_names.clone(),
         damage_fully_prevented,
         damage_redirect_to,
         devotion,
@@ -1202,28 +1203,48 @@ fn crew_saddle_power_bonus_in(cid: CardId, battlefield: &[CardInstance]) -> i32 
 }
 
 
-/// CR 615.7 — summarize the *protective* shields aimed at `who`: how much
-/// damage they still soak (`None` when any of them is a blanket "prevent all
-/// damage this turn"; `Some(0)` when there are none) and which source colors
+/// CR 615.7/615.8/615.9 — summarize the *protective* shields aimed at `who`:
+/// the point budget they still soak (`None` only for a genuine blanket
+/// "prevent all damage this turn"; `Some(0)` when there is no budget), how
+/// many one-whole-instance shields are up, and which source colours/names
 /// they're restricted to.
+#[derive(Default)]
+struct PreventionSummary {
+    remaining: Option<u32>,
+    colors: Vec<crate::mana::Color>,
+    next_instances: u32,
+    source_names: Vec<String>,
+}
+
 fn summarize_prevention(
     state: &crate::game::GameState,
     who: crate::game::types::PreventionTarget,
-) -> (Option<u32>, Vec<crate::mana::Color>) {
-    let mut remaining = Some(0u32);
-    let mut colors: Vec<crate::mana::Color> = Vec::new();
+) -> PreventionSummary {
+    let mut out = PreventionSummary { remaining: Some(0), ..Default::default() };
     for s in state.prevention_shields.iter().filter(|s| s.target == who && !s.destroy) {
-        match s.remaining {
-            Some(n) => remaining = remaining.map(|acc| acc.saturating_add(n)),
-            None => remaining = None,
+        match (s.remaining, s.one_event) {
+            // CR 615.8 — a "next instance" shield has no point budget; it is
+            // not the blanket "prevent all damage this turn" that `None` alone
+            // would otherwise read as.
+            (None, true) => out.next_instances = out.next_instances.saturating_add(1),
+            (None, false) => out.remaining = None,
+            (Some(n), _) => out.remaining = out.remaining.map(|acc| acc.saturating_add(n)),
         }
         if let Some(c) = s.source_color
-            && !colors.contains(&c)
+            && !out.colors.contains(&c)
         {
-            colors.push(c);
+            out.colors.push(c);
+        }
+        if let Some(name) = s
+            .source
+            .and_then(|id| state.find_card_anywhere(id))
+            .map(|c| c.definition.name.to_string())
+            && !out.source_names.contains(&name)
+        {
+            out.source_names.push(name);
         }
     }
-    (remaining, colors)
+    out
 }
 
 fn project_permanent(
@@ -1241,8 +1262,7 @@ fn project_permanent(
         .prevention_shields
         .iter()
         .any(|s| s.target == PreventionTarget::Permanent(card.id) && !s.destroy);
-    let (prevention_remaining, prevention_source_colors) =
-        summarize_prevention(state, PreventionTarget::Permanent(card.id));
+    let prevention = summarize_prevention(state, PreventionTarget::Permanent(card.id));
     let doomed_next_damage = state
         .prevention_shields
         .iter()
@@ -1307,8 +1327,10 @@ fn project_permanent(
         dies_to_exile: card.definition.dies_to_exile,
         has_shield_counters: card.counter_count(crate::card::CounterType::Shield) > 0,
         has_prevention_shield,
-        prevention_remaining,
-        prevention_source_colors,
+        prevention_remaining: prevention.remaining,
+        prevention_source_colors: prevention.colors.clone(),
+        prevention_next_instances: prevention.next_instances,
+        prevention_source_names: prevention.source_names.clone(),
         damage_prevented_as_source: state.source_damage_fully_prevented(card.id),
         doomed_next_damage,
         goaded: !card.goaded_by.is_empty(),
@@ -2735,6 +2757,29 @@ mod tests {
         assert_eq!(bear_v.prevention_remaining, Some(2), "the next-2 shield's points");
         assert_eq!(v.players[0].prevention_remaining, None, "a blanket player fog");
         assert!(v.damage_cant_be_prevented_this_turn);
+    }
+
+    /// CR 615.8/615.9 — a one-instance shield reports as a whole-hit shield
+    /// with its named source, not as a blanket "all damage this turn".
+    #[test]
+    fn next_instance_shield_reports_its_source_not_a_blanket_fog() {
+        use crate::game::types::{PreventionShield, PreventionTarget};
+        let mut state = two_player_game();
+        let dragon = state.add_card_to_battlefield(1, catalog::shivan_dragon());
+        state.prevention_shields.push(PreventionShield {
+            target: PreventionTarget::Player(0),
+            source: Some(dragon),
+            source_color: Some(crate::mana::Color::Red),
+            one_event: true,
+            ..Default::default()
+        });
+        let v = project(&state, 0);
+        let p0 = &v.players[0];
+        assert!(p0.has_prevention_shield);
+        assert_eq!(p0.prevention_remaining, Some(0), "no point budget");
+        assert_eq!(p0.prevention_next_instances, 1);
+        assert_eq!(p0.prevention_source_names, vec!["Shivan Dragon".to_string()]);
+        assert_eq!(p0.prevention_source_colors, vec![crate::mana::Color::Red]);
     }
 
     /// Telepathy publishes opponents' hands one-way, and the view says so.

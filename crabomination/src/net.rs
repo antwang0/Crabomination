@@ -822,6 +822,12 @@ pub struct PlayerView {
     /// The player-side sibling of `PermanentView::prevention_source_colors`.
     #[serde(default)]
     pub prevention_source_colors: Vec<crate::mana::Color>,
+    /// The player-side sibling of `PermanentView::prevention_next_instances`.
+    #[serde(default)]
+    pub prevention_next_instances: u32,
+    /// The player-side sibling of `PermanentView::prevention_source_names`.
+    #[serde(default)]
+    pub prevention_source_names: Vec<String>,
     /// CR 615 — true when a blanket "prevent all damage that would be dealt to
     /// you" static (Glacial Chasm) shields this player from *all* damage this
     /// turn. Distinct from `has_prevention_shield` (a partial / next-N shield).
@@ -1513,6 +1519,15 @@ pub struct PermanentView {
     /// chosen color). Empty when the shields soak any source.
     #[serde(default)]
     pub prevention_source_colors: Vec<crate::mana::Color>,
+    /// CR 615.8 — how many "the next time [a source] would deal damage"
+    /// shields are up. These soak one whole instance each and are counted
+    /// separately from `prevention_remaining`'s point budget.
+    #[serde(default)]
+    pub prevention_next_instances: u32,
+    /// Names of the specific sources the shields are restricted to (CR 615.9
+    /// — a Circle of Protection's chosen source). Empty when unrestricted.
+    #[serde(default)]
+    pub prevention_source_names: Vec<String>,
     /// CR 615.7 — true while all damage this permanent would *deal* is
     /// prevented for the turn (Hallow, Burrenton Forge-Tender's chosen source).
     #[serde(default)]

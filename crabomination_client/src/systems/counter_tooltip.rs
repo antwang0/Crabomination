@@ -451,7 +451,15 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.doomed_next_damage {
         lines.push(String::from("(doomed: next damage destroys this instead)"));
     } else if p.has_prevention_shield {
-        lines.push(format!("(warded: {})", prevention_summary(p.prevention_remaining, &p.prevention_source_colors)));
+        lines.push(format!(
+            "(warded: {})",
+            prevention_summary(
+                p.prevention_remaining,
+                &p.prevention_source_colors,
+                p.prevention_next_instances,
+                &p.prevention_source_names,
+            )
+        ));
     }
     // CR 615.7 — the deal-side shield: this permanent's own damage is off for
     // the turn (Hallow, Burrenton Forge-Tender's chosen source).
@@ -680,17 +688,28 @@ pub(crate) fn companion_restriction_text(rule: &crabomination::card::CompanionRu
 pub(crate) fn prevention_summary(
     remaining: Option<u32>,
     colors: &[crabomination::mana::Color],
+    next_instances: u32,
+    source_names: &[String],
 ) -> String {
-    let mut out = match remaining {
-        None => "all damage prevented this turn".to_string(),
-        Some(0) => "damage prevented this turn".to_string(),
-        Some(1) => "prevents the next 1 damage".to_string(),
-        Some(n) => format!("prevents the next {n} damage"),
+    // CR 615.8 — a "next instance" shield has no point budget, so report it as
+    // whole hits rather than folding it into the numeric total.
+    let mut out = match (remaining, next_instances) {
+        (None, _) => "all damage prevented this turn".to_string(),
+        (Some(0), 1) => "prevents the next damage instance".to_string(),
+        (Some(0), n) if n > 1 => format!("prevents the next {n} damage instances"),
+        (Some(0), _) => "damage prevented this turn".to_string(),
+        (Some(1), 0) => "prevents the next 1 damage".to_string(),
+        (Some(p), 0) => format!("prevents the next {p} damage"),
+        (Some(p), n) => format!("prevents the next {p} damage + {n} whole instances"),
     };
     if !colors.is_empty() {
         let names: Vec<String> =
             colors.iter().map(|c| format!("{c:?}").to_lowercase()).collect();
         out.push_str(&format!(" from {} sources", names.join("/")));
+    }
+    // CR 615.9 — the shield names a specific source; show which.
+    if !source_names.is_empty() {
+        out.push_str(&format!(" from {}", source_names.join(", ")));
     }
     out
 }
@@ -1330,6 +1349,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Fungus => "Fungus",
         CounterType::Storage => "Storage",
         CounterType::Depletion => "Depletion",
+        CounterType::Winch => "Winch",
     }
 }
 
@@ -1385,6 +1405,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Filibuster => "Azor's Elocutors tally — one each upkeep; at five you win the game (removed when a source deals damage to you).",
         CounterType::Storage => "Banked mana — remove any number to add that much of this land's colour at once.",
         CounterType::Depletion => "This land's remaining taps — it's sacrificed once the last one is spent.",
+        CounterType::Winch => "Mercadian Lift's crank — remove X to deploy a creature with mana value X from hand.",
         CounterType::Fungus => "Sporogenesis tally — this creature mints one Saproling per counter when it dies.",
         _ => return None,
     })
@@ -1414,6 +1435,8 @@ mod tests {
         PermanentView {
             prevention_remaining: None,
             prevention_source_colors: Vec::new(),
+            prevention_next_instances: 0,
+            prevention_source_names: Vec::new(),
             id: CardId(0),
             name: "Grizzly Bears".into(),
             controller: 0,
@@ -1999,16 +2022,37 @@ mod tests {
     #[test]
     fn prevention_summary_reports_points_and_colors() {
         use crabomination::mana::Color;
-        assert_eq!(prevention_summary(None, &[]), "all damage prevented this turn");
-        assert_eq!(prevention_summary(Some(3), &[]), "prevents the next 3 damage");
-        assert_eq!(prevention_summary(Some(1), &[]), "prevents the next 1 damage");
+        let none: &[String] = &[];
+        assert_eq!(prevention_summary(None, &[], 0, none), "all damage prevented this turn");
+        assert_eq!(prevention_summary(Some(3), &[], 0, none), "prevents the next 3 damage");
+        assert_eq!(prevention_summary(Some(1), &[], 0, none), "prevents the next 1 damage");
         assert_eq!(
-            prevention_summary(None, &[Color::Red]),
+            prevention_summary(None, &[Color::Red], 0, none),
             "all damage prevented this turn from red sources",
         );
         assert_eq!(
-            prevention_summary(Some(2), &[Color::White, Color::Blue]),
+            prevention_summary(Some(2), &[Color::White, Color::Blue], 0, none),
             "prevents the next 2 damage from white/blue sources",
+        );
+    }
+
+    /// CR 615.8/615.9 — a one-instance shield reads as whole hits (not "all
+    /// damage this turn") and names the source it watches.
+    #[test]
+    fn prevention_summary_reports_next_instance_shields() {
+        use crabomination::mana::Color;
+        let cop = vec!["Shivan Dragon".to_string()];
+        assert_eq!(
+            prevention_summary(Some(0), &[Color::Red], 1, &cop),
+            "prevents the next damage instance from red sources from Shivan Dragon",
+        );
+        assert_eq!(
+            prevention_summary(Some(0), &[], 2, &[]),
+            "prevents the next 2 damage instances",
+        );
+        assert_eq!(
+            prevention_summary(Some(3), &[], 1, &[]),
+            "prevents the next 3 damage + 1 whole instances",
         );
     }
 

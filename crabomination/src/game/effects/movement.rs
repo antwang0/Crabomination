@@ -450,6 +450,10 @@ impl GameState {
         // CR 615.7 — colors of the damage source, resolved before the loop
         // borrows the shield list (Avacyn's chosen-color shields).
         let src_colors = source.map(|id| self.card_colors_anywhere(id)).unwrap_or_default();
+        // CR 609.7b — a source that has left every zone (a spell dealing damage
+        // as it resolves) keeps its last known characteristics; with nothing
+        // observable, the colour recheck can't disprove a match.
+        let src_known = source.is_some_and(|id| self.find_card_anywhere(id).is_some());
         for (i, shield) in self
             .prevention_shields
             .iter_mut()
@@ -459,7 +463,7 @@ impl GameState {
                     || Some(s.target) == team_key
                     || s.target == PreventionTarget::Anything)
                     && (s.source.is_none() || s.source == source)
-                    && s.source_color.is_none_or(|c| src_colors.contains(&c))
+                    && (!src_known || s.source_color.is_none_or(|c| src_colors.contains(&c)))
             })
         {
             if remaining == 0 {

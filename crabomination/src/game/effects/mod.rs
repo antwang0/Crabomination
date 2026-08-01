@@ -22072,6 +22072,7 @@ impl GameState {
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());
                 };
+                let shield_color = self.prevention_source_color_scratch.take();
                 // Stamp the source's controller now — by damage time a
                 // resolving spell is in no visible zone.
                 let src_ctrl = self
@@ -22118,6 +22119,7 @@ impl GameState {
                         redirect_to: redirect_perm,
                         redirect_to_player: redirect_player,
                         source_controller: src_ctrl,
+                        source_color: shield_color,
                         ..Default::default()
                     });
                 }
@@ -25074,6 +25076,13 @@ impl GameState {
                 return None;
             }
             (f, _) => f.clone(),
+        };
+        // CR 615.9 — the shield rechecks the chosen source's colour when it
+        // would deal damage, so stamp what the filter demanded (the Circle of
+        // Protection cycle; `None` for a colour-blind filter).
+        self.prevention_source_color_scratch = match filter {
+            crate::card::SelectionRequirement::HasColor(c) => Some(*c),
+            _ => None,
         };
         let mut candidates: Vec<(CardId, String)> = self
             .stack

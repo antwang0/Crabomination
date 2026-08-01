@@ -23,14 +23,12 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
-## Noticed this run (modern_decks — Mercadian Masques, wave 5)
+## Mercadian Masques — closed
 
-`set_gaps.py mmq` is down from **283 → 65 → 13** (`sets::mmq` … `sets::mmq5`,
-tests in `classic_sets/mmq{,2,3,4,5}`). The three cards the previous run
-deferred (Statecraft, Insubordination, Barbed Wire) are shipped, each with the
-primitive it wanted.
+`set_gaps.py mmq` is at **zero** (283 → 65 → 13 → 0; `sets::mmq` … `sets::mmq6`,
+tests in `classic_sets/mmq{,2,3,4,5,6}`).
 
-Residuals in what shipped this wave:
+Residuals in what shipped:
 
 - **Volcanic Wind's X is read at resolution**, not "as you cast this spell", so
   a creature that dies in response shrinks the total.
@@ -49,28 +47,19 @@ Residuals in what shipped this wave:
   effect on the artifact wouldn't move the body.
 - **Conspiracy drops its off-battlefield half** — creature *spells* you control
   and creature cards you own outside the battlefield keep their printed types.
+- **Bargaining Table's `EachOpponent`** resolves to the first opponent, so in
+  multiplayer the printed "an opponent's hand" choice isn't offered.
+- **Caller of the Hunt names its type as it enters** (`as_enters_effect`)
+  rather than as an additional cast cost, so a countered Caller never locks a
+  type in.
+- **Thieves' Auction's repeated draft resolves through the decider
+  synchronously** — a `wants_ui` seat takes the auto-pick instead of a modal
+  per claim (`ask_seat_cards` allows only one ask per resolution).
+- **Charisma's control grab is keyed to the Aura remaining**, which is right,
+  but the Aura falling off mid-combat-damage isn't re-checked until the
+  trigger resolves.
 
-Remaining MMQ (13), grouped by the primitive each wants:
-
-- **Chooser routing:** Charm Peddler, Cho-Arrim Alchemist, General's Regalia —
-  "the next time a source of your choice would deal damage to *target*"
-  (`PreventNextDamageFromChosenSource` is controller-scoped) and the
-  redirect-to-a-creature variant.
-- **Cost shapes:** Bargaining Table (a `Value`-scaled generic activation cost),
-  Food Chain (exile-a-creature-you-control as a cost + a mana value read off
-  the exiled card), Caller of the Hunt (choose a creature type as an
-  additional cast cost, then a board-wide CDA on it).
-- **Damage-event binding:** Charisma — "whenever enchanted creature deals
-  damage to a creature" needs the *damaged* creature bound as the trigger
-  subject; `EventKind::DealtDamage` on `SelfSource` is the receive side
-  (Enrage), not the deal side.
-- **Misc:** Blood Oath (choose a card type, then damage per match in a revealed
-  hand), Crooked Scales (a repeat-until-you-stop coin-flip loop),
-  Kyren Archive + Mercadian Lift (linked-exile / counter-scaled deploy),
-  Spiritual Focus ("a spell or ability an opponent controls causes you to
-  discard" has no event), Thieves' Auction (a repeated player-choice draft).
-
-Carried over from the previous wave, still open:
+Carried over, still open:
 
 - **A real prompt for `EachPlayerMayPutPermanentFromHand`** — the last
   auto-picked "may" on a Show and Tell-shaped effect.
@@ -78,6 +67,8 @@ Carried over from the previous wave, still open:
 - **The Rebel/Mercenary tutor filters read `PermanentCard + HasCreatureType`.**
 - **`Effect::Search` auto-declines under AutoDecider** (bot policy, not a card
   gap), so every tutor-chain test scripts its pick.
+- **A multi-ask sibling of `ask_seat_cards`** — a resolution that needs several
+  routed card picks (Thieves' Auction) currently can't suspend more than once.
 
 ## Noticed this run (modern_decks — Urza's Saga closure)
 
