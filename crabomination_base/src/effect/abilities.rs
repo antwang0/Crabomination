@@ -2193,6 +2193,9 @@ pub enum StaticEffect {
     ControllerSkipsDrawStep,
     /// "You can't play lands." Aggressive Mining. Gated in `play_land`.
     ControllerCantPlayLands,
+    /// The symmetric sibling: "*Players* can't play lands" (Territorial
+    /// Dispute) — binds every seat, not just the source's controller.
+    NoPlayerCanPlayLands,
     /// Damping Engine — "a player who controls more permanents than each other
     /// player can't play lands or cast artifact, creature, or enchantment
     /// spells." Symmetric (any player's Damping Engine binds every player);

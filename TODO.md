@@ -25,8 +25,8 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (modern_decks — Mercadian Masques opening)
 
-`set_gaps.py mmq` is down from **283 to ~107** (`sets::mmq` + `sets::mmq2`,
-tests in `classic_sets/mmq{,2}`). Three MMQ cards are deliberately *not*
+`set_gaps.py mmq` is down from **283 to 65** (`sets::mmq` … `sets::mmq4`,
+tests in `classic_sets/mmq{,2,3,4}`). Three MMQ cards are deliberately *not*
 shipped because each wants one primitive; implement the primitive, then the
 card:
 
@@ -59,11 +59,13 @@ Worth doing next, in rough order of leverage:
 
 - **A real prompt for `EachPlayerMayPutPermanentFromHand`** — it's the last
   auto-picked "may" on a Show and Tell-shaped effect.
-- **The rest of MMQ** (~107): Cho-Arrim/Kyren/Saprazzan Legates want a
-  "free cast if an opponent controls X and you control Y" alt-cost condition
-  (`AlternativeCost.condition` already exists — this is catalog work, not
-  engine work); Cowardice and Crag Saurian want targeting/damage-event
-  replacements; Thieves' Auction wants a repeated player-choice draft.
+- **The rest of MMQ** (65, mostly rares): Cowardice and Crag Saurian want
+  targeting/damage-event replacements; Thieves' Auction wants a repeated
+  player-choice draft; Conspiracy and Cornered Market want name/type-lock
+  statics; the "pay {1} for each card in your hand" cycle (Megatherium,
+  Extravagant Spirit) wants a `Value`-scaled `SacrificeSourceUnlessPay`; and
+  Orim's Cure / Ramosian Rally want a *tap a creature* alternative cost
+  (`AlternativeCost` has sacrifice/return/exile/life, not tap).
 
 ## Noticed this run (modern_decks — Urza's Saga closure)
 

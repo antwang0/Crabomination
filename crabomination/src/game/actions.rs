@@ -1757,10 +1757,14 @@ impl crate::game::GameState {
     pub fn can_player_play_land(&self, player: usize) -> bool {
         // CR 305.1 — "You can't play lands" (Aggressive Mining) is absolute.
         if self.battlefield.iter().any(|c| {
-            c.controller == player
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, crate::effect::StaticEffect::ControllerCantPlayLands)
-                })
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::NoPlayerCanPlayLands)
+                    || (c.controller == player
+                        && matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::ControllerCantPlayLands
+                        ))
+            })
         }) {
             return false;
         }

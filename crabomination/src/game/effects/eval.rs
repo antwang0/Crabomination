@@ -606,6 +606,17 @@ impl GameState {
             Value::GreatestDiscardedManaValueThisEffect => {
                 self.greatest_discarded_mv_this_resolution as i32
             }
+            Value::CardsMilledThisEffectMatching { filter } => self
+                .last_moved_cards
+                .iter()
+                .filter(|&&cid| {
+                    self.players.iter().enumerate().any(|(seat, p)| {
+                        p.graveyard.iter().any(|c| {
+                            c.id == cid && self.evaluate_requirement_on_card(filter, c, seat)
+                        })
+                    })
+                })
+                .count() as i32,
             Value::CreatureCardsMilledThisEffect => self
                 .last_moved_cards
                 .iter()

@@ -731,6 +731,10 @@ pub enum Value {
     /// card put into a graveyard this way, create a 2/2 Zombie"). Reset between
     /// resolutions.
     CreatureCardsMilledThisEffect,
+    /// The filtered sibling: cards moved to a graveyard earlier in this
+    /// resolution matching `filter` (Saprazzan Breaker's "if a land card was
+    /// milled this way").
+    CardsMilledThisEffectMatching { filter: SelectionRequirement },
     /// Number of *distinct* mana values among nonland cards the controller owns
     /// in exile that carry one or more `counter` counters. Kianne's Fractal
     /// (`CounterType::Study`).

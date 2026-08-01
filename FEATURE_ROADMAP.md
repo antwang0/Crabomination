@@ -1523,6 +1523,12 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   (`continue_ability_resolution_x`), so "remove any number of storage counters:
   add that much mana" works. `StaticEffect::AnyPlayerSpellsHaveFlash` (Vernal
   Equinox) and `EachPlayerMayPutPermanentFromHand.others_only` (Hunted Wumpus).
+  `Selector::MatchingAmong { inner, filter }` narrows another selector's result
+  set (Deathgazer's "the *nonblack* creature blocking or blocked by this");
+  `StaticEffect::NoPlayerCanPlayLands` is the symmetric sibling of
+  `ControllerCantPlayLands` (Territorial Dispute); and
+  `Value::CardsMilledThisEffectMatching` is the filtered sibling of
+  `CreatureCardsMilledThisEffect` (Saprazzan Breaker).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an

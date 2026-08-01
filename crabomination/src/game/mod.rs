@@ -16494,6 +16494,7 @@ fn static_effect_to_effects(
             // Gated at their action dispatch (`can_player_play_land`,
             // the convoke cast path); no layer effect.
             | StaticEffect::ControllerCantPlayLands
+            | StaticEffect::NoPlayerCanPlayLands
             | StaticEffect::ControllerSkipsDrawStep
             | StaticEffect::UntapOnlyChosenTypeWhileUntapped
             | StaticEffect::MostPermanentsCantPlay
