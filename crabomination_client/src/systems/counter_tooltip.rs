@@ -1327,6 +1327,9 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Petal => "Petal",
         CounterType::Arrow => "Arrow",
         CounterType::Infection => "Infection",
+        CounterType::Fungus => "Fungus",
+        CounterType::Storage => "Storage",
+        CounterType::Depletion => "Depletion",
     }
 }
 
@@ -1380,6 +1383,9 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Eon => "Magosi, the Waterveil tally — banked by skipping a turn; cash it in for an extra turn.",
         CounterType::Palliation => "Palliation Accord tally — one per opponent's creature tapped; remove one to prevent 1 damage to you.",
         CounterType::Filibuster => "Azor's Elocutors tally — one each upkeep; at five you win the game (removed when a source deals damage to you).",
+        CounterType::Storage => "Banked mana — remove any number to add that much of this land's colour at once.",
+        CounterType::Depletion => "This land's remaining taps — it's sacrificed once the last one is spent.",
+        CounterType::Fungus => "Sporogenesis tally — this creature mints one Saproling per counter when it dies.",
         _ => return None,
     })
 }

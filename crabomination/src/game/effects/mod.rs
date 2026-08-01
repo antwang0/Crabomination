@@ -14222,10 +14222,13 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::EachPlayerMayPutPermanentFromHand { filter } => {
+            Effect::EachPlayerMayPutPermanentFromHand { filter, others_only } => {
                 // APNAP order (active player first).
                 let order = self.apnap_sort((0..self.players.len()).collect());
                 for p in order {
+                    if *others_only && p == ctx.controller {
+                        continue;
+                    }
                     let candidates: Vec<CardId> = self.players[p]
                         .hand
                         .iter()

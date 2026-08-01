@@ -2343,6 +2343,10 @@ impl GameState {
         // logic in `resolve_top_of_stack`; play_land needs an analogous push
         // so triggered abilities on lands actually fire.
         self.fire_self_etb_triggers(card_id, p);
+        // CR 614.1c — a printed "enters with N counters" land (the MMQ
+        // depletion cycle) gets them off the land drop too.
+        let mut counter_events = Vec::new();
+        self.apply_printed_etb_counters(card_id, &mut counter_events);
         // CR 714.2b — a Saga land (Urza's Saga) enters with its first lore
         // counter; chapter I fires off the land drop too.
         if self
@@ -2352,10 +2356,11 @@ impl GameState {
         {
             self.saga_enter_advance(card_id);
         }
-        Ok(vec![
-            GameEvent::LandPlayed { player: p, card_id, played: true },
-            GameEvent::PermanentEntered { card_id },
-        ])
+        let mut out =
+            vec![GameEvent::LandPlayed { player: p, card_id, played: true }];
+        out.append(&mut counter_events);
+        out.push(GameEvent::PermanentEntered { card_id });
+        Ok(out)
     }
 
     /// Push the source-itself ETB triggered abilities for a permanent that
@@ -9209,7 +9214,11 @@ impl GameState {
     ) -> Result<(), GameError> {
         let cid = match target {
             Target::Player(p) => {
-                if *p != caster && self.player_has_static_hexproof(*p) && !self.player_ignores_hexproof(caster) {
+                if self.player_has_static_shroud(*p)
+                    || (*p != caster
+                        && self.player_has_static_hexproof(*p)
+                        && !self.player_ignores_hexproof(caster))
+                {
                     return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
                 }
                 // Protection from everything (The One Ring) — can't be
@@ -9494,6 +9503,20 @@ impl GameState {
                         .iter()
                         .any(|sa| matches!(sa.effect, StaticEffect::ControllerHasHexproof))
             })
+    }
+
+    /// CR 702.18 — true if `player` controls a permanent granting "you have
+    /// shroud" (Ivory Mask). Unlike hexproof this also blocks the player's own
+    /// spells and abilities, and no ignore-hexproof static pierces it.
+    pub fn player_has_static_shroud(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::ControllerHasShroud))
+        })
     }
 
     /// True if `player` controls a permanent granting "ignore opponents'
@@ -13162,7 +13185,13 @@ impl GameState {
             // it afterward. Only tapping qualifies per the printed text.
             self.mana_production_multiplier =
                 if ability.tap_cost { self.mana_production_multiplier_for(p) } else { 1 };
-            let resolved = self.continue_ability_resolution(card_id, p, effect, target.clone());
+            let resolved = self.continue_ability_resolution_x(
+                card_id,
+                p,
+                effect,
+                target.clone(),
+                x_value.unwrap_or(0),
+            );
             self.mana_production_multiplier = 1;
             let mut resolved = resolved?;
             // CR 605.1b — triggered mana abilities ("Whenever a land is

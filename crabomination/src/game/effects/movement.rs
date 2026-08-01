@@ -656,7 +656,7 @@ impl GameState {
         // either (the receiving half rides
         // `permanent_prevents_all_damage_to_self`).
         if let Some(src) = source
-            && self.damage_sealed_by_aura(src)
+            && self.damage_sealed_by_aura(src, false)
         {
             return;
         }

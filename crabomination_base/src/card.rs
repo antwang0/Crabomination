@@ -59,7 +59,7 @@ pub enum CreatureType {
     Basilisk, Cockatrice,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold, Surrakar,
-    Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Archon, Aetherborn,
+    Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Monger, Archon, Aetherborn,
     Construct, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought,
     Ooze, Plant, Saproling,
     // Strixhaven-era subtypes. (Book is Codie, Vociferous Codex's
@@ -563,6 +563,12 @@ pub enum CounterType {
     /// Sporogenesis — a fungus counter; a creature carrying them mints one
     /// Saproling per counter when it dies.
     Fungus,
+    /// Storage counter — the MMQ storage lands bank one per tap and cash any
+    /// number in for that much colored mana.
+    Storage,
+    /// Depletion counter — the MMQ depletion lands enter with two and are
+    /// sacrificed once the last one is spent.
+    Depletion,
 }
 
 /// Every zone a card can occupy.
@@ -3478,6 +3484,15 @@ pub struct EquipScale {
     /// the printed "for each **other** creature you control" (Bravado).
     #[serde(default)]
     pub exclude_host: bool,
+    /// When true, the `filter` count spans *every* battlefield rather than
+    /// just the source controller's — the printed "for each other enchantment
+    /// on the battlefield" (Ancestral Mask).
+    #[serde(default)]
+    pub count_all_controllers: bool,
+    /// When true, the Aura/Equipment itself is excluded from the `filter`
+    /// count — the "**other**" in Ancestral Mask's "each other enchantment".
+    #[serde(default)]
+    pub exclude_source: bool,
     /// When true, the count is the number of cards in the *host creature's
     /// controller's* hand (Righteous Authority — "+1/+1 for each card in its
     /// controller's hand"), rather than the source-controller counts above.

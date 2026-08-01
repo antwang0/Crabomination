@@ -5904,10 +5904,15 @@ pub enum Effect {
     /// the battlefield under their control.
     SacrificeOthersThenReanimate,
     /// Each player, in APNAP order, may put one permanent card matching
-    /// `filter` from their hand onto the battlefield (Show and Tell). A
-    /// `wants_ui` player is prompted; bots/tests auto-pick their highest-mana
-    /// matching card (or decline if none).
-    EachPlayerMayPutPermanentFromHand { filter: SelectionRequirement },
+    /// `filter` from their hand onto the battlefield (Show and Tell); with
+    /// `others_only` the source's controller is skipped (Hunted Wumpus,
+    /// Charmed Griffin). Every seat auto-picks its highest-mana match —
+    /// the "may" isn't a real prompt yet (tracked in TODO.md).
+    EachPlayerMayPutPermanentFromHand {
+        filter: SelectionRequirement,
+        #[serde(default)]
+        others_only: bool,
+    },
     /// "`who` exiles `count` permanents they control of their choice" — the
     /// exile analogue of Annihilator's forced sacrifice (Bane of Bala Ged).
     /// The affected player chooses which permanents; a `wants_ui` player with

@@ -370,6 +370,7 @@ pub fn show_and_tell() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::EachPlayerMayPutPermanentFromHand {
             filter: SelectionRequirement::Permanent,
+            others_only: false,
         },
         ..Default::default()
     }

@@ -681,6 +681,11 @@ pub enum StaticEffect {
     /// target the source's controller with spells or abilities they
     /// control. Checked by `check_target_legality` for `Target::Player(_)`.
     ControllerHasHexproof,
+    /// CR 702.18 — "you have shroud" (Ivory Mask): *no* player, the source's
+    /// controller included, may target them. Checked alongside
+    /// `ControllerHasHexproof` in `check_target_legality`, and unlike hexproof
+    /// it isn't pierced by the ignore-hexproof statics.
+    ControllerHasShroud,
     /// Glaring Spotlight — "creatures your opponents control with hexproof can
     /// be the targets of spells and abilities you control as though they didn't
     /// have hexproof." The source's controller ignores plain `Hexproof` on
@@ -1044,6 +1049,12 @@ pub enum StaticEffect {
     /// creature" (Heart of Light) — both directions, any damage type. Read
     /// off the source Aura's live host.
     PreventAllDamageToAndFromEnchanted,
+    /// The incoming-only half: "prevent all damage that would be dealt to
+    /// enchanted creature" (Inviolability).
+    PreventAllDamageToEnchanted,
+    /// The outgoing-only half: "prevent all damage that would be dealt by
+    /// enchanted creature" (Muzzle).
+    PreventAllDamageByEnchanted,
     /// CR 704.5j — "the 'legend rule' doesn't apply" (Mirror Gallery). The
     /// legend-rule SBA is skipped entirely while this is on the battlefield.
     LegendRuleDoesntApply,

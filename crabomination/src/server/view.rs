@@ -71,8 +71,9 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                 // (Kaya, Bane of the Dead), an opponent's hexproof no longer
                 // shields them from the viewer, so the flag reads false and the
                 // client won't grey the player out as a target.
-                let hexproof = state.player_has_static_hexproof(i)
-                    && !(i != viewer_seat && state.player_ignores_hexproof(viewer_seat));
+                let hexproof = state.player_has_static_shroud(i)
+                    || (state.player_has_static_hexproof(i)
+                        && !(i != viewer_seat && state.player_ignores_hexproof(viewer_seat)));
                 project_player(state, p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0, state.player_cannot_gain_life_now(i), hexproof, known_library_top(state, i, viewer_seat))
             })
             .collect(),

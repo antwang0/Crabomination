@@ -3161,6 +3161,38 @@ impl GameState {
     /// CR 702.32 / 702.62 — a permanent with Fading N / Vanishing N enters
     /// with N fade / time counters. Called from both ETB paths after the
     /// permanent is on the battlefield.
+    /// CR 614.1c — apply a permanent's printed `enters_with_counters` to a
+    /// permanent that has just entered, honoring the CR 614.16 counter
+    /// replacements and Solemnity's counter lock. The land-drop path
+    /// (`place_land_card`) uses this; the spell-resolution and move paths
+    /// inline the same logic alongside their chosen-type ETB specs.
+    pub(crate) fn apply_printed_etb_counters(
+        &mut self,
+        cid: CardId,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) {
+        let Some(card) = self.battlefield_find(cid) else { return };
+        let Some((kind, value)) = card.definition.enters_with_counters.clone() else { return };
+        let (controller, is_creature) = (card.controller, card.definition.is_creature());
+        if self.counters_locked() {
+            return;
+        }
+        let ctx = crate::game::effects::EffectContext::for_ability(cid, controller, None);
+        let base = self.evaluate_value(&value, &ctx);
+        if base <= 0 {
+            return;
+        }
+        let n = self.scaled_counter_count(controller, kind, base as u32, is_creature);
+        if let Some(card_mut) = self.battlefield_find_mut(cid) {
+            card_mut.add_counters(kind, n);
+        }
+        events.push(crate::game::GameEvent::CounterAdded {
+            card_id: cid,
+            counter_type: kind,
+            count: n,
+        });
+    }
+
     pub(crate) fn apply_fading_vanishing_etb(
         &mut self,
         cid: CardId,
@@ -3853,23 +3885,23 @@ impl GameState {
                 .static_abilities
                 .iter()
                 .any(|sa| self.self_static_prevents_all_damage_active(&sa.effect, c.controller))
-        }) || self.damage_sealed_by_aura(tgt)
+        }) || self.damage_sealed_by_aura(tgt, true)
     }
 
-    /// CR 615 — `who` is enchanted by an Aura with
-    /// `StaticEffect::PreventAllDamageToAndFromEnchanted`: all damage in both
-    /// directions is prevented (Heart of Light).
-    pub(crate) fn damage_sealed_by_aura(&self, who: crate::card::CardId) -> bool {
+    /// CR 615 — `who` is enchanted by an Aura that blanks damage in the
+    /// `incoming` direction: Heart of Light seals both, Inviolability only
+    /// damage dealt *to* the host, Muzzle only damage dealt *by* it.
+    pub(crate) fn damage_sealed_by_aura(&self, who: crate::card::CardId, incoming: bool) -> bool {
+        use crate::effect::StaticEffect;
         if self.damage_cant_be_prevented_this_turn {
             return false;
         }
         self.battlefield.iter().any(|src| {
             src.attached_to == Some(who)
                 && src.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        sa.effect,
-                        crate::effect::StaticEffect::PreventAllDamageToAndFromEnchanted
-                    )
+                    matches!(sa.effect, StaticEffect::PreventAllDamageToAndFromEnchanted)
+                        || matches!(sa.effect, StaticEffect::PreventAllDamageToEnchanted if incoming)
+                        || matches!(sa.effect, StaticEffect::PreventAllDamageByEnchanted if !incoming)
                 })
         })
     }
@@ -3895,7 +3927,7 @@ impl GameState {
         !self.damage_cant_be_prevented_this_turn
             && (self.permanent_prevents_all_combat_damage_to_self(tgt)
                 || self.combat_damage_prevented_to_this_turn.contains(&tgt)
-                || self.damage_sealed_by_aura(tgt))
+                || self.damage_sealed_by_aura(tgt, true))
     }
 
     /// CR 615 — true when all combat damage `dealer` would *deal* is prevented
@@ -3904,7 +3936,7 @@ impl GameState {
     pub fn combat_damage_prevented_from(&self, dealer: crate::card::CardId) -> bool {
         !self.damage_cant_be_prevented_this_turn
             && (self.combat_damage_prevented_by_this_turn.contains(&dealer)
-                || self.damage_sealed_by_aura(dealer))
+                || self.damage_sealed_by_aura(dealer, false))
     }
 
     /// Scale a pending damage event by the global doubling/halving
@@ -5567,8 +5599,9 @@ impl GameState {
                         .battlefield
                         .iter()
                         .filter(|c| {
-                            c.controller == card.controller
+                            (scale.count_all_controllers || c.controller == card.controller)
                                 && !(scale.exclude_host && c.id == target)
+                                && !(scale.exclude_source && c.id == card.id)
                                 && self.evaluate_requirement_on_card(
                                     &scale.filter,
                                     c,
@@ -15500,7 +15533,23 @@ impl GameState {
         effect: crate::effect::Effect,
         target: Option<Target>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let ctx = EffectContext::for_ability(source, controller, target.clone());
+        self.continue_ability_resolution_x(source, controller, effect, target, 0)
+    }
+
+    /// `continue_ability_resolution` with the activation's chosen X threaded
+    /// in, so an inline-resolving mana ability's body can read
+    /// `Value::XFromCost` (the MMQ storage lands' "remove any number of
+    /// storage counters: add that much mana").
+    pub(crate) fn continue_ability_resolution_x(
+        &mut self,
+        source: CardId,
+        controller: usize,
+        effect: crate::effect::Effect,
+        target: Option<Target>,
+        x_value: u32,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let mut ctx = EffectContext::for_ability(source, controller, target.clone());
+        ctx.x_value = x_value;
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
@@ -16359,6 +16408,7 @@ fn static_effect_to_effects(
             // `effective_ability_mana_cost`; no continuous-layer effect.
             | StaticEffect::OpponentActivityCostsMoreOnYourTurn { .. }
             | StaticEffect::ControllerHasHexproof
+            | StaticEffect::ControllerHasShroud
             // IgnoreOpponentsCreatureHexproof — consulted in
             // `check_target_legality_with_source` (Glaring Spotlight); no
             // layer effect.
@@ -16530,6 +16580,8 @@ fn static_effect_to_effects(
             // SBA; PreventAllDamageToAndFrom — read by the damage funnel.
             | StaticEffect::LegendRuleDoesntApply
             | StaticEffect::PreventAllDamageToAndFromEnchanted
+            | StaticEffect::PreventAllDamageToEnchanted
+            | StaticEffect::PreventAllDamageByEnchanted
             // Angelic Arbiter's pair — consulted in declare_attackers and at
             // the cast dispatch; no layer.
             | StaticEffect::OpponentsWhoCastCantAttack
