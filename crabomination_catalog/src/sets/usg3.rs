@@ -1,13 +1,15 @@
 //! Urza's Saga (USG) gap closure, third wave. Tests in `classic_sets/usg3`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
-    EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R,
-    StateTriggeredAbility, StaticAbility, StaticEffect, Subtypes, TokenDefinition,
-    TriggeredAbility, Value, WardCost, Zone,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
+    EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
+    SelectionRequirement as R, StateTriggeredAbility, StaticAbility, StaticEffect, Subtypes,
+    TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::{
-    Duration, Effect, ManaPayload, PlayerRef, Selector, ZoneDest, shortcut::target_filtered,
+    DelayedTriggerKind, Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector,
+    ZoneDest,
+    shortcut::{etb, target_any, target_filtered},
 };
 use crate::game::TurnStep;
 use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u, w, x};
@@ -56,6 +58,22 @@ fn sorcery(name: &'static str, c: crate::mana::ManaCost, effect: Effect) -> Card
         effect,
         ..Default::default()
     }
+}
+
+/// "At the beginning of your upkeep, you may put a verse counter on this."
+fn verse_upkeep() -> TriggeredAbility {
+    your_upkeep(Effect::MayDo {
+        description: "Put a verse counter on this".into(),
+        body: Box::new(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Verse,
+            amount: Value::ONE,
+        }),
+    })
+}
+
+fn verses() -> Value {
+    Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Verse }
 }
 
 fn cycling_two() -> Keyword {
@@ -660,4 +678,314 @@ pub fn time_spiral() -> CardDefinition {
             },
         ]),
     )
+}
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// A Rune of Protection — {1}{W}. "{W}: The next time a [filter] source of
+/// your choice would deal damage to you this turn, prevent that damage."
+fn rune(name: &'static str, filter: R) -> CardDefinition {
+    CardDefinition {
+        keywords: vec![cycling_two()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            effect: Effect::PreventNextDamageFromChosenSource { filter, reflect: false },
+            ..Default::default()
+        }],
+        ..enchantment(name, cost(&[generic(1), w()]))
+    }
+}
+
+pub fn rune_of_protection_white() -> CardDefinition {
+    rune("Rune of Protection: White", R::HasColor(Color::White))
+}
+pub fn rune_of_protection_blue() -> CardDefinition {
+    rune("Rune of Protection: Blue", R::HasColor(Color::Blue))
+}
+pub fn rune_of_protection_green() -> CardDefinition {
+    rune("Rune of Protection: Green", R::HasColor(Color::Green))
+}
+pub fn rune_of_protection_artifacts() -> CardDefinition {
+    rune("Rune of Protection: Artifacts", R::Artifact)
+}
+pub fn rune_of_protection_lands() -> CardDefinition {
+    rune("Rune of Protection: Lands", R::Land)
+}
+
+/// Electryte — {3}{R}{R}. Getting through means every blocker eats 3.
+pub fn electryte() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::DealDamageEqualToPowerToEach {
+                source: Selector::This,
+                targets: Selector::BlockingCreatures,
+                each_opponent: false,
+            },
+        }],
+        ..creature(
+            "Electryte",
+            cost(&[generic(3), r(), r()]),
+            vec![CreatureType::Trilobite, CreatureType::Beast],
+            3,
+            3,
+        )
+    }
+}
+
+/// No Rest for the Wicked — {1}{B}. Sacrifice it to take back everything that
+/// died this turn.
+pub fn no_rest_for_the_wicked() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::ReturnGraveyardCardsToHand {
+                filter: R::And(
+                    Box::new(R::Creature),
+                    Box::new(R::PutIntoGraveyardFromBattlefieldThisTurn),
+                ),
+                max: Value::Const(99),
+            },
+            ..Default::default()
+        }],
+        ..enchantment("No Rest for the Wicked", cost(&[generic(1), b()]))
+    }
+}
+
+/// Argothian Wurm — {3}{G}. A 6/6 trampler anyone can bounce for a land.
+pub fn argothian_wurm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::PlayersMayAccept {
+            who: PlayerRef::EachPlayer,
+            description: "Sacrifice a land to put Argothian Wurm on top of its owner's library?"
+                .into(),
+            on_accept: Box::new(Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::Target(0),
+                    count: Value::ONE,
+                    filter: R::Land,
+                },
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOf(Box::new(Selector::This)),
+                        pos: LibraryPosition::Top,
+                    },
+                },
+            ])),
+            otherwise: Box::new(Effect::Noop),
+        })],
+        ..creature("Argothian Wurm", cost(&[generic(3), g()]), vec![CreatureType::Wurm], 6, 6)
+    }
+}
+
+/// Lifeline — {5}. Nothing stays dead while another creature is out.
+pub fn lifeline() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::SelectorExists(Selector::EachPermanent(R::Creature)),
+            ),
+            effect: Effect::DelayUntilWithCapture {
+                kind: DelayedTriggerKind::NextEndStep,
+                capture: Selector::TriggerSource,
+                body: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::OwnerOfMoved,
+                        tapped: false,
+                    },
+                }),
+            },
+        }],
+        ..artifact("Lifeline", cost(&[generic(5)]))
+    }
+}
+
+/// Persecute — {2}{B}{B}. Name a color and strip it out of a hand.
+pub fn persecute() -> CardDefinition {
+    sorcery(
+        "Persecute",
+        cost(&[generic(2), b(), b()]),
+        Effect::ChooseColorThenDiscardMatching { who: PlayerRef::Target(0) },
+    )
+}
+
+/// Phyrexian Processor — {4}. Pay life on the way in; mint that big a Minion
+/// every turn. The token is a 0/0 carrying that many +1/+1 counters.
+pub fn phyrexian_processor() -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(Effect::Seq(vec![
+            Effect::ChooseNumberForSource { max: 20 },
+            Effect::LoseLife { who: Selector::You, amount: Value::ChosenNumberOfSource },
+        ])),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: TokenDefinition {
+                        name: "Phyrexian Minion".into(),
+                        power: 0,
+                        toughness: 0,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Black],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Phyrexian, CreatureType::Minion],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedTokens,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ChosenNumberOfSource,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..artifact("Phyrexian Processor", cost(&[generic(4)]))
+    }
+}
+
+/// Carpet of Flowers — {G}. Each of your main phases, cash in an opponent's
+/// Islands for mana.
+pub fn carpet_of_flowers() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::PreCombatMain),
+                EventScope::YourControl,
+            ),
+            effect: Effect::MayDo {
+                description: "Add mana for each Island that opponent controls".into(),
+                body: Box::new(Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::CountMatching {
+                        sel: Box::new(Selector::ControlledBy {
+                            who: PlayerRef::Target(0),
+                            filter: R::Any,
+                        }),
+                        filter: R::HasLandType(LandType::Island),
+                    }),
+                }),
+            },
+        }],
+        ..enchantment("Carpet of Flowers", cost(&[g()]))
+    }
+}
+
+/// Remembrance — {3}{W}. Every creature that dies fetches its twin.
+pub fn remembrance() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::NotToken,
+                }),
+            effect: Effect::MayDo {
+                description: "Search your library for a card with that name".into(),
+                body: Box::new(Effect::SearchSameNameAs {
+                    who: PlayerRef::You,
+                    subject: Selector::TriggerSource,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        ..enchantment("Remembrance", cost(&[generic(3), w()]))
+    }
+}
+
+/// Sporogenesis — {3}{G}. Seed creatures with fungus counters; they bloom into
+/// Saprolings when they die.
+pub fn sporogenesis() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            your_upkeep(Effect::MayDo {
+                description: "Put a fungus counter on target nontoken creature".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: target_filtered(R::And(Box::new(R::Creature), Box::new(R::NotToken))),
+                    kind: CounterType::Fungus,
+                    amount: Value::ONE,
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::WithCounter(CounterType::Fungus),
+                    },
+                ),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::CountersOn {
+                        what: Box::new(Selector::TriggerSource),
+                        kind: CounterType::Fungus,
+                    },
+                    definition: TokenDefinition {
+                        name: "Saproling".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Saproling],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::RemoveCounter {
+                    what: Selector::EachPermanent(R::WithCounter(CounterType::Fungus)),
+                    kind: CounterType::Fungus,
+                    amount: Value::Const(99),
+                },
+            },
+        ],
+        ..enchantment("Sporogenesis", cost(&[generic(3), g()]))
+    }
+}
+
+/// Serra's Hymn — {W}. Bank verse counters, then cash them in as a shield.
+/// The printed division across several targets is modeled as one target.
+pub fn serras_hymn() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![verse_upkeep()],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::PreventNextDamage { target: target_any(), amount: verses() },
+            ..Default::default()
+        }],
+        ..enchantment("Serra's Hymn", cost(&[w()]))
+    }
+}
+
+/// Discordant Dirge — {3}{B}{B}. Verse counters buy that many cards out of an
+/// opponent's hand.
+pub fn discordant_dirge() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![verse_upkeep()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::LookAtHand { who: Selector::Player(PlayerRef::Target(0)) },
+                Effect::DiscardChosen {
+                    from: Selector::Player(PlayerRef::Target(0)),
+                    count: verses(),
+                    filter: R::Any,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..enchantment("Discordant Dirge", cost(&[generic(3), b(), b()]))
+    }
 }

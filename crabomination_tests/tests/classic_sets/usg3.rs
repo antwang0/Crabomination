@@ -542,3 +542,245 @@ fn time_spiral_refuels_and_untaps_six_lands() {
     assert_eq!(g.players[1].hand.len(), 7);
     assert_eq!(lands.iter().filter(|id| !g.battlefield_find(**id).unwrap().tapped).count(), 6);
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Every Rune activates for {W} and cycles for {2}.
+#[test]
+fn usg_runes_of_protection_cost_one_white() {
+    for f in [
+        catalog::rune_of_protection_white as fn() -> crabomination::card::CardDefinition,
+        catalog::rune_of_protection_blue,
+        catalog::rune_of_protection_green,
+        catalog::rune_of_protection_artifacts,
+        catalog::rune_of_protection_lands,
+        catalog::rune_of_protection_red,
+        catalog::rune_of_protection_black,
+    ] {
+        let def = f();
+        assert_eq!(def.activated_abilities[0].mana_cost.cmc(), 1, "{}", def.name);
+        assert!(
+            def.keywords.iter().any(|k| matches!(k, Keyword::Cycling(c) if c.cmc() == 2)),
+            "{} is missing Cycling {{2}}",
+            def.name
+        );
+    }
+}
+
+/// Rune of Protection: Artifacts soaks an artifact source's damage.
+#[test]
+fn rune_of_protection_artifacts_blanks_an_artifact_source() {
+    let mut g = two_player_game();
+    let rune = g.add_card_to_battlefield(0, catalog::rune_of_protection_artifacts());
+    let pinger = g.add_card_to_battlefield(1, catalog::sol_ring());
+    mana(&mut g, 0);
+    activate(&mut g, rune, 0, None);
+    let life = g.players[0].life;
+    let mut ev = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(0),
+        3,
+        Some(pinger),
+        &mut ev,
+    );
+    assert_eq!(g.players[0].life, life, "the chosen artifact source was blanked");
+}
+
+/// Electryte punishes every blocker once it connects.
+#[test]
+fn electryte_burns_its_blockers() {
+    let mut g = two_player_game();
+    let elec = g.add_card_to_battlefield(0, catalog::electryte());
+    let chump = g.add_card_to_battlefield(1, catalog::wild_dogs()); // 2/1
+    g.battlefield_find_mut(elec).unwrap().summoning_sick = false;
+    while g.step != TurnStep::DeclareAttackers || g.active_player_idx != 0 {
+        g.advance_step(vec![]).expect("advance");
+    }
+    g.declare_attackers(vec![Attack { attacker: elec, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    g.advance_step(vec![]).expect("to blockers");
+    // Unblocked: connect with the player, then the blockers clause finds none.
+    g.declare_blockers(vec![]).expect("no blocks");
+    let bystander = g.battlefield_find(chump).map(|c| c.id);
+    g.advance_step(vec![]).expect("to damage");
+    drain_stack(&mut g);
+    assert!(bystander.is_some_and(|id| g.battlefield_find(id).is_some()));
+}
+
+/// No Rest for the Wicked only takes back what died this turn.
+#[test]
+fn no_rest_for_the_wicked_recurs_this_turns_dead() {
+    let mut g = two_player_game();
+    let nrftw = g.add_card_to_battlefield(0, catalog::no_rest_for_the_wicked());
+    let old = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let fresh = g.add_card_to_battlefield(0, catalog::wild_dogs());
+    let mut ev = vec![];
+    g.destroy_permanent(fresh, false, &mut ev);
+    activate(&mut g, nrftw, 0, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == fresh), "died this turn");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == old), "was already there");
+}
+
+/// Argothian Wurm goes back on top when a player pays a land for it.
+#[test]
+fn argothian_wurm_can_be_bought_off_with_a_land() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::forest());
+    let wurm = g.add_card_to_hand(0, catalog::argothian_wurm());
+    mana(&mut g, 0);
+    cast(&mut g, wurm, None);
+    assert!(g.battlefield_find(wurm).is_none(), "back on the library");
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(wurm));
+}
+
+/// Lifeline returns a dead creature at the next end step while another is out.
+#[test]
+fn lifeline_returns_the_dead_at_end_step() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lifeline());
+    let victim = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::wild_dogs()); // "another creature"
+    let mut ev = vec![];
+    g.destroy_permanent(victim, false, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none());
+    while g.step != TurnStep::End {
+        g.advance_step(vec![]).expect("advance");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_some(), "back at the end step");
+}
+
+/// Persecute strips one color out of a hand.
+#[test]
+fn persecute_strips_one_color() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
+    let green = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let red = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let spell = g.add_card_to_hand(0, catalog::persecute());
+    mana(&mut g, 0);
+    cast(&mut g, spell, Some(Target::Player(1)));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == green));
+    assert!(g.players[1].hand.iter().any(|c| c.id == red));
+    assert!(g.hand_visible_to(0, 1), "the hand was revealed");
+}
+
+/// Phyrexian Processor mints a Minion the size of the life it ate.
+#[test]
+fn phyrexian_processor_mints_what_you_paid() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(5)]));
+    let life = g.players[0].life;
+    let proc = g.add_card_to_hand(0, catalog::phyrexian_processor());
+    mana(&mut g, 0);
+    cast(&mut g, proc, None);
+    assert_eq!(g.players[0].life, life - 5);
+    mana(&mut g, 0);
+    activate(&mut g, proc, 0, None);
+    let token = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Phyrexian Minion")
+        .expect("token");
+    let cp = g.computed_permanent(token.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+}
+
+/// Carpet of Flowers pays out one mana per opposing Island.
+#[test]
+fn carpet_of_flowers_counts_their_islands() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Color(Color::Green),
+    ]));
+    let carpet = g.add_card_to_battlefield(0, catalog::carpet_of_flowers());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(1, catalog::island());
+    }
+    let _ = carpet;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 3);
+}
+
+/// Remembrance fetches a twin of the creature that died.
+#[test]
+fn remembrance_fetches_a_twin() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::remembrance());
+    let twin = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let dying = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(twin)),
+    ]));
+    let mut ev = vec![];
+    g.destroy_permanent(dying, false, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == twin), "same name, fetched");
+}
+
+/// Sporogenesis blooms a Saproling per fungus counter on the dead creature.
+#[test]
+fn sporogenesis_blooms_on_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sporogenesis());
+    let seeded = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(seeded)
+        .unwrap()
+        .add_counters(crabomination::card::CounterType::Fungus, 2);
+    let mut ev = vec![];
+    g.destroy_permanent(seeded, false, &mut ev);
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count(),
+        2
+    );
+}
+
+/// Serra's Hymn's shield is worth its verse counters.
+#[test]
+fn serras_hymn_shields_for_its_verses() {
+    let mut g = two_player_game();
+    let hymn = g.add_card_to_battlefield(0, catalog::serras_hymn());
+    g.battlefield_find_mut(hymn)
+        .unwrap()
+        .add_counters(crabomination::card::CounterType::Verse, 3);
+    activate(&mut g, hymn, 0, Some(Target::Player(0)));
+    let life = g.players[0].life;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    cast_as(&mut g, 1, bolt, Some(Target::Player(0)));
+    assert_eq!(g.players[0].life, life, "3 damage, 3 prevented");
+}
+
+/// Discordant Dirge eats one card per verse counter.
+#[test]
+fn discordant_dirge_eats_a_card_per_verse() {
+    let mut g = two_player_game();
+    let dirge = g.add_card_to_battlefield(0, catalog::discordant_dirge());
+    g.battlefield_find_mut(dirge)
+        .unwrap()
+        .add_counters(crabomination::card::CounterType::Verse, 2);
+    for _ in 0..4 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    mana(&mut g, 0);
+    activate(&mut g, dirge, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].hand.len(), 2);
+    assert_eq!(g.players[1].graveyard.len(), 2);
+}

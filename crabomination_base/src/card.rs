@@ -560,6 +560,9 @@ pub enum CounterType {
     /// Infection counter — Festering Wound accrues one each of your upkeeps and
     /// bites the enchanted creature's controller for the count (UDS).
     Infection,
+    /// Sporogenesis — a fungus counter; a creature carrying them mints one
+    /// Saproling per counter when it dies.
+    Fungus,
 }
 
 /// Every zone a card can occupy.

@@ -616,6 +616,10 @@ pub enum Value {
     /// The number just picked by [`Effect::PlayerChoosesNumber`] (0 outside
     /// one). Choice of Damnations' "that much" / "all but that many".
     ChosenNumber,
+    /// The number stored on the source permanent by
+    /// `Effect::ChooseNumberForSource` (Phyrexian Processor's "the life paid
+    /// as this artifact entered"). Zero when nothing was chosen.
+    ChosenNumberOfSource,
     /// Nonland cards exiled by the enclosing
     /// [`Effect::ExileTopBatchesUntilLandLast`] (Rally the Horde).
     NonlandCardsExiledThisEffect,
@@ -7246,6 +7250,16 @@ pub enum Effect {
     /// comparison is re-read per player, which a single `Value` filter can't
     /// express.
     ReturnCreaturesWithPowerGreaterThanHand { who: PlayerRef },
+
+    /// "Search `who`'s library for a card with the same name as `subject`,
+    /// reveal it, put it into `to`, then shuffle" (Remembrance). The name is
+    /// read at resolution from the (possibly already-dead) subject's LKI.
+    SearchSameNameAs { who: PlayerRef, subject: Selector, to: ZoneDest },
+
+    /// "Choose a color. `who` reveals their hand and discards all cards of
+    /// that color" (Persecute). The color is chosen by the resolving
+    /// controller; the reveal publishes the hand to them.
+    ChooseColorThenDiscardMatching { who: PlayerRef },
 }
 
 /// CR 702.172 — one Spree mode: an additional mana cost paired with the

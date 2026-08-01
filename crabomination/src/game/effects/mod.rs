@@ -5921,6 +5921,59 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SearchSameNameAs { who, subject, to } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let Some(name) = self
+                    .resolve_selector(subject, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .find_map(|id| {
+                        self.find_card_anywhere(id)
+                            .or_else(|| self.died_card_snapshots.get(&id))
+                            .or_else(|| self.leaves_bf_lki.get(&id))
+                            .map(|c| c.definition.name.to_string())
+                    })
+                else {
+                    return Ok(());
+                };
+                self.run_effect(
+                    &Effect::Search {
+                        who: PlayerRef::Seat(p),
+                        filter: crate::card::SelectionRequirement::HasName(name),
+                        to: to.clone(),
+                    },
+                    ctx,
+                    events,
+                )
+            }
+
+            Effect::ChooseColorThenDiscardMatching { who } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(victim) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let source = ctx.source.unwrap_or(CardId(0));
+                let color = match self.decider.decide(&Decision::ChooseColor {
+                    source,
+                    legal: Color::ALL.to_vec(),
+                }) {
+                    DecisionAnswer::Color(c) => c,
+                    _ => Color::Black,
+                };
+                // The reveal is public to the chooser for the rest of the game.
+                if !self.hands_revealed_to.contains(&(ctx.controller, victim)) {
+                    self.hands_revealed_to.push((ctx.controller, victim));
+                }
+                let doomed: Vec<CardId> = self.players[victim]
+                    .hand
+                    .iter()
+                    .filter(|c| c.definition.printed_colors().contains(&color))
+                    .map(|c| c.id)
+                    .collect();
+                for cid in doomed {
+                    self.discard_card(victim, cid, events);
+                }
+                Ok(())
+            }
+
             Effect::ReturnCreaturesWithPowerGreaterThanHand { who } => {
                 let dest = ZoneDest::Hand(PlayerRef::OwnerOfMoved);
                 for p in self.apnap_sort(self.resolve_players(who, ctx)) {

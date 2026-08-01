@@ -410,6 +410,8 @@ impl Effect {
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
             Effect::ExileHand { who }
             | Effect::PlayerReturnsPermanentUnlessPaysLife { who, .. }
+            | Effect::ChooseColorThenDiscardMatching { who }
+            | Effect::SearchSameNameAs { who, .. }
             | Effect::ReturnCreaturesWithPowerGreaterThanHand { who } => player_has_target(who),
             Effect::ExileChosenFromHandOrGraveyard { who, .. } => player_has_target(who),
             Effect::DiscardUnlessKind { who, count, .. } => {

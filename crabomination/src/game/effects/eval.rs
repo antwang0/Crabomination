@@ -491,16 +491,14 @@ impl GameState {
                     // CR 122.2 strips counters on zone change, so a
                     // die-trigger that reads "its +1/+1 counters"
                     // (Ambitious Augmenter's transfer) consults the
-                    // leaves-battlefield LKI snapshot (CR 603.10) when its
-                    // source is mid-resolution off the battlefield; the
+                    // leaves-battlefield LKI snapshot (CR 603.10); the
                     // dispatch-time `died_card_snapshots` cache covers
                     // filter evaluation before the trigger resolves.
                     self.battlefield_find(cid)
-                        .or_else(|| {
-                            self.resolving_lki_source
-                                .filter(|s| *s == cid)
-                                .and_then(|_| self.leaves_bf_lki.get(&cid))
-                        })
+                        // Covers both the resolving trigger's source and its
+                        // dead subject (Sporogenesis' "for each fungus counter
+                        // on that creature").
+                        .or_else(|| self.lki_snapshot(cid))
                         .or_else(|| self.died_card_snapshots.get(&cid))
                         .or_else(|| self.players.iter().find_map(
                             |p| p.graveyard.iter().find(|c| c.id == cid)))
@@ -546,6 +544,11 @@ impl GameState {
             Value::CounteredSpellManaSpent => self.countered_spell_mana_spent as i32,
             Value::CounteredSpellManaValue => self.countered_spell_mana_value as i32,
             Value::ChosenNumber => self.chosen_number_this_resolution as i32,
+            Value::ChosenNumberOfSource => ctx
+                .source
+                .and_then(|s| self.battlefield_find(s))
+                .and_then(|c| c.chosen_number)
+                .unwrap_or(0) as i32,
             Value::NonlandCardsExiledThisEffect => self.nonland_cards_exiled_this_effect as i32,
             Value::Sum(vs) => vs.iter().map(|v| self.evaluate_value(v, ctx)).sum(),
             Value::Diff(a, b) => self.evaluate_value(a, ctx) - self.evaluate_value(b, ctx),

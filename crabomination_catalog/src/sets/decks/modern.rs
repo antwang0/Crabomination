@@ -49239,17 +49239,23 @@ pub fn circle_of_protection_green() -> CardDefinition {
     circle_of_protection("Circle of Protection: Green", Color::Green)
 }
 
-/// Rune of Protection: Red — {1}{W} Enchantment. CoP: Red plus Cycling {2}.
+/// Rune of Protection: Red — {1}{W} Enchantment. CoP: Red at `{W}`, plus
+/// Cycling {2}.
 pub fn rune_of_protection_red() -> CardDefinition {
-    let mut def = circle_of_protection("Rune of Protection: Red", Color::Red);
-    def.keywords = vec![Keyword::Cycling(cost(&[generic(2)]))];
-    def
+    rune_of_protection("Rune of Protection: Red", Color::Red)
 }
 
-/// Rune of Protection: Black — {1}{W} Enchantment. CoP: Black plus Cycling {2}.
+/// Rune of Protection: Black — {1}{W} Enchantment. CoP: Black at `{W}`, plus
+/// Cycling {2}.
 pub fn rune_of_protection_black() -> CardDefinition {
-    let mut def = circle_of_protection("Rune of Protection: Black", Color::Black);
+    rune_of_protection("Rune of Protection: Black", Color::Black)
+}
+
+/// The Runes' activation is `{W}`, not the Circles' `{1}`.
+fn rune_of_protection(name: &'static str, color: Color) -> CardDefinition {
+    let mut def = circle_of_protection(name, color);
     def.keywords = vec![Keyword::Cycling(cost(&[generic(2)]))];
+    def.activated_abilities[0].mana_cost = cost(&[w()]);
     def
 }
 
