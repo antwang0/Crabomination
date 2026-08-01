@@ -1646,6 +1646,9 @@ pub enum Predicate {
     /// "if this spell was kicked, …" riders (Tear Asunder). Non-spell
     /// contexts default `kicked` to `false`.
     SpellWasKicked,
+    /// CR 702.32b — the resolving spell was kicked with option `n` of its
+    /// `kicker_options` (Anavolver's "kicked with its {1}{U} kicker").
+    SpellWasKickedWith(u8),
     /// "If the sacrificed permanent was an artifact" — reads the
     /// additional-cast-cost sacrifice scratch (Foundry Helix).
     SacrificedWasArtifact,
@@ -4150,6 +4153,17 @@ pub enum Effect {
     /// basic type, each chosen from the cards carrying that type; a type with
     /// no match is simply skipped.
     SearchEachBasicLandType { who: PlayerRef, tapped: bool },
+    /// CR 614 — "Until end of turn, spells and abilities you control that would
+    /// add colored mana instead add that much `color` mana; you may spend that
+    /// colour as though it were mana of any color" (False Dawn).
+    ColoredManaBecomesThisTurn { who: PlayerRef, color: Color },
+    /// CR 105 — the target instant/sorcery spell on the stack becomes a single
+    /// colour of the controller's choice (Vodalian Mystic).
+    SpellBecomesChosenColor { what: Selector },
+    /// "Any player other than the caster may pay that spell's mana cost; if a
+    /// player does, counter it" (Ice Cave). Walks the other seats in turn
+    /// order and takes the first willing payer.
+    OtherPlayerMayPayToCounter { what: Selector },
     /// "Search your library for up to `count` cards matching `filter` and put
     /// them into `to`." Resolves as a chain of single `Search` picks (each
     /// reuses the `SearchPending` suspend), shrinking `count` per pick.
@@ -4955,8 +4969,8 @@ pub enum Effect {
     GrantProtectionFromChosenColor { what: Selector, duration: Duration },
     /// Grant a transient triggered ability to each permanent picked by
     /// `what`, for `duration`. Stashed in `GameState.
-    /// granted_triggers_eot` (only EOT duration is wired today;
-    /// Permanent grants would need a separate map). The dispatcher
+    /// granted_triggers_eot`; `Duration::Permanent` bakes the trigger onto the
+    /// permanent's own definition instead (the Volver kickers). The dispatcher
     /// walks both printed `triggered_abilities` and granted ones,
     /// firing matching events from either source. Used by Root
     /// Manipulation ("creatures you control gain 'whenever this

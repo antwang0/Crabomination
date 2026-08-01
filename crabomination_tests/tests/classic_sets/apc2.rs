@@ -4,7 +4,7 @@
 use crabomination::card::{CardType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, StackItem, Target};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -524,4 +524,222 @@ fn emblazoned_golem_enters_with_x_counters() {
     .expect("cast");
     drain_stack(&mut g);
     assert_eq!(power_of(&g, golem), 4);
+}
+
+/// A Volver kicked with only its cheap half gets that half's rider.
+#[test]
+fn anavolver_kicked_with_one_half_only() {
+    let mut g = main_phase();
+    let volver = g.add_card_to_hand(0, catalog::anavolver());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKickers {
+        card_id: volver,
+        kickers: vec![1],
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(power_of(&g, volver), 4, "3/3 plus one counter");
+    let kws = g.computed_permanent(volver).unwrap().keywords;
+    assert!(!kws.contains(&Keyword::Flying), "the blue half wasn't paid");
+}
+
+/// Both halves stack: counters from each, plus both riders.
+#[test]
+fn cetavolver_kicked_with_both_halves() {
+    let mut g = main_phase();
+    let volver = g.add_card_to_hand(0, catalog::cetavolver());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKickers {
+        card_id: volver,
+        kickers: vec![0, 1],
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(power_of(&g, volver), 4, "1/1 plus three counters");
+    let kws = g.computed_permanent(volver).unwrap().keywords;
+    assert!(kws.contains(&Keyword::FirstStrike) && kws.contains(&Keyword::Trample));
+}
+
+/// Necravolver's white kicker grants a real damage-triggered lifelink.
+#[test]
+fn necravolver_white_kicker_grants_lifegain() {
+    let mut g = main_phase();
+    let volver = g.add_card_to_hand(0, catalog::necravolver());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKickers {
+        card_id: volver,
+        kickers: vec![1],
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    g.clear_sickness(volver);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: volver,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23, "3 power, 3 life");
+}
+
+/// Illuminate's kickers add the controller burn and the cards.
+#[test]
+fn illuminate_kicked_with_both_halves() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let angel = find(&g, "Serra Angel");
+    let illuminate = g.add_card_to_hand(0, catalog::illuminate());
+    let hand_before = g.players[0].hand.len() - 1;
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKickers {
+        card_id: illuminate,
+        kickers: vec![0, 1],
+        target: Some(Target::Permanent(angel)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "the red kicker hits the controller");
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "the blue kicker draws X");
+}
+
+/// Zombie Boa's chosen colour kills the blocker.
+#[test]
+fn zombie_boa_eats_a_blocker_of_the_named_color() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
+    let boa = g.add_card_to_battlefield(0, catalog::zombie_boa());
+    g.clear_sickness(boa);
+    activate(&mut g, 0, boa, 0, None);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: boa,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, boa)])).expect("block");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != blocker), "the green blocker died");
+}
+
+/// Mind Extraction strips the sacrificed creature's colours.
+#[test]
+fn mind_extraction_discards_the_sacrificed_colors() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::giant_growth());
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let extraction = g.add_card_to_hand(0, catalog::mind_extraction());
+    cast(&mut g, 0, extraction, Some(Target::Player(1)));
+    assert_eq!(g.players[1].hand.len(), 1, "the green card went");
+    assert_eq!(g.players[1].hand[0].definition.name, "Lightning Bolt");
+}
+
+/// False Dawn recolours everything you tap for.
+#[test]
+fn false_dawn_turns_your_mana_white() {
+    let mut g = main_phase();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let dawn = g.add_card_to_hand(0, catalog::false_dawn());
+    g.add_card_to_library(0, catalog::plains());
+    cast(&mut g, 0, dawn, None);
+    g.players[0].mana_pool.empty();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap");
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0);
+}
+
+/// Vodalian Mystic repaints a spell on the stack.
+#[test]
+fn vodalian_mystic_recolors_a_spell() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Black)]));
+    let mystic = g.add_card_to_battlefield(0, catalog::vodalian_mystic());
+    g.clear_sickness(mystic);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mystic,
+        ability_index: 0,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    g.resolve_top_of_stack().expect("resolve the ability");
+    let colors = g
+        .stack
+        .iter()
+        .find_map(|si| match si {
+            StackItem::Spell { card, .. } if card.id == bolt => {
+                Some(card.definition.printed_colors())
+            }
+            _ => None,
+        })
+        .expect("still on the stack");
+    assert_eq!(colors, vec![Color::Black]);
+}
+
+/// Ice Cave lets the other seat buy out a spell.
+#[test]
+fn ice_cave_lets_an_opponent_pay_to_counter() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::ice_cave());
+    mana(&mut g, 1);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, 0, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 20, "the Bolt was bought out");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt));
 }

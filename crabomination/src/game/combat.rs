@@ -985,6 +985,7 @@ impl GameState {
                     cast_from_hand: true,
                     event_amount: 0,
                     kicked: false,
+                    kicked_options: Vec::new(),
                     kick_count: 0,
                     bargained: false,
                     cast_via_mayhem: false,

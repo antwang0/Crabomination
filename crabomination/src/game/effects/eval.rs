@@ -2099,6 +2099,7 @@ impl GameState {
                     .iter()
                     .any(|c| c.controller == ctx.controller && ids.contains(&c.id))
             }
+            Predicate::SpellWasKickedWith(n) => ctx.kicked_options.contains(n),
             Predicate::SpellWasKicked => {
                 // CR 702.32 — true iff the kicker cost was paid at cast
                 // time. Stamped onto `ctx.kicked` from the resolving
@@ -3389,6 +3390,12 @@ impl GameState {
             | R::SharesCreatureTypeWithAttachedHost => false,
             // Empty-Shrine Kannushi — printed colours on both sides, since
             // this is consulted from inside the layer gather.
+            R::SharesColorWithSacrificed => {
+                let colors = card.definition.printed_colors();
+                self.sacrificed_colors
+                    .as_ref()
+                    .is_some_and(|cs| cs.iter().any(|c| colors.contains(c)))
+            }
             R::SharesColorWithPermanentYouControl => {
                 let colors = card.definition.printed_colors();
                 !colors.is_empty()

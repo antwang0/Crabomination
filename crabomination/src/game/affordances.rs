@@ -494,6 +494,55 @@ impl GameState {
         out
     }
 
+    /// CR 702.32b — for each hand card with "Kicker {A} and/or {B}", the
+    /// option subsets the caster could actually pay for right now (dry-run per
+    /// subset). Lets the client offer one menu entry per payable combination.
+    fn kicker_option_sets_on(
+        &self,
+        template: &GameState,
+        caster: usize,
+    ) -> Vec<(CardId, Vec<Vec<u8>>)> {
+        let hand: Vec<(CardId, usize, bool, crate::effect::Effect)> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| !c.definition.kicker_options.is_empty())
+            .map(|c| {
+                (
+                    c.id,
+                    c.definition.kicker_options.len(),
+                    c.definition.effect.requires_target(),
+                    c.definition.effect.clone(),
+                )
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, n, needs_target, effect) in &hand {
+            let (target, additional_targets) = if *needs_target {
+                self.auto_targets_for_effect_all_slots_kicked(effect, caster, None, true)
+            } else {
+                (None, Vec::new())
+            };
+            // Non-empty subsets of `0..n`, in mask order.
+            let sets: Vec<Vec<u8>> = (1u32..(1 << *n))
+                .map(|mask| (0..*n as u8).filter(|i| mask & (1 << i) != 0).collect())
+                .filter(|kickers: &Vec<u8>| {
+                    Self::would_accept_on(template, GameAction::CastSpellKickers {
+                        card_id: *id,
+                        kickers: kickers.clone(),
+                        target: target.clone(),
+                        additional_targets: additional_targets.clone(),
+                        mode: None,
+                        x_value: None,
+                    })
+                })
+                .collect();
+            if !sets.is_empty() {
+                out.push((*id, sets));
+            }
+        }
+        out
+    }
+
     /// CardIds in the caster's hand with a live Miracle window (CR 702.94) —
     /// revealed as the turn's first draw, castable for the cheaper miracle
     /// cost. A pure structural filter (no dry-run): the stamped
@@ -1305,6 +1354,7 @@ impl GameState {
             // needs no template and never touches the probe clone.
             pitchable: self.pitchable_hand_cards(seat),
             kickable: self.kickable_hand_cards_on(&template, seat),
+            kicker_option_sets: self.kicker_option_sets_on(&template, seat),
             buyback: self.buyback_hand_cards_on(&template, seat),
             bestowable: self.bestowable_hand_cards_on(&template, seat),
             dashable: self.dashable_hand_cards_on(&template, seat),

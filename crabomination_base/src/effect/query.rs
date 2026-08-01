@@ -229,6 +229,9 @@ impl Effect {
         match self {
             Effect::Noop
             | Effect::SearchEachBasicLandType { .. }
+            | Effect::ColoredManaBecomesThisTurn { .. }
+            | Effect::SpellBecomesChosenColor { .. }
+            | Effect::OtherPlayerMayPayToCounter { .. }
             | Effect::HighestLifeWinsElseDraw
             | Effect::ReplaceLandManaThisTurn { .. }
             | Effect::ExileTopThenRevealUntilNamed { .. }
@@ -2783,9 +2786,7 @@ impl Effect {
                 | Effect::WeldArtifacts { what } => sel_find(what, slot),
                 Effect::RevealLibraryNamedCountPunish { who, .. }
                 | Effect::AlternatingExileFromHand { who } => sel_find(who, slot),
-                Effect::ExileHandThenReclaimLinked
-                | Effect::ExileHandLinked { .. }
-                | Effect::ReturnLinkedExilesToHand { .. } => None,
+                Effect::ExileHandThenReclaimLinked => None,
                 Effect::LookExileAnyNumberRestBack { who, .. }
                 | Effect::PutTopOnBottom { who }
                 | Effect::LookAtHandCastFree { who } => sel_find(who, slot),

@@ -119,7 +119,7 @@ pub enum CreatureType {
     Rabbit, Raccoon, Mouse, Wolverine, Mole, Possum, Skunk, Hamster,
     // Invasion block Metathran (Living Airship, Metathran Zombie) and
     // Apocalypse Flagbearers (Standard Bearer, Coalition Honor Guard).
-    Metathran, Flagbearer,
+    Metathran, Flagbearer, Volver,
     // The Last Airbender (2026).
     Lemur, Kangaroo, Seal,
     // The Lost Caverns of Ixalan (2023).
@@ -1684,6 +1684,9 @@ pub enum SelectionRequirement {
     /// Empty-Shrine Kannushi's "protection from the colors of permanents you
     /// control".
     SharesColorWithPermanentYouControl,
+    /// Shares a colour with the permanent sacrificed to pay this spell's
+    /// additional cost (Mind Extraction). False with nothing sacrificed.
+    SharesColorWithSacrificed,
     /// The permanent's mana value equals the evaluating player's unspent
     /// (floating) mana — Glissa Sunseeker.
     ManaValueEqualsYourUnspentMana,
@@ -2402,6 +2405,10 @@ pub struct CardDefinition {
     /// indicator. Empty for ordinary cards whose color comes from their cost.
     #[serde(default)]
     pub color_indicator: Vec<Color>,
+    /// CR 105 — colours forced onto this object, replacing everything its cost
+    /// and indicator would give (Vodalian Mystic recolouring a stack spell).
+    #[serde(default)]
+    pub color_override: Option<Vec<Color>>,
     pub power: i32,
     pub toughness: i32,
     pub base_loyalty: u32,
@@ -2866,6 +2873,12 @@ pub struct CardDefinition {
     /// the cast `kicked`, which `Predicate::SpellWasKicked` reads.
     #[serde(default)]
     pub kicker_action_cost: Option<AdditionalCastCost>,
+    /// CR 702.32b — "Kicker {A} and/or {B}": two independently payable kicker
+    /// costs (the Apocalypse Volver cycle, Illuminate). Cast via
+    /// `GameAction::CastSpellKickers`; each paid index is stamped onto the
+    /// spell and read back by `Predicate::SpellWasKickedWith`.
+    #[serde(default)]
+    pub kicker_options: Vec<crate::mana::ManaCost>,
     /// CR 614 — "If a spell or ability an opponent controls causes you to
     /// discard this card, put it onto the battlefield with N `CounterType`
     /// counters on it instead of putting it into your graveyard" (Dodecapod).
@@ -4064,6 +4077,9 @@ impl CardDefinition {
     /// the Devoid CDA (CR 702.114) yielding colorless.
     pub fn printed_colors(&self) -> Vec<crate::mana::Color> {
         use crate::mana::ManaSymbol;
+        if let Some(forced) = &self.color_override {
+            return forced.clone();
+        }
         if self.keywords.contains(&Keyword::Devoid) {
             return Vec::new();
         }
@@ -4943,6 +4959,10 @@ pub struct CardInstance {
     /// ChosenColorOfSource` so a `{T}: Add the chosen color` ability taps for
     /// it. `None` until an `Effect::ChooseColorForSelf` stamps it.
     pub chosen_color: Option<crate::mana::Color>,
+    /// CR 702.32b — which of the definition's `kicker_options` were paid for
+    /// this cast (Anavolver kicked with {1}{U} only). Empty for every other
+    /// spell.
+    pub kicked_options: Vec<u8>,
     /// Two colors chosen as this permanent entered (Tablet of the Guilds).
     /// Empty until an `Effect::ChooseTwoColorsForSource` stamps them.
     pub chosen_colors: Vec<crate::mana::Color>,
@@ -5202,6 +5222,7 @@ impl CardInstance {
             granted_cast_surcharge_eot: None,
             named_card: None,
             chosen_color: None,
+            kicked_options: Vec::new(),
             chosen_colors: Vec::new(),
             goaded_by: Vec::new(),
             monstrous: false,
@@ -5849,6 +5870,9 @@ struct CardInstanceWire {
     chosen_color: Option<crate::mana::Color>,
     #[serde(default)]
     chosen_colors: Vec<crate::mana::Color>,
+    /// CR 702.32b — the paid "and/or" kicker indices.
+    #[serde(default)]
+    kicked_options: Vec<u8>,
     /// CR 701.38 goad — players who have goaded this creature.
     /// `#[serde(default)]` so older snapshots load as empty.
     #[serde(default)]
@@ -5972,6 +5996,7 @@ impl serde::Serialize for CardInstance {
             attached_to_player: self.attached_to_player,
             soulbond_partner: self.soulbond_partner,
             kicked: self.kicked,
+            kicked_options: self.kicked_options.clone(),
             kick_count: self.kick_count,
             squad_count: self.squad_count,
             cast_mana_spent: self.cast_mana_spent,
@@ -6094,6 +6119,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.attached_to_player = wire.attached_to_player;
         c.soulbond_partner = wire.soulbond_partner;
         c.kicked = wire.kicked;
+        c.kicked_options = wire.kicked_options;
         c.kick_count = wire.kick_count;
         c.squad_count = wire.squad_count;
         c.cast_mana_spent = wire.cast_mana_spent;

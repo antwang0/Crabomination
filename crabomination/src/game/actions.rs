@@ -3483,6 +3483,33 @@ impl GameState {
     /// CR 702.32 — cast a spell paying its optional Kicker cost. The kicker
     /// mana is added to the spell's cost and the resolving spell is stamped
     /// `kicked`, which `Predicate::SpellWasKicked` reads.
+    /// CR 702.32b — cast a spell paying the chosen subset of its
+    /// `kicker_options`. The picks are stamped onto the spell so
+    /// `Predicate::SpellWasKickedWith` riders fire per option (the Volvers).
+    pub(crate) fn cast_spell_kickers(
+        &mut self,
+        card_id: CardId,
+        kickers: Vec<u8>,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_kicker_options = kickers;
+        let out = self.cast_spell_with_convoke(
+            card_id,
+            target,
+            additional_targets,
+            mode,
+            x_value,
+            &[],
+            &[],
+            CastFlags { kicked: true, ..Default::default() },
+        );
+        self.cast_kicker_options.clear();
+        out
+    }
+
     pub(crate) fn cast_spell_kicked(
         &mut self,
         card_id: CardId,
@@ -5430,10 +5457,18 @@ impl GameState {
         // actually has a kicker cost (mana or action); a mana kicker is
         // folded into the spell's mana cost below, an action kicker joins
         // the additional-cast-cost payment.
+        // CR 702.32b — an "and/or" kicker cast carries its chosen option
+        // indices instead of a single kicker cost.
+        let kicker_options: Vec<u8> = std::mem::take(&mut self.cast_kicker_options)
+            .into_iter()
+            .filter(|i| (*i as usize) < card.definition.kicker_options.len())
+            .collect();
         let kicked = kicked
             && (card.definition.has_kicker().is_some()
-                || card.definition.kicker_action_cost.is_some());
+                || card.definition.kicker_action_cost.is_some()
+                || !kicker_options.is_empty());
         card.kicked = kicked;
+        card.kicked_options = kicker_options;
         // CR 702.27 — opt-in Buyback; folded into the cost below and read
         // at resolution to return the spell to hand instead of the gy.
         let buyback = buyback && card.definition.has_buyback().is_some();
@@ -5987,6 +6022,12 @@ impl GameState {
         // CR 702.32b — fold the optional kicker cost into the total cost.
         if kicked && let Some(kick) = card.definition.has_kicker() {
             cost.symbols.extend(kick.symbols.iter().cloned());
+        }
+        // …and each chosen "and/or" kicker option (the Volver cycle).
+        for i in &card.kicked_options {
+            if let Some(k) = card.definition.kicker_options.get(*i as usize) {
+                cost.symbols.extend(k.symbols.iter().cloned());
+            }
         }
         // CR 702.172 / FIN Tiered — fold each chosen mode's mana cost into the
         // total.
@@ -7556,6 +7597,7 @@ impl GameState {
                     cast_from_hand: true,
                     event_amount: 0,
                     kicked: false,
+                    kicked_options: Vec::new(),
                     kick_count: 0,
                     bargained: false,
                     cast_via_mayhem: false,
@@ -8764,6 +8806,7 @@ impl GameState {
                 cast_from_hand: true,
                 event_amount: 0,
                 kicked: false,
+                kicked_options: Vec::new(),
                 kick_count: 0,
                 bargained: false,
                 cast_via_mayhem: false,
@@ -10014,6 +10057,7 @@ impl GameState {
                     cast_from_hand,
                     event_amount: 0,
                     kicked: false,
+                    kicked_options: Vec::new(),
                     kick_count: 0,
                     bargained: false,
                     cast_via_mayhem: false,
@@ -11776,6 +11820,7 @@ impl GameState {
                 cast_from_hand: true,
                 event_amount: 0,
                 kicked: false,
+                kicked_options: Vec::new(),
                 kick_count: 0,
                 bargained: false,
                 cast_via_mayhem: false,

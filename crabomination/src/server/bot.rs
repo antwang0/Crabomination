@@ -2342,6 +2342,49 @@ fn cast_candidates(
         }
     }
 
+    // CR 702.32b — "Kicker {A} and/or {B}": offer the largest affordable
+    // subset (both halves before either alone; each rider is pure upside).
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| !c.definition.kicker_options.is_empty())
+    {
+        let effect = &c.definition.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) =
+                state.auto_targets_for_effect_all_slots_kicked(effect, seat, None, true);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let n = c.definition.kicker_options.len() as u8;
+        let mut best: Option<GameAction> = None;
+        for mask in (1u32..(1 << n)).rev() {
+            let kickers: Vec<u8> = (0..n).filter(|i| mask & (1 << i) != 0).collect();
+            let action = GameAction::CastSpellKickers {
+                card_id: c.id,
+                kickers,
+                target: target.clone(),
+                additional_targets: additional_targets.clone(),
+                mode: None,
+                x_value: None,
+            };
+            if GameState::would_accept_on(probe, action.clone()) {
+                best = Some(action);
+                break;
+            }
+        }
+        if let Some(action) = best {
+            let cid = c.id;
+            unvalidated
+                .retain(|a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid));
+            castable.push(action);
+        }
+    }
+
     // Multikicker (CR 702.33c): offer the *biggest affordable* kick count
     // (probed 4 → 1 via `would_accept`, which validates base + N×kick).
     for c in state.players[seat]
@@ -6552,6 +6595,7 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
         GameAction::CastSpellSpree { card_id, target, .. } => (*card_id, target.clone(), 0, 0),
         GameAction::CastSpellConspire { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
         GameAction::CastSpellKicked { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
+        GameAction::CastSpellKickers { card_id, target, .. } => (*card_id, target.clone(), 3, 0),
         GameAction::CastSpellMultikicked { card_id, target, times, .. } => {
             (*card_id, target.clone(), 3, *times)
         }

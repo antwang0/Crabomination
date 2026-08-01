@@ -1576,6 +1576,7 @@ impl GameState {
                             // / …) read true when the mode was paid.
                             if let Some(c) = self.battlefield_find(card_id) {
                                 ctx.kicked = c.kicked;
+                                ctx.kicked_options = c.kicked_options.clone();
                                 ctx.bargained = c.bargained;
                                 ctx.cast_from_hand = c.cast_from_hand;
                                 ctx.cast_via_mayhem = c.cast_via_mayhem;
@@ -2932,6 +2933,7 @@ impl GameState {
         self.search_tax_paid_this_turn.clear();
         self.damage_prevented_sources.clear();
         self.land_mana_replacements_this_turn.clear();
+        self.colored_mana_becomes_this_turn.clear();
         self.blocks_declared_this_turn.clear();
         self.turn_granted_triggers.clear();
         self.cant_block_pairs.clear();

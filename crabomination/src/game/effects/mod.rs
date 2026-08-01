@@ -137,6 +137,10 @@ pub struct EffectContext {
     /// `Predicate::SpellWasKicked`. Defaults to `false` for non-spell
     /// contexts.
     pub kicked: bool,
+    /// CR 702.32b — which `kicker_options` indices this cast paid for, stamped
+    /// from the resolving `CardInstance.kicked_options`. Read by
+    /// `Predicate::SpellWasKickedWith` (the Volver cycle).
+    pub kicked_options: Vec<u8>,
     /// CR 702.33c — how many times the resolving spell's Multikicker cost was
     /// paid. Read by `Value::TimesKicked` when the source is a spell rather
     /// than a battlefield permanent (Spell Contortion). Defaults to 0.
@@ -182,6 +186,7 @@ impl EffectContext {
             cast_from_hand: true,
             event_amount: 0,
             kicked: false,
+            kicked_options: Vec::new(),
             kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
@@ -266,6 +271,7 @@ impl EffectContext {
             cast_from_hand,
             event_amount: 0,
             kicked: false,
+            kicked_options: Vec::new(),
             kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
@@ -295,6 +301,7 @@ impl EffectContext {
             cast_from_hand: true,
             event_amount: 0,
             kicked: false,
+            kicked_options: Vec::new(),
             kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
@@ -323,6 +330,7 @@ impl EffectContext {
             cast_from_hand: true,
             event_amount: 0,
             kicked: false,
+            kicked_options: Vec::new(),
             kick_count: 0,
             bargained: false,
             cast_via_mayhem: false,
@@ -7179,9 +7187,19 @@ impl GameState {
                 // Reflection, Nyxbloom Ancient). 1× outside a tapped mana
                 // ability; 0 (serde default) also reads as 1×.
                 let mult = self.mana_production_multiplier.max(1);
-                let add_one = |state: &mut Self, p: usize, c: Color| match restriction {
-                    Some(r) => state.players[p].mana_pool.add_restricted(c, mult, r),
-                    None => state.players[p].mana_pool.add(c, mult),
+                // False Dawn — every colour this seat would add becomes the
+                // recorded colour instead (CR 614).
+                let recolor = self
+                    .colored_mana_becomes_this_turn
+                    .iter()
+                    .find(|(seat, _)| *seat == p)
+                    .map(|(_, c)| *c);
+                let add_one = |state: &mut Self, p: usize, c: Color| {
+                    let c = recolor.unwrap_or(c);
+                    match restriction {
+                        Some(r) => state.players[p].mana_pool.add_restricted(c, mult, r),
+                        None => state.players[p].mana_pool.add(c, mult),
+                    }
                 };
                 // Contamination — "if a land is tapped for mana, it produces
                 // [color] instead of any other type and amount." Replaces the
@@ -15998,6 +16016,88 @@ impl GameState {
                     }
                 }
                 self.shuffle_library(p, events);
+                Ok(())
+            }
+
+            // False Dawn — record the turn-scoped recolour for this seat.
+            Effect::ColoredManaBecomesThisTurn { who, color } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.colored_mana_becomes_this_turn.retain(|(s, _)| *s != p);
+                    self.colored_mana_becomes_this_turn.push((p, *color));
+                }
+                Ok(())
+            }
+
+            // Vodalian Mystic — force a stack spell's colours (CR 105).
+            Effect::SpellBecomesChosenColor { what } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let ids: Vec<CardId> =
+                    self.resolve_selector(what, ctx).iter().filter_map(|e| e.as_card_id()).collect();
+                if ids.is_empty() {
+                    return Ok(());
+                }
+                let decision = Decision::ChooseColor {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    legal: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
+                };
+                let color = match self.decider.decide(&decision) {
+                    DecisionAnswer::Color(c) => c,
+                    _ => Color::Blue,
+                };
+                for si in self.stack.iter_mut() {
+                    if let StackItem::Spell { card, .. } = si
+                        && ids.contains(&card.id)
+                    {
+                        std::sync::Arc::make_mut(&mut card.definition).color_override =
+                            Some(vec![color]);
+                    }
+                }
+                Ok(())
+            }
+
+            // Ice Cave — the first other seat willing to pay the spell's own
+            // mana cost counters it.
+            Effect::OtherPlayerMayPayToCounter { what } => {
+                let ids: Vec<CardId> =
+                    self.resolve_selector(what, ctx).iter().filter_map(|e| e.as_card_id()).collect();
+                let Some(&cid) = ids.first() else { return Ok(()) };
+                let Some((caster, cost)) = self.stack.iter().find_map(|si| match si {
+                    StackItem::Spell { card, caster, .. } if card.id == cid => {
+                        Some((*caster, card.definition.cost.clone()))
+                    }
+                    _ => None,
+                }) else {
+                    return Ok(());
+                };
+                let seats: Vec<usize> = (0..self.players.len()).filter(|p| *p != caster).collect();
+                let mut cursor = 0;
+                for payer in seats {
+                    let Some(willing) = self.ask_seat_bool(
+                        &mut cursor,
+                        payer,
+                        "Pay this spell's mana cost to counter it?".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    if !willing {
+                        continue;
+                    }
+                    let saved = self.priority.player_with_priority;
+                    self.priority.player_with_priority = payer;
+                    let paid = self.try_pay_with_auto_tap(payer, &cost).is_ok();
+                    self.priority.player_with_priority = saved;
+                    if paid {
+                        self.clear_answer_log();
+                        return self.run_effect(
+                            &Effect::CounterSpell { what: what.clone() },
+                            ctx,
+                            events,
+                        );
+                    }
+                }
+                self.clear_answer_log();
                 Ok(())
             }
 
@@ -26386,8 +26486,15 @@ impl GameState {
                 let all = self.resolve_selector(inner, ctx);
                 all.into_iter()
                     .filter(|e| match e {
-                        EntityRef::Permanent(id) => self
-                            .evaluate_requirement(filter, &Target::Permanent(*id), ctx.controller),
+                        // Thread the resolving source so source-relative
+                        // filters (`HasChosenColorOfSource`, `IsSource`, …)
+                        // evaluate instead of silently failing.
+                        EntityRef::Permanent(id) => self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(*id),
+                            ctx.controller,
+                            ctx.source,
+                        ),
                         _ => false,
                     })
                     .collect()

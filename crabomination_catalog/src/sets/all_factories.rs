@@ -10391,6 +10391,17 @@ static APC2: &[Factory] = &[
     super::apc2::legacy_weapon,
     super::apc2::suppress,
     super::apc2::emblazoned_golem,
+    super::apc2::anavolver,
+    super::apc2::cetavolver,
+    super::apc2::degavolver,
+    super::apc2::necravolver,
+    super::apc2::rakavolver,
+    super::apc2::illuminate,
+    super::apc2::vodalian_mystic,
+    super::apc2::zombie_boa,
+    super::apc2::mind_extraction,
+    super::apc2::false_dawn,
+    super::apc2::ice_cave,
 ];
 static BOT: &[Factory] = &[
     super::bot::slicer_hired_muscle,

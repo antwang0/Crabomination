@@ -185,6 +185,8 @@ pub struct HandAffordances {
     pub castable: Vec<CardId>,
     pub pitchable: Vec<CardId>,
     pub kickable: Vec<CardId>,
+    /// CR 702.32b — payable "and/or" kicker subsets per hand card.
+    pub kicker_option_sets: Vec<(CardId, Vec<Vec<u8>>)>,
     pub buyback: Vec<CardId>,
     pub bestowable: Vec<CardId>,
     pub dashable: Vec<CardId>,
@@ -561,6 +563,9 @@ pub struct GameState {
     /// Aftershocks reads "the number of times that spell was kicked").
     #[serde(skip)]
     pub(crate) cast_kick_count: u32,
+    /// CR 702.32b — the `kicker_options` indices the in-flight cast is paying
+    /// for, consumed by the cast pipeline (`GameAction::CastSpellKickers`).
+    pub(crate) cast_kicker_options: Vec<u8>,
     /// Transient: ids of all tokens created within the current effect
     /// resolution. Set by `Effect::CreateToken`
     /// alongside `last_created_token` and read by
@@ -1098,6 +1103,10 @@ pub struct GameState {
     /// cleared at cleanup.
     #[serde(default)]
     pub(crate) land_mana_replacements_this_turn: Vec<crate::game::types::LandManaReplacement>,
+    /// CR 614 — seats whose spells and abilities add `Color` instead of any
+    /// other colour for the rest of the turn, and who may spend that colour as
+    /// any colour (False Dawn). Cleared at cleanup.
+    pub(crate) colored_mana_becomes_this_turn: Vec<(usize, crate::mana::Color)>,
     /// `(blocker, attacker)` pairs declared this turn, kept off the permanents
     /// so it survives the blocker's death — "destroy it and all creatures it
     /// blocked this turn" (Defiant Vanguard). Cleared at cleanup.
@@ -1573,6 +1582,7 @@ impl Clone for GameState {
             extra_cast_reduction: self.extra_cast_reduction,
             cast_paid_uncounterable: self.cast_paid_uncounterable,
             cast_kick_count: self.cast_kick_count,
+            cast_kicker_options: self.cast_kicker_options.clone(),
             last_created_tokens: self.last_created_tokens.clone(),
             last_moved_cards: self.last_moved_cards.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
@@ -1660,6 +1670,7 @@ impl Clone for GameState {
             creature_pw_cast_locks: self.creature_pw_cast_locks.clone(),
             damage_prevented_sources: self.damage_prevented_sources.clone(),
             land_mana_replacements_this_turn: self.land_mana_replacements_this_turn.clone(),
+            colored_mana_becomes_this_turn: self.colored_mana_becomes_this_turn.clone(),
             blocks_declared_this_turn: self.blocks_declared_this_turn.clone(),
             token_minting_source: self.token_minting_source,
             cant_block_pairs: self.cant_block_pairs.clone(),
@@ -1812,6 +1823,7 @@ impl GameState {
             extra_cast_reduction: 0,
             cast_paid_uncounterable: false,
             cast_kick_count: 0,
+            cast_kicker_options: Vec::new(),
             last_created_tokens: Vec::new(),
             last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
@@ -1897,6 +1909,7 @@ impl GameState {
             creature_pw_cast_locks: Vec::new(),
             damage_prevented_sources: Vec::new(),
             land_mana_replacements_this_turn: Vec::new(),
+            colored_mana_becomes_this_turn: Vec::new(),
             blocks_declared_this_turn: Vec::new(),
             token_minting_source: None,
             cant_block_pairs: Vec::new(),
@@ -5106,6 +5119,11 @@ impl GameState {
     /// relaxed to generic while this holds.
     pub fn spend_mana_as_any_color_active(&self) -> bool {
         use crate::effect::StaticEffect;
+        // False Dawn folds every colour into white and then lets white pay for
+        // anything, so the relaxed-cost path covers both clauses.
+        if !self.colored_mana_becomes_this_turn.is_empty() {
+            return true;
+        }
         self.battlefield.iter().any(|src| {
             src.definition
                 .static_abilities
@@ -9871,6 +9889,15 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell_kicked(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastSpellKickers {
+                card_id,
+                kickers,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self
+                .cast_spell_kickers(card_id, kickers, target, additional_targets, mode, x_value),
             GameAction::CastSpellBuyback {
                 card_id,
                 target,
@@ -12372,6 +12399,7 @@ impl GameState {
                                 cast_from_hand: true,
                                 event_amount: self.event_amount_for(ev),
                                 kicked: false,
+                                kicked_options: Vec::new(),
                                 kick_count: 0,
                                 bargained: false,
                                 cast_via_mayhem: false,
@@ -12945,6 +12973,7 @@ impl GameState {
                     cast_from_hand: true,
                     event_amount,
                     kicked: false,
+                    kicked_options: Vec::new(),
                     kick_count: 0,
                     bargained: false,
                     cast_via_mayhem: false,
@@ -15541,6 +15570,7 @@ impl GameState {
             card.cast_from_hand,
         );
         ctx.kicked = card.kicked;
+        ctx.kicked_options = card.kicked_options.clone();
         ctx.kick_count = card.kick_count;
         ctx.bargained = card.bargained;
         ctx.cast_via_mayhem = card.cast_via_mayhem;
@@ -15878,6 +15908,7 @@ impl GameState {
         // riders (Goblin Bushwhacker) can branch on `SpellWasKicked`.
         if let Some(src) = self.battlefield.iter().find(|c| c.id == source) {
             ctx.kicked = src.kicked;
+            ctx.kicked_options = src.kicked_options.clone();
             ctx.kick_count = src.kick_count;
             ctx.bargained = src.bargained;
             // "Escapes with …" / cast-zone riders (Tizerus Charger) read

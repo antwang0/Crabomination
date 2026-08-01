@@ -796,3 +796,265 @@ pub fn emblazoned_golem() -> CardDefinition {
         ..creature("Emblazoned Golem", cost(&[generic(2)]), vec![CreatureType::Golem], 1, 2)
     }
 }
+
+/// "Pay 3 life: Regenerate this creature."
+fn pay_three_regenerate() -> ActivatedAbility {
+    ActivatedAbility {
+        life_cost: 3,
+        effect: Effect::Regenerate { what: Selector::This },
+        ..Default::default()
+    }
+}
+
+/// "Whenever this creature deals damage, you gain that much life."
+fn damage_lifelink() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
+        effect: Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+    }
+}
+
+/// One Volver kicker rider: `n` +1/+1 counters plus a granted ability.
+fn volver_rider(option: u8, counters: i32, grant: Effect) -> TriggeredAbility {
+    etb(Effect::If {
+        cond: Predicate::SpellWasKickedWith(option),
+        then: Box::new(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(counters),
+            },
+            grant,
+        ])),
+        else_: Box::new(Effect::Noop),
+    })
+}
+
+/// The Volver cycle (CR 702.32b) — "Kicker {A} and/or {B}", each half worth
+/// counters plus an ability.
+fn volver(
+    name: &'static str,
+    c: ManaCost,
+    p: i32,
+    t: i32,
+    big: (ManaCost, Effect),
+    small: (crate::mana::ManaSymbol, Effect),
+) -> CardDefinition {
+    CardDefinition {
+        kicker_options: vec![big.0, cost(&[small.0])],
+        triggered_abilities: vec![volver_rider(0, 2, big.1), volver_rider(1, 1, small.1)],
+        ..creature(name, c, vec![CreatureType::Volver], p, t)
+    }
+}
+
+fn grant_keyword(keyword: Keyword) -> Effect {
+    Effect::GrantKeyword { what: Selector::This, keyword, duration: Duration::Permanent }
+}
+
+fn grant_regenerate() -> Effect {
+    Effect::GainActivatedAbility {
+        what: Selector::This,
+        ability: Box::new(pay_three_regenerate()),
+        duration: Duration::Permanent,
+    }
+}
+
+fn grant_lifelink_trigger() -> Effect {
+    Effect::GrantTriggeredAbility {
+        what: Selector::This,
+        trigger: Box::new(damage_lifelink()),
+        duration: Duration::Permanent,
+    }
+}
+
+/// Anavolver — {3}{G} 3/3. Kicker {1}{U} and/or {B}.
+pub fn anavolver() -> CardDefinition {
+    volver(
+        "Anavolver",
+        cost(&[generic(3), g()]),
+        3,
+        3,
+        (cost(&[generic(1), u()]), grant_keyword(Keyword::Flying)),
+        (b(), grant_regenerate()),
+    )
+}
+
+/// Cetavolver — {1}{U} 1/1. Kicker {1}{R} and/or {G}.
+pub fn cetavolver() -> CardDefinition {
+    volver(
+        "Cetavolver",
+        cost(&[generic(1), u()]),
+        1,
+        1,
+        (cost(&[generic(1), r()]), grant_keyword(Keyword::FirstStrike)),
+        (g(), grant_keyword(Keyword::Trample)),
+    )
+}
+
+/// Degavolver — {1}{W} 1/1. Kicker {1}{B} and/or {R}.
+pub fn degavolver() -> CardDefinition {
+    volver(
+        "Degavolver",
+        cost(&[generic(1), w()]),
+        1,
+        1,
+        (cost(&[generic(1), b()]), grant_regenerate()),
+        (r(), grant_keyword(Keyword::FirstStrike)),
+    )
+}
+
+/// Necravolver — {2}{B} 2/2. Kicker {1}{G} and/or {W}.
+pub fn necravolver() -> CardDefinition {
+    volver(
+        "Necravolver",
+        cost(&[generic(2), b()]),
+        2,
+        2,
+        (cost(&[generic(1), g()]), grant_keyword(Keyword::Trample)),
+        (w(), grant_lifelink_trigger()),
+    )
+}
+
+/// Rakavolver — {2}{R} 2/2. Kicker {1}{W} and/or {U}.
+pub fn rakavolver() -> CardDefinition {
+    volver(
+        "Rakavolver",
+        cost(&[generic(2), r()]),
+        2,
+        2,
+        (cost(&[generic(1), w()]), grant_lifelink_trigger()),
+        (u(), grant_keyword(Keyword::Flying)),
+    )
+}
+
+/// Illuminate — {X}{R}. Kicker {2}{R} and/or {3}{U}; X damage, then extras.
+pub fn illuminate() -> CardDefinition {
+    CardDefinition {
+        kicker_options: vec![cost(&[generic(2), r()]), cost(&[generic(3), u()])],
+        ..sorcery(
+            "Illuminate",
+            cost(&[x(), r()]),
+            Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(R::Creature),
+                    amount: Value::XFromCost,
+                },
+                Effect::If {
+                    cond: Predicate::SpellWasKickedWith(0),
+                    then: Box::new(Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                        amount: Value::XFromCost,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::If {
+                    cond: Predicate::SpellWasKickedWith(1),
+                    then: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::XFromCost,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        )
+    }
+}
+
+/// Vodalian Mystic — {1}{U} 1/1 that recolours a spell on the stack.
+pub fn vodalian_mystic() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::SpellBecomesChosenColor {
+                what: target_filtered(
+                    R::IsSpellOnStack.and(
+                        R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                    ),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Vodalian Mystic",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Merfolk, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Zombie Boa — {4}{B} 3/3 that names a colour and eats blockers of it.
+pub fn zombie_boa() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::ChooseColorForSelf,
+                Effect::GrantTriggeredAbility {
+                    what: Selector::This,
+                    trigger: Box::new(TriggeredAbility {
+                        event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                        effect: Effect::Destroy {
+                            what: Selector::MatchingAmong {
+                                inner: Box::new(Selector::BlockingCreatures),
+                                filter: R::HasChosenColorOfSource,
+                            },
+                        },
+                    }),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Zombie Boa",
+            cost(&[generic(4), b()]),
+            vec![CreatureType::Zombie, CreatureType::Snake],
+            3,
+            3,
+        )
+    }
+}
+
+/// Mind Extraction — {2}{B}. A creature's colours strip their hand.
+pub fn mind_extraction() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature,
+            count: 1,
+        }],
+        ..sorcery(
+            "Mind Extraction",
+            cost(&[generic(2), b()]),
+            Effect::RevealHandDiscardAllMatching {
+                who: PlayerRef::Target(0),
+                filter: R::SharesColorWithSacrificed,
+            },
+        )
+    }
+}
+
+/// False Dawn — {1}{W}. Every colour you make turns white, and pays for anything.
+pub fn false_dawn() -> CardDefinition {
+    sorcery(
+        "False Dawn",
+        cost(&[generic(1), w()]),
+        Effect::Seq(vec![
+            Effect::ColoredManaBecomesThisTurn { who: PlayerRef::You, color: Color::White },
+            draw(1),
+        ]),
+    )
+}
+
+/// Ice Cave — {3}{U}{U}. Anyone can buy out a spell by matching its cost.
+pub fn ice_cave() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer),
+            effect: Effect::OtherPlayerMayPayToCounter { what: Selector::TriggerSource },
+        }],
+        ..enchantment("Ice Cave", cost(&[generic(3), u(), u()]))
+    }
+}

@@ -65,6 +65,18 @@ pub enum GameAction {
     /// CR 702.32 — cast a spell paying its optional Kicker cost in addition
     /// to the mana cost. The resolving spell is stamped `kicked` so
     /// `Predicate::SpellWasKicked` riders fire (Tear Asunder).
+    /// CR 702.32b — cast a spell paying any subset of its `kicker_options`
+    /// ("Kicker {A} and/or {B}" — the Volver cycle). Each paid index is
+    /// stamped on the spell for `Predicate::SpellWasKickedWith`.
+    CastSpellKickers {
+        card_id: CardId,
+        kickers: Vec<u8>,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     CastSpellKicked {
         card_id: CardId,
         target: Option<Target>,

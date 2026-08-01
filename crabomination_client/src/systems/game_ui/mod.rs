@@ -3337,6 +3337,7 @@ pub fn auto_advance_p0(
         || !cv.spliceable_hand.is_empty()
         || !cv.activatable_permanents.is_empty()
         || !cv.kickable_hand.is_empty()
+        || !cv.kicker_option_sets.is_empty()
         || !cv.buyback_hand.is_empty();
 
     // Auto-pass a window only when the viewer has nothing to do there —
@@ -3718,6 +3719,7 @@ pub fn handle_game_input(
                             targeting.pending_gift,
                             targeting.pending_omen,
                             targeting.pending_kicked,
+                            targeting.pending_kicker_options.clone(),
                             targeting.pending_spree_modes.clone(),
                             targeting.pending_helpers.clone(),
                         );
@@ -3772,6 +3774,7 @@ pub fn handle_game_input(
                             targeting.pending_gift,
                             targeting.pending_omen,
                             targeting.pending_kicked,
+                            targeting.pending_kicker_options.clone(),
                             targeting.pending_spree_modes.clone(),
                             targeting.pending_helpers.clone(),
                         );
@@ -3840,6 +3843,7 @@ pub fn handle_game_input(
                             targeting.pending_gift,
                             targeting.pending_omen,
                             targeting.pending_kicked,
+                            targeting.pending_kicker_options.clone(),
                             targeting.pending_spree_modes.clone(),
                             targeting.pending_helpers.clone(),
                     );
@@ -4022,6 +4026,26 @@ pub fn handle_game_input(
                             r.helper_tap.selected = vec![false; candidates.len()];
                             r.helper_tap.candidates = candidates;
                             r.helper_tap.pending = Some((card_id, mechanic));
+                        }
+                    } else if let Some((_, sets)) =
+                        cv.kicker_option_sets.iter().find(|(id, _)| *id == card_id)
+                    {
+                        // CR 702.32b — right-click pays the largest affordable
+                        // "and/or" kicker subset (each rider is pure upside).
+                        let kickers = sets
+                            .iter()
+                            .max_by_key(|s| s.len())
+                            .cloned()
+                            .unwrap_or_default();
+                        if k.needs_target {
+                            targeting.active = true;
+                            targeting.pending_card_id = Some(card_id);
+                            targeting.pending_kicker_options = kickers;
+                        } else {
+                            outbox.submit(GameAction::CastSpellKickers {
+                                card_id, kickers, target: None, additional_targets: vec![],
+                                mode: None, x_value: None,
+                            });
                         }
                     } else if cv.kickable_hand.contains(&card_id) {
                         // CR 702.32 / 702.166 — right-click a Kicker/Offspring
@@ -4443,6 +4467,7 @@ fn build_pending_cast(
     gift: bool,
     omen: bool,
     kicked: bool,
+    kicker_options: Vec<u8>,
     spree_modes: Option<Vec<u8>>,
     helpers: Option<(Vec<CardId>, crate::game::HelperMechanic)>,
 ) -> GameAction {
@@ -4467,6 +4492,13 @@ fn build_pending_cast(
     if omen {
         return GameAction::CastOmen {
             card_id, target, additional_targets: vec![], mode, x_value: None,
+        };
+    }
+    // CR 702.32b — an "and/or" kicker cast carries its chosen option indices.
+    if !kicker_options.is_empty() {
+        return GameAction::CastSpellKickers {
+            card_id, kickers: kicker_options, target,
+            additional_targets: vec![], mode, x_value: None,
         };
     }
     // CR 702.32 / 702.166 — Kicker / Offspring paid via the kicked cast path.
@@ -4516,6 +4548,7 @@ fn cancel_targeting(
     targeting.pending_gift = false;
     targeting.pending_omen = false;
     targeting.pending_kicked = false;
+    targeting.pending_kicker_options.clear();
     targeting.pending_helpers = None;
     legal.permanents.clear();
     legal.players.clear();

@@ -359,6 +359,11 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub kickable_hand: Vec<CardId>,
+    /// CR 702.32b — for each "Kicker {A} and/or {B}" hand card, the option
+    /// subsets the viewer could pay for right now. One client menu entry each.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub kicker_option_sets: Vec<(CardId, Vec<Vec<u8>>)>,
     /// CardIds in the viewer's hand they could cast paying their Buyback
     /// cost right now (CR 702.27). Lets the client offer a "pay buyback?"
     /// toggle distinct from the plain castable highlight. Empty

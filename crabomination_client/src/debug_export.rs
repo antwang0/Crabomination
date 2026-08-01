@@ -269,6 +269,7 @@ mod tests {
             spliceable_hand: vec![],
             pitchable_hand: vec![],
             kickable_hand: vec![],
+            kicker_option_sets: vec![],
             buyback_hand: vec![],
             bestowable_hand: vec![],
             miracle_hand: vec![],
