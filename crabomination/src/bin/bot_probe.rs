@@ -146,6 +146,11 @@ fn action_kind(a: &GameAction) -> &'static str {
     }
 }
 
+/// A *cast* — the thing whose timing the bot actually chooses. Land drops
+/// are excluded deliberately: they are sorcery-speed by rule and can never
+/// be held, so counting them as "plays" hides the timing signal under a
+/// constant. (They were about 45 % of precombat "plays", which made a real
+/// shift toward the second main look like no shift at all.)
 fn is_play(a: &GameAction) -> bool {
     !matches!(
         a,
@@ -153,6 +158,8 @@ fn is_play(a: &GameAction) -> bool {
             | GameAction::SubmitDecision(_)
             | GameAction::DeclareAttackers(_)
             | GameAction::DeclareBlockers(_)
+            | GameAction::PlayLand(_)
+            | GameAction::PlayLandFromGraveyard(_)
     )
 }
 
@@ -255,6 +262,7 @@ fn main() {
         "combat" => EvalWeights::combat_aware(),
         "pretap" => EvalWeights::legacy_mana(),
         "holdsick" => EvalWeights::hold_sick(),
+        "planner" => EvalWeights::planner(),
         other => {
             eprintln!("unknown profile {other}");
             std::process::exit(2);
@@ -287,7 +295,7 @@ fn main() {
         100.0 * c.opp_windows_with_mana as f64 / c.opp_windows.max(1) as f64,
     );
 
-    println!("\nplays by step (anything that isn't a pass or a declaration):");
+    println!("\ncasts by step (land drops excluded — they can't be held):");
     let total_plays: usize = c.plays_by_step.values().sum();
     for (k, v) in &c.plays_by_step {
         println!("  {k:<34} {v:>6}  {:>5.1}%", 100.0 * *v as f64 / total_plays.max(1) as f64);

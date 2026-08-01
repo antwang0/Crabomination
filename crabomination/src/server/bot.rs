@@ -60,6 +60,13 @@ pub struct EvalWeights {
     /// Hold a play whose only gain this turn is a summoning-sick body until
     /// the postcombat main (see [`eval_material_summon_sick_blind`]).
     pub hold_sick: bool,
+    /// Hold an instant-speed line that achieves nothing this turn, so it is
+    /// cast on the opponent's turn instead — with a turn more information,
+    /// and with the mana up in the meantime. The instant-speed sibling of
+    /// [`hold_sick`](Self::hold_sick), and the cheap form of Forge's
+    /// "formulate a plan restricted to instant-speed lines and wait if it
+    /// scores as well" (`SpellAbilityPicker::createNewPlan`).
+    pub hold_instants: bool,
     /// Score a candidate on the board *after* this turn's combat rather
     /// than the instant it resolves (see [`simulate_through_combat`]).
     pub combat_aware: bool,
@@ -89,6 +96,7 @@ impl EvalWeights {
             keyword_pct: 0,
             concave_life: false,
             hold_sick: false,
+            hold_instants: false,
             combat_aware: false,
             legacy_pretap: false,
         }
@@ -135,6 +143,7 @@ impl EvalWeights {
             keyword_pct: 100,
             concave_life: true,
             hold_sick: false,
+            hold_instants: false,
             combat_aware: false,
             legacy_pretap: false,
         }
@@ -164,6 +173,7 @@ impl EvalWeights {
             keyword_pct: 0,
             concave_life: false,
             hold_sick: false,
+            hold_instants: false,
             combat_aware: false,
             legacy_pretap: false,
         }
@@ -171,20 +181,33 @@ impl EvalWeights {
 
     /// Baseline + Forge's summon-sick gate, for laddering it on its own.
     ///
-    /// **Measured 50.8 % over 8000 games** (50.8 % and 50.9 % on two
-    /// independent seeds), i.e. about +0.9 points — directionally positive
-    /// and consistent, but the pooled interval [49.7 %, 51.9 %] still
-    /// touches 50 %, so it is not adopted as the default on this evidence
-    /// alone. A run several times larger would settle it.
+    /// **Adopted — this is [`EvalWeights::default`].** Measured 51.5 %
+    /// [50.8 %, 52.3 %] over 16 000 games, after two 4000-game runs at
+    /// 50.8 % and 50.9 % pointed the same way. Worth roughly +1.5 points.
     ///
-    /// It is the first *reasoned* change in this series with a positive
-    /// signal, and its behavioral effect is large and verifiable: plays in
-    /// the postcombat main go from 0.5 % to 37.7 % of all plays
-    /// (`bot_probe`), which is simply what correct sequencing looks like.
-    /// It also costs ~30 % more CPU per decision, since the gate resolves
-    /// the winning line a second time.
+    /// Its behavioral effect is large and verifiable: casts in the
+    /// precombat main go from 91.9 % to 25.3 %, with 66.2 % moving to the
+    /// second main (`bot_probe`, land drops excluded — those are
+    /// sorcery-speed by rule and can never be held). That is simply what
+    /// correct sequencing looks like. It costs ~30 % more CPU per decision,
+    /// since the gate resolves the winning line a second time.
     pub const fn hold_sick() -> Self {
         Self { hold_sick: true, ..Self::baseline() }
+    }
+
+    /// Baseline + the instant-speed hold. Needs
+    /// [`combat_aware`](Self::combat_aware) to be much use: without it the
+    /// gate cannot tell "kill the blocker before I attack" (worth doing
+    /// now) from "kill it at end of turn" (worth the same, later).
+    pub const fn hold_instants() -> Self {
+        Self { hold_instants: true, combat_aware: true, ..Self::baseline() }
+    }
+
+    /// Everything the planner work produced: hold summoning-sick bodies,
+    /// hold instant-speed lines that do nothing yet, and evaluate both
+    /// through this turn's combat so the gate can tell the difference.
+    pub const fn planner() -> Self {
+        Self { hold_sick: true, hold_instants: true, combat_aware: true, ..Self::baseline() }
     }
 
     /// Baseline + the combat-aware evaluation.
@@ -277,8 +300,12 @@ impl EvalWeights {
 }
 
 impl Default for EvalWeights {
+    /// The adopted profile. [`baseline`](EvalWeights::baseline) stays the
+    /// historical *control* — it is what ladder runs measure against — but
+    /// it is no longer what the bot plays: the summon-sick gate beat it
+    /// 51.5 % [50.8 %, 52.3 %] over 16 000 games, so it is on by default.
     fn default() -> Self {
-        Self::baseline()
+        Self::hold_sick()
     }
 }
 
@@ -2658,11 +2685,20 @@ fn main_phase_action_with(
                 // every candidate this way would have the bot pick some
                 // lesser non-creature line now and then have no mana left
                 // for the creature it actually wanted in the second main.
-                if w.hold_sick
-                    && state.step == TurnStep::PreCombatMain
-                    && state.active_player_idx == seat
-                    && !improves_this_turn(state, seat, &best, w)
-                {
+                let own_main = state.active_player_idx == seat
+                    && matches!(
+                        state.step,
+                        TurnStep::PreCombatMain | TurnStep::PostCombatMain
+                    );
+                // Hold a creature that can't attack yet until the second
+                // main; hold an instant-speed line until the opponent's
+                // turn. Both ask the same question -- "is this worth the
+                // same later?" -- and both only fire on our own main phase,
+                // where there is a later to wait for.
+                let gate = own_main
+                    && ((w.hold_sick && state.step == TurnStep::PreCombatMain)
+                        || (w.hold_instants && castable_at_instant_speed(state, seat, &best)));
+                if gate && !improves_this_turn(state, seat, &best, w) {
                     return GameAction::PassPriority;
                 }
                 return best;
@@ -5646,17 +5682,60 @@ fn evaluate_action_outcome(
     Some(eval_material(&g, seat, w))
 }
 
+/// Could `action` still be taken later this turn cycle at instant speed?
+///
+/// Only spells whose card is an Instant or has Flash: everything else is
+/// sorcery-timed, so "wait" means "wait a whole turn", which is a very
+/// different trade from "wait until their end step". Deliberately narrow —
+/// it gates *not acting*, and a false positive there costs a real play.
+fn castable_at_instant_speed(state: &GameState, seat: usize, action: &GameAction) -> bool {
+    use crate::card::{CardType, Keyword};
+    let card_id = match action {
+        GameAction::CastSpell { card_id, .. } => *card_id,
+        _ => return false,
+    };
+    let Some(card) = state.players[seat].hand.iter().find(|c| c.id == card_id) else {
+        return false;
+    };
+    card.definition.card_types.contains(&CardType::Instant)
+        || card.definition.keywords.contains(&Keyword::Flash)
+}
+
 /// Does `action` achieve anything *this turn*, ignoring bodies that can't
 /// attack yet? See [`eval_material_summon_sick_blind`]. `true` when the
 /// question can't be answered (the outcome probe bailed), so an
 /// unevaluable line is never held back.
+///
+/// Under [`EvalWeights::combat_aware`] the comparison runs *through this
+/// turn's combat*, which is what makes the question meaningful for
+/// interaction rather than just for creatures: killing a blocker before
+/// attacking is worth something now, killing it at the opponent's end step
+/// is worth the same and costs less information. Only a simulation that
+/// reaches combat damage can tell those apart — and this is the consumer
+/// the combat-aware evaluator was missing when it measured neutral on its
+/// own, because within a single main phase combat is otherwise identical
+/// across every candidate and cancels out.
 fn improves_this_turn(
     state: &GameState,
     seat: usize,
     action: &GameAction,
     w: &EvalWeights,
 ) -> bool {
-    let before = eval_material_summon_sick_blind(state, seat, w);
+    // The baseline has to be measured the same way the outcome is. With
+    // `combat_aware` the outcome runs through combat, so a raw pre-combat
+    // baseline would be compared against a post-combat score and every
+    // connecting attack would read as "this action improved things" —
+    // making the gate fire almost never. Forge avoids this by routing both
+    // sides through the same `getScoreForGameState`, which fast-forwards
+    // combat itself.
+    let before = if w.combat_aware {
+        let mut idle = state.clone();
+        let mut idle_fuel = 256u32;
+        simulate_through_combat(&mut idle, &mut idle_fuel);
+        eval_material_summon_sick_blind(&idle, seat, w)
+    } else {
+        eval_material_summon_sick_blind(state, seat, w)
+    };
     let mut g = state.clone();
     if g.perform_action(action.clone()).is_err() {
         return true;
@@ -5680,6 +5759,15 @@ fn improves_this_turn(
             Some(f) => f,
             None => return true,
         };
+    }
+    if w.combat_aware {
+        let mut combat_fuel = 256u32;
+        let started = g.step < TurnStep::CombatDamage;
+        simulate_through_combat(&mut g, &mut combat_fuel);
+        // A torn simulation can't answer the question; don't hold on it.
+        if started && g.step < TurnStep::CombatDamage && !g.is_game_over() {
+            return true;
+        }
     }
     eval_material_summon_sick_blind(&g, seat, w) > before
 }
@@ -6077,6 +6165,11 @@ mod tests {
     fn bot_pays_offspring_when_affordable() {
         use crate::mana::Color;
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         let recruit = g.add_card_to_hand(0, catalog::pawpatch_recruit()); // {G}, Offspring {2}
         g.players[0].mana_pool.add(Color::Green, 1);
         g.players[0].mana_pool.add_colorless(2);
@@ -6095,6 +6188,11 @@ mod tests {
     fn bot_promises_gift_for_scrapshooter() {
         use crate::mana::Color;
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         let scrap = g.add_card_to_hand(0, catalog::scrapshooter()); // {1}{G}{G}
         g.add_card_to_battlefield(1, catalog::sol_ring()); // a legal ETB destroy target
         g.add_card_to_library(1, catalog::forest()); // the gift draw
@@ -6211,7 +6309,10 @@ mod tests {
         g.players[0].mana_pool.add_colorless(1);
         g.priority.player_with_priority = 0;
         g.active_player_idx = 0;
-        g.step = TurnStep::PreCombatMain;
+        // Second main: this tests which candidate wins the ranking, not
+        // when it is cast. The default profile's summon-sick gate defers a
+        // first-main creature, which is orthogonal to the point here.
+        g.step = TurnStep::PostCombatMain;
         let action = main_phase_action(&g, 0);
         assert!(
             matches!(action, GameAction::CastSpell { card_id, .. } if card_id == bears),
@@ -6561,6 +6662,11 @@ mod tests {
     #[test]
     fn bot_spends_mana_rock_output_on_a_spell() {
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         let sol = g.add_card_to_battlefield(0, catalog::sol_ring());
         g.clear_sickness(sol);
         let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
@@ -7458,6 +7564,11 @@ mod tests {
     #[test]
     fn bot_casts_adventure_half_as_removal() {
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         let id = g.add_card_to_hand(0, catalog::bonecrusher_giant());
         // {1}{R}: enough for Stomp, not the {2}{R} creature.
@@ -7917,6 +8028,11 @@ mod tests {
     #[test]
     fn auto_tap_spends_a_land_before_sacrificing_a_mana_source() {
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         let petal = g.add_card_to_battlefield(0, catalog::lotus_petal());
         g.clear_sickness(petal);
         // Two Forests cover the bear's {1}{G} on their own. The Petal sits
@@ -8322,6 +8438,11 @@ mod tests {
         // Triplicate Spirits ({4}{W}{W}, convoke) with only {W}{W} floating:
         // unaffordable outright, castable by tapping four creatures.
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         let id = g.add_card_to_hand(0, catalog::triplicate_spirits());
         g.players[0].mana_pool.add(crate::mana::Color::White, 2);
         for _ in 0..4 {
@@ -8341,6 +8462,11 @@ mod tests {
     #[test]
     fn bot_taps_the_minimum_number_of_convoke_helpers() {
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         let id = g.add_card_to_hand(0, catalog::triplicate_spirits()); // {4}{W}{W}
         g.players[0].mana_pool.add(crate::mana::Color::White, 2);
         g.players[0].mana_pool.add_colorless(2);
@@ -8390,6 +8516,11 @@ mod tests {
         // unaffordable at its printed cost, but castable for Spectacle once an
         // opponent has lost life this turn.
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         let id = g.add_card_to_hand(0, catalog::skewer_the_critics());
         g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
         g.adjust_life(1, -1); // opponent bleeds → Spectacle online
@@ -8405,6 +8536,11 @@ mod tests {
     #[test]
     fn bot_casts_mdfc_back_face_from_hand() {
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         g.players[0].hand.clear();
         let id = g.add_card_to_hand(0, catalog::wandering_archaic());
         g.players[0].mana_pool.add_colorless(4); // affords the {4} back, not the {5} front
@@ -8420,6 +8556,11 @@ mod tests {
     #[test]
     fn bot_casts_mdfc_back_face_from_graveyard() {
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         g.players[0].hand.clear();
         let pc = g.add_card_to_graveyard(0, catalog::pestilent_cauldron());
         g.players[0]
@@ -8690,6 +8831,11 @@ mod tests {
     #[test]
     fn bot_considers_bestow_when_mana_flush() {
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         g.add_card_to_hand(0, catalog::hopeful_eidolon());
         g.players[0].mana_pool.add(crate::mana::Color::White, 1);
@@ -8899,14 +9045,14 @@ mod tests {
             matches!(bot2.next_action(&g, 0), Some(GameAction::CastSpell { card_id, .. }) if card_id == bear),
             "gated bot casts it postcombat",
         );
-        // The ungated bot casts it immediately, which is the behavior the
-        // gate exists to change.
-        let mut plain = RandomBot::new();
+        // The historical profile casts it immediately, which is the
+        // behavior the gate exists to change.
+        let mut plain = RandomBot::with_weights(EvalWeights::baseline());
         let mut pre = g.clone();
         pre.step = TurnStep::PreCombatMain;
         assert!(
             matches!(plain.next_action(&pre, 0), Some(GameAction::CastSpell { .. })),
-            "the default profile still front-loads",
+            "the historical profile still front-loads",
         );
     }
 
@@ -9661,6 +9807,11 @@ mod stack_response_tests {
     fn bot_puts_beneficial_aura_on_own_best_creature() {
         use crate::mana::Color;
         let mut g = two_player_game();
+        // Second main: these test *what* the bot can find and cast, not
+        // when. The default profile's summon-sick gate defers a
+        // first-main creature to here, which is orthogonal to the card
+        // shape under test.
+        g.step = TurnStep::PostCombatMain;
         g.priority.player_with_priority = 0;
         g.active_player_idx = 0;
         let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2

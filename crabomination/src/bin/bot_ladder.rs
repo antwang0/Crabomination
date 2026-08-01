@@ -141,6 +141,8 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "pretap" => Some(Pilot::Scored(EvalWeights::legacy_mana())),
         "combat" => Some(Pilot::Scored(EvalWeights::combat_aware())),
         "holdsick" => Some(Pilot::Scored(EvalWeights::hold_sick())),
+        "holdinst" => Some(Pilot::Scored(EvalWeights::hold_instants())),
+        "planner" => Some(Pilot::Scored(EvalWeights::planner())),
         "v2+combat" => Some(Pilot::Scored(EvalWeights::v2_combat())),
         "scaled" => Some(Pilot::Scored(EvalWeights::scaled_control())),
         "keywords" => Some(Pilot::Scored(EvalWeights::keywords_only())),
@@ -155,7 +157,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform";
+const PROFILES: &str = "baseline, combat, holdsick, holdinst, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform";
 
 /// Wilson score interval for `wins` out of `n` at `z`. Chosen over the
 /// normal approximation because it stays sane at small n and at p̂ = 0 or 1,
@@ -308,26 +310,34 @@ fn main() {
 
     std::thread::scope(|s| {
         for _ in 0..threads {
-            s.spawn(|| {
-                loop {
-                    let i = next.fetch_add(1, Ordering::Relaxed);
-                    let Some(job) = jobs.get(i) else { break };
-                    let d = &field[job.arch].deck;
-                    let tally = simulate_match_games_piloted(
-                        d,
-                        d,
-                        job.games,
-                        [args.a, args.b],
-                        50_000,
-                        Some(job.seed),
-                    );
-                    let mut rows = rows.lock().unwrap();
-                    let row = &mut rows[job.arch];
-                    row.wins_a += tally.wins_a;
-                    row.wins_b += tally.wins_b;
-                    row.undecided += tally.undecided;
-                }
-            });
+            // A worker plays whole games, and resolution recurses through
+            // `Effect` trees with debug-build frames big enough that the
+            // 2 MB spawn default runs out on deep boards — this crashed a
+            // 16 000-game run outright. `recommend.rs`'s game workers do
+            // the same for the same reason.
+            let builder = std::thread::Builder::new().stack_size(32 * 1024 * 1024);
+            builder
+                .spawn_scoped(s, || {
+                    loop {
+                        let i = next.fetch_add(1, Ordering::Relaxed);
+                        let Some(job) = jobs.get(i) else { break };
+                        let d = &field[job.arch].deck;
+                        let tally = simulate_match_games_piloted(
+                            d,
+                            d,
+                            job.games,
+                            [args.a, args.b],
+                            50_000,
+                            Some(job.seed),
+                        );
+                        let mut rows = rows.lock().unwrap();
+                        let row = &mut rows[job.arch];
+                        row.wins_a += tally.wins_a;
+                        row.wins_b += tally.wins_b;
+                        row.undecided += tally.undecided;
+                    }
+                })
+                .expect("spawn ladder worker");
         }
     });
 

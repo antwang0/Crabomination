@@ -992,7 +992,10 @@ fn bot_offers_disturb_recast() {
     let id = g.add_card_to_graveyard(0, catalog::baithook_angler());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.step = TurnStep::PreCombatMain;
+    // Second main: this tests that the bot *finds* the disturb recast, not
+    // when it takes it. The default profile holds a creature that can't
+    // attack yet until after combat (`EvalWeights::hold_sick`).
+    g.step = TurnStep::PostCombatMain;
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
     let action = RandomBot::new().next_action(&g, 0);
