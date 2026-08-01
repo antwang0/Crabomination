@@ -596,6 +596,9 @@ pub enum Zone {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum WardCost {
     Mana(crate::mana::ManaCost),
+    /// Generic mana equal to the resolution's declared `{X}` — "unless its
+    /// controller pays {X}" (Excise).
+    GenericXFromCost,
     Life(u32),
     /// Compound "Ward—{cost}, Pay N life" (Ovika, Enigma Goliath; Gisa, the
     /// Hellraiser). Both halves must be paid or the spell/ability is countered.
@@ -1138,6 +1141,12 @@ pub enum Keyword {
     /// has been dealt damage this turn" (Bloodcrazed Goblin). Reads the
     /// per-turn `was_dealt_damage_this_turn` flag on each opponent.
     CantAttackUnlessOpponentDamaged,
+    /// CR 508.1a restriction — "This creature can't attack if defending player
+    /// controls an untapped land" (Branded Brawlers).
+    CantAttackIfDefenderHasUntappedLand,
+    /// CR 509.1b restriction — the blocking half of Branded Brawlers: "can't
+    /// block if you control an untapped land."
+    CantBlockIfYouHaveUntappedLand,
     /// CR 508.1a restriction — "This creature can't attack unless you control
     /// more creatures than the defending player" (Mogg Toady).
     CantAttackUnlessMoreCreaturesThanDefender,
@@ -2718,6 +2727,13 @@ pub struct CardDefinition {
     /// spell being cast, so `> 0` means a prior spell. `None` by default.
     #[serde(default)]
     pub self_cost_reduction_if_cast_spell: Option<u32>,
+    /// "This spell costs `{amount}` less to cast if [condition]" — the general
+    /// predicate-gated sibling of the `self_cost_reduction_if_*` family
+    /// (the Prophecy Avatar cycle's board-state discounts). Generic-only,
+    /// clamped by the caller; the predicate is evaluated from the caster's
+    /// seat with no source or target.
+    #[serde(default)]
+    pub self_cost_reduction_if: Option<(crate::effect::Predicate, u32)>,
     /// "This spell costs `{amount}` less to cast if evidence was collected"
     /// (Bite Down on Crime, CR 701.59). Pairs with an
     /// `AdditionalCastCost::CollectEvidence`; generic-only, clamped by the
@@ -3954,6 +3970,13 @@ pub struct AlternativeCost {
     /// lowest life total.
     #[serde(default)]
     pub opponent_gains_life: u32,
+    /// Optional additional cost: discard N cards matching each filter ("you
+    /// may discard a Plains card rather than pay this spell's mana cost" —
+    /// Abolish; Foil's "an Island card and another card" is two entries).
+    /// Rejected with `SelectionRequirementViolated` when the hand can't cover
+    /// every entry; the auto-picker discards the lowest-mana-value matches.
+    #[serde(default)]
+    pub discard_filters: Vec<(SelectionRequirement, u32)>,
     /// EOE Warp (CR 702.x). When `true`, casting via this alternative cost
     /// stamps the resolving permanent `warped`: at the beginning of the next
     /// end step it's exiled and gains a `WhileExiled` may-play permission so
@@ -4840,6 +4863,10 @@ pub struct CardInstance {
     /// this enchantment" (Saproling Burst). `None` for cards and for tokens
     /// minted outside a permanent's ability.
     pub created_by: Option<CardId>,
+    /// "Until end of turn, this loses 'Prevent all damage that would be dealt
+    /// to this'" (the Glittering Lion / Lynx escape hatch). Consulted by
+    /// `permanent_prevents_all_damage_to_self`; cleared at cleanup.
+    pub damage_prevention_off_eot: bool,
     /// CR 720-style "exiled with [a permanent]": a permanent tag stamped on a
     /// card in exile that some source put there and keeps caring about (e.g.
     /// Keen-Eyed Curator's "card types among cards exiled with this
@@ -5131,6 +5158,7 @@ impl CardInstance {
             skip_next_untap: false,
             untap_locked_by: None,
             created_by: None,
+            damage_prevention_off_eot: false,
             untap_locked_while_present: None,
             attacked_this_turn: false,
             blocked_this_turn: false,
@@ -5535,6 +5563,7 @@ impl CardInstance {
         // and so does the "can't be regenerated this turn" lock.
         self.regeneration_shields = 0;
         self.cant_regenerate_this_turn = false;
+        self.damage_prevention_off_eot = false;
         // CR 702.171 — "saddled until end of turn" ends here.
         self.saddled = false;
         self.saddled_by.clear();

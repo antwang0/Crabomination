@@ -233,6 +233,7 @@ impl Effect {
             | Effect::RevealChosenCardsLowestCreaturesEnter
             | Effect::AttackingCreaturesBecomeBlocked
             | Effect::GrantTriggeredAbilityThisTurnToMatching { .. }
+            | Effect::TurnOffDamagePreventionThisTurn { .. }
             | Effect::MassPolymorph
             | Effect::CopyForEachOtherTargetableCreature
             | Effect::SearchRevealPunishSameNameCasters { .. }

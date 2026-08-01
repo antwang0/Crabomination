@@ -288,6 +288,7 @@ fn ward_suffix(cost: &WardCost) -> String {
         SacrificePermanents(n) => format!("sac{n}"),
         RemoveCounterFromPermanent => "ctr-".into(),
         GenericSourcePower => "P".into(),
+        GenericXFromCost => "X".into(),
         LifeSourcePower => "P♥".into(),
     }
 }

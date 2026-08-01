@@ -3990,10 +3990,10 @@ impl GameState {
             return false;
         }
         self.battlefield_find(tgt).is_some_and(|c| {
-            c.definition
-                .static_abilities
-                .iter()
-                .any(|sa| self.self_static_prevents_all_damage_active(&sa.effect, c.controller))
+            !c.damage_prevention_off_eot
+                && c.definition.static_abilities.iter().any(|sa| {
+                    self.self_static_prevents_all_damage_active(&sa.effect, c.controller)
+                })
         }) || self.damage_sealed_by_aura(tgt, true)
     }
 
@@ -9387,6 +9387,14 @@ impl GameState {
         // CR 509.1a — city's blessing gate (Wayward Swordtooth).
         if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessCityBlessing)
             && !self.players[blocker.controller].city_blessing
+        {
+            return false;
+        }
+        // CR 509.1b — Branded Brawlers: your own untapped land locks the block.
+        if blocker_cp.keywords.contains(&Keyword::CantBlockIfYouHaveUntappedLand)
+            && self.battlefield.iter().any(|c| {
+                c.controller == blocker.controller && c.definition.is_land() && !c.tapped
+            })
         {
             return false;
         }

@@ -3830,6 +3830,10 @@ pub enum Effect {
     /// routes through `Decision::ChooseCards` (auto-pick: their cheapest
     /// creature card, else their cheapest card).
     RevealChosenCardsLowestCreaturesEnter,
+    /// "Until end of turn, [what] loses 'Prevent all damage that would be
+    /// dealt to this'" (Glittering Lion / Lynx). Sets
+    /// `CardInstance.damage_prevention_off_eot`.
+    TurnOffDamagePreventionThisTurn { what: Selector },
     /// CR 611.2 — "This turn, whenever a [`filter`] …": installs a floating
     /// watcher that every matching permanent carries for the rest of the turn,
     /// including ones that enter after this resolves (Mage Hunters' Onslaught).

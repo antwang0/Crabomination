@@ -5859,6 +5859,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TurnOffDamagePreventionThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        c.damage_prevention_off_eot = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantTriggeredAbilityThisTurnToMatching { filter, trigger } => {
                 self.turn_granted_triggers.push((filter.clone(), (**trigger).clone()));
                 Ok(())
@@ -14053,6 +14064,9 @@ impl GameState {
                         self.priority.player_with_priority = saved_priority;
                         ok
                     }
+                    // Not reachable as a printed Ward tax (no card prints
+                    // "Ward—{X}"); treated as unpaid so the ability resolves.
+                    WardCost::GenericXFromCost => false,
                     WardCost::Life(n) => {
                         // Ward—Pay N life. CR 119.4 forbids paying more
                         // life than you have, so insufficient life means
@@ -14338,6 +14352,20 @@ impl GameState {
                                 .and_then(|sid| self.computed_permanent(sid))
                                 .map(|c| c.power.max(0) as u32)
                                 .unwrap_or(0);
+                            if x == 0 {
+                                true
+                            } else {
+                                let mc = crate::mana::cost(&[crate::mana::generic(x)]);
+                                let saved = self.priority.player_with_priority;
+                                self.priority.player_with_priority = payer;
+                                let ok = self.try_pay_with_auto_tap(payer, &mc).is_ok();
+                                self.priority.player_with_priority = saved;
+                                ok
+                            }
+                        }
+                        // "{X}" — the resolution's declared X (Excise).
+                        WardCost::GenericXFromCost => {
+                            let x = ctx.x_value;
                             if x == 0 {
                                 true
                             } else {

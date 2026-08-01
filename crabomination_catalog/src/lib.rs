@@ -74,6 +74,7 @@ pub use sets::nms::*;
 pub use sets::nms2::*;
 pub use sets::nms3::*;
 pub use sets::nms4::*;
+pub use sets::pcy::*;
 pub use sets::curses::*;
 pub use sets::decks::*;
 pub use sets::dgm::*;

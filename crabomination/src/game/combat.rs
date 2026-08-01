@@ -382,6 +382,16 @@ impl GameState {
                         return Err(GameError::CannotAttack(id));
                     }
                 }
+                // CR 508.1a — Branded Brawlers: the defender having any
+                // untapped land locks the attack.
+                if computed_kw(id).contains(&Keyword::CantAttackIfDefenderHasUntappedLand)
+                    && let Some(d) = self.defender_for(atk.target)
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == d && c.definition.is_land() && !c.tapped
+                    })
+                {
+                    return Err(GameError::CannotAttack(id));
+                }
                 // CR 508.1a — Mogg Toady: strictly more creatures than the
                 // defending player.
                 if computed_kw(id).contains(&Keyword::CantAttackUnlessMoreCreaturesThanDefender)
@@ -1177,6 +1187,15 @@ impl GameState {
                 .battlefield_find(attacker_id)
                 .ok_or(GameError::CardNotOnBattlefield(attacker_id))?;
 
+            // CR 509.1b — Branded Brawlers: your own untapped land locks the
+            // block.
+            if kws_of(blocker_id).contains(&Keyword::CantBlockIfYouHaveUntappedLand)
+                && self.battlefield.iter().any(|c| {
+                    c.controller == blocker.controller && c.definition.is_land() && !c.tapped
+                })
+            {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
             // CR 509.1b — Mogg Toady: strictly more creatures than the
             // attacker's controller.
             if kws_of(blocker_id).contains(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)

@@ -23,6 +23,33 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
+## Noticed this run (modern_decks — Prophecy)
+
+`set_gaps.py pcy` is at **134 → 98** after wave 1 (`sets::pcy`, tests in
+`classic_sets/pcy`). New primitives this run:
+`CardDefinition.self_cost_reduction_if` (a general predicate-gated flat
+discount — the Avatar cycle), `AlternativeCost.discard_filters` (CR 601.2b
+"discard a [filter] card rather than pay this spell's mana cost" — Abolish,
+Foil, Flameshot), `WardCost::GenericXFromCost` (Excise's "unless its
+controller pays {X}"), `Effect::TurnOffDamagePreventionThisTurn` +
+`CardInstance.damage_prevention_off_eot` (the Glittering cycle's any-player
+escape hatch), and `Keyword::{CantAttackIfDefenderHasUntappedLand,
+CantBlockIfYouHaveUntappedLand}` (Branded Brawlers).
+
+Residuals in what shipped:
+
+- **Copper-Leaf Angel eats one land per activation**, not the printed
+  "Sacrifice X lands" for X counters (no `{X}`-scaled sacrifice cost).
+- **Endbringer's Revel's "as a sorcery" is `sorcery_speed`**, which also
+  requires an empty stack — right in practice, stricter than printed for the
+  non-active player.
+- **Excise's tax is auto-declined by bots** (the `UnlessPlayerPays` policy),
+  so the exile always happens under AutoDecider.
+
+Remaining PCY (98) is mostly the Rebel/Mercenary tutor chains, the rhystic
+"unless a player pays" cycle, and Dual Nature / Coffin Puppets / Celestial
+Convergence (each wants one primitive).
+
 ## Nemesis — closed
 
 `set_gaps.py nms` is at **zero** (129 → 44 → 22 → 16 → 0; `sets::nms` …

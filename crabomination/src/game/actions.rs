@@ -28,6 +28,9 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::Blight(n) => *n == 0,
         WardCost::CollectEvidence(n) => *n == 0,
         WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => false,
+        // "{X}" is only free when the declared X was 0, which the caller
+        // can't see here.
+        WardCost::GenericXFromCost => false,
         WardCost::SacrificePermanents(n) => *n == 0,
         // Dynamic — the source's power can change before payment.
         WardCost::GenericSourcePower | WardCost::LifeSourcePower => false,
@@ -854,6 +857,13 @@ pub fn cost_reduction_for_spell_full(
         && state.players[caster].spells_cast_this_turn > 0
     {
         reduction = reduction.saturating_add(amount);
+    }
+    // Card-intrinsic predicate-gated discount (the Prophecy Avatars).
+    if let Some((cond, amount)) = &card.definition.self_cost_reduction_if {
+        let ctx = crate::game::effects::EffectContext::for_spell(caster, None, 0, 0);
+        if state.evaluate_predicate(cond, &ctx) {
+            reduction = reduction.saturating_add(*amount);
+        }
     }
     // Card-intrinsic "costs {amount} less if evidence was collected" (Bite Down
     // on Crime, CR 701.59). The collect is an optional additional cost announced
@@ -8936,6 +8946,29 @@ impl GameState {
             }
         }
 
+        // CR 601.2b — "discard a [filter] card rather than pay this spell's
+        // mana cost": pick the discards up front (lowest MV first) so an
+        // unpayable alt cost is rejected before anything is spent.
+        let mut discard_picks: Vec<CardId> = Vec::new();
+        for (filter, n) in &alt.discard_filters {
+            for _ in 0..*n {
+                let pick = self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| {
+                        c.id != card_id
+                            && !discard_picks.contains(&c.id)
+                            && self.evaluate_requirement_on_card(filter, c, p)
+                    })
+                    .min_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| c.id);
+                match pick {
+                    Some(id) => discard_picks.push(id),
+                    None => return Err(GameError::SelectionRequirementViolated),
+                }
+            }
+        }
+
         // Remove the spell card from hand now (so the pitch card doesn't
         // accidentally collide with it during validation).
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
@@ -9105,6 +9138,12 @@ impl GameState {
                     amount: (-applied) as u32,
                 });
             }
+        }
+
+        // Discard the alt-cost picks (CR 601.2b), firing the normal discard
+        // events so "whenever you discard" payoffs see them.
+        for did in std::mem::take(&mut discard_picks) {
+            self.discard_card(p, did, &mut auto_events);
         }
 
         // Exile the pitch card from hand if required.
