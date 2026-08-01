@@ -28,9 +28,6 @@ Items are grouped by area and roughly ordered by impact within each group.
 `set_gaps.py usg` is at **zero**: the whole Urza block (USG / ULG / UDS) is
 closed. Residuals in what the last three waves shipped:
 
-- **Serra's Hymn's shield is single-target**, not "divided as you choose among
-  any number of targets" — there's no divided form of `PreventNextDamage`
-  (`DealDamageDivided` is the damage-side analogue to copy).
 - **Temporal Aperture's free cast rides the card, not the library top.**
   `GrantMayPlay` stamps `may_play_until` on the card, so drawing it or moving
   it off the top doesn't revoke the permission the way "for as long as that
@@ -38,10 +35,6 @@ closed. Residuals in what the last three waves shipped:
 - **Abundance's land/nonland pick is a bot policy** (dig for whichever kind the
   hand is short on) rather than a real per-draw prompt; the yes/no is a real
   decision, the *kind* is not.
-- **Phyrexian Processor's Minion is a 0/0 with X +1/+1 counters**, not a
-  printed X/X — `TokenDefinition.dynamic_pt` would evaluate in the token's own
-  context, where `Value::ChosenNumberOfSource` reads the token, not the
-  Processor.
 - **Contamination replaces every land's mana**, including its controller's, and
   is not restricted to the first active static (multiple copies are
   idempotent, which is right, but a second colour would be ignored).
@@ -68,13 +61,6 @@ closed. Residuals in what the last three waves shipped:
 
 Worth doing next, in rough order of leverage:
 
-- **A divided-prevention primitive** (`PreventNextDamageDivided`) — Serra's
-  Hymn today, and every "prevent the next X damage divided as you choose"
-  printing after it. It can share `Decision::DivideDamage` with
-  `DealDamageDivided`.
-- **`Value` in `TokenDefinition.power/toughness`**, evaluated in the *creating*
-  effect's context. Unblocks printed X/X tokens (Phyrexian Processor, and the
-  many "create an X/X" cards currently modeled with counters).
 - **A real "for as long as it remains on top" permission** — a library-top
   linked `may_play` that revokes on any zone/order change.
 - **The client cannot be built in this environment** (`wayland-sys` needs

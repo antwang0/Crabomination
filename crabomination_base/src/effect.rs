@@ -7260,6 +7260,12 @@ pub enum Effect {
     /// read at resolution from the (possibly already-dead) subject's LKI.
     SearchSameNameAs { who: PlayerRef, subject: Selector, to: ZoneDest },
 
+    /// CR 615 — "Prevent the next `total` damage that would be dealt this turn
+    /// to any number of targets, divided as you choose." The prevention-side
+    /// sibling of `DealDamageDivided`; shares `Decision::DivideDamage`.
+    /// Serra's Hymn.
+    PreventNextDamageDivided { total: Value, filter: SelectionRequirement, max_targets: u8 },
+
     /// Stamp `what`'s first resolved permanent on the source's
     /// `chosen_permanent` slot, so a later `Selector::ChosenPermanentOfSource`
     /// can name it. The resolution-time sibling of

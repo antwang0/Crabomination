@@ -44,7 +44,9 @@ exercising each) was elided in a compaction pass; recover it from
   SearchSameNameAs, ChooseColorThenDiscardMatching, PutAuraFromHandAttachedTo,
   RememberPermanentOnSource}`, `Selector::LeastToughnessAmongAll`,
   `PlayerRef::HighestLife`, `SelectionRequirement::IsSource`,
-  `Value::ChosenNumberOfSource`, `Predicate::TriggerSourceIsSourcesChosenPermanent`,
+  `Value::ChosenNumberOfSource`, `Effect::PreventNextDamageDivided` (CR 615 —
+  the prevention twin of `DealDamageDivided`),
+  `Predicate::TriggerSourceIsSourcesChosenPermanent`,
   and `Keyword::{CantAttackUnlessGreaterPowerAttacks,
   CantBlockUnlessGreaterPowerBlocks}`. Correctness: CR 300.2a — a land card can
   only be *played*, never cast; CR 603.10 — `Value::CountersOn` reads the dead
@@ -1689,9 +1691,9 @@ Each unblocks a large swath of cards.
 - 🟡 **Divided damage / counters** — `Effect::DealDamageDivided` +
   `Effect::DistributeCounters` (Jugan) share `Decision::DivideDamage` (the modal
   is noun-aware). Forked Bolt, Pyrokinesis, Crackle with Power. Remaining:
-  "choose targets as it resolves", and the *prevention* sibling — "prevent the
-  next X damage divided as you choose" has no primitive (Serra's Hymn ships
-  single-target).
+  "choose targets as it resolves". The prevention sibling ships as
+  `Effect::PreventNextDamageDivided` (Serra's Hymn), sharing the same
+  `Decision::DivideDamage`.
 - 🟡 **Targeting refinements:** resolution-time legality re-check (608.2b) ships
   for single/multi-target spells and Auras, and now resolves `{X}`-from-cost
   target filters (Hearth Kami's "artifact with mana value X" via

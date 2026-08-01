@@ -10,7 +10,7 @@ use crate::card::{
 use crate::effect::{
     DelayedTriggerKind, Duration, Effect, LibraryPosition, ManaPayload, PlayerRef, Selector,
     ZoneDest,
-    shortcut::{etb, target_any, target_filtered},
+    shortcut::{etb, target_filtered},
 };
 use crate::game::TurnStep;
 use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u, w, x};
@@ -814,7 +814,7 @@ pub fn persecute() -> CardDefinition {
 }
 
 /// Phyrexian Processor — {4}. Pay life on the way in; mint that big a Minion
-/// every turn. The token is a 0/0 carrying that many +1/+1 counters.
+/// every turn.
 pub fn phyrexian_processor() -> CardDefinition {
     CardDefinition {
         as_enters_effect: Some(Effect::Seq(vec![
@@ -824,29 +824,25 @@ pub fn phyrexian_processor() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4)]),
             tap_cost: true,
-            effect: Effect::Seq(vec![
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    definition: TokenDefinition {
-                        name: "Phyrexian Minion".into(),
-                        power: 0,
-                        toughness: 0,
-                        card_types: vec![CardType::Creature],
-                        colors: vec![Color::Black],
-                        subtypes: Subtypes {
-                            creature_types: vec![CreatureType::Phyrexian, CreatureType::Minion],
-                            ..Default::default()
-                        },
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: TokenDefinition {
+                    name: "Phyrexian Minion".into(),
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Black],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Phyrexian, CreatureType::Minion],
                         ..Default::default()
                     },
+                    // The life paid as this entered, baked at mint time.
+                    dynamic_pt: Some((
+                        Value::ChosenNumberOfSource,
+                        Value::ChosenNumberOfSource,
+                    )),
+                    ..Default::default()
                 },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedTokens,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ChosenNumberOfSource,
-                },
-            ]),
+            },
             ..Default::default()
         }],
         ..artifact("Phyrexian Processor", cost(&[generic(4)]))
@@ -955,14 +951,18 @@ pub fn sporogenesis() -> CardDefinition {
     }
 }
 
-/// Serra's Hymn — {W}. Bank verse counters, then cash them in as a shield.
-/// The printed division across several targets is modeled as one target.
+/// Serra's Hymn — {W}. Bank verse counters, then cash them in as a shield
+/// split across any number of targets.
 pub fn serras_hymn() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![verse_upkeep()],
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
-            effect: Effect::PreventNextDamage { target: target_any(), amount: verses() },
+            effect: Effect::PreventNextDamageDivided {
+                total: verses(),
+                filter: R::Creature.or(R::Player).or(R::Planeswalker),
+                max_targets: 4,
+            },
             ..Default::default()
         }],
         ..enchantment("Serra's Hymn", cost(&[w()]))

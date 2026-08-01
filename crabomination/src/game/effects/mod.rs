@@ -3905,6 +3905,70 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 615 — "Prevent the next N damage that would be dealt this
+            // turn to any number of targets, divided as you choose." The
+            // prevention twin of `DealDamageDivided`, sharing its decision.
+            Effect::PreventNextDamageDivided { total, .. } => {
+                let amt = self.evaluate_value(total, ctx).max(0) as u32;
+                if amt == 0 {
+                    return Ok(());
+                }
+                let targets: Vec<Target> = ctx
+                    .targets
+                    .iter()
+                    .filter(|t| match t {
+                        Target::Player(p) => *p < self.players.len(),
+                        Target::Permanent(id) => self.battlefield_find(*id).is_some(),
+                    })
+                    .cloned()
+                    .collect();
+                if targets.is_empty() {
+                    return Ok(());
+                }
+                let decision = Decision::DivideDamage {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    total: amt,
+                    targets: targets.clone(),
+                    noun: "prevention".into(),
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::DivisionAnswerPending,
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
+                let mut division = match answer {
+                    crate::decision::DecisionAnswer::DamageDivision(v) => v,
+                    _ => vec![],
+                };
+                if division.len() != targets.len() || division.iter().sum::<u32>() != amt {
+                    division = crate::decision::even_damage_split(amt, targets.len());
+                }
+                for (t, n) in targets.iter().zip(division) {
+                    if n == 0 {
+                        continue;
+                    }
+                    let shield_target = match t {
+                        Target::Player(p) => crate::game::types::PreventionTarget::Player(*p),
+                        Target::Permanent(id) => {
+                            crate::game::types::PreventionTarget::Permanent(*id)
+                        }
+                    };
+                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                        target: shield_target,
+                        remaining: Some(n),
+                        ..Default::default()
+                    });
+                }
+                Ok(())
+            }
+
             // "Divided evenly, rounded down" (Fireball) — each still-present
             // target takes total/n; the remainder is lost. No decision.
             Effect::DealDamageDividedEvenly { total, .. } => {

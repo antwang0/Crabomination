@@ -587,7 +587,7 @@ impl Effect {
                 sel_has_target(subject) || value_has_target(amount)
             }
             // Divided damage always targets (one or more chosen targets).
-            Effect::DealDamageDivided { .. } => true,
+            Effect::DealDamageDivided { .. } | Effect::PreventNextDamageDivided { .. } => true,
             Effect::DealDamageDividedEvenly { .. } => true,
             Effect::CreateTokenBlocking { .. } => true,
             Effect::SupportCounters { .. } => true,
@@ -1207,6 +1207,7 @@ impl Effect {
             }
             Effect::CreateTokenBlocking { filter, .. }
             | Effect::DealDamageDivided { filter, .. }
+            | Effect::PreventNextDamageDivided { filter, .. }
             | Effect::DealDamageDividedEvenly { filter, .. }
             | Effect::DistributeCounters { filter, .. }
             | Effect::DestroyTargetsPolymorph { filter }
@@ -1780,7 +1781,8 @@ impl Effect {
                     _ => format!("deal damage to {t}; excess is dealt to its controller"),
                 }
             }
-            Effect::DealDamageDivided { total, .. } => match total {
+            Effect::PreventNextDamageDivided { total, .. }
+            | Effect::DealDamageDivided { total, .. } => match total {
                 Value::Const(n) => format!("deal {n} damage divided among targets"),
                 _ => "deal damage divided among targets".into(),
             },
@@ -2152,6 +2154,7 @@ impl Effect {
             // match a player (Crackle with Power "any target"); creature-only
             // divide spells (Forked Bolt, Pyrokinesis) reject players.
             Effect::DealDamageDivided { filter, .. }
+            | Effect::PreventNextDamageDivided { filter, .. }
             | Effect::DealDamageDividedEvenly { filter, .. } => filter.can_match_player(),
             Effect::ApplyToTargets { filter, .. } => filter.can_match_player(),
             // Refraction Trap's redirect slot is "any target".
@@ -2546,6 +2549,11 @@ impl Effect {
                 // Each of slots 0..max_targets carries the divide filter, so
                 // the cast/auto-target machinery collects "up to N targets".
                 Effect::DealDamageDivided {
+                    filter,
+                    max_targets,
+                    ..
+                }
+                | Effect::PreventNextDamageDivided {
                     filter,
                     max_targets,
                     ..
@@ -2949,6 +2957,7 @@ impl Effect {
             // "divided as you choose among any number of targets" — one target
             // is required, the rest are the caster's option (CR 115.3).
             Effect::DealDamageDivided { .. }
+            | Effect::PreventNextDamageDivided { .. }
             | Effect::DealDamageDividedEvenly { .. }
             | Effect::DistributeCounters { .. }
             | Effect::SupportCounters { .. } => Some(1),
@@ -3010,6 +3019,7 @@ impl Effect {
     pub fn distinct_target_count(&self, mode: Option<usize>) -> Option<u8> {
         match self {
             Effect::DealDamageDivided { max_targets, .. }
+            | Effect::PreventNextDamageDivided { max_targets, .. }
             | Effect::DealDamageDividedEvenly { max_targets, .. }
             | Effect::SupportCounters { max_targets, .. }
             | Effect::ApplyToTargets { max_targets, .. }

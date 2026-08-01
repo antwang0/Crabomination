@@ -752,20 +752,34 @@ fn sporogenesis_blooms_on_death() {
     );
 }
 
-/// Serra's Hymn's shield is worth its verse counters.
+/// Serra's Hymn splits its verse counters across several targets.
 #[test]
-fn serras_hymn_shields_for_its_verses() {
+fn serras_hymn_divides_its_shield() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let hymn = g.add_card_to_battlefield(0, catalog::serras_hymn());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(hymn)
         .unwrap()
         .add_counters(crabomination::card::CounterType::Verse, 3);
-    activate(&mut g, hymn, 0, Some(Target::Player(0)));
+    // 2 points to the player, 1 to the bear.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DamageDivision(vec![2, 1])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hymn,
+        ability_index: 0,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
     let life = g.players[0].life;
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     mana(&mut g, 1);
     cast_as(&mut g, 1, bolt, Some(Target::Player(0)));
-    assert_eq!(g.players[0].life, life, "3 damage, 3 prevented");
+    assert_eq!(g.players[0].life, life - 1, "2 of the 3 were prevented");
+    assert!(g.battlefield_find(bear).is_some(), "the bear kept its 1-point shield");
 }
 
 /// Discordant Dirge eats one card per verse counter.
