@@ -157,6 +157,7 @@ impl Effect {
                 | Selector::RadianceGroup { subject: i }
                 | Selector::CreaturesInCombatWith(i)
                 | Selector::SharingNameWith(i) => sel_has_target(i),
+                Selector::MatchingAmong { inner, .. } => sel_has_target(inner),
                 Selector::Take { inner, count } | Selector::TakeRandom { inner, count } => {
                     sel_has_target(inner) || value_has_target(count)
                 }
@@ -411,8 +412,10 @@ impl Effect {
             Effect::ExileHand { who }
             | Effect::PlayerReturnsPermanentUnlessPaysLife { who, .. }
             | Effect::ChooseColorThenDiscardMatching { who }
-            | Effect::SearchSameNameAs { who, .. }
             | Effect::ReturnCreaturesWithPowerGreaterThanHand { who } => player_has_target(who),
+            Effect::SearchSameNameAs { who, subject, .. } => {
+                player_has_target(who) || sel_has_target(subject)
+            }
             Effect::ExileChosenFromHandOrGraveyard { who, .. } => player_has_target(who),
             Effect::DiscardUnlessKind { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
@@ -1183,7 +1186,9 @@ impl Effect {
                 Selector::EachPermanent(f) => Some(f),
                 Selector::CardsInZone { filter, .. } => Some(filter),
                 Selector::TargetFiltered { filter, .. } => Some(filter),
-                Selector::Take { inner, .. } | Selector::TakeRandom { inner, .. } => {
+                Selector::MatchingAmong { inner, .. }
+                | Selector::Take { inner, .. }
+                | Selector::TakeRandom { inner, .. } => {
                     sel_filter(inner)
                 }
                 Selector::TakeWithSumCap { inner, .. } => sel_filter(inner),
@@ -2374,7 +2379,9 @@ impl Effect {
                 | Selector::RadianceGroup { subject: i }
                 | Selector::CreaturesInCombatWith(i)
                 | Selector::SharingNameWith(i) => sel_find(i, slot),
-                Selector::Take { inner, .. } | Selector::TakeRandom { inner, .. } => {
+                Selector::MatchingAmong { inner, .. }
+                | Selector::Take { inner, .. }
+                | Selector::TakeRandom { inner, .. } => {
                     sel_find(inner, slot)
                 }
                 Selector::TakeWithSumCap { inner, .. } => sel_find(inner, slot),
@@ -2860,6 +2867,7 @@ impl Effect {
                 | Effect::LockTargetNameUntilYourNextTurn { what }
                 | Effect::Explore { who: what } => sel_find(what, slot),
                 Effect::CantBlockSourceThisTurn { target } => sel_find(target, slot),
+                Effect::SearchSameNameAs { subject, .. } => sel_find(subject, slot),
                 Effect::LandsDontUntapNextUntapStep { who }
                 | Effect::CreaturesDontUntapNextUntapStep { who } => sel_find(who, slot),
                 Effect::MoveAllCounters { from, to } | Effect::MoveCounter { from, to, .. } => {

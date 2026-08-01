@@ -25424,6 +25424,17 @@ impl GameState {
                 .map(EntityRef::Player)
                 .collect(),
 
+            Selector::MatchingAmong { inner, filter } => {
+                let all = self.resolve_selector(inner, ctx);
+                all.into_iter()
+                    .filter(|e| match e {
+                        EntityRef::Permanent(id) => self
+                            .evaluate_requirement(filter, &Target::Permanent(*id), ctx.controller),
+                        _ => false,
+                    })
+                    .collect()
+            }
+
             Selector::Take { inner, count } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {

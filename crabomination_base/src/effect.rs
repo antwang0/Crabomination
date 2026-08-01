@@ -353,6 +353,10 @@ pub enum Selector {
     /// "up to two creature cards from your graveyard". The cap is
     /// evaluated against the controller's resolution context, so values
     /// like `Value::CountersOn(...)` work as expected.
+    /// Narrow another selector's result set to the entities matching `filter`
+    /// ("the *nonblack* creature blocking or blocked by this" — Deathgazer).
+    /// Player entities never match a permanent filter and are dropped.
+    MatchingAmong { inner: Box<Selector>, filter: SelectionRequirement },
     Take { inner: Box<Selector>, count: Box<Value> },
     /// Like `Take` but picks `count` entities uniformly at random instead of
     /// the first in resolution order (Capricious Hellraiser's random exile).
