@@ -2808,6 +2808,8 @@ impl Effect {
                 | Effect::ExileHand { who }
                 | Effect::ShuffleGraveyardCardsIntoLibrary { who, .. }
                 | Effect::RevealUntilFind { who, .. }
+                | Effect::RearrangeTop { who, .. }
+                | Effect::ShuffleHandsDrawSame { who }
                 | Effect::DiscardUnlessKind { who, .. } => implicit_player_for_ref_slot(who, slot),
                 Effect::PhaseOut { what, .. }
                 | Effect::GrantSuspend { what, .. }

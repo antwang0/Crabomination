@@ -486,10 +486,18 @@ pub(crate) fn event_matches_spec(
                 .auras_at_death
                 .get(card_id)
                 .is_some_and(|auras| auras.iter().any(|(a, _)| *a == source.id)),
+            // CR 603.2 — the trigger condition is checked when the damage is
+            // dealt, before the lethal-damage SBA. When the host died to that
+            // same damage the Aura is already orphaned, so fall back to the
+            // death snapshot (Soul Link's "is dealt damage" half).
             GameEvent::DamageDealt { to_card: Some(cid), .. } => state
                 .battlefield_find(source.id)
                 .and_then(|a| a.attached_to)
-                .is_some_and(|host| host == *cid),
+                .is_some_and(|host| host == *cid)
+                || state
+                    .auras_at_death
+                    .get(cid)
+                    .is_some_and(|auras| auras.iter().any(|(a, _)| *a == source.id)),
             // "Whenever enchanted creature attacks" (the Theros Ordeals) —
             // the host is still on the battlefield, so read `attached_to`.
             GameEvent::AttackerDeclared(cid) | GameEvent::PermanentTapped { card_id: cid, .. } => {

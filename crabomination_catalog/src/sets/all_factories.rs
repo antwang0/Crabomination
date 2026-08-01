@@ -10358,6 +10358,25 @@ static APC: &[Factory] = &[
     super::apc::last_caress,
     super::apc::lightning_angel,
 ];
+static APC2: &[Factory] = &[
+    super::apc2::living_airship,
+    super::apc2::llanowar_dead,
+    super::apc2::minotaur_tactician,
+    super::apc2::minotaur_illusionist,
+    super::apc2::putrid_warrior,
+    super::apc2::martyrs_tomb,
+    super::apc2::tahngarths_glare,
+    super::apc2::manacles_of_decay,
+    super::apc2::yavimayas_embrace,
+    super::apc2::soul_link,
+    super::apc2::planar_despair,
+    super::apc2::mask_of_intolerance,
+    super::apc2::whirlpool_warrior,
+    super::apc2::symbiotic_deployment,
+    super::apc2::wild_research,
+    super::apc2::guided_passage,
+    super::apc2::last_stand,
+];
 static BOT: &[Factory] = &[
     super::bot::slicer_hired_muscle,
     super::bot::slicer_high_speed_antagonist,
@@ -18351,6 +18370,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("pcy4", PCY4),
     ("bot", BOT),
     ("apc", APC),
+    ("apc2", APC2),
     ("mod_set", MOD_SET),
     ("ogw", OGW),
     ("one", ONE),

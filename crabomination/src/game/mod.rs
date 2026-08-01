@@ -12476,9 +12476,13 @@ impl GameState {
                 // (Minion's Return, Kaya's Ghostform) — the snapshot is the
                 // orphaned Aura, scope keys on the departed host recorded in
                 // `auras_at_death`.
+                // `DealtDamage` joins them for the lethal case: the host died
+                // to the very damage that triggered (CR 603.2 — Soul Link).
                 let lki_enchanted = matches!(
                     ta.event.kind,
-                    crate::effect::EventKind::CreatureDied | crate::effect::EventKind::CardExiled
+                    crate::effect::EventKind::CreatureDied
+                        | crate::effect::EventKind::CardExiled
+                        | crate::effect::EventKind::DealtDamage
                 ) && ta.event.scope == crate::effect::EventScope::EnchantedBySource;
                 if !(lki_self || lki_enchanted) {
                     continue;
