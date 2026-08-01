@@ -319,6 +319,32 @@ impl EvalWeights {
     }
 
     /// The adopted default plus the searched block assignment.
+    ///
+    /// **Measured, and not adopted**: 50.4 % [49.8 %, 51.0 %] over 30 000
+    /// games across all twelve archetypes — the interval straddles 50 %.
+    ///
+    /// Kept because the negative result is worth more than the code. Two
+    /// earlier runs each read about +0.8 (50.9 % over 8 000 fixed-deck
+    /// games, 50.7 % over 15 998 cube games), with a dramatic per-deck
+    /// split: −3.2 in the mono-red mirror against +6.7 in golgari. Pooling
+    /// those two runs would have cleared 50 % and looked like an adoption.
+    /// The 30 000-game run was pre-registered as the decision instead, and
+    /// the effect halved to +0.4 while the split mostly evaporated —
+    /// mono-red came back to 49.4 %. Only golgari survived, at +4.1.
+    ///
+    /// So the interesting finding is methodological: at 2 000 games per
+    /// archetype this ladder produces per-deck swings of five points that
+    /// are not there at 2 500. A per-archetype number is roughly a tenth of
+    /// the total sample and should be read as a hint about *where* to look,
+    /// never as a result on its own.
+    ///
+    /// Why it might genuinely not help: [`attack_search`](Self::attack_search)
+    /// already delivers about twice the untapped board to `DeclareBlockers`,
+    /// and the greedy assignment in [`pick_blocks_inner`] is a far more
+    /// developed heuristic than `pick_attacks` ever was — it already folds in
+    /// first strike, deathtouch, trample, protection, indestructible,
+    /// rampage, planeswalker defense and poison. There was much less room
+    /// above it than there was above the alpha strike.
     pub const fn block_search() -> Self {
         Self { block_search: 6, ..Self::attack_search() }
     }
