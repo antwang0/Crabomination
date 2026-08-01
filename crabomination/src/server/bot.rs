@@ -4517,6 +4517,17 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
 /// one-step hill climb toward restraint targets that error directly
 /// without paying for a search over subsets the bot will never want.
 ///
+/// **Tried and reverted**: forcing unblockable attackers into every
+/// candidate, on the theory that free damage should never be declined.
+/// It measured *worse* — 51.4 % [50.3 %, 52.4 %] against this version's
+/// 52.4 % [51.3 %, 53.5 %] on the same seed and sample — and did nothing
+/// for the dimir mirror it was aimed at (44.0 % against 44.8 %). The
+/// reasoning was simply wrong: evasion is about being *blocked*, not about
+/// *blocking*, so a 2/3 flier that no ground board can stop on offense is
+/// still a perfectly good blocker on defense. Forcing it to attack deletes
+/// a real option. See `EvalWeights::attack_search` for the dimir deficit,
+/// which remains open.
+///
 /// Ties go to the greedy set, so the search only ever departs from the
 /// current behavior for a strict improvement.
 fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
