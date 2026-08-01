@@ -1160,6 +1160,11 @@ exercising each) was elided in a compaction pass; recover it from
   `CardDefinition.cast_only_before_blockers`, `Value::HalfLifeRoundedUp`, and
   `GameState::may_choose_to_draw` (CR 121.2b/121.3 — a capped player is never
   offered an optional draw, and the cap now gates `draw_one` itself).
+- **Lair lands (modern_decks — Planeshift):** `LandType::Lair` +
+  `Effect::SacrificeSourceUnlessReturn` — "sacrifice this unless you return a
+  non-Lair land you control to its owner's hand"; the bounce sibling of
+  `SacrificeSourceUnlessSacrifice` (auto-picks the least useful land, a UI seat
+  gets a real yes/no).
 - **And/or kicker + the Flagbearer requirement (modern_decks — Apocalypse):**
   CR 702.32b "Kicker {A} and/or {B}" ships end to end —
   `CardDefinition.kicker_options`, `CardInstance.kicked_options`,
