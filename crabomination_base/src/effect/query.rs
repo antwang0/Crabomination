@@ -1476,6 +1476,7 @@ impl Effect {
             // a target (e.g. "you may sacrifice [target permanent]").
             Effect::RevealAnyNumberFromHand { then: body, .. }
             | Effect::MayExileSelfThen { body }
+            | Effect::MayExileFromYourGraveyard { then: body, .. }
             | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::CapTargetsAtX { body }
@@ -2565,7 +2566,10 @@ impl Effect {
                 | Effect::DealDamageExcessToController { to, amount } => {
                     sel_find(to, slot).or_else(|| val_find(amount, slot))
                 }
-                Effect::MayExileSelfThen { body } => eff_find(body, slot, mode, kicked),
+                Effect::MayExileSelfThen { body }
+                | Effect::MayExileFromYourGraveyard { then: body, .. } => {
+                    eff_find(body, slot, mode, kicked)
+                }
                 Effect::AttachAuraFromGraveyardTo { aura, .. } => sel_find(aura, slot),
                 Effect::ExileAllCopiesOfTargetName { what }
                 | Effect::DestroyAllSharingNameWith { what }
