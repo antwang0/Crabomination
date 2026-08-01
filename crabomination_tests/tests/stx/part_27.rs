@@ -575,6 +575,26 @@ fn deadly_brew_each_player_sacrifices() {
         "returned a permanent from graveyard");
 }
 
+/// The printed "another permanent card" excludes the creature this very
+/// resolution ate.
+#[test]
+fn deadly_brew_cannot_return_what_it_just_sacrificed() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::deadly_brew());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().all(|c| c.id != mine), "the sacrificed bear stays dead");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mine));
+}
+
 #[test]
 fn kasmina_minus_x_makes_a_scaled_fractal() {
     let mut g = two_player_game();

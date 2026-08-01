@@ -2927,6 +2927,7 @@ impl GameState {
         self.damage_prevented_sources.clear();
         self.land_mana_replacements_this_turn.clear();
         self.blocks_declared_this_turn.clear();
+        self.turn_granted_triggers.clear();
         self.cant_block_pairs.clear();
         self.attack_despite_defender_this_turn.clear();
         // CR 615 — prevention shields and the "can't be prevented" rider

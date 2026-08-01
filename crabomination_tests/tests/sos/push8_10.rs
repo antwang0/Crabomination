@@ -613,6 +613,27 @@ fn ambitious_augmenter_death_with_counters_creates_fractal_with_counters() {
     );
 }
 
+/// Printed "put this creature's counters on that token" means counters of any
+/// kind, not just +1/+1.
+#[test]
+fn ambitious_augmenter_transfers_counters_of_any_kind() {
+    let mut g = two_player_game();
+    let aug = g.add_card_to_battlefield(0, catalog::ambitious_augmenter());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == aug) {
+        c.add_counters(CounterType::PlusOnePlusOne, 1);
+        c.add_counters(CounterType::Charge, 2);
+    }
+    let _ = g.remove_to_graveyard_with_triggers(aug);
+    drain_stack(&mut g);
+    let fractal = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Fractal")
+        .expect("a Fractal token");
+    assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(fractal.counter_count(CounterType::Charge), 2, "the charge counters came too");
+}
+
 #[test]
 fn ambitious_augmenter_death_without_counters_does_not_create_fractal() {
     let mut g = two_player_game();

@@ -150,6 +150,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Spend-as-any-colour (CR 609.4b) — a neutral pewter, matching the
         // colorless mana pip: colour requirements have stopped mattering.
         StatChipKind::AnyColorMana => (Color::srgba(0.30, 0.30, 0.33, 1.0), theme::TEXT_PRIMARY),
+        // Turn-scoped rules changes nobody can read off the board — a warm
+        // amber so they stand out from the per-permanent chips.
+        StatChipKind::TurnEffect => (Color::srgba(0.42, 0.30, 0.06, 1.0), theme::TEXT_PRIMARY),
         // Player-level hexproof (CR 702.11 — Aegis, Leyline of Sanctity) — a
         // teal ward, distinct from the damage-immunity shield.
         StatChipKind::PlayerHexproof => (Color::srgba(0.10, 0.28, 0.28, 1.0), theme::TEXT_PRIMARY),
@@ -207,6 +210,9 @@ pub(super) enum StatChipKind {
     Shield,
     PlayerHexproof,
     AbilityWord,
+    /// A turn-scoped continuous effect with no board trace — a land-tap mana
+    /// replacement or a floating "this turn, whenever …" watcher.
+    TurnEffect,
     /// CR 603.7e — a pending "your next creature spell enters with +1/+1 /
     /// haste" rider (the FIN "Summon" saga chapters).
     Summon,
@@ -1103,6 +1109,14 @@ pub fn update_player_stats_chips(
         // CR 702.11 — player-level hexproof (Aegis, Leyline of Sanctity).
         if p.has_hexproof {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::PlayerHexproof, "◈ hexproof".to_string());
+        }
+        // Turn-scoped rules changes with no board trace (a land-tap mana
+        // replacement, a floating "this turn, whenever …" watcher). Global, so
+        // surface them once, on the active player's row.
+        if p.seat == cv.active_player {
+            for note in &cv.turn_effects {
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::TurnEffect, format!("⟲ {note}"));
+            }
         }
         // CR 609.4b — a global permission; surface it once, on the viewer's row.
         if cv.spend_mana_as_any_color {

@@ -300,6 +300,12 @@ pub struct ClientView {
     pub attack_tax_this_turn: u32,
     #[serde(default)]
     pub block_tax_this_turn: u32,
+    /// Turn-scoped continuous effects a player can't otherwise see on the
+    /// board — a land-tap mana replacement (Pale Moon, Harvest Mage) or a
+    /// floating "this turn, whenever …" watcher (Mage Hunters' Onslaught) —
+    /// as short human-readable lines. Empty on a clean turn.
+    #[serde(default)]
+    pub turn_effects: Vec<String>,
     /// CR 731 — the game's day/night designation: `None` = neither (the
     /// starting state), `Some(true)` = day, `Some(false)` = night. Surfaced
     /// so UIs can show a day/night indicator. `#[serde(default)]` for
@@ -1762,6 +1768,12 @@ pub struct PermanentView {
     /// rather than a permanent. `#[serde(default)]`.
     #[serde(default)]
     pub attached_to_player: Option<usize>,
+    /// For a token, the name of the permanent whose ability created it
+    /// (`CardInstance.created_by`), so the tooltip can say what a
+    /// counter-scaled token is keyed to (Saproling Burst). `None` once the
+    /// creator has left the battlefield, and for non-tokens.
+    #[serde(default)]
+    pub created_by_name: Option<String>,
     /// CR 702.95 — the `CardId` of this creature's Soulbond partner, if it's
     /// paired. Lets the client draw a pairing link / badge "Soulbonded with …"
     /// in the tooltip without scanning the battlefield. `None` for the common

@@ -788,6 +788,18 @@ pub struct GameState {
     /// (Deadly Brew). Reset between independent resolutions.
     #[serde(skip)]
     pub(crate) players_sacrificed_this_resolution: std::collections::HashSet<usize>,
+    /// The cards sacrificed during the current resolution, read by
+    /// `SelectionRequirement::NotSacrificedThisResolution` so an "another
+    /// permanent card" clause can't pick back what it just ate (Deadly Brew).
+    #[serde(default)]
+    pub(crate) cards_sacrificed_this_resolution: Vec<CardId>,
+    /// CR 611.2 — floating "this turn, whenever a [filter] …" watchers. Merged
+    /// into every matching permanent's trigger set for the rest of the turn, so
+    /// permanents entering later carry them too (Mage Hunters' Onslaught).
+    /// Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) turn_granted_triggers:
+        Vec<(crate::card::SelectionRequirement, crate::card::TriggeredAbility)>,
     /// Transient: the card name chosen by an `Effect::NameCard` within the
     /// current resolution. Read by `SelectionRequirement::NamedBySource` so a
     /// reveal-until-the-named-card chain (Spoils of the Vault) can match even
@@ -1590,6 +1602,8 @@ impl Clone for GameState {
             nonland_cards_exiled_this_effect: self.nonland_cards_exiled_this_effect,
             countered_spell_controller: self.countered_spell_controller,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
+            cards_sacrificed_this_resolution: self.cards_sacrificed_this_resolution.clone(),
+            turn_granted_triggers: self.turn_granted_triggers.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
             names_this_resolution: self.names_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
@@ -1826,6 +1840,8 @@ impl GameState {
             nonland_cards_exiled_this_effect: 0,
             countered_spell_controller: None,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
+            cards_sacrificed_this_resolution: Vec::new(),
+            turn_granted_triggers: Vec::new(),
             named_card_this_resolution: None,
             names_this_resolution: HashMap::new(),
             pending_cast_face: CastFace::Front,
@@ -2126,6 +2142,19 @@ impl GameState {
                 {
                     out.push((**ability).clone());
                 }
+            }
+        }
+        // CR 611.2 — turn-scoped floating watchers ("whenever a creature blocks
+        // this turn, …"). Unlike an EOT trigger grant, these reach permanents
+        // that enter after the granting spell resolved.
+        for (filter, ability) in &self.turn_granted_triggers {
+            if self.evaluate_requirement_static(
+                filter,
+                &Target::Permanent(card.id),
+                card.controller,
+                None,
+            ) {
+                out.push(ability.clone());
             }
         }
         // CR 721.2a — a station card's own `{N+}` triggered-ability striations,
@@ -5083,6 +5112,35 @@ impl GameState {
             symbols.push(ManaSymbol::Generic(relaxed));
         }
         crate::mana::ManaCost::new(symbols)
+    }
+
+    /// Short human-readable lines for the turn-scoped continuous effects that
+    /// leave no board trace — a land-tap mana replacement and any floating
+    /// "this turn, whenever …" watcher. Surfaced as `ClientView.turn_effects`
+    /// so a player can tell why their Island is producing {C}.
+    pub fn turn_effect_notes(&self) -> Vec<String> {
+        use crate::game::types::LandManaOutput;
+        let mut out = Vec::new();
+        for r in &self.land_mana_replacements_this_turn {
+            let whose = match r.who {
+                Some(p) => format!("player {}'s ", p + 1),
+                None => String::new(),
+            };
+            let which = if r.nonbasic_only { "nonbasic land" } else { "land" };
+            let makes = match r.output {
+                LandManaOutput::Colorless => "one colorless mana",
+                LandManaOutput::ColorOfChoice => "one mana of a chosen color",
+            };
+            out.push(format!("Each {whose}{which} tapped for mana produces {makes} instead"));
+        }
+        for (filter, ability) in &self.turn_granted_triggers {
+            out.push(format!(
+                "This turn, each {} has: {}",
+                crate::server::view::requirement_noun_public(filter),
+                crate::server::view::trigger_label_public(ability),
+            ));
+        }
+        out
     }
 
     /// Test/inspection accessor for the CR 615.7 chosen-source shields

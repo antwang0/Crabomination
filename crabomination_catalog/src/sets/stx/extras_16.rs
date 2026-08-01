@@ -1109,12 +1109,10 @@ pub fn rootha_mercurial_artist() -> CardDefinition {
 /// Deadly Brew — {B}{G} Sorcery. "Each player sacrifices a creature or
 /// planeswalker of their choice. If you sacrificed a permanent this way, you
 /// may return **another** permanent card from your graveyard to your hand."
-/// The "another" exclusion is not modeled — there is no selection
-/// requirement excluding the card sacrificed this resolution (missing
-/// primitive: `NotSacrificedThisResolution`-style filter), so the pick may
-/// currently return the just-sacrificed card. The "of your choice" pick is
-/// also the engine-wide `Selector::take` approximation (first matching card
-/// in graveyard order), not a prompted choice.
+/// The "another" exclusion rides
+/// `SelectionRequirement::NotSacrificedThisResolution`. The "of your choice"
+/// pick is still the engine-wide `Selector::take` approximation (first
+/// matching card in graveyard order), not a prompted choice.
 pub fn deadly_brew() -> CardDefinition {
     CardDefinition {
         name: "Deadly Brew",
@@ -1135,7 +1133,8 @@ pub fn deadly_brew() -> CardDefinition {
                             Selector::CardsInZone {
                                 who: PlayerRef::You,
                                 zone: Zone::Graveyard,
-                                filter: SelectionRequirement::Permanent,
+                                filter: SelectionRequirement::Permanent
+                                    .and(SelectionRequirement::NotSacrificedThisResolution),
                             },
                             Value::Const(1),
                         ),

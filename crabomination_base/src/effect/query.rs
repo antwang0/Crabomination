@@ -232,6 +232,7 @@ impl Effect {
             | Effect::ExileTopThenRevealUntilNamed { .. }
             | Effect::RevealChosenCardsLowestCreaturesEnter
             | Effect::AttackingCreaturesBecomeBlocked
+            | Effect::GrantTriggeredAbilityThisTurnToMatching { .. }
             | Effect::MassPolymorph
             | Effect::CopyForEachOtherTargetableCreature
             | Effect::SearchRevealPunishSameNameCasters { .. }

@@ -1226,6 +1226,7 @@ impl GameState {
         self.countered_spell_controller = None;
         self.countered_spell_mana_value = 0;
         self.players_sacrificed_this_resolution.clear();
+        self.cards_sacrificed_this_resolution.clear();
         self.named_card_this_resolution = None;
         self.names_this_resolution.clear();
         let mut events = vec![];
@@ -1331,6 +1332,7 @@ impl GameState {
         }
         events.push(GameEvent::PermanentSacrificed { card_id: id, who });
         self.players_sacrificed_this_resolution.insert(who);
+        self.cards_sacrificed_this_resolution.push(id);
         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
         events.append(&mut die_evs);
     }
@@ -5854,6 +5856,11 @@ impl GameState {
                         );
                     }
                 }
+                Ok(())
+            }
+
+            Effect::GrantTriggeredAbilityThisTurnToMatching { filter, trigger } => {
+                self.turn_granted_triggers.push((filter.clone(), (**trigger).clone()));
                 Ok(())
             }
 

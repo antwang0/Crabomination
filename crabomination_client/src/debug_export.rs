@@ -256,6 +256,7 @@ mod tests {
             spend_mana_as_any_color: false,
             combat_damage_prevented_this_turn: false,
             attack_tax_this_turn: 0,
+            turn_effects: Vec::new(),
             block_tax_this_turn: 0,
             combat_chooser: None,
             max_attackers_per_combat: None,

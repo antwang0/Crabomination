@@ -7530,7 +7530,7 @@ pub fn all_fates_scroll() -> CardDefinition {
                 sac_cost: true,
                 effect: Effect::Draw {
                     who: Selector::You,
-                    amount: Value::DifferentlyNamedLandsControlled,
+                    amount: Value::DistinctNamesControlledMatching(SelectionRequirement::Land),
                 },
                 ..Default::default()
             },

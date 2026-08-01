@@ -1446,6 +1446,23 @@ fn mage_hunters_onslaught_destroys_creature_and_blockers_bleed() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_life - 1,
         "the blocking creature's controller loses 1 life");
+
+    // The watcher is turn-scoped, not a one-time grant: a creature that
+    // entered after the Onslaught resolved carries it too.
+    let latecomer = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let second_attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(second_attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: second_attacker, target: AttackTarget::Player(1),
+    }]))
+    .expect("second bear attacks");
+    g.step = TurnStep::DeclareBlockers;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::DeclareBlockers(vec![(latecomer, second_attacker)]))
+        .expect("the latecomer blocks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "a creature that entered later bleeds too");
 }
 
 // ── STX legends (body-only smoke tests) ─────────────────────────────────────

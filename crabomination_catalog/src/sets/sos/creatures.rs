@@ -3023,13 +3023,8 @@ pub fn ulna_alley_shopkeep() -> CardDefinition {
 /// Put X +1/+1 counters on it, where X is the number of differently
 /// named lands you control."
 ///
-/// Approximation: the "differently named" filter on the activated
-/// ability's X value is collapsed to **all** lands you control — the
-/// engine has no `Value::DistinctNamesIn(...)` primitive yet, and in
-/// the typical cube game each land slot is unique anyway, so the
-/// behavior matches in practice. The static "trample for creatures
-/// with +1/+1 counters" is wired faithfully via `StaticEffect::
-/// GrantKeyword` filtered to `WithCounter(PlusOnePlusOne)`.
+/// X reads `Value::DistinctNamesControlledMatching(Land)`; the trample
+/// static is a `GrantKeyword` filtered to `WithCounter(PlusOnePlusOne)`.
 pub fn emil_vastlands_roamer() -> CardDefinition {
     use crate::card::{CounterType, StaticAbility, StaticEffect, Supertype};
     use crate::catalog::sets::sos::sorceries::fractal_token;
@@ -3061,7 +3056,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
                     kind: CounterType::PlusOnePlusOne,
                     // "X is the number of DIFFERENTLY NAMED lands you
                     // control" — duplicate basics count once.
-                    amount: Value::DifferentlyNamedLandsControlled,
+                    amount: Value::DistinctNamesControlledMatching(SelectionRequirement::Land),
                 },
             ]),
             once_per_turn: false,
@@ -4290,11 +4285,9 @@ pub fn wildgrowth_archaic() -> CardDefinition {
 /// `Value::CountersOn(This) >= 1` mints a Fractal token and copies the
 /// counter count onto it (counters persist on the CardInstance across
 /// the bf → gy zone change, so the read is accurate at resolve time).
-/// Approximation: printed "counters" means counters of any kind, but
-/// the gate and the transfer both look only at +1/+1 counters — other
-/// counter types are ignored.
+/// The gate and the transfer both read counters of *any* kind
+/// (`Value::TotalCountersOn` + `Effect::MoveAllCounters`).
 pub fn ambitious_augmenter() -> CardDefinition {
-    use crate::card::CounterType;
     use crate::catalog::sets::sos::sorceries::fractal_token;
     use crate::effect::Predicate;
     use crate::effect::shortcut::increment_self_plus_one;
@@ -4309,10 +4302,7 @@ pub fn ambitious_augmenter() -> CardDefinition {
         event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
         effect: Effect::If {
             cond: Predicate::ValueAtLeast(
-                Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::PlusOnePlusOne,
-                },
+                Value::TotalCountersOn { what: Box::new(Selector::This) },
                 Value::Const(1),
             ),
             then: Box::new(Effect::Seq(vec![
@@ -4321,13 +4311,9 @@ pub fn ambitious_augmenter() -> CardDefinition {
                     count: Value::Const(1),
                     definition: fractal_token(),
                 },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::CountersOn {
-                        what: Box::new(Selector::This),
-                        kind: CounterType::PlusOnePlusOne,
-                    },
+                Effect::MoveAllCounters {
+                    from: Selector::This,
+                    to: Selector::LastCreatedToken,
                 },
             ])),
             else_: Box::new(Effect::Noop),

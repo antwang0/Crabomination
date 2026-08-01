@@ -119,6 +119,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         spend_mana_as_any_color: state.spend_mana_as_any_color_active(),
         combat_damage_prevented_this_turn: state.prevent_combat_damage_this_turn,
         attack_tax_this_turn: state.attack_tax_this_turn,
+        turn_effects: state.turn_effect_notes(),
         block_tax_this_turn: state.block_tax_this_turn,
         combat_chooser: state.combat_chooser,
         max_attackers_per_combat: state.combat_participation_cap(false),
@@ -1477,6 +1478,10 @@ fn project_permanent(
         }),
         // CR 303.4a — an "enchant player" Aura anchors to a seat instead.
         attached_to_player: card.attached_to_player,
+        // The permanent whose ability minted this token, by name.
+        created_by_name: card.created_by.and_then(|src| {
+            battlefield.iter().find(|o| o.id == src).map(|o| o.definition.name.to_string())
+        }),
         // CR 702.95 — Soulbond partner (only while still on the battlefield).
         soulbond_partner: card
             .soulbond_partner
@@ -2202,6 +2207,16 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
 /// Short noun for the common `SelectionRequirement` shapes used in cost
 /// riders ("Sacrifice a [noun]"). Falls back to "permanent" for filters
 /// without a crisp single-word label.
+/// `requirement_noun` for the engine side (`GameState::turn_effect_notes`).
+pub(crate) fn requirement_noun_public(req: &crate::card::SelectionRequirement) -> &'static str {
+    requirement_noun(req)
+}
+
+/// A one-line "<event> → <effect>" label for a floating turn-scoped watcher.
+pub(crate) fn trigger_label_public(t: &crate::card::TriggeredAbility) -> String {
+    format!("{} → {}", trigger_event_label(&t.event), ability_effect_label(&t.effect))
+}
+
 fn requirement_noun(req: &crate::card::SelectionRequirement) -> &'static str {
     use crate::card::SelectionRequirement as R;
     match req {
@@ -2388,7 +2403,13 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::PreventNextDamage { .. } => "Prevent damage",
         Effect::RevealHandDiscardAllMatching { .. } => "Reveal hand, discard matching",
         Effect::PreventNextDamageAndGainLife { .. } => "Prevent damage, gain life",
+        Effect::PreventAllDamageThisTurn { redirect_to: Some(_), .. } => "Redirect all damage",
         Effect::PreventAllDamageThisTurn { .. } => "Prevent all damage",
+        Effect::ReplaceLandManaThisTurn { .. } => "Rewrite land mana",
+        Effect::ExileTopThenRevealUntilNamed { .. } => "Dig for a named card",
+        Effect::RevealChosenCardsLowestCreaturesEnter => "Reveal, cheapest creature enters",
+        Effect::AttackingCreaturesBecomeBlocked => "Attackers become blocked",
+        Effect::GrantTriggeredAbilityThisTurnToMatching { .. } => "Grant a trigger this turn",
         Effect::ReplaceNextDamageWithDestroy { .. } => "Destroy on next damage",
         Effect::DamageCantBePreventedThisTurn => "Damage can't be prevented",
         Effect::LifeGainLockThisTurn { .. } => "Lock lifegain",

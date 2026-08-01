@@ -1932,6 +1932,10 @@ pub enum SelectionRequirement {
     /// targeting filters it routes through `evaluate_requirement_*`
     /// which read the source id from the resolution context.
     OtherThanSource,
+    /// The candidate was NOT sacrificed during this resolution — the printed
+    /// "another permanent card" in a sacrifice-then-recur line (Deadly Brew).
+    /// Backed by `GameState::cards_sacrificed_this_resolution`.
+    NotSacrificedThisResolution,
     /// The mirror of [`SelectionRequirement::OtherThanSource`] — the candidate
     /// *is* the ability's source. Lets a cost name the permanent itself
     /// ("Return this enchantment to its owner's hand:" — Attunement).

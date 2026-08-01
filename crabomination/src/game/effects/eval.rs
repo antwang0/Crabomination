@@ -345,12 +345,20 @@ impl GameState {
                 powers.dedup();
                 powers.len() as i32
             }
-            Value::DifferentlyNamedLandsControlled => {
-                let mut names: Vec<String> = self
+            Value::DistinctNamesControlledMatching(filter) => {
+                let mut names: Vec<&str> = self
                     .battlefield
                     .iter()
-                    .filter(|c| c.controller == ctx.controller && c.definition.is_land())
-                    .map(|c| c.definition.name.to_string())
+                    .filter(|c| {
+                        c.controller == ctx.controller
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &crate::game::types::Target::Permanent(c.id),
+                                ctx.controller,
+                                None,
+                            )
+                    })
+                    .map(|c| c.definition.name)
                     .collect();
                 names.sort_unstable();
                 names.dedup();
@@ -522,16 +530,24 @@ impl GameState {
                         _ => return None,
                     };
                     // Same LKI fallback chain as `CountersOn` so a source
-                    // sacrificed as a cost (Twitching Doll) reads its last
-                    // counter total (CR 603.10 / 608.2).
+                    // sacrificed as a cost (Twitching Doll) or a dead
+                    // die-trigger source (Ambitious Augmenter) reads its last
+                    // counter total (CR 603.10 / 608.2). Keyword counters
+                    // count toward "counters on it" too (CR 122.1).
                     self.battlefield_find(cid)
-                        .or_else(|| {
-                            self.resolving_lki_source
-                                .filter(|s| *s == cid)
-                                .and_then(|_| self.leaves_bf_lki.get(&cid))
-                        })
+                        .or_else(|| self.lki_snapshot(cid))
                         .or_else(|| self.died_card_snapshots.get(&cid))
-                        .map(|inst| inst.counters.values().sum::<u32>() as i32)
+                        .or_else(|| {
+                            self.players
+                                .iter()
+                                .find_map(|p| p.graveyard.iter().find(|c| c.id == cid))
+                        })
+                        .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        .map(|inst| {
+                            (inst.counters.values().sum::<u32>()
+                                + inst.keyword_counters.values().sum::<u32>())
+                                as i32
+                        })
                 })
                 .sum(),
             Value::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution as i32,
@@ -2958,6 +2974,9 @@ impl GameState {
                         None => true,
                     },
                     R::IsSource => source == Some(*cid),
+                    R::NotSacrificedThisResolution => {
+                        !self.cards_sacrificed_this_resolution.contains(cid)
+                    }
                     R::ManaValueAtMostCastManaSpent => source
                         .and_then(|s| self.battlefield_find(s))
                         .is_some_and(|s| card.definition.cost.cmc() <= s.cast_mana_spent),
@@ -3447,6 +3466,9 @@ impl GameState {
             R::OtherThanSource => true,
             // A card in another zone is never the battlefield source.
             R::IsSource => false,
+            R::NotSacrificedThisResolution => {
+                !self.cards_sacrificed_this_resolution.contains(&card.id)
+            }
             R::InGraveyard => self
                 .players
                 .iter()

@@ -222,10 +222,10 @@ fn mana_cache_banks_counters_and_pays_any_player() {
 
 /// Mogg Toady sits out unless it has the numbers.
 #[test]
-fn mogg_toady_needs_more_creatures_than_the_defender() {
+fn mogg_toady_needs_more_creatures_than_the_other_player() {
     let mut g = two_player_game();
     let toady = g.add_card_to_battlefield(0, catalog::mogg_toady());
-    let wall = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.clear_sickness(toady);
     g.active_player_idx = 0;
     g.step = TurnStep::DeclareAttackers;
@@ -235,9 +235,10 @@ fn mogg_toady_needs_more_creatures_than_the_defender() {
             .is_err(),
         "1 creature vs 1 is not more"
     );
-    assert!(!g.blocker_can_block_attacker(toady, wall) || true);
+    assert!(!g.blocker_can_block_attacker(toady, theirs), "and it can't block either");
 
     g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.blocker_can_block_attacker(toady, theirs), "2 vs 1 blocks");
     g.declare_attackers(vec![Attack { attacker: toady, target: AttackTarget::Player(1) }])
         .expect("2 vs 1 attacks");
 }

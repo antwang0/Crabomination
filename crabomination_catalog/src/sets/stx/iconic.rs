@@ -123,16 +123,11 @@ pub fn spectacle_mage() -> CardDefinition {
 /// creature or planeswalker. / Whenever a creature blocks this turn,
 /// its controller loses 1 life."
 ///
-/// The removal half targets creature-or-planeswalker. The floating
-/// "whenever a creature blocks this turn" half is modeled with
-/// `Effect::GrantTriggeredAbility` over every creature on the
-/// battlefield: each gains a `Blocks/SelfSource` trigger (EOT) whose
-/// effect makes its own controller lose 1 life. Approximation: a
-/// creature that enters the battlefield *after* this resolves and then
-/// blocks this turn won't carry the granted trigger (needs a true
-/// floating/delayed "whenever … this turn" event watcher).
+/// The removal half targets creature-or-planeswalker; the floating
+/// "whenever a creature blocks this turn" half is a real turn-scoped
+/// watcher (`Effect::GrantTriggeredAbilityThisTurnToMatching`), so
+/// creatures entering after it resolves carry it too.
 pub fn mage_hunters_onslaught() -> CardDefinition {
-    use crate::effect::Duration;
     CardDefinition {
         name: "Mage Hunters' Onslaught",
         cost: cost(&[generic(2), b(), b()]),
@@ -145,8 +140,8 @@ pub fn mage_hunters_onslaught() -> CardDefinition {
             },
             // "Whenever a creature blocks this turn, its controller
             // loses 1 life."
-            Effect::GrantTriggeredAbility {
-                what: Selector::EachPermanent(SelectionRequirement::Creature),
+            Effect::GrantTriggeredAbilityThisTurnToMatching {
+                filter: SelectionRequirement::Creature,
                 trigger: Box::new(TriggeredAbility {
                     event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
                     effect: Effect::LoseLife {
@@ -154,7 +149,6 @@ pub fn mage_hunters_onslaught() -> CardDefinition {
                         amount: Value::Const(1),
                     },
                 }),
-                duration: Duration::EndOfTurn,
             },
         ]),
         ..Default::default()

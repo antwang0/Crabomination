@@ -859,10 +859,10 @@ pub enum Value {
     /// CR 702.9 — number of creatures that crewed the source this turn
     /// (`CardInstance.crewed_by`; Luxurious Locomotive).
     SourceCrewerCount,
-    /// Number of differently-named lands the controller controls (All-Fates
-    /// Scroll's "draw X cards, where X is the number of differently named
-    /// lands you control").
-    DifferentlyNamedLandsControlled,
+    /// How many *differently named* permanents matching the filter the
+    /// controller controls — All-Fates Scroll's and Emil's "differently named
+    /// lands you control", and any future distinct-name count.
+    DistinctNamesControlledMatching(crate::card::SelectionRequirement),
     /// Number of Gates you control with different names (Maze's End's
     /// ten-different-Gates win condition, CR 704).
     DistinctlyNamedGatesControlled,
@@ -3830,6 +3830,15 @@ pub enum Effect {
     /// routes through `Decision::ChooseCards` (auto-pick: their cheapest
     /// creature card, else their cheapest card).
     RevealChosenCardsLowestCreaturesEnter,
+    /// CR 611.2 — "This turn, whenever a [`filter`] …": installs a floating
+    /// watcher that every matching permanent carries for the rest of the turn,
+    /// including ones that enter after this resolves (Mage Hunters' Onslaught).
+    /// The trigger fires with the matching permanent as its source, so
+    /// `EventScope::SelfSource` and `Selector::This` read that permanent.
+    GrantTriggeredAbilityThisTurnToMatching {
+        filter: crate::card::SelectionRequirement,
+        trigger: Box<crate::card::TriggeredAbility>,
+    },
     /// CR 509 — "Attacking creatures become blocked" (Fog Patch), even ones
     /// that can't be blocked. No blocker is assigned, so nothing deals or is
     /// dealt combat damage by the block.

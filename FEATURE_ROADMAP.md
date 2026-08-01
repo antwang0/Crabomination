@@ -1704,6 +1704,23 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   deathtouch-trample, 603.3d once-per-turn). Client keyword strip splits
   power-gated evasion (`Eva</≤/≥`); server status/`/metrics` expose
   `min_turns`/`max_turns`/`turn_stddev`; view trigger labels cover tap-matters.
+- **Combat-memory / mana-replacement / token-lineage primitives (modern_decks —
+  NMS closure):** `GameState.blocks_declared_this_turn` +
+  `Selector::CreaturesBlockedBySourceThisTurn` (the blocked set survives the
+  blocker's death, so an end-of-combat sweep still sees it — Defiant Vanguard);
+  `Effect::ReplaceLandManaThisTurn` + `GameState.land_mana_replacements_this_turn`
+  (CR 614 turn-scoped land-tap replacement, seat- and nonbasic-scoped — Pale
+  Moon, Harvest Mage); `CardInstance.created_by` stamped from the resolving
+  source with `Selector::{TokensCreatedBySource, CreatorOfSource}` (Saproling
+  Burst's counter-scaled tokens and its LTB sweep);
+  `Effect::{ExileTopThenRevealUntilNamed, RevealChosenCardsLowestCreaturesEnter,
+  AttackingCreaturesBecomeBlocked}`; `LookPickToHand.rest_to_exile`;
+  `PreventNextDamageFromChosenSource.whole_turn`;
+  `PreventAllDamageThisTurn.redirect_to`;
+  `Value::PermanentCountControlledByMatching` (battlefield-state filters read
+  live, so `Untapped` works); and the CR 502.1 fix that only a permanent
+  printing "you may choose not to untap this" holds itself tapped to keep a
+  lock alive (Kill Switch untaps and releases).
 
 ## Tier 1 — High-leverage engine primitives
 

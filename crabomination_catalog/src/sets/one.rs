@@ -7806,7 +7806,7 @@ pub fn monument_to_perfection() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(3)]),
                 condition: Some(Predicate::ValueAtLeast(
-                    Value::DifferentlyNamedLandsControlled,
+                    Value::DistinctNamesControlledMatching(SelectionRequirement::Land),
                     Value::Const(9),
                 )),
                 effect: Effect::Seq(vec![

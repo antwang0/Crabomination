@@ -425,11 +425,6 @@ pub fn encouraging_aviator() -> CardDefinition {
 /// Front: 1/1 Merfolk Bard Wizard. "{T}, Tap two untapped creatures you
 /// control: This creature becomes prepared."
 ///
-/// Approximation: the engine's `tap_other_filter` activation cost taps
-/// exactly **one** untapped matching permanent, so the cost taps this
-/// creature plus one other untapped creature you control instead of the
-/// printed two.
-///
 /// Prepare spell: instant — Brainstorm (draw 3, then put two cards from
 /// your hand on top of your library).
 pub fn harmonized_trio() -> CardDefinition {

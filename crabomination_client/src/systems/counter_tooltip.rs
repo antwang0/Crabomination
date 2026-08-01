@@ -213,6 +213,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("Enchanting: player {}", seat + 1));
     }
 
+    // A token's minting permanent — its P/T or lifetime is often keyed to it.
+    if let Some(creator) = &p.created_by_name {
+        lines.push(format!("Created by: {creator}"));
+    }
+
     // Soulbond pairing (CR 702.95): flag the pair so the player sees the
     // creature is sharing its partner's bonus.
     if p.soulbond_partner.is_some() {
@@ -892,6 +897,8 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CantAttackOrBlockUnlessDelirium => "Can't attack or block unless you have delirium (four or more card types among cards in your graveyard).",
         K::CantAttackUnlessLandCount(_, _) => "Can't attack unless that many lands of the named type are on the battlefield (anyone's count).",
         K::CantAttackUnlessOpponentDamaged => "Can't attack unless an opponent has been dealt damage this turn.",
+        K::CantAttackUnlessMoreCreaturesThanDefender => "Can't attack unless you control more creatures than the defending player.",
+        K::CantBlockUnlessMoreCreaturesThanAttacker => "Can't block unless you control more creatures than the attacking player.",
         K::CantAttackOrBlockUnlessPay(_) => "Can't attack or block unless its controller pays the listed mana. The cost is charged as attackers or blockers are declared.",
         K::CantAttackOrBlockUnlessDescend(_) => "Descend — can't attack or block unless there are that many or more permanent cards in your graveyard.",
         K::CantAttackOrBlockUnlessCityBlessing => "Can't attack or block unless you have the city's blessing.",
@@ -1160,6 +1167,12 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         }
         K::CantAttackUnlessOpponentDamaged => {
             "Can't attack unless an opponent has been dealt damage this turn".into()
+        }
+        K::CantAttackUnlessMoreCreaturesThanDefender => {
+            "Can't attack unless you control more creatures than the defending player".into()
+        }
+        K::CantBlockUnlessMoreCreaturesThanAttacker => {
+            "Can't block unless you control more creatures than the attacking player".into()
         }
         K::CantAttackOrBlockUnlessPay(n) => {
             format!("Can't attack or block unless its controller pays {{{n}}}")
@@ -1504,6 +1517,7 @@ mod tests {
             chosen_mode_label: None,
             attachments: vec![],
             attached_to_name: None,
+            created_by_name: None,
             attached_to_player: None,
             soulbond_partner: None,
             saga_final_chapter: None,

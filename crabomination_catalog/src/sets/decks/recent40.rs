@@ -1,6 +1,6 @@
 //! Utility / nonbasic lands staple cluster. Several exercise existing
 //! primitives (pain-style mana+self-damage, conditional ETB-tapped, manland
-//! animation, charge/`+1/+1` counters, `DifferentlyNamedLandsControlled`) plus
+//! animation, charge/`+1/+1` counters, `DistinctNamesControlledMatching`) plus
 //! the new `StaticEffect::PreventAllDamageToController` (Glacial Chasm, CR 615).
 //! Tests in `tests/recent40.rs`.
 
@@ -308,7 +308,7 @@ pub fn field_of_the_dead() -> CardDefinition {
                             filter: R::HasCardType(CardType::Land),
                         },
                         Predicate::ValueAtLeast(
-                            Value::DifferentlyNamedLandsControlled,
+                            Value::DistinctNamesControlledMatching(crate::card::SelectionRequirement::Land),
                             Value::Const(7),
                         ),
                     ])),
