@@ -10212,6 +10212,11 @@ static MMQ5: &[Factory] = &[
     super::mmq5::mercadias_downfall,
     super::mmq5::erithizon,
     super::mmq5::deepwood_elder,
+    super::mmq5::cowardice,
+    super::mmq5::crag_saurian,
+    super::mmq5::diplomatic_escort,
+    super::mmq5::jeweled_torque,
+    super::mmq5::ley_line,
 ];
 static MOD_SET: &[Factory] = &[
     super::mod_set::ornithopter,

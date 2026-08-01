@@ -850,3 +850,100 @@ pub fn deepwood_elder() -> CardDefinition {
         )
     }
 }
+
+/// Cowardice — {3}{U}{U}. Point anything at a creature and it flees home.
+pub fn cowardice() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+            ),
+            effect: Effect::Move {
+                what: Selector::TriggerSource,
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+        }],
+        ..enchantment("Cowardice", cost(&[generic(3), u(), u()]))
+    }
+}
+
+/// Crag Saurian — {R}{R}{R} 4/4 that defects to whoever damages it.
+pub fn crag_saurian() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::GainControl {
+                what: Selector::This,
+                to: Some(PlayerRef::LastDamagerControllerOf(Box::new(Selector::This))),
+                duration: Duration::Permanent,
+            },
+        }],
+        ..creature("Crag Saurian", cost(&[r(), r(), r()]), vec![CreatureType::Lizard], 4, 4)
+    }
+}
+
+
+/// Diplomatic Escort — {1}{U} 1/1 Spellshaper that swats anything aimed at a
+/// creature.
+pub fn diplomatic_escort() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            tap_cost: true,
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::CounterSpell { what: target_filtered(R::SpellTargetsCreature) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Diplomatic Escort",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Human, CreatureType::Spellshaper],
+            1,
+            1,
+        )
+    }
+}
+
+/// Jeweled Torque — {2}. Names a colour and sells you 2 life per spell of it.
+pub fn jeweled_torque() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::ChooseColorForSelf,
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                    .with_filter(Predicate::CastSpellSharesChosenColorOfSource),
+                effect: Effect::MayPay {
+                    description: "Pay {2} to gain 2 life?".into(),
+                    mana_cost: cost(&[generic(2)]),
+                    body: Box::new(Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    }),
+                    else_: None,
+                },
+            },
+        ],
+        ..artifact("Jeweled Torque", cost(&[generic(2)]))
+    }
+}
+
+/// Ley Line — {3}{G}. Every upkeep hands the active player a counter to place.
+pub fn ley_line() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::MayDo {
+                description: "Put a +1/+1 counter on target creature?".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+            },
+        }],
+        ..enchantment("Ley Line", cost(&[generic(3), g()]))
+    }
+}

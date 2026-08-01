@@ -729,3 +729,87 @@ fn deepwood_elder_forests_x_lands() {
             .contains(&crabomination::card::LandType::Forest)
     );
 }
+
+/// Cowardice bounces anything that gets targeted.
+#[test]
+fn cowardice_bounces_the_targeted_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cowardice());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, 0, bolt, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "back to hand");
+}
+
+/// Crag Saurian defects to whoever damaged it.
+#[test]
+fn crag_saurian_changes_sides_when_damaged() {
+    let mut g = two_player_game();
+    let saurian = g.add_card_to_battlefield(0, catalog::crag_saurian());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Permanent(saurian)));
+    assert_eq!(g.battlefield_find(saurian).unwrap().controller, 1);
+}
+
+/// Diplomatic Escort counters anything aimed at a creature.
+#[test]
+fn diplomatic_escort_counters_a_creature_targeting_spell() {
+    let mut g = two_player_game();
+    let escort = g.add_card_to_battlefield(0, catalog::diplomatic_escort());
+    g.clear_sickness(escort);
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: escort,
+        ability_index: 0,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "bolt countered");
+}
+
+/// Jeweled Torque sells 2 life whenever a spell of the named colour resolves.
+#[test]
+fn jeweled_torque_pays_for_the_named_color() {
+    let mut g = two_player_game();
+    let torque = g.add_card_to_battlefield(0, catalog::jeweled_torque());
+    script(&mut g, vec![DecisionAnswer::Color(Color::Red), DecisionAnswer::Bool(true)]);
+    g.fire_self_etb_triggers(torque, 0);
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt()); // red
+    mana(&mut g, 0);
+    cast(&mut g, 1, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[0].life, 22);
+}
+
+/// Ley Line hands out a counter each upkeep.
+#[test]
+fn ley_line_grows_a_creature_each_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ley_line());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    script(&mut g, vec![DecisionAnswer::Bool(true), DecisionAnswer::Target(Target::Permanent(bear))]);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+}
