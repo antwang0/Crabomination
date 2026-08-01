@@ -7167,7 +7167,7 @@ impl GameState {
                     } => (filter, power, toughness, keywords, opponents, all_players,
                           only_your_turn, scale_by_counters_on_self),
                     crate::effect::StaticEffect::AnthemForFilterIf {
-                        filter, power, toughness, keywords, condition,
+                        filter, power, toughness, keywords, condition, all_players,
                     } => {
                         let ctx = crate::game::effects::EffectContext::for_ability(
                             card.id, card.controller, None,
@@ -7175,7 +7175,7 @@ impl GameState {
                         if !self.evaluate_predicate(condition, &ctx) {
                             continue;
                         }
-                        (filter, power, toughness, keywords, &false, &false, &false, &None)
+                        (filter, power, toughness, keywords, &false, all_players, &false, &None)
                     }
                     _ => continue,
                 };
@@ -17033,6 +17033,9 @@ fn static_effect_to_effects(
             | StaticEffect::SpellsCostMoreExceptOnControllerTurn { .. }
             | StaticEffect::PreventDamageToYourAttackers
             | StaticEffect::PreventAllDamageToController
+            // Crumbling Sanctuary — a CR 614.1b replacement read at the
+            // player branch of the damage funnel; no layer effect.
+            | StaticEffect::PlayerDamageBecomesExileFromLibrary
             | StaticEffect::PreventNoncombatDamageToYourCreatures
             | StaticEffect::PreventNoncombatDamageToYouAndYourPermanents
             | StaticEffect::PreventAllDamageToYourCreatureTokens

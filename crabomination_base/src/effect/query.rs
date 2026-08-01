@@ -236,6 +236,7 @@ impl Effect {
             | Effect::SearchExileThenTokensPerCard { .. }
             | Effect::SearchAuraAttachToSource
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
+            | Effect::SacrificeSourceUnlessPayValue { .. }
             | Effect::GrantExtraLoyaltyActivations
             | Effect::GuessManaValueAboveElseCastFree { .. }
             | Effect::EachPlayerSplitsAndSacrificesRandomPile { .. }

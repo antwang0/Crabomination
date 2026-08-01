@@ -499,6 +499,7 @@ pub fn tanglewalker() -> CardDefinition {
                     },
                     n: Value::ONE,
                 },
+                all_players: false,
             },
         }],
         ..creature(

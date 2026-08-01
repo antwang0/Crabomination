@@ -1019,6 +1019,10 @@ pub enum Predicate {
     SelectorExists(Selector),
     /// Selector resolves to at least `n` entities.
     SelectorCountAtLeast { sel: Selector, n: Value },
+    /// Every battlefield permanent matching `filter` shares at least one
+    /// colour with all the others (Common Cause). Vacuously true when nothing
+    /// matches; false as soon as one match is colourless.
+    AllMatchingShareAColor(crate::card::SelectionRequirement),
     /// lhs ≥ rhs.
     ValueAtLeast(Value, Value),
     /// lhs ≤ rhs.
@@ -7091,6 +7095,11 @@ pub enum Effect {
     /// The source's controller keeps it by paying (auto-tap), else it is
     /// sacrificed. Gateway Plaza, Transguild Promenade ("pay {1}").
     SacrificeSourceUnlessPay { cost: crate::mana::ManaCost },
+
+    /// "Sacrifice this unless you pay {1} for each [thing]" — the dynamic
+    /// sibling of `SacrificeSourceUnlessPay`, where the generic amount is a
+    /// `Value` read at resolution (Megatherium, Extravagant Spirit).
+    SacrificeSourceUnlessPayValue { generic: Value },
 
     /// CR 614.9 — "Prevent all combat damage that would be dealt to and dealt
     /// by `target` this turn." Adds the target creature to

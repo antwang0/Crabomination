@@ -268,3 +268,180 @@ fn nether_spirit_returns_when_it_is_alone() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(spirit).is_some());
 }
+
+/// Extortion strips two cards from a hand.
+#[test]
+fn extortion_takes_two_cards() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    let ext = g.add_card_to_hand(0, catalog::extortion());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ext,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 1);
+}
+
+/// Ramosian Rally's alt cost taps a creature and still pumps the team.
+#[test]
+fn ramosian_rally_pumps_for_a_tap() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::plains());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rally = g.add_card_to_hand(0, catalog::ramosian_rally());
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: rally,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("free cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(a).unwrap().power, 3);
+    assert_eq!(g.computed_permanent(b).unwrap().power, 3);
+    assert!(g.battlefield_find(a).unwrap().tapped || g.battlefield_find(b).unwrap().tapped);
+}
+
+/// Aerial Caravan exiles the top card and lets you play it this turn.
+#[test]
+fn aerial_caravan_impulse_draws() {
+    let mut g = two_player_game();
+    let caravan = g.add_card_to_battlefield(0, catalog::aerial_caravan());
+    g.clear_sickness(caravan);
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: caravan,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == top).expect("exiled");
+    assert!(exiled.may_play_until.is_some(), "playable this turn");
+}
+
+/// Saprazzan Bailiff jails graveyard artifacts, then hands them back.
+#[test]
+fn saprazzan_bailiff_exiles_then_returns_artifacts() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_graveyard(1, catalog::sol_ring());
+    let bailiff = g.add_card_to_battlefield(0, catalog::saprazzan_bailiff());
+    g.fire_self_etb_triggers(bailiff, 0);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == relic), "jailed");
+}
+
+/// Karn's Touch stands an artifact up at its mana value.
+#[test]
+fn karns_touch_animates_at_mana_value() {
+    let mut g = two_player_game();
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring()); // {1}
+    let touch = g.add_card_to_hand(0, catalog::karns_touch());
+    cast(&mut g, 0, touch, Some(Target::Permanent(ring)));
+    let cp = g.computed_permanent(ring).unwrap();
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+}
+
+/// Indentured Djinn hands every opponent three cards.
+#[test]
+fn indentured_djinn_draws_for_the_opponent() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    let before = g.players[1].hand.len();
+    let djinn = g.add_card_to_battlefield(0, catalog::indentured_djinn());
+    g.fire_self_etb_triggers(djinn, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), before + 3);
+}
+
+/// Megatherium sticks around when the tax is payable, and dies when it isn't.
+#[test]
+fn megatherium_charges_one_per_card_in_hand() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+    }
+    let beast = g.add_card_to_battlefield(0, catalog::megatherium());
+    g.fire_self_etb_triggers(beast, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(beast).is_none(), "no mana for the two-card tax");
+
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let beast = g.add_card_to_battlefield(0, catalog::megatherium());
+    mana(&mut g, 0);
+    g.fire_self_etb_triggers(beast, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(beast).is_some(), "paid the one-card tax");
+}
+
+/// Common Cause pumps only while the board is monochrome.
+#[test]
+fn common_cause_needs_a_shared_color() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::common_cause());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+    g.add_card_to_battlefield(1, catalog::savannah_lions()); // white
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2, "colors diverged");
+}
+
+/// Crumbling Sanctuary turns damage into library exile.
+#[test]
+fn crumbling_sanctuary_exiles_instead_of_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::crumbling_sanctuary());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let lib = g.players[0].library.len();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Player(0)));
+    assert_eq!(g.players[0].life, 20);
+    assert_eq!(g.players[0].library.len(), lib - 3);
+}
+
+/// Instigator forces a player's whole board to attack.
+#[test]
+fn instigator_makes_them_attack() {
+    let mut g = two_player_game();
+    let shaper = g.add_card_to_battlefield(0, catalog::instigator());
+    g.clear_sickness(shaper);
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shaper,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(victim)
+            .unwrap()
+            .keywords
+            .contains(&crabomination::card::Keyword::MustAttack)
+    );
+}

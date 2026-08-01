@@ -881,6 +881,24 @@ impl GameState {
                         self.players[p].creatures_that_damaged_me_this_turn.push(src);
                     }
                 }
+                // CR 614.1b — Crumbling Sanctuary: damage to a player becomes
+                // exiling that many cards off their library instead.
+                if self.battlefield.iter().any(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::PlayerDamageBecomesExileFromLibrary
+                        )
+                    })
+                }) {
+                    for _ in 0..amount {
+                        let Some(card) = self.players[p].library.pop() else { break };
+                        let cid = card.id;
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    }
+                    return;
+                }
                 // Phyrexian Unlife — at ≤ 0 life all damage lands as poison.
                 let unlife_infect = self.players[p].life <= 0 && self.player_unlife_active(p);
                 if source_has_infect || unlife_infect {

@@ -662,6 +662,7 @@ pub fn raksha_golden_cub() -> CardDefinition {
                 toughness: 2,
                 keywords: vec![Keyword::DoubleStrike],
                 condition: Predicate::SourceIsEquipped,
+                all_players: false,
             },
         }],
         ..creature(

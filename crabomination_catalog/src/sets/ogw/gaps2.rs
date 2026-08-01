@@ -329,6 +329,7 @@ pub fn weapons_trainer() -> CardDefinition {
                     ),
                     n: Value::Const(1),
                 },
+                all_players: false,
             },
         }],
         ..ally(

@@ -1150,6 +1150,32 @@ impl GameState {
             Predicate::SelectorCountAtLeast { sel, n } => {
                 self.resolve_selector(sel, ctx).len() as i32 >= self.evaluate_value(n, ctx)
             }
+            Predicate::AllMatchingShareAColor(filter) => {
+                // Common Cause — intersect the colours of every match; a
+                // colourless one empties the set immediately.
+                let mut shared: Option<Vec<crate::mana::Color>> = None;
+                for c in &self.battlefield {
+                    if !self.evaluate_requirement_static(
+                        filter,
+                        &crate::game::types::Target::Permanent(c.id),
+                        c.controller,
+                        ctx.source,
+                    ) {
+                        continue;
+                    }
+                    // Printed colours, not computed: this predicate gates an
+                    // anthem, and asking the layer system here would recurse.
+                    let colors = c.definition.printed_colors();
+                    shared = Some(match shared {
+                        None => colors,
+                        Some(prev) => prev.into_iter().filter(|k| colors.contains(k)).collect(),
+                    });
+                    if shared.as_ref().is_some_and(|s| s.is_empty()) {
+                        return false;
+                    }
+                }
+                true
+            }
             Predicate::ValueAtLeast(a, b) => self.evaluate_value(a, ctx) >= self.evaluate_value(b, ctx),
             Predicate::ValueAtMost(a, b) => self.evaluate_value(a, ctx) <= self.evaluate_value(b, ctx),
             Predicate::ValueEquals(a, b) => self.evaluate_value(a, ctx) == self.evaluate_value(b, ctx),

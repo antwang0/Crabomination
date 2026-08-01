@@ -10186,6 +10186,17 @@ static MMQ5: &[Factory] = &[
     super::mmq5::volcanic_wind,
     super::mmq5::puppets_verdict,
     super::mmq5::nether_spirit,
+    super::mmq5::aerial_caravan,
+    super::mmq5::saprazzan_bailiff,
+    super::mmq5::karns_touch,
+    super::mmq5::toymaker,
+    super::mmq5::indentured_djinn,
+    super::mmq5::hired_giant,
+    super::mmq5::megatherium,
+    super::mmq5::extravagant_spirit,
+    super::mmq5::common_cause,
+    super::mmq5::crumbling_sanctuary,
+    super::mmq5::instigator,
 ];
 static MOD_SET: &[Factory] = &[
     super::mod_set::ornithopter,

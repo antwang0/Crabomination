@@ -296,6 +296,7 @@ pub fn sword_of_the_paruns() -> CardDefinition {
                         what: Selector::AttachedTo(Box::new(Selector::This)),
                         filter: R::Tapped,
                     },
+                    all_players: false,
                 },
             },
             StaticAbility {
@@ -309,6 +310,7 @@ pub fn sword_of_the_paruns() -> CardDefinition {
                         what: Selector::AttachedTo(Box::new(Selector::This)),
                         filter: R::Untapped,
                     },
+                    all_players: false,
                 },
             },
         ],

@@ -1484,6 +1484,11 @@ pub enum StaticEffect {
         #[serde(default)]
         keywords: Vec<Keyword>,
         condition: Predicate,
+        /// "[filter] get +P/+T" with no controller scoping — every seat's
+        /// matching permanents are pumped (Common Cause). Mirrors
+        /// `AnthemForFilter::all_players`.
+        #[serde(default)]
+        all_players: bool,
     },
     /// "As long as [condition], this has [keyword]" — the self keyword-grant
     /// sibling of `SetBasePtIf` / `PumpSelfIf`, gated on a live `Predicate`
@@ -1836,6 +1841,11 @@ pub enum StaticEffect {
     /// Consulted at the player-directed branch of the shared damage funnel
     /// (combat and noncombat alike), unless prevention is shut off this turn.
     PreventAllDamageToController,
+    /// CR 614.1b — "If damage would be dealt to a player, that player exiles
+    /// that many cards from the top of their library instead" (Crumbling
+    /// Sanctuary). Symmetric; applied at the player branch of the damage
+    /// funnel, after prevention shields.
+    PlayerDamageBecomesExileFromLibrary,
     /// CR 615 — "Prevent all noncombat damage that would be dealt to creatures
     /// you control." Mark of Asylum. Consulted at the shared (noncombat) damage
     /// funnel for creature targets; combat damage is marked on a separate path
