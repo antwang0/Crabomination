@@ -2452,9 +2452,13 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Ascend { .. } => "Ascend",
         Effect::ReturnSelfTappedWithCounters { .. } => "Return tapped with counters",
         Effect::ReturnTopCreatureFromGraveyard { .. } => "Reanimate top creature",
-        Effect::RandomGraveyardCardToBattlefieldElse { .. } => {
-            "Random GY card to play/hand"
-        }
+        Effect::RandomGraveyardCardToBattlefieldElse { miss, .. } => match miss {
+            crate::effect::ZoneDest::Exile => "Random GY card: creature to play, else exile",
+            _ => "Random GY card: creature to play, else hand",
+        },
+        Effect::ExileTokensSharingNameWith { .. } => "Exile same-named tokens",
+        Effect::RedirectNextDamageBackAtSource { .. } => "Reflect its next combat damage",
+        Effect::HighestLifeWinsElseDraw => "Highest life wins (tie = draw)",
         Effect::Regenerate { .. } => "Regenerate",
         Effect::SacrificePermanent { .. } => "Sacrifice",
         Effect::LoseKeywordThisTurn { .. } => "Remove keyword",

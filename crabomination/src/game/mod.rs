@@ -9356,6 +9356,88 @@ impl GameState {
     /// attacker views (build them with [`computed_attackers`]).
     ///
     /// [`computed_attackers`]: Self::computed_attackers
+    /// CR 509.1a/b — the blocker-side gates that don't depend on which
+    /// attacker is being blocked. Shared by `can_block_any_computed_attacker`
+    /// (the affordance/bot scan) and `blocker_can_block_attacker` (the
+    /// per-pair check) so the two can't drift apart.
+    fn blocker_side_gates_allow_block(
+        &self,
+        blocker: &CardInstance,
+        blocker_cp: &ComputedPermanent,
+    ) -> bool {
+        let owner = blocker.controller;
+        if blocker_cp.keywords.contains(&Keyword::CantBlock)
+            || blocker_cp.keywords.contains(&Keyword::Decayed)
+        {
+            return false;
+        }
+        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
+            && blocker.counters.values().sum::<u32>() % 2 != 0
+        {
+            return false;
+        }
+        // Hazoret-class hand-size gate, the {N} pay gate, delirium, "a creature
+        // died this turn", Descend N and the city's blessing.
+        if blocker_cp.keywords.iter().any(|k| match k {
+            Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
+                self.players[owner].hand.len() as u32 > *n
+            }
+            Keyword::CantAttackOrBlockUnlessPay(n) => !self.could_pay_generic(owner, *n),
+            Keyword::CantAttackOrBlockUnlessDelirium => !self.delirium_active(owner),
+            Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
+                self.players[owner].creatures_died_this_turn == 0
+            }
+            Keyword::CantAttackOrBlockUnlessDescend(n) => {
+                self.descend_count(owner) < *n as usize
+            }
+            Keyword::CantAttackOrBlockUnlessCityBlessing => !self.players[owner].city_blessing,
+            // Branded Brawlers: your own untapped land locks the block.
+            Keyword::CantBlockIfYouHaveUntappedLand => self
+                .battlefield
+                .iter()
+                .any(|c| c.controller == owner && c.definition.is_land() && !c.tapped),
+            _ => false,
+        }) {
+            return false;
+        }
+        // CR 509.1b — Hollow Warrior: a spare untapped match must exist to tap,
+        // and it can be neither the blocker nor a declared attacker.
+        if let Some(f) = blocker_cp.keywords.iter().find_map(|kw| match kw {
+            Keyword::AttackBlockCostTapAnother(f) => Some((**f).clone()),
+            _ => None,
+        }) && !self.battlefield.iter().any(|c| {
+            c.controller == owner
+                && !c.tapped
+                && c.id != blocker.id
+                && !self.attacking.iter().any(|a| a.attacker == c.id)
+                && self.evaluate_requirement_on_card(&f, c, owner)
+        }) {
+            return false;
+        }
+        // "Can't block unless you control N+ [filter]" (Topiary Stomper).
+        // Attack-only gates (Lambholt Pacifist) don't restrict blocking.
+        if let Some((req, min, excl)) = blocker_cp.keywords.iter().find_map(|kw| match kw {
+            Keyword::CantAttackOrBlockUnlessYouControlCount {
+                filter, min, attack_only: false, exclude_self, ..
+            } => Some((filter.clone(), *min, *exclude_self)),
+            _ => None,
+        }) {
+            let n = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == owner
+                        && !(excl && c.id == blocker.id)
+                        && self.evaluate_requirement_on_card(&req, c, owner)
+                })
+                .count();
+            if (n as u32) < min {
+                return false;
+            }
+        }
+        true
+    }
+
     pub(crate) fn can_block_any_computed_attacker(
         &self,
         blocker_id: CardId,
@@ -9376,15 +9458,10 @@ impl GameState {
         if !blocker_cp.card_types.contains(&crate::card::CardType::Creature) || blocker.tapped {
             return false;
         }
-        // Honor `Keyword::CantBlock` from the computed keyword set —
-        // transient grants from pump spells (Duel Tactics) and static
-        // restrictions (Postmortem Professor) both surface here.
-        if blocker_cp.keywords.contains(&Keyword::CantBlock) {
-            return false;
-        }
-        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
-            && blocker.counters.values().sum::<u32>() % 2 != 0
-        {
+        // Honor `Keyword::CantBlock` from the computed keyword set (transient
+        // pump-spell grants and static restrictions both surface here) plus
+        // every other attacker-independent gate.
+        if !self.blocker_side_gates_allow_block(blocker, blocker_cp) {
             return false;
         }
         attackers.iter().any(|(_, atk_cp)| {
@@ -9421,94 +9498,18 @@ impl GameState {
         {
             return false;
         }
-        // CR 702.147 — Decayed creatures can't block (mirrors the
-        // DeclareBlockers validation in `combat.rs`).
-        if blocker_cp.keywords.contains(&Keyword::CantBlock)
-            || blocker_cp.keywords.contains(&Keyword::Decayed)
-        {
-            return false;
-        }
-        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
-            && blocker.counters.values().sum::<u32>() % 2 != 0
-        {
-            return false;
-        }
-        // CR 509.1a — Hazoret-class: can't block unless hand is small.
-        if blocker_cp.keywords.iter().any(|k| {
-            matches!(k, Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n)
-                if self.players[blocker.controller].hand.len() as u32 > *n)
-        }) {
-            return false;
-        }
-        // CR 509.1d — the pay gate: only legal if the blocker's controller
-        // could actually produce {N}.
-        if blocker_cp.keywords.iter().any(|k| {
-            matches!(k, Keyword::CantAttackOrBlockUnlessPay(n)
-                if !self.could_pay_generic(blocker.controller, *n))
-        }) {
-            return false;
-        }
-        // CR 509.1a — Delirium gate (Patchwork Beastie).
-        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessDelirium)
-            && !self.delirium_active(blocker.controller)
-        {
-            return false;
-        }
-        // CR 509.1a — "a creature died under your control this turn" gate (Bontu).
-        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn)
-            && self.players[blocker.controller].creatures_died_this_turn == 0
-        {
-            return false;
-        }
-        // CR 509.1a — Descend N gate (The Ancient One).
-        if blocker_cp.keywords.iter().any(|k| {
-            matches!(k, Keyword::CantAttackOrBlockUnlessDescend(n)
-                if self.descend_count(blocker.controller) < *n as usize)
-        }) {
-            return false;
-        }
-        // CR 509.1a — city's blessing gate (Wayward Swordtooth).
-        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessCityBlessing)
-            && !self.players[blocker.controller].city_blessing
-        {
-            return false;
-        }
-        // CR 509.1b — Branded Brawlers: your own untapped land locks the block.
-        if blocker_cp.keywords.contains(&Keyword::CantBlockIfYouHaveUntappedLand)
-            && self.battlefield.iter().any(|c| {
-                c.controller == blocker.controller && c.definition.is_land() && !c.tapped
-            })
-        {
+        // CR 509.1a/b — every attacker-independent gate (CantBlock, Decayed,
+        // the hand-size / pay / delirium / descend / blessing gates, Branded
+        // Brawlers, Hollow Warrior's tap cost, Topiary Stomper's count).
+        if !self.blocker_side_gates_allow_block(blocker, blocker_cp) {
             return false;
         }
         // CR 509.1b — Mogg Toady: strictly more creatures than the attacker's
-        // controller.
+        // controller. Attacker-dependent, so it stays here.
         if blocker_cp.keywords.contains(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)
             && self.creature_count(blocker.controller) <= self.creature_count(attacker.controller)
         {
             return false;
-        }
-        // "Can't block unless you control N+ [filter]" (Topiary Stomper).
-        // Attack-only gates (Lambholt Pacifist) don't restrict blocking.
-        if let Some((req, min, excl)) = blocker_cp.keywords.iter().find_map(|kw| match kw {
-            Keyword::CantAttackOrBlockUnlessYouControlCount {
-                filter, min, attack_only: false, exclude_self, ..
-            } => Some((filter.clone(), *min, *exclude_self)),
-            _ => None,
-        }) {
-            let owner = blocker.controller;
-            let n = self
-                .battlefield
-                .iter()
-                .filter(|c| {
-                    c.controller == owner
-                        && !(excl && c.id == blocker.id)
-                        && self.evaluate_requirement_on_card(&req, c, owner)
-                })
-                .count();
-            if (n as u32) < min {
-                return false;
-            }
         }
         let atk_cp = self.computed_permanent(attacker_id);
         let atk_kws = atk_cp.as_ref().map(|c| c.keywords.as_slice()).unwrap_or(&[]);

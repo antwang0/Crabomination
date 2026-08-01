@@ -108,3 +108,41 @@ fn cr_701_9_cost_payment_discard_fires_the_batch() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18, "the two-card cost discard billed for 2");
 }
+
+/// The affordance layer agrees with `declare_attackers`: no spare creature,
+/// no legal attack.
+#[test]
+fn cr_508_1g_tap_cost_gates_the_legal_attacker_list() {
+    let mut g = two_player_game();
+    let warrior = g.add_card_to_battlefield(0, catalog::hollow_warrior());
+    g.clear_sickness(warrior);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(!g.legal_attackers(0).contains(&warrior), "nothing to tap");
+    let helper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.legal_attackers(0).contains(&warrior));
+    g.battlefield_find_mut(helper).unwrap().tapped = true;
+    assert!(!g.legal_attackers(0).contains(&warrior), "the helper is already tapped");
+}
+
+/// Same gate on the blocking side.
+#[test]
+fn cr_509_1b_tap_cost_gates_blocking() {
+    let mut g = two_player_game();
+    let warrior = g.add_card_to_battlefield(1, catalog::hollow_warrior());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![crabomination::game::types::Attack {
+        attacker: bear,
+        target: crabomination::game::types::AttackTarget::Player(1),
+    }])
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(!g.legal_blockers(1).contains(&warrior), "nothing to tap");
+}

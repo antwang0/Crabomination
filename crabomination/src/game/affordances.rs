@@ -361,6 +361,25 @@ impl GameState {
                     // CR 508.1g — the pay gate is legal only if the seat can
                     // actually produce {N} (pool + auto-tappable sources).
                     Keyword::CantAttackOrBlockUnlessPay(n) => self.could_pay_generic(seat, *n),
+                    // CR 508.1g — Hollow Warrior needs a spare untapped match
+                    // that isn't the attacker itself.
+                    Keyword::AttackBlockCostTapAnother(f) => self.battlefield.iter().any(|p| {
+                        p.controller == seat
+                            && !p.tapped
+                            && p.id != c.id
+                            && self.evaluate_requirement_on_card(f, p, seat)
+                    }),
+                    // CR 508.1a — Branded Brawlers / Veteran Brawlers can only
+                    // swing into a tapped-out defender.
+                    Keyword::CantAttackIfDefenderHasUntappedLand => {
+                        (0..self.players.len()).any(|d| {
+                            d != seat
+                                && self.players[d].is_alive()
+                                && !self.battlefield.iter().any(|p| {
+                                    p.controller == d && p.definition.is_land() && !p.tapped
+                                })
+                        })
+                    }
                     Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
                         self.players[seat].creatures_died_this_turn > 0
                     }

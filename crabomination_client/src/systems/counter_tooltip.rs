@@ -900,6 +900,10 @@ pub(crate) fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'st
         K::CantAttackUnlessMoreCreaturesThanDefender => "Can't attack unless you control more creatures than the defending player.",
         K::CantBlockUnlessMoreCreaturesThanAttacker => "Can't block unless you control more creatures than the attacking player.",
         K::CantAttackOrBlockUnlessPay(_) => "Can't attack or block unless its controller pays the listed mana. The cost is charged as attackers or blockers are declared.",
+        K::AttackBlockCostTapAnother(_) => "Can't attack or block unless you tap an untapped matching permanent you control that isn't already in this combat. The tap is paid as attackers or blockers are declared.",
+        K::LivingMetal => "Living metal — during your turn, this Vehicle is also an artifact creature.",
+        K::CantAttackIfDefenderHasUntappedLand => "Can't attack if the defending player controls an untapped land.",
+        K::CantBlockIfYouHaveUntappedLand => "Can't block if you control an untapped land.",
         K::CantAttackOrBlockUnlessDescend(_) => "Descend — can't attack or block unless there are that many or more permanent cards in your graveyard.",
         K::CantAttackOrBlockUnlessCityBlessing => "Can't attack or block unless you have the city's blessing.",
         K::Bloodthirst(_) => "If an opponent was dealt damage this turn, it enters with that many +1/+1 counters.",
@@ -1178,6 +1182,17 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantAttackOrBlockUnlessPay(n) => {
             format!("Can't attack or block unless its controller pays {{{n}}}")
         }
+        K::AttackBlockCostTapAnother(f) => format!(
+            "Can't attack or block unless you tap an untapped {} you control not already in combat",
+            describe_count_filter(f)
+        ),
+        K::LivingMetal => "Living metal (during your turn, this Vehicle is also a creature)".into(),
+        K::CantAttackIfDefenderHasUntappedLand => {
+            "Can't attack if defending player controls an untapped land".into()
+        }
+        K::CantBlockIfYouHaveUntappedLand => {
+            "Can't block if you control an untapped land".into()
+        }
         K::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
             "Can't attack or block unless a creature died under your control this turn".into()
         }
@@ -1300,6 +1315,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Blood => "Blood",
         CounterType::Plague => "Plague",
         CounterType::Fuse => "Fuse",
+        CounterType::Omen => "Omen",
         CounterType::Age => "Age",
         CounterType::Level => "Level",
         CounterType::Energy => "Energy",
