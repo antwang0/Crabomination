@@ -443,7 +443,7 @@ pub fn last_stand() -> CardDefinition {
     )
 }
 
-/// The Flagbearer restriction line (CR 115.9), printed on every Flagbearer.
+/// The Flagbearer restriction line (CR 601.2c), printed on every Flagbearer.
 fn flagbearer_static() -> StaticAbility {
     StaticAbility {
         description: "An opponent choosing targets must choose a Flagbearer if able.",

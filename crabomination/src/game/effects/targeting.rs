@@ -138,7 +138,7 @@ impl GameState {
                     if !crate::game::actions::ward_cost_is_trivial(w)))
         };
 
-        // CR 115.9 — Flagbearer: an opponent's Flagbearer must be chosen when
+        // CR 601.2c — Flagbearer: an opponent's Flagbearer must be chosen when
         // the slot can take it, so it outranks every other candidate here.
         for fb in self.flagbearer_candidates(controller) {
             let t = Target::Permanent(fb);

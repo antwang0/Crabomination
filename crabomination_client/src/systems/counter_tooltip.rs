@@ -480,6 +480,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     // this turn with a tap + heal + remove-from-combat. Surface the count
     // so the player knows how many destructions the creature can shrug off
     // before it actually dies.
+    // CR 601.2c — the Flagbearer targeting requirement is invisible on the
+    // board otherwise, and it's the reason an opponent's spell gets rejected.
+    if p.is_flagbearer {
+        lines.push(String::from("(Flagbearer: opponents must target it if able)"));
+    }
     if p.cant_regenerate {
         // CR 701.15g — the shields are still on the permanent but inert, so
         // say so rather than promising a save it can no longer make.
@@ -1524,6 +1529,7 @@ mod tests {
             finality_counter_count: 0,
             regeneration_shields: 0,
             cant_regenerate: false,
+            is_flagbearer: false,
             equippable: false,
             equip_token_cost: None,
             crew_value: 0,

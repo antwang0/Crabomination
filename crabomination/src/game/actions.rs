@@ -5647,7 +5647,7 @@ impl GameState {
             }
         }
 
-        // CR 115.9 — an opponent's Flagbearer must be chosen if any declared
+        // CR 601.2c — an opponent's Flagbearer must be chosen if any declared
         // slot could take it (Standard Bearer).
         {
             let chosen: Vec<Target> =
@@ -9513,7 +9513,7 @@ impl GameState {
         })
     }
 
-    /// CR 115.9 — Flagbearer. Every battlefield Flagbearer `actor` could
+    /// CR 601.2c — Flagbearer. Every battlefield Flagbearer `actor` could
     /// legally target, when an opponent of `actor` has the restriction up.
     /// Empty when the restriction is inactive, so callers can treat "no
     /// candidates" as "no restriction".
@@ -9540,7 +9540,7 @@ impl GameState {
             .collect()
     }
 
-    /// CR 115.9 — true when `chosen` skips an available Flagbearer that one of
+    /// CR 601.2c — true when `chosen` skips an available Flagbearer that one of
     /// `slot_filters` would have accepted ("must choose at least one … if able").
     pub(crate) fn flagbearer_violation(
         &self,
@@ -11878,7 +11878,7 @@ impl GameState {
                 return Err(GameError::SelectionRequirementViolated);
             }
         }
-        // CR 115.9 — Flagbearer applies to activated abilities too.
+        // CR 601.2c — Flagbearer applies to activated abilities too.
         {
             let chosen: Vec<Target> =
                 target.iter().cloned().chain(additional_targets.iter().cloned()).collect();

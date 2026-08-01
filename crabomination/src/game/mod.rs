@@ -10571,6 +10571,9 @@ impl GameState {
                 card_id,
                 x,
             });
+            // CR 701.9 — cycling *is* a discard, so the "you discarded one or
+            // more cards" batch fires alongside the per-card event.
+            events.push(GameEvent::DiscardedBatch { player: seat, count: 1 });
         }
         // Draw a card (Dredge can replace this draw, CR 702.52).
         self.draw_one(seat, &mut events);
@@ -10741,6 +10744,7 @@ impl GameState {
         let mut events = vec![];
         if self.discard_card(seat, card_id, &mut events) {
             events.push(GameEvent::CardCycled { player: seat, card_id, x: 0 });
+            events.push(GameEvent::DiscardedBatch { player: seat, count: 1 });
         }
         // Fetch the stashed pick (validated against the match set), else the
         // first match; reveal + to hand.

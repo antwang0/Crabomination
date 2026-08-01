@@ -1437,6 +1437,10 @@ fn project_permanent(
         finality_counter_count: card.counter_count(crate::card::CounterType::Finality),
         regeneration_shields: card.regeneration_shields,
         cant_regenerate: card.cant_regenerate_this_turn,
+        is_flagbearer: cp
+            .map(|c| c.subtypes.creature_types.as_slice())
+            .unwrap_or(&card.definition.subtypes.creature_types)
+            .contains(&crate::card::CreatureType::Flagbearer),
         equippable: card.definition.is_equipment() && card.definition.has_equip().is_some(),
         equip_token_cost: card.definition.equip_token_cost.clone(),
         crew_value: card.definition.crew_cost().unwrap_or(0),

@@ -1689,6 +1689,11 @@ pub struct PermanentView {
     /// so the client doesn't promise a save the shield can no longer make.
     #[serde(default)]
     pub cant_regenerate: bool,
+    /// CR 601.2c — this permanent is a Flagbearer, so an opponent choosing
+    /// targets must choose it if able (Standard Bearer, Coalition Flag).
+    /// Surfaced so the client can explain a rejected target.
+    #[serde(default)]
+    pub is_flagbearer: bool,
     /// True when this permanent is an Equipment that carries an equip ability
     /// (`Keyword::Equip`). Lets the client offer the "equip" action (CR
     /// 702.6) on the permanent without decoding its keyword list. Populated
