@@ -15966,7 +15966,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ChooseRandomGraveyardCardCreatureToBattlefieldElseHand { who } => {
+            Effect::RandomGraveyardCardToBattlefieldElse { who, miss } => {
                 use rand::seq::IndexedRandom;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let ids: Vec<crate::card::CardId> =
@@ -15985,8 +15985,8 @@ impl GameState {
                         events,
                     );
                     self.last_moved_cards.push(pick);
-                } else if let Some(card) = Self::take_card(&mut self.players[p].graveyard, pick) {
-                    self.players[p].hand.push(card);
+                } else {
+                    self.move_card_to(pick, miss, ctx, events);
                     self.last_moved_cards.push(pick);
                 }
                 Ok(())
@@ -22554,6 +22554,57 @@ impl GameState {
                 self.run_effect(then, ctx, events)
             }
 
+            Effect::ExileTokensSharingNameWith { what } => {
+                // Dual Nature — the copies made off a creature die with it.
+                let Some(cid) = self.resolve_selector(what, ctx).iter().find_map(|e| match e {
+                    EntityRef::Permanent(c) | EntityRef::Card(c) => Some(*c),
+                    EntityRef::Player(_) => None,
+                }) else {
+                    return Ok(());
+                };
+                let Some(name) = self
+                    .find_card_anywhere(cid)
+                    .or_else(|| self.died_card_snapshots.get(&cid))
+                    .map(|c| c.definition.name)
+                else {
+                    return Ok(());
+                };
+                let doomed: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.is_token && c.definition.name == name)
+                    .map(|c| c.id)
+                    .collect();
+                for id in doomed {
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::RedirectNextDamageBackAtSource { what, to } => {
+                // CR 614.9 — Shield Dancer: a one-event shield on `to`, scoped
+                // to `what`, whose soaked damage is re-dealt to `what` itself.
+                let pick = |g: &mut Self, sel: &Selector| {
+                    g.resolve_selector(sel, ctx).iter().find_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(*c),
+                        EntityRef::Player(_) => None,
+                    })
+                };
+                let (Some(src), Some(shielded)) = (pick(self, what), pick(self, to)) else {
+                    return Ok(());
+                };
+                let source_controller = self.battlefield_find(src).map(|c| c.controller);
+                self.prevention_shields.push(crate::game::types::PreventionShield {
+                    target: crate::game::types::PreventionTarget::Permanent(shielded),
+                    source: Some(src),
+                    one_event: true,
+                    redirect_to: Some(src),
+                    source_controller,
+                    ..Default::default()
+                });
+                Ok(())
+            }
+
             Effect::ExileAllCopiesOfTargetName { what } => {
                 // Eradicate / Quash / Scour / Sowing Salt / Splinter. Exile the
                 // named object (countering it if it's still on the stack), then
@@ -25374,6 +25425,43 @@ impl GameState {
                                 .get_or_insert(crate::player::LossCause::Other);
                         }
                     }
+                }
+                Ok(())
+            }
+            Effect::HighestLifeWinsElseDraw => {
+                // CR 104.2a / 104.4b — Celestial Convergence. A unique highest
+                // life total wins outright (every other player is eliminated);
+                // a tie ends the game in a draw.
+                let best = self
+                    .players
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, pl)| !pl.eliminated)
+                    .map(|(_, pl)| pl.life)
+                    .max();
+                let Some(best) = best else { return Ok(()) };
+                let leaders: Vec<usize> = self
+                    .players
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, pl)| !pl.eliminated && pl.life == best)
+                    .map(|(i, _)| i)
+                    .collect();
+                match leaders.as_slice() {
+                    [w] if !self.player_cant_win_game(*w) => {
+                        for idx in 0..self.players.len() {
+                            if idx != *w && !self.player_cant_lose_game(idx) {
+                                self.players[idx].eliminated = true;
+                                self.players[idx]
+                                    .loss_cause
+                                    .get_or_insert(crate::player::LossCause::Other);
+                            }
+                        }
+                        let mut sba = self.check_state_based_actions();
+                        events.append(&mut sba);
+                    }
+                    [_] => {}
+                    _ => self.game_over = Some(None),
                 }
                 Ok(())
             }

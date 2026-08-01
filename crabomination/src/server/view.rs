@@ -2452,7 +2452,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Ascend { .. } => "Ascend",
         Effect::ReturnSelfTappedWithCounters { .. } => "Return tapped with counters",
         Effect::ReturnTopCreatureFromGraveyard { .. } => "Reanimate top creature",
-        Effect::ChooseRandomGraveyardCardCreatureToBattlefieldElseHand { .. } => {
+        Effect::RandomGraveyardCardToBattlefieldElse { .. } => {
             "Random GY card to play/hand"
         }
         Effect::Regenerate { .. } => "Regenerate",

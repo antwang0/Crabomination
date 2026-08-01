@@ -330,8 +330,9 @@ pub fn deadbridge_chant() -> CardDefinition {
                     EventKind::StepBegins(TurnStep::Upkeep),
                     EventScope::YourControl,
                 ),
-                effect: Effect::ChooseRandomGraveyardCardCreatureToBattlefieldElseHand {
+                effect: Effect::RandomGraveyardCardToBattlefieldElse {
                     who: PlayerRef::You,
+                    miss: crate::effect::ZoneDest::Hand(PlayerRef::You),
                 },
             },
         ],

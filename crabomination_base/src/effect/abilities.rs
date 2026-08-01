@@ -160,6 +160,16 @@ pub enum StaticEffect {
     SetBaseToughnessForMatching { applies_to: Selector, toughness: i32 },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
+    /// CR 611.2 — "[filter] permanents have `keyword` as long as their
+    /// controller controls `max` or fewer [`count_filter`]" (Sheltering
+    /// Prayers). The gate is read per affected permanent's own controller, so
+    /// each player's board is judged separately.
+    GrantKeywordWhileControllerControlsAtMost {
+        filter: SelectionRequirement,
+        keyword: Keyword,
+        count_filter: SelectionRequirement,
+        max: u32,
+    },
     /// CR 716.2 — a static ability that only applies while the source Class
     /// enchantment is at level `n` or higher. Wraps `inner`; its continuous
     /// effects are emitted only while `CardInstance.class_level >= n`. Powers a
@@ -1383,6 +1393,14 @@ pub enum StaticEffect {
     /// cost {N} more to activate" (Oppressive Rays). Applies only to
     /// activations whose source is the permanent this Aura is attached to.
     AttachedActivationTax { amount: u32 },
+    /// CR 602.5b — "Activated abilities of [filter] cost an additional
+    /// 'Sacrifice a [sacrifice]' to activate" (Brutal Suppression). Applies to
+    /// every player's non-mana activations whose source matches `filter`; the
+    /// activator sacrifices one matching permanent per taxing static.
+    ActivationAdditionalSacrifice {
+        filter: SelectionRequirement,
+        sacrifice: SelectionRequirement,
+    },
     /// CR 606 — "Loyalty abilities of planeswalkers your opponents control
     /// cost {N} more to activate" (Eidolon of Obstruction). Summed across the
     /// taxers an activating player's opponents control and paid as extra

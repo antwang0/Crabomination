@@ -8182,6 +8182,47 @@ impl GameState {
                     ));
                 }
             }
+            // CR 611.2 — Sheltering Prayers: the grant is gated on each
+            // affected permanent's *own* controller's board, so the recipient
+            // set is computed live here rather than in the pure walk.
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::GrantKeywordWhileControllerControlsAtMost {
+                    filter,
+                    keyword,
+                    count_filter,
+                    max,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let counts: Vec<usize> = (0..self.players.len())
+                    .map(|seat| {
+                        self.battlefield
+                            .iter()
+                            .filter(|c| c.controller == seat)
+                            .filter(|c| self.evaluate_requirement_on_card(count_filter, c, seat))
+                            .count()
+                    })
+                    .collect();
+                let ids: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| counts.get(c.controller).is_some_and(|n| *n as u32 <= *max))
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, c.controller))
+                    .map(|c| c.id)
+                    .collect();
+                if !ids.is_empty() {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(ids),
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(keyword.clone()),
+                    });
+                }
+            }
             // CR 701.60 — a suspected creature has menace and can't block.
             // Injected as computed keywords so combat-legality enforcement
             // honors them.
@@ -14856,6 +14897,10 @@ impl GameState {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let mut events = Vec::with_capacity(card_ids.len());
+                // Publish the batch on `Selector::LastMoved` so a follow-up
+                // effect in the same Seq can act on what was exiled (Psychic
+                // Theft's may-play grant + end-step return).
+                self.last_moved_cards.clear();
                 for cid in card_ids {
                     if let Some(mut card) = Self::take_card(&mut self.players[target_player].hand, *cid)
                     {
@@ -14864,6 +14909,7 @@ impl GameState {
                         card.exiled_with = link_source;
                         card.face_down = face_down;
                         self.exile.push(card);
+                        self.last_moved_cards.push(*cid);
                         events.push(GameEvent::PermanentExiled { card_id: *cid });
                     }
                 }
@@ -17148,6 +17194,12 @@ fn static_effect_to_effects(
             // AttachedActivationTax (Oppressive Rays) — same funnel, scoped
             // to the Aura's host.
             | StaticEffect::AttachedActivationTax { .. }
+            // Brutal Suppression — the extra sacrifice is folded into
+            // `activate_ability`'s cost pre-flight; no layer effect.
+            | StaticEffect::ActivationAdditionalSacrifice { .. }
+            // Sheltering Prayers — emitted from the stateful gather pass,
+            // which needs each recipient's own controller's board.
+            | StaticEffect::GrantKeywordWhileControllerControlsAtMost { .. }
             // OpponentLoyaltyActivationTax (Eidolon of Obstruction) —
             // consulted in `activate_loyalty_ability`; no layer effect.
             | StaticEffect::OpponentLoyaltyActivationTax { .. }

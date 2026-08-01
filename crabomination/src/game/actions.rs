@@ -12117,6 +12117,42 @@ impl GameState {
             Vec::new()
         };
 
+        // CR 602.5b — statics that bolt an extra "Sacrifice a [filter]" onto
+        // matching permanents' activated abilities (Brutal Suppression).
+        // Mana abilities are exempt, matching the other activation taxes.
+        let mut sac_other_picks = sac_other_picks;
+        if !is_mana_ability(&ability.effect) {
+            let taxes: Vec<crate::card::SelectionRequirement> = self
+                .battlefield
+                .iter()
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .filter_map(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::ActivationAdditionalSacrifice {
+                        filter,
+                        sacrifice,
+                    } => Some((filter.clone(), sacrifice.clone())),
+                    _ => None,
+                })
+                .filter(|(filter, _)| {
+                    self.battlefield_find(card_id)
+                        .is_some_and(|c| self.evaluate_requirement_on_card(filter, c, p))
+                })
+                .map(|(_, sacrifice)| sacrifice)
+                .collect();
+            for sacrifice in taxes {
+                let pick = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && !sac_other_picks.contains(&c.id))
+                    .find(|c| self.evaluate_requirement_on_card(&sacrifice, c, p))
+                    .map(|c| c.id);
+                match pick {
+                    Some(id) => sac_other_picks.push(id),
+                    None => return Err(GameError::SelectionRequirementViolated),
+                }
+            }
+        }
+
         // Pre-flight tap-another gate (CR 602.5b): confirm an untapped
         // permanent (other than the source) the activator controls matches the
         // cost's filter. A hand-paying activator with more than one candidate
@@ -12999,7 +13035,6 @@ impl GameState {
         // "Sacrifice all [filter] you control" as a cost (Tomb of Urami) —
         // folded into the same payment loop as `sac_other_filter`. The source
         // is excluded here; pair with `sac_cost` when it also goes.
-        let mut sac_other_picks = sac_other_picks;
         if let Some(filter) = ability.sac_all_matching_cost.as_ref() {
             let extra: Vec<CardId> = self
                 .battlefield

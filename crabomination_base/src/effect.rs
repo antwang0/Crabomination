@@ -4166,10 +4166,10 @@ pub enum Effect {
     /// to your hand" — Charmbreaker Devils). No player choice; stops early if
     /// the graveyard runs out of matches.
     ReturnRandomFromGraveyard { who: PlayerRef, filter: SelectionRequirement, count: Value },
-    /// Deadbridge Chant — choose a card at random in `who`'s graveyard; if it's
-    /// a creature card put it onto the battlefield under their control,
-    /// otherwise put it into their hand (CR 105-agnostic random pick).
-    ChooseRandomGraveyardCardCreatureToBattlefieldElseHand { who: PlayerRef },
+    /// Pick a card at random in `who`'s graveyard; a creature card goes onto
+    /// the battlefield under their control, anything else goes to `miss`.
+    /// Deadbridge Chant (`miss` = hand), Search for Survivors (`miss` = exile).
+    RandomGraveyardCardToBattlefieldElse { who: PlayerRef, miss: ZoneDest },
     /// Second Sunrise — each player returns to the battlefield all artifact,
     /// creature, enchantment, and land cards in their graveyard that were put
     /// there from the battlefield this turn.
@@ -7078,6 +7078,10 @@ pub enum Effect {
     /// The Urza's Destiny name-hate cycle (Eradicate, Quash, Scour, Sowing Salt,
     /// Splinter). `what` may be a stack object (Quash counters it).
     ExileAllCopiesOfTargetName { what: Selector },
+    /// "Exile all tokens with the same name as `what`" (Dual Nature's leave
+    /// trigger). Nontoken permanents sharing the name are untouched; `what`
+    /// resolves off the death/leave LKI snapshot when it has already gone.
+    ExileTokensSharingNameWith { what: Selector },
     /// "Exile `what`, then return it to the battlefield under its owner's
     /// control" — an immediate blink (Flicker). Tokens cease to exist.
     ExileAndReturnToOwner { what: Selector },
@@ -7172,6 +7176,11 @@ pub enum Effect {
     /// winner on the next SBA pass. No CR violation: the state-based
     /// action approach matches CR 104.2a's "you win the game" wording.
     WinGame { who: PlayerRef },
+
+    /// CR 104.2a/104.4b — "the player with the highest life total wins the
+    /// game. If two or more players are tied for highest life total, the game
+    /// is a draw." Celestial Convergence.
+    HighestLifeWinsElseDraw,
 
     /// "[Player] loses the game" (CR 104.3a). Eliminates the named player;
     /// the SBA pass promotes the last player standing to the winner.
@@ -7320,6 +7329,11 @@ pub enum Effect {
     /// per-target prevention shield flagged with `redirect_to`; when it soaks
     /// damage, that damage is re-dealt to the chosen permanent.
     RedirectNextDamage { target: Selector, to: Selector, amount: Value },
+
+    /// CR 614.9 — "The next time `what` would deal combat damage to `to` this
+    /// turn, `what` deals that damage to itself instead" (Shield Dancer). A
+    /// one-event shield on `to`, scoped to `what` and redirecting back onto it.
+    RedirectNextDamageBackAtSource { what: Selector, to: Selector },
 
     /// "Prevent all damage that would be dealt to `target` this turn."
     /// (CR 615) A fog scoped to one player/permanent — Pradesh Gypsies,

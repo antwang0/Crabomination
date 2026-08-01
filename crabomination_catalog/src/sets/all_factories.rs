@@ -10309,6 +10309,17 @@ static PCY4: &[Factory] = &[
     super::pcy4::sunken_field,
     super::pcy4::verdant_field,
     super::pcy4::keldon_battlewagon,
+    super::pcy4::brutal_suppression,
+    super::pcy4::celestial_convergence,
+    super::pcy4::coffin_puppets,
+    super::pcy4::dual_nature,
+    super::pcy4::hollow_warrior,
+    super::pcy4::infernal_genesis,
+    super::pcy4::psychic_theft,
+    super::pcy4::search_for_survivors,
+    super::pcy4::sheltering_prayers,
+    super::pcy4::shield_dancer,
+    super::pcy4::task_mage_assembly,
 ];
 static NMS4: &[Factory] = &[
     super::nms4::defiant_vanguard,

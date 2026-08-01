@@ -713,3 +713,276 @@ pub fn keldon_battlewagon() -> CardDefinition {
         )
     }
 }
+
+/// Brutal Suppression — {R}. Every Rebel activation now eats a land.
+pub fn brutal_suppression() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of nontoken Rebels cost an additional \"Sacrifice a land\" to activate.",
+            effect: StaticEffect::ActivationAdditionalSacrifice {
+                filter: R::HasCreatureType(CreatureType::Rebel)
+                    .and(R::Not(Box::new(R::IsToken))),
+                sacrifice: R::Land,
+            },
+        }],
+        ..enchantment("Brutal Suppression", cost(&[r()]))
+    }
+}
+
+/// Celestial Convergence — {2}{W}{W}. Seven upkeeps, then the life leader wins.
+pub fn celestial_convergence() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::Omen, Value::Const(7))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Omen,
+                    amount: Value::ONE,
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtMost(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Omen,
+                        },
+                        Value::ZERO,
+                    ),
+                    then: Box::new(Effect::HighestLifeWinsElseDraw),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..enchantment("Celestial Convergence", cost(&[generic(2), w(), w()]))
+    }
+}
+
+/// Coffin Puppets — {3}{B}{B} 3/3. Two lands per upkeep buys it back.
+pub fn coffin_puppets() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            from_graveyard: true,
+            sac_other_filter: Some((R::Land, 2)),
+            condition: Some(Predicate::All(vec![
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::SelectorExists(Selector::EachPermanent(
+                    R::HasLandType(crate::card::LandType::Swamp).and(R::ControlledByYou),
+                )),
+            ])),
+            effect: Effect::ReturnSelf,
+            ..Default::default()
+        }],
+        ..creature("Coffin Puppets", cost(&[generic(3), b(), b()]), vec![CreatureType::Zombie], 3, 3)
+    }
+}
+
+/// Dual Nature — {4}{G}{G}. Every creature arrives with a twin.
+pub fn dual_nature() -> CardDefinition {
+    let nontoken_creature = R::Creature.and(R::Not(Box::new(R::IsToken)));
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: nontoken_creature.clone(),
+                    }),
+                effect: Effect::CreateTokenCopyOf {
+                    who: PlayerRef::ControllerOf(Box::new(Selector::TriggerSource)),
+                    count: Value::ONE,
+                    source: Selector::TriggerSource,
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::AnyPlayer,
+                )
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: nontoken_creature,
+                }),
+                effect: Effect::ExileTokensSharingNameWith { what: Selector::TriggerSource },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Exile { what: Selector::TokensCreatedBySource },
+            },
+        ],
+        ..enchantment("Dual Nature", cost(&[generic(4), g(), g()]))
+    }
+}
+
+/// Hollow Warrior — {4} 4/4. Every swing taps a spare creature.
+pub fn hollow_warrior() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::AttackBlockCostTapAnother(Box::new(
+            R::Creature.and(R::ControlledByYou),
+        ))],
+        ..creature(
+            "Hollow Warrior",
+            cost(&[generic(4)]),
+            vec![CreatureType::Golem, CreatureType::Warrior],
+            4,
+            4,
+        )
+    }
+}
+
+/// Infernal Genesis — {4}{B}{B}. Each upkeep mills one and pays it out in Minions.
+pub fn infernal_genesis() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: Effect::Seq(vec![
+                Effect::Mill {
+                    who: Selector::Player(PlayerRef::ActivePlayer),
+                    amount: Value::ONE,
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::ActivePlayer,
+                    count: Value::ManaValueOf(Box::new(Selector::LastMoved)),
+                    definition: TokenDefinition {
+                        name: "Minion".to_string(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![crate::mana::Color::Black],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Minion],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            ]),
+        }],
+        ..enchantment("Infernal Genesis", cost(&[generic(4), b(), b()]))
+    }
+}
+
+/// Psychic Theft — {1}{U}. Borrows a spell out of their hand for a turn.
+pub fn psychic_theft() -> CardDefinition {
+    sorcery(
+        "Psychic Theft",
+        cost(&[generic(1), u()]),
+        Effect::Seq(vec![
+            Effect::ExileChosenFromHand {
+                from: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: R::Or(
+                    Box::new(R::HasCardType(CardType::Instant)),
+                    Box::new(R::HasCardType(CardType::Sorcery)),
+                ),
+                link_to_source: false,
+                face_down: false,
+            },
+            Effect::GrantMayPlay {
+                what: Selector::LastMoved,
+                duration: crate::card::MayPlayDuration::WhileExiled,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: false,
+            },
+            Effect::DelayUntilWithCapture {
+                kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                capture: Selector::LastMoved,
+                body: Box::new(Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::Target(0),
+                        filter: R::InExile,
+                    },
+                    then: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+        ]),
+    )
+}
+
+/// Search for Survivors — {2}{R}. A random graveyard card, revived or burned.
+pub fn search_for_survivors() -> CardDefinition {
+    sorcery(
+        "Search for Survivors",
+        cost(&[generic(2), r()]),
+        Effect::RandomGraveyardCardToBattlefieldElse {
+            who: PlayerRef::You,
+            miss: ZoneDest::Exile,
+        },
+    )
+}
+
+/// Sheltering Prayers — {W}. Basic lands are untargetable while you're behind.
+pub fn sheltering_prayers() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Basic lands each player controls have shroud as long as that player controls three or fewer lands.",
+            effect: StaticEffect::GrantKeywordWhileControllerControlsAtMost {
+                filter: R::Land.and(R::IsBasicLand),
+                keyword: Keyword::Shroud,
+                count_filter: R::Land,
+                max: 3,
+            },
+        }],
+        ..enchantment("Sheltering Prayers", cost(&[w()]))
+    }
+}
+
+/// Shield Dancer — {2}{W} 1/3. Turns an attacker's swing back on itself.
+pub fn shield_dancer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            effect: Effect::RedirectNextDamageBackAtSource {
+                what: target_filtered(R::Creature.and(R::IsAttacking)),
+                to: Selector::This,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Shield Dancer",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Human, CreatureType::Rebel],
+            1,
+            3,
+        )
+    }
+}
+
+/// Task Mage Assembly — {2}{R}. A ping anyone can fire, gone once the board empties.
+pub fn task_mage_assembly() -> CardDefinition {
+    CardDefinition {
+        sacrifice_when: Some(Predicate::Not(Box::new(Predicate::SelectorExists(
+            Selector::EachPermanent(R::Creature),
+        )))),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            any_player: true,
+            sorcery_speed: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Task Mage Assembly", cost(&[generic(2), r()]))
+    }
+}

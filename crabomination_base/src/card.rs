@@ -374,6 +374,8 @@ pub enum CounterType {
     Experience,
     Stun,
     Verse,
+    /// Omen counter — Celestial Convergence's seven-turn fuse.
+    Omen,
     /// Azor's Elocutors — a slow win condition (5 filibuster counters).
     Filibuster,
     Shield,
@@ -1147,6 +1149,11 @@ pub enum Keyword {
     /// CR 509.1b restriction — the blocking half of Branded Brawlers: "can't
     /// block if you control an untapped land."
     CantBlockIfYouHaveUntappedLand,
+    /// CR 508.1g / 509.1b cost — "can't attack or block unless you tap an
+    /// untapped [filter] you control not declared as an attacking or blocking
+    /// creature this combat" (Hollow Warrior). Paid as attackers / blockers
+    /// are declared; each such creature consumes its own helper.
+    AttackBlockCostTapAnother(Box<SelectionRequirement>),
     /// CR 508.1a restriction — "This creature can't attack unless you control
     /// more creatures than the defending player" (Mogg Toady).
     CantAttackUnlessMoreCreaturesThanDefender,

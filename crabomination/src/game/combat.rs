@@ -3,6 +3,17 @@ use crate::card::Keyword;
 use crate::effect::{Effect, EventKind, Selector, Value};
 use crate::game::layers::ComputedPermanent;
 
+/// The `AttackBlockCostTapAnother` filters carried by a computed keyword list
+/// (Hollow Warrior) — one helper must be tapped per entry.
+fn tap_another_filters(kws: &[Keyword]) -> Vec<crate::card::SelectionRequirement> {
+    kws.iter()
+        .filter_map(|k| match k {
+            Keyword::AttackBlockCostTapAnother(f) => Some((**f).clone()),
+            _ => None,
+        })
+        .collect()
+}
+
 /// CR 509.1b — how many attackers this creature may block. One by default;
 /// `CanBlockAdditional(n)` adds n (they stack), `CanBlockAnyNumber` lifts the
 /// cap entirely. `SelfCanBlockAdditionalPerAttachedEquipment` (Kemba's Legion)
@@ -715,6 +726,26 @@ impl GameState {
             self.dispatch_triggers_for_events(&events);
         }
 
+        // CR 508.1g — Hollow Warrior's attack cost: tap an untapped matching
+        // permanent that isn't itself attacking. One helper per such attacker.
+        {
+            let declared: Vec<CardId> = attacks.iter().map(|a| a.attacker).collect();
+            let mut tapped: Vec<CardId> = Vec::new();
+            for atk in &attacks {
+                for f in tap_another_filters(computed_kw(atk.attacker)) {
+                    match self.find_tap_helper(p, &f, atk.attacker, &declared, &tapped) {
+                        Some(id) => tapped.push(id),
+                        None => return Err(GameError::CannotAttack(atk.attacker)),
+                    }
+                }
+            }
+            for id in tapped {
+                if let Some(c) = self.battlefield_find_mut(id) {
+                    c.tapped = true;
+                }
+            }
+        }
+
         let any_attackers = !attacks.is_empty();
         // CR 702.121 — Melee counts the distinct opponents this player attacked
         // this combat (a player targeted directly, or the controller of a
@@ -1420,6 +1451,33 @@ impl GameState {
                 let tax = crate::mana::cost(&[crate::mana::generic(amount)]);
                 if self.try_pay_with_auto_tap(seat, &tax).is_err() {
                     return Err(GameError::CannotBlock(assignments[0].0));
+                }
+            }
+        }
+
+        // CR 509.1b — the blocking half of Hollow Warrior's tap cost. Helpers
+        // may be neither an attacker nor one of the declared blockers.
+        {
+            let declared: Vec<CardId> = assignments
+                .iter()
+                .map(|(b, _)| *b)
+                .chain(self.attacking.iter().map(|a| a.attacker))
+                .collect();
+            let mut tapped: Vec<CardId> = Vec::new();
+            for &(blocker_id, _) in &assignments {
+                let Some(seat) = self.battlefield_find(blocker_id).map(|c| c.controller) else {
+                    continue;
+                };
+                for f in tap_another_filters(kws_of(blocker_id)) {
+                    match self.find_tap_helper(seat, &f, blocker_id, &declared, &tapped) {
+                        Some(id) => tapped.push(id),
+                        None => return Err(GameError::CannotBlock(blocker_id)),
+                    }
+                }
+            }
+            for id in tapped {
+                if let Some(c) = self.battlefield_find_mut(id) {
+                    c.tapped = true;
                 }
             }
         }
@@ -3278,6 +3336,36 @@ impl GameState {
                 }
             }
         }
+    }
+
+    /// CR 508.1g / 509.1b — pick the untapped permanent `who` taps to pay
+    /// `payer`'s `AttackBlockCostTapAnother` cost. Candidates exclude the payer
+    /// itself, everything declared in combat this step, and helpers already
+    /// spent on an earlier payer in the same declaration.
+    fn find_tap_helper(
+        &self,
+        who: usize,
+        filter: &crate::card::SelectionRequirement,
+        payer: CardId,
+        declared: &[CardId],
+        spent: &[CardId],
+    ) -> Option<CardId> {
+        self.battlefield
+            .iter()
+            .find(|c| {
+                c.controller == who
+                    && !c.tapped
+                    && c.id != payer
+                    && !declared.contains(&c.id)
+                    && !spent.contains(&c.id)
+                    && self.evaluate_requirement_static(
+                        filter,
+                        &crate::game::types::Target::Permanent(c.id),
+                        who,
+                        Some(payer),
+                    )
+            })
+            .map(|c| c.id)
     }
 
     /// CR 508.1a / 509.1a — the "can't attack or block unless its controller

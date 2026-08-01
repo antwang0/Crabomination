@@ -50,6 +50,25 @@ fn activate(g: &mut GameState, seat: usize, card_id: CardId, index: usize, targe
     drain_stack(g);
 }
 
+fn activate_res(
+    g: &mut GameState,
+    seat: usize,
+    card_id: CardId,
+    index: usize,
+    target: Option<Target>,
+) -> Result<Vec<crabomination::game::types::GameEvent>, crabomination::game::GameError> {
+    mana(g, seat);
+    g.priority.player_with_priority = seat;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id,
+        ability_index: index,
+        target,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+}
+
 fn end_step(g: &mut GameState) {
     g.step = TurnStep::End;
     g.fire_step_triggers(TurnStep::End);
@@ -571,4 +590,218 @@ fn fickle_efreet_changes_hands_on_a_lost_flip() {
     }
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(efreet).unwrap().controller, 1);
+}
+
+/// Brutal Suppression bolts a land sacrifice onto every Rebel activation.
+#[test]
+fn brutal_suppression_taxes_rebel_activations_a_land() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::brutal_suppression());
+    let dancer = g.add_card_to_battlefield(0, catalog::sword_dancer());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    // No land to feed the tax: the activation is rejected outright.
+    assert!(
+        activate_res(&mut g, 0, dancer, 0, Some(Target::Permanent(bear))).is_err(),
+        "no land to sacrifice"
+    );
+    g.add_card_to_battlefield(0, catalog::plains());
+    activate(&mut g, 0, dancer, 0, Some(Target::Permanent(bear)));
+    assert!(!g.battlefield.iter().any(|c| c.definition.is_land()), "the land was eaten");
+}
+
+/// Celestial Convergence hands the game to the life leader on the seventh upkeep.
+#[test]
+fn celestial_convergence_awards_the_life_leader() {
+    let mut g = main_phase();
+    let conv = g.add_card_to_hand(0, catalog::celestial_convergence());
+    cast(&mut g, 0, conv, None);
+    let id = g.battlefield.iter().find(|c| c.definition.name == "Celestial Convergence").unwrap().id;
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Omen), 7);
+    g.players[0].life = 25;
+    for _ in 0..7 {
+        upkeep(&mut g);
+    }
+    assert_eq!(g.game_over, Some(Some(0)));
+}
+
+/// A tie on the last omen counter ends the game in a draw.
+#[test]
+fn celestial_convergence_ties_are_a_draw() {
+    let mut g = main_phase();
+    let conv = g.add_card_to_hand(0, catalog::celestial_convergence());
+    cast(&mut g, 0, conv, None);
+    for _ in 0..7 {
+        upkeep(&mut g);
+    }
+    assert_eq!(g.game_over, Some(None));
+}
+
+/// Coffin Puppets climbs back out for two lands on your upkeep.
+#[test]
+fn coffin_puppets_returns_on_your_upkeep() {
+    let mut g = main_phase();
+    let puppets = g.add_card_to_graveyard(0, catalog::coffin_puppets());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    g.step = TurnStep::Upkeep;
+    activate(&mut g, 0, puppets, 0, None);
+    assert!(g.battlefield_find(puppets).is_some());
+}
+
+/// Outside your upkeep the same activation is illegal.
+#[test]
+fn coffin_puppets_is_upkeep_only() {
+    let mut g = main_phase();
+    let puppets = g.add_card_to_graveyard(0, catalog::coffin_puppets());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    assert!(activate_res(&mut g, 0, puppets, 0, None).is_err());
+}
+
+/// Dual Nature twins every creature, and the twin leaves with the original.
+#[test]
+fn dual_nature_twins_and_untwins() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::dual_nature());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, 0, bear, None);
+    let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 2, "the original plus its copy");
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Permanent(bear)));
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        0,
+        "the token was exiled with it"
+    );
+}
+
+/// Hollow Warrior can't attack without a spare creature to tap.
+#[test]
+fn hollow_warrior_needs_a_spare_creature_to_attack() {
+    let mut g = two_player_game();
+    let warrior = g.add_card_to_battlefield(0, catalog::hollow_warrior());
+    g.clear_sickness(warrior);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.declare_attackers(vec![Attack { attacker: warrior, target: AttackTarget::Player(1) }])
+            .is_err(),
+        "nothing to tap"
+    );
+    let helper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.declare_attackers(vec![Attack { attacker: warrior, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    assert!(g.battlefield_find(helper).unwrap().tapped, "the helper paid the cost");
+}
+
+/// Infernal Genesis pays out Minions equal to the milled card's mana value.
+#[test]
+fn infernal_genesis_mints_minions_per_milled_mana_value() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::infernal_genesis());
+    g.add_card_to_library(0, catalog::shivan_dragon()); // {4}{R}{R}
+    upkeep(&mut g);
+    let minions = g.battlefield.iter().filter(|c| c.definition.name == "Minion").count();
+    assert_eq!(minions, 6);
+}
+
+/// Psychic Theft exiles a spell and hands it back at end of turn.
+#[test]
+fn psychic_theft_borrows_then_returns_the_card() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let theft = g.add_card_to_hand(0, catalog::psychic_theft());
+    cast(&mut g, 0, theft, Some(Target::Player(1)));
+    assert!(g.exile.iter().any(|c| c.id == bolt), "exiled from their hand");
+    end_step(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "returned uncast");
+}
+
+/// Search for Survivors revives a creature and burns anything else.
+#[test]
+fn search_for_survivors_revives_a_creature() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let search = g.add_card_to_hand(0, catalog::search_for_survivors());
+    cast(&mut g, 0, search, None);
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+#[test]
+fn search_for_survivors_exiles_a_noncreature() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let search = g.add_card_to_hand(0, catalog::search_for_survivors());
+    cast(&mut g, 0, search, None);
+    assert!(g.exile.iter().any(|c| c.id == bolt));
+}
+
+/// Sheltering Prayers shrouds basics only while their controller is on ≤3 lands.
+#[test]
+fn sheltering_prayers_shrouds_only_the_land_light() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::sheltering_prayers());
+    let mine = g.add_card_to_battlefield(0, catalog::plains());
+    let theirs: Vec<_> =
+        (0..4).map(|_| g.add_card_to_battlefield(1, catalog::island())).collect();
+    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(
+        !g.computed_permanent(theirs[0]).unwrap().keywords.contains(&Keyword::Shroud),
+        "four lands is too many"
+    );
+}
+
+/// Shield Dancer turns an attacker's combat damage back on itself.
+#[test]
+fn shield_dancer_reflects_combat_damage() {
+    let mut g = two_player_game();
+    let dancer = g.add_card_to_battlefield(0, catalog::shield_dancer());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(dancer, bear)])).expect("block");
+    drain_stack(&mut g);
+    activate(&mut g, 0, dancer, 0, Some(Target::Permanent(bear)));
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "it dealt its 2 to itself");
+    assert!(g.battlefield_find(dancer).is_some(), "the Dancer took none");
+}
+
+/// Task Mage Assembly pings for anyone, and goes away with the last creature.
+#[test]
+fn task_mage_assembly_pings_for_any_player() {
+    let mut g = main_phase();
+    let assembly = g.add_card_to_battlefield(0, catalog::task_mage_assembly());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // "Only as a sorcery" binds the activator, so seat 1 fires it on their turn.
+    g.active_player_idx = 1;
+    activate(&mut g, 1, assembly, 0, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 1);
+}
+
+#[test]
+fn task_mage_assembly_sacrifices_itself_on_an_empty_board() {
+    let mut g = main_phase();
+    let assembly = g.add_card_to_battlefield(0, catalog::task_mage_assembly());
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(assembly).is_none());
 }

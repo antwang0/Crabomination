@@ -228,6 +228,7 @@ impl Effect {
         }
         match self {
             Effect::Noop
+            | Effect::HighestLifeWinsElseDraw
             | Effect::ReplaceLandManaThisTurn { .. }
             | Effect::ExileTopThenRevealUntilNamed { .. }
             | Effect::RevealChosenCardsLowestCreaturesEnter
@@ -302,7 +303,7 @@ impl Effect {
             | Effect::LandsBecomeChosenBasicType { .. }
             | Effect::ChooseBasicLandTypeForSource
             | Effect::ExileTopSelfPumpIfCreature
-            | Effect::ChooseRandomGraveyardCardCreatureToBattlefieldElseHand { .. }
+            | Effect::RandomGraveyardCardToBattlefieldElse { .. }
             | Effect::DistributeCountersAmongLastCreated { .. } => false,
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
@@ -1189,7 +1190,11 @@ impl Effect {
             Effect::DestroyAllSharingNameWith { what } => sel_has_target(what),
             Effect::SkipPlayerDrawStep { player } => player_has_target(player),
             Effect::ExileAllCopiesOfTargetName { what }
+            | Effect::ExileTokensSharingNameWith { what }
             | Effect::ExileAndReturnToOwner { what } => sel_has_target(what),
+            Effect::RedirectNextDamageBackAtSource { what, to } => {
+                sel_has_target(what) || sel_has_target(to)
+            }
             Effect::DealDamageExcessTo { to, excess_to, .. } => {
                 sel_has_target(to) || sel_has_target(excess_to)
             }
@@ -2572,8 +2577,12 @@ impl Effect {
                 }
                 Effect::AttachAuraFromGraveyardTo { aura, .. } => sel_find(aura, slot),
                 Effect::ExileAllCopiesOfTargetName { what }
+                | Effect::ExileTokensSharingNameWith { what }
                 | Effect::DestroyAllSharingNameWith { what }
                 | Effect::ExileAndReturnToOwner { what } => sel_find(what, slot),
+                Effect::RedirectNextDamageBackAtSource { what, to } => {
+                    sel_find(what, slot).or_else(|| sel_find(to, slot))
+                }
                 Effect::DealDamageExcessTo { to, amount, excess_to, .. } => sel_find(to, slot)
                     .or_else(|| val_find(amount, slot))
                     .or_else(|| sel_find(excess_to, slot)),
