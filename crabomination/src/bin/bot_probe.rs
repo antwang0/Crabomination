@@ -298,6 +298,15 @@ fn main() {
 
     println!("\ncasts by step (land drops excluded — they can't be held):");
     let total_plays: usize = c.plays_by_step.values().sum();
+    // Casts per turn is the direct read on sequencing: a bot that can only
+    // score one action at a time tends to take the single biggest play it
+    // can afford and stop, so a lookahead that works shows up here before
+    // it shows up on the ladder.
+    println!(
+        "  (total {total_plays} casts over {} turns = {:.2} per turn)",
+        c.turns,
+        total_plays as f64 / c.turns.max(1) as f64,
+    );
     for (k, v) in &c.plays_by_step {
         println!("  {k:<34} {v:>6}  {:>5.1}%", 100.0 * *v as f64 / total_plays.max(1) as f64);
     }

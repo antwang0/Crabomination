@@ -212,8 +212,27 @@ impl EvalWeights {
     }
 
     /// The adopted default plus one ply of sequence lookahead.
+    ///
+    /// **Measured neutral and not adopted**: 50.2 % [49.1 %, 51.3 %]
+    /// against the default over 8000 games, with no consistent direction
+    /// across archetypes (mono-red and dimir favour it, skies and golgari
+    /// don't), at roughly 2.4x the CPU per decision.
+    ///
+    /// The likely reason is that the summon-sick gate already banked most
+    /// of the available sequencing value. The bot was never unable to cast
+    /// several spells in a turn — the main-phase loop runs every tick — it
+    /// was unable to *compare combinations*, and once plays are deferred to
+    /// the second main the greedy loop deploys them anyway. What is left is
+    /// the narrower case where the first pick is wrong *given* what follows,
+    /// which one ply and two continuations apparently doesn't catch often
+    /// enough to measure.
+    ///
+    /// Forge searches three plies rather than one. Going deeper here costs
+    /// proportionally more and, on this series' base rate, isn't worth
+    /// betting on without evidence — but the machinery is in place if
+    /// someone wants to try `lookahead: 2` and measure it.
     pub const fn lookahead1() -> Self {
-        Self { lookahead: 1, ..Self::hold_sick() }
+        Self { lookahead: 1, ..Self::hold_sick_combat() }
     }
 
     /// **The adopted default.** The summon-sick gate plus the combat-aware
