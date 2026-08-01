@@ -27,10 +27,12 @@ share Kasmina's loyalty abilities" static
 "No partials remain" is true only in the narrow tracker sense (no card is marked
 🟡/⏳ in the status tables). In practice:
 
-- **Documented approximations remain** (as of 2026-07-29, a case-insensitive
-  grep for `Approximation` / `omitted` / `dropped` matches 26 lines in the SOS
-  catalog and 22 in STX; Fractalize's printed type/colour rewrite came off that
-  list this run). Most capture
+- **Documented approximations remain** (as of 2026-08-01, a case-insensitive
+  grep for `Approximation` / `omitted` / `dropped` matches 23 lines in the SOS
+  catalog and 21 in STX). Five came off the list on modern_decks: Mage Hunters'
+  Onslaught (a real turn-scoped floating watcher), Deadly Brew (the printed
+  "another permanent card"), Ambitious Augmenter (counters of any kind), and
+  stale notes on Emil and Harmonized Trio, both already faithful. Most capture
   the headline play pattern. Possibility Storm (cast-trigger exile-and-dig via
   `Effect::PossibilityStorm`) and Hindering Light (target-restricted counter)
   are now fully wired. Arclight Phoenix (gy-return on 3+ I/S spells) and
