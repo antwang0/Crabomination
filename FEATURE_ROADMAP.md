@@ -1506,6 +1506,23 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `ControlledByTriggerPlayer` target filters survive the CR 608.2b re-check;
   and a trigger's multi-target fan-out now peels `MayDo` / `CapTargetsAt` /
   `OptionalTargets` wrappers (Terastodon, Voyager Drake).
+- **Player status / team primitives (modern_decks — MMQ):**
+  `StaticEffect::ControllerHasShroud` (CR 702.18 — Ivory Mask; unlike hexproof
+  it blocks the controller's own targeting and no ignore-hexproof static
+  pierces it); CR 810.5/810.8d shared team **poison** (`effective_poison` /
+  `poison_loss_threshold`, fifteen for a 2HG team) — both surfaced through
+  `PlayerView` alongside the shared life pool, which the view had been reading
+  past. `assign_teams` preserves the shared pool on a re-partition.
+- **Aura / counter / cost primitives (modern_decks — MMQ):** directional aura
+  damage seals (`PreventAllDamageTo`/`ByEnchanted`, splitting Heart of Light's
+  both-ways static); `EquipScale.count_all_controllers` + `.exclude_source`
+  (Ancestral Mask); `CounterType::{Storage, Depletion}`;
+  `GameState::apply_printed_etb_counters` — a land played from hand now gets its
+  printed `enters_with_counters` (CR 614.1c), which only the cast and move paths
+  applied; and inline-resolving **mana abilities** read the activation's X
+  (`continue_ability_resolution_x`), so "remove any number of storage counters:
+  add that much mana" works. `StaticEffect::AnyPlayerSpellsHaveFlash` (Vernal
+  Equinox) and `EachPlayerMayPutPermanentFromHand.others_only` (Hunted Wumpus).
 - **CDA / UI primitives (recent94 — Equipment/Voltron):**
   `DynamicPt::ArtifactsControlledPower` (power-only artifact CDA with fixed
   toughness — Akiri, Line-Slinger); `PermanentView.attached_to_name` surfaces an

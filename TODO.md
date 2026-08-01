@@ -23,6 +23,48 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
+## Noticed this run (modern_decks — Mercadian Masques opening)
+
+`set_gaps.py mmq` is down from **283 to ~107** (`sets::mmq` + `sets::mmq2`,
+tests in `classic_sets/mmq{,2}`). Three MMQ cards are deliberately *not*
+shipped because each wants one primitive; implement the primitive, then the
+card:
+
+- **Statecraft** — wants `StaticEffect::PreventAllCombatDamageToAndFromYourCreatures`
+  (a controller-scoped both-directions combat seal). The per-permanent
+  `PreventAllDamageToAndFromEnchanted` shape is the model; it needs a
+  controller-scoped variant read at both combat funnels.
+- **Insubordination** — wants `Predicate::AttachedHostAttackedThisTurn` (and an
+  "active player controls the attached host" gate) for its end-step punisher.
+- **Barbed Wire** — wants "prevent the next N damage that would be dealt *by* a
+  named source this turn". `PreventNextDamageFromChosenSource` is the
+  receive-side shield; the deal-side equivalent doesn't exist.
+
+Residuals in what did ship:
+
+- **Wave of Reckoning is a sequential `ForEach`**, not simultaneous. No
+  rules-visible difference today (SBAs don't run mid-resolution and nothing
+  changes power between iterations), but a power-changing replacement would
+  expose it.
+- **`Effect::EachPlayerMayPutPermanentFromHand` still auto-picks.** The
+  `others_only` flag (Hunted Wumpus, Charmed Griffin) is new; the "may" is
+  still the highest-mana auto-pick for every seat, `wants_ui` included.
+- **The Rebel/Mercenary tutor filters read `PermanentCard + HasCreatureType`.**
+  Exact for every printed Rebel and Mercenary (all are creatures), but a
+  noncreature permanent card with the subtype wouldn't be found.
+- **`Effect::Search` auto-declines under AutoDecider**, so every tutor-chain
+  test scripts its pick. That's a bot-policy gap, not a card gap.
+
+Worth doing next, in rough order of leverage:
+
+- **A real prompt for `EachPlayerMayPutPermanentFromHand`** — it's the last
+  auto-picked "may" on a Show and Tell-shaped effect.
+- **The rest of MMQ** (~107): Cho-Arrim/Kyren/Saprazzan Legates want a
+  "free cast if an opponent controls X and you control Y" alt-cost condition
+  (`AlternativeCost.condition` already exists — this is catalog work, not
+  engine work); Cowardice and Crag Saurian want targeting/damage-event
+  replacements; Thieves' Auction wants a repeated player-choice draft.
+
 ## Noticed this run (modern_decks — Urza's Saga closure)
 
 `set_gaps.py usg` is at **zero**: the whole Urza block (USG / ULG / UDS) is
@@ -63,10 +105,15 @@ Worth doing next, in rough order of leverage:
 
 - **A real "for as long as it remains on top" permission** — a library-top
   linked `may_play` that revokes on any zone/order change.
-- **The client cannot be built in this environment** (`wayland-sys` needs
-  `wayland-client.pc`, which isn't installed), so client changes are
-  reviewed by hand and covered by pure-function unit tests only. Worth adding
-  the system package to the container image.
+- ✅ ~~**The client cannot be built in this environment**~~ — it can, after
+  `apt-get install libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev`.
+  Worth baking those into the container image: without them the client crate
+  silently rots (it had been broken since `CounterType::Fungus` landed, because
+  two exhaustive counter-label matches were never updated). `cargo clippy -p
+  crabomination_client --all-targets` is now part of the end-of-run sweep.
+  Caveat: a full debug build of the client is ~2.5 GB of `target/`, which can
+  exhaust the session's disk allowance — `cargo clean -p crabomination_client`
+  afterwards.
 
 ## Noticed this run (modern_decks — Urza block closure)
 
