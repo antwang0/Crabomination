@@ -11939,6 +11939,27 @@ impl GameState {
             Vec::new()
         };
 
+        // Pre-flight "Exile a [filter] you control:" gate (Food Chain). Rejects
+        // cleanly when too few match; the auto-picker takes the lowest-power
+        // candidates so better creatures stay on the battlefield.
+        let exile_permanent_picks: Vec<CardId> = if let Some((filter, count)) =
+            ability.exile_permanent_cost.as_ref()
+        {
+            let candidates: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| c.id)
+                .collect();
+            if candidates.len() < *count as usize {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            self.auto_pick_lowest_power(&candidates, *count as usize)
+        } else {
+            Vec::new()
+        };
+
         // Pre-flight sacrifice-other gate: confirm `count` battlefield
         // permanents the activator controls match the cost's filter
         // (excluding the source itself, since activating from the
@@ -12352,7 +12373,20 @@ impl GameState {
         } else {
             ability.mana_cost.clone()
         };
-        let activated_x = if ability.mana_cost.has_x()
+        // A generic cost whose amount the game state defines rather than the
+        // activator (Bargaining Table's "X is the number of cards in an
+        // opponent's hand"). Folded into the printed generic; the body reads
+        // it back via `Value::XFromCost`.
+        let state_defined_x = ability.generic_cost_value.as_ref().map(|v| {
+            let ctx = crate::game::effects::EffectContext::for_trigger(card_id, p, None, 0);
+            self.evaluate_value(v, &ctx).max(0) as u32
+        });
+        if let Some(n) = state_defined_x {
+            effective_mana_cost.add_generic(n);
+        }
+        let activated_x = if let Some(n) = state_defined_x {
+            n
+        } else if ability.mana_cost.has_x()
             || ability.sac_other_x
             || ability.exile_other_x
             || ability.remove_counter_x.is_some()
@@ -12860,6 +12894,22 @@ impl GameState {
                 &ctx,
                 &mut events,
             );
+        }
+
+        // "Exile a [filter] you control:" as a cost (Food Chain). Stamps the
+        // last exiled permanent's mana value for `Value::ExiledForCostManaValue`.
+        self.exiled_for_cost_mana_value = None;
+        for cid in exile_permanent_picks {
+            let mv = self.battlefield_find(cid).map(|c| c.definition.cost.cmc() as i32);
+            self.move_card_to(
+                cid,
+                &crate::effect::ZoneDest::Exile,
+                &crate::game::effects::EffectContext::for_ability(card_id, p, None),
+                &mut events,
+            );
+            if mv.is_some() {
+                self.exiled_for_cost_mana_value = mv;
+            }
         }
 
         // "Sacrifice all [filter] you control" as a cost (Tomb of Urami) —

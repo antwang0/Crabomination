@@ -6067,6 +6067,142 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseCardTypeRevealHandDamage { who, per } => {
+                // Blood Oath — choose a card type, the victim reveals, then
+                // `per` damage per matching card revealed.
+                let Some(victim) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let source = ctx.source.unwrap_or(CardId(0));
+                let chosen = self.choose_a_card_type(source);
+                if !self.hands_revealed_to.contains(&(ctx.controller, victim)) {
+                    self.hands_revealed_to.push((ctx.controller, victim));
+                }
+                let hits = self.players[victim]
+                    .hand
+                    .iter()
+                    .filter(|c| c.definition.card_types.contains(&chosen))
+                    .count() as i32;
+                let amount = self.evaluate_value(per, ctx) * hits;
+                if amount > 0 {
+                    self.deal_damage_to_from(
+                        EntityRef::Player(victim),
+                        amount as u32,
+                        ctx.source,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
+            Effect::CoinFlipDestroyLoop { win, lose, repeat_cost } => {
+                // Crooked Scales — flip until a win destroys the opponent's
+                // creature, or the controller declines/can't pay the repeat.
+                let pick = |g: &Self, sel| {
+                    g.resolve_selector(sel, ctx).into_iter().find_map(|e| match e {
+                        EntityRef::Permanent(c) => Some(c),
+                        _ => None,
+                    })
+                };
+                let (theirs, mine) = (pick(self, win), pick(self, lose));
+                let mut cursor = 0;
+                // Backstop against a rigged decider that always loses.
+                for _ in 0..64 {
+                    if self.flip_one_coin(ctx.controller) {
+                        events.push(GameEvent::CoinFlipWon { player: ctx.controller });
+                        if let Some(cid) = theirs {
+                            self.destroy_permanent(cid, false, events);
+                        }
+                        break;
+                    }
+                    events.push(GameEvent::CoinFlipLost { player: ctx.controller });
+                    let Some(again) = self.ask_seat_bool(
+                        &mut cursor,
+                        ctx.controller,
+                        "Pay the repeat cost to flip again?".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    if again && self.try_pay_with_auto_tap(ctx.controller, repeat_cost).is_ok() {
+                        continue;
+                    }
+                    if let Some(cid) = mine {
+                        self.destroy_permanent(cid, false, events);
+                    }
+                    break;
+                }
+                self.clear_answer_log();
+                Ok(())
+            }
+
+            Effect::ThievesAuction => {
+                // Exile every nontoken permanent, then draft them back one at
+                // a time in turn order starting with the controller. The
+                // repeated pick resolves through the decider synchronously.
+                use crate::decision::{Decision, DecisionAnswer};
+                let doomed: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| !c.is_token)
+                    .map(|c| c.id)
+                    .collect();
+                let mut pool: Vec<CardId> = Vec::new();
+                for cid in doomed {
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    if self.exile.iter().any(|c| c.id == cid) {
+                        pool.push(cid);
+                    }
+                }
+                // Turn order starting with the controller (CR 101.4).
+                let mut order = vec![ctx.controller];
+                let mut s = ctx.controller;
+                for _ in 1..self.players.len() {
+                    s = self.next_alive_seat(s);
+                    if s == ctx.controller {
+                        break;
+                    }
+                    order.push(s);
+                }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut seat = 0usize;
+                while !pool.is_empty() {
+                    let picker = order[seat % order.len()];
+                    seat += 1;
+                    let candidates: Vec<(CardId, String)> = pool
+                        .iter()
+                        .filter_map(|id| self.exile.iter().find(|c| c.id == *id))
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if candidates.is_empty() {
+                        break;
+                    }
+                    let chosen = match self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Thieves' Auction: claim a card".into(),
+                        candidates: candidates.clone(),
+                        min: 1,
+                        max: 1,
+                    }) {
+                        DecisionAnswer::Cards(v) => {
+                            v.into_iter().find(|id| candidates.iter().any(|(c, _)| c == id))
+                        }
+                        _ => None,
+                    }
+                    .unwrap_or(candidates[0].0);
+                    pool.retain(|id| *id != chosen);
+                    self.move_card_to(
+                        chosen,
+                        &ZoneDest::Battlefield {
+                            controller: PlayerRef::Seat(picker),
+                            tapped: true,
+                        },
+                        ctx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::ReturnCreaturesWithPowerGreaterThanHand { who } => {
                 let dest = ZoneDest::Hand(PlayerRef::OwnerOfMoved);
                 for p in self.apnap_sort(self.resolve_players(who, ctx)) {
@@ -21921,11 +22057,18 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventNextDamageFromChosenSource { filter, reflect } => {
+            Effect::PreventNextDamageFromChosenSource {
+                filter,
+                reflect,
+                to,
+                gain_life,
+                redirect_to,
+            } => {
                 // CR 615.7 — Circle of Protection: a one-event shield around
                 // the controller, restricted to the chosen source. With
                 // `reflect` (Deflecting Palm) the prevented damage is dealt
-                // to the source's controller.
+                // to the source's controller; with `to` the shield sits on
+                // something else (Charm Peddler's target creature).
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());
                 };
@@ -21939,14 +22082,45 @@ impl GameState {
                             if card.id == chosen => Some(*caster),
                         _ => None,
                     }));
-                self.prevention_shields.push(crate::game::types::PreventionShield {
-                    target: crate::game::types::PreventionTarget::Player(ctx.controller),
-                    source: Some(chosen),
-                    one_event: true,
-                    reflect: *reflect,
-                    source_controller: src_ctrl,
-                    ..Default::default()
-                });
+                let (mut redirect_perm, mut redirect_player) = (None, None);
+                if let Some(sel) = redirect_to {
+                    for e in self.resolve_selector(sel, ctx) {
+                        match e {
+                            EntityRef::Permanent(c) => redirect_perm = redirect_perm.or(Some(c)),
+                            EntityRef::Player(p) => redirect_player = redirect_player.or(Some(p)),
+                            _ => {}
+                        }
+                    }
+                }
+                let targets: Vec<crate::game::types::PreventionTarget> = match to {
+                    None => vec![crate::game::types::PreventionTarget::Player(ctx.controller)],
+                    Some(sel) => self
+                        .resolve_selector(sel, ctx)
+                        .into_iter()
+                        .filter_map(|e| match e {
+                            EntityRef::Permanent(c) => {
+                                Some(crate::game::types::PreventionTarget::Permanent(c))
+                            }
+                            EntityRef::Player(p) => {
+                                Some(crate::game::types::PreventionTarget::Player(p))
+                            }
+                            _ => None,
+                        })
+                        .collect(),
+                };
+                for target in targets {
+                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                        target,
+                        source: Some(chosen),
+                        one_event: true,
+                        reflect: *reflect,
+                        gain_life: *gain_life,
+                        redirect_to: redirect_perm,
+                        redirect_to_player: redirect_player,
+                        source_controller: src_ctrl,
+                        ..Default::default()
+                    });
+                }
                 Ok(())
             }
 

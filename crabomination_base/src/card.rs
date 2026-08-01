@@ -388,6 +388,9 @@ pub enum CounterType {
     /// ability one for one. The counter-scaled cost reduction itself is
     /// not yet wired (see TODO.md), but counters tick up correctly.
     Page,
+    /// Winch counter — Mercadian Lift's crank; remove X to deploy a creature
+    /// with mana value X from hand.
+    Winch,
     /// Growth counter — used on enchantments that count tutoring or
     /// life-gain progress (Comforting Counsel, "as long as N or more
     /// growth counters …"). Distinct from `Charge` so the static-toggle
@@ -3629,6 +3632,10 @@ pub enum DynamicPt {
     /// Power = toughness = the number of creatures of `creature_type` the
     /// controller controls (counting the source). Pack Rat.
     CreaturesOfTypeControlled { creature_type: CreatureType },
+    /// Power = toughness = the number of creatures on the battlefield (any
+    /// controller) sharing the source's `chosen_creature_type`. Caller of
+    /// the Hunt.
+    CreaturesOfSourceChosenType,
     /// Power = `base_p` + the controller's experience counters; toughness =
     /// `base_t` + that count. Daxos the Returned's Spirit token (0/0 base) and
     /// Kalemne, Disciple of Iroas (2/4 base, "+1/+1 for each experience").

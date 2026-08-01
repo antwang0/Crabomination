@@ -10171,6 +10171,21 @@ static MMQ4: &[Factory] = &[
     super::mmq4::righteous_indignation,
     super::mmq4::sand_squid,
 ];
+static MMQ6: &[Factory] = &[
+    super::mmq6::charm_peddler,
+    super::mmq6::cho_arrim_alchemist,
+    super::mmq6::generals_regalia,
+    super::mmq6::bargaining_table,
+    super::mmq6::food_chain,
+    super::mmq6::caller_of_the_hunt,
+    super::mmq6::charisma,
+    super::mmq6::blood_oath,
+    super::mmq6::crooked_scales,
+    super::mmq6::kyren_archive,
+    super::mmq6::mercadian_lift,
+    super::mmq6::spiritual_focus,
+    super::mmq6::thieves_auction,
+];
 static MMQ5: &[Factory] = &[
     super::mmq5::statecraft,
     super::mmq5::insubordination,
@@ -17960,6 +17975,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("mmq3", MMQ3),
     ("mmq4", MMQ4),
     ("mmq5", MMQ5),
+    ("mmq6", MMQ6),
     ("mod_set", MOD_SET),
     ("ogw", OGW),
     ("one", ONE),

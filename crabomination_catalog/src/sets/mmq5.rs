@@ -961,6 +961,9 @@ pub fn story_circle() -> CardDefinition {
             effect: Effect::PreventNextDamageFromChosenSource {
                 filter: R::HasChosenColorOfSource,
                 reflect: false,
+                to: None,
+                gain_life: false,
+                redirect_to: None,
             },
             ..Default::default()
         }],

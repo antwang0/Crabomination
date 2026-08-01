@@ -446,6 +446,11 @@ pub struct GameState {
     /// Reset between independent resolutions.
     #[serde(default)]
     pub(crate) sacrificed_mana_value: Option<u32>,
+    /// Transient: mana value of the permanent exiled to pay an activation's
+    /// `exile_permanent_cost`; read by `Value::ExiledForCostManaValue`
+    /// (Food Chain).
+    #[serde(default)]
+    pub(crate) exiled_for_cost_mana_value: Option<i32>,
     /// Transient: whether the most-recently-sacrificed cost permanent was an
     /// artifact ("if the sacrificed permanent was an artifact" — Foundry
     /// Helix's `Predicate::SacrificedWasArtifact`). Set on the additional-
@@ -1518,6 +1523,7 @@ impl Clone for GameState {
             last_discarded_creature_types: self.last_discarded_creature_types.clone(),
             sacrificed_toughness: self.sacrificed_toughness,
             sacrificed_mana_value: self.sacrificed_mana_value,
+            exiled_for_cost_mana_value: self.exiled_for_cost_mana_value,
             last_discarded_mana_value: self.last_discarded_mana_value,
             cost_discarded_mana_value: self.cost_discarded_mana_value,
             block_poison_this_turn: self.block_poison_this_turn,
@@ -1749,6 +1755,7 @@ impl GameState {
             last_discarded_creature_types: Vec::new(),
             sacrificed_toughness: None,
             sacrificed_mana_value: None,
+            exiled_for_cost_mana_value: None,
             last_discarded_mana_value: None,
             cost_discarded_mana_value: None,
             block_poison_this_turn: 0,
@@ -7606,6 +7613,16 @@ impl GameState {
                     }).count() as i32;
                     (n, n)
                 }
+                crate::card::DynamicPt::CreaturesOfSourceChosenType => {
+                    let n = card.chosen_creature_type.map_or(0, |ct| {
+                        self.battlefield.iter().filter(|c| {
+                            c.definition.is_creature()
+                                && (c.definition.subtypes.creature_types.contains(&ct)
+                                    || c.has_keyword(&crate::card::Keyword::Changeling))
+                        }).count() as i32
+                    });
+                    (n, n)
+                }
                 crate::card::DynamicPt::PermanentsControlledMatching { base_p, base_t, ref filter } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller
@@ -10043,6 +10060,12 @@ impl GameState {
         // 701.8b), so emit the event + bump the discard-matters counters
         // up front, before resolving the Madness replacement.
         events.push(GameEvent::CardDiscarded { player: p, card_id });
+        // "Whenever a spell or ability an opponent controls causes you to
+        // discard a card" (Spiritual Focus) — the causing seat is stamped on
+        // `discard_causer` for the duration of the resolution.
+        if self.discard_causer.is_some_and(|c| self.opponents_of(p).contains(&c)) {
+            events.push(GameEvent::OpponentCausedYouToDiscard { player: p, card_id });
+        }
         self.players[p].cards_discarded_this_turn =
             self.players[p].cards_discarded_this_turn.saturating_add(1);
         self.players[p].discarded_this_turn.insert(card_id);

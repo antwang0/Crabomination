@@ -684,6 +684,9 @@ pub enum Value {
     /// resolution (set by `Effect::SacrificeAndRemember`). Reckoner's
     /// Bargain ("gain life equal to the sacrificed permanent's mana value").
     SacrificedManaValue,
+    /// Mana value of the permanent exiled to pay this activation's
+    /// `ActivatedAbility::exile_permanent_cost` (Food Chain).
+    ExiledForCostManaValue,
     /// Number of cards discarded so far within the current effect
     /// resolution. Bumped by every `GameEvent::CardDiscarded` emission
     /// in `Effect::Discard` / `Effect::DiscardChosen`. Used by Borrowed
@@ -2083,6 +2086,11 @@ pub enum EventKind {
     FirstCardDrawnThisTurn,
     /// A card was discarded.
     CardDiscarded,
+    /// A spell or ability an opponent controls caused a player to discard a
+    /// card (CR 701.9 + `GameState.discard_causer`). Keyed on the *discarding*
+    /// player, so `EventScope::YourControl` reads "causes you to discard"
+    /// (Spiritual Focus). Emitted alongside `CardDiscarded`.
+    OpponentCausedYouToDiscard,
     /// A land was played.
     LandPlayed,
     /// A spell was cast.
@@ -6945,6 +6953,19 @@ pub enum Effect {
         /// the chosen source's controller.
         #[serde(default)]
         reflect: bool,
+        /// Who the shield protects. `None` = the controller (the Circle of
+        /// Protection default); a selector shields whatever it resolves to —
+        /// "damage to target creature" (Charm Peddler) or another seat.
+        #[serde(default)]
+        to: Option<Selector>,
+        /// "You gain life equal to the damage prevented this way"
+        /// (Cho-Arrim Alchemist).
+        #[serde(default)]
+        gain_life: bool,
+        /// CR 614.9 — "that damage is dealt to `redirect_to` instead"
+        /// (General's Regalia).
+        #[serde(default)]
+        redirect_to: Option<Selector>,
     },
     /// CR 615.7 — "Prevent the next `amount` damage that a source of your
     /// choice would deal to you and/or permanents you control this turn. If
@@ -7348,6 +7369,22 @@ pub enum Effect {
     /// that color" (Persecute). The color is chosen by the resolving
     /// controller; the reveal publishes the hand to them.
     ChooseColorThenDiscardMatching { who: PlayerRef },
+
+    /// "Choose a card type. `who` reveals their hand. Deal `per` damage to
+    /// that player for each card of the chosen type revealed this way"
+    /// (Blood Oath). The type is chosen by the resolving controller.
+    ChooseCardTypeRevealHandDamage { who: PlayerRef, per: Value },
+
+    /// Crooked Scales — "Flip a coin. If you win, destroy `win`. If you lose,
+    /// destroy `lose` unless you pay `repeat_cost` and repeat this process."
+    /// Loops until a win, a decline, or the loser is destroyed.
+    CoinFlipDestroyLoop { win: Selector, lose: Selector, repeat_cost: crate::mana::ManaCost },
+
+    /// Thieves' Auction — exile all nontoken permanents, then, starting with
+    /// the controller, each player in turn order picks one of the exiled
+    /// cards and puts it onto the battlefield tapped under their control,
+    /// repeating until every exiled card is claimed.
+    ThievesAuction,
 }
 
 /// CR 702.172 — one Spree mode: an additional mana cost paired with the

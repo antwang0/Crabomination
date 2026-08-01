@@ -65,6 +65,10 @@ pub(crate) fn event_matches_spec(
         (EventKind::PlayerDamaged, GameEvent::DamageDealt { to_player: Some(_), .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
         (EventKind::ScriedOrSurveiled, GameEvent::ScriedOrSurveiled { .. }) => true,
+        (
+            EventKind::OpponentCausedYouToDiscard,
+            GameEvent::OpponentCausedYouToDiscard { .. },
+        ) => true,
         (EventKind::DungeonCompleted, GameEvent::DungeonCompleted { .. }) => true,
         (EventKind::Proliferated, GameEvent::Proliferated { .. }) => true,
         (EventKind::Foraged, GameEvent::Foraged { .. }) => true,
@@ -603,6 +607,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::LifeLost { player, .. }
         | GameEvent::PaidLife { player, .. }
         | GameEvent::ScriedOrSurveiled { player, .. }
+        | GameEvent::OpponentCausedYouToDiscard { player, .. }
         | GameEvent::Proliferated { player }
         | GameEvent::Foraged { player }
         | GameEvent::EvidenceCollected { player }

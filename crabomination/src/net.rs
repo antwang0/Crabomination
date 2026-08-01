@@ -2253,6 +2253,8 @@ pub enum GameEventWire {
     /// row already narrates it, so this renders blank.
     FirstCardDrawnThisTurn { player: usize },
     CardDiscarded { player: usize, card_id: CardId },
+    /// Wire mirror of `GameEvent::OpponentCausedYouToDiscard`.
+    OpponentCausedYouToDiscard { player: usize, card_id: CardId },
     LandPlayed {
         player: usize,
         card_id: CardId,
@@ -2422,6 +2424,12 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 card_id: *card_id,
             },
+            GameEvent::OpponentCausedYouToDiscard { player, card_id } => {
+                GameEventWire::OpponentCausedYouToDiscard {
+                    player: *player,
+                    card_id: *card_id,
+                }
+            }
             GameEvent::LandPlayed { player, card_id, played } => GameEventWire::LandPlayed {
                 player: *player,
                 card_id: *card_id,
@@ -2807,6 +2815,8 @@ impl GameEventWire {
             // ScryPerformed/SurveilPerformed line already covers the log, so
             // this one renders blank (and the client skips blank rows).
             E::ScriedOrSurveiled { .. } => String::new(),
+            // The paired `CardDiscarded` row already narrates it.
+            E::OpponentCausedYouToDiscard { .. } => String::new(),
             E::FirstCardDrawnThisTurn { .. } => String::new(),
             E::Proliferated { player } => format!("{} proliferates", pn(*player)),
             E::Foraged { player } => format!("{} forages", pn(*player)),

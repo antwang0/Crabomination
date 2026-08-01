@@ -328,6 +328,14 @@ impl ManaCost {
             .sum()
     }
 
+    /// Add `amount` generic pips to this cost (a state-defined additional
+    /// generic cost — `ActivatedAbility::generic_cost_value`).
+    pub fn add_generic(&mut self, amount: u32) {
+        if amount > 0 {
+            self.symbols.push(ManaSymbol::Generic(amount));
+        }
+    }
+
     pub fn reduce_generic(&mut self, amount: u32) -> u32 {
         let mut remaining = amount;
         let mut applied = 0u32;

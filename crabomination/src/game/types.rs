@@ -1669,6 +1669,9 @@ pub enum GameEvent {
     /// Kefnet) can inspect and act on it.
     FirstCardDrawnThisTurn { player: usize, card_id: CardId },
     CardDiscarded { player: usize, card_id: CardId },
+    /// A spell or ability an opponent of `player` controls caused that
+    /// discard (`GameState.discard_causer`). Spiritual Focus.
+    OpponentCausedYouToDiscard { player: usize, card_id: CardId },
     /// CR 701.9 batch — a player discarded one or more cards in a single
     /// effect resolution. Fired once per resolution alongside the per-card
     /// `CardDiscarded`s, carrying the count for "whenever you discard one or

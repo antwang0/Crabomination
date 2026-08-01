@@ -49218,6 +49218,9 @@ fn circle_of_protection(name: &'static str, color: Color) -> CardDefinition {
             effect: Effect::PreventNextDamageFromChosenSource {
                 reflect: false,
                 filter: SelectionRequirement::HasColor(color),
+                to: None,
+                gain_life: false,
+                redirect_to: None,
             },
             ..Default::default()
         }],
@@ -60360,6 +60363,9 @@ pub fn deflecting_palm() -> CardDefinition {
         effect: Effect::PreventNextDamageFromChosenSource {
             filter: SelectionRequirement::Any,
             reflect: true,
+            to: None,
+            gain_life: false,
+            redirect_to: None,
         },
         ..Default::default()
     }

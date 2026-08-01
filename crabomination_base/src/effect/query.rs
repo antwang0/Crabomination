@@ -419,7 +419,12 @@ impl Effect {
             Effect::ExileHand { who }
             | Effect::PlayerReturnsPermanentUnlessPaysLife { who, .. }
             | Effect::ChooseColorThenDiscardMatching { who }
+            | Effect::ChooseCardTypeRevealHandDamage { who, .. }
             | Effect::ReturnCreaturesWithPowerGreaterThanHand { who } => player_has_target(who),
+            Effect::CoinFlipDestroyLoop { win, lose, .. } => {
+                sel_has_target(win) || sel_has_target(lose)
+            }
+            Effect::ThievesAuction => false,
             Effect::SearchSameNameAs { who, subject, .. } => {
                 player_has_target(who) || sel_has_target(subject)
             }

@@ -405,6 +405,9 @@ pub fn haazda_shield_mate() -> CardDefinition {
             effect: Effect::PreventNextDamageFromChosenSource {
                 filter: SelectionRequirement::Any,
                 reflect: false,
+                to: None,
+                gain_life: false,
+                redirect_to: None,
             },
             ..Default::default()
         }],

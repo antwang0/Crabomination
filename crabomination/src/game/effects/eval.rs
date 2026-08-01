@@ -566,6 +566,7 @@ impl GameState {
                 }
             }
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
+            Value::ExiledForCostManaValue => self.exiled_for_cost_mana_value.unwrap_or(0),
             Value::RevealedForCostPower => self.revealed_for_cost_power.unwrap_or(0),
             Value::GreatestManaValueAmongPermanents(who) => self
                 .resolve_player(who, ctx)

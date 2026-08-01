@@ -38,6 +38,7 @@ mod mmq2;
 mod mmq3;
 mod mmq4;
 mod mmq5;
+mod mmq6;
 mod mom;
 mod ogw;
 mod one;

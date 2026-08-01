@@ -2721,6 +2721,17 @@ pub struct ActivatedAbility {
     /// tap/mana but before the effect resolves.
     #[serde(default)]
     pub exile_top_cost: u32,
+    /// CR 602.5b — "Exile a [filter] you control:" as an activation cost
+    /// (Food Chain). The battlefield sibling of `exile_other_filter`; the
+    /// exiled permanent's mana value is stamped for `Value::ExiledForCostManaValue`.
+    #[serde(default)]
+    pub exile_permanent_cost: Option<(SelectionRequirement, u32)>,
+    /// CR 107.3 — a generic cost whose amount is defined by the game state
+    /// rather than chosen ("{X}, {T}: … X is the number of cards in an
+    /// opponent's hand" — Bargaining Table). Added to the printed generic at
+    /// activation time; the body reads the same amount via `Value::XFromCost`.
+    #[serde(default)]
+    pub generic_cost_value: Option<Value>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

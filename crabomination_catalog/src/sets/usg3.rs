@@ -690,7 +690,13 @@ fn rune(name: &'static str, filter: R) -> CardDefinition {
         keywords: vec![cycling_two()],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
-            effect: Effect::PreventNextDamageFromChosenSource { filter, reflect: false },
+            effect: Effect::PreventNextDamageFromChosenSource {
+                filter,
+                reflect: false,
+                to: None,
+                gain_life: false,
+                redirect_to: None,
+            },
             ..Default::default()
         }],
         ..enchantment(name, cost(&[generic(1), w()]))
