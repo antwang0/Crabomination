@@ -38,7 +38,32 @@ impl GameState {
         // `perform_action_inner`: the probe is discarded either way, so
         // the transactional checkpoint would be pure waste here.
         let mut probe = self.clone();
-        probe.perform_action_inner(action).is_ok()
+        let acting = self.priority.player_with_priority;
+        let ok = probe.perform_action_inner(action).is_ok();
+        ok && !self.suspended_without_completing(&probe, acting)
+    }
+
+    /// Whether `probe` came back `Ok` only because the action *suspended*
+    /// into a replay modal — cost pick, {X} pick, float-spend confirm —
+    /// rather than completing.
+    ///
+    /// Only applied to seats that can't be prompted (`!manual_mana`, i.e.
+    /// bots). For a hand-paying seat a suspend genuinely means "you can
+    /// begin casting this", which is what the client's castable-hand
+    /// highlight wants, so their answer is left exactly as it was.
+    ///
+    /// For a bot it is a lie with teeth: the bot reads `Ok`, commits a cast
+    /// it cannot pay for, answers the modal, and the failed replay is rolled
+    /// back with the decision restored — the deadlock that silently dropped
+    /// 14 % of cube games. Moving the individual cost modals to
+    /// `manual_mana` fixed the cases the evidence named; this closes the
+    /// class, so a modal that is added later (or one of the targeting
+    /// suspends still keyed on `wants_ui`) can't reopen it.
+    fn suspended_without_completing(&self, probe: &GameState, acting: usize) -> bool {
+        if self.players.get(acting).is_some_and(|p| p.manual_mana) {
+            return false;
+        }
+        probe.pending_decision.as_ref().is_some_and(|pd| pd.resume.is_action_replay())
     }
 
     /// A clone of `self` with every player's library emptied, for use as a
@@ -94,7 +119,9 @@ impl GameState {
     /// [`affordance_probe_template`]: Self::affordance_probe_template
     pub(crate) fn would_accept_on(template: &GameState, action: GameAction) -> bool {
         let mut probe = template.clone();
-        probe.perform_action_inner(action).is_ok()
+        let acting = template.priority.player_with_priority;
+        let ok = probe.perform_action_inner(action).is_ok();
+        ok && !template.suspended_without_completing(&probe, acting)
     }
 
     /// CardIds in `caster`'s hand they could begin casting (or play, for

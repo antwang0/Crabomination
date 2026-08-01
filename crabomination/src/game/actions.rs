@@ -7812,8 +7812,16 @@ impl GameState {
         // CR 601.2g — float-spend confirmation. Nothing is mutated yet (the
         // card is still in the graveyard; additional costs unpaid), so suspend
         // cleanly and replay the whole flashback on answer.
+        // CR 601.2g float-spend confirmation is a *mana payment* question,
+        // so it keys on `manual_mana` — the flag that exists for exactly this
+        // rule — rather than `wants_ui`, which bot seats also set. Prompting
+        // a bot here is the same livelock as the {X} and additional-cost
+        // modals: the suspend returns `Ok`, so the probe reports the cast as
+        // legal, and the failed replay is rolled back with the decision
+        // restored. Latent rather than observed only because the bot stopped
+        // floating mana when it stopped pre-tapping its board.
         if spend_float.is_none()
-            && self.players[p].wants_ui
+            && self.players[p].manual_mana
             && !cost.symbols.is_empty()
             && self.float_spend_is_optional(p, &cost, &card.definition.spell_kind())
         {
@@ -9080,8 +9088,16 @@ impl GameState {
         // CR 601.2g — float-spend confirmation. The spell card is back-in-hand
         // safe to restore (nothing else is committed yet — pitch/gy-exile/
         // return happen after payment), so suspend and replay the alt cast.
+        // CR 601.2g float-spend confirmation is a *mana payment* question,
+        // so it keys on `manual_mana` — the flag that exists for exactly this
+        // rule — rather than `wants_ui`, which bot seats also set. Prompting
+        // a bot here is the same livelock as the {X} and additional-cost
+        // modals: the suspend returns `Ok`, so the probe reports the cast as
+        // legal, and the failed replay is rolled back with the decision
+        // restored. Latent rather than observed only because the bot stopped
+        // floating mana when it stopped pre-tapping its board.
         if spend_float.is_none()
-            && self.players[p].wants_ui
+            && self.players[p].manual_mana
             && !mana_cost.symbols.is_empty()
             && self.float_spend_is_optional(p, &mana_cost, &card.definition.spell_kind())
         {
@@ -12617,8 +12633,16 @@ impl GameState {
         // spend or avoid (untapped sources can cover it), ask first. Nothing is
         // mutated yet at this point (tap-cost applies below), so suspending is a
         // clean replay of the whole activation.
+        // CR 601.2g float-spend confirmation is a *mana payment* question,
+        // so it keys on `manual_mana` — the flag that exists for exactly this
+        // rule — rather than `wants_ui`, which bot seats also set. Prompting
+        // a bot here is the same livelock as the {X} and additional-cost
+        // modals: the suspend returns `Ok`, so the probe reports the cast as
+        // legal, and the failed replay is rolled back with the decision
+        // restored. Latent rather than observed only because the bot stopped
+        // floating mana when it stopped pre-tapping its board.
         if spend_float.is_none()
-            && self.players[p].wants_ui
+            && self.players[p].manual_mana
             && !effective_mana_cost.symbols.is_empty()
             && self.float_spend_is_optional(p, &effective_mana_cost, &ability_spend_kind)
         {

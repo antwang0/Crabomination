@@ -88,6 +88,17 @@ pub struct EvalWeights {
     /// whether restraint is worth the tempo is a ladder question, not an
     /// argument, so this is a flag rather than a rewrite.
     pub attack_search: u8,
+    /// Search the block assignment instead of taking the greedy one:
+    /// simulate each candidate through combat damage and keep the best (see
+    /// [`pick_blocks_scored`]). 0 disables it; higher values allow more
+    /// candidate assignments.
+    ///
+    /// The block sibling of [`attack_search`](Self::attack_search), and a
+    /// cheaper search than it: a block candidate only has to be simulated
+    /// through this turn's combat damage, not through a full turn cycle,
+    /// because the payoff of a block — who dies, how much life is saved —
+    /// is settled inside the same combat.
+    pub block_search: u8,
     /// Restore the pre-fix mana behavior: tap every land before deciding
     /// anything, and size affordability off the floating pool.
     ///
@@ -119,6 +130,7 @@ impl EvalWeights {
             lookahead: 0,
             combat_aware: false,
             attack_search: 0,
+            block_search: 0,
             legacy_pretap: false,
         }
     }
@@ -168,6 +180,7 @@ impl EvalWeights {
             lookahead: 0,
             combat_aware: false,
             attack_search: 0,
+            block_search: 0,
             legacy_pretap: false,
         }
     }
@@ -200,6 +213,7 @@ impl EvalWeights {
             lookahead: 0,
             combat_aware: false,
             attack_search: 0,
+            block_search: 0,
             legacy_pretap: false,
         }
     }
@@ -302,6 +316,41 @@ impl EvalWeights {
     /// horizon that reaches a win — is the obvious next thing to measure.
     pub const fn attack_search() -> Self {
         Self { attack_search: 6, ..Self::hold_sick_combat() }
+    }
+
+    /// The adopted default plus the searched block assignment.
+    pub const fn block_search() -> Self {
+        Self { block_search: 6, ..Self::attack_search() }
+    }
+
+    /// Searched attacks with life priced on the concave curve.
+    ///
+    /// The hypothesis this exists to test. `eval_material` prices a
+    /// permanent at `3 * (cmc + power + toughness)` but life at one point
+    /// per life, so a Grizzly Bears is worth 18 and the 2 damage it deals is
+    /// worth 2 — the attack search has to see a 9:1 payoff before swinging
+    /// beats staying home. In an aggro mirror that is roughly right, because
+    /// the body you keep really does block something. In the dimir control
+    /// mirror it is fatal, and that is exactly where
+    /// [`attack_search`](Self::attack_search) loses 5.2 points: damage is the
+    /// only win route there, and the evaluator has priced it at a ninth of
+    /// its worth.
+    ///
+    /// [`concave_life`](Self::concave_life) is the existing knob for this —
+    /// it prices life steeply near zero and flatly near twenty, which is
+    /// what makes "this is the race I need to win" visible to a search whose
+    /// horizon is one turn cycle.
+    pub const fn attack_search_life() -> Self {
+        Self { concave_life: true, ..Self::attack_search() }
+    }
+
+    /// The adopted default with the concave life curve and *no* attack
+    /// search — the control for [`attack_search_life`](Self::attack_search_life).
+    /// Without it a win by that profile can't be attributed: the curve might
+    /// simply be better everywhere rather than specifically correcting the
+    /// search's bias.
+    pub const fn hold_sick_combat_life() -> Self {
+        Self { concave_life: true, ..Self::hold_sick_combat() }
     }
 
     /// Searched attacks with the candidate set cut to the two extremes —
@@ -681,7 +730,11 @@ impl Bot for RandomBot {
                     self.blocks_declared = true;
                     // Master Warcraft on our own turn: we're choosing the
                     // *defender's* blocks, so decline them all.
-                    let blocks = if is_active { Vec::new() } else { pick_blocks(state, seat) };
+                    let blocks = if is_active {
+                        Vec::new()
+                    } else {
+                        pick_blocks_scored(state, seat, &self.weights)
+                    };
                     Some(GameAction::DeclareBlockers(blocks))
                 } else if state.blockers_declared() && state.stack.is_empty() {
                     // Post-block priority: a held pump trick that flips a
@@ -4556,6 +4609,94 @@ fn simulate_attack_outcome(
             _ => GameAction::PassPriority,
         };
         if g.perform_action(action).is_err() && g.perform_action(GameAction::PassPriority).is_err() {
+            return None;
+        }
+    }
+    Some(eval_material(&g, seat, w))
+}
+
+/// The block assignment, chosen by search rather than by rule.
+///
+/// [`pick_blocks`] assigns blockers greedily, one at a time, in ascending
+/// power order, each taking the best attacker it can find *given the
+/// assignments already made*. That ordering is a heuristic standing in for
+/// the thing it can't do: score the whole assignment. A first-fit choice
+/// that looks locally best can spend the one blocker a later, bigger
+/// attacker needed — and the greedy pass has no way to notice, because it
+/// never looks at the board the block produces.
+///
+/// So this scores whole assignments. The greedy block seeds the candidate
+/// set; the alternatives are "block with nobody" and the greedy assignment
+/// minus one blocker each. Each is played through combat damage and scored
+/// with the same evaluator, which already prices both the creatures that
+/// died and the life that got through.
+///
+/// Cheaper than [`pick_attacks_scored`], and deliberately so: a block's
+/// consequences are settled inside this combat, so the simulation stops at
+/// end of combat instead of running a full turn cycle.
+///
+/// Ties go to the greedy assignment, so the search only ever departs from
+/// current behavior for a strict improvement.
+fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(CardId, CardId)> {
+    let greedy = pick_blocks(state, seat);
+    if w.block_search == 0 || greedy.is_empty() {
+        return greedy;
+    }
+    let mut candidates: Vec<Vec<(CardId, CardId)>> = vec![greedy.clone(), Vec::new()];
+    if greedy.len() > 1 {
+        // Consider releasing the cheapest bodies first: those are the
+        // chump-blocks the greedy pass throws in to save life, and the ones
+        // most likely to be worth more alive than the damage they absorb.
+        let mut order: Vec<usize> = (0..greedy.len()).collect();
+        order.sort_by_key(|&i| {
+            state.battlefield_find(greedy[i].0).map(|c| c.toughness()).unwrap_or(0)
+        });
+        for &i in order.iter().take(w.block_search as usize) {
+            let mut alt = greedy.clone();
+            alt.remove(i);
+            candidates.push(alt);
+        }
+    }
+
+    let mut best: Option<(usize, i32)> = None;
+    for (i, cand) in candidates.iter().enumerate() {
+        let Some(score) = simulate_block_outcome(state, seat, cand, w) else { continue };
+        if best.map(|(_, s)| score > s).unwrap_or(true) {
+            best = Some((i, score));
+        }
+    }
+    match best {
+        Some((i, _)) => candidates.swap_remove(i),
+        None => greedy,
+    }
+}
+
+/// Declare `blocks`, run combat damage, and score the board for `seat`.
+///
+/// `None` on a rejected declaration (a must-block creature we tried to hold
+/// back, an over-cap batch) or a combat that won't settle — an unfinished
+/// combat is scored not at all rather than scored wrong.
+fn simulate_block_outcome(
+    state: &GameState,
+    seat: usize,
+    blocks: &[(CardId, CardId)],
+    w: &EvalWeights,
+) -> Option<i32> {
+    let mut g = state.clone();
+    g.perform_action(GameAction::DeclareBlockers(blocks.to_vec())).ok()?;
+    let turn = g.turn_number;
+    let mut fuel = 200u32;
+    while !g.is_game_over() && g.turn_number == turn && g.step < TurnStep::EndCombat {
+        fuel = fuel.checked_sub(1)?;
+        if g.pending_decision.is_some() {
+            let answer = {
+                let pending = g.pending_decision.as_ref().unwrap();
+                AutoDecider.decide(&pending.decision)
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
+            continue;
+        }
+        if g.perform_action(GameAction::PassPriority).is_err() {
             return None;
         }
     }

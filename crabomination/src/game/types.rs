@@ -948,6 +948,35 @@ pub enum AbilityCostChoice {
     XValue,
 }
 
+impl ResumeContext {
+    /// Whether this suspend stashed an action to *replay*, rather than
+    /// pausing something already committed.
+    ///
+    /// The distinction matters to the affordance probes. A replay suspend
+    /// returns `Ok` without the action having happened — the cast is still
+    /// in hand, nothing is paid — so a probe that reads `Ok` as "accepted"
+    /// reports an unaffordable spell as castable. That lie is what let the
+    /// bot commit casts it could not pay for, whose failed replay was then
+    /// rolled back with the pending decision restored, wedging the game.
+    ///
+    /// The other contexts (`Spell`, `Trigger`, `Ability`, `Mulligan`,
+    /// `CleanupDiscard`, `CombatDamage`, the trigger-ordering picks) pause
+    /// *resolution* of something that already resolved onto the stack, so
+    /// the action itself did complete and `Ok` is honest.
+    pub(crate) fn is_action_replay(&self) -> bool {
+        matches!(
+            self,
+            ResumeContext::CastAdditionalCost { .. }
+                | ResumeContext::ActionFloatConfirm { .. }
+                | ResumeContext::ActionSearchPick { .. }
+                | ResumeContext::ActivateAbilityChoice { .. }
+                | ResumeContext::CastExtraTargetPick { .. }
+                | ResumeContext::CastXPick { .. }
+                | ResumeContext::CastSlot0TargetPick { .. }
+        )
+    }
+}
+
 /// Recorded where resolution suspended so it can resume after the decision.
 /// `remaining` is whatever effects in the original tree still need to run
 /// after the answered decision is applied (e.g. the `Draw` half of `Opt`
