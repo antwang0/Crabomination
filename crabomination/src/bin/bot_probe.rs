@@ -263,6 +263,7 @@ fn main() {
         "pretap" => EvalWeights::legacy_mana(),
         "holdsick" => EvalWeights::hold_sick(),
         "planner" => EvalWeights::planner(),
+        "lookahead" => EvalWeights::lookahead1(),
         other => {
             eprintln!("unknown profile {other}");
             std::process::exit(2);

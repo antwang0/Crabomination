@@ -142,6 +142,8 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "combat" => Some(Pilot::Scored(EvalWeights::combat_aware())),
         "holdsick" => Some(Pilot::Scored(EvalWeights::hold_sick())),
         "holdinst" => Some(Pilot::Scored(EvalWeights::hold_instants())),
+        "holdsick+combat" => Some(Pilot::Scored(EvalWeights::hold_sick_combat())),
+        "lookahead" => Some(Pilot::Scored(EvalWeights::lookahead1())),
         "planner" => Some(Pilot::Scored(EvalWeights::planner())),
         "v2+combat" => Some(Pilot::Scored(EvalWeights::v2_combat())),
         "scaled" => Some(Pilot::Scored(EvalWeights::scaled_control())),
@@ -157,7 +159,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdinst, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, lookahead, holdinst, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform";
 
 /// Wilson score interval for `wins` out of `n` at `z`. Chosen over the
 /// normal approximation because it stays sane at small n and at p̂ = 0 or 1,

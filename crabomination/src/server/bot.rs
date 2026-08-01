@@ -67,6 +67,11 @@ pub struct EvalWeights {
     /// "formulate a plan restricted to instant-speed lines and wait if it
     /// scores as well" (`SpellAbilityPicker::createNewPlan`).
     pub hold_instants: bool,
+    /// How many *extra* plays a candidate's evaluation may look ahead. 0
+    /// scores the board right after the candidate resolves (the historical
+    /// behavior); 1 asks "and what would I do next?" once. See
+    /// [`evaluate_action_sequence`].
+    pub lookahead: u8,
     /// Score a candidate on the board *after* this turn's combat rather
     /// than the instant it resolves (see [`simulate_through_combat`]).
     pub combat_aware: bool,
@@ -97,6 +102,7 @@ impl EvalWeights {
             concave_life: false,
             hold_sick: false,
             hold_instants: false,
+            lookahead: 0,
             combat_aware: false,
             legacy_pretap: false,
         }
@@ -144,6 +150,7 @@ impl EvalWeights {
             concave_life: true,
             hold_sick: false,
             hold_instants: false,
+            lookahead: 0,
             combat_aware: false,
             legacy_pretap: false,
         }
@@ -174,6 +181,7 @@ impl EvalWeights {
             concave_life: false,
             hold_sick: false,
             hold_instants: false,
+            lookahead: 0,
             combat_aware: false,
             legacy_pretap: false,
         }
@@ -201,6 +209,33 @@ impl EvalWeights {
     /// now) from "kill it at end of turn" (worth the same, later).
     pub const fn hold_instants() -> Self {
         Self { hold_instants: true, combat_aware: true, ..Self::baseline() }
+    }
+
+    /// The adopted default plus one ply of sequence lookahead.
+    pub const fn lookahead1() -> Self {
+        Self { lookahead: 1, ..Self::hold_sick() }
+    }
+
+    /// **The adopted default.** The summon-sick gate plus the combat-aware
+    /// evaluation, with the instant-speed hold left off.
+    ///
+    /// This is the decomposition of [`planner`](Self::planner), and it is
+    /// why the bundle is not what shipped. Against [`hold_sick`] alone this
+    /// measures 51.3 % [50.4 %, 52.2 %] over 12 000 games, while the full
+    /// planner measures 51.0 % [50.2 %, 51.8 %] over 16 000 — the same
+    /// within error. So `combat_aware` carries the gain and
+    /// `hold_instants` adds nothing detectable on top of it.
+    ///
+    /// The interesting part is that `combat_aware` measured *exactly*
+    /// neutral on its own (50.0 % over 12 000 games, 6002-5998). It was
+    /// never a bad idea, it just had no consumer: within a single main
+    /// phase this turn's combat is nearly identical whichever candidate is
+    /// picked, so the term cancelled. Give the bot a reason to ask "is this
+    /// worth the same later?" and the same signal is worth +1.3 points.
+    ///
+    /// [`hold_sick`]: Self::hold_sick
+    pub const fn hold_sick_combat() -> Self {
+        Self { combat_aware: true, ..Self::hold_sick() }
     }
 
     /// Everything the planner work produced: hold summoning-sick bodies,
@@ -302,10 +337,12 @@ impl EvalWeights {
 impl Default for EvalWeights {
     /// The adopted profile. [`baseline`](EvalWeights::baseline) stays the
     /// historical *control* — it is what ladder runs measure against — but
-    /// it is no longer what the bot plays: the summon-sick gate beat it
-    /// 51.5 % [50.8 %, 52.3 %] over 16 000 games, so it is on by default.
+    /// it is no longer what the bot plays. The summon-sick gate beat it
+    /// 51.5 % [50.8 %, 52.3 %] over 16 000 games, and the combat-aware
+    /// evaluation then beat *that* 51.3 % [50.4 %, 52.2 %] over 12 000, so
+    /// the default is both.
     fn default() -> Self {
-        Self::hold_sick()
+        Self::hold_sick_combat()
     }
 }
 
@@ -1680,57 +1717,28 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
     main_phase_action_with(state, seat, true, &EvalWeights::default())
 }
 
-fn main_phase_action_with(
+/// Every cast / activation the bot would consider from `state` this tick,
+/// as `(already validated, action)`.
+///
+/// Extracted from `main_phase_action_with` so a sequence search can ask
+/// "and what would I do next?" about a hypothetical state. That question
+/// is the whole point of looking more than one play ahead: with four mana
+/// the bot could never see that two two-drops beat one four-drop, because
+/// it only ever scored a single action against the board.
+///
+/// The `bool` is whether the candidate has already been through the engine
+/// dry-run. Specialty shapes (delve, convoke, kicker, spree, ...) are
+/// probed eagerly because building them needs the accept/reject signal —
+/// how many cards to delve, how few helpers to tap, the biggest affordable
+/// kick. Plain casts are left unvalidated for the caller to probe lazily in
+/// score order, which is what keeps a typical tick down to one or two
+/// engine probes instead of the whole hand.
+fn cast_candidates(
     state: &GameState,
     seat: usize,
-    scored: bool,
+    probe: &GameState,
     w: &EvalWeights,
-) -> GameAction {
-    // One library-stripped probe template per tick: every candidate dry-run
-    // below re-clones this light template instead of the full state. The
-    // library is the largest part of a `GameState` clone and cast/activate/
-    // play-land legality never reads it (see `affordance_probe_template`),
-    // so this turns N full-deck clones into one + N light ones.
-    let probe = state.affordance_probe_template();
-
-    // NOTE: the bot deliberately does *not* pre-tap its mana sources here.
-    //
-    // It used to: one untapped land per tick until the board was empty,
-    // which is what made `can_afford_in_state` work off the floating pool.
-    // The cost was severe and invisible to the unit tests (which all
-    // pre-fill `mana_pool` by hand). Pools empty at every step and phase
-    // boundary (CR 500.4), so tapping out in the precombat main left the
-    // bot with nothing for its own postcombat main and nothing at all on
-    // the opponent's turn: measured over 20 bot-vs-bot games, zero of 1366
-    // opponent-turn priority windows had a single untapped land, and 100 %
-    // of spells were cast in the precombat main. `pick_stack_response`,
-    // `pick_ability_counter_response`, `pick_combat_trick` and the
-    // end-of-turn instant window below were all dead code in real play.
-    //
-    // Now the engine's auto-tap pays each cast from only the sources it
-    // needs (`try_pay_with_auto_tap`, which `would_accept_on` already runs
-    // for every candidate), so leftover mana simply stays untapped and is
-    // still there at instant speed.
-    if w.legacy_pretap
-        && let Some(id) = state
-            .battlefield
-            .iter()
-            .find(|c| c.controller == seat && c.definition.is_land() && !c.tapped)
-            .map(|c| c.id)
-    {
-        let action = GameAction::ActivateAbility {
-            card_id: id,
-            ability_index: 0,
-            target: None,
-            additional_targets: Vec::new(),
-            x_value: None,
-            mode: None,
-        };
-        if GameState::would_accept_on(&probe, action.clone()) {
-            return action;
-        }
-    }
-
+) -> Vec<(GameAction, bool)> {
     // Build list of castable non-land spells. Affordability + target
     // pre-filters reduce the candidate set; the FINAL gate is still the
     // engine dry-run, which discards anything the engine would reject
@@ -1861,7 +1869,7 @@ fn main_phase_action_with(
             x_value: None,
             delve_cards,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -1922,7 +1930,7 @@ fn main_phase_action_with(
                 x_value: None,
                 convoke_creatures: ranked[..n].to_vec(),
             };
-            if GameState::would_accept_on(&probe, action.clone()) {
+            if GameState::would_accept_on(probe, action.clone()) {
                 castable.push(action);
                 break;
             }
@@ -1964,7 +1972,7 @@ fn main_phase_action_with(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -1996,7 +2004,7 @@ fn main_phase_action_with(
                 additional_targets,
                 x_value: None,
             };
-            if GameState::would_accept_on(&probe, action.clone()) {
+            if GameState::would_accept_on(probe, action.clone()) {
                 castable.push(action);
             }
         }
@@ -2029,7 +2037,7 @@ fn main_phase_action_with(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2116,7 +2124,7 @@ fn main_phase_action_with(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             // Prefer conspiring over the plain cast of the same card — the
             // extra copy is value the bot's spell eval doesn't otherwise see.
             let cid = c.id;
@@ -2155,7 +2163,7 @@ fn main_phase_action_with(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             // Offspring (CR 702.166) is pure upside — a free 1/1 token copy
             // with no downside beyond the mana. When affordable, prefer it
             // over the plain cast of the same card (mirrors Conspire above).
@@ -2195,7 +2203,7 @@ fn main_phase_action_with(
                 mode: None,
                 x_value: None,
             };
-            if GameState::would_accept_on(&probe, action.clone()) {
+            if GameState::would_accept_on(probe, action.clone()) {
                 castable.push(action);
                 break;
             }
@@ -2226,7 +2234,7 @@ fn main_phase_action_with(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2253,7 +2261,7 @@ fn main_phase_action_with(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2278,7 +2286,7 @@ fn main_phase_action_with(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2297,7 +2305,7 @@ fn main_phase_action_with(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2323,7 +2331,7 @@ fn main_phase_action_with(
         let action = GameAction::CastSplitRight {
             card_id: c.id, target, additional_targets, mode: None, x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2345,7 +2353,7 @@ fn main_phase_action_with(
         let action = GameAction::CastAftermath {
             card_id: c.id, target, additional_targets, mode: None, x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2371,7 +2379,7 @@ fn main_phase_action_with(
             let action = GameAction::CastFlashback {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             };
-            if GameState::would_accept_on(&probe, action.clone()) {
+            if GameState::would_accept_on(probe, action.clone()) {
                 castable.push(action);
             }
         }
@@ -2392,7 +2400,7 @@ fn main_phase_action_with(
                 let action = GameAction::CastDisturb {
                     card_id: c.id, target, additional_targets,
                 };
-                if GameState::would_accept_on(&probe, action.clone()) {
+                if GameState::would_accept_on(probe, action.clone()) {
                     castable.push(action);
                 }
             }
@@ -2414,7 +2422,7 @@ fn main_phase_action_with(
             let action = GameAction::CastMayhem {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             };
-            if GameState::would_accept_on(&probe, action.clone()) {
+            if GameState::would_accept_on(probe, action.clone()) {
                 castable.push(action);
             }
         }
@@ -2435,7 +2443,7 @@ fn main_phase_action_with(
             let action = GameAction::CastHarmonize {
                 card_id: c.id, tap_creature: None, target, additional_targets, mode: None, x_value: None,
             };
-            if GameState::would_accept_on(&probe, action.clone()) {
+            if GameState::would_accept_on(probe, action.clone()) {
                 castable.push(action);
             }
         }
@@ -2459,7 +2467,7 @@ fn main_phase_action_with(
             let action = GameAction::ActivateAbility {
                 card_id: c.id, ability_index: idx, target, additional_targets, x_value: None, mode: None,
             };
-            if GameState::would_accept_on(&probe, action.clone()) {
+            if GameState::would_accept_on(probe, action.clone()) {
                 castable.push(action);
             }
         }
@@ -2499,7 +2507,7 @@ fn main_phase_action_with(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2529,7 +2537,7 @@ fn main_phase_action_with(
         } else {
             continue;
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
@@ -2575,10 +2583,70 @@ fn main_phase_action_with(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(&probe, action.clone()) {
+        if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
         }
     }
+
+    let mut out: Vec<(GameAction, bool)> = Vec::with_capacity(castable.len() + unvalidated.len());
+    out.extend(castable.into_iter().map(|a| (a, true)));
+    out.extend(unvalidated.into_iter().map(|a| (a, false)));
+    out
+}
+
+fn main_phase_action_with(
+    state: &GameState,
+    seat: usize,
+    scored: bool,
+    w: &EvalWeights,
+) -> GameAction {
+    // One library-stripped probe template per tick: every candidate dry-run
+    // below re-clones this light template instead of the full state. The
+    // library is the largest part of a `GameState` clone and cast/activate/
+    // play-land legality never reads it (see `affordance_probe_template`),
+    // so this turns N full-deck clones into one + N light ones.
+    let probe = state.affordance_probe_template();
+
+    // NOTE: the bot deliberately does *not* pre-tap its mana sources here.
+    //
+    // It used to: one untapped land per tick until the board was empty,
+    // which is what made `can_afford_in_state` work off the floating pool.
+    // The cost was severe and invisible to the unit tests (which all
+    // pre-fill `mana_pool` by hand). Pools empty at every step and phase
+    // boundary (CR 500.4), so tapping out in the precombat main left the
+    // bot with nothing for its own postcombat main and nothing at all on
+    // the opponent's turn: measured over 20 bot-vs-bot games, zero of 1366
+    // opponent-turn priority windows had a single untapped land, and 100 %
+    // of spells were cast in the precombat main. `pick_stack_response`,
+    // `pick_ability_counter_response`, `pick_combat_trick` and the
+    // end-of-turn instant window below were all dead code in real play.
+    //
+    // Now the engine's auto-tap pays each cast from only the sources it
+    // needs (`try_pay_with_auto_tap`, which `would_accept_on` already runs
+    // for every candidate), so leftover mana simply stays untapped and is
+    // still there at instant speed.
+    if w.legacy_pretap
+        && let Some(id) = state
+            .battlefield
+            .iter()
+            .find(|c| c.controller == seat && c.definition.is_land() && !c.tapped)
+            .map(|c| c.id)
+    {
+        let action = GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        };
+        if GameState::would_accept_on(&probe, action.clone()) {
+            return action;
+        }
+    }
+
+    // Everything castable this tick — see `cast_candidates`.
+    let pool = cast_candidates(state, seat, &probe, w);
 
     // Play a land if possible — gated through `would_accept` for
     // the same reason (the engine enforces sorcery timing, lands-
@@ -2607,7 +2675,7 @@ fn main_phase_action_with(
         }
     }
 
-    if !castable.is_empty() || !unvalidated.is_empty() {
+    if !pool.is_empty() {
         // Magecraft-aware bias: if the bot controls a permanent with a
         // magecraft trigger, prefer instants/sorceries so the trigger
         // fires — IS candidates sort first, and finalist collection stops
@@ -2621,10 +2689,6 @@ fn main_phase_action_with(
         let is_is_spell = |a: &GameAction| {
             matches!(a, GameAction::CastSpell { card_id, .. } if is_instant_or_sorcery_in_hand(state, seat, *card_id))
         };
-        let mut pool: Vec<(GameAction, bool)> =
-            Vec::with_capacity(castable.len() + unvalidated.len());
-        pool.extend(castable.into_iter().map(|a| (a, true)));
-        pool.extend(unvalidated.into_iter().map(|a| (a, false)));
         let mut r = rng();
         if !scored {
             // Uniform baseline: validate everything (the historical
@@ -5562,14 +5626,32 @@ fn lifegain_sources(state: &GameState, seat: usize) -> i32 {
 /// driven by the bot's own `pick_attacks` / `pick_blocks` so the simulated
 /// combat is the combat this bot would actually play.
 ///
-/// Returns true when combat was simulated. Bails cheaply — without
-/// touching `g` — when there is no combat to look at: the game is over,
-/// the turn is already past combat damage, or the active player has no
-/// creature that could attack. Forge guards the same way, because the
-/// state copy is the expensive part.
-fn simulate_through_combat(g: &mut GameState, fuel: &mut u32) -> bool {
+/// What a combat simulation did.
+///
+/// Previously a `bool`, which conflated "there was no combat to look at"
+/// with "the simulation ran out of fuel partway". Callers treat those
+/// oppositely — the first means score the state as-is, the second means
+/// refuse to score a board where attackers are tapped but damage was never
+/// dealt — and collapsing them made every evaluation on a board with no
+/// possible attackers unscoreable, silently dropping the whole position
+/// back to the static rank.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CombatSim {
+    /// Nothing to simulate; `g` is untouched.
+    Skipped,
+    /// Ran through combat damage.
+    Completed,
+    /// Started and could not finish; `g` is now a torn state.
+    Incomplete,
+}
+
+/// Bails cheaply — without touching `g` — when there is no combat to look
+/// at: the game is over, the turn is already past combat damage, or the
+/// active player has no creature that could attack. Forge guards the same
+/// way, because the state copy is the expensive part.
+fn simulate_through_combat(g: &mut GameState, fuel: &mut u32) -> CombatSim {
     if g.is_game_over() || g.step >= TurnStep::CombatDamage {
-        return false;
+        return CombatSim::Skipped;
     }
     let attacker_seat = g.active_player_idx;
     let could_attack = g.battlefield.iter().any(|c| {
@@ -5579,7 +5661,7 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32) -> bool {
             && (!c.summoning_sick || c.has_keyword(&crate::card::Keyword::Haste))
     });
     if !could_attack {
-        return false;
+        return CombatSim::Skipped;
     }
     let turn = g.turn_number;
     let mut attacks_submitted = false;
@@ -5587,7 +5669,7 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32) -> bool {
     while g.step < TurnStep::CombatDamage && g.turn_number == turn && !g.is_game_over() {
         *fuel = match fuel.checked_sub(1) {
             Some(f) => f,
-            None => return false,
+            None => return CombatSim::Incomplete,
         };
         if g.pending_decision.is_some() {
             let answer = {
@@ -5595,7 +5677,7 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32) -> bool {
                 AutoDecider.decide(&pending.decision)
             };
             if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
-                return false;
+                return CombatSim::Incomplete;
             }
             continue;
         }
@@ -5624,11 +5706,11 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32) -> bool {
             // A rejected declaration would spin forever; fall back to
             // passing, and give up if even that fails.
             if g.perform_action(GameAction::PassPriority).is_err() {
-                return false;
+                return CombatSim::Incomplete;
             }
         }
     }
-    true
+    CombatSim::Completed
 }
 
 /// Dry-run `action` to quiescence on a full-state clone (libraries kept —
@@ -5641,6 +5723,29 @@ fn evaluate_action_outcome(
     seat: usize,
     action: &GameAction,
     w: &EvalWeights,
+) -> Option<i32> {
+    evaluate_action_sequence(state, seat, action, w, w.lookahead)
+}
+
+/// Score of the best *sequence* of up to `depth + 1` plays that starts with
+/// `action`, rather than the score the moment `action` resolves.
+///
+/// This is the gap a one-action-at-a-time evaluator cannot close: with four
+/// mana available, "cast the four-drop" and "cast a two-drop" are compared
+/// as single plays, so the bot never sees that the second line continues
+/// into *another* two-drop and ends the turn ahead. Forge searches
+/// sequences to three plies for exactly this reason
+/// (`SpellAbilityPicker` recursing through `SimulationController`).
+///
+/// Stopping is always one of the options considered, so a sequence is never
+/// forced to spend everything — dumping the hand is a line, not an
+/// obligation.
+fn evaluate_action_sequence(
+    state: &GameState,
+    seat: usize,
+    action: &GameAction,
+    w: &EvalWeights,
+    depth: u8,
 ) -> Option<i32> {
     let mut g = state.clone();
     g.perform_action(action.clone()).ok()?;
@@ -5662,24 +5767,79 @@ fn evaluate_action_outcome(
         }
         fuel = fuel.checked_sub(1)?;
     }
+    // The value of stopping here.
+    let mut best = score_settled_state(&g, seat, w)?;
+    if depth > 0 {
+        for follow in follow_up_candidates(&g, seat, w) {
+            if let Some(v) = evaluate_action_sequence(&g, seat, &follow, w, depth - 1) {
+                best = best.max(v);
+            }
+        }
+    }
+    Some(best)
+}
+
+/// Score a state that has resolved to quiescence, running it through this
+/// turn's combat first when the profile asks for it. `None` when the combat
+/// simulation can't complete — see `simulate_through_combat`.
+fn score_settled_state(g: &GameState, seat: usize, w: &EvalWeights) -> Option<i32> {
+    if !w.combat_aware {
+        return Some(eval_material(g, seat, w));
+    }
     // Score the board this line actually leads to, not the one that exists
-    // the moment it resolves -- see `simulate_through_combat`.
-    if w.combat_aware {
-        // Its own budget: the resolve loop above may have spent most of the
-        // 64, and combat is a long way through the step machine (two
-        // declarations plus a priority round per step, before triggers).
-        let mut combat_fuel = 256u32;
-        let started = g.step < TurnStep::CombatDamage;
-        simulate_through_combat(&mut g, &mut combat_fuel);
+    // the moment it resolves -- see `simulate_through_combat`. Its own fuel
+    // budget: combat is a long way through the step machine (two
+    // declarations plus a priority round per step, before triggers).
+    let mut sim = g.clone();
+    let mut combat_fuel = 256u32;
+    match simulate_through_combat(&mut sim, &mut combat_fuel) {
         // A half-simulated combat is worse than none: attackers are
         // declared and tapped but damage was never dealt, so the line reads
         // as pure downside. Refuse to score a torn state -- the caller
         // falls back to the static rank.
-        if started && g.step < TurnStep::CombatDamage && !g.is_game_over() {
-            return None;
+        CombatSim::Incomplete => None,
+        // Skipped leaves `sim` untouched, so scoring it is just scoring `g`.
+        CombatSim::Skipped | CombatSim::Completed => Some(eval_material(&sim, seat, w)),
+    }
+}
+
+/// The few plays worth considering as a continuation of a sequence:
+/// the best-scoring validated candidates from `g`, capped hard.
+///
+/// The cap is the whole reason this is affordable. Enumerating candidates
+/// runs an engine dry-run per specialty card shape, so a wide branching
+/// factor at every ply would cost far more than the extra ply is worth;
+/// two continuations is enough to catch the case this exists for (a second
+/// cheap spell the greedy pick would have priced out).
+fn follow_up_candidates(g: &GameState, seat: usize, w: &EvalWeights) -> Vec<GameAction> {
+    const MAX_FOLLOW_UPS: usize = 2;
+    // Only when the bot could actually take another play right now: still
+    // its own main phase, holding priority, nothing on the stack.
+    if g.is_game_over()
+        || g.pending_decision.is_some()
+        || !g.stack.is_empty()
+        || g.active_player_idx != seat
+        || g.player_with_priority() != seat
+        || !matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
+    {
+        return Vec::new();
+    }
+    let probe = g.affordance_probe_template();
+    let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(g, seat, &probe, w)
+        .into_iter()
+        .map(|(a, ok)| (score_candidate(g, seat, &a, w), a, ok))
+        .collect();
+    ranked.sort_by_key(|(s, _, _)| std::cmp::Reverse(*s));
+    let mut out = Vec::with_capacity(MAX_FOLLOW_UPS);
+    for (_, a, ok) in ranked {
+        if out.len() >= MAX_FOLLOW_UPS {
+            break;
+        }
+        if ok || GameState::would_accept_on(&probe, a.clone()) {
+            out.push(a);
         }
     }
-    Some(eval_material(&g, seat, w))
+    out
 }
 
 /// Could `action` still be taken later this turn cycle at instant speed?
@@ -5731,7 +5891,7 @@ fn improves_this_turn(
     let before = if w.combat_aware {
         let mut idle = state.clone();
         let mut idle_fuel = 256u32;
-        simulate_through_combat(&mut idle, &mut idle_fuel);
+        let _ = simulate_through_combat(&mut idle, &mut idle_fuel);
         eval_material_summon_sick_blind(&idle, seat, w)
     } else {
         eval_material_summon_sick_blind(state, seat, w)
@@ -5762,10 +5922,8 @@ fn improves_this_turn(
     }
     if w.combat_aware {
         let mut combat_fuel = 256u32;
-        let started = g.step < TurnStep::CombatDamage;
-        simulate_through_combat(&mut g, &mut combat_fuel);
         // A torn simulation can't answer the question; don't hold on it.
-        if started && g.step < TurnStep::CombatDamage && !g.is_game_over() {
+        if simulate_through_combat(&mut g, &mut combat_fuel) == CombatSim::Incomplete {
             return true;
         }
     }
@@ -7645,6 +7803,12 @@ mod tests {
         g.players[0].mana_pool.add_colorless(3);
         g.add_card_to_battlefield(0, catalog::goblin_guide());
         g.add_card_to_battlefield(0, catalog::goblin_guide());
+        // Second main. Conspire taps the two Goblin Guides, which costs
+        // their attack — so casting it *before* combat is genuinely worse,
+        // and the default profile's gate correctly declines to. This tests
+        // that the bot finds the conspire cast, not that it fires it at the
+        // worst possible moment.
+        g.step = TurnStep::PostCombatMain;
         let mut bot = RandomBot::new();
         for _ in 0..16 {
             let action = bot.next_action(&g, 0).expect("bot should act");
@@ -9007,6 +9171,75 @@ mod tests {
         assert!(eval_material(&g, 1, &EvalWeights::default()) > eval_material(&g, 0, &EvalWeights::default()), "a won game beats any material");
     }
 
+    /// The gap one-action-at-a-time scoring cannot close: with four mana,
+    /// two two-drops beat one four-drop, but a greedy pick compares each
+    /// cast against the board *once* and takes the biggest single body.
+    #[test]
+    fn lookahead_prefers_two_cheap_spells_over_one_expensive_one() {
+        let w = EvalWeights::lookahead1();
+        let mut g = two_player_game();
+        // Second main so the summon-sick gate (on in both profiles) isn't
+        // what decides this.
+        g.step = TurnStep::PostCombatMain;
+        for _ in 0..4 {
+            let land = g.add_card_to_battlefield(0, catalog::forest());
+            g.clear_sickness(land);
+        }
+        // One four-mana 4/5 versus two two-mana 2/2s. Two bears are 4/4
+        // across two bodies for the same mana — the greedy pick can't see
+        // the second one because it never asks what comes next.
+        let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+        let bear_a = g.add_card_to_hand(0, catalog::grizzly_bears());
+        let bear_b = g.add_card_to_hand(0, catalog::grizzly_bears());
+        let cast = |id| GameAction::CastSpell {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        // Craw Wurm costs {4}{G}{G} — too much here; use the mana we have.
+        let _ = wurm;
+        let one_bear = evaluate_action_sequence(&g, 0, &cast(bear_a), &w, 0)
+            .expect("single-play score");
+        let bear_then_bear = evaluate_action_sequence(&g, 0, &cast(bear_a), &w, 1)
+            .expect("two-play score");
+        assert!(
+            bear_then_bear > one_bear,
+            "looking one play ahead must see the second bear ({bear_then_bear} vs {one_bear})",
+        );
+        let _ = bear_b;
+    }
+
+    /// Lookahead must not invent plays that aren't legal yet: once the
+    /// bot no longer holds priority in its own main phase, there is no
+    /// continuation to search.
+    #[test]
+    fn follow_up_candidates_are_empty_outside_our_main_phase() {
+        let w = EvalWeights::lookahead1();
+        let mut g = two_player_game();
+        for _ in 0..3 {
+            let land = g.add_card_to_battlefield(0, catalog::forest());
+            g.clear_sickness(land);
+        }
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+        assert!(
+            !follow_up_candidates(&g, 0, &w).is_empty(),
+            "our own main phase offers continuations",
+        );
+        g.step = TurnStep::DeclareBlockers;
+        assert!(
+            follow_up_candidates(&g, 0, &w).is_empty(),
+            "no sorcery-speed continuation mid-combat",
+        );
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 1;
+        assert!(
+            follow_up_candidates(&g, 0, &w).is_empty(),
+            "not our turn, no continuation",
+        );
+    }
+
     /// Forge's summon-sick gate: a creature that can't attack this turn is
     /// worth the same after combat, so the bot should deploy it in the
     /// second main and keep the mana up in between. Measured by `bot_probe`
@@ -9129,7 +9362,11 @@ mod tests {
         // Empty board opposite, so the swing is free and unambiguous.
         let life_before = g.players[1].life;
         let mut fuel = 200u32;
-        assert!(simulate_through_combat(&mut g, &mut fuel), "combat should be simulated");
+        assert_eq!(
+            simulate_through_combat(&mut g, &mut fuel),
+            CombatSim::Completed,
+            "combat should be simulated",
+        );
         assert!(g.step >= TurnStep::CombatDamage, "advanced to combat damage, got {:?}", g.step);
         assert_eq!(g.players[1].life, life_before - 2, "the bear connected for 2");
     }
@@ -9140,14 +9377,26 @@ mod tests {
     fn simulate_through_combat_bails_without_attackers() {
         let mut g = two_player_game();
         let mut fuel = 200u32;
-        assert!(!simulate_through_combat(&mut g, &mut fuel), "no creatures, no combat");
+        assert_eq!(
+            simulate_through_combat(&mut g, &mut fuel),
+            CombatSim::Skipped,
+            "no creatures, no combat",
+        );
         assert_eq!(fuel, 200, "bailing must not burn fuel");
         // A summoning-sick creature can't attack, so still nothing to see.
         g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        assert!(!simulate_through_combat(&mut g, &mut fuel), "sick creature can't attack");
+        assert_eq!(
+            simulate_through_combat(&mut g, &mut fuel),
+            CombatSim::Skipped,
+            "sick creature can't attack",
+        );
         g.step = TurnStep::PostCombatMain;
         g.clear_sickness(g.battlefield[0].id);
-        assert!(!simulate_through_combat(&mut g, &mut fuel), "combat is already over");
+        assert_eq!(
+            simulate_through_combat(&mut g, &mut fuel),
+            CombatSim::Skipped,
+            "combat is already over",
+        );
     }
 
     /// The payoff. A creature that is *forced* to attack into a blocker
@@ -9169,7 +9418,7 @@ mod tests {
         let snapshot = eval_material(&g, 0, &w);
         let mut sim = g.clone();
         let mut fuel = 200u32;
-        assert!(simulate_through_combat(&mut sim, &mut fuel));
+        assert_eq!(simulate_through_combat(&mut sim, &mut fuel), CombatSim::Completed);
         assert!(sim.battlefield_find(doomed).is_none(), "the forced attacker died");
         assert!(
             eval_material(&sim, 0, &w) < snapshot,
