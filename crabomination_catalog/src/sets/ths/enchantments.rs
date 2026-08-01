@@ -669,6 +669,7 @@ pub fn athreos_god_of_passage() -> CardDefinition {
                         Selector::TriggerSource,
                     ))),
                 }),
+                if_paid: None,
             },
         }],
         ..god2(

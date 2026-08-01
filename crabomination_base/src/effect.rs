@@ -5708,6 +5708,10 @@ pub enum Effect {
         who: PlayerRef,
         cost: crate::card::WardCost,
         then: Box<Effect>,
+        /// The mirror branch — "if any player pays {2}, discard three cards"
+        /// (Rhystic Scrying). Runs only when the tax was actually paid.
+        #[serde(default)]
+        if_paid: Option<Box<Effect>>,
     },
     /// Copy target spell/ability `count` times.
     CopySpell    { what: Selector, count: Value },

@@ -1807,6 +1807,7 @@ pub fn aura_flux() -> CardDefinition {
                         who: PlayerRef::You,
                         cost: crate::card::WardCost::generic(2),
                         then: Box::new(Effect::SacrificeSource),
+                        if_paid: None,
                     },
                 }),
             },

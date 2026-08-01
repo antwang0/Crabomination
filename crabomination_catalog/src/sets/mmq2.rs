@@ -439,6 +439,7 @@ fn rishadan(
                     count: Value::ONE,
                     filter: R::Permanent,
                 }),
+                if_paid: None,
             }),
         })],
         ..creature(name, c, types, p, t)

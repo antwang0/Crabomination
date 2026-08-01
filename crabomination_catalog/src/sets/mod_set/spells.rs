@@ -357,6 +357,7 @@ pub fn rhystic_study() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(1),
                 }),
+                if_paid: None,
             },
         }],
         ..Default::default()
@@ -390,6 +391,7 @@ pub fn mystic_remora() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(1),
                 }),
+                if_paid: None,
             },
         }],
         ..Default::default()
@@ -414,6 +416,7 @@ pub fn smothering_tithe() -> CardDefinition {
                     count: Value::Const(1),
                     definition: crate::game::effects::treasure_token(),
                 }),
+                if_paid: None,
             },
         }],
         ..Default::default()

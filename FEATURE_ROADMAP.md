@@ -1721,6 +1721,29 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   live, so `Untapped` works); and the CR 502.1 fix that only a permanent
   printing "you may choose not to untap this" holds itself tapped to keep a
   lock alive (Kill Switch untaps and releases).
+- **Cost / tax / floating-watcher primitives (modern_decks — Prophecy waves
+  1-3 + the STX/SOS approximation sweep):**
+  `CardDefinition.self_cost_reduction_if` (a general predicate-gated flat
+  discount — the whole Avatar cycle in one field);
+  `AlternativeCost.discard_filters` (CR 601.2b "discard a [filter] card
+  rather than pay this spell's mana cost", paid through the normal discard
+  funnel — Abolish, Foil, Flameshot, Outbreak, Snag);
+  `WardCost::GenericXFromCost` and `Effect::UnlessPlayerPays.if_paid` (the
+  Rhystic cycle's "{X}" toll and its mirror branch);
+  `Effect::TurnOffDamagePreventionThisTurn` + `CardInstance.damage_prevention_off_eot`
+  (the Glittering cycle's any-player escape hatch);
+  `Effect::EachPlayerSacrificesDownTo` (Keldon Firebombers);
+  `Keyword::{CantAttackIfDefenderHasUntappedLand, CantBlockIfYouHaveUntappedLand}`;
+  `Effect::GrantTriggeredAbilityThisTurnToMatching` +
+  `GameState.turn_granted_triggers` (CR 611.2 floating "this turn, whenever a
+  [filter] …" watchers that reach permanents entering later — Mage Hunters'
+  Onslaught); `SelectionRequirement::NotSacrificedThisResolution`; and
+  `Value::DistinctNamesControlledMatching` (generalizes the old
+  lands-only distinct-name count). Engine fixes: `Effect::NameCreatureType`
+  works for a resolving instant/sorcery, `Value::TotalCountersOn` shares
+  `CountersOn`'s LKI/zone fallback chain and counts keyword counters, and
+  `Keyword::CantBeBlockedIfDefenderControls` is mirrored into
+  `blocker_can_block_attacker`.
 
 ## Tier 1 — High-leverage engine primitives
 

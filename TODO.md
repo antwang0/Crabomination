@@ -25,8 +25,8 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (modern_decks — Prophecy)
 
-`set_gaps.py pcy` is at **134 → 98 → 68** across two waves (`sets::pcy{,2}`,
-tests in `classic_sets/pcy{,2}`). New primitives this run:
+`set_gaps.py pcy` is at **134 → 98 → 68 → 43** across three waves
+(`sets::pcy{,2,3}`, tests in `classic_sets/pcy{,2,3}`). New primitives this run:
 `CardDefinition.self_cost_reduction_if` (a general predicate-gated flat
 discount — the Avatar cycle), `AlternativeCost.discard_filters` (CR 601.2b
 "discard a [filter] card rather than pay this spell's mana cost" — Abolish,
@@ -46,9 +46,20 @@ Residuals in what shipped:
 - **Excise's tax is auto-declined by bots** (the `UnlessPlayerPays` policy),
   so the exile always happens under AutoDecider.
 
-Remaining PCY (68) is mostly the Rebel/Mercenary tutor chains, the rhystic
-"unless a player pays" cycle, and Dual Nature / Coffin Puppets / Celestial
-Convergence (each wants one primitive).
+Residuals in what wave 3 shipped:
+
+- **Every `UnlessPlayerPays` tax auto-declines under AutoDecider**, so bots
+  never buy off a Rhystic card. Engine-wide policy, not a card gap.
+- **`PlayerRef::EachOpponent` resolves to the first opponent**, so "any
+  player may pay" is exact heads-up only.
+- **Rhystic Cave's "activate only as an instant"** is dropped (a mana ability
+  has no timing gate to hang it on).
+- **Reveille Squad's untap is a `MayDo`**, so a headless seat declines it.
+
+Remaining PCY (43) is mostly the Rebel/Mercenary tutor chains plus Dual
+Nature / Coffin Puppets / Celestial Convergence / Hollow Warrior (each wants
+one primitive: token-lineage exile, an upkeep-only graveyard activation, an
+alternate win condition, and a tap-a-creature attack cost).
 
 ## Nemesis — closed
 

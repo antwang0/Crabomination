@@ -44,6 +44,7 @@ pub fn energy_flux() -> CardDefinition {
                         who: PlayerRef::You,
                         cost: WardCost::generic(2),
                         then: Box::new(Effect::SacrificeSource),
+                        if_paid: None,
                     },
                 }),
             },

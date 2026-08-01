@@ -717,6 +717,7 @@ pub fn blood_clock() -> CardDefinition {
                     ),
                     to: ZoneDest::Hand(PlayerRef::ActivePlayer),
                 }),
+                if_paid: None,
             },
         }],
         ..Default::default()

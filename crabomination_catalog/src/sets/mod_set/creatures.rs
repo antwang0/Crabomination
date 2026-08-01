@@ -9349,6 +9349,7 @@ pub fn esper_sentinel() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::Const(1),
                 }),
+                if_paid: None,
             },
         }],
         ..Default::default()

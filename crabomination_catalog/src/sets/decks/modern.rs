@@ -23187,6 +23187,7 @@ fn bounce_unless_pay_one() -> Effect {
             what: target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
         }),
+        if_paid: None,
     }
 }
 
@@ -56588,6 +56589,7 @@ pub fn kataki_wars_wage() -> CardDefinition {
                         who: PlayerRef::You,
                         cost: WardCost::generic(1),
                         then: Box::new(Effect::SacrificeSource),
+                        if_paid: None,
                     },
                 }),
             },

@@ -1359,6 +1359,7 @@ pub fn aether_barrier() -> CardDefinition {
                     filter: R::Permanent,
                     count: Value::ONE,
                 }),
+                if_paid: None,
             },
         }],
         ..enchantment("Aether Barrier", cost(&[generic(2), u()]))

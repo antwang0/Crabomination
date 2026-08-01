@@ -34,6 +34,7 @@ pub fn spelltithe_enforcer() -> CardDefinition {
                     count: Value::ONE,
                     filter: R::Permanent,
                 }),
+                if_paid: None,
             },
         }],
         ..Default::default()

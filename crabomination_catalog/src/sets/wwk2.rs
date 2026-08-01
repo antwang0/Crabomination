@@ -991,6 +991,7 @@ pub fn kazuul_tyrant_of_the_cliffs() -> crate::card::CardDefinition {
                         ..Default::default()
                     },
                 }),
+                if_paid: None,
             },
         }],
         ..creature("Kazuul, Tyrant of the Cliffs", cost(&[generic(3), r(), r()]), vec![CreatureType::Ogre, CreatureType::Warrior], 5, 4)

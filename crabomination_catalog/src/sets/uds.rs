@@ -677,6 +677,7 @@ pub fn masticore() -> CardDefinition {
                 who: PlayerRef::You,
                 cost: WardCost::Discard(1),
                 then: Box::new(Effect::SacrificeSource),
+                if_paid: None,
             },
         }],
         activated_abilities: vec![
@@ -2096,6 +2097,7 @@ pub fn body_snatcher() -> CardDefinition {
                     who: PlayerRef::You,
                     cost: WardCost::DiscardMatching(Box::new(R::Creature), 1),
                     then: Box::new(Effect::Move { what: Selector::This, to: ZoneDest::Exile }),
+                    if_paid: None,
                 },
             },
             on_dies(Effect::MayExileSelfThen {

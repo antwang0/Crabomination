@@ -737,6 +737,7 @@ pub fn unnatural_hunger() -> CardDefinition {
                     to: Selector::Player(PlayerRef::ControllerOf(Box::new(host()))),
                     amount: Value::PowerOf(Box::new(host())),
                 }),
+                if_paid: None,
             },
         }],
         ..aura("Unnatural Hunger", cost(&[generic(3), b(), b()]))

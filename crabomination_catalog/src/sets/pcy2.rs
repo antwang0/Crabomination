@@ -388,6 +388,7 @@ pub fn nakaya_shade() -> CardDefinition {
                     toughness: Value::ONE,
                     duration: Duration::EndOfTurn,
                 }),
+                if_paid: None,
             },
             ..Default::default()
         }],
@@ -516,6 +517,7 @@ pub fn plague_fiend() -> CardDefinition {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 cost: WardCost::Mana(cost(&[generic(2)])),
                 then: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+                if_paid: None,
             },
         }],
         ..creature("Plague Fiend", cost(&[generic(1), b()]), vec![CreatureType::Insect], 1, 1)

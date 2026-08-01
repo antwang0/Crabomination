@@ -5429,6 +5429,7 @@ pub fn combustion_man() -> CardDefinition {
             then: Box::new(Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Permanent),
             }),
+            if_paid: None,
         })],
         ..Default::default()
     }

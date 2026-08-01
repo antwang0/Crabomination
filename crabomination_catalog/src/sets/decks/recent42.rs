@@ -168,6 +168,7 @@ pub fn the_tabernacle_at_pendrell_vale() -> CardDefinition {
                         then: Box::new(Effect::Destroy {
                             what: Selector::This,
                         }),
+                        if_paid: None,
                     },
                 }),
             },

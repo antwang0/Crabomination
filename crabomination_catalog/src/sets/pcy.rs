@@ -426,6 +426,7 @@ pub fn death_charmer() -> CardDefinition {
                     who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
                     amount: Value::Const(2),
                 }),
+                if_paid: None,
             },
         }],
         ..creature(
@@ -524,6 +525,7 @@ pub fn excise() -> CardDefinition {
                 what: target_filtered(R::Creature.and(R::IsAttacking)),
                 to: ZoneDest::Exile,
             }),
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -615,6 +617,7 @@ pub fn flay() -> CardDefinition {
                     amount: Value::ONE,
                     random: true,
                 }),
+                if_paid: None,
             },
         ]),
     )

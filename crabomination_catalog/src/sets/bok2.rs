@@ -453,6 +453,7 @@ pub fn chisei_heart_of_oceans() -> CardDefinition {
             who: PlayerRef::You,
             cost: WardCost::RemoveCounterFromPermanent,
             then: Box::new(Effect::SacrificePermanent { what: Selector::This }),
+            if_paid: None,
         })],
         ..legend(
             "Chisei, Heart of Oceans",
@@ -477,6 +478,7 @@ pub fn ogre_marauder() -> CardDefinition {
                     keyword: Keyword::Unblockable,
                     duration: Duration::EndOfTurn,
                 }),
+                if_paid: None,
             },
         )],
         ..creature(

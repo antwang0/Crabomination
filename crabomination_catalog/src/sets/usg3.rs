@@ -252,6 +252,7 @@ pub fn veiled_apparition() -> CardDefinition {
                         who: PlayerRef::You,
                         cost: WardCost::Mana(cost(&[generic(1), u()])),
                         then: Box::new(Effect::SacrificeSource),
+                        if_paid: None,
                     })),
                     duration: Duration::Permanent,
                 },
@@ -549,6 +550,7 @@ pub fn power_taint() -> CardDefinition {
                     )))),
                     amount: Value::Const(2),
                 }),
+                if_paid: None,
             },
         }],
         ..Default::default()

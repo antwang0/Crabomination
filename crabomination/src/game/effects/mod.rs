@@ -14325,7 +14325,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::UnlessPlayerPays { who, cost, then } => {
+            Effect::UnlessPlayerPays { who, cost, then, if_paid } => {
                 // Rhystic-tax rider: resolve the taxed player, ask them yes/no
                 // whether to pay `cost`, and resolve `then` if they don't (or
                 // can't). `then` runs in this same context, so its
@@ -14432,7 +14432,11 @@ impl GameState {
                         // tax riders; treat as unpaid so the effect runs.
                         _ => false,
                     };
-                if !paid {
+                if paid {
+                    if let Some(e) = if_paid {
+                        self.run_effect(e, ctx, events)?;
+                    }
+                } else {
                     self.run_effect(then, ctx, events)?;
                 }
                 Ok(())

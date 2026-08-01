@@ -80,6 +80,7 @@ fn upkeep_sacrifice_unless_pay(c: crate::mana::ManaCost) -> TriggeredAbility {
             who: PlayerRef::You,
             cost: WardCost::Mana(c),
             then: Box::new(Effect::SacrificeSource),
+            if_paid: None,
         },
     }
 }
@@ -786,6 +787,7 @@ pub fn endless_wurm() -> CardDefinition {
                 who: PlayerRef::You,
                 cost: WardCost::SacrificeMatching(Box::new(R::Enchantment)),
                 then: Box::new(Effect::SacrificeSource),
+                if_paid: None,
             },
         }],
         ..creature("Endless Wurm", cost(&[generic(3), g(), g()]), vec![CreatureType::Wurm], 9, 9)
