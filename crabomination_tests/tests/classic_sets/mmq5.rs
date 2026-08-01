@@ -813,3 +813,53 @@ fn ley_line_grows_a_creature_each_upkeep() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
 }
+
+/// Story Circle buys off damage from the named colour.
+#[test]
+fn story_circle_shields_the_named_color() {
+    let mut g = two_player_game();
+    let circle = g.add_card_to_battlefield(0, catalog::story_circle());
+    script(&mut g, vec![DecisionAnswer::Color(Color::Red)]);
+    g.fire_self_etb_triggers(circle, 0);
+    drain_stack(&mut g);
+    // The shield names a source, so the Bolt has to be on the stack first.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt()); // red
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: circle,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "red damage soaked");
+}
+
+/// Chameleon Spirit sizes to the named colour across the table.
+#[test]
+fn chameleon_spirit_counts_opposing_permanents_of_the_color() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // yours — no count
+    let spirit = g.add_card_to_battlefield(0, catalog::chameleon_spirit());
+    script(&mut g, vec![DecisionAnswer::Color(Color::Green)]);
+    g.fire_self_etb_triggers(spirit, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(spirit).unwrap().power, 1);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(spirit).unwrap().power, 2);
+}

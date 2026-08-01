@@ -3064,6 +3064,11 @@ impl GameState {
                                     && c.definition.name == card.definition.name
                             })
                     }),
+                    // Story Circle — "a source of the chosen colour".
+                    R::HasChosenColorOfSource => source
+                        .and_then(|sid| self.find_card_anywhere(sid))
+                        .and_then(|src| src.chosen_color)
+                        .is_some_and(|color| card.definition.printed_colors().contains(&color)),
                     // Mourner's Shield — "shares a color with the exiled card".
                     R::SharesColorWithExiledBySource => source.is_some_and(|sid| {
                         self.exile
@@ -3275,7 +3280,8 @@ impl GameState {
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
             // Need the ability's source or the live trigger context, which
             // only the static walker carries.
-            R::SharesColorWithExiledBySource
+            R::HasChosenColorOfSource
+            | R::SharesColorWithExiledBySource
             | R::SameNameAsExiledWithSource
             | R::SharesColorWithAttachedHost
             | R::SharesCreatureTypeWithAttachedHost => false,

@@ -1654,6 +1654,10 @@ pub enum SelectionRequirement {
     /// (floating) mana — Glissa Sunseeker.
     ManaValueEqualsYourUnspentMana,
     IsBasicLand,
+    /// The candidate is (one of) the colour the source permanent chose as it
+    /// entered (`CardInstance.chosen_color` — Story Circle's Circle-of-
+    /// Protection shield). False when the source never chose one.
+    HasChosenColorOfSource,
     /// CR 702.113 — the card has an Awaken alternative cost (Halimar Tidecaller).
     HasAwaken,
     /// True for a land that is **not** basic (CR 305.6) — i.e. a land card
@@ -3611,6 +3615,9 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of creatures the controller
     /// controls (counting the source itself). Burrowguard Mentor (base 0/0).
     CreaturesControlled { base: i32 },
+    /// `*`/`*` equal to the number of permanents of the source's ETB-chosen
+    /// colour that its controller's opponents control (Chameleon Spirit).
+    PermanentsOfChosenColorOpponentsControl,
     /// Power = `base_p` + the number of creatures the controller controls;
     /// toughness is the fixed `base_t` (`*`/N creatures — Suki, Kyoshi
     /// Warrior `*`/4). The power-only sibling of `CreaturesControlled`.

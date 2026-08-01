@@ -7567,6 +7567,20 @@ impl GameState {
                     }).count() as i32;
                     (base + n, base + n)
                 }
+                crate::card::DynamicPt::PermanentsOfChosenColorOpponentsControl => {
+                    let n = match card.chosen_color {
+                        Some(color) => self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller != card.controller
+                                    && c.definition.printed_colors().contains(&color)
+                            })
+                            .count() as i32,
+                        None => 0,
+                    };
+                    (n, n)
+                }
                 crate::card::DynamicPt::CreaturesControlledPower { base_p, base_t } => {
                     let n = self.battlefield.iter().filter(|c| {
                         c.controller == card.controller && c.definition.is_creature()

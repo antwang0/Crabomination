@@ -23,49 +23,59 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
-## Noticed this run (modern_decks — Mercadian Masques opening)
+## Noticed this run (modern_decks — Mercadian Masques, wave 5)
 
-`set_gaps.py mmq` is down from **283 to 65** (`sets::mmq` … `sets::mmq4`,
-tests in `classic_sets/mmq{,2,3,4}`). Three MMQ cards are deliberately *not*
-shipped because each wants one primitive; implement the primitive, then the
-card:
+`set_gaps.py mmq` is down from **283 → 65 → 18** (`sets::mmq` … `sets::mmq5`,
+tests in `classic_sets/mmq{,2,3,4,5}`). The three cards the previous run
+deferred (Statecraft, Insubordination, Barbed Wire) are shipped, each with the
+primitive it wanted.
 
-- **Statecraft** — wants `StaticEffect::PreventAllCombatDamageToAndFromYourCreatures`
-  (a controller-scoped both-directions combat seal). The per-permanent
-  `PreventAllDamageToAndFromEnchanted` shape is the model; it needs a
-  controller-scoped variant read at both combat funnels.
-- **Insubordination** — wants `Predicate::AttachedHostAttackedThisTurn` (and an
-  "active player controls the attached host" gate) for its end-step punisher.
-- **Barbed Wire** — wants "prevent the next N damage that would be dealt *by* a
-  named source this turn". `PreventNextDamageFromChosenSource` is the
-  receive-side shield; the deal-side equivalent doesn't exist.
+Residuals in what shipped this wave:
 
-Residuals in what did ship:
+- **Volcanic Wind's X is read at resolution**, not "as you cast this spell", so
+  a creature that dies in response shrinks the total.
+- **Mercadia's Downfall reads `ControlledByOpponent`** rather than "defending
+  player" — exact heads-up, wrong in multiplayer.
+- **Ley Line's target is picked by the enchantment's controller.**
+  `Effect::MayDoBy` routes the *may* and the counter to the active player, but
+  the trigger's target slot is still filled at push time by the trigger's own
+  controller.
+- **`Selector::ChosenCardInHand` auto-picks the first match** (Assembly Hall's
+  reveal): selector resolution has no decision hook.
+- **Unnatural Hunger's sacrifice is `WardCost::SacrificeMatching`**, so the
+  bite fires only when the payer declines *or* can't pay — the printed "of
+  their choice" pick is the auto-picker's.
+- **Toymaker / Karn's Touch animate at printed mana value**; a cost-changing
+  effect on the artifact wouldn't move the body.
 
-- **Wave of Reckoning is a sequential `ForEach`**, not simultaneous. No
-  rules-visible difference today (SBAs don't run mid-resolution and nothing
-  changes power between iterations), but a power-changing replacement would
-  expose it.
-- **`Effect::EachPlayerMayPutPermanentFromHand` still auto-picks.** The
-  `others_only` flag (Hunted Wumpus, Charmed Griffin) is new; the "may" is
-  still the highest-mana auto-pick for every seat, `wants_ui` included.
-- **The Rebel/Mercenary tutor filters read `PermanentCard + HasCreatureType`.**
-  Exact for every printed Rebel and Mercenary (all are creatures), but a
-  noncreature permanent card with the subtype wouldn't be found.
-- **`Effect::Search` auto-declines under AutoDecider**, so every tutor-chain
-  test scripts its pick. That's a bot-policy gap, not a card gap.
+Remaining MMQ (18), grouped by the primitive each wants:
 
-Worth doing next, in rough order of leverage:
+- **Chooser routing:** Charm Peddler, Cho-Arrim Alchemist, General's Regalia —
+  "the next time a source of your choice would deal damage to *target*"
+  (`PreventNextDamageFromChosenSource` is controller-scoped) and the
+  redirect-to-a-creature variant.
+- **Name / type locks:** Conspiracy (your creatures are the chosen type),
+  Cornered Market (can't cast a spell sharing a nontoken permanent's name).
+- **Cost shapes:** Bargaining Table (a `Value`-scaled generic activation cost),
+  Food Chain (exile-a-creature-you-control as a cost + a mana value read off
+  the exiled card), Caller of the Hunt (choose a creature type as an
+  additional cast cost, then a board-wide CDA on it).
+- **Grant-an-activated-ability-this-turn:** Brawl, Shoving Match.
+- **Misc:** Blood Oath (choose a card type, then damage per match in a revealed
+  hand), Crooked Scales (a repeat-until-you-stop coin-flip loop), Game Preserve
+  (each player reveals top; all enter only if *every* one is a creature),
+  Kyren Archive + Mercadian Lift (linked-exile / counter-scaled deploy),
+  Spiritual Focus ("a spell or ability an opponent controls causes you to
+  discard" has no event), Thieves' Auction (a repeated player-choice draft).
 
-- **A real prompt for `EachPlayerMayPutPermanentFromHand`** — it's the last
+Carried over from the previous wave, still open:
+
+- **A real prompt for `EachPlayerMayPutPermanentFromHand`** — the last
   auto-picked "may" on a Show and Tell-shaped effect.
-- **The rest of MMQ** (65, mostly rares): Cowardice and Crag Saurian want
-  targeting/damage-event replacements; Thieves' Auction wants a repeated
-  player-choice draft; Conspiracy and Cornered Market want name/type-lock
-  statics; the "pay {1} for each card in your hand" cycle (Megatherium,
-  Extravagant Spirit) wants a `Value`-scaled `SacrificeSourceUnlessPay`; and
-  Orim's Cure / Ramosian Rally want a *tap a creature* alternative cost
-  (`AlternativeCost` has sacrifice/return/exile/life, not tap).
+- **Wave of Reckoning is a sequential `ForEach`**, not simultaneous.
+- **The Rebel/Mercenary tutor filters read `PermanentCard + HasCreatureType`.**
+- **`Effect::Search` auto-declines under AutoDecider** (bot policy, not a card
+  gap), so every tutor-chain test scripts its pick.
 
 ## Noticed this run (modern_decks — Urza's Saga closure)
 

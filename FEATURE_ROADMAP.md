@@ -1513,6 +1513,32 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `poison_loss_threshold`, fifteen for a 2HG team) — both surfaced through
   `PlayerView` alongside the shared life pool, which the view had been reading
   past. `assign_teams` preserves the shared pool on a re-partition.
+- **Combat / prevention / cost primitives (modern_decks — MMQ wave 5):**
+  `StaticEffect::PreventAllCombatDamageToAndFromYourCreatures` (Statecraft — a
+  controller-scoped both-directions combat seal read at both combat funnels)
+  and `Effect::PreventNextDamageFromSourceThisTurn` (Barbed Wire — the
+  deal-side mirror of `PreventNextDamage`, a floating shield keyed to the
+  source). `AlternativeCost` gains `tap_creatures` (Orim's Cure, Ramosian
+  Rally) and `opponent_gains_life` (Invigorate), both surfaced in the cast
+  prompt and gated in the hand view. `Effect::SacrificeSourceUnlessPayValue`
+  (Megatherium — the `Value`-scaled sibling of `SacrificeSourceUnlessPay`),
+  `Effect::{AddAttackTaxThisTurn, AddBlockTaxThisTurn}` (War Tax / War
+  Cadence — symmetric turn-scoped tolls charged to the *acting* player,
+  surfaced in `ClientView` and the HUD's combat chip),
+  `StaticEffect::PlayerDamageBecomesExileFromLibrary` (CR 614.1b — Crumbling
+  Sanctuary), `Predicate::AllMatchingShareAColor` +
+  `AnthemForFilterIf.all_players` (Common Cause),
+  `Selector::ChosenCardInHand` (Assembly Hall),
+  `Effect::{ShuffleAnyNumberFromHandThenDraw, EachPlayerRevealTopNKeepLandsExileRest}`
+  (Credit Voucher, Clear the Land), `Effect::MayDoBy` ("that player may …",
+  routed to another seat — Ley Line),
+  `DynamicPt::PermanentsOfChosenColorOpponentsControl` (Chameleon Spirit) and
+  `SelectionRequirement::HasChosenColorOfSource` (Story Circle). Correctness:
+  a triggered ability now carries the seat that **caused** its firing event
+  (`TriggerCandidate`/`PendingTriggerPush.actor`, stamped from `event_actor`,
+  read through `PlayerRef::TriggerEventPlayer`), so "that spell or ability's
+  controller" on a `BecameTarget` trigger resolves to the caster instead of the
+  targeted permanent's controller (Lava Runner).
 - **Aura / counter / cost primitives (modern_decks — MMQ):** directional aura
   damage seals (`PreventAllDamageTo`/`ByEnchanted`, splitting Heart of Light's
   both-ways static); `EquipScale.count_all_controllers` + `.exclude_source`

@@ -948,3 +948,40 @@ pub fn ley_line() -> CardDefinition {
         ..enchantment("Ley Line", cost(&[generic(3), g()]))
     }
 }
+
+/// Story Circle — {1}{W}{W}. Names a colour and buys off its damage all day.
+pub fn story_circle() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseColorForSelf,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            effect: Effect::PreventNextDamageFromChosenSource {
+                filter: R::HasChosenColorOfSource,
+                reflect: false,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Story Circle", cost(&[generic(1), w(), w()]))
+    }
+}
+
+/// Chameleon Spirit — {3}{U} `*`/`*` sized by a colour your opponents play.
+pub fn chameleon_spirit() -> CardDefinition {
+    CardDefinition {
+        dynamic_pt: Some(DynamicPt::PermanentsOfChosenColorOpponentsControl),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseColorForSelf,
+        }],
+        ..creature(
+            "Chameleon Spirit",
+            cost(&[generic(3), u()]),
+            vec![CreatureType::Illusion, CreatureType::Spirit],
+            0,
+            0,
+        )
+    }
+}

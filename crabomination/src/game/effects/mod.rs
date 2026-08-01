@@ -24856,6 +24856,21 @@ impl GameState {
     ) -> Option<CardId> {
         use crate::decision::{Decision, DecisionAnswer};
         let p = ctx.controller;
+        // Story Circle names its colour as it enters; concretize the filter
+        // here because the candidate walk is source-blind.
+        let chosen = ctx
+            .source
+            .and_then(|sid| self.find_card_anywhere(sid))
+            .and_then(|src| src.chosen_color);
+        let filter = &match (filter, chosen) {
+            (crate::card::SelectionRequirement::HasChosenColorOfSource, Some(c)) => {
+                crate::card::SelectionRequirement::HasColor(c)
+            }
+            (crate::card::SelectionRequirement::HasChosenColorOfSource, None) => {
+                return None;
+            }
+            (f, _) => f.clone(),
+        };
         let mut candidates: Vec<(CardId, String)> = self
             .stack
             .iter()
