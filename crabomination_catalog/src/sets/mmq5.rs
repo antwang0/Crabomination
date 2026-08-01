@@ -1011,3 +1011,52 @@ pub fn cornered_market() -> CardDefinition {
         ..enchantment("Cornered Market", cost(&[generic(2), w()]))
     }
 }
+
+/// Game Preserve — {2}{G}. If everyone's top card is a creature, they all
+/// walk in.
+pub fn game_preserve() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::EachPlayerRevealTopAllEnterIfAllCreatures,
+        }],
+        ..enchantment("Game Preserve", cost(&[generic(2), g()]))
+    }
+}
+
+/// Brawl — {3}{R}{R}. Every creature can shoot another for its power.
+pub fn brawl() -> CardDefinition {
+    instant(
+        "Brawl",
+        cost(&[generic(3), r(), r()]),
+        Effect::GainActivatedAbility {
+            what: Selector::EachPermanent(R::Creature),
+            ability: Box::new(ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::DealDamage {
+                    to: target_filtered(R::Creature),
+                    amount: Value::PowerOf(Box::new(Selector::This)),
+                },
+                ..Default::default()
+            }),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Shoving Match — {2}{U}. Every creature turns into a tapper for a turn.
+pub fn shoving_match() -> CardDefinition {
+    instant(
+        "Shoving Match",
+        cost(&[generic(2), u()]),
+        Effect::GainActivatedAbility {
+            what: Selector::EachPermanent(R::Creature),
+            ability: Box::new(ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Tap { what: target_filtered(R::Creature) },
+                ..Default::default()
+            }),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}

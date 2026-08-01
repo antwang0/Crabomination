@@ -25,7 +25,7 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (modern_decks — Mercadian Masques, wave 5)
 
-`set_gaps.py mmq` is down from **283 → 65 → 16** (`sets::mmq` … `sets::mmq5`,
+`set_gaps.py mmq` is down from **283 → 65 → 13** (`sets::mmq` … `sets::mmq5`,
 tests in `classic_sets/mmq{,2,3,4,5}`). The three cards the previous run
 deferred (Statecraft, Insubordination, Barbed Wire) are shipped, each with the
 primitive it wanted.
@@ -50,7 +50,7 @@ Residuals in what shipped this wave:
 - **Conspiracy drops its off-battlefield half** — creature *spells* you control
   and creature cards you own outside the battlefield keep their printed types.
 
-Remaining MMQ (16), grouped by the primitive each wants:
+Remaining MMQ (13), grouped by the primitive each wants:
 
 - **Chooser routing:** Charm Peddler, Cho-Arrim Alchemist, General's Regalia —
   "the next time a source of your choice would deal damage to *target*"
@@ -60,10 +60,12 @@ Remaining MMQ (16), grouped by the primitive each wants:
   Food Chain (exile-a-creature-you-control as a cost + a mana value read off
   the exiled card), Caller of the Hunt (choose a creature type as an
   additional cast cost, then a board-wide CDA on it).
-- **Grant-an-activated-ability-this-turn:** Brawl, Shoving Match.
+- **Damage-event binding:** Charisma — "whenever enchanted creature deals
+  damage to a creature" needs the *damaged* creature bound as the trigger
+  subject; `EventKind::DealtDamage` on `SelfSource` is the receive side
+  (Enrage), not the deal side.
 - **Misc:** Blood Oath (choose a card type, then damage per match in a revealed
-  hand), Crooked Scales (a repeat-until-you-stop coin-flip loop), Game Preserve
-  (each player reveals top; all enter only if *every* one is a creature),
+  hand), Crooked Scales (a repeat-until-you-stop coin-flip loop),
   Kyren Archive + Mercadian Lift (linked-exile / counter-scaled deploy),
   Spiritual Focus ("a spell or ability an opponent controls causes you to
   discard" has no event), Thieves' Auction (a repeated player-choice draft).

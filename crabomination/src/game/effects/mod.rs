@@ -21763,6 +21763,36 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::EachPlayerRevealTopAllEnterIfAllCreatures => {
+                // Game Preserve — all-or-nothing across the table.
+                let tops: Vec<(usize, CardId)> = (0..self.players.len())
+                    .filter_map(|p| self.players[p].library.last().map(|c| (p, c.id)))
+                    .collect();
+                let all_creatures = !tops.is_empty()
+                    && tops.iter().all(|(p, id)| {
+                        self.players[*p]
+                            .library
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .is_some_and(|c| c.definition.is_creature())
+                    });
+                if !all_creatures {
+                    return Ok(());
+                }
+                for (p, id) in tops {
+                    self.move_card_to(
+                        id,
+                        &crate::effect::ZoneDest::Battlefield {
+                            controller: PlayerRef::Seat(p),
+                            tapped: false,
+                        },
+                        ctx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
             Effect::EachPlayerRevealTopNKeepLandsExileRest { count } => {
                 // Clear the Land — lands enter tapped, everything else is exiled.
                 let n = self.evaluate_value(count, ctx).max(0) as usize;

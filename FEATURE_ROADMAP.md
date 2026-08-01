@@ -1537,7 +1537,10 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   `StaticEffect::CreaturesYouControlAreChosenType` (Conspiracy — the
   creature-subtype sibling of Realmwright's land-type replacement) and
   `StaticEffect::NoSpellOrNonbasicLandSharingAPermanentName` (Cornered Market,
-  gated at both the cast and land-play funnels). Correctness:
+  gated at both the cast and land-play funnels) and
+  `Effect::EachPlayerRevealTopAllEnterIfAllCreatures` (Game Preserve). Brawl
+  and Shoving Match ride the existing `Effect::GainActivatedAbility` over
+  `EachPermanent(Creature)`. Correctness:
   a triggered ability now carries the seat that **caused** its firing event
   (`TriggerCandidate`/`PendingTriggerPush.actor`, stamped from `event_actor`,
   read through `PlayerRef::TriggerEventPlayer`), so "that spell or ability's

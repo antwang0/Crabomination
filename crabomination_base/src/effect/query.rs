@@ -241,6 +241,7 @@ impl Effect {
             | Effect::AddBlockTaxThisTurn { .. }
             | Effect::ShuffleAnyNumberFromHandThenDraw { .. }
             | Effect::EachPlayerRevealTopNKeepLandsExileRest { .. }
+            | Effect::EachPlayerRevealTopAllEnterIfAllCreatures
             | Effect::GrantExtraLoyaltyActivations
             | Effect::GuessManaValueAboveElseCastFree { .. }
             | Effect::EachPlayerSplitsAndSacrificesRandomPile { .. }

@@ -919,3 +919,67 @@ fn cornered_market_blocks_a_duplicate_name() {
     })
     .expect("fresh name is fine");
 }
+
+/// Game Preserve deploys everyone's top card only when they're all creatures.
+#[test]
+fn game_preserve_is_all_or_nothing() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::game_preserve());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let land = g.add_card_to_library(1, catalog::forest());
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.players[1].library.iter().any(|c| c.id == land), "a land blocks the whole thing");
+
+    g.players[1].library.pop();
+    let theirs = g.add_card_to_library(1, catalog::grizzly_bears());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_some());
+}
+
+/// Brawl turns every creature into a machine gun for the turn.
+#[test]
+fn brawl_lets_creatures_shoot_each_other() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::colossal_dreadmaw()); // 6/6
+    g.clear_sickness(mine);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let brawl = g.add_card_to_hand(0, catalog::brawl());
+    cast(&mut g, 0, brawl, None);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mine,
+        ability_index: 0,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("granted ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+}
+
+/// Shoving Match turns every creature into a tapper for the turn.
+#[test]
+fn shoving_match_lets_creatures_tap_each_other() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mine);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::shoving_match());
+    cast(&mut g, 0, spell, None);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mine,
+        ability_index: 0,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("granted ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).unwrap().tapped);
+}

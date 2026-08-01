@@ -7118,6 +7118,12 @@ pub enum Effect {
     /// via `Decision::ChooseCards`; AutoDecider shuffles none.
     ShuffleAnyNumberFromHandThenDraw { who: PlayerRef },
 
+    /// "Each player reveals the top card of their library. If all cards
+    /// revealed this way are creature cards, put those cards onto the
+    /// battlefield under their owners' control" (Game Preserve). Nothing moves
+    /// unless every revealed card is a creature.
+    EachPlayerRevealTopAllEnterIfAllCreatures,
+
     /// "Each player reveals the top `count` cards of their library, puts all
     /// land cards revealed this way onto the battlefield tapped, and exiles the
     /// rest" (Clear the Land).
