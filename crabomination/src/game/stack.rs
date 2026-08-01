@@ -775,6 +775,7 @@ impl GameState {
             if captured_target.is_some() {
                 self.push_pending_trigger(
                     PendingTriggerPush {
+                    actor: None,
                         source,
                         controller,
                         effect,
@@ -788,6 +789,7 @@ impl GameState {
                 continue;
             }
             queue.push(PendingTriggerPush {
+                    actor: None,
                 source,
                 controller,
                 effect,
@@ -800,6 +802,7 @@ impl GameState {
         for (source, effect, controller, intervening_if) in triggers_with_filter {
             let mode = self.pick_trigger_mode(&effect, source, controller);
             queue.push(PendingTriggerPush {
+                    actor: None,
                 source,
                 controller,
                 effect,
@@ -877,6 +880,7 @@ impl GameState {
         for effect in effects {
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             queue.push(PendingTriggerPush {
+                    actor: None,
                 source: card_id,
                 controller,
                 effect,
@@ -927,6 +931,7 @@ impl GameState {
         for (_, effect) in chapters {
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             queue.push(PendingTriggerPush {
+                    actor: None,
                 source: card_id,
                 controller,
                 effect,
@@ -2918,6 +2923,8 @@ impl GameState {
         // are "this turn" effects; they expire at cleanup too.
         self.prevention_shields.clear();
         self.damage_cant_be_prevented_this_turn = false;
+        self.attack_tax_this_turn = 0;
+        self.block_tax_this_turn = 0;
         self.damage_redirect_this_turn.clear();
         self.combat_damage_redirect_this_turn.clear();
         self.doubled_damage_sources_this_turn.clear();
@@ -3260,6 +3267,7 @@ impl GameState {
             if self.steal_penalty_armed.insert(id) {
                 self.push_pending_trigger(
                     crate::game::types::PendingTriggerPush {
+                    actor: None,
                         source: id,
                         controller: thief,
                         effect: Effect::Seq(vec![
@@ -3338,6 +3346,7 @@ impl GameState {
             } else if self.no_other_sacrifice_armed.insert(id) {
                 self.push_pending_trigger(
                     crate::game::types::PendingTriggerPush {
+                    actor: None,
                         source: id,
                         controller: seat,
                         effect: Effect::SacrificeSource,

@@ -237,6 +237,10 @@ impl Effect {
             | Effect::SearchAuraAttachToSource
             | Effect::PreventNextDamageFromSourceThisTurn { .. }
             | Effect::SacrificeSourceUnlessPayValue { .. }
+            | Effect::AddAttackTaxThisTurn { .. }
+            | Effect::AddBlockTaxThisTurn { .. }
+            | Effect::ShuffleAnyNumberFromHandThenDraw { .. }
+            | Effect::EachPlayerRevealTopNKeepLandsExileRest { .. }
             | Effect::GrantExtraLoyaltyActivations
             | Effect::GuessManaValueAboveElseCastFree { .. }
             | Effect::EachPlayerSplitsAndSacrificesRandomPile { .. }

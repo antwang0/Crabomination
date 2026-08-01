@@ -891,6 +891,12 @@ pub struct TriggerCandidate {
     /// additional time" doubler.
     #[serde(default)]
     pub triggered_by_attack: bool,
+    /// The seat that *caused* the firing event (`event_actor`) — the caster
+    /// for a `BecameTarget`, the sacrificing player for a sacrifice, and so
+    /// on. Read back at resolution through `PlayerRef::TriggerEventPlayer`
+    /// ("that spell or ability's controller" — Lava Runner).
+    #[serde(default)]
+    pub actor: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -913,6 +919,9 @@ pub struct PendingTriggerPush {
     /// triggers whose filter is intended only as a trigger-time gate.
     #[serde(default)]
     pub intervening_if: Option<crate::card::Predicate>,
+    /// The seat that caused the firing event — see `TriggerCandidate.actor`.
+    #[serde(default)]
+    pub actor: Option<usize>,
 }
 
 /// Which "another permanent" activated-ability cost a suspended

@@ -1122,6 +1122,15 @@ pub struct GameState {
     /// Cleared at cleanup.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
+    /// CR 508.1/509.1d — turn-scoped combat taxes charged to the *acting*
+    /// player, {N} per attacker / per blocker they declare (War Tax, War
+    /// Cadence). Symmetric across seats and cleared at cleanup; the
+    /// `AttackTaxToController` / `BlockTaxToController` statics are the
+    /// permanent-scoped siblings.
+    #[serde(default)]
+    pub attack_tax_this_turn: u32,
+    #[serde(default)]
+    pub block_tax_this_turn: u32,
     /// CR 614.9 — one-shot "all damage to you and your permanents this turn is
     /// dealt to the chosen permanent instead" (Gideon's Sacrifice). Each entry
     /// is `(protected_player, redirect_target)`; consulted in
@@ -1608,6 +1617,8 @@ impl Clone for GameState {
             damage_locked_until_turn_of: self.damage_locked_until_turn_of.clone(),
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
+            attack_tax_this_turn: self.attack_tax_this_turn,
+            block_tax_this_turn: self.block_tax_this_turn,
             damage_redirect_this_turn: self.damage_redirect_this_turn.clone(),
             combat_damage_redirect_this_turn: self.combat_damage_redirect_this_turn.clone(),
             damaged_creatures_die_this_turn: self.damaged_creatures_die_this_turn,
@@ -1835,6 +1846,8 @@ impl GameState {
             damage_locked_until_turn_of: Vec::new(),
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
+            attack_tax_this_turn: 0,
+            block_tax_this_turn: 0,
             damage_redirect_this_turn: Vec::new(),
             combat_damage_redirect_this_turn: Vec::new(),
             damaged_creatures_die_this_turn: false,
@@ -3399,6 +3412,7 @@ impl GameState {
             {
                 self.push_pending_trigger(
                     PendingTriggerPush {
+                        actor: None,
                         source: id,
                         controller: active,
                         effect: Effect::CumulativeUpkeepPayOrSacrifice { cost: cost.clone() },
@@ -3539,6 +3553,7 @@ impl GameState {
             if self.players.get(active).is_some_and(|p| p.wants_ui) {
                 self.push_pending_trigger(
                     PendingTriggerPush {
+                        actor: None,
                         source: id,
                         controller: active,
                         effect: Effect::EchoPayOrSacrifice { mana_cost: cost },
@@ -12094,6 +12109,7 @@ impl GameState {
                                     | GameEvent::CreatureSacrificed { .. }
                             ),
                             triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
+                            actor: crate::game::effects::events::event_actor(self, ev),
                         });
                         if ta.event.once_per_turn && trig_idx < n_printed {
                             once_fired_this_batch.insert(once_key);
@@ -12164,6 +12180,7 @@ impl GameState {
                 for ev in events {
                     if crate::game::effects::event_matches_spec(self, ev, &ta.event, snap) {
                         candidates.push(TriggerCandidate {
+                            actor: None,
                             source: snap.id,
                             effect: ta.effect.clone(),
                             controller: snap.controller,
@@ -12194,6 +12211,7 @@ impl GameState {
                 for ev in events {
                     if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
                         candidates.push(TriggerCandidate {
+                            actor: None,
                             source: card.id,
                             effect: ta.effect.clone(),
                             controller: card.controller,
@@ -12263,6 +12281,7 @@ impl GameState {
                         }
                         if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
                             candidates.push(TriggerCandidate {
+                            actor: None,
                                 source: card.id,
                                 effect: ta.effect.clone(),
                                 controller: card.owner,
@@ -12301,6 +12320,7 @@ impl GameState {
                         }
                         if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
                             candidates.push(TriggerCandidate {
+                            actor: None,
                                 source: card.id,
                                 effect: ta.effect.clone(),
                                 controller: card.owner,
@@ -12338,6 +12358,7 @@ impl GameState {
                     for ev in events {
                         if crate::game::effects::emblem_event_matches(self, ev, &ta.event, seat_idx) {
                             candidates.push(TriggerCandidate {
+                            actor: None,
                                 source: CardId(0),
                                 effect: ta.effect.clone(),
                                 controller: seat_idx,
@@ -12414,6 +12435,7 @@ impl GameState {
                         .collect();
                     for pid in prowess_ids {
                         candidates.push(TriggerCandidate {
+                            actor: None,
                             source: pid,
                             effect: Effect::PumpPT {
                                 what: crate::effect::Selector::This,
@@ -12451,6 +12473,7 @@ impl GameState {
                             && self.effective_ring_bearer(seat) == Some(*attacker)
                         {
                             candidates.push(TriggerCandidate {
+                            actor: None,
                                 source: *attacker,
                                 effect: Effect::Seq(vec![
                                     Effect::Draw {
@@ -12482,6 +12505,7 @@ impl GameState {
                         {
                             *done = true;
                             candidates.push(TriggerCandidate {
+                            actor: None,
                                 source: *attacker,
                                 effect: Effect::SacrificeAtEndOfCombat {
                                     what: crate::effect::Selector::BlockingCreatures,
@@ -12585,6 +12609,7 @@ impl GameState {
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
         for candidate in candidates {
             let TriggerCandidate {
+                actor,
                 source,
                 effect,
                 controller,
@@ -12651,6 +12676,7 @@ impl GameState {
                         break;
                     }
                     queue.push(PendingTriggerPush {
+                        actor,
                         source,
                         controller,
                         effect: effect.clone(),
@@ -12694,6 +12720,7 @@ impl GameState {
                     + attack_extra;
                 for _ in 0..fires {
                     queue.push(PendingTriggerPush {
+                        actor,
                         source,
                         controller,
                         effect: effect.clone(),
@@ -12959,6 +12986,7 @@ impl GameState {
         target: Option<Target>,
     ) {
         let PendingTriggerPush {
+            actor,
             source,
             controller,
             effect,
@@ -13009,6 +13037,7 @@ impl GameState {
                 .mode(mode)
                 .trigger_source(subject)
                 .event_amount(event_amount)
+                .trigger_player(actor)
                 .intervening_if(intervening_if)
                 .build(),
         );

@@ -612,6 +612,8 @@ impl GameState {
             // Forbidding Spirit — a temporary Propaganda tax on the defender
             // that also protects their planeswalkers.
             total_tax += self.players[d].attack_tax_until_your_turn;
+            // War Tax — a symmetric per-attacker tax for the rest of the turn.
+            total_tax += self.attack_tax_this_turn;
             // Evaluate each tax `amount` with the defender as "you" (and the
             // tax permanent as source) so dynamic taxes — Sphere of Safety's
             // "number of enchantments you control" — count the defender's
@@ -1333,7 +1335,8 @@ impl GameState {
                     }
                 }
             }
-            sum
+            // War Cadence — a symmetric per-blocker tax for the rest of the turn.
+            sum + self.block_tax_this_turn
         };
         // The spend is deferred to after every block-legality check so a
         // rejected declaration never costs mana (CR 601.2h-style atomicity).

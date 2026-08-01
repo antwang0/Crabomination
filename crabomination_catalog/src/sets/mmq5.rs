@@ -8,7 +8,7 @@ use crate::card::{
 };
 use crate::effect::{Duration, Effect, PlayerRef, Selector, ZoneDest, shortcut::target_filtered};
 use crate::game::TurnStep;
-use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 
 fn creature(
     name: &'static str,
@@ -556,6 +556,297 @@ pub fn instigator() -> CardDefinition {
             vec![CreatureType::Human, CreatureType::Spellshaper],
             1,
             1,
+        )
+    }
+}
+
+/// War Tax — {2}{U}. Buy your opponents out of attacking for a turn.
+pub fn war_tax() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), u()]),
+            effect: Effect::AddAttackTaxThisTurn { amount: Value::XFromCost },
+            ..Default::default()
+        }],
+        ..enchantment("War Tax", cost(&[generic(2), u()]))
+    }
+}
+
+/// War Cadence — {2}{R}. The same toll, charged to blockers.
+pub fn war_cadence() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), r()]),
+            effect: Effect::AddBlockTaxThisTurn { amount: Value::XFromCost },
+            ..Default::default()
+        }],
+        ..enchantment("War Cadence", cost(&[generic(2), r()]))
+    }
+}
+
+/// Foster — {2}{G}{G}. Every creature death can dig you a replacement.
+pub fn foster() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {1} to dig for a creature card?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::RevealUntilFind {
+                    who: PlayerRef::You,
+                    find: R::Creature,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                    cap: Value::Const(99),
+                    life_per_revealed: 0,
+                    miss_dest: crate::effect::RevealMissDest::Graveyard,
+                }),
+                else_: None,
+            },
+        }],
+        ..enchantment("Foster", cost(&[generic(2), g(), g()]))
+    }
+}
+
+/// Horn of Plenty — {6}. Every spell can be turned into a card, for {1}.
+pub fn horn_of_plenty() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer),
+            effect: Effect::MayPay {
+                description: "Pay {1} to draw a card at the beginning of the next end step?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::DelayUntil {
+                    kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                    body: Box::new(Effect::Draw {
+                        who: Selector::Player(PlayerRef::Triggerer),
+                        amount: Value::ONE,
+                    }),
+                }),
+                else_: None,
+            },
+        }],
+        ..artifact("Horn of Plenty", cost(&[generic(6)]))
+    }
+}
+
+/// Monkey Cage — {5}. The next creature to enter pops it open.
+pub fn monkey_cage() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::SacrificeSource,
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    definition: crate::card::TokenDefinition {
+                        name: "Monkey".into(),
+                        power: 2,
+                        toughness: 2,
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Monkey],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            ]),
+        }],
+        ..artifact("Monkey Cage", cost(&[generic(5)]))
+    }
+}
+
+/// Credit Voucher — {2}. Trade any part of your hand in for fresh cards.
+pub fn credit_voucher() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::ShuffleAnyNumberFromHandThenDraw { who: PlayerRef::You },
+            ..Default::default()
+        }],
+        ..artifact("Credit Voucher", cost(&[generic(2)]))
+    }
+}
+
+/// Assembly Hall — {5}. Tutors a second copy of a creature you're holding.
+pub fn assembly_hall() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            effect: Effect::SearchSameNameAs {
+                who: PlayerRef::You,
+                subject: Selector::ChosenCardInHand(R::Creature),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..artifact("Assembly Hall", cost(&[generic(5)]))
+    }
+}
+
+/// Clear the Land — {2}{G}. Everyone digs five for lands and burns the rest.
+pub fn clear_the_land() -> CardDefinition {
+    sorcery(
+        "Clear the Land",
+        cost(&[generic(2), g()]),
+        Effect::EachPlayerRevealTopNKeepLandsExileRest { count: Value::Const(5) },
+    )
+}
+
+/// Unmask — {3}{B}. Free if you pitch a black card; strips their best nonland.
+pub fn unmask() -> CardDefinition {
+    CardDefinition {
+        alternative_cost: Some(AlternativeCost {
+            exile_filter: Some(R::HasColor(Color::Black)),
+            ..Default::default()
+        }),
+        ..sorcery(
+            "Unmask",
+            cost(&[generic(3), b()]),
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: R::Not(Box::new(R::Land)),
+            },
+        )
+    }
+}
+
+/// Unnatural Hunger — {3}{B}{B} Aura. Each upkeep the host's controller feeds
+/// it a creature or takes the host's power in damage.
+pub fn unnatural_hunger() -> CardDefinition {
+    let host = || Selector::AttachedTo(Box::new(Selector::This));
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::ControllerOf(Box::new(host())))),
+            effect: Effect::UnlessPlayerPays {
+                who: PlayerRef::ControllerOf(Box::new(host())),
+                cost: crate::card::WardCost::SacrificeMatching(Box::new(
+                    R::Creature.and(R::OtherThanSource),
+                )),
+                then: Box::new(Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(host()))),
+                    amount: Value::PowerOf(Box::new(host())),
+                }),
+            },
+        }],
+        ..aura("Unnatural Hunger", cost(&[generic(3), b(), b()]))
+    }
+}
+
+/// Blood Hound — {2}{R} 1/1 that swells with every point of damage you take.
+pub fn blood_hound() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PlayerDamaged, EventScope::YourControl),
+                effect: Effect::MayDo {
+                    description: "Put that many +1/+1 counters on Blood Hound?".into(),
+                    body: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: crate::card::CounterType::PlusOnePlusOne,
+                        amount: Value::TriggerEventAmount,
+                    }),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                effect: Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::Const(99),
+                },
+            },
+        ],
+        ..creature("Blood Hound", cost(&[generic(2), r()]), vec![CreatureType::Dog], 1, 1)
+    }
+}
+
+/// Lava Runner — {1}{R}{R} 2/2 haste. Pointing anything at it costs a land.
+pub fn lava_runner() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::TriggerEventPlayer),
+                count: Value::ONE,
+                filter: R::Land,
+            },
+        }],
+        ..creature("Lava Runner", cost(&[generic(1), r(), r()]), vec![CreatureType::Lizard], 2, 2)
+    }
+}
+
+/// Mercadia's Downfall — {2}{R}. The city's own streets arm the attackers.
+pub fn mercadias_downfall() -> CardDefinition {
+    instant(
+        "Mercadia's Downfall",
+        cost(&[generic(2), r()]),
+        Effect::PumpPT {
+            what: Selector::EachPermanent(R::IsAttacking),
+            // "Defending player" reads as the opponent — exact heads-up.
+            power: Value::CountMatching {
+                sel: Box::new(Selector::EachPermanent(R::Land.and(R::ControlledByOpponent))),
+                filter: R::Not(Box::new(R::IsBasicLand)),
+            },
+            toughness: Value::ZERO,
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Erithizon — {2}{G}{G} 4/4 that hands the defender's board a counter.
+pub fn erithizon() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(R::Creature),
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
+        ..creature("Erithizon", cost(&[generic(2), g(), g()]), vec![CreatureType::Beast], 4, 4)
+    }
+}
+
+/// Deepwood Elder — {G}{G} 2/2 Spellshaper that turns lands into Forests.
+pub fn deepwood_elder() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), g(), g()]),
+            tap_cost: true,
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::TargetsExactlyX {
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 1,
+                    filter: R::Land,
+                    effect: Box::new(Effect::BecomeBasicLand {
+                        what: Selector::Target(0),
+                        land_type: crate::card::LandType::Forest,
+                        duration: Duration::EndOfTurn,
+                    }),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Deepwood Elder",
+            cost(&[g(), g()]),
+            vec![CreatureType::Dryad, CreatureType::Spellshaper],
+            2,
+            2,
         )
     }
 }

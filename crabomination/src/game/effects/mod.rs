@@ -8,7 +8,7 @@
 
 mod delayed;
 mod eval;
-mod events;
+pub(crate) mod events;
 mod movement;
 mod targeting;
 
@@ -21690,6 +21690,92 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ShuffleAnyNumberFromHandThenDraw { who } => {
+                // Credit Voucher — the controller picks the subset; the redraw
+                // happens after the shuffle so a shuffled card can come back.
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .hand
+                    .iter()
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let max = candidates.len() as u32;
+                let picks: Vec<CardId> = match self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Shuffle which cards into your library?".to_string(),
+                    candidates: candidates.clone(),
+                    min: 0,
+                    max,
+                }) {
+                    DecisionAnswer::Cards(ids) => ids
+                        .into_iter()
+                        .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                        .collect(),
+                    _ => Vec::new(),
+                };
+                let n = picks.len() as i32;
+                for id in picks {
+                    if let Some(card) = self.players[p].remove_from_hand(id) {
+                        self.players[p].library.push(card);
+                    }
+                }
+                if n > 0 {
+                    self.shuffle_library(p, events);
+                    self.run_effect(
+                        &Effect::Draw { who: Selector::Player(PlayerRef::Seat(p)), amount: crate::effect::Value::Const(n) },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerRevealTopNKeepLandsExileRest { count } => {
+                // Clear the Land — lands enter tapped, everything else is exiled.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                for p in 0..self.players.len() {
+                    let revealed: Vec<CardId> = self.players[p]
+                        .library
+                        .iter()
+                        .rev()
+                        .take(n)
+                        .map(|c| c.id)
+                        .collect();
+                    for id in revealed {
+                        let is_land = self.players[p]
+                            .library
+                            .iter()
+                            .find(|c| c.id == id)
+                            .is_some_and(|c| c.definition.is_land());
+                        let dest = if is_land {
+                            crate::effect::ZoneDest::Battlefield {
+                                controller: PlayerRef::Seat(p),
+                                tapped: true,
+                            }
+                        } else {
+                            crate::effect::ZoneDest::Exile
+                        };
+                        self.move_card_to(id, &dest, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::AddAttackTaxThisTurn { amount }
+            | Effect::AddBlockTaxThisTurn { amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if matches!(effect, Effect::AddAttackTaxThisTurn { .. }) {
+                    self.attack_tax_this_turn = self.attack_tax_this_turn.saturating_add(n);
+                } else {
+                    self.block_tax_this_turn = self.block_tax_this_turn.saturating_add(n);
+                }
+                Ok(())
+            }
+
             Effect::SacrificeSourceUnlessPayValue { generic } => {
                 // "Pay {1} for each card in your hand" (Megatherium).
                 let Some(id) = ctx.source else { return Ok(()) };
@@ -24932,6 +25018,14 @@ impl GameState {
                 }
                 out
             }
+            Selector::ChosenCardInHand(filter) => self.players[ctx.controller]
+                .hand
+                .iter()
+                .find(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller))
+                .map(|c| EntityRef::Card(c.id))
+                .into_iter()
+                .collect(),
+
             Selector::RandomAmong(filter) => {
                 use rand::seq::IndexedRandom;
                 let mut pool: Vec<EntityRef> = self
@@ -25624,6 +25718,7 @@ impl GameState {
                     Some(b) if self.players[b].hand.len() >= self.players[p].hand.len() => Some(b),
                     _ => Some(p),
                 }),
+            PlayerRef::TriggerEventPlayer => self.trigger_event_player_scratch,
             PlayerRef::Triggerer => ctx.trigger_source.and_then(|e| match e {
                 EntityRef::Player(p) => Some(p),
                 // A card trigger-source (e.g. a SpellCast trigger) resolves to

@@ -62,6 +62,12 @@ pub enum PlayerRef {
     EnchantedPlayer,
     /// The player who triggered the event (for triggered abilities).
     Triggerer,
+    /// The seat that *caused* the firing event — the caster for a
+    /// `BecameTarget`, the damaged seat for a combat-damage trigger. Reads
+    /// the trigger's stamped actor (`GameState::trigger_event_player_scratch`),
+    /// so it resolves "that spell or ability's controller" (Lava Runner)
+    /// where `Triggerer` would give the targeted permanent's controller.
+    TriggerEventPlayer,
     /// A specific seat index. Used internally to flatten selector-based
     /// player refs (e.g. `OwnerOf(Selector)`) into a concrete seat before
     /// passing them across context boundaries — the original-card lookup
@@ -291,6 +297,11 @@ pub enum Selector {
     /// Resolves to the attachments on the source that grant abilities; two
     /// granters on one host are indistinguishable, so all of them match.
     AttachmentGranting,
+    /// One card the effect's controller chooses from their own hand matching
+    /// `filter` — the "reveal a [card] in your hand" shape (Assembly Hall).
+    /// Resolves to nothing when nothing matches. The pick is the first match
+    /// in hand order (selector resolution has no decision hook).
+    ChosenCardInHand(SelectionRequirement),
     /// One legal object chosen uniformly at random from the battlefield
     /// permanents and players matching `filter` — "any target chosen at
     /// random" (Goblin Test Pilot). Resolves to nothing when the pool is
@@ -7095,6 +7106,22 @@ pub enum Effect {
     /// The source's controller keeps it by paying (auto-tap), else it is
     /// sacrificed. Gateway Plaza, Transguild Promenade ("pay {1}").
     SacrificeSourceUnlessPay { cost: crate::mana::ManaCost },
+
+    /// "Shuffle any number of cards from your hand into your library, then
+    /// draw that many cards" (Credit Voucher). The controller picks the subset
+    /// via `Decision::ChooseCards`; AutoDecider shuffles none.
+    ShuffleAnyNumberFromHandThenDraw { who: PlayerRef },
+
+    /// "Each player reveals the top `count` cards of their library, puts all
+    /// land cards revealed this way onto the battlefield tapped, and exiles the
+    /// rest" (Clear the Land).
+    EachPlayerRevealTopNKeepLandsExileRest { count: Value },
+
+    /// CR 508.1 / 509.1d — "This turn, creatures can't attack (or block)
+    /// unless their controller pays {X} for each attacking (blocking) creature
+    /// they control" (War Tax, War Cadence). Symmetric and turn-scoped.
+    AddAttackTaxThisTurn { amount: Value },
+    AddBlockTaxThisTurn { amount: Value },
 
     /// "Sacrifice this unless you pay {1} for each [thing]" — the dynamic
     /// sibling of `SacrificeSourceUnlessPay`, where the generic amount is a

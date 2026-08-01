@@ -299,6 +299,7 @@ fn yusri_wants_ui_prompts_flip_count() {
     let eff = catalog::yusri_fortunes_flame().triggered_abilities[0].effect.clone();
     g.push_pending_trigger(
         crabomination::game::PendingTriggerPush {
+            actor: None,
             source: yusri, controller: 0, effect: eff,
             subject: None, event_amount: 0, mode: None, intervening_if: None,
         },

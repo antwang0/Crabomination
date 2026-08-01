@@ -445,3 +445,287 @@ fn instigator_makes_them_attack() {
             .contains(&crabomination::card::Keyword::MustAttack)
     );
 }
+
+/// War Tax charges the attacking player {X} per attacker.
+#[test]
+fn war_tax_bills_the_attacker() {
+    let mut g = two_player_game();
+    let tax = g.add_card_to_battlefield(1, catalog::war_tax());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tax,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])
+            .is_err(),
+        "can't cover the {{3}} toll"
+    );
+}
+
+/// War Cadence charges the blocking player {X} per blocker.
+#[test]
+fn war_cadence_bills_the_blocker() {
+    let mut g = two_player_game();
+    let cad = g.add_card_to_battlefield(0, catalog::war_cadence());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cad,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(4),
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).is_err(),
+        "can't cover the {{4}} toll"
+    );
+}
+
+/// Foster digs a creature out of the library when one dies.
+#[test]
+fn foster_digs_after_a_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::foster());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    script(&mut g, vec![DecisionAnswer::Bool(true)]);
+    let mut evs = vec![];
+    g.destroy_permanent(bear, true, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "found a creature");
+}
+
+/// Monkey Cage pops when a creature enters and pays out in Monkeys.
+#[test]
+fn monkey_cage_pays_out_in_monkeys() {
+    let mut g = two_player_game();
+    let cage = g.add_card_to_battlefield(0, catalog::monkey_cage());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears()); // {1}{G}
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    cast(&mut g, 1, bear, None);
+    assert!(g.battlefield_find(cage).is_none(), "cage sacrificed");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Monkey").count(),
+        2
+    );
+}
+
+/// Credit Voucher swaps part of your hand for fresh cards.
+#[test]
+fn credit_voucher_redraws_what_you_shuffle_away() {
+    let mut g = two_player_game();
+    let voucher = g.add_card_to_battlefield(0, catalog::credit_voucher());
+    g.clear_sickness(voucher);
+    let dud = g.add_card_to_hand(0, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    mana(&mut g, 0);
+    script(&mut g, vec![DecisionAnswer::Cards(vec![dud])]);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: voucher,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "one in, one out");
+}
+
+/// Assembly Hall tutors a twin for a creature in hand.
+#[test]
+fn assembly_hall_finds_a_second_copy() {
+    let mut g = two_player_game();
+    let hall = g.add_card_to_battlefield(0, catalog::assembly_hall());
+    g.clear_sickness(hall);
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let twin = g.add_card_to_library(0, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    script(&mut g, vec![DecisionAnswer::Search(Some(twin))]);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hall,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == twin));
+}
+
+/// Clear the Land deploys the lands off the top five and burns the rest.
+#[test]
+fn clear_the_land_deploys_lands_and_exiles_the_rest() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::clear_the_land());
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Forest").count(), 2);
+    assert_eq!(g.exile.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 3);
+}
+
+/// Unmask is free when you exile a black card.
+#[test]
+fn unmask_pitches_a_black_card() {
+    let mut g = two_player_game();
+    let pitch = g.add_card_to_hand(0, catalog::dark_ritual());
+    let unmask = g.add_card_to_hand(0, catalog::unmask());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: unmask,
+        pitch_card: Some(pitch),
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("pitch cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.is_empty());
+}
+
+/// Unnatural Hunger eats a creature or bites for the host's power.
+#[test]
+fn unnatural_hunger_bites_when_nothing_is_fed() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let aura = g.add_card_to_hand(0, catalog::unnatural_hunger());
+    cast(&mut g, 0, aura, Some(Target::Permanent(host)));
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+}
+
+/// Blood Hound swells with the damage you take and deflates at end of turn.
+#[test]
+fn blood_hound_grows_on_damage_then_resets() {
+    let mut g = two_player_game();
+    let hound = g.add_card_to_battlefield(0, catalog::blood_hound());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    script(&mut g, vec![DecisionAnswer::Bool(true)]);
+    cast(&mut g, 1, bolt, Some(Target::Player(0)));
+    assert_eq!(g.computed_permanent(hound).unwrap().power, 4);
+    g.active_player_idx = 0;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(hound).unwrap().power, 1);
+}
+
+/// Lava Runner charges a land for targeting it.
+#[test]
+fn lava_runner_eats_a_land_when_targeted() {
+    let mut g = two_player_game();
+    let runner = g.add_card_to_battlefield(0, catalog::lava_runner());
+    g.add_card_to_battlefield(1, catalog::mountain());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Permanent(runner)));
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 0, "land sacrificed");
+}
+
+/// Mercadia's Downfall arms attackers with the defender's nonbasics.
+#[test]
+fn mercadias_downfall_counts_nonbasic_lands() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::mountain()); // basic — no bonus
+    g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.add_card_to_battlefield(1, catalog::adarkar_wastes());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    let spell = g.add_card_to_hand(0, catalog::mercadias_downfall());
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.computed_permanent(attacker).unwrap().power, 3);
+}
+
+/// Erithizon hands out a counter whenever it attacks.
+#[test]
+fn erithizon_gives_a_counter_on_attack() {
+    let mut g = two_player_game();
+    let porcupine = g.add_card_to_battlefield(0, catalog::erithizon());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(porcupine);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: porcupine, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    script(&mut g, vec![DecisionAnswer::Target(Target::Permanent(victim))]);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(victim).unwrap().power, 3);
+}
+
+/// Deepwood Elder turns X lands into Forests.
+#[test]
+fn deepwood_elder_forests_x_lands() {
+    let mut g = two_player_game();
+    let elder = g.add_card_to_battlefield(0, catalog::deepwood_elder());
+    g.clear_sickness(elder);
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elder,
+        ability_index: 0,
+        target: Some(Target::Permanent(island)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(
+        g.computed_permanent(island)
+            .unwrap()
+            .subtypes
+            .land_types
+            .contains(&crabomination::card::LandType::Forest)
+    );
+}
