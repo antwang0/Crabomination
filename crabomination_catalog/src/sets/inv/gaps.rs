@@ -755,8 +755,8 @@ pub fn elfhame_sanctuary() -> CardDefinition {
 }
 
 /// Addle — {1}{B}. Reveal their hand and take a card. (The printed colour is
-/// named before the reveal; the caster picking from the revealed hand collapses
-/// to the same card whenever one of that colour is there.)
+/// named before the reveal; a hand-zone filter can't read the source's chosen
+/// colour yet — see TODO.md — so the caster's pick stands in for it.)
 pub fn addle() -> CardDefinition {
     sorcery(
         "Addle",

@@ -8138,9 +8138,12 @@ Planeshift is at zero `set_gaps.py` gaps (86 cards this run); Invasion went
   `Value::MostCommonColorAmongPermanents` read), Aether Rift, Bend or Break,
   Cauldron Dance (a combat-only double reanimate) and the Blind Seer /
   Atalya utility rares.
-- **Addle's colour choice is collapsed.** The printed card names a colour
-  before the reveal; the catalog models it as `DiscardChosen` over the whole
-  revealed hand, which is the same card whenever one of that colour is there.
-  `Effect::ChooseColorForSelf` doesn't stamp from a resolving *spell* source
-  (it wants a battlefield permanent), which is what blocked the faithful
-  wording.
+- **`R::HasChosenColorOfSource` is false in hidden zones.** The hidden-zone
+  card evaluator (`eval.rs`, the `R::HasChosenColorOfSource | …` arm) returns
+  `false` because it carries no source, so a hand/library/graveyard filter can
+  never read the source's chosen colour. That blocks the faithful Addle
+  ("choose a color … discard a card of that color"), which ships as
+  `DiscardChosen` over the whole revealed hand instead. Two halves to fix:
+  thread the source into that evaluator, and have
+  `Effect::ChooseColorForSelf` keep the pick in per-resolution scratch (a
+  resolving *spell* has no battlefield permanent to stamp).
