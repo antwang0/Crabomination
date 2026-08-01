@@ -358,6 +358,8 @@ fn main() {
         "combat" => EvalWeights::combat_aware(),
         "pretap" => EvalWeights::legacy_mana(),
         "holdsick" => EvalWeights::hold_sick(),
+        "default" => EvalWeights::default(),
+        "atk" => EvalWeights::attack_search(),
         "planner" => EvalWeights::planner(),
         "lookahead" => EvalWeights::lookahead1(),
         other => {

@@ -75,6 +75,19 @@ pub struct EvalWeights {
     /// Score a candidate on the board *after* this turn's combat rather
     /// than the instant it resolves (see [`simulate_through_combat`]).
     pub combat_aware: bool,
+    /// Search the attack declaration instead of taking the greedy one:
+    /// simulate each candidate attack through the opponent's crack-back and
+    /// keep the best (see [`pick_attacks_scored`]). 0 disables the search;
+    /// higher values allow more candidates, and the cost is roughly linear
+    /// in it because each candidate is a full simulated turn cycle.
+    ///
+    /// The measurement this exists to settle: `bot_probe` shows the bot
+    /// declaring every eligible creature as an attacker in 73 % of its
+    /// combats, and 41 % of its creatures tapped when blocks are declared
+    /// as a direct result. Greedy attacking is *why* it can't block — but
+    /// whether restraint is worth the tempo is a ladder question, not an
+    /// argument, so this is a flag rather than a rewrite.
+    pub attack_search: u8,
     /// Restore the pre-fix mana behavior: tap every land before deciding
     /// anything, and size affordability off the floating pool.
     ///
@@ -89,8 +102,9 @@ pub struct EvalWeights {
 impl EvalWeights {
     /// The historical weights: mana value + power + toughness, one point
     /// each, no keyword term, linear life. Kept exactly as-is so it stays
-    /// a valid ladder control -- and still the default, because nothing
-    /// tried against it has beaten it. See [`v2`](Self::v2).
+    /// a valid ladder control — it is what every run measures against, not
+    /// what the bot plays (see [`Default`](EvalWeights::default)).
+    /// See [`v2`](Self::v2).
     pub const fn baseline() -> Self {
         Self {
             unit: 1,
@@ -104,6 +118,7 @@ impl EvalWeights {
             hold_instants: false,
             lookahead: 0,
             combat_aware: false,
+            attack_search: 0,
             legacy_pretap: false,
         }
     }
@@ -152,6 +167,7 @@ impl EvalWeights {
             hold_instants: false,
             lookahead: 0,
             combat_aware: false,
+            attack_search: 0,
             legacy_pretap: false,
         }
     }
@@ -183,6 +199,7 @@ impl EvalWeights {
             hold_instants: false,
             lookahead: 0,
             combat_aware: false,
+            attack_search: 0,
             legacy_pretap: false,
         }
     }
@@ -255,6 +272,21 @@ impl EvalWeights {
     /// [`hold_sick`]: Self::hold_sick
     pub const fn hold_sick_combat() -> Self {
         Self { combat_aware: true, ..Self::hold_sick() }
+    }
+
+    /// The adopted default plus the searched attack declaration. See
+    /// [`attack_search`](Self::attack_search) for what it is and why it is
+    /// a flag; this is the profile the ladder measures it with.
+    pub const fn attack_search() -> Self {
+        Self { attack_search: 6, ..Self::hold_sick_combat() }
+    }
+
+    /// Searched attacks with the candidate set cut to the two extremes —
+    /// the greedy alpha strike and no attack at all. If the cheap version
+    /// captures most of the gain, the per-attacker drops aren't paying for
+    /// their simulations and the search can stay nearly free.
+    pub const fn attack_search_cheap() -> Self {
+        Self { attack_search: 1, ..Self::hold_sick_combat() }
     }
 
     /// Everything the planner work produced: hold summoning-sick bodies,
@@ -648,7 +680,11 @@ impl Bot for RandomBot {
             TurnStep::DeclareAttackers if is_active && state.attack_declarer() == seat => {
                 if !self.attackers_declared {
                     self.attackers_declared = true;
-                    Some(GameAction::DeclareAttackers(pick_attacks(state, seat)))
+                    Some(GameAction::DeclareAttackers(pick_attacks_scored(
+                        state,
+                        seat,
+                        &self.weights,
+                    )))
                 } else {
                     Some(GameAction::PassPriority)
                 }
@@ -4344,6 +4380,157 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
     attacks
 }
 
+/// The attack declaration, chosen by search rather than by rule.
+///
+/// [`pick_attacks`] is a greedy accretion: a pile of individually sensible
+/// exclusions (don't suicide into deathtouch, respect Propaganda, honor
+/// layer-granted Defender) applied to "swing with everything". Each of
+/// those rules is right about the case it names. What none of them can see
+/// is the *cost of tapping the team* — that a creature which attacks is
+/// not available to block next turn — because that cost is only paid a
+/// turn later, on a board the greedy rule never looks at.
+///
+/// `bot_probe` measures the consequence: the bot declares every eligible
+/// creature in 73 % of its combats, and 41 % of its creatures are tapped
+/// when it is asked to block. Half of the combats where it has no blocker
+/// at all are tapped-out boards rather than empty ones.
+///
+/// So this searches instead. The greedy declaration seeds the candidate
+/// set; the alternatives are "attack with nobody" and the greedy set minus
+/// one attacker each. Every candidate is played forward through our combat
+/// damage, the rest of our turn, and the opponent's crack-back, then scored
+/// with the same evaluator everything else uses — which already prices both
+/// the life we took and the creatures we kept.
+///
+/// Restricted to *dropping* attackers on purpose: greedy already attacks
+/// with 77 % of eligible creatures, so its error is over-attacking, and a
+/// one-step hill climb toward restraint targets that error directly
+/// without paying for a search over subsets the bot will never want.
+///
+/// Ties go to the greedy set, so the search only ever departs from the
+/// current behavior for a strict improvement.
+fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
+    let greedy = pick_attacks(state, seat);
+    if w.attack_search == 0 || greedy.is_empty() {
+        return greedy;
+    }
+    // Candidates, in the order they're scored. Index 0 is greedy and wins
+    // every tie.
+    let mut candidates: Vec<Vec<Attack>> = vec![greedy.clone(), Vec::new()];
+    if greedy.len() > 1 {
+        // Which attacker to consider holding back? Order by toughness
+        // ascending: the cheapest body to keep home is also the one most
+        // likely to die attacking, so the front of this list is where both
+        // halves of the trade are largest.
+        let mut order: Vec<usize> = (0..greedy.len()).collect();
+        order.sort_by_key(|&i| {
+            state.battlefield_find(greedy[i].attacker).map(|c| c.toughness()).unwrap_or(0)
+        });
+        for &i in order.iter().take(w.attack_search as usize) {
+            let mut alt = greedy.clone();
+            alt.remove(i);
+            candidates.push(alt);
+        }
+    }
+
+    let mut best: Option<(usize, i32)> = None;
+    for (i, cand) in candidates.iter().enumerate() {
+        let Some(score) = simulate_attack_outcome(state, seat, cand, w) else { continue };
+        // Strictly greater: index 0 is greedy, so equal scores keep it.
+        if best.map(|(_, s)| score > s).unwrap_or(true) {
+            best = Some((i, score));
+        }
+    }
+    match best {
+        Some((i, _)) => candidates.swap_remove(i),
+        None => greedy,
+    }
+}
+
+/// Declare `attacks`, play the turn out through the opponent's counter-
+/// attack, and score the board for `seat`.
+///
+/// The horizon matters more than the fidelity here. Scoring right after our
+/// own combat damage would make holding a creature back *strictly* worse —
+/// we dealt less damage and gained nothing measurable — because the entire
+/// payoff of restraint is that the creature is untapped on the opponent's
+/// turn. So the simulation has to reach their combat damage or it cannot
+/// see the thing it exists to weigh.
+///
+/// Neither side casts anything during the simulation; both take the greedy
+/// combat declarations. That's a real simplification — an opponent holding
+/// removal, or ourselves holding a trick, are invisible — but it keeps the
+/// cost to one turn cycle of priority passes per candidate, and the greedy
+/// declarations are exactly the policy this search is trying to beat, which
+/// makes the comparison conservative rather than flattering.
+///
+/// `None` when the declaration is rejected (a "must attack" creature we
+/// tried to hold back) or the simulation runs out of fuel — an unfinished
+/// turn is scored not at all rather than scored wrong, the same rule
+/// [`simulate_through_combat`] settled on.
+fn simulate_attack_outcome(
+    state: &GameState,
+    seat: usize,
+    attacks: &[Attack],
+    w: &EvalWeights,
+) -> Option<i32> {
+    let mut g = state.clone();
+    g.perform_action(GameAction::DeclareAttackers(attacks.to_vec())).ok()?;
+    let start_turn = g.turn_number;
+    // One turn cycle of pure priority passes is on the order of fifty
+    // actions; the rest is headroom for triggers and decisions.
+    let mut fuel = 400u32;
+    let mut declared: std::collections::HashSet<(u32, TurnStep)> = Default::default();
+    // *This* turn's attack declaration is the candidate, already submitted.
+    // Without this the loop's own DeclareAttackers arm fires on the same
+    // turn and re-declares the greedy set over the top of it — which the
+    // engine happily accepts, so every candidate silently collapses back to
+    // the alpha strike and the whole search scores one line N times.
+    declared.insert((g.turn_number, TurnStep::DeclareAttackers));
+    while !g.is_game_over() {
+        // Stop once the opponent's combat is resolved — the first board on
+        // which a creature held back has actually done anything.
+        if g.turn_number > start_turn && g.step >= TurnStep::EndCombat {
+            break;
+        }
+        fuel = fuel.checked_sub(1)?;
+        if g.pending_decision.is_some() {
+            let answer = {
+                let pending = g.pending_decision.as_ref().unwrap();
+                AutoDecider.decide(&pending.decision)
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
+            continue;
+        }
+        // Declarations are one-shot per step per turn; the marker keeps a
+        // rejected declaration from being retried forever.
+        let key = (g.turn_number, g.step);
+        let action = match g.step {
+            TurnStep::DeclareAttackers if !declared.contains(&key) => {
+                declared.insert(key);
+                let declarer = g.attack_declarer();
+                // Greedy, deliberately: calling the search here would
+                // recurse a turn deeper on every candidate.
+                GameAction::DeclareAttackers(pick_attacks(&g, declarer))
+            }
+            TurnStep::DeclareBlockers if !declared.contains(&key) && !g.attacking().is_empty() => {
+                match (0..g.players.len()).find(|&s| g.may_declare_blocks(s)) {
+                    Some(defender) => {
+                        declared.insert(key);
+                        GameAction::DeclareBlockers(pick_blocks(&g, defender))
+                    }
+                    None => GameAction::PassPriority,
+                }
+            }
+            _ => GameAction::PassPriority,
+        };
+        if g.perform_action(action).is_err() && g.perform_action(GameAction::PassPriority).is_err() {
+            return None;
+        }
+    }
+    Some(eval_material(&g, seat, w))
+}
+
 fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // The heuristic probes block legality per blocker×attacker pair, each a
     // layer-aware check — share one gather across the whole scan.
@@ -7440,6 +7627,69 @@ mod tests {
             }
             other => panic!("expected ActivateLoyaltyAbility, got {:?}", other),
         }
+    }
+
+    /// The attack search must actually *reach* the opponent's crack-back.
+    /// A simulation that bails — on fuel, a rejected declaration, or a step
+    /// it can't advance past — silently degrades the whole search to the
+    /// greedy declaration it was meant to second-guess, and nothing else in
+    /// the suite would notice, because falling back is not an error.
+    #[test]
+    fn attack_simulation_reaches_the_crack_back() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        for _ in 0..2 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+        }
+        let c = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(c);
+        let w = EvalWeights::attack_search();
+        let greedy = pick_attacks(&g, 0);
+        assert_eq!(greedy.len(), 2, "both bears are eligible attackers");
+        assert!(
+            simulate_attack_outcome(&g, 0, &greedy, &w).is_some(),
+            "the alpha strike must simulate to a score"
+        );
+        assert!(
+            simulate_attack_outcome(&g, 0, &[], &w).is_some(),
+            "declining to attack must simulate to a score"
+        );
+    }
+
+    /// Holding a blocker back is only ever *worth* anything a turn later, so
+    /// the search has to price it there: two bears into an empty board is a
+    /// free swing, but with a 3/3 staring back, keeping one home to block is
+    /// the better board once the crack-back is resolved.
+    #[test]
+    fn attack_search_holds_a_blocker_against_a_bigger_board() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        for _ in 0..2 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+        }
+        // A 3/3 that eats a 2/2 for free if we have nothing back.
+        let big = g.add_card_to_battlefield(1, catalog::hill_giant());
+        g.clear_sickness(big);
+        // Both players need something to draw: the simulation runs a full
+        // turn cycle, and an empty library decks whoever draws first, which
+        // pins every candidate to the same "we won" score.
+        for seat in 0..2 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, catalog::forest());
+            }
+        }
+        let w = EvalWeights::attack_search();
+        let all_in = simulate_attack_outcome(&g, 0, &pick_attacks(&g, 0), &w);
+        let none = simulate_attack_outcome(&g, 0, &[], &w);
+        assert!(all_in.is_some() && none.is_some(), "both lines must simulate");
+        assert_ne!(all_in, none, "the two lines must not score identically \
+             — if they do, the simulation is not reaching the crack-back");
     }
 
     /// Helper: a 1/1 creature with one extra keyword for attack-filter tests.
