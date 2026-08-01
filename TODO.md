@@ -25,8 +25,8 @@ Items are grouped by area and roughly ordered by impact within each group.
 
 ## Noticed this run (modern_decks — Apocalypse)
 
-`set_gaps.py apc` is at **123 → 88 → 55** across two waves (`sets::apc`, tests
-in `classic_sets/apc`). New primitives: `CardDefinition.opponent_discard_deploys`
+`set_gaps.py apc` is at **123 → 88 → 55 → 43** across three waves (`sets::apc`,
+tests in `classic_sets/apc`). New primitives: `CardDefinition.opponent_discard_deploys`
 (CR 614 — Dodecapod's discard-destination replacement) and
 `Effect::BecomeChosenCreatureType` (Unnatural Selection).
 
@@ -44,12 +44,15 @@ Residuals in what shipped:
   `perform_action(DeclareAttackers)` won't see it. That is true of every
   non-`SelfSource` Attacks trigger, not this card.
 
-Remaining APC (55) is mostly the Volver cycle (kicker-scaled ETB abilities),
+Remaining APC (43) is mostly the Volver cycle (kicker-scaled ETB abilities),
 the Flagbearer targeting-restriction static (Standard Bearer, Coalition Honor
 Guard), the split cards (Night // Day, Order // Chaos), Dead Ringers'
 colour-symmetry gate, Emblazoned Golem's colored-{X}, Captain's Maneuver's
 X-damage redirect, Suppress's exile-hand-until-their-next-end-step, Zombie
-Boa's chosen-colour blocker kill, Wild Research and Symbiotic Deployment.
+Boa's chosen-colour blocker kill, Legacy Weapon's shuffle-instead-of-graveyard
+replacement, Jaded Response's shares-a-colour-with-your-board counter gate,
+Gaea's Balance's one-of-each-basic search, Wild Research and Symbiotic
+Deployment.
 
 ## Prophecy — closed
 

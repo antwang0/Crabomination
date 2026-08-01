@@ -1394,3 +1394,264 @@ pub fn powerstone_minefield() -> CardDefinition {
         ..enchantment("Powerstone Minefield", cost(&[generic(2), r(), w()]))
     }
 }
+
+/// A 1/1 green Saproling.
+fn saproling() -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: "Saproling".to_string(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Saproling],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Aether Mutation — {3}{G}{U}. A bounce that pays out in Saprolings.
+pub fn aether_mutation() -> CardDefinition {
+    sorcery(
+        "Aether Mutation",
+        cost(&[generic(3), g(), u()]),
+        Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                definition: saproling(),
+            },
+        ]),
+    )
+}
+
+/// Death Mutation — {6}{B}{G}. Removal that pays out in Saprolings.
+pub fn death_mutation() -> CardDefinition {
+    sorcery(
+        "Death Mutation",
+        cost(&[generic(6), b(), g()]),
+        Effect::Seq(vec![
+            Effect::DestroyNoRegen {
+                what: target_filtered(R::Creature.and(R::Not(Box::new(R::HasColor(Color::Black))))),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                definition: saproling(),
+            },
+        ]),
+    )
+}
+
+/// Desolation Angel — {3}{B}{B} 5/4 flier. Your lands, or everyone's.
+pub fn desolation_angel() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Kicker(cost(&[w(), w()]))],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Destroy { what: Selector::EachPermanent(R::Land) }),
+            else_: Box::new(Effect::Destroy {
+                what: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+            }),
+        })],
+        ..creature("Desolation Angel", cost(&[generic(3), b(), b()]), vec![CreatureType::Angel], 5, 4)
+    }
+}
+
+/// Desolation Giant — {2}{R}{R} 3/3. Your board, or everyone's.
+pub fn desolation_giant() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Kicker(cost(&[w(), w()]))],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Destroy {
+                what: Selector::EachPermanent(R::Creature.and(R::Not(Box::new(R::IsSource)))),
+            }),
+            else_: Box::new(Effect::Destroy {
+                what: Selector::EachPermanent(
+                    R::Creature.and(R::ControlledByYou).and(R::Not(Box::new(R::IsSource))),
+                ),
+            }),
+        })],
+        ..creature("Desolation Giant", cost(&[generic(2), r(), r()]), vec![CreatureType::Giant], 3, 3)
+    }
+}
+
+/// Brass Herald — {6} 2/2. Names a type, digs for it, and lords it.
+pub fn brass_herald() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
+        triggered_abilities: vec![etb(Effect::RevealTopTakeMatchingToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            filter: R::Creature.and(R::IsSourceChosenCreatureType),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures of the chosen type get +1/+1.",
+            effect: StaticEffect::AnthemForChosenType {
+                power: 1,
+                toughness: 1,
+                exclude_source: false,
+                opponents: false,
+                all_players: false,
+                per_counter: None,
+            },
+        }],
+        ..creature("Brass Herald", cost(&[generic(6)]), vec![CreatureType::Golem], 2, 2)
+    }
+}
+
+/// Dragon Arch — {5}. Deploys multicolored creatures straight from hand.
+pub fn dragon_arch() -> CardDefinition {
+    CardDefinition {
+        name: "Dragon Arch",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::Multicolored),
+                count: Value::ONE,
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fervent Charge — {1}{R}{W}{B}. Every attack comes in bigger.
+pub fn fervent_charge() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..enchantment("Fervent Charge", cost(&[generic(1), r(), w(), b()]))
+    }
+}
+
+/// Fungal Shambler — {4}{B}{G}{U} 6/4 trample that trades hits for cards.
+pub fn fungal_shambler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                draw(1),
+                Effect::Discard {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::ONE,
+                    random: false,
+                },
+            ]),
+        }],
+        ..creature(
+            "Fungal Shambler",
+            cost(&[generic(4), b(), g(), u()]),
+            vec![CreatureType::Fungus, CreatureType::Beast],
+            6,
+            4,
+        )
+    }
+}
+
+/// Gerrard Capashen — {3}{W}{W} 3/4. Taxes their hand, and taps blockers.
+pub fn gerrard_capashen() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::HandSizeOf(PlayerRef::Target(0)),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            condition: Some(Predicate::EntityMatches {
+                what: Selector::This,
+                filter: R::IsAttacking,
+            }),
+            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Gerrard Capashen",
+            cost(&[generic(3), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            3,
+            4,
+        )
+    }
+}
+
+/// Goblin Trenches — {1}{R}{W}. Lands into pairs of Goblin Soldiers.
+pub fn goblin_trenches() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((R::Land, 1)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: crate::card::TokenDefinition {
+                    name: "Goblin Soldier".to_string(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red, Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Goblin, CreatureType::Soldier],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Goblin Trenches", cost(&[generic(1), r(), w()]))
+    }
+}
+
+/// Last Caress — {2}{B}. A one-point drain that replaces itself.
+pub fn last_caress() -> CardDefinition {
+    sorcery(
+        "Last Caress",
+        cost(&[generic(2), b()]),
+        Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE },
+            Effect::GainLife { who: Selector::You, amount: Value::ONE },
+            draw(1),
+        ]),
+    )
+}
+
+/// Lightning Angel — {1}{U}{R}{W} 3/4 with all three keywords.
+pub fn lightning_angel() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
+        ..creature(
+            "Lightning Angel",
+            cost(&[generic(1), u(), r(), w()]),
+            vec![CreatureType::Angel],
+            3,
+            4,
+        )
+    }
+}

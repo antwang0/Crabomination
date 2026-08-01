@@ -10345,6 +10345,18 @@ static APC: &[Factory] = &[
     super::apc::whirlpool_drake,
     super::apc::overgrown_estate,
     super::apc::powerstone_minefield,
+    super::apc::aether_mutation,
+    super::apc::death_mutation,
+    super::apc::desolation_angel,
+    super::apc::desolation_giant,
+    super::apc::brass_herald,
+    super::apc::dragon_arch,
+    super::apc::fervent_charge,
+    super::apc::fungal_shambler,
+    super::apc::gerrard_capashen,
+    super::apc::goblin_trenches,
+    super::apc::last_caress,
+    super::apc::lightning_angel,
 ];
 static BOT: &[Factory] = &[
     super::bot::slicer_hired_muscle,

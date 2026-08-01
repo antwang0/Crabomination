@@ -788,3 +788,188 @@ fn urborg_elf_taps_for_mana() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1);
 }
+
+/// Aether Mutation pays out Saprolings equal to the bounced creature's cost.
+#[test]
+fn aether_mutation_pays_out_saprolings() {
+    let mut g = main_phase();
+    let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon()); // MV 6
+    let mutation = g.add_card_to_hand(0, catalog::aether_mutation());
+    cast(&mut g, 0, mutation, Some(Target::Permanent(dragon)));
+    assert!(g.players[1].hand.iter().any(|c| c.id == dragon));
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count(), 6);
+}
+
+/// Death Mutation kills a nonblack creature and pays out.
+#[test]
+fn death_mutation_kills_and_pays_out() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant()); // MV 4
+    let mutation = g.add_card_to_hand(0, catalog::death_mutation());
+    cast(&mut g, 0, mutation, Some(Target::Permanent(giant)));
+    assert!(g.battlefield_find(giant).is_none());
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count(), 4);
+}
+
+/// Desolation Angel takes only your lands unkicked.
+#[test]
+fn desolation_angel_unkicked_burns_only_your_lands() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::swamp());
+    let theirs = g.add_card_to_battlefield(1, catalog::island());
+    let angel = g.add_card_to_hand(0, catalog::desolation_angel());
+    cast(&mut g, 0, angel, None);
+    assert!(g.battlefield_find(mine).is_none());
+    assert!(g.battlefield_find(theirs).is_some());
+}
+
+/// Kicked, it takes everyone's.
+#[test]
+fn desolation_angel_kicked_burns_every_land() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::island());
+    let angel = g.add_card_to_hand(0, catalog::desolation_angel());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: angel,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast kicked");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+}
+
+/// Desolation Giant spares itself.
+#[test]
+fn desolation_giant_spares_itself() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_hand(0, catalog::desolation_giant());
+    cast(&mut g, 0, giant, None);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(giant).is_some(), "it kept itself");
+}
+
+/// Brass Herald names a type, digs for it, and lords it.
+#[test]
+fn brass_herald_names_digs_and_lords() {
+    let mut g = main_phase();
+    g.players[0].library.clear();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let herald = g.add_card_to_hand(0, catalog::brass_herald());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::CreatureType(
+            crabomination::card::CreatureType::Bear,
+        ),
+    ]));
+    cast(&mut g, 0, herald, None);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "the Bear lord is on");
+    assert_eq!(g.players[0].hand.len(), 4, "all four Bears came to hand");
+}
+
+/// Dragon Arch deploys a multicolored creature from hand.
+#[test]
+fn dragon_arch_deploys_a_gold_creature() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::dragon_arch());
+    let arch = g.battlefield.iter().find(|c| c.definition.name == "Dragon Arch").unwrap().id;
+    let angel = g.add_card_to_hand(0, catalog::lightning_angel());
+    activate(&mut g, 0, arch, 0, None);
+    assert!(g.battlefield_find(angel).is_some());
+}
+
+/// Fervent Charge pumps every attacker.
+#[test]
+fn fervent_charge_pumps_attackers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::fervent_charge());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+}
+
+/// Fungal Shambler trades a connection for a card each way.
+#[test]
+fn fungal_shambler_draws_and_strips() {
+    let mut g = two_player_game();
+    let shambler = g.add_card_to_battlefield(0, catalog::fungal_shambler());
+    g.clear_sickness(shambler);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: shambler,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "they discarded");
+}
+
+/// Gerrard Capashen taxes their hand each upkeep.
+#[test]
+fn gerrard_capashen_gains_per_card_in_hand() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::gerrard_capashen());
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    upkeep(&mut g);
+    assert_eq!(g.players[0].life, 23);
+}
+
+/// Goblin Trenches turns a land into two bodies.
+#[test]
+fn goblin_trenches_makes_two_goblins() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::goblin_trenches());
+    let trenches = g.battlefield.iter().find(|c| c.definition.name == "Goblin Trenches").unwrap().id;
+    g.add_card_to_battlefield(0, catalog::mountain());
+    activate(&mut g, 0, trenches, 0, None);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Goblin Soldier").count(),
+        2
+    );
+}
+
+/// Last Caress drains one and cantrips.
+#[test]
+fn last_caress_drains_and_draws() {
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let before = g.players[0].hand.len();
+    let caress = g.add_card_to_hand(0, catalog::last_caress());
+    cast(&mut g, 0, caress, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 19);
+    assert_eq!(g.players[0].life, 21);
+    assert_eq!(g.players[0].hand.len(), before + 1);
+}
+
+/// Lightning Angel ships all three keywords.
+#[test]
+fn lightning_angel_keywords() {
+    let def = catalog::lightning_angel();
+    for kw in [Keyword::Flying, Keyword::Vigilance, Keyword::Haste] {
+        assert!(def.keywords.contains(&kw));
+    }
+}
