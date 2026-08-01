@@ -10439,6 +10439,18 @@ impl GameState {
         })
     }
 
+    /// `StaticEffect::MayReplaceDrawWithRevealUntilKind` (Abundance).
+    fn player_may_reveal_until_kind_instead_of_drawing(&self, p: usize) -> bool {
+        self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    self.active_static(&sa.effect, c),
+                    Some(crate::effect::StaticEffect::MayReplaceDrawWithRevealUntilKind)
+                )
+            })
+        })
+    }
+
     /// CR 121.2a — the look-N-keep-one draw replacement `p` controls
     /// (Tomorrow, Azami's Familiar), peeled through the gating wrappers.
     fn look_instead_of_drawing(&self, p: usize) -> Option<u32> {
@@ -10561,6 +10573,52 @@ impl GameState {
                         who: crate::effect::PlayerRef::Seat(p),
                         filter: crate::card::SelectionRequirement::Any,
                         to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(p)),
+                    },
+                    &ctx,
+                ) {
+                    events.append(&mut evs);
+                }
+                return true;
+            }
+        }
+        // CR 121.2a — Abundance: "choose land or nonland and reveal cards from
+        // the top of your library until you reveal a card of the chosen kind."
+        if self.player_may_reveal_until_kind_instead_of_drawing(p) {
+            use crate::decision::{Decision, DecisionAnswer};
+            let yes = matches!(
+                self.decider.decide(&Decision::OptionalTrigger {
+                    source: crate::card::CardId(0),
+                    description: "Reveal until a land/nonland instead of drawing?".to_string(),
+                }),
+                DecisionAnswer::Bool(true)
+            );
+            // Auto policy: dig for whichever kind the hand is shorter on.
+            let want_land = self.players[p]
+                .hand
+                .iter()
+                .filter(|c| c.definition.is_land())
+                .count()
+                * 2
+                < self.players[p].hand.len();
+            if yes && !self.players[p].library.is_empty() {
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    crate::card::CardId(0),
+                    p,
+                    None,
+                );
+                let filter = if want_land {
+                    crate::card::SelectionRequirement::Land
+                } else {
+                    crate::card::SelectionRequirement::Nonland
+                };
+                if let Ok(mut evs) = self.resolve_effect(
+                    &crate::effect::Effect::RevealUntilFind {
+                        who: crate::effect::PlayerRef::Seat(p),
+                        find: filter,
+                        to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(p)),
+                        cap: crate::effect::Value::Const(500),
+                        life_per_revealed: 0,
+                        miss_dest: crate::effect::RevealMissDest::BottomRandom,
                     },
                     &ctx,
                 ) {
@@ -16763,6 +16821,8 @@ fn static_effect_to_effects(
             // MayReplaceDrawWithTutor — a draw replacement consulted in
             // `draw_one`; no layer effect.
             | StaticEffect::MayReplaceDrawWithTutor
+            | StaticEffect::MayReplaceDrawWithRevealUntilKind
+            | StaticEffect::ControllerAssignsAttackersCombatDamage
             | StaticEffect::PlayersSkipDraws
             | StaticEffect::SharedFate
             // Uba Mask — consulted by `draw_one`; no layer effect.

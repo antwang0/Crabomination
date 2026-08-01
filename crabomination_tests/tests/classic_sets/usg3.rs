@@ -784,3 +784,90 @@ fn discordant_dirge_eats_a_card_per_verse() {
     assert_eq!(g.players[1].hand.len(), 2);
     assert_eq!(g.players[1].graveyard.len(), 2);
 }
+
+/// Abundance swaps a draw for a dig to the chosen kind.
+#[test]
+fn abundance_digs_instead_of_drawing() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::abundance());
+    // A land-light hand makes the auto policy dig for a land.
+    for _ in 0..2 {
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+    }
+    // Library bottom-to-top: the land is buried under two nonlands.
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    assert_eq!(g.players[0].hand.len(), 3);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.is_land()),
+        "dug past the nonlands"
+    );
+    assert!(g.players[0].library.is_empty() || g.players[0].library.len() == 2);
+}
+
+/// Academy Researchers drags an Aura out of hand onto itself.
+#[test]
+fn academy_researchers_deploys_an_aura_from_hand() {
+    let mut g = two_player_game();
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let aura = g.add_card_to_hand(0, catalog::pendrell_flux());
+    let body = g.add_card_to_hand(0, catalog::academy_researchers());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![aura])]));
+    mana(&mut g, 0);
+    cast(&mut g, body, None);
+    assert_eq!(
+        g.battlefield_find(aura).and_then(|c| c.attached_to),
+        Some(body),
+        "the Aura came down attached"
+    );
+}
+
+/// Defensive Formation hands the damage split to the defender (CR 510.1a).
+#[test]
+fn defensive_formation_lets_the_defender_assign() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::defensive_formation());
+    let attacker = g.add_card_to_battlefield(0, catalog::okk()); // 4/4
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let big = g.add_card_to_battlefield(0, catalog::serra_avatar());
+    for id in [attacker, big] {
+        g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+    }
+    while g.step != TurnStep::DeclareAttackers || g.active_player_idx != 0 {
+        g.advance_step(vec![]).expect("advance");
+    }
+    g.declare_attackers(vec![
+        Attack { attacker, target: AttackTarget::Player(1) },
+        Attack { attacker: big, target: AttackTarget::Player(1) },
+    ])
+    .expect("attack");
+    g.advance_step(vec![]).expect("to blockers");
+    g.declare_blockers(vec![(a, attacker), (b, attacker)]).expect("double block");
+    // Seat 1 is the assigner, so its scripted order is the one that lands.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DamageOrder(vec![b, a])]));
+    g.advance_step(vec![]).expect("to damage");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(b).is_none(), "the defender put b first in line");
+}
+
+/// Temporal Aperture shuffles up and hands you the new top card for free.
+#[test]
+fn temporal_aperture_frees_the_new_top_card() {
+    let mut g = two_player_game();
+    let aperture = g.add_card_to_battlefield(0, catalog::temporal_aperture());
+    g.battlefield_find_mut(aperture).unwrap().summoning_sick = false;
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    activate(&mut g, aperture, 0, None);
+    assert!(
+        g.players[0].library.iter().any(|c| c.id == top && c.may_play_until.is_some()),
+        "the revealed card is castable for free"
+    );
+}

@@ -2211,6 +2211,16 @@ pub enum StaticEffect {
     /// "Prevent all damage that would be dealt to you by sources you don't
     /// control" (Energy Field).
     PreventAllDamageToControllerFromOthersSources,
+    /// CR 510.1a — "Rather than the attacking player, you assign the combat
+    /// damage of each creature attacking you" (Defensive Formation). Rides the
+    /// same assigner hook as Banding.
+    ControllerAssignsAttackersCombatDamage,
+    /// CR 121.2a — "If you would draw a card, you may instead choose land or
+    /// nonland and reveal cards from the top of your library until you reveal a
+    /// card of the chosen kind. Put that card into your hand and put all other
+    /// cards revealed this way on the bottom of your library in any order."
+    /// Abundance.
+    MayReplaceDrawWithRevealUntilKind,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

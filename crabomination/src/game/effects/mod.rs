@@ -18485,6 +18485,49 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutAuraFromHandAttachedTo { host } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(anchor) =
+                    self.resolve_selector(host, ctx).into_iter().find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let candidates: Vec<(CardId, String)> = self.players[ctx.controller]
+                    .hand
+                    .iter()
+                    .filter(|c| c.definition.is_aura())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let pick = match self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Put an Aura from your hand onto the battlefield attached to this"
+                        .into(),
+                    candidates,
+                    min: 0,
+                    max: 1,
+                }) {
+                    DecisionAnswer::Cards(picked) if !picked.is_empty() => picked[0],
+                    _ => return Ok(()),
+                };
+                self.move_card_to(
+                    pick,
+                    &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    ctx,
+                    events,
+                );
+                if let Some(c) = self.battlefield_find_mut(pick) {
+                    c.attached_to = Some(anchor);
+                    events.push(GameEvent::AttachmentMoved {
+                        attachment: pick,
+                        attached_to: Some(anchor),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::Attach { what, to } => {
                 // CR 303.4a — the anchor may be a player ("enchant player":
                 // the Curse cycle, Psychic Possession) or a permanent.

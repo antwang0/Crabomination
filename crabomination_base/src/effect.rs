@@ -7256,6 +7256,11 @@ pub enum Effect {
     /// read at resolution from the (possibly already-dead) subject's LKI.
     SearchSameNameAs { who: PlayerRef, subject: Selector, to: ZoneDest },
 
+    /// "You may put an Aura card from your hand onto the battlefield attached
+    /// to `host`" (Academy Researchers). The Aura's own enchant filter is
+    /// re-checked against the host; nothing happens when no Aura fits.
+    PutAuraFromHandAttachedTo { host: Selector },
+
     /// "Choose a color. `who` reveals their hand and discards all cards of
     /// that color" (Persecute). The color is chosen by the resolving
     /// controller; the reveal publishes the hand to them.

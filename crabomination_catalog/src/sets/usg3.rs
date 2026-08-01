@@ -3,7 +3,8 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate,
-    SelectionRequirement as R, StateTriggeredAbility, StaticAbility, StaticEffect, Subtypes,
+    MayPlayDuration, SelectionRequirement as R, StateTriggeredAbility, StaticAbility, StaticEffect,
+    Subtypes,
     TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::{
@@ -987,5 +988,68 @@ pub fn discordant_dirge() -> CardDefinition {
             ..Default::default()
         }],
         ..enchantment("Discordant Dirge", cost(&[generic(3), b(), b()]))
+    }
+}
+
+/// Abundance — {2}{G}{G}. Trade every draw for the kind of card you want.
+pub fn abundance() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If you would draw, you may instead reveal until a land/nonland.",
+            effect: StaticEffect::MayReplaceDrawWithRevealUntilKind,
+        }],
+        ..enchantment("Abundance", cost(&[generic(2), g(), g()]))
+    }
+}
+
+/// Academy Researchers — {1}{U}{U}. Brings an Aura out of hand with it.
+pub fn academy_researchers() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::PutAuraFromHandAttachedTo {
+            host: Selector::This,
+        })],
+        ..creature(
+            "Academy Researchers",
+            cost(&[generic(1), u(), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            2,
+            2,
+        )
+    }
+}
+
+/// Defensive Formation — {W}. You, not the attacker, split their damage.
+pub fn defensive_formation() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "You assign the combat damage of each creature attacking you.",
+            effect: StaticEffect::ControllerAssignsAttackersCombatDamage,
+        }],
+        ..enchantment("Defensive Formation", cost(&[w()]))
+    }
+}
+
+/// Temporal Aperture — {2}. Shuffle up and cast the new top card for free.
+/// The permission rides the card, so moving it off the top doesn't revoke it.
+pub fn temporal_aperture() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::ShuffleLibrary { who: PlayerRef::You },
+                Effect::RevealTopCard { who: PlayerRef::You },
+                Effect::GrantMayPlay {
+                    what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: false,
+                    any_color: false,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..artifact("Temporal Aperture", cost(&[generic(2)]))
     }
 }

@@ -2021,7 +2021,30 @@ impl GameState {
                     .find(|c| c.id == *bid && c.keywords.contains(&Keyword::Banding))
                     .map(|c| c.controller)
             });
-            let assigner = banding_assigner.unwrap_or(active);
+            // CR 510.1a — Defensive Formation: the defending player assigns
+            // the damage of everything attacking them.
+            let defending_seat = self.attacking.iter().find(|a| a.attacker == atk.id).and_then(
+                |a| match a.target {
+                    crate::game::types::AttackTarget::Player(d) => Some(d),
+                    crate::game::types::AttackTarget::Planeswalker(pw)
+                    | crate::game::types::AttackTarget::Battle(pw) => {
+                        self.battlefield_find(pw).map(|c| c.controller)
+                    }
+                },
+            );
+            let defender_assigner = match defending_seat {
+                Some(d) if self.battlefield.iter().any(|c| {
+                    c.controller == d
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::ControllerAssignsAttackersCombatDamage
+                            )
+                        })
+                }) => Some(d),
+                _ => None,
+            };
+            let assigner = banding_assigner.or(defender_assigner).unwrap_or(active);
             let assigner_ui = self.players[assigner].wants_ui;
 
             // 1) Blocker order (CR 510.1c).

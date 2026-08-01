@@ -780,6 +780,7 @@ impl Effect {
             | Effect::GrantSuspend { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
+            | Effect::PutAuraFromHandAttachedTo { host: what }
             | Effect::Tap { what }
             | Effect::TapAndUntapLock { what }
             | Effect::TapAndLockWhileSourcePresent { what }

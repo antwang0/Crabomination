@@ -17128,6 +17128,10 @@ static USG2: &[Factory] = &[
     super::usg3::sporogenesis,
     super::usg3::serras_hymn,
     super::usg3::discordant_dirge,
+    super::usg3::abundance,
+    super::usg3::academy_researchers,
+    super::usg3::defensive_formation,
+    super::usg3::temporal_aperture,
 ];
 static WAR: &[Factory] = &[
     super::war::ironclad_krovod,
