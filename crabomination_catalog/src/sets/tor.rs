@@ -107,9 +107,8 @@ pub fn accelerate() -> CardDefinition {
 /// Acorn Harvest — {3}{G}. Two Squirrels, twice.
 pub fn acorn_harvest() -> CardDefinition {
     CardDefinition {
-        // The printed flashback is "{1}{G}, Pay 3 life"; the life half of a
-        // flashback cost isn't modeled.
         keywords: vec![Keyword::Flashback(cost(&[generic(1), g()]))],
+        flashback_additional_cost: vec![crate::card::AdditionalCastCost::PayLife { amount: 3 }],
         ..sorcery(
             "Acorn Harvest",
             cost(&[generic(3), g()]),
@@ -199,12 +198,23 @@ pub fn breakthrough() -> CardDefinition {
 
 /// Cleansing Meditation — {1}{W}{W}. Wrath for enchantments.
 pub fn cleansing_meditation() -> CardDefinition {
-    // The Threshold half ("return all enchantments destroyed this way to the
-    // battlefield") is not modeled.
     sorcery(
         "Cleansing Meditation",
         cost(&[generic(1), w(), w()]),
-        Effect::Destroy { what: Selector::EachPermanent(R::Enchantment) },
+        Effect::Seq(vec![
+            Effect::Destroy { what: Selector::EachPermanent(R::Enchantment) },
+            Effect::If {
+                cond: threshold(),
+                then: Box::new(Effect::Move {
+                    what: Selector::DestroyedThisResolution { filter: R::Enchantment },
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::OwnerOfMoved,
+                        tapped: false,
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
     )
 }
 

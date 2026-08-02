@@ -586,3 +586,35 @@ fn radiate_forks_onto_every_other_target() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both burned");
 }
+
+/// Cleansing Meditation rebuilds your own enchantments past Threshold.
+#[test]
+fn cleansing_meditation_rebuilds_at_threshold() {
+    let mut g = main_phase();
+    fill_graveyard(&mut g, 0);
+    let mine = g.add_card_to_battlefield(0, catalog::hypochondria());
+    let theirs = g.add_card_to_battlefield(1, catalog::hypochondria());
+    let spell = g.add_card_to_hand(0, catalog::cleansing_meditation());
+    cast(&mut g, 0, spell, None);
+    assert!(g.battlefield_find(mine).is_some(), "yours came back");
+    assert!(g.battlefield_find(theirs).is_some(), "so did theirs — both were destroyed this way");
+}
+
+/// Acorn Harvest's flashback charges 3 life on top of {1}{G}.
+#[test]
+fn acorn_harvest_flashback_costs_life() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_graveyard(0, catalog::acorn_harvest());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("flashback");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 17);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 2);
+}

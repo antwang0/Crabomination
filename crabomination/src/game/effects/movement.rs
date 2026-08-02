@@ -1883,7 +1883,12 @@ impl GameState {
                     return;
                 }
                 let ctx = EffectContext::for_spell(default_player, None, 0, 0);
-                let p = self.resolve_player(controller, &ctx).unwrap_or(default_player);
+                // `OwnerOfMoved` routes each card back under *its own* owner's
+                // control (CR 400.7 — Cleansing Meditation's Threshold rebuild).
+                let p = match controller {
+                    PlayerRef::OwnerOfMoved => card.owner,
+                    _ => self.resolve_player(controller, &ctx).unwrap_or(default_player),
+                };
                 card.controller = p;
                 card.tapped = *tapped;
                 card.summoning_sick = card.definition.is_creature();

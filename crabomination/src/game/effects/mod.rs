@@ -27757,17 +27757,15 @@ impl GameState {
 
             Selector::DestroyedThisResolution { filter } => self
                 .destroyed_this_resolution
-                .clone()
-                .into_iter()
+                .iter()
                 .filter(|cid| {
-                    self.evaluate_requirement_static(
-                        filter,
-                        &Target::Permanent(*cid),
-                        ctx.controller,
-                        ctx.source,
-                    )
+                    // The card has already left the battlefield, so match it
+                    // wherever it landed (graveyard, exile, …).
+                    self.find_card_anywhere(**cid).is_some_and(|c| {
+                        self.evaluate_requirement_on_card(filter, c, ctx.controller)
+                    })
                 })
-                .map(EntityRef::Card)
+                .map(|cid| EntityRef::Card(*cid))
                 .collect(),
 
             Selector::Player(p) => self
