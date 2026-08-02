@@ -454,3 +454,22 @@ fn breaking_wave_swaps_tapped_and_untapped() {
     assert!(!g.battlefield_find(tapped).unwrap().tapped);
     assert!(g.battlefield_find(untapped).unwrap().tapped);
 }
+
+/// Void wipes the named mana value off the board and out of the target's hand.
+#[test]
+fn void_clears_one_mana_value_everywhere() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    // Noble Panther is mana value 3; Jade Leech is 4.
+    let hit = g.add_card_to_battlefield(1, catalog::noble_panther());
+    let miss = g.add_card_to_battlefield(1, catalog::jade_leech());
+    let in_hand = g.add_card_to_hand(1, catalog::noble_panther());
+    let safe_land = g.add_card_to_hand(1, catalog::mountain());
+    let spell = g.add_card_to_hand(0, catalog::void());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(3)]));
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert!(g.battlefield.iter().all(|c| c.id != hit), "the 3-drop died");
+    assert!(g.battlefield.iter().any(|c| c.id == miss), "the 4-drop survived");
+    assert!(g.players[1].hand.iter().all(|c| c.id != in_hand), "the 3-drop was discarded");
+    assert!(g.players[1].hand.iter().any(|c| c.id == safe_land), "lands are exempt");
+}

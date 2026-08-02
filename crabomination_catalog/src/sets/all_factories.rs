@@ -9441,6 +9441,7 @@ static INV: &[Factory] = &[
     super::inv::seers_vision,
     super::inv::ghitu_fire,
     super::inv::breaking_wave,
+    super::inv::void,
 ];
 static JOU: &[Factory] = &[
     super::jou::oreskos_swiftclaw,

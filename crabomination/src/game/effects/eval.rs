@@ -3019,6 +3019,9 @@ impl GameState {
                         let top = self.most_common_permanent_colors();
                         card.definition.printed_colors().iter().any(|k| top.contains(k))
                     }
+                    R::ManaValueEqualsChosenNumber => {
+                        card.definition.cost.cmc() == self.chosen_number_this_resolution
+                    }
                     R::HasNonManaActivatedAbility => card
                         .definition
                         .activated_abilities
@@ -3533,6 +3536,9 @@ impl GameState {
             R::SharesMostCommonColor => {
                 let top = self.most_common_permanent_colors();
                 card.definition.printed_colors().iter().any(|k| top.contains(k))
+            }
+            R::ManaValueEqualsChosenNumber => {
+                card.definition.cost.cmc() == self.chosen_number_this_resolution
             }
             R::HasNonManaActivatedAbility => card
                 .definition

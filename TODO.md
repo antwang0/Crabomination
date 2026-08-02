@@ -31,14 +31,14 @@ shipped.
 
 ## Invasion — in progress
 
-`set_gaps.py inv` is at **41** (280 → 233 → 136 → 70 → 41; `sets::inv::{gaps,
+`set_gaps.py inv` is at **40** (280 → 233 → 136 → 70 → 40; `sets::inv::{gaps,
 gaps2, gaps3, gaps4}`, tests in `classic_sets/inv_gaps`–`inv_gaps4`).
 Primitives it shipped: `CardDefinition.flash_surcharge` (CR 601.2b — the
 "cast as though it had flash if you pay {2} more" cycle),
 `Effect::SwapTappedState` (Breaking Wave's simultaneous flip),
 `StaticEffect::{ColoredSpellTax, PreventSmallDamageToThis, CapLargeDamage}`, `Predicate::ColorIsMostCommonAmongPermanents`,
 `SelectionRequirement::{SharesMostCommonColor, HasNonManaActivatedAbility,
-SharesNameWithAnotherPermanent}`, `Effect::PlayerCantPlayLandsThisTurn`, and
+SharesNameWithAnotherPermanent, ManaValueEqualsChosenNumber}`, `Effect::PlayerCantPlayLandsThisTurn`, and
 `GameState::restart_game` / `Effect::RestartGame` (CR 727).
 
 ### Invasion remainder — each blocked on one primitive
@@ -52,9 +52,7 @@ SharesNameWithAnotherPermanent}`, `Effect::PlayerCantPlayLandsThisTurn`, and
   snapshotting the reveal; only visible if the hand changes mid-resolution.
 - **Cauldron Dance / Spinal Embrace** — need a `cast_only_during_combat` cast
   restriction; not yet implemented.
-- **Void / Desperate Research** — need
-  `SelectionRequirement::ManaValueEqualsChosenNumber` and a
-  name-then-reveal-seven effect respectively.
+- **Desperate Research** — needs a name-then-reveal-seven effect.
 - **Spreading Plague** — needs `SelectionRequirement::SharesColorWithTriggerSource`
   (plus an `OtherThanTriggerSource` exclusion).
 - **Pure Reflection** — needs a token whose P/T is the triggering spell's mana

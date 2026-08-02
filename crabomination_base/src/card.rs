@@ -1944,6 +1944,9 @@ pub enum SelectionRequirement {
     /// ("Whenever you cast a multicolored spell, …") and similar
     /// "multicolored spell"/permanent payoffs.
     Multicolored,
+    /// Mana value equals the number chosen earlier in this resolution
+    /// (`Effect::PlayerChoosesNumber` — Void's hand half).
+    ManaValueEqualsChosenNumber,
     /// A land whose activated abilities include at least one that isn't a mana
     /// ability (CR 605.1a) — Tsabo's Web's untap lock.
     HasNonManaActivatedAbility,

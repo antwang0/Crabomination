@@ -742,3 +742,26 @@ pub fn breaking_wave() -> CardDefinition {
     }
 }
 
+
+/// Void — {3}{B}{R}. Name a number; wipe it off the board and out of a hand.
+pub fn void() -> CardDefinition {
+    sorcery(
+        "Void",
+        cost(&[generic(3), b(), r()]),
+        Effect::PlayerChoosesNumber {
+            who: Selector::You,
+            prompt: "Choose a mana value".into(),
+            max: Value::Const(15),
+            then: Box::new(Effect::Seq(vec![
+                Effect::DestroyEachMatchingWithManaValue {
+                    filter: R::Artifact.or(R::Creature),
+                    value: Value::ChosenNumber,
+                },
+                Effect::RevealHandDiscardAllMatching {
+                    who: PlayerRef::Target(0),
+                    filter: R::Nonland.and(R::ManaValueEqualsChosenNumber),
+                },
+            ])),
+        },
+    )
+}
