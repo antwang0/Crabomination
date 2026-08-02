@@ -2323,8 +2323,13 @@ Each a small targeted feature; sweep batch by batch.
   a tax the bot can't pay after the spell's own cost drops the candidate,
   a payable one is priced into the score; `bot_wont_cast_removal_into_*`
   tests). SOS college mirrors run on the ladder (`bot_ladder --decks sos`)
-  and probe (`bot_probe --deck sos`). Remaining: X sized by evaluation
-  rather than max-dump.
+  and probe (`bot_probe --deck sos`). X sizing now splits spare mana across
+  multi-X pips ({X}{X} paid 2X but was sized as one) and covers
+  prepare-casts (`max_affordable_x_for_def`). **Simulations answer
+  decisions with the bot's own policy table** (`decide_pending_policy` in
+  every lookahead/combat sim — they used to assume an AutoDecider future:
+  bad scries, declined tutors, mode 0). Remaining: X chosen by outcome
+  eval rather than max-dump.
 - 🟡 **SOS mechanic play** — Prepare: inset-spell candidates, response casts
   when removal targets the prepared body (`pick_prepare_response`, plus the
   own-main response-timing dispatch fix that also revived counterspells
@@ -2333,8 +2338,14 @@ Each a small targeted feature; sweep batch by batch.
   now, and the bot declines life-draining copies at a low total
   (`self_life_loss`). On-cast payoff steering: Opus (prefer 5+-mana casts)
   and Infusion (lifegain first) score nudges; Repartee offers a
-  creature-aimed sibling candidate the outcome eval judges. Remaining:
-  Increment sequencing, converge-aware payment, prepare-cast X sizing.
+  creature-aimed sibling candidate the outcome eval judges; Increment
+  nudges casts that clear the smallest body's threshold
+  (`increment_threshold`); Converge casts pre-float one source per missing
+  college color so the payment drains distinct colors
+  (`pick_converge_prefloat` — bot-side, the engine payment funnel is
+  untouched). Prepare-cast X is sized like a hand cast. Remaining: none
+  tracked; next leads live in the per-college ladder splits (Prismari /
+  Quandrix ≈ 49 % for the default profile).
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
 
 ## Tier 14 — Replays, analysis & observability

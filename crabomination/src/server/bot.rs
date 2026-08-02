@@ -583,194 +583,34 @@ impl Bot for RandomBot {
         // Any pending decision addressed to us: auto-answer it.
         if let Some(pending) = &state.pending_decision {
             if pending.acting_player() == seat {
-                let answer = match &pending.decision {
-                    // Smarter mulligan than AutoDecider's blanket Keep:
-                    // ship hands that are flooded or screwed on lands.
-                    crate::decision::Decision::Mulligan { mulligans_taken, .. } => {
-                        decide_mulligan(state, seat, *mulligans_taken)
-                    }
-                    // Unlike AutoDecider (which declines every tutor), the
-                    // bot actually fetches — preferring a basic land toward
-                    // its weakest color so singleplayer tutors fix mana.
-                    crate::decision::Decision::SearchLibrary { candidates, eligible, .. } => {
-                        // Only consider picks the engine will accept.
-                        let pickable: Vec<(crate::card::CardId, String)> = match eligible {
-                            Some(ok) => candidates
-                                .iter()
-                                .filter(|(id, _)| ok.contains(id))
-                                .cloned()
-                                .collect(),
-                            None => candidates.clone(),
-                        };
-                        decide_library_search(state, seat, &pickable)
-                    }
-                    // Unlike AutoDecider (which declines *every* "you may"
-                    // trigger), the bot takes an optional trigger whose body
-                    // is pure upside — so Provoke's "you may", Boast token
-                    // riders, etc. actually fire under bot play. It still
-                    // declines bodies that impose a self-cost (lose life /
-                    // sacrifice / discard).
-                    crate::decision::Decision::OptionalTrigger { source, description } => {
-                        // Ad Nauseam's per-reveal prompt: the generic screen
-                        // can't introspect it (no MayDo body) and would
-                        // answer yes forever — drawing the whole library and
-                        // dying to the life loss. The asks all precede the
-                        // life loss (see `RevealTopToHandLoseLifeRepeat`),
-                        // so track committed reveals across the series and
-                        // keep saying yes only while the running total
-                        // leaves a comfortable buffer.
-                        // Engine-authored prompt families the generic screen
-                        // can't introspect (no MayDo body): each gets a real
-                        // policy instead of the blanket-yes fallback.
-                        let take = if description.starts_with("Pay ")
-                            && description.contains(" life to deny ")
-                        {
-                            // Rhystic-style life tax: pay only with a healthy
-                            // buffer. Parse the printed amount.
-                            let n: i32 = description
-                                .split_whitespace()
-                                .nth(1)
-                                .and_then(|w| w.parse().ok())
-                                .unwrap_or(2);
-                            state.effective_life(seat) - n > 10
-                        } else if description.starts_with("Accept the tempting offer") {
-                            // Tempting offers reward the caster; decline.
-                            false
-                        } else if description.starts_with("Pay echo ")
-                            || description.starts_with("Pay cumulative upkeep ")
-                            || description.starts_with("Discard a card for ")
-                        {
-                            // Pay while the permanent is worth keeping; let
-                            // cheap chaff die to its own upkeep.
-                            state
-                                .battlefield_find(*source)
-                                .map(|c| permanent_value(state, c.id, &self.weights) >= 4 * self.weights.unit)
-                                .unwrap_or(false)
-                        } else if description.starts_with("Cast a copy of ") {
-                            // Paradigm recurrence (SOS): a free copy is pure
-                            // upside unless the spell's own body drains life
-                            // the bot can't spare — Decorum Dissertation's
-                            // draw-2-lose-2 recurs every main phase, and the
-                            // blanket yes played it straight into the
-                            // state-based loss.
-                            let loss = state
-                                .exile
-                                .iter()
-                                .find(|c| c.id == *source)
-                                .map(|c| self_life_loss(&c.definition.effect))
-                                .unwrap_or(0);
-                            state.effective_life(seat) - loss > 5
-                        } else if description.starts_with("Reveal the top card (") {
-                            let (cards, life_committed) = match &self.reveal_commit {
-                                Some((s, c, l)) if *s == *source => (*c, *l),
-                                _ => (0, 0),
-                            };
-                            let mv = state.players[seat]
-                                .library
-                                .get(cards)
-                                .map(|c| c.definition.cost.cmc() as i32)
-                                .unwrap_or(0);
-                            let yes =
-                                state.effective_life(seat) - life_committed - mv > 10;
-                            self.reveal_commit = if yes {
-                                Some((*source, cards + 1, life_committed + mv))
-                            } else {
-                                None
-                            };
-                            yes
-                        } else {
-                            optional_trigger_beneficial(state, *source, description)
-                        };
-                        crate::decision::DecisionAnswer::Bool(take)
-                    }
-                    // AutoDecider always names Demon; the bot instead names the
-                    // creature type it has the most of across its battlefield +
-                    // hand, so tribal payoffs (Cavern of Souls, Kindred
-                    // Discovery, Door of Destinies, the chosen-type lords) land
-                    // on a type it can actually exploit.
-                    crate::decision::Decision::ChooseCreatureType { suggestions, .. } => {
-                        decide_creature_type(state, seat, suggestions)
-                    }
-                    // AutoDecider chooses nothing; the bot exiles opponents'
-                    // graveyard cards (deny graveyard value) up to the cap.
-                    crate::decision::Decision::ChooseCards { prompt, candidates, min, max, .. } => {
-                        decide_choose_cards(&self.weights, state, seat, prompt, candidates, *min, *max)
-                    }
-                    // London mulligan bottoming (CR 103.5) and "put N cards
-                    // from your hand on top/bottom" effects. `AutoDecider`
-                    // takes the first N cards of the hand, so a bot that
-                    // mulliganed bottomed whichever cards happened to sit at
-                    // the front — routinely its business spells. Rank them
-                    // the same way a discard is ranked: surplus lands first,
-                    // then the priciest spells.
-                    crate::decision::Decision::PutOnLibrary { player, count, hand }
-                        if *player == seat =>
-                    {
-                        let order = hand_worst_first(state, seat, hand);
-                        crate::decision::DecisionAnswer::PutOnLibrary(
-                            order.into_iter().take(*count).collect(),
-                        )
-                    }
-                    // A self-discard (cleanup over max hand size, rummaging, a
-                    // discard cost): every offered card is in our own hand and
-                    // we're the one choosing. Unlike AutoDecider (which dumps
-                    // the head of the hand — possibly our best spell), shed the
-                    // least useful cards. Inquisition-style "choose from an
-                    // opponent's hand" Discards fail the own-hand guard and
-                    // fall through to AutoDecider unchanged.
-                    crate::decision::Decision::Discard { player, count, hand }
-                        if *player == seat
-                            && hand.iter().all(|(id, _)| {
-                                state.players[seat].hand.iter().any(|c| c.id == *id)
-                            }) =>
-                    {
-                        decide_self_discard(state, seat, hand, *count)
-                    }
-                    // AutoDecider blindly picks the first legal target. For
-                    // votes (Council's Judgment), edicts, and removal the bot
-                    // should instead hit the opponent's *most* valuable
-                    // permanent — or, when forced to choose among its own
-                    // permanents, give up the *least* valuable.
-                    crate::decision::Decision::ChooseTarget { legal, .. } if !legal.is_empty() => {
-                        decide_choose_target(state, seat, legal, &self.weights)
-                    }
-                    // AutoDecider answers every amount with 0, which turns
-                    // "choose up to X" payoffs into no-ops and (worse) reads
-                    // as "power ≥ 0" on destroy-cutoff wraths. Default to
-                    // the max for generic upside prompts; prompt families
-                    // with a real downside get their own rule.
-                    crate::decision::Decision::ChooseAmount { prompt, max, .. } => {
-                        let amount = if prompt.contains("destroy all creatures with power") {
-                            best_destroy_power_cutoff(state, seat, *max, &self.weights)
-                        } else if prompt.to_lowercase().contains("life") {
-                            // Life payments: keep a buffer, never sink deep.
-                            let spare = (state.effective_life(seat) - 10).max(0) as u32;
-                            spare.min(*max).min(3)
-                        } else {
-                            *max
-                        };
-                        crate::decision::DecisionAnswer::Amount(amount)
-                    }
-                    // AutoDecider keeps every scried card on top — a no-op
-                    // that wastes every scry and surveil under bot play.
-                    // Bottom flood and unplayable spells, draw wants first.
-                    crate::decision::Decision::Scry { player, cards, mode }
-                        if *player == seat =>
-                    {
-                        decide_scry(state, seat, cards, *mode)
-                    }
-                    // AutoDecider answers every mid-resolution modal with
-                    // mode 0. Evaluate each mode's settled outcome instead.
-                    crate::decision::Decision::ChooseMode { num_modes, .. } => {
-                        crate::decision::DecisionAnswer::Mode(decide_mode_by_outcome(
-                            state,
-                            seat,
-                            *num_modes,
-                            &self.weights,
-                        ))
-                    }
-                    other => AutoDecider.decide(other),
-                };
+                // Ad Nauseam's per-reveal prompt is the one STATEFUL
+                // policy (it tracks committed reveals on the bot struct
+                // across the series — see `RevealTopToHandLoseLifeRepeat`),
+                // so it answers here; every other decision goes through
+                // [`decide_pending_policy`], the same table simulations
+                // use.
+                if let crate::decision::Decision::OptionalTrigger { source, description } =
+                    &pending.decision
+                    && description.starts_with("Reveal the top card (")
+                {
+                    let (cards, life_committed) = match &self.reveal_commit {
+                        Some((s, c, l)) if *s == *source => (*c, *l),
+                        _ => (0, 0),
+                    };
+                    let mv = state.players[seat]
+                        .library
+                        .get(cards)
+                        .map(|c| c.definition.cost.cmc() as i32)
+                        .unwrap_or(0);
+                    let yes = state.effective_life(seat) - life_committed - mv > 10;
+                    self.reveal_commit =
+                        if yes { Some((*source, cards + 1, life_committed + mv)) } else { None };
+                    return Some(GameAction::SubmitDecision(
+                        crate::decision::DecisionAnswer::Bool(yes),
+                    ));
+                }
+                let answer =
+                    decide_pending_policy(state, seat, &self.weights, &pending.decision, true);
                 return Some(GameAction::SubmitDecision(answer));
             }
             return None;
@@ -842,7 +682,7 @@ impl Bot for RandomBot {
                 if !state.stack.is_empty()
                     && let Some(a) = pick_stack_response(state, seat, &self.weights)
                         .or_else(|| pick_ability_counter_response(state, seat))
-                        .or_else(|| pick_prepare_response(state, seat))
+                        .or_else(|| pick_prepare_response(state, seat, &self.weights))
                 {
                     return Some(a);
                 }
@@ -861,10 +701,188 @@ impl Bot for RandomBot {
             _ => Some(
                 pick_stack_response(state, seat, &self.weights)
                     .or_else(|| pick_ability_counter_response(state, seat))
-                    .or_else(|| pick_prepare_response(state, seat))
+                    .or_else(|| pick_prepare_response(state, seat, &self.weights))
                     .unwrap_or(GameAction::PassPriority),
             ),
         }
+    }
+}
+
+/// The bot's answer to a pending `decision` for `seat` — the policy table
+/// behind `next_action`, extracted so SIMULATIONS answer with it too.
+/// Every lookahead used to answer internal decisions with `AutoDecider`,
+/// which meant a line was scored as if the bot's future self would scry
+/// badly, decline its tutors, dump the head of its hand to a discard, and
+/// take mode 0 — and the opponent would as well. Now both seats inside a
+/// sim play by this table (`pending.acting_player()` picks whose view).
+///
+/// `eval_modes: false` answers `ChooseMode` with mode 0 instead of the
+/// clone-and-resolve outcome pick — inside a sim that recursion would
+/// multiply whole-state clones for marginal fidelity, and mode 0 is the
+/// pre-policy floor. The stateful Ad Nauseam reveal family (a running
+/// life commitment on the bot struct) is handled by `next_action` before
+/// this table; a sim reaching it here declines, the conservative read.
+fn decide_pending_policy(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    decision: &crate::decision::Decision,
+    eval_modes: bool,
+) -> crate::decision::DecisionAnswer {
+    match decision {
+        // Smarter mulligan than AutoDecider's blanket Keep:
+        // ship hands that are flooded or screwed on lands.
+        crate::decision::Decision::Mulligan { mulligans_taken, .. } => {
+            decide_mulligan(state, seat, *mulligans_taken)
+        }
+        // Unlike AutoDecider (which declines every tutor), the
+        // bot actually fetches — preferring a basic land toward
+        // its weakest color so singleplayer tutors fix mana.
+        crate::decision::Decision::SearchLibrary { candidates, eligible, .. } => {
+            // Only consider picks the engine will accept.
+            let pickable: Vec<(crate::card::CardId, String)> = match eligible {
+                Some(ok) => {
+                    candidates.iter().filter(|(id, _)| ok.contains(id)).cloned().collect()
+                }
+                None => candidates.clone(),
+            };
+            decide_library_search(state, seat, &pickable)
+        }
+        // Unlike AutoDecider (which declines *every* "you may"
+        // trigger), the bot takes an optional trigger whose body
+        // is pure upside — so Provoke's "you may", Boast token
+        // riders, etc. actually fire under bot play. It still
+        // declines bodies that impose a self-cost (lose life /
+        // sacrifice / discard). Engine-authored prompt families the
+        // generic screen can't introspect (no MayDo body) each get a
+        // real policy instead of the blanket-yes fallback.
+        crate::decision::Decision::OptionalTrigger { source, description } => {
+            let take = if description.starts_with("Pay ")
+                && description.contains(" life to deny ")
+            {
+                // Rhystic-style life tax: pay only with a healthy
+                // buffer. Parse the printed amount.
+                let n: i32 = description
+                    .split_whitespace()
+                    .nth(1)
+                    .and_then(|w| w.parse().ok())
+                    .unwrap_or(2);
+                state.effective_life(seat) - n > 10
+            } else if description.starts_with("Accept the tempting offer") {
+                // Tempting offers reward the caster; decline.
+                false
+            } else if description.starts_with("Pay echo ")
+                || description.starts_with("Pay cumulative upkeep ")
+                || description.starts_with("Discard a card for ")
+            {
+                // Pay while the permanent is worth keeping; let
+                // cheap chaff die to its own upkeep.
+                state
+                    .battlefield_find(*source)
+                    .map(|c| permanent_value(state, c.id, w) >= 4 * w.unit)
+                    .unwrap_or(false)
+            } else if description.starts_with("Cast a copy of ") {
+                // Paradigm recurrence (SOS): a free copy is pure
+                // upside unless the spell's own body drains life
+                // the bot can't spare — Decorum Dissertation's
+                // draw-2-lose-2 recurs every main phase, and the
+                // blanket yes played it straight into the
+                // state-based loss.
+                let loss = state
+                    .exile
+                    .iter()
+                    .find(|c| c.id == *source)
+                    .map(|c| self_life_loss(&c.definition.effect))
+                    .unwrap_or(0);
+                state.effective_life(seat) - loss > 5
+            } else if description.starts_with("Reveal the top card (") {
+                // Stateful family (see `next_action`); in a sim, decline.
+                false
+            } else {
+                optional_trigger_beneficial(state, *source, description)
+            };
+            crate::decision::DecisionAnswer::Bool(take)
+        }
+        // AutoDecider always names Demon; the bot instead names the
+        // creature type it has the most of across its battlefield +
+        // hand, so tribal payoffs (Cavern of Souls, Kindred
+        // Discovery, Door of Destinies, the chosen-type lords) land
+        // on a type it can actually exploit.
+        crate::decision::Decision::ChooseCreatureType { suggestions, .. } => {
+            decide_creature_type(state, seat, suggestions)
+        }
+        // AutoDecider chooses nothing; the bot exiles opponents'
+        // graveyard cards (deny graveyard value) up to the cap.
+        crate::decision::Decision::ChooseCards { prompt, candidates, min, max, .. } => {
+            decide_choose_cards(w, state, seat, prompt, candidates, *min, *max)
+        }
+        // London mulligan bottoming (CR 103.5) and "put N cards
+        // from your hand on top/bottom" effects. `AutoDecider`
+        // takes the first N cards of the hand, so a bot that
+        // mulliganed bottomed whichever cards happened to sit at
+        // the front — routinely its business spells. Rank them
+        // the same way a discard is ranked: surplus lands first,
+        // then the priciest spells.
+        crate::decision::Decision::PutOnLibrary { player, count, hand } if *player == seat => {
+            let order = hand_worst_first(state, seat, hand);
+            crate::decision::DecisionAnswer::PutOnLibrary(
+                order.into_iter().take(*count).collect(),
+            )
+        }
+        // A self-discard (cleanup over max hand size, rummaging, a
+        // discard cost): every offered card is in our own hand and
+        // we're the one choosing. Unlike AutoDecider (which dumps
+        // the head of the hand — possibly our best spell), shed the
+        // least useful cards. Inquisition-style "choose from an
+        // opponent's hand" Discards fail the own-hand guard and
+        // fall through to AutoDecider unchanged.
+        crate::decision::Decision::Discard { player, count, hand }
+            if *player == seat
+                && hand
+                    .iter()
+                    .all(|(id, _)| state.players[seat].hand.iter().any(|c| c.id == *id)) =>
+        {
+            decide_self_discard(state, seat, hand, *count)
+        }
+        // AutoDecider blindly picks the first legal target. For
+        // votes (Council's Judgment), edicts, and removal the bot
+        // should instead hit the opponent's *most* valuable
+        // permanent — or, when forced to choose among its own
+        // permanents, give up the *least* valuable.
+        crate::decision::Decision::ChooseTarget { legal, .. } if !legal.is_empty() => {
+            decide_choose_target(state, seat, legal, w)
+        }
+        // AutoDecider answers every amount with 0, which turns
+        // "choose up to X" payoffs into no-ops and (worse) reads
+        // as "power ≥ 0" on destroy-cutoff wraths. Default to
+        // the max for generic upside prompts; prompt families
+        // with a real downside get their own rule.
+        crate::decision::Decision::ChooseAmount { prompt, max, .. } => {
+            let amount = if prompt.contains("destroy all creatures with power") {
+                best_destroy_power_cutoff(state, seat, *max, w)
+            } else if prompt.to_lowercase().contains("life") {
+                // Life payments: keep a buffer, never sink deep.
+                let spare = (state.effective_life(seat) - 10).max(0) as u32;
+                spare.min(*max).min(3)
+            } else {
+                *max
+            };
+            crate::decision::DecisionAnswer::Amount(amount)
+        }
+        // AutoDecider keeps every scried card on top — a no-op
+        // that wastes every scry and surveil under bot play.
+        // Bottom flood and unplayable spells, draw wants first.
+        crate::decision::Decision::Scry { player, cards, mode } if *player == seat => {
+            decide_scry(state, seat, cards, *mode)
+        }
+        // AutoDecider answers every mid-resolution modal with
+        // mode 0. Evaluate each mode's settled outcome instead.
+        crate::decision::Decision::ChooseMode { num_modes, .. } if eval_modes => {
+            crate::decision::DecisionAnswer::Mode(decide_mode_by_outcome(
+                state, seat, *num_modes, w,
+            ))
+        }
+        other => AutoDecider.decide(other),
     }
 }
 
@@ -1050,7 +1068,7 @@ fn pick_ability_counter_response(state: &GameState, seat: usize) -> Option<GameA
 /// resource is spent before the body (and the Prepared counter with it)
 /// is answered. `would_accept` gates timing: only an instant-speed inset
 /// spell actually fires here, a sorcery copy is simply rejected.
-fn pick_prepare_response(state: &GameState, seat: usize) -> Option<GameAction> {
+fn pick_prepare_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
     use crate::game::types::StackItem;
     let threatened: Vec<CardId> = state.stack.iter().rev().find_map(|si| {
         let StackItem::Spell { caster, target, additional_targets, .. } = si else {
@@ -1089,12 +1107,17 @@ fn pick_prepare_response(state: &GameState, seat: usize) -> Option<GameAction> {
         } else {
             (None, vec![])
         };
+        let x_value = if x_relevant(spell) {
+            Some(max_affordable_x_for_def(state, seat, spell, 0, w))
+        } else {
+            None
+        };
         let action = GameAction::CastPrepareSpell {
             creature_id,
             target,
             additional_targets,
             mode: None,
-            x_value: None,
+            x_value,
         };
         if !ward_gate_ok(state, seat, &action) {
             continue;
@@ -2057,7 +2080,7 @@ fn decide_mode_by_outcome(
             if g.pending_decision.is_some() {
                 let answer = {
                     let pending = g.pending_decision.as_ref().unwrap();
-                    AutoDecider.decide(&pending.decision)
+                    decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
                 };
                 if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
                     break false;
@@ -2510,12 +2533,19 @@ fn cast_candidates(
         } else {
             (None, vec![])
         };
+        // X-cost inset spells (Jadzi's Oracle's Gift, {X}{X}{U}) size X
+        // like a hand cast would; at `None` the engine casts them at X=0.
+        let x_value = if x_relevant(spell) {
+            Some(max_affordable_x_for_def(state, seat, spell, 0, w))
+        } else {
+            None
+        };
         let action = GameAction::CastPrepareSpell {
             creature_id: c.id,
             target,
             additional_targets,
             mode: None,
-            x_value: None,
+            x_value,
         };
         if GameState::would_accept_on(probe, action.clone()) {
             castable.push(action);
@@ -3247,6 +3277,8 @@ fn main_phase_action_with(
             // magecraft partition (nudges compose; partitions don't):
             // * Opus: a controlled Opus permanent upgrades its trigger
             //   when 5+ mana was spent on the cast.
+            // * Increment: a controlled Increment body grows when the
+            //   cast's mana spent clears its smaller stat.
             // * Infusion: an Infusion-gated card in hand unlocks on any
             //   lifegain, so lifegain casts go first while none has been
             //   gained this turn.
@@ -3257,6 +3289,7 @@ fn main_phase_action_with(
                 c.controller == seat
                     && c.definition.triggered_abilities.iter().any(is_opus_trigger)
             });
+            let increment_bar = increment_threshold(state, seat);
             let wants_lifegain = state.players[seat].life_gained_this_turn == 0
                 && state.players[seat]
                     .hand
@@ -3267,7 +3300,15 @@ fn main_phase_action_with(
                 .map(|(a, ok)| {
                     let mut s =
                         score_candidate(state, seat, &a, w) * 4 + r.random_range(0..4) as i32;
-                    if has_opus && cast_mana_spent(state, seat, &a) >= 5 {
+                    let spent = if has_opus || increment_bar.is_some() {
+                        cast_mana_spent(state, seat, &a)
+                    } else {
+                        0
+                    };
+                    if has_opus && spent >= 5 {
+                        s += 8 * w.unit;
+                    }
+                    if increment_bar.is_some_and(|bar| spent >= bar) {
                         s += 8 * w.unit;
                     }
                     if wants_lifegain && cast_gains_life(state, seat, &a) {
@@ -3320,6 +3361,11 @@ fn main_phase_action_with(
                         || (w.hold_instants && castable_at_instant_speed(state, seat, &best)));
                 if gate && !improves_this_turn(state, seat, &best, w) {
                     return GameAction::PassPriority;
+                }
+                // SOS Converge: float a missing color first so the cast
+                // counts it — see `pick_converge_prefloat`.
+                if let Some(tap) = pick_converge_prefloat(state, seat, &best) {
+                    return tap;
                 }
                 return best;
             }
@@ -5158,7 +5204,7 @@ fn simulate_attack_outcome(
         if g.pending_decision.is_some() {
             let answer = {
                 let pending = g.pending_decision.as_ref().unwrap();
-                AutoDecider.decide(&pending.decision)
+                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
             };
             g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
             continue;
@@ -5268,7 +5314,7 @@ fn simulate_block_outcome(
         if g.pending_decision.is_some() {
             let answer = {
                 let pending = g.pending_decision.as_ref().unwrap();
-                AutoDecider.decide(&pending.decision)
+                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
             };
             g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
             continue;
@@ -6274,7 +6320,25 @@ pub fn max_affordable_x(
     card: &crate::card::CardInstance,
     w: &EvalWeights,
 ) -> u32 {
-    if !x_relevant(&card.definition) { return 0; }
+    let extra = state.extra_cost_for_card_in_hand(seat, card.id)
+        + crate::game::actions::colored_spell_tax_for_spell(state, seat, card).cmc();
+    max_affordable_x_for_def(state, seat, &card.definition, extra, w)
+}
+
+/// [`max_affordable_x`] for a definition that isn't a hand card — the
+/// prepare-cast inset spell. `extra` carries any surcharges the caller
+/// can compute (hand casts pass their static taxes; prepare copies pass
+/// 0, erring optimistic — `would_accept` re-validates the real payment).
+pub fn max_affordable_x_for_def(
+    state: &GameState,
+    seat: usize,
+    def: &CardDefinition,
+    extra: u32,
+    w: &EvalWeights,
+) -> u32 {
+    if !x_relevant(def) {
+        return 0;
+    }
     // Everything the seat could still produce, not just what's floating --
     // see `available_mana`. Sizing X off the floating pool alone only
     // worked back when the bot tapped out before deciding anything.
@@ -6283,18 +6347,25 @@ pub fn max_affordable_x(
     } else {
         available_mana(state, seat).total
     };
-    let fixed_cmc = card.definition.cost.with_x_value(0).cmc();
-    let extra = state.extra_cost_for_card_in_hand(seat, card.id);
-    let needed = fixed_cmc
-        + extra
-        + crate::game::actions::colored_spell_tax_for_spell(state, seat, card).cmc();
-    let affordable = pool_total.saturating_sub(needed);
+    let fixed_cmc = def.cost.with_x_value(0).cmc();
+    let affordable = pool_total.saturating_sub(fixed_cmc + extra);
+    // `with_x_value` replaces EVERY X pip, so an {X}{X} cost (Oracle's
+    // Gift) pays 2X total — divide the spare mana across the pips or the
+    // declared X overshoots what the payment funnel will accept.
+    let x_pips = def
+        .cost
+        .symbols
+        .iter()
+        .filter(|s| matches!(s, crate::mana::ManaSymbol::X))
+        .count()
+        .max(1) as u32;
+    let affordable = affordable / x_pips;
     // Don't overkill: an `{X}: deal X damage to target creature` spell
     // (creature-only target — can't go to the face) never needs more X
     // than the toughest opposing creature's toughness. Capping here frees
     // the leftover mana for the rest of the turn instead of vanishing it
     // into a 6-damage Disfigure on a 2/2.
-    if let Some(cap) = creature_only_x_damage_cap(state, seat, &card.definition) {
+    if let Some(cap) = creature_only_x_damage_cap(state, seat, def) {
         return affordable.min(cap);
     }
     affordable
@@ -6491,6 +6562,45 @@ fn is_opus_trigger(ta: &crate::card::TriggeredAbility) -> bool {
     matches!(ta.event.kind, EventKind::SpellCast) && branches(&ta.effect)
 }
 
+/// True when `ta` is an Increment rider (SOS): an on-cast trigger gated
+/// on `Predicate::IncrementSatisfied` — "if the amount of mana spent is
+/// greater than this creature's power or toughness, put a +1/+1 counter
+/// on it". See `shortcut::increment_trigger`.
+fn is_increment_trigger(ta: &crate::card::TriggeredAbility) -> bool {
+    use crate::card::EventKind;
+    fn branches(e: &Effect) -> bool {
+        match e {
+            Effect::If { cond, then, else_ } => {
+                matches!(cond, crate::effect::Predicate::IncrementSatisfied)
+                    || branches(then)
+                    || branches(else_)
+            }
+            Effect::Seq(v) => v.iter().any(branches),
+            Effect::MayDo { body, .. } | Effect::ForEach { body, .. } => branches(body),
+            _ => false,
+        }
+    }
+    matches!(ta.event.kind, EventKind::SpellCast) && branches(&ta.effect)
+}
+
+/// The smallest mana-spent total that grows at least one of the bot's
+/// Increment bodies: `min(power, toughness) + 1` over them (the gate is
+/// "spent > power OR toughness", so clearing the smaller stat suffices).
+/// `None` with no Increment body out. Computed stats, so the threshold
+/// climbs as counters land — exactly the printed escalation.
+fn increment_threshold(state: &GameState, seat: usize) -> Option<u32> {
+    state
+        .battlefield
+        .iter()
+        .filter(|c| {
+            c.controller == seat
+                && c.definition.triggered_abilities.iter().any(is_increment_trigger)
+        })
+        .filter_map(|c| state.computed_permanent(c.id))
+        .map(|cp| (cp.power.min(cp.toughness).max(0) + 1) as u32)
+        .min()
+}
+
 /// True when `ta` is a Repartee trigger (SOS): an on-cast event filter
 /// that requires the spell to target a creature. See `shortcut::repartee`.
 fn is_repartee_trigger(ta: &crate::card::TriggeredAbility) -> bool {
@@ -6599,6 +6709,129 @@ fn best_hostile_creature_target(
         Some(f) => state.evaluate_requirement_static(f, t, seat, None),
         None => true,
     })
+}
+
+/// True when casting `def` reads the converge count — the distinct colors
+/// of mana spent — anywhere the bot can see it: an effect `Value`
+/// (`ConvergedValue`), a `ManaValueAtMostConverged` target filter
+/// (Sundering Archaic), or an enters-with-counters amount. The `Value`
+/// walk mirrors [`effect_uses_x`]'s variant coverage.
+fn card_reads_converge(def: &CardDefinition) -> bool {
+    use crate::effect::Value;
+    fn value_is_converge(v: &Value) -> bool {
+        match v {
+            Value::ConvergedValue => true,
+            Value::Sum(parts) => parts.iter().any(value_is_converge),
+            Value::Diff(a, b) | Value::Times(a, b) | Value::Min(a, b) | Value::Max(a, b) => {
+                value_is_converge(a) || value_is_converge(b)
+            }
+            Value::NonNeg(inner) => value_is_converge(inner),
+            _ => false,
+        }
+    }
+    fn req_converge(r: &crate::card::SelectionRequirement) -> bool {
+        use crate::card::SelectionRequirement as R;
+        match r {
+            R::ManaValueAtMostConverged => true,
+            R::And(a, b) | R::Or(a, b) => req_converge(a) || req_converge(b),
+            _ => false,
+        }
+    }
+    fn walk(eff: &Effect) -> bool {
+        match eff {
+            Effect::Seq(steps) => steps.iter().any(walk),
+            Effect::If { then, else_, .. } => walk(then) || walk(else_),
+            Effect::ChooseMode(modes) => modes.iter().any(walk),
+            Effect::ForEach { body, .. }
+            | Effect::Repeat { body, .. }
+            | Effect::DelayUntil { body, .. }
+            | Effect::MayDo { body, .. } => walk(body),
+            Effect::DealDamage { amount, .. }
+            | Effect::GainLife { amount, .. }
+            | Effect::LoseLife { amount, .. }
+            | Effect::Drain { amount, .. }
+            | Effect::Draw { amount, .. }
+            | Effect::Mill { amount, .. }
+            | Effect::Scry { amount, .. }
+            | Effect::Surveil { amount, .. }
+            | Effect::LookAtTop { amount, .. }
+            | Effect::AddCounter { amount, .. }
+            | Effect::RemoveCounter { amount, .. }
+            | Effect::AddPoison { amount, .. }
+            | Effect::Discard { amount, .. } => value_is_converge(amount),
+            Effect::PumpPT { power, toughness, .. } => {
+                value_is_converge(power) || value_is_converge(toughness)
+            }
+            Effect::CreateToken { count, .. } => value_is_converge(count),
+            _ => false,
+        }
+    }
+    walk(&def.effect)
+        || def.effect.primary_target_filter().is_some_and(req_converge)
+        || def.enters_with_counters.as_ref().is_some_and(|(_, v)| value_is_converge(v))
+}
+
+/// SOS Converge pre-float: when the bot's chosen play scales with the
+/// distinct colors of mana spent, tap one plain source of a color the
+/// pool doesn't hold yet and cast NEXT tick — the payment funnel spends
+/// pool mana first, so every floated color is a drained (counted) color
+/// when the cast goes off. Bounded on every side: only fires while the
+/// float is smaller than the cost's mana value (excess would strand and
+/// vanish at end of phase), only from single-fixed-color tap-only
+/// sources with no life cost (no ChooseColor prompt, no pain), and each
+/// firing adds a color the pool lacked, so at most four taps precede the
+/// cast.
+fn pick_converge_prefloat(
+    state: &GameState,
+    seat: usize,
+    action: &GameAction,
+) -> Option<GameAction> {
+    use crate::mana::Color;
+    let def: &CardDefinition = match action {
+        GameAction::CastSpell { card_id, .. } => {
+            &state.players[seat].hand.iter().find(|c| c.id == *card_id)?.definition
+        }
+        GameAction::CastPrepareSpell { creature_id, .. } => {
+            state.battlefield_find(*creature_id)?.definition.prepare_spell.as_deref()?
+        }
+        _ => return None,
+    };
+    if !card_reads_converge(def) {
+        return None;
+    }
+    let pool = &state.players[seat].mana_pool;
+    if pool.total() >= def.cost.cmc() {
+        return None;
+    }
+    for c in state.battlefield.iter().filter(|c| c.controller == seat && !c.tapped) {
+        for (idx, a) in c.definition.activated_abilities.iter().enumerate() {
+            if !is_countable_mana_ability(a) || a.life_cost > 0 {
+                continue;
+            }
+            let (amount, colors, colorless) = mana_ability_output(&a.effect);
+            if amount == 0 || colorless || colors.len() != 1 {
+                continue;
+            }
+            let Some(color) = Color::ALL.into_iter().find(|c| colors.contains(*c)) else {
+                continue;
+            };
+            if pool.amount(color) > 0 {
+                continue;
+            }
+            let tap = GameAction::ActivateAbility {
+                card_id: c.id,
+                ability_index: idx,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            if state.would_accept(tap.clone()) {
+                return Some(tap);
+            }
+        }
+    }
+    None
 }
 
 /// True when the card with id `cid` in `seat`'s hand is an instant or
@@ -6921,7 +7154,7 @@ enum CombatSim {
 /// at: the game is over, the turn is already past combat damage, or the
 /// active player has no creature that could attack. Forge guards the same
 /// way, because the state copy is the expensive part.
-fn simulate_through_combat(g: &mut GameState, fuel: &mut u32) -> CombatSim {
+fn simulate_through_combat(g: &mut GameState, fuel: &mut u32, w: &EvalWeights) -> CombatSim {
     if g.is_game_over() || g.step >= TurnStep::CombatDamage {
         return CombatSim::Skipped;
     }
@@ -6946,7 +7179,7 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32) -> CombatSim {
         if g.pending_decision.is_some() {
             let answer = {
                 let pending = g.pending_decision.as_ref().unwrap();
-                AutoDecider.decide(&pending.decision)
+                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
             };
             if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
                 return CombatSim::Incomplete;
@@ -7029,7 +7262,7 @@ fn evaluate_action_sequence(
         if g.pending_decision.is_some() {
             let answer = {
                 let pending = g.pending_decision.as_ref().unwrap();
-                AutoDecider.decide(&pending.decision)
+                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
             };
             g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
         } else if g.stack.is_empty() {
@@ -7064,7 +7297,7 @@ fn score_settled_state(g: &GameState, seat: usize, w: &EvalWeights) -> Option<i3
     // declarations plus a priority round per step, before triggers).
     let mut sim = g.clone();
     let mut combat_fuel = 256u32;
-    match simulate_through_combat(&mut sim, &mut combat_fuel) {
+    match simulate_through_combat(&mut sim, &mut combat_fuel, w) {
         // A half-simulated combat is worse than none: attackers are
         // declared and tapped but damage was never dealt, so the line reads
         // as pure downside. Refuse to score a torn state -- the caller
@@ -7163,7 +7396,7 @@ fn improves_this_turn(
     let before = if w.combat_aware {
         let mut idle = state.clone();
         let mut idle_fuel = 256u32;
-        let _ = simulate_through_combat(&mut idle, &mut idle_fuel);
+        let _ = simulate_through_combat(&mut idle, &mut idle_fuel, w);
         eval_material_summon_sick_blind(&idle, seat, w)
     } else {
         eval_material_summon_sick_blind(state, seat, w)
@@ -7177,7 +7410,7 @@ fn improves_this_turn(
         if g.pending_decision.is_some() {
             let answer = {
                 let pending = g.pending_decision.as_ref().unwrap();
-                AutoDecider.decide(&pending.decision)
+                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
             };
             if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
                 return true;
@@ -7195,7 +7428,7 @@ fn improves_this_turn(
     if w.combat_aware {
         let mut combat_fuel = 256u32;
         // A torn simulation can't answer the question; don't hold on it.
-        if simulate_through_combat(&mut g, &mut combat_fuel) == CombatSim::Incomplete {
+        if simulate_through_combat(&mut g, &mut combat_fuel, w) == CombatSim::Incomplete {
             return true;
         }
     }
@@ -10760,7 +10993,7 @@ mod tests {
         let life_before = g.players[1].life;
         let mut fuel = 200u32;
         assert_eq!(
-            simulate_through_combat(&mut g, &mut fuel),
+            simulate_through_combat(&mut g, &mut fuel, &EvalWeights::default()),
             CombatSim::Completed,
             "combat should be simulated",
         );
@@ -10775,7 +11008,7 @@ mod tests {
         let mut g = two_player_game();
         let mut fuel = 200u32;
         assert_eq!(
-            simulate_through_combat(&mut g, &mut fuel),
+            simulate_through_combat(&mut g, &mut fuel, &EvalWeights::default()),
             CombatSim::Skipped,
             "no creatures, no combat",
         );
@@ -10783,14 +11016,14 @@ mod tests {
         // A summoning-sick creature can't attack, so still nothing to see.
         g.add_card_to_battlefield(0, catalog::grizzly_bears());
         assert_eq!(
-            simulate_through_combat(&mut g, &mut fuel),
+            simulate_through_combat(&mut g, &mut fuel, &EvalWeights::default()),
             CombatSim::Skipped,
             "sick creature can't attack",
         );
         g.step = TurnStep::PostCombatMain;
         g.clear_sickness(g.battlefield[0].id);
         assert_eq!(
-            simulate_through_combat(&mut g, &mut fuel),
+            simulate_through_combat(&mut g, &mut fuel, &EvalWeights::default()),
             CombatSim::Skipped,
             "combat is already over",
         );
@@ -10815,7 +11048,7 @@ mod tests {
         let snapshot = eval_material(&g, 0, &w);
         let mut sim = g.clone();
         let mut fuel = 200u32;
-        assert_eq!(simulate_through_combat(&mut sim, &mut fuel), CombatSim::Completed);
+        assert_eq!(simulate_through_combat(&mut sim, &mut fuel, &EvalWeights::default()), CombatSim::Completed);
         assert!(sim.battlefield_find(doomed).is_none(), "the forced attacker died");
         assert!(
             eval_material(&sim, 0, &w) < snapshot,
@@ -11660,6 +11893,157 @@ mod stack_response_tests {
             "with a Repartee payoff out, Shock kills the bear instead of pinging face, \
              got {action:?}"
         );
+    }
+
+    /// SOS Converge: before casting a spell that scales with distinct
+    /// colors of mana spent, the bot floats a color the pool lacks —
+    /// tapping one source per tick — and only then casts, so the payment
+    /// drains every college color instead of whatever the auto-tap
+    /// grabbed first.
+    #[test]
+    fn converge_cast_prefloats_missing_colors() {
+        use crate::card::CardType;
+        use crate::effect::{Selector, Value};
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.step = TurnStep::PostCombatMain;
+        let mountain = g.add_card_to_battlefield(0, catalog::mountain());
+        let island = g.add_card_to_battlefield(0, catalog::island());
+        // {1}{R} "draw cards equal to converge" stand-in.
+        let spell = CardDefinition {
+            name: "Converge Test",
+            cost: crate::mana::ManaCost::new(vec![
+                crate::mana::ManaSymbol::Generic(1),
+                crate::mana::ManaSymbol::Colored(Color::Red),
+            ]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Draw { who: Selector::You, amount: Value::ConvergedValue },
+            ..Default::default()
+        };
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let card = g.add_card_to_hand(0, spell);
+        g.priority.player_with_priority = 0;
+        // Tick 1: the bot taps a source instead of casting — floating a
+        // color toward the converge count.
+        let first = main_phase_action(&g, 0);
+        assert!(
+            matches!(
+                first,
+                GameAction::ActivateAbility { card_id, .. }
+                    if card_id == mountain || card_id == island
+            ),
+            "first tick floats a color for the converge cast, got {first:?}"
+        );
+        g.perform_action(first).unwrap();
+        // Tick 2: one color floated; with pool ≥ another new color still
+        // missing but no room left (cmc 2, 1 floated) — the second tick
+        // floats the second color or casts; drive to the cast and check
+        // it happened with both colors drained.
+        let mut fuel = 4;
+        loop {
+            let a = main_phase_action(&g, 0);
+            let done = matches!(a, GameAction::CastSpell { card_id, .. } if card_id == card);
+            g.perform_action(a).expect("bot line applies");
+            if done {
+                break;
+            }
+            fuel -= 1;
+            assert!(fuel > 0, "prefloat must terminate in a cast");
+        }
+        // Both sources went into the payment: the cast drained R and U.
+        assert!(
+            g.battlefield.iter().filter(|c| c.controller == 0).all(|c| c.tapped),
+            "both colors were tapped into the converge cast"
+        );
+    }
+
+    /// Simulations answer decisions with the bot's own policy table:
+    /// a pure-upside "you may draw" is TAKEN under
+    /// `decide_pending_policy` where `AutoDecider` (the old sim
+    /// decider) declines every optional trigger — the difference that
+    /// made lookaheads undervalue every line with a beneficial rider.
+    #[test]
+    fn sim_policy_takes_beneficial_triggers() {
+        use crate::card::{CardType, TriggeredAbility};
+        use crate::decision::{Decision, DecisionAnswer};
+        use crate::effect::{EventKind, EventScope, EventSpec, Selector, Value};
+        let mut g = two_player_game();
+        let upside = CardDefinition {
+            name: "Upside Rider",
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "you may".to_string(),
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
+                },
+            }],
+            ..Default::default()
+        };
+        let id = g.add_card_to_battlefield(0, upside);
+        let d = Decision::OptionalTrigger { source: id, description: "you may".to_string() };
+        assert!(
+            matches!(AutoDecider.decide(&d), DecisionAnswer::Bool(false)),
+            "AutoDecider declines every optional trigger"
+        );
+        let ans = decide_pending_policy(&g, 0, &EvalWeights::default(), &d, false);
+        assert!(
+            matches!(ans, DecisionAnswer::Bool(true)),
+            "the sim policy takes the pure-upside draw, got {ans:?}"
+        );
+    }
+
+    /// X sizing honors multi-X costs: `{X}{X}{U}` with five mana up
+    /// declares X=2 (pays {2}{2}{U}), not X=4 — and the same helper
+    /// sizes prepare-cast inset spells that used to be stuck at X=0.
+    #[test]
+    fn multi_x_pip_costs_split_the_spare_mana() {
+        use crate::mana::{Color, ManaCost, ManaSymbol};
+        let mut g = two_player_game();
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        let def = CardDefinition {
+            name: "Double X Test",
+            cost: ManaCost::new(vec![
+                ManaSymbol::X,
+                ManaSymbol::X,
+                ManaSymbol::Colored(Color::Blue),
+            ]),
+            ..Default::default()
+        };
+        let x = max_affordable_x_for_def(&g, 0, &def, 0, &EvalWeights::default());
+        assert_eq!(x, 2, "five mana into {{X}}{{X}}{{U}} is X=2");
+    }
+
+    /// The Increment threshold reads the smaller stat: a 2/3 Increment
+    /// body wants casts spending 3+ mana, and the bar climbs as the
+    /// body grows.
+    #[test]
+    fn increment_threshold_reads_smaller_stat() {
+        use crate::card::CardType;
+        use crate::effect::shortcut;
+        let mut g = two_player_game();
+        assert_eq!(increment_threshold(&g, 0), None, "no body, no bar");
+        let body = CardDefinition {
+            name: "Increment Test",
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 3,
+            triggered_abilities: vec![shortcut::increment_trigger(Effect::Noop)],
+            ..Default::default()
+        };
+        let id = g.add_card_to_battlefield(0, body);
+        assert!(is_increment_trigger(
+            &g.battlefield_find(id).unwrap().definition.triggered_abilities[0]
+        ));
+        assert_eq!(increment_threshold(&g, 0), Some(3), "min(2,3)+1");
     }
 
     /// The on-cast family detectors tell the SOS trigger shapes apart:
