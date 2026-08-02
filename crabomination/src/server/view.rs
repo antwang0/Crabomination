@@ -799,6 +799,12 @@ fn project_player(
         } else {
             Vec::new()
         },
+        // Cease-Fire — the turn's filtered cast locks, labelled for the HUD.
+        locked_cast_kinds: player
+            .cant_cast_matching_this_turn
+            .iter()
+            .map(|r| requirement_noun(r).to_string())
+            .collect(),
         life_locked: player.life_locked_this_turn,
         has_hexproof,
         commander_damage_taken,
@@ -2652,6 +2658,17 @@ mod tests {
         );
         g.remove_from_battlefield_to_graveyard_raw(maze);
         assert!(project(&g, 0).players[0].locked_cast_colors.is_empty());
+    }
+
+    /// Cease-Fire's filtered cast lock is labelled for the HUD.
+    #[test]
+    fn filtered_cast_lock_surfaces_its_noun() {
+        let mut g = two_player_game();
+        assert!(project(&g, 0).players[1].locked_cast_kinds.is_empty());
+        g.players[1]
+            .cant_cast_matching_this_turn
+            .push(crate::card::SelectionRequirement::Creature);
+        assert_eq!(project(&g, 0).players[1].locked_cast_kinds, vec!["creature".to_string()]);
     }
 
     #[test]

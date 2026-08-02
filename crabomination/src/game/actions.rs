@@ -5837,6 +5837,15 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // CR 702.16b — protection from a *filtered* quality
+                // (Empty-Shrine Kannushi, Pledge of Loyalty): the spell is
+                // still in transient ownership, so match it card-side.
+                if let Keyword::ProtectionFromMatching(f) = kw
+                    && self.evaluate_requirement_on_card(f, &card, target_card.controller)
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
                 // CR 702.16j — protection from a card type (Serra's Emissary
                 // grant): can't be targeted by a spell of that type.
                 if let Keyword::ProtectionFromCardType(t) = kw

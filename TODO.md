@@ -56,49 +56,53 @@ arm can chain a card pick with further seat questions).
 
 ### Residuals in what shipped
 
-- **Psychic Battle fires on `BecameTarget`** (per targeted object) rather than
-  once per "chooses one or more targets" decision, and it repoints only the
-  topmost *spell* on the stack — an ability's targets are left alone.
-
-- **Barrin's Spite's second slot isn't restricted** to a creature controlled by
-  the same player as slot 0 (no cross-slot cast-time filter).
-- **Atalya, Samite Master's "spend only white mana on X"** and **Protective
-  Sphere's "shares a color with the mana spent"** are dropped (no per-
-  activation mana-colour provenance on the X payment).
-- **Samite Ministration's black/red lifegain rider** is dropped.
-- **Pledge of Loyalty snapshots your colours at ETB** rather than tracking them
-  continuously.
-- **Kangee's feather counters** ride `CounterType::Charge`; **Darigaaz, the
-  Igniter** reads the hand live instead of snapshotting the reveal; **Prison
-  Barricade's** kicked defender-bypass grant is dropped.
 - **The pile-split bodies must stay non-interactive** — a body that suspends
   would restart the split on its re-run (`Effect::SeparateIntoPiles`).
+- **Kangee's feather counters** are a real `CounterType::Feather`; **Darigaaz,
+  the Igniter** now reveals the hand (`Effect::RevealHand`) but still counts it
+  live rather than from a snapshot — indistinguishable within one resolution.
 
-### Noticed this run (Invasion closeout) — not tackled
+The rest of the Invasion residual list is closed: Psychic Battle fires once per
+targeting decision (`EventKind::ChoseTargets`) and repoints every slot of a
+spell *or* ability (CR 115.7c); Barrin's Spite enforces the same-controller
+pairing at cast (`SelectionRequirement::SameControllerAsTargetSlot`); Atalya
+spends only white on X (`ActivatedAbility.x_mana_color`); Protective Sphere
+reads the activation's mana colours (`SharesColorWithManaSpent`); Samite
+Ministration refunds life for black/red sources
+(`PreventedSource.gain_life_colors`); Pledge of Loyalty is a continuous
+protection grant that can't shed itself (`EquipBonus.protection_keeps_self`);
+Prison Barricade's kicked defender bypass is wired.
 
-- **Mana-colour provenance on an activation's `{X}`.** Several cards gate X on
-  the *colour* of the mana spent (Atalya's "spend only white mana on X",
-  Protective Sphere's "shares a color with the mana spent on this activation
-  cost"). `mana_spent_by_color` exists for spells; activated abilities don't
-  record it.
-- **Cross-slot cast-time target filters.** `evaluate_requirement_static` sees
-  one target at a time, so "two target creatures controlled by the same
-  player" (Barrin's Spite) can't be enforced at cast. A slot-aware filter
-  variant would also cover Dead Ringers-style pairings more cleanly.
-- **Interactive bodies inside a pile split.** `Effect::SeparateIntoPiles` runs
-  its two bodies after the last ask; a body that itself suspends restarts the
-  whole split on its re-run. Either park the split result in the resume
-  context or forbid suspending bodies with a debug assert.
-- **`Effect::ChooseNewTargetsForSpell` only walks stack *spells*.** Psychic
-  Battle (and any future "change the target of that ability") can't repoint a
-  triggered or activated ability.
-- **A "chooses one or more targets" event.** `EventKind::BecameTarget` fires
-  per targeted object, so a per-decision listener over-fires under a
-  multi-target spell.
+### Noticed this run (Odyssey wave) — not tackled
+
+- **`MagicCompRules_20260417.txt` is not in the repo.** The CR audit sections
+  below were maintained against a local copy; re-add it (or vendor a pinned
+  copy) before the next rules sweep.
+- **Interactive bodies inside a pile split** (carried forward): park the split
+  result in the resume context, or debug-assert against a suspending body.
 - **CR 605.3c** — "once a player begins to activate a mana ability, it can't be
   activated again until it has resolved" isn't modelled (mana abilities resolve
   synchronously, so it has never mattered; it would for a future split-payment
   UI).
+- **`Effect::RevealTopOfLibrary` clears only on a draw.** A shuffle, a scry to
+  the bottom, or a `Move`-to-library also changes the top card, but the reveal
+  flag survives them; route the clear through the library-mutation funnels.
+- **Earnest Fellowship** ("each creature has protection from its colors") needs
+  a self-referential protection filter — a `SharesColorWithSelf` requirement.
+- **Dwarven Recruiter / Aether Burst / Cultural Exchange** each need one
+  primitive: search-any-number-onto-the-library-top, an as-you-cast target
+  count, and a multi-way control exchange.
+
+## Odyssey — opened
+
+`set_gaps.py ody` 274 → ~173 (`sets::ody::{gaps,gaps2}`, 101 cards; tests in
+`classic_sets/ody`). Threshold rides `Predicate::ThresholdActive`, flashback and
+the Aura/EquipBonus shell were already in place. New primitives:
+`Effect::{RevealHand, RevealTopOfLibrary, PlayerCantCastMatchingThisTurn}`,
+`StaticEffect::{ControllerMaxHandSizeReduced, ReduceColorDamageToYouBy}`,
+`SelectionRequirement::ToughnessAtMostGraveyardCount`, `CounterType::Feather`,
+`CreatureType::Mystic`, and `Player.cant_cast_matching_this_turn` (surfaced as
+`PlayerView.locked_cast_kinds` + a client `⊘ <kind>` chip).
 
 ## Apocalypse — closed
 

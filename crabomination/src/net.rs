@@ -907,6 +907,11 @@ pub struct PlayerView {
     /// of just rejecting the cast. `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub locked_cast_colors: Vec<crate::mana::Color>,
+    /// Cease-Fire — short labels for the turn-scoped filtered cast locks on
+    /// this seat ("creature", "artifact", …), so a UI can explain a rejected
+    /// cast instead of just refusing it. Empty when nothing is locked.
+    #[serde(default)]
+    pub locked_cast_kinds: Vec<String>,
     /// True when this player's life total can't change this turn (Flare of
     /// Fortitude) — both gain and loss are dropped. Surfaced so UIs can show
     /// the life total is frozen. `#[serde(default)]` for snapshot back-compat.

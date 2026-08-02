@@ -950,12 +950,32 @@ impl GameState {
         chooser: usize,
         original: &Option<crate::game::types::Target>,
     ) -> Option<crate::game::types::Target> {
+        self.retarget_slot(effect, name, chooser, 0, original)
+    }
+
+    /// CR 115.7 — repoint one declared target slot. Slot 0 walks the effect's
+    /// own legal-target enumeration; later slots filter the same pool by that
+    /// slot's printed requirement.
+    fn retarget_slot(
+        &mut self,
+        effect: &crate::effect::Effect,
+        name: &str,
+        chooser: usize,
+        slot: u8,
+        original: &Option<crate::game::types::Target>,
+    ) -> Option<crate::game::types::Target> {
         use crate::decision::{Decision, DecisionAnswer};
         use crate::game::types::Target;
+        let slot_filter = effect.target_filter_for_slot(slot).cloned();
         let mut legal: Vec<Target> = self
             .enumerate_legal_targets(effect, chooser)
             .into_iter()
             .filter(|t| Some(t) != original.as_ref())
+            .filter(|t| {
+                slot_filter.as_ref().is_none_or(|f| {
+                    self.evaluate_requirement_static(f, t, chooser, None)
+                })
+            })
             .collect();
         if legal.is_empty() {
             return original.clone();
@@ -22703,24 +22723,38 @@ impl GameState {
                 }) else {
                     return Ok(());
                 };
-                let (eff, name, orig) = match &self.stack[idx] {
-                    StackItem::Spell { card, target, .. } => (
+                let (eff, name, orig, extra) = match &self.stack[idx] {
+                    StackItem::Spell { card, target, additional_targets, .. } => (
                         card.definition.effect.clone(),
                         card.definition.name.to_string(),
                         target.clone(),
+                        additional_targets.clone(),
                     ),
-                    StackItem::Trigger { source, effect, target, .. } => (
+                    StackItem::Trigger { source, effect, target, additional_targets, .. } => (
                         (**effect).clone(),
                         self.find_card_anywhere(*source)
                             .map(|c| c.definition.name.to_string())
                             .unwrap_or_default(),
                         target.clone(),
+                        additional_targets.clone(),
                     ),
                 };
+                // CR 115.7c — "the target or targets": every declared slot is
+                // repointed, each against its own filter.
                 let new_target = self.retarget_spell(&eff, &name, who, &orig);
+                let new_extra: Vec<Target> = extra
+                    .iter()
+                    .enumerate()
+                    .map(|(i, t)| {
+                        self.retarget_slot(&eff, &name, who, (i + 1) as u8, &Some(t.clone()))
+                            .unwrap_or_else(|| t.clone())
+                    })
+                    .collect();
                 match &mut self.stack[idx] {
-                    StackItem::Spell { target, .. } | StackItem::Trigger { target, .. } => {
+                    StackItem::Spell { target, additional_targets, .. }
+                    | StackItem::Trigger { target, additional_targets, .. } => {
                         *target = new_target;
+                        *additional_targets = new_extra;
                     }
                 }
                 Ok(())

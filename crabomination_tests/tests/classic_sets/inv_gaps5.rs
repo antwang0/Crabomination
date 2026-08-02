@@ -570,20 +570,26 @@ fn barrins_spite_needs_one_controller() {
     assert!(g.players[1].hand.iter().any(|c| c.id == other), "the other bounced");
 }
 
-/// Pledge of Loyalty keeps granting protection as your colours change, and
-/// never sheds itself.
+/// Pledge of Loyalty grants protection from the colours you control right now,
+/// and never sheds itself.
 #[test]
 fn pledge_of_loyalty_tracks_your_colors() {
-    let mut g = main_phase();
-    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let aura = g.add_card_to_hand(0, catalog::pledge_of_loyalty());
-    cast(&mut g, 0, aura, Some(Target::Permanent(host)));
-    assert_eq!(g.battlefield_find(aura).map(|c| c.attached_to), Some(Some(host)));
-    // Only white (the Aura) and green (the host) are on board so far.
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    mana(&mut g, 1);
-    g.priority.player_with_priority = 1;
-    assert!(
+    let bolt_at = |red_on_board: bool| {
+        let mut g = main_phase();
+        let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let aura = g.add_card_to_hand(0, catalog::pledge_of_loyalty());
+        cast(&mut g, 0, aura, Some(Target::Permanent(host)));
+        assert_eq!(
+            g.battlefield_find(aura).map(|c| c.attached_to),
+            Some(Some(host)),
+            "the white Aura doesn't shed itself"
+        );
+        if red_on_board {
+            g.add_card_to_battlefield(0, catalog::raging_goblin());
+        }
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        mana(&mut g, 1);
+        g.priority.player_with_priority = 1;
         g.perform_action(GameAction::CastSpell {
             card_id: bolt,
             target: Some(Target::Permanent(host)),
@@ -591,22 +597,9 @@ fn pledge_of_loyalty_tracks_your_colors() {
             mode: None,
             x_value: None,
         })
-        .is_err(),
-        "protection from white blocks nothing red yet"
-    );
-    g.add_card_to_battlefield(0, catalog::raging_goblin());
-    g.priority.player_with_priority = 1;
-    assert!(
-        g.perform_action(GameAction::CastSpell {
-            card_id: bolt,
-            target: Some(Target::Permanent(host)),
-            additional_targets: vec![],
-            mode: None,
-            x_value: None,
-        })
-        .is_err(),
-        "a red permanent you control now blocks the Bolt"
-    );
+    };
+    assert!(bolt_at(false).is_ok(), "no red permanent, no protection from red");
+    assert!(bolt_at(true).is_err(), "a red permanent you control blocks the Bolt");
 }
 
 /// Psychic Battle fires once per targeting decision, not once per target.

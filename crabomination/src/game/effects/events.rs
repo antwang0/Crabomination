@@ -657,6 +657,9 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // OpponentControl → caster is opponent of source's controller).
         GameEvent::BecameTarget { caster, .. } => Some(*caster),
         GameEvent::ChoseTargets { chooser, .. } => Some(*chooser),
+        // CR 605 — the player who tapped the land (Price of Glory's off-turn
+        // gate reads "that player's turn").
+        GameEvent::TappedForMana { player, .. } => Some(*player),
         // Sacrifice is performed by the controller of the sacrificed
         // permanent ("a player sacrifices a creature"). This routes the
         // YourControl / OpponentControl scope check correctly: a

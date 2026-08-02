@@ -2358,9 +2358,9 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to open.** Invasion, Planeshift and Apocalypse are all at zero
-   `set_gaps.py`, so the block is done; pick the next classic set (Odyssey
-   block or Mercadian Masques) and repeat the wave pattern.
+0. **Next set to close.** Odyssey is open (`set_gaps.py ody` 274 → ~173,
+   `sets::ody::{gaps,gaps2}`); keep the wave pattern going, then Torment and
+   Judgment finish the block.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2374,6 +2374,33 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Odyssey (ODY) opened** — 101 cards (`sets::ody::{gaps,gaps2}`, tests in
+  `classic_sets/ody`): the sac-land cycle, the Threshold shell (Mystics,
+  Frightcrawler, Krosan Avenger, the Desire Auras, Divine Sacrament), the
+  flashback commons, the Sphere cycle, Standstill / Battle of Wits / Ground
+  Seal / Price of Glory. New: `Effect::{RevealHand, RevealTopOfLibrary,
+  PlayerCantCastMatchingThisTurn}`, `StaticEffect::{ControllerMaxHandSizeReduced,
+  ReduceColorDamageToYouBy}`, `SelectionRequirement::ToughnessAtMostGraveyardCount`,
+  `CounterType::Feather`, `CreatureType::Mystic`.
+- **CR 106.6 — mana provenance on an activation.** `StackItem::Trigger` carries
+  the activation's per-colour spend into `EffectContext.mana_spent_by_color`,
+  and `ActivatedAbility.x_mana_color` turns "spend only [colour] mana on X"
+  (CR 601.2g) into real coloured pips. Atalya, Protective Sphere.
+- **CR 601.2c cross-slot target filters** — `SameControllerAsTargetSlot` reads
+  the whole chosen slot vector at cast (`target_slots_scratch`) and in the
+  `&self` auto-targeter (`cross_slot_targets_ok`). Barrin's Spite.
+- **CR 115.7c — "the target or targets".** A repoint now walks *every* declared
+  slot (each against its own filter) and accepts an ability as well as a spell,
+  and `EventKind::ChoseTargets` fires once per targeting decision rather than
+  once per targeted object. Psychic Battle is fully faithful.
+- **CR 702.16b — filtered protection gates targeting.** The cast-time
+  protection walk now honours `Keyword::ProtectionFromMatching`, which it
+  silently skipped (Empty-Shrine Kannushi, Pledge of Loyalty).
+- **`PreventedSource`** replaces the `damage_prevented_sources` 3-tuple, with a
+  colour gate on the life refund (Samite Ministration) rechecked at damage time.
+- **`EquipBonus.protection_keeps_self`** (CR 702.16k, narrow) — a
+  protection-granting Aura is exempt from its own 704.5m shed.
 
 - **Invasion (INV) complete** — `set_gaps.py inv` at zero (`sets::inv::gaps5`,
   40 cards this push). The pile-splitting

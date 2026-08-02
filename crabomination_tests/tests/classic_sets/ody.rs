@@ -317,3 +317,153 @@ fn aven_windreader_reveals_a_library_top() {
         "the reveal ends when the top moves"
     );
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Kamahl's Desire grants first strike now and +3/+0 past Threshold.
+#[test]
+fn kamahls_desire_scales_with_threshold() {
+    let mut g = main_phase();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::kamahls_desire());
+    cast(&mut g, 0, aura, Some(Target::Permanent(host)));
+    let cp = g.computed_permanent(host).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    fill_graveyard(&mut g, 0);
+    assert_eq!(g.computed_permanent(host).unwrap().power, 5);
+}
+
+/// Gorilla Titan is an 8/8 only while your graveyard is empty.
+#[test]
+fn gorilla_titan_shrinks_once_you_have_a_graveyard() {
+    let mut g = main_phase();
+    let titan = g.add_card_to_battlefield(0, catalog::gorilla_titan());
+    assert_eq!(g.computed_permanent(titan).unwrap().power, 8);
+    g.add_card_to_graveyard(0, catalog::forest());
+    assert_eq!(g.computed_permanent(titan).unwrap().power, 4);
+}
+
+/// Thermal Blast upgrades from 3 to 5 damage past Threshold.
+#[test]
+fn thermal_blast_hits_harder_past_threshold() {
+    let mut g = main_phase();
+    let big = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw());
+    let blast = g.add_card_to_hand(0, catalog::thermal_blast());
+    cast(&mut g, 0, blast, Some(Target::Permanent(big)));
+    assert_eq!(g.battlefield_find(big).unwrap().damage, 3, "3 without Threshold");
+
+    let mut g = main_phase();
+    fill_graveyard(&mut g, 0);
+    let big = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw());
+    let blast = g.add_card_to_hand(0, catalog::thermal_blast());
+    cast(&mut g, 0, blast, Some(Target::Permanent(big)));
+    assert_eq!(g.battlefield_find(big).unwrap().damage, 5, "5 past Threshold");
+}
+
+/// Squirrel Nest turns the enchanted land into a token engine.
+#[test]
+fn squirrel_nest_makes_a_squirrel_per_tap() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let nest = g.add_card_to_hand(0, catalog::squirrel_nest());
+    cast(&mut g, 0, nest, Some(Target::Permanent(land)));
+    activate(&mut g, 0, land, 1, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Squirrel").count(), 1);
+}
+
+/// Bearscape eats two graveyard cards per Bear.
+#[test]
+fn bearscape_trades_your_graveyard_for_bears() {
+    let mut g = main_phase();
+    let scape = g.add_card_to_battlefield(0, catalog::bearscape());
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    activate(&mut g, 0, scape, 0, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Bear").count(), 1);
+    assert!(g.players[0].graveyard.is_empty(), "both cards were exiled");
+    mana(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: scape,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "an empty graveyard can't pay the cost"
+    );
+}
+
+/// Price of Glory destroys a land tapped for mana off-turn only.
+#[test]
+fn price_of_glory_punishes_off_turn_mana() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::price_of_glory());
+    let mine = g.add_card_to_battlefield(0, catalog::forest());
+    let theirs = g.add_card_to_battlefield(1, catalog::forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mine,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("active player taps freely");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_some(), "it's the active player's turn");
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: theirs,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "an off-turn tap loses the land");
+}
+
+/// Nantuko Mentor doubles the target's power.
+#[test]
+fn nantuko_mentor_doubles_power() {
+    let mut g = main_phase();
+    let mentor = g.add_card_to_battlefield(0, catalog::nantuko_mentor());
+    g.battlefield_find_mut(mentor).unwrap().summoning_sick = false;
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    activate(&mut g, 0, mentor, 0, Some(Target::Permanent(giant)));
+    let cp = g.computed_permanent(giant).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3 + 3, 3 + 3));
+}
+
+/// Ground Seal locks graveyard cards out of being targeted.
+#[test]
+fn ground_seal_protects_graveyards() {
+    let mut g = main_phase();
+    let before = g.players[0].hand.len();
+    g.add_card_to_library(0, catalog::forest());
+    let seal = g.add_card_to_hand(0, catalog::ground_seal());
+    cast(&mut g, 0, seal, None);
+    assert_eq!(g.players[0].hand.len(), before + 1, "the Seal cantripped");
+    let victim = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let purge = g.add_card_to_hand(0, catalog::coffin_purge());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: purge,
+            target: Some(Target::Permanent(victim)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "graveyard cards can't be targeted"
+    );
+}

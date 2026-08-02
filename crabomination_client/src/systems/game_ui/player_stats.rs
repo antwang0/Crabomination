@@ -939,6 +939,10 @@ pub fn update_player_stats_chips(
                 .collect();
             spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, format!("⊘ {pips}"));
         }
+        // Cease-Fire — a turn-scoped filtered cast lock.
+        for kind in &p.locked_cast_kinds {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, format!("⊘ {kind}"));
+        }
         // Damping Engine — the seat ahead on permanents can't develop until it
         // sacrifices something.
         if p.development_locked {
