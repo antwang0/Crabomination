@@ -4206,6 +4206,19 @@ impl GameState {
     /// CR 615 — `who` is enchanted by an Aura that blanks damage in the
     /// `incoming` direction: Heart of Light seals both, Inviolability only
     /// damage dealt *to* the host, Muzzle only damage dealt *by* it.
+    /// CR 615 — the combat-only sibling of [`damage_sealed_by_aura`]: an Aura
+    /// on `who` that seals only its *combat* damage (Sandskin).
+    pub(crate) fn combat_damage_sealed_by_aura(&self, who: crate::card::CardId) -> bool {
+        use crate::effect::StaticEffect;
+        !self.damage_cant_be_prevented_this_turn
+            && self.battlefield.iter().any(|src| {
+                src.attached_to == Some(who)
+                    && src.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, StaticEffect::PreventAllCombatDamageToAndFromEnchanted)
+                    })
+            })
+    }
+
     pub(crate) fn damage_sealed_by_aura(&self, who: crate::card::CardId, incoming: bool) -> bool {
         use crate::effect::StaticEffect;
         if self.damage_cant_be_prevented_this_turn {
@@ -4243,6 +4256,7 @@ impl GameState {
             && (self.permanent_prevents_all_combat_damage_to_self(tgt)
                 || self.combat_damage_prevented_to_this_turn.contains(&tgt)
                 || self.damage_sealed_by_aura(tgt, true)
+                || self.combat_damage_sealed_by_aura(tgt)
                 || self.combat_damage_sealed_for_your_creatures(tgt))
     }
 
@@ -4253,6 +4267,7 @@ impl GameState {
         !self.damage_cant_be_prevented_this_turn
             && (self.combat_damage_prevented_by_this_turn.contains(&dealer)
                 || self.damage_sealed_by_aura(dealer, false)
+                || self.combat_damage_sealed_by_aura(dealer)
                 || self.combat_damage_sealed_for_your_creatures(dealer))
     }
 
@@ -4362,6 +4377,19 @@ impl GameState {
                         StaticEffect::ReduceDamageToYourCreaturesBy(n)
                             if c.controller == p
                                 && matches!(ent, EntityRef::Permanent(_)) =>
+                        {
+                            amount = amount.saturating_sub(*n);
+                        }
+                        // Daunting Defender — the tribe-scoped shave.
+                        StaticEffect::ReduceDamageToYourMatchingCreaturesBy {
+                            filter,
+                            amount: n,
+                        } if c.controller == p
+                            && matches!(ent, EntityRef::Permanent(cid)
+                                if self.battlefield_find(cid).is_some_and(|t| {
+                                    t.controller == p
+                                        && self.evaluate_requirement_on_card(filter, t, p)
+                                })) =>
                         {
                             amount = amount.saturating_sub(*n);
                         }
@@ -17720,6 +17748,7 @@ fn static_effect_to_effects(
             | StaticEffect::HalveDamageDealt
             | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::PreventAllCombatDamageToAttached
+            | StaticEffect::PreventAllCombatDamageToAndFromEnchanted
             | StaticEffect::PreventAllDamageToThis
             | StaticEffect::PreventSmallDamageToThis { .. }
             | StaticEffect::CapLargeDamage { .. }
@@ -17760,6 +17789,7 @@ fn static_effect_to_effects(
             | StaticEffect::ReduceColorDamageToYouBy { .. }
             | StaticEffect::ControllerMaxHandSizeReduced(_)
             | StaticEffect::ReduceDamageToYourCreaturesBy(_)
+            | StaticEffect::ReduceDamageToYourMatchingCreaturesBy { .. }
             | StaticEffect::AddDamageToOpponents { .. }
             | StaticEffect::AddDamageToOpponentsPerCounter { .. }
             | StaticEffect::AddDamageFromColorToPlayers { .. }
@@ -18728,6 +18758,12 @@ pub fn can_block_attacker_computed(
     if blocker_kws.iter().any(|k| {
         matches!(k, Keyword::CantBlockPowerAtLeast(n) if attacker_power >= *n as i32)
     }) {
+        return false;
+    }
+    // Spitfire Handler (CR 509.1b): the self-relative threshold.
+    if blocker_kws.contains(&Keyword::CantBlockGreaterPowerThanSelf)
+        && attacker_power > blocker_computed.power
+    {
         return false;
     }
     // Fear (CR 702.36): can only be blocked by artifact creatures and/or

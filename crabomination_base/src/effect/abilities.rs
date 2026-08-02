@@ -1094,6 +1094,10 @@ pub enum StaticEffect {
     /// The attached-host sibling: "prevent all combat damage that would be
     /// dealt to equipped creature" (General's Kabuto).
     PreventAllCombatDamageToAttached,
+    /// "Prevent all combat damage that would be dealt to and dealt by enchanted
+    /// creature" (Sandskin) — the combat-only sibling of
+    /// `PreventAllDamageToAndFromEnchanted`.
+    PreventAllCombatDamageToAndFromEnchanted,
     /// "Prevent all damage that would be dealt to this permanent" — the
     /// combat+noncombat superset of `PreventAllCombatDamageToThis`, consulted
     /// on both damage funnels. Wrap in `WhileYourTurn` for turn-gated
@@ -1181,6 +1185,10 @@ pub enum StaticEffect {
     /// The creature-side sibling of `ReduceDamageToYouBy`; applied in
     /// `GameState::scale_damage_to` before the doublers.
     ReduceDamageToYourCreaturesBy(u32),
+    /// The filtered sibling of `ReduceDamageToYourCreaturesBy`: only creatures
+    /// you control matching `filter` get the reduction (Daunting Defender's
+    /// Clerics, Circle of Solace-style tribal shields).
+    ReduceDamageToYourMatchingCreaturesBy { filter: SelectionRequirement, amount: u32 },
     /// CR 614.5 — "If a [color] source you control would deal damage to an
     /// opponent or a permanent an opponent controls, it deals that much
     /// damage plus `amount` instead." (Torbran, Thane of Red Fell.)

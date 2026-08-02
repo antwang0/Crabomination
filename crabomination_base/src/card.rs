@@ -1136,6 +1136,10 @@ pub enum Keyword {
     /// greater" (Ironclaw Orcs, Ironclaw Buzzardiers). Enforced against the
     /// attacker's *computed* power in `can_block_attacker_computed`.
     CantBlockPowerAtLeast(u32),
+    /// CR 509.1b — "This creature can't block creatures with power greater
+    /// than this creature's power" (Spitfire Handler). The self-relative
+    /// sibling of `CantBlockPowerAtLeast`; both powers are the computed ones.
+    CantBlockGreaterPowerThanSelf,
     /// CR 509.1b — "This creature can block an additional N creatures each
     /// combat" (Knight of Sorrows, Sunweb). Raises the blocker's per-combat
     /// assignment cap in `declare_blockers`; instances stack.

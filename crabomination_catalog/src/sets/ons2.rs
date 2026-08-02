@@ -2292,3 +2292,840 @@ pub fn dream_chisel() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Wave 5 ──────────────────────────────────────────────────────────────────
+
+/// Aether Charge — every Beast you land can bolt an opponent for 4.
+pub fn aether_charge() -> CardDefinition {
+    CardDefinition {
+        name: "Aether Charge",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Beast),
+                }),
+            effect: Effect::MayDo {
+                description: "Deal 4 damage to an opponent?".into(),
+                body: Box::new(Effect::DealDamage {
+                    to: target_filtered(R::OpponentPlayer.or(R::Planeswalker)),
+                    amount: Value::Const(4),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Airdrop Condor — throw a Goblin at anything.
+pub fn airdrop_condor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            sac_other_filter: Some((
+                R::Creature.and(R::HasCreatureType(CreatureType::Goblin)),
+                1,
+            )),
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Any),
+                amount: Value::SacrificedPower,
+            },
+            ..Default::default()
+        }],
+        ..creature("Airdrop Condor", cost(&[generic(4), r()]), vec![CreatureType::Bird], 2, 2)
+    }
+}
+
+/// Aphetto Alchemist — untaps anything; Morph {U}.
+pub fn aphetto_alchemist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[u()]))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Untap {
+                what: target_filtered(R::Artifact.or(R::Creature)),
+                up_to: None,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Aphetto Alchemist",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            2,
+        )
+    }
+}
+
+/// Boneknitter — regenerates Zombies; Morph {2}{B}.
+pub fn boneknitter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(2), b()]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::Regenerate {
+                what: target_filtered(R::Creature.and(R::HasCreatureType(CreatureType::Zombie))),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Boneknitter",
+            cost(&[generic(1), b()]),
+            vec![CreatureType::Zombie, CreatureType::Cleric],
+            1,
+            1,
+        )
+    }
+}
+
+/// Battlefield Medic — a Cleric-sized damage shield.
+pub fn battlefield_medic() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PreventNextDamage {
+                target: target_filtered(R::Creature),
+                amount: tribe_count(CreatureType::Cleric),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Battlefield Medic",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            1,
+        )
+    }
+}
+
+/// Daru Healer — one point of prevention a turn; Morph {W}.
+pub fn daru_healer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[w()]))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PreventNextDamage {
+                target: target_filtered(R::Any),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Daru Healer",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            2,
+        )
+    }
+}
+
+/// Daunting Defender — your Clerics shrug off a point of every hit.
+pub fn daunting_defender() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Prevent 1 damage dealt to Cleric creatures you control.",
+            effect: StaticEffect::ReduceDamageToYourMatchingCreaturesBy {
+                filter: R::HasCreatureType(CreatureType::Cleric),
+                amount: 1,
+            },
+        }],
+        ..creature(
+            "Daunting Defender",
+            cost(&[generic(4), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            3,
+            3,
+        )
+    }
+}
+
+/// Broodhatch Nantuko — every point of damage buys an Insect; Morph {2}{G}.
+pub fn broodhatch_nantuko() -> CardDefinition {
+    let insect = TokenDefinition {
+        name: "Insect".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(2), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Create that many Insects?".into(),
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::TriggerEventAmount,
+                    definition: insect,
+                }),
+            },
+        }],
+        ..creature(
+            "Broodhatch Nantuko",
+            cost(&[generic(1), g()]),
+            vec![CreatureType::Insect, CreatureType::Druid],
+            1,
+            1,
+        )
+    }
+}
+
+/// Disruptive Pitmage — a repeatable {1} tax; Morph {U}.
+pub fn disruptive_pitmage() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[u()]))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::CounterUnlessPaid {
+                what: target_filtered(R::IsSpellOnStack),
+                mana_cost: cost(&[generic(1)]),
+                exile: false,
+                extra_generic: None,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Disruptive Pitmage",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Dwarven Blastminer — nonbasic land hate; Morph {R}.
+pub fn dwarven_blastminer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[r()]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            tap_cost: true,
+            effect: Effect::Destroy { what: target_filtered(R::IsNonbasicLand) },
+            ..Default::default()
+        }],
+        ..creature("Dwarven Blastminer", cost(&[generic(1), r()]), vec![CreatureType::Dwarf], 1, 1)
+    }
+}
+
+/// Gravel Slinger — pings a combatant; Morph {1}{W}.
+pub fn gravel_slinger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(1), w()]))],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))),
+                amount: Value::ONE,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Gravel Slinger",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            1,
+            3,
+        )
+    }
+}
+
+/// Venomspout Brackus — shoots fliers out of the sky; Morph {3}{G}{G}.
+pub fn venomspout_brackus() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(3), g(), g()]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    R::Creature
+                        .and(R::IsAttacking.or(R::IsBlocking))
+                        .and(R::HasKeyword(Keyword::Flying)),
+                ),
+                amount: Value::Const(5),
+            },
+            ..Default::default()
+        }],
+        ..creature("Venomspout Brackus", cost(&[generic(6), g()]), vec![CreatureType::Beast], 5, 5)
+    }
+}
+
+/// Whipcorder — taps a creature every turn; Morph {W}.
+pub fn whipcorder() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[w()]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            tap_cost: true,
+            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Whipcorder",
+            cost(&[w(), w()]),
+            vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Rebel],
+            2,
+            2,
+        )
+    }
+}
+
+/// Voidmage Prodigy — feed it a Wizard to counter anything; Morph {U}.
+pub fn voidmage_prodigy() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[u()]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u(), u()]),
+            sac_other_filter: Some((
+                R::Creature.and(R::HasCreatureType(CreatureType::Wizard)),
+                1,
+            )),
+            effect: Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Voidmage Prodigy",
+            cost(&[u(), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            2,
+            1,
+        )
+    }
+}
+
+/// Serpentine Basilisk — anything it touches dies; Morph {1}{G}{G}.
+pub fn serpentine_basilisk() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(1), g(), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+            effect: Effect::AtEndOfCombat {
+                body: Box::new(Effect::Destroy { what: Selector::Target(0) }),
+            },
+        }],
+        ..creature(
+            "Serpentine Basilisk",
+            cost(&[generic(2), g(), g()]),
+            vec![CreatureType::Basilisk],
+            2,
+            3,
+        )
+    }
+}
+
+/// Spitfire Handler — firebreathing that won't block up.
+pub fn spitfire_handler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBlockGreaterPowerThanSelf],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::ONE,
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Spitfire Handler", cost(&[generic(1), r()]), vec![CreatureType::Goblin], 1, 1)
+    }
+}
+
+/// Rummaging Wizard — surveil at will.
+pub fn rummaging_wizard() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..creature(
+            "Rummaging Wizard",
+            cost(&[generic(3), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            2,
+            2,
+        )
+    }
+}
+
+/// Information Dealer — look at as many cards as you have Wizards.
+pub fn information_dealer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::RearrangeTop {
+                who: PlayerRef::You,
+                amount: tribe_count(CreatureType::Wizard),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Information Dealer",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Goblin Pyromancer — a one-turn Goblin overrun that eats the team.
+pub fn goblin_pyromancer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    R::Creature.and(R::HasCreatureType(CreatureType::Goblin)),
+                ),
+                power: Value::Const(3),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::End),
+                    EventScope::AnyPlayer,
+                ),
+                effect: Effect::Destroy {
+                    what: Selector::EachPermanent(
+                        R::Creature.and(R::HasCreatureType(CreatureType::Goblin)),
+                    ),
+                },
+            },
+        ],
+        ..creature(
+            "Goblin Pyromancer",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Goblin, CreatureType::Wizard],
+            2,
+            2,
+        )
+    }
+}
+
+/// Cruel Revival — kill a non-Zombie, buy back a Zombie.
+pub fn cruel_revival() -> CardDefinition {
+    CardDefinition {
+        name: "Cruel Revival",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::HasCreatureType(CreatureType::Zombie).negate()),
+                },
+            },
+            Effect::CantBeRegeneratedThisTurn { what: Selector::Target(0) },
+            Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature
+                        .and(R::HasCreatureType(CreatureType::Zombie))
+                        .and(R::InYourGraveyard),
+                },
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Oversold Cemetery — a creature back every upkeep once the yard fills.
+pub fn oversold_cemetery() -> CardDefinition {
+    CardDefinition {
+        name: "Oversold Cemetery",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::SelectorCountAtLeast {
+                sel: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: R::Creature,
+                },
+                n: Value::Const(4),
+            }),
+            effect: Effect::MayDo {
+                description: "Return a creature card from your graveyard to your hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Convalescent Care — a lifeline while you're low.
+pub fn convalescent_care() -> CardDefinition {
+    CardDefinition {
+        name: "Convalescent Care",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::ValueAtMost(
+                Value::LifeOf(PlayerRef::You),
+                Value::Const(5),
+            )),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                draw(1),
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lightning Rift — cycling turns into damage.
+pub fn lightning_rift() -> CardDefinition {
+    CardDefinition {
+        name: "Lightning Rift",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::AnyPlayer),
+            effect: Effect::MayPay {
+                description: "Pay one generic mana to deal 2 damage?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::DealDamage {
+                    to: target_filtered(R::Any),
+                    amount: Value::Const(2),
+                }),
+                else_: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Invigorating Boon — cycling turns into counters.
+pub fn invigorating_boon() -> CardDefinition {
+    CardDefinition {
+        name: "Invigorating Boon",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::AnyPlayer),
+            effect: Effect::MayDo {
+                description: "Put a +1/+1 counter on a creature?".into(),
+                body: Box::new(Effect::AddCounter {
+                    what: target_filtered(R::Creature),
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sea's Claim — turn a land into an Island.
+pub fn seas_claim() -> CardDefinition {
+    CardDefinition {
+        name: "Sea's Claim",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
+        equipped_bonus: Some(EquipBonus {
+            set_land_types: Some(vec![LandType::Island]),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Sandskin — a creature that neither deals nor takes combat damage.
+pub fn sandskin() -> CardDefinition {
+    CardDefinition {
+        name: "Sandskin",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        static_abilities: vec![StaticAbility {
+            description: "Prevent all combat damage that would be dealt to and by enchanted creature.",
+            effect: StaticEffect::PreventAllCombatDamageToAndFromEnchanted,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Withering Hex — an Aura that rots as the table cycles.
+pub fn withering_hex() -> CardDefinition {
+    CardDefinition {
+        name: "Withering Hex",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::AnyPlayer),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::Plague,
+                amount: Value::ONE,
+            },
+        }],
+        equipped_bonus: Some(EquipBonus {
+            scale: Some(crate::card::EquipScale {
+                filter: R::Any,
+                per_power: -1,
+                per_toughness: -1,
+                count_self_counters: Some(crate::card::CounterType::Plague),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Run Wild — trample and a regeneration outlet for a turn.
+pub fn run_wild() -> CardDefinition {
+    CardDefinition {
+        name: "Run Wild",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GrantKeywords {
+            what: target_filtered(R::Creature),
+            keywords: vec![Keyword::Trample, Keyword::Regenerate(1)],
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Insurrection — take the whole board for a swing.
+pub fn insurrection() -> CardDefinition {
+    CardDefinition {
+        name: "Insurrection",
+        cost: cost(&[generic(5), r(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Untap { what: Selector::EachPermanent(R::Creature), up_to: None },
+            Effect::GainControl {
+                what: Selector::EachPermanent(R::Creature),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Tribal Golem — a Golem that borrows a keyword from every tribe you field.
+pub fn tribal_golem() -> CardDefinition {
+    let grant = |tribe: CreatureType, keyword: Keyword| StaticAbility {
+        description: "Tribal Golem's conditional keyword grant.",
+        effect: StaticEffect::WhileCondition {
+            condition: Predicate::SelectorExists(Selector::ControlledBy {
+                who: PlayerRef::You,
+                filter: R::Creature.and(R::HasCreatureType(tribe)),
+            }),
+            inner: Box::new(StaticEffect::GrantKeyword {
+                applies_to: Selector::This,
+                keyword,
+            }),
+        },
+    };
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        static_abilities: vec![
+            grant(CreatureType::Beast, Keyword::Trample),
+            grant(CreatureType::Goblin, Keyword::Haste),
+            grant(CreatureType::Soldier, Keyword::FirstStrike),
+            grant(CreatureType::Wizard, Keyword::Flying),
+            grant(CreatureType::Zombie, Keyword::Regenerate(1)),
+        ],
+        ..creature("Tribal Golem", cost(&[generic(6)]), vec![CreatureType::Golem], 4, 4)
+    }
+}
+
+// ── The Onslaught charms ────────────────────────────────────────────────────
+
+/// Fever Charm — haste, a pump, or a dead Wizard.
+pub fn fever_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Fever Charm",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(2),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DealDamage {
+                to: target_filtered(R::Creature.and(R::HasCreatureType(CreatureType::Wizard))),
+                amount: Value::Const(3),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Misery Charm — kill a Cleric, raise a Cleric, or drain.
+pub fn misery_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Misery Charm",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::HasCreatureType(CreatureType::Cleric))),
+            },
+            Effect::Move {
+                what: target_filtered(
+                    R::Creature
+                        .and(R::HasCreatureType(CreatureType::Cleric))
+                        .and(R::InYourGraveyard),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Piety Charm — crack an Aura, pump a Soldier, or hand out vigilance.
+pub fn piety_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Piety Charm",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
+            },
+            Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::HasCreatureType(CreatureType::Soldier))),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                keyword: Keyword::Vigilance,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Trickery Charm — flying, a retype, or a look at the top four.
+pub fn trickery_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Trickery Charm",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::BecomeChosenCreatureType {
+                what: target_filtered(R::Creature),
+                duration: Duration::EndOfTurn,
+                excluded: vec![],
+            },
+            Effect::RearrangeTop { who: PlayerRef::You, amount: Value::Const(4) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Vitality Charm — an Insect, a pump, or a saved Beast.
+pub fn vitality_charm() -> CardDefinition {
+    let insect = TokenDefinition {
+        name: "Insect".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Vitality Charm",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: insect,
+            },
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature),
+                    power: Value::ONE,
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            Effect::Regenerate {
+                what: target_filtered(R::Creature.and(R::HasCreatureType(CreatureType::Beast))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
