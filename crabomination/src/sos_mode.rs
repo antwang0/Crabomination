@@ -58,6 +58,16 @@ pub enum College {
 }
 
 impl College {
+    /// Every college, in a fixed order — the enumeration the ladder and
+    /// probe binaries build their per-college deck sets from.
+    pub const ALL: [College; 5] = [
+        College::Lorehold,
+        College::Prismari,
+        College::Quandrix,
+        College::Silverquill,
+        College::Witherbloom,
+    ];
+
     pub fn colors(self) -> [Color; 2] {
         match self {
             College::Lorehold => [Color::Red, Color::White],
@@ -225,14 +235,7 @@ pub fn build_sos_state() -> GameState {
 
 /// Pick one of the five colleges uniformly at random.
 pub fn random_college<R: Rng>(rng: &mut R) -> College {
-    const ALL: [College; 5] = [
-        College::Lorehold,
-        College::Prismari,
-        College::Quandrix,
-        College::Silverquill,
-        College::Witherbloom,
-    ];
-    ALL[rng.random_range(0..ALL.len())]
+    College::ALL[rng.random_range(0..College::ALL.len())]
 }
 
 /// Assemble a 60-card SoS deck for the given college.

@@ -38,6 +38,7 @@ use rand::SeedableRng;
 use rand::rngs::StdRng;
 use crabomination::recommend::{Pilot, simulate_match_games_piloted};
 use crabomination::server::{EvalWeights, MctsConfig};
+use crabomination::sos_mode::{College, sos_deck};
 
 /// One archetype in the ladder. Mirror-matched, so this is the deck *both*
 /// profiles pilot.
@@ -161,6 +162,30 @@ fn cube_archetypes(seed: u64, count: usize) -> Vec<Archetype> {
         .collect()
 }
 
+/// Seeded SOS college mirrors — one 60-card `sos_mode` deck per college.
+///
+/// The fixed and cube decks measure the bot on the staple catalog; none of
+/// them contain a prepare creature, a ward body, an Opus payoff, or a
+/// school land's surveil. A change aimed at Secrets of Strixhaven play can
+/// only be measured on decks that hold those cards, and per-college rows
+/// give the same split view the four fixed archetypes do — a change that
+/// only helps Prismari shows up as a split result.
+///
+/// Seeded from `--seed` (same construction `bot_probe --deck sos` uses, so
+/// the two tools describe the same decks), and each college plays a mirror
+/// of itself for the same reason the fixed decks do: deck strength cancels
+/// and only the pilots differ.
+fn sos_archetypes(seed: u64) -> Vec<Archetype> {
+    let mut rng = StdRng::seed_from_u64(seed ^ 0x0505_ACAD);
+    College::ALL
+        .into_iter()
+        .map(|college| Archetype {
+            name: Box::leak(format!("sos {}", college.name()).into_boxed_str()),
+            deck: sos_deck(college, &mut rng),
+        })
+        .collect()
+}
+
 fn parse_profile(name: &str) -> Option<Pilot> {
     match name {
         "baseline" => Some(Pilot::Scored(EvalWeights::baseline())),
@@ -257,7 +282,8 @@ fn parse_args() -> Result<Args, String> {
                     "bot_ladder [--a PROFILE] [--b PROFILE] [--games N] [--seed N] [--threads N]\n\
                      \n\
                      PROFILE is one of: {PROFILES}\n\
-                     --decks fixed (4 hand-built archetypes) | cube (8 random cube pairs) | both\n\
+                     --decks fixed (4 hand-built archetypes) | cube (8 random cube pairs)\n\
+                     | sos (5 seeded college mirrors) | both (fixed+cube) | all\n\
                      --games is per archetype, split evenly across seats."
                 );
                 std::process::exit(0);
@@ -303,13 +329,20 @@ fn main() {
     let field: Vec<Archetype> = match args.deck_set.as_str() {
         "fixed" => archetypes(),
         "cube" => cube_archetypes(args.seed, CUBE_PAIRS),
+        "sos" => sos_archetypes(args.seed),
         "both" => {
             let mut f = archetypes();
             f.extend(cube_archetypes(args.seed, CUBE_PAIRS));
             f
         }
+        "all" => {
+            let mut f = archetypes();
+            f.extend(cube_archetypes(args.seed, CUBE_PAIRS));
+            f.extend(sos_archetypes(args.seed));
+            f
+        }
         other => {
-            eprintln!("unknown --decks {other}; expected fixed, cube or both");
+            eprintln!("unknown --decks {other}; expected fixed, cube, sos, both or all");
             std::process::exit(2);
         }
     };

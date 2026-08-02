@@ -737,6 +737,24 @@ impl Bot for RandomBot {
                         };
                         crate::decision::DecisionAnswer::Amount(amount)
                     }
+                    // AutoDecider keeps every scried card on top — a no-op
+                    // that wastes every scry and surveil under bot play.
+                    // Bottom flood and unplayable spells, draw wants first.
+                    crate::decision::Decision::Scry { player, cards, mode }
+                        if *player == seat =>
+                    {
+                        decide_scry(state, seat, cards, *mode)
+                    }
+                    // AutoDecider answers every mid-resolution modal with
+                    // mode 0. Evaluate each mode's settled outcome instead.
+                    crate::decision::Decision::ChooseMode { num_modes, .. } => {
+                        crate::decision::DecisionAnswer::Mode(decide_mode_by_outcome(
+                            state,
+                            seat,
+                            *num_modes,
+                            &self.weights,
+                        ))
+                    }
                     other => AutoDecider.decide(other),
                 };
                 return Some(GameAction::SubmitDecision(answer));
@@ -1804,6 +1822,131 @@ fn hand_worst_first(
     scored.into_iter().map(|(_, id)| id).collect()
 }
 
+/// Order a Scry / Surveil / Rearrange window. `AutoDecider` keeps every
+/// card on top — a no-op that wastes every scry in the catalog (the SOS
+/// school lands alone surveil in every college deck). The land logic is
+/// the discard ranker's (see [`hand_worst_first`]): a land is wanted
+/// while total sources — in play plus in hand — run below the
+/// five-source buffer, surplus past it; a spell is kept unless its cost
+/// sits more than two land drops beyond what the bot can see. Kept cards
+/// are ordered most-wanted first (index 0 is the next draw). Cards not
+/// in the bot's own library (an opponent-library scry) score neutral and
+/// keep the engine's order.
+fn decide_scry(
+    state: &GameState,
+    seat: usize,
+    cards: &[(crate::card::CardId, String)],
+    mode: crate::decision::ScryMode,
+) -> crate::decision::DecisionAnswer {
+    use crate::decision::ScryMode;
+    let lands_in_play = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_land())
+        .count();
+    let lands_in_hand =
+        state.players[seat].hand.iter().filter(|c| c.definition.is_land()).count();
+    let sources = lands_in_play + lands_in_hand;
+    // Higher draws sooner; below zero means "don't draw this at all".
+    let mut scored: Vec<(i64, crate::card::CardId)> = cards
+        .iter()
+        .map(|(id, _)| {
+            let def = state.players[seat]
+                .library
+                .iter()
+                .find(|c| c.id == *id)
+                .map(|c| &c.definition);
+            let score = match def {
+                None => 0,
+                Some(d) if d.is_land() => {
+                    if sources < 5 {
+                        500
+                    } else {
+                        -100
+                    }
+                }
+                Some(d) => {
+                    let cmc = d.cost.cmc() as i64;
+                    if cmc > sources as i64 + 2 { -50 } else { 100 - cmc }
+                }
+            };
+            (score, *id)
+        })
+        .collect();
+    // Stable sort: equal scores keep the engine's order.
+    scored.sort_by_key(|(s, _)| std::cmp::Reverse(*s));
+    match mode {
+        // Rearrange has no second bucket — everything stays on top,
+        // wanted cards first.
+        ScryMode::Rearrange => crate::decision::DecisionAnswer::ScryOrder {
+            kept_top: scored.into_iter().map(|(_, id)| id).collect(),
+            bottom: vec![],
+        },
+        ScryMode::Scry | ScryMode::Surveil => {
+            let (keep, bin): (Vec<_>, Vec<_>) = scored.into_iter().partition(|(s, _)| *s >= 0);
+            crate::decision::DecisionAnswer::ScryOrder {
+                kept_top: keep.into_iter().map(|(_, id)| id).collect(),
+                bottom: bin.into_iter().map(|(_, id)| id).collect(),
+            }
+        }
+    }
+}
+
+/// Pick a mid-resolution mode (`Decision::ChooseMode` — Charm modes, ETB
+/// choices like Biblioplex Tomekeeper's prepare/unprepare) by outcome
+/// instead of `AutoDecider`'s blanket mode 0: submit each candidate on a
+/// clone, resolve to quiescence the same way [`evaluate_action_sequence`]
+/// does (`AutoDecider` answers any nested decision), and keep the best
+/// material eval. Ties and unevaluable modes keep the lowest index, so
+/// the old mode-0 behavior is the floor, never regressed below.
+fn decide_mode_by_outcome(
+    state: &GameState,
+    seat: usize,
+    num_modes: usize,
+    w: &EvalWeights,
+) -> usize {
+    let mut best: Option<(i32, usize)> = None;
+    for m in 0..num_modes {
+        let mut g = state.clone();
+        if g.perform_action(GameAction::SubmitDecision(crate::decision::DecisionAnswer::Mode(m)))
+            .is_err()
+        {
+            continue;
+        }
+        let mut fuel = 64u32;
+        let settled = loop {
+            if g.is_game_over() {
+                break true;
+            }
+            if g.pending_decision.is_some() {
+                let answer = {
+                    let pending = g.pending_decision.as_ref().unwrap();
+                    AutoDecider.decide(&pending.decision)
+                };
+                if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
+                    break false;
+                }
+            } else if g.stack.is_empty() {
+                break true;
+            } else if g.perform_action(GameAction::PassPriority).is_err() {
+                break false;
+            }
+            match fuel.checked_sub(1) {
+                Some(f) => fuel = f,
+                None => break false,
+            }
+        };
+        if !settled {
+            continue;
+        }
+        let score = eval_material(&g, seat, w);
+        if best.map_or(true, |(b, _)| score > b) {
+            best = Some((score, m));
+        }
+    }
+    best.map(|(_, m)| m).unwrap_or(0)
+}
+
 fn accumulate_mana_colors(eff: &Effect, set: &mut crate::mana::ColorSet) {
     match eff {
         Effect::AddMana { pool, .. } => accumulate_payload_colors(pool, set),
@@ -2800,6 +2943,11 @@ fn cast_candidates(
     let mut out: Vec<(GameAction, bool)> = Vec::with_capacity(castable.len() + unvalidated.len());
     out.extend(castable.into_iter().map(|a| (a, true)));
     out.extend(unvalidated.into_iter().map(|a| (a, false)));
+    // Ward gate, applied once for every candidate block above: a cast
+    // aimed at a warded permanent whose tax the bot can't pay after the
+    // spell's own cost resolves as a counter, not a cast (the engine
+    // auto-pays ward and `would_accept` can't see the trigger fail).
+    out.retain(|(a, _)| ward_gate_ok(state, seat, a));
     out
 }
 
@@ -3510,6 +3658,11 @@ fn pick_removal_destroy(state: &GameState, seat: usize) -> Option<GameAction> {
                     x_value: None,
                     mode: None,
                 };
+                // Unpayable ward tax → the activation would be countered;
+                // fall through to the next-biggest foe instead.
+                if !ward_gate_ok(state, seat, &action) {
+                    continue;
+                }
                 if state.would_accept(action.clone()) {
                     return Some(action);
                 }
@@ -3596,6 +3749,9 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
                     additional_targets: Vec::new(),
                     x_value: None, mode: None,
                 };
+                if !ward_gate_ok(state, seat, &action) {
+                    continue;
+                }
                 if state.would_accept(action.clone()) {
                     return Some(action);
                 }
@@ -3630,6 +3786,9 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
                     additional_targets: Vec::new(),
                     x_value: None, mode: None,
                 };
+                if !ward_gate_ok(state, seat, &action) {
+                    continue;
+                }
                 if state.would_accept(action.clone()) {
                     return Some(action);
                 }
@@ -3680,6 +3839,9 @@ fn pick_removal_sacrifice(state: &GameState, seat: usize) -> Option<GameAction> 
                     additional_targets: Vec::new(),
                     x_value: None, mode: None,
                 };
+                if !ward_gate_ok(state, seat, &action) {
+                    continue;
+                }
                 if state.would_accept(action.clone()) {
                     return Some(action);
                 }
@@ -5652,6 +5814,184 @@ fn can_afford_from(
     })
 }
 
+/// CR 702.21 — the tax `actor` would owe for aiming a spell or ability at
+/// `id`: the permanent's computed Ward cost when it is hostile and
+/// non-trivial, `None` when targeting it is tax-free. The engine's
+/// auto-targeter already *prefers* un-warded candidates
+/// (`auto_target_for_effect_avoiding_set_xc`); this helper exists for the
+/// fallback case where every candidate is warded and the bot has to judge
+/// whether the tax is survivable at all.
+fn ward_tax(state: &GameState, id: CardId, actor: usize) -> Option<crate::card::WardCost> {
+    use crate::card::Keyword;
+    let c = state.battlefield_find(id)?;
+    if state.same_team(c.controller, actor) {
+        return None;
+    }
+    state
+        .computed_permanent(id)
+        .map(|cp| cp.keywords)
+        .unwrap_or_else(|| c.definition.keywords.clone())
+        .iter()
+        .find_map(|k| match k {
+            Keyword::Ward(w) if !crate::game::actions::ward_cost_is_trivial(w) => Some(w.clone()),
+            _ => None,
+        })
+}
+
+/// Whether the bot could actually pay `tax` on top of `besides` — the
+/// mana the cast or activation itself is about to consume. The engine
+/// auto-pays ward taxes when the trigger resolves (`try_pay_ward_cost`);
+/// a payment that fails there gets the bot's spell countered, which is
+/// strictly worse than never casting it, and a life payment the engine
+/// *can* make is still refused here when it would spend the bot's whole
+/// life total into the state-based loss. Variants with no cheap
+/// payability read default to `true`: a wrong `true` costs one card and
+/// shows up on the ladder, a wrong `false` makes a legal line permanently
+/// invisible.
+fn ward_tax_payable(
+    state: &GameState,
+    seat: usize,
+    tax: &crate::card::WardCost,
+    besides: &ManaCost,
+) -> bool {
+    use crate::card::WardCost;
+    let mana_ok = |mc: &ManaCost| {
+        let mut combined = besides.clone();
+        combined.symbols.extend(mc.symbols.iter().cloned());
+        can_afford_from(&combined, &available_mana(state, seat), 0, 0)
+    };
+    let life_ok = |n: u32| (n as i32) < state.effective_life(seat);
+    let gy = &state.players[seat].graveyard;
+    match tax {
+        WardCost::Mana(mc) => mana_ok(mc),
+        WardCost::Life(n) => life_ok(*n),
+        WardCost::ManaAndLife(mc, n) => mana_ok(mc) && life_ok(*n),
+        WardCost::Discard(n) | WardCost::DiscardMatching(_, n) => {
+            state.players[seat].hand.len() >= *n as usize
+        }
+        WardCost::DiscardHand => true,
+        WardCost::ExileFromGraveyard(n) | WardCost::BottomFromGraveyard(n) => {
+            gy.len() >= *n as usize
+        }
+        WardCost::CollectEvidence(n) => {
+            gy.iter().map(|c| c.definition.cost.cmc()).sum::<u32>() >= *n
+        }
+        WardCost::SacrificeCreature => state
+            .battlefield
+            .iter()
+            .any(|c| c.controller == seat && c.definition.is_creature()),
+        WardCost::SacrificePermanents(n) => {
+            state.battlefield.iter().filter(|c| c.controller == seat).count() >= *n as usize
+        }
+        // Dynamic and niche shapes (source-power costs, attached-cost,
+        // counter removal, X reads): defer to the engine's auto-pay.
+        _ => true,
+    }
+}
+
+/// Rough mana-equivalent weight of a ward tax, for ranking candidates
+/// that survived [`ward_tax_payable`]. Life prices at two per mana (the
+/// Phyrexian rate), a discarded card at two mana; shapes with no cheap
+/// read get a nominal two. Precision is not the point — the term only
+/// has to make an un-warded target of equal value, or a different spell
+/// entirely, win the tie.
+fn ward_tax_burden(tax: &crate::card::WardCost) -> i32 {
+    use crate::card::WardCost;
+    match tax {
+        WardCost::Mana(mc) => mc.cmc() as i32,
+        WardCost::Life(n) => (*n as i32 + 1) / 2,
+        WardCost::ManaAndLife(mc, n) => mc.cmc() as i32 + (*n as i32 + 1) / 2,
+        WardCost::Discard(n) | WardCost::DiscardMatching(_, n) => 2 * *n as i32,
+        WardCost::DiscardHand => 3,
+        _ => 2,
+    }
+}
+
+/// `false` when `action` aims at a warded hostile permanent whose tax the
+/// bot could not pay after the action's own mana cost. Such a candidate
+/// is a dead card, not an expensive one — the resolution path auto-pays
+/// or counters (see [`ward_tax_payable`]) — so it is dropped from the
+/// pool entirely rather than merely down-ranked. The printed cost stands
+/// in for alternative-cost casts (flashback, delve, …); that
+/// over-estimates what some casts consume, which errs toward holding a
+/// spell, never toward blanking one. Actions with no recognized target
+/// shape pass.
+fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
+    let empty = ManaCost::new(vec![]);
+    let (mut cost, target, additional): (ManaCost, &Option<Target>, &[Target]) = match action {
+        GameAction::CastSpell { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellDelve { card_id, target, additional_targets, .. }
+        | GameAction::CastGift { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellSpree { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellConspire { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellKicked { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellKickers { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellMultikicked { card_id, target, additional_targets, .. }
+        | GameAction::CastBestow { card_id, target, additional_targets, .. }
+        | GameAction::CastAdventure { card_id, target, additional_targets, .. }
+        | GameAction::CastOmen { card_id, target, additional_targets, .. }
+        | GameAction::CastPrototype { card_id, target, additional_targets, .. }
+        | GameAction::CastSplitRight { card_id, target, additional_targets, .. }
+        | GameAction::CastAftermath { card_id, target, additional_targets, .. }
+        | GameAction::CastFlashback { card_id, target, additional_targets, .. }
+        | GameAction::CastMayhem { card_id, target, additional_targets, .. }
+        | GameAction::CastHarmonize { card_id, target, additional_targets, .. }
+        | GameAction::CastSpellAlternative { card_id, target, additional_targets, .. }
+        | GameAction::CastAdventureCreature { card_id, target, additional_targets, .. }
+        | GameAction::CastPlotted { card_id, target, additional_targets, .. } => {
+            let cost = state
+                .find_card_anywhere(*card_id)
+                .map(|c| c.definition.cost.clone())
+                .unwrap_or(empty);
+            (cost, target, additional_targets.as_slice())
+        }
+        // Back-face casts pay the back's cost.
+        GameAction::CastSpellBack { card_id, target, additional_targets, .. }
+        | GameAction::CastDisturb { card_id, target, additional_targets, .. } => {
+            let cost = state
+                .find_card_anywhere(*card_id)
+                .and_then(|c| c.definition.back_face.as_deref().map(|b| b.cost.clone()))
+                .unwrap_or(empty);
+            (cost, target, additional_targets.as_slice())
+        }
+        // Prepare-casts pay the inset spell's cost.
+        GameAction::CastPrepareSpell { creature_id, target, additional_targets, .. } => {
+            let cost = state
+                .battlefield_find(*creature_id)
+                .and_then(|c| c.definition.prepare_spell.as_deref().map(|s| s.cost.clone()))
+                .unwrap_or(empty);
+            (cost, target, additional_targets.as_slice())
+        }
+        GameAction::ActivateAbility { card_id, ability_index, target, additional_targets, .. } => {
+            // Granted abilities index past the printed list; missing costs
+            // fall back to free, which errs permissive — the gate still
+            // sees the tax itself.
+            let cost = state
+                .battlefield_find(*card_id)
+                .and_then(|c| c.definition.activated_abilities.get(*ability_index))
+                .map(|a| a.mana_cost.clone())
+                .unwrap_or(empty);
+            (cost, target, additional_targets.as_slice())
+        }
+        GameAction::ActivateLoyaltyAbility { target, .. } => (empty, target, &[]),
+        _ => return true,
+    };
+    // The one candidate shape that sinks *extra* mana into the cast: a
+    // plain CastSpell with a chosen X (`max_affordable_x` dumps the whole
+    // spare pool into it). Price the X into the gate, or a max-X spell
+    // aimed at a warded target taps the bot out of the tax it then owes.
+    if let GameAction::CastSpell { x_value: Some(x), .. } = action {
+        cost.symbols.push(crate::mana::ManaSymbol::Generic(*x));
+    }
+    target.iter().chain(additional.iter()).all(|t| match t {
+        Target::Permanent(id) => match ward_tax(state, *id, seat) {
+            Some(tax) => ward_tax_payable(state, seat, &tax, &cost),
+            None => true,
+        },
+        _ => true,
+    })
+}
+
 /// For an X-cost spell (or a spell whose effect reads
 /// `Value::XFromCost`), return the largest non-negative X the caster can
 /// pay given their current mana pool — leftover generic mana after the
@@ -6757,6 +7097,16 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
             match state.battlefield_find(id).map(|c| c.controller) {
                 Some(ctrl) if ctrl != seat => {
                     let mut v = permanent_value(state, id, w);
+                    // CR 702.21 — a ward tax is mana/life the cast sinks
+                    // with no effect of its own; price it at the same
+                    // 2-per-mana rate the cast's own cost earns above so
+                    // an un-warded target of equal value, or a different
+                    // spell entirely, wins the tie. Payability is the
+                    // candidate gate's job (`ward_gate_ok`); this term
+                    // only ranks survivors.
+                    if let Some(tax) = ward_tax(state, id, seat) {
+                        v -= 2 * ward_tax_burden(&tax) * w.unit;
+                    }
                     // Damage spells only count as removal when they kill:
                     // chip damage at a too-big creature keeps a quarter of
                     // the value, and overkill (a huge X at a small body)
@@ -10775,6 +11125,210 @@ mod stack_response_tests {
             with_anthem < plain,
             "unpreparing under a prepared-matters anthem must score lower \
              ({with_anthem} !< {plain})",
+        );
+    }
+
+    /// A 3/3 for the ward tests: identical body with and without Ward, so
+    /// a score comparison isolates the ward term instead of conflating it
+    /// with mana-value or keyword differences.
+    fn test_bear(ward: Option<crate::card::WardCost>) -> CardDefinition {
+        use crate::card::{CardType, Keyword};
+        CardDefinition {
+            name: "Ward Test Bear",
+            card_types: vec![CardType::Creature],
+            power: 3,
+            toughness: 3,
+            keywords: ward.map(|w| vec![Keyword::Ward(w)]).unwrap_or_default(),
+            ..Default::default()
+        }
+    }
+
+    /// CR 702.21 under bot play: casting removal at a warded creature with
+    /// no mana left for the tax gets the spell countered by the ward
+    /// trigger's auto-pay failing — strictly worse than holding it. The
+    /// ward gate drops the candidate until the tax is payable *on top of*
+    /// the spell's own cost.
+    #[test]
+    fn bot_wont_cast_removal_into_unpayable_ward_mana() {
+        use crate::card::WardCost;
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.step = TurnStep::PostCombatMain;
+        let bear = g.add_card_to_battlefield(1, test_bear(Some(WardCost::generic(2))));
+        let blade = g.add_card_to_hand(0, catalog::doom_blade()); // {1}{B}
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 0;
+        let action = main_phase_action(&g, 0);
+        assert!(
+            !matches!(action, GameAction::CastSpell { .. }),
+            "exactly {{1}}{{B}} up: Doom Blade into Ward {{2}} would be countered, got {action:?}"
+        );
+        g.players[0].mana_pool.add_colorless(2);
+        let action = main_phase_action(&g, 0);
+        assert!(
+            matches!(
+                action,
+                GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                    if card_id == blade && t == bear
+            ),
+            "with the tax affordable the same cast goes through, got {action:?}"
+        );
+    }
+
+    /// Ward—Pay N life at N ≥ our life total: the engine's auto-pay would
+    /// spend the bot's whole life into the state-based loss, so the gate
+    /// refuses the target outright; with a live total it is just a tax.
+    #[test]
+    fn bot_wont_pay_lethal_ward_life() {
+        use crate::card::WardCost;
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.step = TurnStep::PostCombatMain;
+        let bear = g.add_card_to_battlefield(1, test_bear(Some(WardCost::Life(5))));
+        let blade = g.add_card_to_hand(0, catalog::doom_blade());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.players[0].life = 4;
+        g.priority.player_with_priority = 0;
+        let action = main_phase_action(&g, 0);
+        assert!(
+            !matches!(action, GameAction::CastSpell { .. }),
+            "paying Ward—5 life at 4 life is suicide, got {action:?}"
+        );
+        g.players[0].life = 20;
+        let action = main_phase_action(&g, 0);
+        assert!(
+            matches!(
+                action,
+                GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                    if card_id == blade && t == bear
+            ),
+            "at 20 life the ward is a payable tax, got {action:?}"
+        );
+    }
+
+    /// Two identical 3/3s, one warded: the cast aimed at the warded twin
+    /// scores lower, so the un-warded target (or a different spell) wins
+    /// the tie even when both taxes are payable.
+    #[test]
+    fn warded_target_scores_below_unwarded_twin() {
+        use crate::card::WardCost;
+        let mut g = two_player_game();
+        let warded = g.add_card_to_battlefield(1, test_bear(Some(WardCost::generic(2))));
+        let plain = g.add_card_to_battlefield(1, test_bear(None));
+        let blade = g.add_card_to_hand(0, catalog::doom_blade());
+        let cast_at = |t: CardId| GameAction::CastSpell {
+            card_id: blade,
+            target: Some(Target::Permanent(t)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        let w = EvalWeights::default();
+        let s_warded = score_candidate(&g, 0, &cast_at(warded), &w);
+        let s_plain = score_candidate(&g, 0, &cast_at(plain), &w);
+        assert!(
+            s_warded < s_plain,
+            "identical bodies, one warded: {s_warded} !< {s_plain}"
+        );
+    }
+
+    /// Scry under bot play is no longer a no-op: with plenty of land
+    /// sources a scried land goes to the bottom; while mana-light the
+    /// same land stays on top, and an uncastable haymaker gets bottomed
+    /// in favor of a cheap spell.
+    #[test]
+    fn scry_bottoms_flood_and_bricks() {
+        use crate::decision::{DecisionAnswer, ScryMode};
+        let id_of = |g: &GameState, name: &str| {
+            g.players[0].library.iter().find(|c| c.definition.name == name).unwrap().id
+        };
+        // Flooded: six sources in play, a seventh on top → bottom it.
+        let mut g = two_player_game();
+        for _ in 0..6 {
+            g.add_card_to_battlefield(0, catalog::forest());
+        }
+        g.add_card_to_library(0, catalog::forest());
+        let land = id_of(&g, "Forest");
+        let ans = decide_scry(&g, 0, &[(land, "Forest".into())], ScryMode::Scry);
+        match ans {
+            DecisionAnswer::ScryOrder { kept_top, bottom } => {
+                assert!(kept_top.is_empty() && bottom == vec![land],
+                    "at six sources a scried land is flood");
+            }
+            other => panic!("expected ScryOrder, got {other:?}"),
+        }
+        // Mana-light: one source, scrying land + 6-drop + Shock. Keep the
+        // land (first) and the Shock; bottom the uncastable wurm.
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::forest());
+        g.add_card_to_library(0, catalog::forest());
+        g.add_card_to_library(0, catalog::craw_wurm());
+        g.add_card_to_library(0, catalog::shock());
+        let (land, wurm, shock) =
+            (id_of(&g, "Forest"), id_of(&g, "Craw Wurm"), id_of(&g, "Shock"));
+        let cards = vec![
+            (wurm, "Craw Wurm".into()),
+            (land, "Forest".into()),
+            (shock, "Shock".into()),
+        ];
+        let ans = decide_scry(&g, 0, &cards, ScryMode::Scry);
+        match ans {
+            DecisionAnswer::ScryOrder { kept_top, bottom } => {
+                assert_eq!(kept_top, vec![land, shock],
+                    "wanted land first, then the castable spell");
+                assert_eq!(bottom, vec![wurm], "a 6-drop at one source is a brick");
+            }
+            other => panic!("expected ScryOrder, got {other:?}"),
+        }
+    }
+
+    /// A mid-resolution modal is picked by outcome, not AutoDecider's
+    /// blanket mode 0: a trigger offering [draw 1, draw 3] must answer
+    /// mode 1.
+    #[test]
+    fn mode_decision_picked_by_outcome() {
+        use crate::decision::{Decision, DecisionAnswer};
+        use crate::effect::{Selector, Value};
+        use crate::game::TriggerPush;
+        let mut g = two_player_game();
+        g.players[0].wants_ui = true;
+        let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for _ in 0..5 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let draw = |n: i32| Effect::Draw { who: Selector::You, amount: Value::Const(n) };
+        // `MODE_PICK_DEFERRED` is what `pick_trigger_mode` stamps on a
+        // wants_ui controller's modal trigger so the pick suspends at
+        // resolution instead of being answered inline by the decider.
+        g.stack.push(
+            TriggerPush::new(src, 0, Effect::ChooseMode(vec![draw(1), draw(3)]))
+                .mode(Some(crate::game::types::MODE_PICK_DEFERRED))
+                .build(),
+        );
+        // Pass priority until the modal suspends for the wants_ui seat.
+        let mut fuel = 20;
+        while g.pending_decision.is_none() && fuel > 0 {
+            g.perform_action(GameAction::PassPriority).unwrap();
+            fuel -= 1;
+        }
+        assert!(
+            matches!(
+                g.pending_decision.as_ref().map(|p| &p.decision),
+                Some(Decision::ChooseMode { .. })
+            ),
+            "trigger resolution must suspend on the modal, got {:?}",
+            g.pending_decision
+        );
+        let mut bot = RandomBot::new();
+        let action = bot.next_action(&g, 0).expect("bot answers its pending decision");
+        assert!(
+            matches!(
+                action,
+                GameAction::SubmitDecision(DecisionAnswer::Mode(1))
+            ),
+            "draw 3 beats draw 1, got {action:?}"
         );
     }
 

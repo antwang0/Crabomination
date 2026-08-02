@@ -25,15 +25,15 @@ use crabomination::cube::{CardFactory, cube_deck, random_color_pair};
 use crabomination::game::{GameAction, GameState};
 use crabomination::player::Player;
 use crabomination::server::{Bot, EvalWeights, RandomBot};
+use crabomination::sos_mode::{College, sos_deck};
 use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 
 /// Decision variants the bot answers with its own policy. Everything else
 /// falls through to `AutoDecider`, whose answers are deliberately
-/// conservative defaults rather than play decisions — `Scry`, for
-/// instance, keeps every card on top and bottoms nothing, which makes
-/// every scry and surveil in the catalog a no-op under bot play.
+/// conservative defaults rather than play decisions — `CombatDamageOrder`,
+/// for instance, keeps the engine's declaration order no matter what dies.
 const BOT_HANDLED: &[&str] = &[
     "Mulligan",
     "SearchLibrary",
@@ -44,6 +44,8 @@ const BOT_HANDLED: &[&str] = &[
     "ChooseTarget",
     "ChooseAmount",
     "PutOnLibrary",
+    "Scry",
+    "ChooseMode",
 ];
 
 fn deck(spec: &[(CardFactory, usize)]) -> Vec<CardFactory> {
@@ -492,9 +494,9 @@ fn main() {
             "-h" | "--help" => {
                 println!(
                     "bot_probe [--deck NAME] [--games N] [--profile baseline|combat]\n\
-                     [--seed N, matches bot_ladder's cube decks]\n\
+                     [--seed N, matches bot_ladder's cube and sos decks]\n\
                      [--vs PROFILE puts a different bot in seat 1]\n\
-                     decks: {}",
+                     decks: {}, cube, sos",
                     DECKS.join(", ")
                 );
                 return;
@@ -510,6 +512,26 @@ fn main() {
     let weights = lookup(&profile);
     let weights_b = vs.as_deref().map(lookup).unwrap_or(weights);
 
+    // Whole games recurse through `Effect` trees with debug-build frames
+    // big enough to overflow the default main-thread stack (the SOS decks
+    // did, first try). `bot_ladder` sizes its workers at 32 MB for the
+    // same reason; run the probe on a matching thread.
+    std::thread::Builder::new()
+        .stack_size(32 * 1024 * 1024)
+        .spawn(move || probe(games, which, profile, seed, weights, weights_b))
+        .expect("spawn probe thread")
+        .join()
+        .expect("probe thread panicked");
+}
+
+fn probe(
+    games: usize,
+    which: Option<String>,
+    profile: String,
+    seed: u64,
+    weights: EvalWeights,
+    weights_b: EvalWeights,
+) {
     if which.as_deref() == Some("cube") {
         // Same construction the ladder uses, so stall rates are comparable
         // between the two tools.
@@ -540,6 +562,21 @@ fn main() {
             }
         }
         report("cube", &c, &profile);
+        return;
+    }
+    if which.as_deref() == Some("sos") {
+        // Same seeded construction as the ladder's `--decks sos`, so the
+        // probe describes the decks the ladder measures. All five colleges
+        // fold into one report: the question this mode answers is "what
+        // decision mix does SOS play produce", and that is a property of
+        // the format's card pool, not of one college.
+        let mut rng = StdRng::seed_from_u64(seed ^ 0x0505_ACAD);
+        let mut c = Counts::default();
+        for college in College::ALL {
+            let d = sos_deck(college, &mut rng);
+            run(&d, games, weights, weights_b, &mut c);
+        }
+        report("sos", &c, &profile);
         return;
     }
     let decks: Vec<&str> = match &which {

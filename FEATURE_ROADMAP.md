@@ -2316,7 +2316,15 @@ Each a small targeted feature; sweep batch by batch.
 - ⏳ **Better sequencing** (land drops, hold-up, when to cast).
 - 🟡 **Mulligan decisions** — `RandomBot` ships flood/screw mulligans with
   color-screw awareness. Remaining: transitive fetch/dual sources.
-- ⏳ **Targeting / mode / X-value choices** by evaluation.
+- 🟡 **Targeting / mode / X-value choices** — mid-resolution modals are picked
+  by settled-outcome eval (`decide_mode_by_outcome`), scry/surveil/rearrange
+  order for real (`decide_scry` — flood to the bottom, bricks off the top,
+  wants first), and targeting/affordability is ward-aware (CR 702.21:
+  a tax the bot can't pay after the spell's own cost drops the candidate,
+  a payable one is priced into the score; `bot_wont_cast_removal_into_*`
+  tests). SOS college mirrors run on the ladder (`bot_ladder --decks sos`)
+  and probe (`bot_probe --deck sos`). Remaining: X sized by evaluation
+  rather than max-dump.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
 
 ## Tier 14 — Replays, analysis & observability
