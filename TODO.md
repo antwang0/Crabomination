@@ -84,9 +84,9 @@ Prison Barricade's kicked defender bypass is wired.
   activated again until it has resolved" isn't modelled (mana abilities resolve
   synchronously, so it has never mattered; it would for a future split-payment
   UI).
-- **`Effect::RevealTopOfLibrary` clears only on a draw.** A shuffle, a scry to
-  the bottom, or a `Move`-to-library also changes the top card, but the reveal
-  flag survives them; route the clear through the library-mutation funnels.
+- **`Effect::RevealTopOfLibrary`'s reveal ends on a draw, a shuffle, or any
+  library insertion. Still open: a scry that reorders the top in place doesn't
+  clear it (the scry path doesn't route through `place_card_in_dest`).
 - **Earnest Fellowship** ("each creature has protection from its colors") needs
   a self-referential protection filter — a `SharesColorWithSelf` requirement.
 - **Dwarven Recruiter / Aether Burst / Cultural Exchange** each need one
@@ -95,14 +95,17 @@ Prison Barricade's kicked defender bypass is wired.
 - **Dreamwinder's attack gate is any Island**, not the defender's, and its
   `{U}`, sacrifice-an-Island land-animation half is dropped (no one-shot
   "target land becomes an Island").
-- **The remaining 94 ODY gaps** are mostly one-primitive cards: Bomb Squad /
-  Mine Layer (counter-driven board watchers), Braids / Delaying Shield /
-  Nefarious Lich (replacement effects), the Egg cycle and the filter lands,
-  Balancing Act, Cultural Exchange, Haunting Echoes, Impulsive Maneuvers.
+- **The remaining 71 ODY gaps** are mostly one-primitive cards: Bomb Squad /
+  Mine Layer (counter-driven board watchers), Delaying Shield / Nefarious Lich
+  (damage replacements), Balancing Act, Cultural Exchange, Haunting Echoes,
+  Impulsive Maneuvers, Charmed Pendant, Catalyst Stone (flashback-cost
+  modifiers), Aura Graft.
+- **Otarian Juggernaut's "can't be blocked by Walls"** is dropped — no
+  creature-type-scoped block restriction.
 
 ## Odyssey — opened
 
-`set_gaps.py ody` 274 → 94 (`sets::ody::gaps`–`gaps6`, 180 cards; tests in
+`set_gaps.py ody` 274 → 71 (`sets::ody::gaps`–`gaps7`, 203 cards; tests in
 `classic_sets/ody`). Threshold rides `Predicate::ThresholdActive`, flashback and
 the Aura/EquipBonus shell were already in place. New primitives:
 `Effect::{RevealHand, RevealTopOfLibrary, PlayerCantCastMatchingThisTurn}`,

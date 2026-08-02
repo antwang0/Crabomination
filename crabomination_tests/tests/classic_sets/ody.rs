@@ -877,3 +877,109 @@ fn decimate_takes_one_of_each() {
         assert!(g.battlefield_find(id).is_none(), "everything was destroyed");
     }
 }
+
+// ── Wave 7 ──────────────────────────────────────────────────────────────────
+
+/// The Egg cycle cracks for two coloured mana and a card.
+#[test]
+fn egg_cracks_for_two_colors_and_a_card() {
+    let mut g = main_phase();
+    let egg = g.add_card_to_battlefield(0, catalog::skycloud_egg());
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: egg,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("crack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Cabal Pit pings you for mana and only shrinks past Threshold.
+#[test]
+fn cabal_pit_pings_and_gates_on_threshold() {
+    let mut g = main_phase();
+    let pit = g.add_card_to_battlefield(0, catalog::cabal_pit());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    activate(&mut g, 0, pit, 0, None);
+    assert_eq!(g.players[0].life, life - 1, "the tap cost a point");
+    g.battlefield_find_mut(pit).unwrap().tapped = false;
+    mana(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: pit,
+            ability_index: 1,
+            target: Some(Target::Permanent(victim)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "the sac ability needs Threshold"
+    );
+    fill_graveyard(&mut g, 0);
+    activate(&mut g, 0, pit, 1, Some(Target::Permanent(victim)));
+    assert!(g.battlefield_find(victim).is_none(), "-2/-2 killed the 2/2");
+}
+
+/// Braids taxes every player's upkeep, including her controller's.
+#[test]
+fn braids_taxes_each_upkeep() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::braids_cabal_minion());
+    let mine = g.add_card_to_battlefield(0, catalog::forest());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "the active player paid too");
+}
+
+/// Pianna pumps the whole attack, not just herself.
+#[test]
+fn pianna_pumps_the_swing() {
+    let mut g = main_phase();
+    let pianna = g.add_card_to_battlefield(0, catalog::pianna_nomad_captain());
+    let friend = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [pianna, friend] {
+        g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: pianna, target: AttackTarget::Player(1) },
+        Attack { attacker: friend, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(friend).unwrap().power, 3);
+    assert_eq!(g.computed_permanent(pianna).unwrap().power, 3);
+}
+
+/// Divert repoints a spell when its caster declines to pay {2}.
+#[test]
+fn divert_repoints_an_unpaid_spell() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt on the stack");
+    let divert = g.add_card_to_hand(0, catalog::divert());
+    cast(&mut g, 0, divert, Some(Target::Permanent(bolt)));
+    assert!(g.battlefield_find(mine).is_some(), "the Bolt was pointed elsewhere");
+}
