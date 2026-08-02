@@ -756,3 +756,148 @@ pub fn pledge_of_loyalty() -> CardDefinition {
         ..enchantment("Pledge of Loyalty", cost(&[generic(1), w()]))
     }
 }
+
+// ── The colour-matters shell ────────────────────────────────────────────────
+
+/// Well-Laid Plans — creatures can't hurt creatures of a shared colour.
+pub fn well_laid_plans() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Prevent all damage that would be dealt to a creature by another \
+                          creature if they share a color.",
+            effect: StaticEffect::PreventDamageBetweenSharedColorCreatures,
+        }],
+        ..enchantment("Well-Laid Plans", cost(&[generic(2), u()]))
+    }
+}
+
+/// Harsh Judgment — instants and sorceries of the chosen colour burn their own
+/// caster instead of you.
+pub fn harsh_judgment() -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
+        static_abilities: vec![StaticAbility {
+            description: "If an instant or sorcery spell of the chosen color would deal damage \
+                          to you, it deals that damage to its controller instead.",
+            effect: StaticEffect::RedirectChosenColorSpellDamageToController,
+        }],
+        ..enchantment("Harsh Judgment", cost(&[generic(2), w(), w()]))
+    }
+}
+
+/// Pulse of Llanowar — your basic lands produce the colour you named.
+pub fn pulse_of_llanowar() -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(Effect::ChooseColorForSelf),
+        static_abilities: vec![StaticAbility {
+            description: "If a basic land you control is tapped for mana, it produces mana of \
+                          the chosen color instead of any other type.",
+            effect: StaticEffect::YourBasicLandsProduceChosenColorInstead,
+        }],
+        ..enchantment("Pulse of Llanowar", cost(&[generic(3), g()]))
+    }
+}
+
+/// Mana Maze — nothing may share a colour with the turn's last cast.
+pub fn mana_maze() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Players can't cast spells that share a color with the spell most \
+                          recently cast this turn.",
+            effect: StaticEffect::CantCastSharingColorWithLastCastSpell,
+        }],
+        ..enchantment("Mana Maze", cost(&[generic(1), u()]))
+    }
+}
+
+/// Traveler's Cloak — landwalk of a type chosen as it enters, plus a cantrip.
+pub fn travelers_cloak() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        as_enters_effect: Some(Effect::ChooseBasicLandTypeForSource),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GrantChosenTypeLandwalk { what: Selector::attached_to(Selector::This) },
+            draw(1),
+        ]))],
+        ..enchantment("Traveler's Cloak", cost(&[generic(2), u()]))
+    }
+}
+
+/// Teferi's Response — counter an opponent's land-targeting spell or ability
+/// (killing a permanent source) and draw two.
+pub fn teferis_response() -> CardDefinition {
+    instant(
+        "Teferi's Response",
+        cost(&[generic(1), u()]),
+        Effect::Seq(vec![
+            Effect::CounterAbilityAndDestroySource {
+                what: target_filtered(R::TargetsALandYouControl),
+            },
+            draw(2),
+        ]),
+    )
+}
+
+/// Mages' Contest — bid life for the right to counter a spell.
+pub fn mages_contest() -> CardDefinition {
+    instant(
+        "Mages' Contest",
+        cost(&[generic(1), r(), r()]),
+        Effect::BidLifeToCounterTargetSpell { what: target_filtered(R::IsSpellOnStack) },
+    )
+}
+
+/// Pain // Suffering — a split card: a discard, or a Stone Rain.
+pub fn pain_suffering() -> CardDefinition {
+    CardDefinition {
+        split: Some(Box::new(crate::card::SplitCard {
+            right: crate::card::SplitHalf {
+                cost: cost(&[generic(3), r()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Destroy { what: target_filtered(R::Land) },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..sorcery(
+            "Pain // Suffering",
+            cost(&[b()]),
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(1),
+                random: false,
+            },
+        )
+    }
+}
+
+/// Essence Leak — a red or green enchanted permanent has to be bought back
+/// each upkeep.
+pub fn essence_leak() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Permanent) },
+        triggered_abilities: vec![TriggeredAbility {
+            event: upkeep(EventScope::YourControl).with_filter(Predicate::EntityMatches {
+                what: Selector::attached_to(Selector::This),
+                filter: R::HasColor(Color::Red).or(R::HasColor(Color::Green)),
+            }),
+            effect: Effect::UnlessPlayerPays {
+                who: PlayerRef::You,
+                cost: WardCost::ManaCostOfAttached,
+                then: Box::new(Effect::SacrificeSelected {
+                    what: Selector::attached_to(Selector::This),
+                }),
+                if_paid: None,
+            },
+        }],
+        ..enchantment("Essence Leak", cost(&[u()]))
+    }
+}

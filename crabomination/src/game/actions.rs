@@ -34,7 +34,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::SacrificePermanents(n) => *n == 0,
         // Dynamic — the source's power can change before payment.
         WardCost::GenericSourcePower | WardCost::LifeSourcePower => false,
-        WardCost::RemoveCounterFromPermanent => false,
+        WardCost::RemoveCounterFromPermanent | WardCost::ManaCostOfAttached => false,
     }
 }
 
@@ -7142,6 +7142,8 @@ impl GameState {
     ) {
         let card_id = card.id;
         self.spells_cast_this_turn += 1;
+        // Mana Maze reads the turn's most recent cast (CR 601.2 restriction).
+        self.last_cast_spell_colors = card.definition.printed_colors();
         self.players[p].spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_game_turn += 1;
         // Per-turn cast-name log (Grim Reminder's "cast a spell this turn with

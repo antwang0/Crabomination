@@ -740,6 +740,10 @@ pub struct GameState {
     /// `Selector::SeparatedPile`; set and cleared inside one resolution.
     #[serde(skip)]
     pub(crate) separated_piles: (Vec<CardId>, Vec<CardId>),
+    /// Printed colours of the most recently cast spell this turn — Mana
+    /// Maze's cast restriction. Cleared at Cleanup.
+    #[serde(default)]
+    pub(crate) last_cast_spell_colors: Vec<crate::mana::Color>,
     /// Transient: set when a `wants_ui` caster answers an optional extra-
     /// target prompt with `DecisionAnswer::DeclineTarget`. The cast replay
     /// (`ResumeContext::CastExtraTargetPick`) re-enters `perform_action`,
@@ -1641,6 +1645,7 @@ impl Clone for GameState {
             haunt_pending: self.haunt_pending.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
             separated_piles: self.separated_piles.clone(),
+            last_cast_spell_colors: self.last_cast_spell_colors.clone(),
             suppress_extra_target_prompts: self.suppress_extra_target_prompts,
             exiled_card_ids_this_resolution: self.exiled_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
@@ -1886,6 +1891,7 @@ impl GameState {
             haunt_pending: None,
             discarded_card_ids_this_resolution: Vec::new(),
             separated_piles: (Vec::new(), Vec::new()),
+            last_cast_spell_colors: Vec::new(),
             suppress_extra_target_prompts: None,
             exiled_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
@@ -8787,6 +8793,79 @@ impl GameState {
         })
     }
 
+    /// CR 615 — Well-Laid Plans: true when `src` and `tgt` are both creatures
+    /// sharing a colour while any such static is on the battlefield.
+    pub(crate) fn shared_color_creature_damage_prevented(
+        &self,
+        src: CardId,
+        tgt: CardId,
+    ) -> bool {
+        if self.damage_cant_be_prevented_this_turn || src == tgt {
+            return false;
+        }
+        let live = self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::PreventDamageBetweenSharedColorCreatures
+                )
+            })
+        });
+        if !live {
+            return false;
+        }
+        let creature_colors = |id: CardId| {
+            self.computed_permanent(id).filter(|c| {
+                c.card_types.contains(&crate::card::CardType::Creature)
+            })
+            .map(|c| c.colors.clone())
+        };
+        match (creature_colors(src), creature_colors(tgt)) {
+            (Some(a), Some(b)) => a.iter().any(|k| b.contains(k)),
+            _ => false,
+        }
+    }
+
+    /// CR 614.9 — Harsh Judgment: the seat an instant/sorcery spell's damage
+    /// to `p` is redirected to (its own controller), or `None`.
+    pub(crate) fn chosen_color_spell_damage_redirect(
+        &self,
+        p: usize,
+        source: Option<CardId>,
+    ) -> Option<usize> {
+        let src = source?;
+        // The spell is in no visible zone mid-resolution, so read its caster,
+        // colours and types off `resolving_source` when it's the one running.
+        let (caster, colors, types) = match &self.resolving_source {
+            Some((id, caster, colors, types)) if *id == src => {
+                (*caster, colors.clone(), types.clone())
+            }
+            _ => {
+                let caster = self.stack_spell_caster(src)?;
+                let card = self.find_card_anywhere(src)?;
+                (caster, card.definition.printed_colors(), card.definition.card_types.clone())
+            }
+        };
+        if caster == p
+            || !(types.contains(&CardType::Instant) || types.contains(&CardType::Sorcery))
+        {
+            return None;
+        }
+        self.battlefield
+            .iter()
+            .find(|c| {
+                c.controller == p
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::RedirectChosenColorSpellDamageToController
+                        )
+                    })
+                    && c.chosen_color.is_some_and(|k| colors.contains(&k))
+            })
+            .map(|_| caster)
+    }
+
     /// CR 601.3 — Cornered Market: true when `card` shares its name with a
     /// nontoken permanent on the battlefield while the lock is active.
     pub(crate) fn name_locked_by_a_permanent(&self, card: Option<CardId>) -> bool {
@@ -9900,6 +9979,26 @@ impl GameState {
                 })
             });
             if blocked {
+                return Err(GameError::SpellLimitReached);
+            }
+            // Mana Maze — no spell may share a colour with the turn's last
+            // cast. Vacuous while nothing has been cast this turn.
+            if !self.last_cast_spell_colors.is_empty()
+                && self.battlefield.iter().any(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, StaticEffect::CantCastSharingColorWithLastCastSpell)
+                    })
+                })
+                && action
+                    .cast_card_id()
+                    .and_then(|id| self.find_card_anywhere(id))
+                    .is_some_and(|c| {
+                        c.definition
+                            .printed_colors()
+                            .iter()
+                            .any(|k| self.last_cast_spell_colors.contains(k))
+                    })
+            {
                 return Err(GameError::SpellLimitReached);
             }
             // Cornered Market — no spell may share a nontoken permanent's name.
@@ -17177,6 +17276,10 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsPlayWithHandsRevealed
             | StaticEffect::CyclingCostReduction(_)
             | StaticEffect::LandsProduceColorInstead(_)
+            | StaticEffect::YourBasicLandsProduceChosenColorInstead
+            | StaticEffect::PreventDamageBetweenSharedColorCreatures
+            | StaticEffect::RedirectChosenColorSpellDamageToController
+            | StaticEffect::CantCastSharingColorWithLastCastSpell
             // Gated at their action dispatch (`can_player_play_land`,
             // the convoke cast path); no layer effect.
             | StaticEffect::ControllerCantPlayLands

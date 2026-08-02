@@ -648,6 +648,9 @@ pub enum WardCost {
     /// "...unless you remove a counter from a permanent you control" (Chisei,
     /// Heart of Oceans). Unpayable when no controlled permanent has a counter.
     RemoveCounterFromPermanent,
+    /// "…unless you pay its mana cost" — the printed cost of the permanent the
+    /// source is attached to (Essence Leak).
+    ManaCostOfAttached,
 }
 
 impl WardCost {
@@ -1833,6 +1836,9 @@ pub enum SelectionRequirement {
     SpellTargetsControllerOrControlled,
     /// A stack spell that targets at least one creature (Intervene).
     SpellTargetsCreature,
+    /// A spell *or ability* on the stack that targets a land the evaluating
+    /// player controls (Teferi's Response).
+    TargetsALandYouControl,
     /// True when the candidate stack spell targets *only* the ability's
     /// source — one target slot, filled with the source (Ink-Treader
     /// Nephilim's "if that spell targets only this creature").

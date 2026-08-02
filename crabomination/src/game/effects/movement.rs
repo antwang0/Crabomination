@@ -708,6 +708,24 @@ impl GameState {
         {
             return;
         }
+        // CR 615 — Well-Laid Plans: creatures never hurt creatures of a
+        // shared colour.
+        if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
+            && self.shared_color_creature_damage_prevented(src, tgt)
+        {
+            return;
+        }
+        // CR 614.9 — Harsh Judgment: an I/S spell of the chosen colour burns
+        // its own controller instead of the enchantment's controller.
+        if !self.in_damage_redirect
+            && let EntityRef::Player(p) = ent
+            && let Some(to) = self.chosen_color_spell_damage_redirect(p, source)
+        {
+            self.in_damage_redirect = true;
+            self.deal_damage_to_from(EntityRef::Player(to), amount, source, events);
+            self.in_damage_redirect = false;
+            return;
+        }
         // CR 615 — Iroas-style "prevent all damage to attacking creatures
         // you control".
         if let EntityRef::Permanent(tgt) = ent

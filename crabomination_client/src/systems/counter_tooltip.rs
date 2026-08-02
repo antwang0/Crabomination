@@ -1027,6 +1027,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             crabomination::card::WardCost::RemoveCounterFromPermanent => {
                 "Ward—Remove a counter from a permanent you control".into()
             }
+            crabomination::card::WardCost::ManaCostOfAttached => {
+                "Ward—Pay the enchanted permanent's mana cost".into()
+            }
             crabomination::card::WardCost::CollectEvidence(n) => {
                 format!("Ward—Collect evidence {n}")
             }

@@ -5737,6 +5737,14 @@ pub enum Effect {
     /// the choice on the source's `chosen_land_type`. Paired with
     /// `StaticEffect::LandsYouControlAreChosenType` (Realmwright).
     ChooseBasicLandTypeForSource,
+    /// Grant `what` landwalk of the source's `chosen_land_type` (stamped by a
+    /// preceding `ChooseBasicLandTypeForSource`), permanently. Traveler's
+    /// Cloak. No-op when no type was chosen.
+    GrantChosenTypeLandwalk { what: Selector },
+    /// CR 601.2b — "You and target spell's controller bid life. You start at
+    /// 1; in turn order each may top the high bid. The high bidder loses that
+    /// much life; if you win, counter that spell." Mages' Contest.
+    BidLifeToCounterTargetSpell { what: Selector },
     /// CR 305 — each resolved permanent *gains* all five basic land types for
     /// `duration` (additive, keeping existing types and abilities). Installs a
     /// layer-4 `AddLandType` continuous effect per basic type so the lands tap

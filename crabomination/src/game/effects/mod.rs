@@ -7665,6 +7665,29 @@ impl GameState {
                     events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                     return Ok(());
                 }
+                // CR 605 — Pulse of Llanowar: your *basic* lands produce the
+                // enchantment's chosen colour instead. Scoped to the static's
+                // controller, so an opponent's basics are untouched.
+                if ctx
+                    .source
+                    .and_then(|s| self.battlefield_find(s))
+                    .is_some_and(|c| c.definition.is_land() && c.definition.is_basic())
+                    && let Some(color) = self.battlefield.iter().find_map(|c| {
+                        (c.controller == p
+                            && c.definition.static_abilities.iter().any(|sa| {
+                                matches!(
+                                    sa.effect,
+                                    crate::effect::StaticEffect::YourBasicLandsProduceChosenColorInstead
+                                )
+                            }))
+                        .then_some(c.chosen_color)
+                        .flatten()
+                    })
+                {
+                    add_one(self, p, color);
+                    events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
+                    return Ok(());
+                }
                 // CR 614 — the turn-scoped land-tap replacements (Pale Moon,
                 // Harvest Mage). Same "instead of any other type and amount"
                 // shape as Contamination, but installed by a spell.
@@ -13839,6 +13862,79 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantChosenTypeLandwalk { what } => {
+                let Some(lt) = ctx
+                    .source
+                    .and_then(|s| self.find_card_anywhere(s))
+                    .and_then(|c| c.chosen_land_type)
+                else {
+                    return Ok(());
+                };
+                self.run_effect(
+                    &Effect::GrantKeyword {
+                        what: what.clone(),
+                        keyword: crate::card::Keyword::Landwalk(lt),
+                        duration: crate::effect::Duration::Permanent,
+                    },
+                    ctx,
+                    events,
+                )
+            }
+
+            Effect::BidLifeToCounterTargetSpell { what } => {
+                // CR 601.2b — the caster opens at 1 and the two seats top each
+                // other in turn until one passes. Capped so a scripted decider
+                // that always raises can't spin.
+                let Some(cid) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id())
+                else {
+                    self.clear_answer_log();
+                    return Ok(());
+                };
+                let Some(them) = self.stack_spell_caster(cid) else {
+                    self.clear_answer_log();
+                    return Ok(());
+                };
+                let me = ctx.controller;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0;
+                let (mut high, mut leader) = (1u32, me);
+                for _ in 0..8 {
+                    let bidder = if leader == me { them } else { me };
+                    let cap = self.players[bidder].life.max(0) as u32;
+                    if cap <= high {
+                        break;
+                    }
+                    let Some(bid) = self.ask_seat_amount(
+                        &mut cursor,
+                        bidder,
+                        format!("Top the bid of {high} life? (0 passes)"),
+                        source,
+                        cap,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    if bid <= high {
+                        break;
+                    }
+                    high = bid;
+                    leader = bidder;
+                }
+                self.clear_answer_log();
+                self.adjust_life(leader, -(high as i32));
+                if leader == me {
+                    self.run_effect(
+                        &Effect::CounterSpell { what: what.clone() },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::SacrificeSelected { what } => {
                 for cid in self
                     .resolve_selector(what, ctx)
@@ -14772,9 +14868,9 @@ impl GameState {
                         self.priority.player_with_priority = saved_priority;
                         ok
                     }
-                    // Not reachable as a printed Ward tax (no card prints
-                    // "Ward—{X}"); treated as unpaid so the ability resolves.
-                    WardCost::GenericXFromCost => false,
+                    // Not reachable as printed Ward taxes; treated as unpaid
+                    // so the ability resolves.
+                    WardCost::GenericXFromCost | WardCost::ManaCostOfAttached => false,
                     WardCost::Life(n) => {
                         // Ward—Pay N life. CR 119.4 forbids paying more
                         // life than you have, so insufficient life means
@@ -15083,6 +15179,26 @@ impl GameState {
                                 let ok = self.try_pay_with_auto_tap(payer, &mc).is_ok();
                                 self.priority.player_with_priority = saved;
                                 ok
+                            }
+                        }
+                        // Essence Leak — "pay its mana cost": the printed cost
+                        // of the permanent this Aura is attached to.
+                        WardCost::ManaCostOfAttached => {
+                            let mc = ctx
+                                .source
+                                .and_then(|sid| self.battlefield_find(sid))
+                                .and_then(|c| c.attached_to)
+                                .and_then(|host| self.battlefield_find(host))
+                                .map(|c| c.definition.cost.clone());
+                            match mc {
+                                None => true,
+                                Some(mc) => {
+                                    let saved = self.priority.player_with_priority;
+                                    self.priority.player_with_priority = payer;
+                                    let ok = self.try_pay_with_auto_tap(payer, &mc).is_ok();
+                                    self.priority.player_with_priority = saved;
+                                    ok
+                                }
                             }
                         }
                         WardCost::RemoveCounterFromPermanent => {

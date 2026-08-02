@@ -2319,6 +2319,21 @@ pub enum StaticEffect {
     /// card of the chosen kind. Put that card into your hand and put all other
     /// cards revealed this way on the bottom of your library in any order."
     /// Abundance.
+    /// CR 615 — "Prevent all damage that would be dealt to a creature by
+    /// another creature if they share a color" (Well-Laid Plans). Global.
+    PreventDamageBetweenSharedColorCreatures,
+    /// CR 614.9 — "If an instant or sorcery spell of the chosen color would
+    /// deal damage to you, it deals that damage to its controller instead"
+    /// (Harsh Judgment). Reads the source's `chosen_color`.
+    RedirectChosenColorSpellDamageToController,
+    /// CR 605 — "If a basic land you control is tapped for mana, it produces
+    /// mana of the chosen color instead of any other type" (Pulse of
+    /// Llanowar). The chosen-colour, own-basics-only sibling of
+    /// `LandsProduceColorInstead`.
+    YourBasicLandsProduceChosenColorInstead,
+    /// CR 601.2 — "Players can't cast spells that share a color with the spell
+    /// most recently cast this turn" (Mana Maze).
+    CantCastSharingColorWithLastCastSpell,
     MayReplaceDrawWithRevealUntilKind,
 }
 

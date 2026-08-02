@@ -1415,6 +1415,7 @@ fn project_permanent(
                 W::GenericXFromCost => "Ward—{X}".to_string(),
                 W::LifeSourcePower => "Ward—pay life equal to this creature's power".to_string(),
                 W::RemoveCounterFromPermanent => "Ward—remove a counter from a permanent".to_string(),
+                W::ManaCostOfAttached => "Ward—pay the enchanted permanent's mana cost".to_string(),
             })
         }).unwrap_or_default(),
         mana_value: card.definition.cost.cmc(),

@@ -287,6 +287,7 @@ fn ward_suffix(cost: &WardCost) -> String {
         SacrificeCreature | SacrificeMatching(_) => "sac".into(),
         SacrificePermanents(n) => format!("sac{n}"),
         RemoveCounterFromPermanent => "ctr-".into(),
+        ManaCostOfAttached => "MC".into(),
         GenericSourcePower => "P".into(),
         GenericXFromCost => "X".into(),
         LifeSourcePower => "P♥".into(),

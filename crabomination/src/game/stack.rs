@@ -492,6 +492,7 @@ impl GameState {
                 // at the next upkeep) sees it.
                 self.spells_cast_last_turn = self.spells_cast_this_turn;
                 self.spells_cast_this_turn = 0;
+                self.last_cast_spell_colors.clear();
                 self.noncreature_spells_cast_this_turn = 0;
                 for pl in &mut self.players {
                     pl.spells_cast_this_game_turn = 0;

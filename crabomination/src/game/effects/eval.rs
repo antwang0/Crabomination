@@ -2933,6 +2933,30 @@ impl GameState {
                                     if self.battlefield.iter().any(|o| o.id == *id && o.definition.is_creature()))
                             })
                     }),
+                    // Teferi's Response — a stack item (spell or ability) with
+                    // a land the evaluating player controls among its targets.
+                    R::TargetsALandYouControl => {
+                        let hits_your_land = |t: &crate::game::types::Target| {
+                            matches!(t, crate::game::types::Target::Permanent(pid)
+                                if self.battlefield.iter().any(|o| {
+                                    o.id == *pid
+                                        && o.controller == controller
+                                        && o.definition.is_land()
+                                }))
+                        };
+                        self.stack.iter().any(|si| match si {
+                            StackItem::Spell { card: c, target, additional_targets, .. } => {
+                                c.id == card.id
+                                    && target
+                                        .iter()
+                                        .chain(additional_targets.iter())
+                                        .any(hits_your_land)
+                            }
+                            StackItem::Trigger { source: sid, target, .. } => {
+                                *sid == card.id && target.iter().any(hits_your_land)
+                            }
+                        })
+                    }
                     R::SpellTargetsOnlySource => source.is_some_and(|src| {
                         self.stack.iter().any(|si| {
                             let StackItem::Spell { card: c, target, additional_targets, .. } = si
@@ -3620,7 +3644,7 @@ impl GameState {
             R::NamedBySource => false,
             R::IsSourceChosenCardType => false,
             R::IsSourceChosenCreatureType => false,
-            R::SameNameAsTarget => false,
+            R::SameNameAsTarget | R::TargetsALandYouControl => false,
             // Count walks the battlefield for the evaluating controller's
             // matching permanents; the candidate's own zone is irrelevant.
             R::ManaValueAtMostControllerHand => {

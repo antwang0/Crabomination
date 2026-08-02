@@ -319,3 +319,129 @@ fn overabundance_pings_the_land_tapper() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, before - 1, "the tapper took a point");
 }
+
+// ── The colour-matters shell ────────────────────────────────────────────────
+
+/// Well-Laid Plans stops a creature hurting a creature of a shared colour.
+#[test]
+fn well_laid_plans_blanks_same_color_creature_damage() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::well_laid_plans());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut events = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(b),
+        2,
+        Some(a),
+        &mut events,
+    );
+    assert_eq!(g.battlefield_find(b).unwrap().damage, 0, "shared-colour damage prevented");
+}
+
+/// Harsh Judgment sends the chosen colour's burn back at its caster.
+#[test]
+fn harsh_judgment_redirects_the_chosen_colors_burn() {
+    let mut g = main_phase();
+    let ward = g.add_card_to_battlefield(1, catalog::harsh_judgment());
+    g.battlefield_find_mut(ward).unwrap().chosen_color = Some(Color::Red);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let (me, them) = (g.players[0].life, g.players[1].life);
+    cast(&mut g, 0, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, them, "the enchantment's controller is untouched");
+    assert_eq!(g.players[0].life, me - 3, "the caster took it instead");
+}
+
+/// Pulse of Llanowar overrides what your basics tap for.
+#[test]
+fn pulse_of_llanowar_rewrites_your_basics() {
+    let mut g = main_phase();
+    let pulse = g.add_card_to_battlefield(0, catalog::pulse_of_llanowar());
+    g.battlefield_find_mut(pulse).unwrap().chosen_color = Some(Color::Blue);
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "the Forest made blue");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0);
+}
+
+/// Mana Maze locks out a spell sharing the last cast's colour.
+#[test]
+fn mana_maze_blocks_the_last_casts_color() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::mana_maze());
+    let first = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, 0, first, Some(Target::Player(1)));
+    let second = g.add_card_to_hand(0, catalog::lightning_bolt());
+    mana(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: second,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "a second red spell is locked out"
+    );
+}
+
+/// Traveler's Cloak hands out landwalk of the type it named.
+#[test]
+fn travelers_cloak_grants_the_chosen_landwalk() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let cloak = g.add_card_to_hand(0, catalog::travelers_cloak());
+    cast(&mut g, 0, cloak, Some(Target::Permanent(bear)));
+    assert!(
+        g.computed_permanent(bear)
+            .unwrap()
+            .keywords
+            .iter()
+            .any(|k| matches!(k, Keyword::Landwalk(_))),
+        "the enchanted creature has landwalk"
+    );
+    assert_eq!(g.players[0].hand.len(), 1, "the Aura cantripped");
+}
+
+/// Mages' Contest counters the spell when nobody tops the opening bid.
+#[test]
+fn mages_contest_counters_when_the_bid_stands() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt on the stack");
+    let contest = g.add_card_to_hand(0, catalog::mages_contest());
+    let before = g.players[0].life;
+    // Seat 1 passes on topping the opening bid of 1.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(0)]));
+    cast(&mut g, 0, contest, Some(Target::Permanent(bolt)));
+    assert_eq!(g.players[0].life, before - 1, "the winner paid their bid");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "the Bolt was countered");
+}
+
+/// Pain // Suffering ships both halves.
+#[test]
+fn pain_suffering_has_a_right_half() {
+    let def = catalog::pain_suffering();
+    let split = def.split.as_ref().expect("split card");
+    assert_eq!(split.right.cost.cmc(), 4, "Suffering costs four");
+    assert!(!split.fuse && !split.aftermath);
+}

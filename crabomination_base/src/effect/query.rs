@@ -352,6 +352,8 @@ impl Effect {
                 sel_has_target(what) || player_has_target(splitter) || player_has_target(chooser)
             }
             Effect::SacrificeSelected { what } => sel_has_target(what),
+            Effect::GrantChosenTypeLandwalk { what } => sel_has_target(what),
+            Effect::BidLifeToCounterTargetSpell { what } => sel_has_target(what),
             Effect::RevealTopTakeNamedExileRest { .. }
             | Effect::EachPlayerKeepsOneOfEachBasicTypeSacrificesRest => false,
             Effect::ChooseOneAmong { what, chooser, .. } => {
@@ -2993,6 +2995,8 @@ impl Effect {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }
                 Effect::DoubleLife { who } => sel_find(who, slot),
+                Effect::GrantChosenTypeLandwalk { what }
+                | Effect::BidLifeToCounterTargetSpell { what } => sel_find(what, slot),
                 Effect::ChooseOneAmong { what, chooser, .. } => sel_find(what, slot)
                     .or_else(|| implicit_player_for_ref_slot(chooser, slot)),
                 Effect::SeparateIntoPiles { what, splitter, chooser, .. } => sel_find(what, slot)
