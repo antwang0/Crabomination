@@ -348,7 +348,7 @@ pub fn hammer_of_purphoros() -> CardDefinition {
         }],
         ..god_weapon(
             "Hammer of Purphoros",
-            cost(&[generic(2), r()]),
+            cost(&[generic(1), r(), r()]),
             "Creatures you control have haste.",
             StaticEffect::GrantKeyword {
                 applies_to: your_creatures(),

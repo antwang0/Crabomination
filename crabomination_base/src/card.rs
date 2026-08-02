@@ -64,7 +64,7 @@ pub enum CreatureType {
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold, Surrakar,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Rebel, Monger, Archon, Aetherborn,
-    Construct, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought,
+    Construct, Golem, Myr, Robot, Hellion, Scarecrow, Dreadnought, Sable,
     Ooze, Plant, Saproling,
     // Strixhaven-era subtypes. (Book is Codie, Vociferous Codex's
     // 2023-oracle creature type.)

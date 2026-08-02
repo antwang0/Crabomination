@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
-use crate::mana::{Color, b, cost, generic, r, u, w};
+use crate::mana::{Color, b, cost, generic, r, u, w, x};
 
 /// Rowan's Grim Search — {2}{B} Instant. Bargain. If bargained, dig the top four
 /// (keep up to two; modeled as Surveil 4). You draw two and lose 2 life.
@@ -123,7 +123,7 @@ fn mercenary_token() -> TokenDefinition {
 pub fn form_a_posse() -> CardDefinition {
     CardDefinition {
         name: "Form a Posse",
-        cost: cost(&[r(), w()]),
+        cost: cost(&[x(), r(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::CreateToken {
             who: PlayerRef::You,

@@ -1562,7 +1562,7 @@ pub fn sickening_dreams() -> CardDefinition {
         additional_cast_cost: vec![crate::card::AdditionalCastCost::DiscardXFromCost],
         ..sorcery(
             "Sickening Dreams",
-            cost(&[x(), b()]),
+            cost(&[generic(1), b()]),
             sweep_everything(Value::XFromCost),
         )
     }

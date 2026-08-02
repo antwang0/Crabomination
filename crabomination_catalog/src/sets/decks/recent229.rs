@@ -13,7 +13,7 @@ use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, TriggeredAbility,
     Value,
 };
-use crate::mana::{Color, b, cost, g, generic, u, w};
+use crate::mana::{Color, b, cost, g, generic, u, w, x};
 
 /// Primal Might — {X}{G} Sorcery. Target creature you control gets +X/+X until
 /// end of turn. Then it fights up to one target creature you don't control.
@@ -28,7 +28,7 @@ pub fn primal_might() -> CardDefinition {
     };
     CardDefinition {
         name: "Primal Might",
-        cost: cost(&[generic(0), g()]),
+        cost: cost(&[x(), g()]),
         card_types: vec![CardType::Sorcery],
         // slot 1 (the fight defender) is "up to one" — declinable.
         effect: Effect::OptionalTargets {

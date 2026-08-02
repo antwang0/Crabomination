@@ -4786,6 +4786,35 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   `libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev` (install via
   apt). Once present `cargo build/clippy -p crabomination_client` works.
 
+## Noticed this run (modern_decks — Judgment closure, Vanguard, Onslaught)
+
+- **`audit_catalog_stats.py` now resolves file-local card helpers.** Most
+  classic sets build cards through `fn creature(name, cost, types, p, t)` and
+  pass the printed stats positionally, so the audit's `name:` / `power:` field
+  scans skipped them — 10 678 cards checked before, **14 602** after. The first
+  run of the widened audit found and fixed 20 cost / 6 P/T / 4 type drifts
+  (Wind Spirit, Panther Warriors, Arrest, Untamed Hunger, Ophidian Eye, Sedge
+  Sliver, Homing Sliver, Spawn of Rix Maadi, Gore-House Chainwalker, Warden of
+  Geometries, Cultivator Drone, Curse of the Pierced Heart, Curse of
+  Bloodletting, Hammer of Purphoros, Bronze Sable, Void Grafter) and six
+  `{X}` spells that spelled X as `generic(0)` or omitted it entirely
+  (Lunar Frenzy, Form a Posse, March of Otherworldly Light, Primal Might, Bond
+  of Agony, Overrule) — those never offered the caster an X prompt.
+- ⏳ **31 TYPE + 52 KEYWORD drifts remain** (mostly `decks`). Run
+  `python3 scripts/audit_catalog_stats.py decks` for the list; each needs a
+  per-card read (some are deliberate — a granted keyword modelled as a static
+  isn't printed on the card).
+- ⏳ **Vanguard statics from the command zone.** `seat_vanguard` applies
+  `NoMaximumHandSize` at seating; a general "a command-zone avatar's static
+  abilities apply" pass would need the ~100 battlefield-scanning static
+  gathers to also walk command zones (Birds of Paradise Avatar, Dauntless
+  Escort Avatar, Ixidor-style face-down lords).
+- ⏳ **`Effect::ApplyToTargets.max_targets` is a `u8`.** "X target creatures"
+  currently rides `TargetsExactlyX` wrapping a fixed ceiling (Wave of
+  Indifference uses 8). A `Value`-typed ceiling would drop the magic number.
+- ⏳ **Onslaught is at 219 gaps.** The remaining bulk is Morph (engine support
+  ships) and the tribal commons; Legions and Scourge follow.
+
 ## MagicCompRules coverage audit
 
 Periodic spot-check against the rules document (`MagicCompRules_20260417.txt`).

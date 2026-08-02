@@ -7249,25 +7249,25 @@ pub fn rakdos_cackler() -> CardDefinition {
     )
 }
 
-/// Gore-House Chainwalker — {1}{R} Creature — Human Warrior 2/2 with Unleash. (RTR)
+/// Gore-House Chainwalker — {1}{R} Creature — Human Warrior 2/1 with Unleash. (RTR)
 pub fn gore_house_chainwalker() -> CardDefinition {
     unleash_creature(
         "Gore-House Chainwalker",
         cost(&[generic(1), r()]),
         vec![CreatureType::Human, CreatureType::Warrior],
         2,
-        2,
+        1,
     )
 }
 
-/// Spawn of Rix Maadi — {3}{R} Creature — Zombie 2/2 with Unleash. (DIS)
+/// Spawn of Rix Maadi — {3}{B}{R} Creature — Horror 5/3 with Unleash. (DIS)
 pub fn spawn_of_rix_maadi() -> CardDefinition {
     unleash_creature(
         "Spawn of Rix Maadi",
-        cost(&[generic(3), r()]),
-        vec![CreatureType::Zombie],
-        2,
-        2,
+        cost(&[generic(3), b(), r()]),
+        vec![CreatureType::Horror],
+        5,
+        3,
     )
 }
 

@@ -95,7 +95,7 @@ pub fn eldrazi_devastator() -> CardDefinition {
     }
 }
 
-/// Warden of Geometries — {3}{C} 2/4 Eldrazi Drone. Devoid, {T}: Add {C}.
+/// Warden of Geometries — {4} 2/3 Eldrazi Drone. Devoid, {T}: Add {C}.
 pub fn warden_of_geometries() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::{ManaPayload, PlayerRef, Value};
@@ -110,14 +110,14 @@ pub fn warden_of_geometries() -> CardDefinition {
         }],
         ..drone(
             "Warden of Geometries",
-            cost(&[generic(3), crate::mana::colorless(1)]),
+            cost(&[generic(4)]),
             2,
-            4,
+            3,
         )
     }
 }
 
-/// Cultivator Drone — {3}{C} 2/2 Eldrazi Drone. Devoid, {T}: Add {C}{C}.
+/// Cultivator Drone — {2}{U} 2/3 Eldrazi Drone. Devoid, {T}: Add {C}{C}.
 /// (The "spend only to cast colorless spells" restriction is dropped.)
 pub fn cultivator_drone() -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -133,9 +133,9 @@ pub fn cultivator_drone() -> CardDefinition {
         }],
         ..drone(
             "Cultivator Drone",
-            cost(&[generic(3), crate::mana::colorless(1)]),
+            cost(&[generic(2), u()]),
             2,
-            2,
+            3,
         )
     }
 }
@@ -1109,7 +1109,7 @@ pub fn void_grafter() -> CardDefinition {
             keyword: Keyword::Hexproof,
             duration: Duration::EndOfTurn,
         })],
-        ..drone("Void Grafter", cost(&[g(), u()]), 2, 4)
+        ..drone("Void Grafter", cost(&[generic(1), g(), u()]), 2, 4)
     }
 }
 

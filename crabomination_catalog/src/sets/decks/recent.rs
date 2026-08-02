@@ -9,7 +9,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, on_dies, recover, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{b, colorless, cost, g, generic, r, u, w};
+use crate::mana::{b, colorless, cost, g, generic, r, u, w, x};
 
 // === Innistrad: Midnight Hunt — Coven (control 3+ creatures with different
 // powers). `Predicate::CovenActive { who }`. ===
@@ -1563,7 +1563,7 @@ pub fn lunar_frenzy() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Lunar Frenzy",
-        cost: cost(&[r()]),
+        cost: cost(&[x(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PumpPT {

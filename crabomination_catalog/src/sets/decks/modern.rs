@@ -17138,7 +17138,7 @@ pub fn lure() -> CardDefinition {
 pub fn arrest() -> CardDefinition {
     simple_aura(
         "Arrest",
-        cost(&[generic(1), w()]),
+        cost(&[generic(2), w()]),
         0,
         0,
         vec![
@@ -30289,7 +30289,7 @@ pub fn wild_slash() -> CardDefinition {
 pub fn untamed_hunger() -> CardDefinition {
     simple_aura(
         "Untamed Hunger",
-        cost(&[generic(3), b()]),
+        cost(&[generic(2), b()]),
         2,
         1,
         vec![Keyword::Menace],
@@ -41571,7 +41571,7 @@ pub fn keen_sense() -> CardDefinition {
 
 /// Ophidian Eye — {1}{U} Aura. Flash Curiosity ("draw on damage to a player").
 pub fn ophidian_eye() -> CardDefinition {
-    aura_damage_draw("Ophidian Eye", cost(&[generic(1), u()]))
+    aura_damage_draw("Ophidian Eye", cost(&[generic(2), u()]))
 }
 
 fn aura_damage_draw(name: &'static str, mana: ManaCost) -> CardDefinition {
@@ -57984,7 +57984,7 @@ pub fn vexing_shusher() -> CardDefinition {
 
 // ── modern_decks: Sliver tribal wave 2 (granted activations + utility) ────────
 
-/// Sedge Sliver — {2}{B} 2/2. All Slivers have "This creature gets +1/+1 as
+/// Sedge Sliver — {2}{R} 2/2. All Slivers have "This creature gets +1/+1 as
 /// long as you control a Swamp" and "{B}: Regenerate this creature." Each
 /// Sliver checks its own controller's Swamps.
 pub fn sedge_sliver() -> CardDefinition {
@@ -58021,11 +58021,11 @@ pub fn sedge_sliver() -> CardDefinition {
                 },
             },
         ],
-        ..sliver("Sedge Sliver", cost(&[generic(2), b()]), 2, 2)
+        ..sliver("Sedge Sliver", cost(&[generic(2), r()]), 2, 2)
     }
 }
 
-/// Homing Sliver — {3}{R} 2/2. Each Sliver card in each player's hand has
+/// Homing Sliver — {2}{R} 2/2. Each Sliver card in each player's hand has
 /// slivercycling {3} ({3}, Discard: search your library for a Sliver card,
 /// put it into your hand).
 pub fn homing_sliver() -> CardDefinition {
@@ -58038,7 +58038,7 @@ pub fn homing_sliver() -> CardDefinition {
                 search: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
             },
         }],
-        ..sliver("Homing Sliver", cost(&[generic(3), r()]), 2, 2)
+        ..sliver("Homing Sliver", cost(&[generic(2), r()]), 2, 2)
     }
 }
 

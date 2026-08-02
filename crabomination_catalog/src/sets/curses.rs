@@ -84,7 +84,7 @@ pub fn psychic_possession() -> CardDefinition {
 pub fn curse_of_the_pierced_heart() -> CardDefinition {
     player_aura(
         "Curse of the Pierced Heart",
-        cost(&[r()]),
+        cost(&[generic(1), r()]),
         true,
         vec![],
         vec![enchanted_player_upkeep(Effect::DealDamage {
@@ -135,7 +135,7 @@ pub fn curse_of_exhaustion() -> CardDefinition {
 pub fn curse_of_bloodletting() -> CardDefinition {
     player_aura(
         "Curse of Bloodletting",
-        cost(&[generic(3), r()]),
+        cost(&[generic(3), r(), r()]),
         true,
         vec![StaticAbility {
             description: "If a source would deal damage to enchanted player, it deals double that damage instead.",

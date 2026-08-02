@@ -64,7 +64,7 @@ fn classic_vanilla_bodies_have_correct_stats() {
         (catalog::merfolk_of_the_pearl_trident, 1, 1, &[]),
         (catalog::vodalian_soldiers, 1, 2, &[]),
         (catalog::sea_eagle, 1, 1, &[Keyword::Flying]),
-        (catalog::wind_spirit, 2, 3, &[Keyword::Flying]),
+        (catalog::wind_spirit, 3, 2, &[Keyword::Flying]),
         (catalog::scathe_zombies, 2, 2, &[]),
         (catalog::walking_corpse, 2, 2, &[]),
         (catalog::bog_imp, 1, 1, &[Keyword::Flying]),
@@ -73,7 +73,7 @@ fn classic_vanilla_bodies_have_correct_stats() {
         (catalog::raging_goblin, 1, 1, &[Keyword::Haste]),
         (catalog::goblin_piker, 2, 1, &[]),
         (catalog::goblin_chariot, 2, 2, &[Keyword::Haste]),
-        (catalog::panther_warriors, 6, 1, &[]),
+        (catalog::panther_warriors, 6, 3, &[]),
         (catalog::redwood_treefolk, 3, 6, &[]),
     ];
     for (factory, p, t, kws) in cases {

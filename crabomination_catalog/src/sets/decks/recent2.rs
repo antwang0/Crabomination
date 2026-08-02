@@ -10,7 +10,7 @@ use crate::card::{
 use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 /// Tangle — {1}{G} Instant. Prevent all combat damage this turn; each attacking
 /// creature doesn't untap during its controller's next untap step.
@@ -35,7 +35,7 @@ pub fn tangle() -> CardDefinition {
 pub fn march_of_otherworldly_light() -> CardDefinition {
     CardDefinition {
         name: "March of Otherworldly Light",
-        cost: cost(&[generic(0), w()]), // {X}{W}; X paid as generic at cast time
+        cost: cost(&[x(), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
             what: Selector::TargetFiltered {

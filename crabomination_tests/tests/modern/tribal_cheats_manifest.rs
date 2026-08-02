@@ -926,7 +926,7 @@ fn ophidian_eye_attaches_to_creature() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let eye = g.add_card_to_hand(0, catalog::ophidian_eye());
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: eye, target: Some(Target::Permanent(bear)),
         additional_targets: vec![], mode: None, x_value: None,

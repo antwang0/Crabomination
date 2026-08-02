@@ -8,7 +8,7 @@ use crate::card::{
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef};
-use crate::mana::{ManaCost, b, cost, g, generic, u, w};
+use crate::mana::{ManaCost, b, cost, g, generic, u, w, x};
 
 // ── Golgari ─────────────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ pub fn woodwraith_corrupter() -> CardDefinition {
 pub fn bond_of_agony() -> CardDefinition {
     CardDefinition {
         name: "Bond of Agony",
-        cost: cost(&[b()]),
+        cost: cost(&[x(), b()]),
         card_types: vec![CardType::Sorcery],
         additional_cost_pay_x_life: true,
         effect: Effect::LoseLife {
@@ -118,7 +118,7 @@ pub fn court_hussar() -> CardDefinition {
 pub fn overrule() -> CardDefinition {
     CardDefinition {
         name: "Overrule",
-        cost: cost(&[w(), u()]),
+        cost: cost(&[x(), w(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::CounterUnlessPaid {

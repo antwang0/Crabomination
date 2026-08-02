@@ -6062,7 +6062,7 @@ mod recent {
         let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         let aura = g.add_card_to_hand(0, catalog::arrest());
         g.players[0].mana_pool.add(Color::White, 1);
-        g.players[0].mana_pool.add_colorless(1);
+        g.players[0].mana_pool.add_colorless(2);
         cast_at(&mut g, aura, Target::Permanent(foe));
         let cp = g.computed_permanent(foe).unwrap();
         assert!(cp.keywords.contains(&Keyword::CantAttack));

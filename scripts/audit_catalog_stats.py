@@ -59,7 +59,11 @@ def sym(call):
     if m: return "{%s/P}" % COLOR[m.group(1)]
     return None
 
-def norm(mc): return tuple(sorted(re.findall(r"\{[^}]+\}", mc or "")))
+def norm(mc):
+    """Mana cost as an order-insensitive symbol multiset. An empty cost and
+    `{0}` are the same object (`cost(&[])` is how the catalog spells {0})."""
+    syms = tuple(sorted(re.findall(r"\{[^}]+\}", mc or "")))
+    return () if syms == ("{0}",) else syms
 
 def vec_after(body, i):
     j = body.find("vec![", i)
@@ -206,15 +210,130 @@ def card_def_name(body):
     """
     return own_field(body, r'name:\s*"((?:[^"\\]|\\.)*)"')
 
+# ── Local card-shape helpers ────────────────────────────────────────────────
+#
+# Most set modules build their cards through a file-local helper
+# (`fn creature(name, cost, types, p, t) -> CardDefinition`) and pass the
+# printed stats positionally: `..creature("Aven Brigadier", cost(&[…]), …)`.
+# Those cards carry no top-level `name:` / `power:` field, so the audit used to
+# skip them entirely — most of the classic sets went unchecked. `HELPERS`
+# records, per file, which positional parameter of each helper feeds which
+# CardDefinition field; `inline_helper_call` then splices the call's arguments
+# into a synthetic literal the existing field scans can read.
+
+HELPER_DEF = re.compile(
+    r"\nfn (\w+)\(([^)]*)\)\s*->\s*CardDefinition\s*\{", re.S
+)
+FIELD_FROM_PARAM = {
+    "name": "name",
+    "cost": "cost",
+    "power": "power",
+    "toughness": "toughness",
+    "creature_types": "creature_types",
+}
+
+def helper_table(text):
+    """`{helper_name: {field: positional_index}}` for one source file."""
+    out = {}
+    for m in HELPER_DEF.finditer(text):
+        params = [
+            p.split(":")[0].strip()
+            for p in re.split(r",(?![^<>()]*[>)])", m.group(2))
+            if p.strip()
+        ]
+        j, depth = m.end(), 1
+        while j < len(text) and depth:
+            depth += (text[j] == "{") - (text[j] == "}")
+            j += 1
+        body = text[m.end() : j]
+        mapping = {}
+        for field in ("name", "cost", "power", "toughness", "creature_types"):
+            # `power: p,` (explicit) or `name,` (shorthand field init).
+            fm = re.search(r"\b" + field + r":\s*(\w+)\s*[,}]", body) or (
+                re.search(r"\b(" + field + r")\s*,", body)
+            )
+            if fm and fm.group(1) in params:
+                mapping[field] = params.index(fm.group(1))
+        # A helper that layers on another helper (`legend` → `creature`)
+        # forwards its own parameters; resolve one level.
+        base = re.search(r"\.\.(\w+)\(", body)
+        if base and base.group(1) in out:
+            for field, idx in out[base.group(1)].items():
+                arg = split_args(call_args(body, base.group(1)))
+                if idx < len(arg) and arg[idx].strip() in params:
+                    mapping.setdefault(field, params.index(arg[idx].strip()))
+        if mapping:
+            out[m.group(1)] = mapping
+    return out
+
+def call_args(body, fname):
+    """The raw argument text of the first `fname(` call in `body`."""
+    m = re.search(r"\b" + re.escape(fname) + r"\s*\(", body)
+    if not m:
+        return ""
+    i, depth = m.end(), 1
+    while i < len(body) and depth:
+        depth += (body[i] == "(") - (body[i] == ")")
+        i += 1
+    return body[m.end() : i - 1]
+
+def split_args(argtext):
+    out, depth, cur = [], 0, ""
+    for ch in argtext:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        if ch == "," and depth == 0:
+            out.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    if cur.strip():
+        out.append(cur)
+    return out
+
+def inline_helper_call(body, helpers):
+    """Rewrite `..helper(args)` into the fields the helper would have set.
+
+    Returns `body` unchanged when it already carries its own `name:` field or
+    uses no known helper — the field scans then behave exactly as before.
+    """
+    if card_def_name(body) is not None:
+        return body
+    m = re.search(r"\.\.(\w+)\(", body)
+    fname = m.group(1) if m else None
+    if fname is None:
+        # A bare `helper("Name", …)` tail with no struct wrapper.
+        m2 = re.search(r"^\s*(\w+)\(", body, re.M)
+        fname = m2.group(1) if m2 else None
+    if fname not in helpers:
+        return body
+    args = split_args(call_args(body, fname))
+    fields = []
+    for field, idx in helpers[fname].items():
+        if idx >= len(args):
+            continue
+        val = args[idx].strip()
+        if field == "creature_types":
+            fields.append(f"creature_types: {val},")
+        else:
+            fields.append(f"{field}: {val},")
+    if not fields:
+        return body
+    return "CardDefinition {" + "".join(fields) + "}" + body
+
 def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
         d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "kw": []})
         text = src.read_text()
+        helpers = helper_table(text)
         for m in FUNC.finditer(text):
             nxt = FUNC.search(text, m.end()); body = text[m.end():nxt.start() if nxt else len(text)]
             body = strip_token_literals(body)
+            body = inline_helper_call(body, helpers)
             nm = card_def_name(body)
             if not nm: continue
             card = CACHE_LC.get(nm.group(1).lower())

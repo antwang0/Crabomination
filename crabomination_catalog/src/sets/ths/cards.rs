@@ -388,7 +388,7 @@ pub fn bronze_sable() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Construct],
+            creature_types: vec![CreatureType::Sable],
             ..Default::default()
         },
         power: 2,

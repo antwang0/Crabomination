@@ -203,7 +203,7 @@ pub fn devastating_dreams() -> CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::DiscardXRandomFromCost],
         ..sorcery(
             "Devastating Dreams",
-            cost(&[x(), r(), r()]),
+            cost(&[r(), r()]),
             Effect::Seq(vec![
                 Effect::Sacrifice {
                     who: Selector::Player(PlayerRef::EachPlayer),

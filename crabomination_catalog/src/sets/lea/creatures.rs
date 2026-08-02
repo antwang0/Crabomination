@@ -937,8 +937,8 @@ pub fn wind_spirit() -> CardDefinition {
         "Wind Spirit",
         &[generic(3), u()],
         vec![CreatureType::Spirit],
-        2,
         3,
+        2,
         vec![Keyword::Flying],
     )
 }
@@ -1069,7 +1069,7 @@ pub fn panther_warriors() -> CardDefinition {
         &[generic(3), g()],
         vec![CreatureType::Cat, CreatureType::Warrior],
         6,
-        1,
+        3,
         vec![],
     )
 }
