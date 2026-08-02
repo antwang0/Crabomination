@@ -2359,8 +2359,9 @@ Each a small targeted feature; sweep batch by batch.
 ## Suggested sequencing
 
 0. **Next set to close.** Odyssey is **complete** (`set_gaps.py ody` at zero,
-   `sets::ody::gaps`–`gaps12`). Torment then Judgment finish the block; keep the
-   wave pattern going.
+   `sets::ody::gaps`–`gaps12`). **Torment is in progress** — `sets::tor` is at
+   73 cards / ~48 gaps after waves 1–4; finish it, then Judgment closes the
+   block. Keep the wave pattern going.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio

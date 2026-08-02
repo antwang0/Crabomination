@@ -104,28 +104,45 @@ Prison Barricade's kicked defender bypass is wired.
 
 ## Torment — opened
 
-`set_gaps.py tor` is open; `sets::tor` ships the first wave (17 cards, tests in
-`classic_sets/tor`): the Cephalid self-mill shell (Aristocrat, Illusionist,
-Sage, Snitch, Vandal), the Threshold bodies (Boneshard Slasher, Cabal Torturer,
-Centaur Chieftain), Chainer, Ambassador Laquatus, Circular Logic (Madness),
-Compulsion, Coral Net and the spells. New: `CounterType::Shred`.
+`set_gaps.py tor` is open (143 → ~48 gaps); `sets::tor` ships waves 1–4
+(73 cards, tests in `classic_sets/tor`): the Cephalid self-mill shell, the
+Threshold bodies, Chainer, the Nightmare Horror jailers (Faceless Butcher,
+Gravegouger, Petravark, Slithery Stalker), the Madness Auras, the Tainted land
+cycle and the sweepers.
 
-Engine fix it forced: `statics_granted_triggers_for` matched
-`StaticEffect::GrantTriggeredAbility` *literally*, so a trigger granted under a
-gating wrapper (`WhileCondition`, `WhileYourTurn`, …) never surfaced. It now
-peels through `active_static`, which is what made Decaying Soil's Threshold
-half, Wayward Angel's upkeep sacrifice, Boneshard Slasher and Cephalid Sage
-work at all.
+Primitives it shipped: `CounterType::Shred`; `CardDefinition::
+flashback_additional_cost` (+ `AdditionalCastCost::DiscardXFromCost`) replacing
+the old name-keyed flashback-rider table; `WardCost::BottomFromGraveyard`;
+`Effect::FlipUntilLoss` (CR 705.1); `ExileReturnZone::Graveyard`;
+`StaticEffect::OpponentsCantCastMatching`; `Effect::NextSpellCantBeCountered`
+(+ `PlayerView::uncounterable_next` and its HUD chip);
+`Value::CardsInAllGraveyardsMatching`.
 
-Open follow-up:
-- **Chainer's Nightmare grant dies with him.** His reanimation ability stamps
-  the Nightmare type via `Effect::AddCreatureTypes { duration: Permanent }`,
-  which is a continuous effect *sourced from Chainer*, so it's swept when he
-  leaves — which is exactly when his "exile all Nightmares" trigger looks. The
-  printed card sets the characteristic on the reanimated creature itself,
-  independent of Chainer. Wants a source-independent type stamp (the shape
-  `Effect::BecomeChosenCreatureType` uses) rather than a sourced layer-4
-  effect. The same gap keeps his anthem off creatures he reanimated.
+Engine fixes it forced:
+- `statics_granted_triggers_for` matched `StaticEffect::GrantTriggeredAbility`
+  *literally*, so a trigger granted under a gating wrapper (`WhileCondition`,
+  `WhileYourTurn`, …) never surfaced. It now peels through `active_static`.
+- CR 611.2b — `remove_effects_from_source` swept `EffectDuration::Indefinite`
+  effects too, so a `Duration::Permanent` type stamp died with its source.
+  Indefinite effects now survive (Chainer's Nightmares keep the type).
+- `Effect::ExileUntilSourceLeaves` routed every `Target` through the
+  battlefield path, so a graveyard pick silently no-oped (Gravegouger).
+
+Open follow-ups:
+- **Floating Shield / Zombie Trailblazer** want a *host* grant keyed to the
+  Aura's chosen colour / a one-shot "target land becomes a Swamp"; neither
+  shape exists (`EquipBonus` keywords are static).
+- **Carrion Rats / Carrion Wurm** need "any player may exile N cards from their
+  graveyard; if a player does, this assigns no combat damage".
+- **Equal Treatment** needs a turn-scoped "damage is dealt as 2 instead of 1+"
+  replacement (not a doubler).
+- **Flaming Gambit** needs the "that player may redirect it to a creature they
+  control" damage menu.
+- **Stupefying Touch** needs a host-scoped "activated abilities can't be
+  activated" lock.
+- **Laquatus's Champion / Soul Scourge** model the leaves-the-battlefield
+  life-back half against the ETB target; the trigger has no memory of which
+  player was chosen, so both cards are deferred.
 
 ## Odyssey — closed
 
@@ -5089,6 +5106,17 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b). 208.3 noncreature P/T now observable for `*`-power Vehicles: `DynamicPt::LandsControlledPower` sets power off a count while toughness stays printed, `computed_permanent()` reports it on a non-crewed (noncreature) Vehicle (Lumbering Worldwagon `*`/4; test `lumbering_worldwagon_power_tracks_lands`). Conditional base-P/T set ✅ (`StaticEffect::SetBasePtIf` — live layer-7b SetPowerToughness gated on a predicate; counters/+N stack on top per 613.7c/f — Snowmelt Stag "5/2 during your turn"; `snowmelt_stag_*`). CR 604.3 CDAs: `DynamicPt::LandsControlledPlusLandsInControllerGraveyard` (Multani, Yavimaya's Avatar), `DynamicPt::CardTypesInOpponentsGraveyards` (Nighthawk Scavenger), `DynamicPt::InstantsSorceriesInControllerGraveyard` (Enigma Drake), `DynamicPt::CreaturesControlledPower` (Suki `*`/4), `DynamicPt::PlusCountersOnLandsControlledPower` (Toph `*`/3), `DynamicPt::NoncreatureNonlandCardsInControllerGraveyard` (Dragonfly Swarm `*`/3), `DynamicPt::ColorsAmongAlliesControlledPower` (Earthen Ally `*`/2), `DynamicPt::EnchantmentsInPlay` (Yavimaya Enchantress `2/2`, +1/+1 per enchantment in play — `tests/recent72.rs`), `DynamicPt::ForestsInPlay` (Traproot Kami `0/*`, toughness = Forests on the battlefield — `tests/recent100.rs`), all live-recomputed by `computed_permanent()`; `tests/recent47.rs`, `tests/recent50.rs`, `tests/tla.rs`.
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). 119.7 rest-of-game lifegain lock ✅ (`Effect::LifeGainLockGame` sets the permanent `Player.cannot_gain_life` flag, distinct from the turn-scoped lock — Screaming Nemesis via `Selector::Target(0)`; test `screaming_nemesis_redirects_damage`). Life-total-threshold statics ✅ (`Predicate::PlayerLifeAtLeast` gates a live self-anthem — Angel of Vitality's +2/+2 at 25+ life; `cr_119_*`, `tests/recent17.rs`). Life-vs-*starting*-total statics ✅ (`Predicate::PlayerLifeAtLeastAboveStarting` gates tiered self-pumps — Elenda, Saint of Dusk +1/+1/menace above starting, +5/+5 more at 10+ above; `elenda_scales_with_life`). Exact-life gate ✅ (`Predicate::PlayerLifeExactly` — Hidetsugu's Second Rite deals 10 only if the targeted player is at exactly 10; `hidetsugus_second_rite_needs_exactly_ten`). Redistribute-life-totals (119.7) is exact at two players — Reverse the Sands rides `ExchangeLifeTotals`, `reverse_the_sands_swaps_life_totals`; a true multiplayer redistribution (each player picks which total they get back) is still open. Remaining: per-source life-gain replacement breadth. (Audit follow-up closed: every `LifeGained` emitter now uses `adjust_life_applied`, and `SetLifeTotal`/`ExchangeLifeTotals` route through the funnel — so a can't-gain-life lock on the player who would gain blocks their half of an exchange while the other still loses; test `cr_119_7_exchange_life_totals_respects_cant_gain_life`.)
 - 🟡 **CR 121 — Drawing a Card** — draw-count replacement (121.2a) ✅ via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought Reflection; stacks per 614.5, reentrancy-guarded); **condition-gated** draw doubling ✅ (`ControllerDrawsDoubledIf` — Vnwxt's max-speed draw-two; test `cr_121_2a_conditional_draw_replacement`). Draw-count board gates ✅ via `SelectionRequirement::ControllerDrewAtLeastThisTurn(n)` (reads `Player.cards_drawn_this_turn`), wired as a `SelfHasKeywordWhile` condition (Foggy Swamp Hunters lifelink/menace, June unblockable). Choose-to-draw (121.3 / 121.2b) ✅ — `GameState::may_choose_to_draw` stops `Effect::MayDo` / `Effect::MayPay` offering an optional draw to a capped player (a rules-declined `MayPay` still runs its `else_`), and the per-turn cap now gates `draw_one` itself so *every* draw source is capped, not just `Effect::Draw`'s count; an empty library deliberately doesn't block the choice. Remaining: mid-cast face-down draw (121.8); reveal-on-draw (121.9).
+- ✅ **CR 705.1 — Flipping a coin.** `Effect::FlipUntilLoss` runs its payoff
+  once per won flip and stops on the first loss (Crazed Firecat); test
+  `cr_recent64::cr_705_1_flip_until_loss_pays_per_win`.
+- ✅ **CR 702.15 — Landwalk.** The evasion reads the *defending* player's
+  lands, not the attacker's; test
+  `cr_recent64::cr_702_15b_landwalk_keys_on_the_defender`.
+- ✅ **CR 702.34a — Flashback additional costs.** Declared per card on
+  `CardDefinition::flashback_additional_cost` (sacrifice / discard /
+  `DiscardXFromCost` / pay-life / exile-from-graveyard) and paid on top of the
+  flashback mana cost; test
+  `cr_recent64::cr_702_34a_flashback_additional_cost_is_paid`.
 - ✅ **CR 605.1b / 605.4a — triggered mana abilities** — a targetless
   mana-adding trigger fired from a mana ability resolves off-stack, so its mana
   reaches the pool before the payment in progress finishes (Overabundance).
