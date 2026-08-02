@@ -2662,6 +2662,7 @@ impl GameState {
             // Turf Wound's land-play lock is turn-scoped.
             pl.cant_play_lands_this_turn = false;
             pl.cant_cast_matching_this_turn.clear();
+            pl.next_spell_uncounterable.clear();
             // CR 700.13 — "committed a crime this turn" resets each turn.
             pl.committed_crime_this_turn = false;
             // CR 708 — "entered face down / turned face up this turn" resets.

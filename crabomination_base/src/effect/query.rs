@@ -230,6 +230,7 @@ impl Effect {
         }
         match self {
             Effect::FlipUntilLoss { per_win } => per_win.requires_target(),
+            Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
             | Effect::SearchEachBasicLandType { .. }
             | Effect::SacrificeSourceUnlessReturn { .. }

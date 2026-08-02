@@ -607,6 +607,9 @@ pub enum Value {
     /// "equal to the number of Arcane cards in your graveyard" (Ire of
     /// Kaminari) and similar graveyard-count payoffs.
     CardsInGraveyardMatching { who: PlayerRef, filter: SelectionRequirement },
+    /// The same count across *every* player's graveyard (Invigorating Falls,
+    /// Mortal Combat).
+    CardsInAllGraveyardsMatching { filter: SelectionRequirement },
     /// Number of cards in `who`'s hand matching `filter`. Powers Amplify
     /// (CR 702.38 — "+N/+N counters for each [type] card you reveal in your
     /// hand"; all matching cards are auto-revealed) and other reveal-from-hand
@@ -5077,6 +5080,10 @@ pub enum Effect {
     /// "Target player can't cast [filter] spells this turn" (Cease-Fire).
     /// Checked at the cast gate; cleared at cleanup.
     PlayerCantCastMatchingThisTurn { who: PlayerRef, filter: SelectionRequirement },
+    /// "The next [filter] spell you cast this turn can't be countered"
+    /// (Insist, Overmaster). Arms a one-shot grant consumed by the next
+    /// matching cast.
+    NextSpellCantBeCountered { filter: SelectionRequirement },
     /// "Lands `who` controls don't untap during their next untap step"
     /// (Bontu's Last Reckoning). Adds one charge to
     /// `Player.lands_dont_untap_next_untap`; non-land permanents untap normally.

@@ -1039,3 +1039,387 @@ pub fn hydromorph_gull() -> CardDefinition {
         vec![Keyword::Flying],
     )
 }
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────────
+
+/// "The next [filter] spell you cast this turn can't be countered. Draw a card."
+fn uncounterable_cantrip(name: &'static str, c: ManaCost, filter: R) -> CardDefinition {
+    sorcery(
+        name,
+        c,
+        Effect::Seq(vec![Effect::NextSpellCantBeCountered { filter }, draw(1)]),
+    )
+}
+
+/// Insist — {G}. Your next creature spell resolves.
+pub fn insist() -> CardDefinition {
+    uncounterable_cantrip("Insist", cost(&[g()]), R::Creature)
+}
+
+/// Overmaster — {R}. Your next instant or sorcery resolves.
+pub fn overmaster() -> CardDefinition {
+    uncounterable_cantrip("Overmaster", cost(&[r()]), R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)))
+}
+
+/// Llawan, Cephalid Empress — {3}{U} 2/3. Bounces the blue creatures your
+/// opponents control and stops them casting more.
+pub fn llawan_cephalid_empress() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::EachPermanent(
+                R::Creature.and(R::HasColor(Color::Blue)).and(R::ControlledByOpponent),
+            ),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Your opponents can't cast blue creature spells.",
+            effect: StaticEffect::OpponentsCantCastMatching {
+                filter: R::Creature.and(R::HasColor(Color::Blue)),
+            },
+        }],
+        ..legend(
+            "Llawan, Cephalid Empress",
+            cost(&[generic(3), u()]),
+            vec![CreatureType::Octopus, CreatureType::Noble],
+            2,
+            3,
+        )
+    }
+}
+
+/// Invigorating Falls — {2}{G}{G}. Life for every dead creature everywhere.
+pub fn invigorating_falls() -> CardDefinition {
+    sorcery(
+        "Invigorating Falls",
+        cost(&[generic(2), g(), g()]),
+        Effect::GainLife {
+            who: Selector::You,
+            amount: Value::CardsInAllGraveyardsMatching { filter: R::Creature },
+        },
+    )
+}
+
+/// Mortal Combat — {2}{B}{B}. Twenty creature cards in your graveyard wins.
+pub fn mortal_combat() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::ValueAtLeast(
+                Value::CardsInGraveyardMatching { who: PlayerRef::You, filter: R::Creature },
+                Value::Const(20),
+            )),
+            effect: Effect::WinGame { who: PlayerRef::You },
+        }],
+        ..enchantment("Mortal Combat", cost(&[generic(2), b(), b()]))
+    }
+}
+
+/// Morningtide — {1}{W}. Exile every graveyard.
+pub fn morningtide() -> CardDefinition {
+    sorcery(
+        "Morningtide",
+        cost(&[generic(1), w()]),
+        Effect::ExileAllGraveyards { filter: None, opponents_only: false },
+    )
+}
+
+/// Mind Sludge — {4}{B}. A discard for every Swamp.
+pub fn mind_sludge() -> CardDefinition {
+    sorcery(
+        "Mind Sludge",
+        cost(&[generic(4), b()]),
+        Effect::Discard {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::PermanentCountControlledByMatching(
+                PlayerRef::You,
+                R::Land.and(R::HasLandType(crate::card::LandType::Swamp)),
+            ),
+            random: false,
+        },
+    )
+}
+
+/// "{cost}: This creature gets +1/+1 until end of turn." — the Shade pump.
+fn shade_pump(mana: ManaCost) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: mana,
+        effect: Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Nantuko Shade — {B}{B} 2/1 that grows for {B}.
+pub fn nantuko_shade() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![shade_pump(cost(&[b()]))],
+        ..creature(
+            "Nantuko Shade",
+            cost(&[b(), b()]),
+            vec![CreatureType::Insect, CreatureType::Shade],
+            2,
+            1,
+        )
+    }
+}
+
+/// Pardic Collaborator — {3}{R} 2/2 first strike that grows for {B}.
+pub fn pardic_collaborator() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        activated_abilities: vec![shade_pump(cost(&[b()]))],
+        ..creature(
+            "Pardic Collaborator",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Human, CreatureType::Barbarian],
+            2,
+            2,
+        )
+    }
+}
+
+/// Pardic Lancer — {4}{R} 3/2. Random discard buys +1/+0 and first strike.
+pub fn pardic_lancer() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            discard_cost_random: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::FirstStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Pardic Lancer",
+            cost(&[generic(4), r()]),
+            vec![CreatureType::Human, CreatureType::Barbarian],
+            3,
+            2,
+        )
+    }
+}
+
+/// Mystic Familiar — {1}{W} 1/2 flier that hardens past Threshold.
+pub fn mystic_familiar() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Threshold — +1/+1 and protection from black.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: threshold(),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Protection(Color::Black)],
+            },
+        }],
+        ..creature("Mystic Familiar", cost(&[generic(1), w()]), vec![CreatureType::Bird], 1, 2)
+    }
+}
+
+/// Nantuko Calmer — {2}{G}{G} 2/3. Eats an enchantment; bigger past Threshold.
+pub fn nantuko_calmer() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Threshold — +1/+1.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: threshold(),
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Destroy { what: target_filtered(R::Enchantment) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Nantuko Calmer",
+            cost(&[generic(2), g(), g()]),
+            vec![CreatureType::Insect, CreatureType::Druid],
+            2,
+            3,
+        )
+    }
+}
+
+/// Krosan Constrictor — {3}{G} 2/2 swampwalker that shrinks black creatures.
+pub fn krosan_constrictor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Landwalk(crate::card::LandType::Swamp)],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::HasColor(Color::Black))),
+                power: Value::Const(-2),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature("Krosan Constrictor", cost(&[generic(3), g()]), vec![CreatureType::Snake], 2, 2)
+    }
+}
+
+/// Militant Monk — {1}{W}{W} 2/1 vigilant damage sponge.
+pub fn militant_monk() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PreventNextDamage {
+                target: Selector::Target(0),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Militant Monk",
+            cost(&[generic(1), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Monk, CreatureType::Cleric],
+            2,
+            1,
+        )
+    }
+}
+
+/// Organ Grinder — {2}{B} 3/1 that cashes graveyard cards for drain.
+pub fn organ_grinder() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            exile_other_filter: Some((R::Any, 3)),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(3),
+            },
+            ..Default::default()
+        }],
+        ..creature("Organ Grinder", cost(&[generic(2), b()]), vec![CreatureType::Zombie], 3, 1)
+    }
+}
+
+/// Major Teroh — {3}{W} 2/3 flier whose swan song exiles black creatures.
+pub fn major_teroh() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w(), w()]),
+            sac_cost: true,
+            effect: Effect::Exile {
+                what: Selector::EachPermanent(R::Creature.and(R::HasColor(Color::Black))),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Major Teroh",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Bird, CreatureType::Soldier],
+            2,
+            3,
+        )
+    }
+}
+
+/// Liquify — {2}{U}. Counter a cheap spell and exile it.
+pub fn liquify() -> CardDefinition {
+    instant(
+        "Liquify",
+        cost(&[generic(2), u()]),
+        Effect::CounterSpellToZone {
+            what: target_filtered(R::IsSpellOnStack.and(R::ManaValueAtMost(3))),
+            zone: crate::effect::CounteredSpellZone::Exile,
+        },
+    )
+}
+
+/// Obsessive Search — {U}. A cantrip you'd rather discard.
+pub fn obsessive_search() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Madness(cost(&[u()]))],
+        ..instant("Obsessive Search", cost(&[u()]), draw(1))
+    }
+}
+
+/// Narcissism — {2}{G}. Discard or cash in for +2/+2.
+pub fn narcissism() -> CardDefinition {
+    let pump = || Effect::PumpPT {
+        what: target_filtered(R::Creature),
+        power: Value::Const(2),
+        toughness: Value::Const(2),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                discard_cost: Some((R::Any, 1)),
+                effect: pump(),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                sac_cost: true,
+                effect: pump(),
+                ..Default::default()
+            },
+        ],
+        ..enchantment("Narcissism", cost(&[generic(2), g()]))
+    }
+}
+
+/// Mortiphobia — {1}{B}{B}. Discard or cash in to exile a graveyard card.
+pub fn mortiphobia() -> CardDefinition {
+    let exile = || Effect::Move {
+        what: target_filtered(R::InGraveyard),
+        to: ZoneDest::Exile,
+    };
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), b()]),
+                discard_cost: Some((R::Any, 1)),
+                effect: exile(),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), b()]),
+                sac_cost: true,
+                effect: exile(),
+                ..Default::default()
+            },
+        ],
+        ..enchantment("Mortiphobia", cost(&[generic(1), b(), b()]))
+    }
+}
+
+/// Pay No Heed — {W}. Blank a source for the turn.
+pub fn pay_no_heed() -> CardDefinition {
+    instant(
+        "Pay No Heed",
+        cost(&[w()]),
+        Effect::PreventAllDamageFromChosenSourceThisTurn {
+            filter: R::Any,
+            gain_life_from_colors: vec![],
+        },
+    )
+}

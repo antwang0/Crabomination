@@ -1606,6 +1606,16 @@ impl crate::game::GameState {
         {
             return true;
         }
+        // "The next [filter] spell you cast this turn can't be countered"
+        // (Insist, Overmaster). Consumed by `consume_next_spell_uncounterable`
+        // once the cast goes through.
+        if self.players[caster]
+            .next_spell_uncounterable
+            .iter()
+            .any(|f| self.evaluate_requirement_on_card(f, card, caster))
+        {
+            return true;
+        }
         // Conditional "if X is N or more, this spell can't be countered"
         // rider (Banefire-style). Threshold lives on the card's printed
         // keywords as `CantBeCounteredIfXAtLeast(threshold)`; checked
@@ -5597,6 +5607,12 @@ impl GameState {
             }
         }
 
+        // Llawan — an opponent's static locks a whole class of spells.
+        if self.opponent_locks_cast_of(p, &card) {
+            self.players[p].hand.push(card);
+            return Err(GameError::CantCastNoncreature);
+        }
+
         // Codie lock — this player can't cast permanent spells.
         if card.definition.is_permanent() && self.player_cant_cast_permanent_spells(p) {
             self.players[p].hand.push(card);
@@ -7201,6 +7217,17 @@ impl GameState {
         from_hand: bool,
     ) {
         let card_id = card.id;
+        // "The next [filter] spell you cast this turn can't be countered" is a
+        // one-shot: the matching cast consumes its grant.
+        if !self.players[p].next_spell_uncounterable.is_empty() {
+            let hit = self.players[p]
+                .next_spell_uncounterable
+                .iter()
+                .position(|f| self.evaluate_requirement_on_card(f, &card, p));
+            if let Some(i) = hit {
+                self.players[p].next_spell_uncounterable.remove(i);
+            }
+        }
         self.spells_cast_this_turn += 1;
         // Mana Maze reads the turn's most recent cast (CR 601.2 restriction).
         self.last_cast_spell_colors = card.definition.printed_colors();
@@ -9744,6 +9771,28 @@ impl GameState {
             c.controller == player
                 && c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, StaticEffect::ControllerCantCastNoncreatureSpells)
+                })
+        })
+    }
+
+    /// True when an opponent of `player` controls an
+    /// `OpponentsCantCastMatching` static whose filter matches `card`
+    /// (Llawan, Cephalid Empress — "your opponents can't cast blue creature
+    /// spells").
+    pub(crate) fn opponent_locks_cast_of(
+        &self,
+        player: usize,
+        card: &crate::card::CardInstance,
+    ) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            !self.same_team(c.controller, player)
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        &sa.effect,
+                        StaticEffect::OpponentsCantCastMatching { filter }
+                            if self.evaluate_requirement_on_card(filter, card, player)
+                    )
                 })
         })
     }

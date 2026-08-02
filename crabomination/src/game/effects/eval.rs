@@ -942,6 +942,24 @@ impl GameState {
                     })
                     .count() as i32
             }
+            Value::CardsInAllGraveyardsMatching { filter } => {
+                let ids: Vec<CardId> = self
+                    .players
+                    .iter()
+                    .flat_map(|p| p.graveyard.iter())
+                    .map(|c| c.id)
+                    .collect();
+                ids.into_iter()
+                    .filter(|id| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::Target::Permanent(*id),
+                            ctx.controller,
+                            ctx.source,
+                        )
+                    })
+                    .count() as i32
+            }
             Value::CardsInHandMatching { who, filter } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0; };
                 let ids: Vec<CardId> = self.players[p].hand.iter().map(|c| c.id).collect();

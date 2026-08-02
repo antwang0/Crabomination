@@ -436,3 +436,145 @@ fn ghostly_wings_bounces_its_host() {
     assert!(g.battlefield_find(bear).is_none(), "the host was bounced");
     assert!(g.players[0].hand.iter().any(|c| c.id == bear));
 }
+
+/// Overmaster makes your next instant or sorcery uncounterable, once.
+#[test]
+fn overmaster_protects_one_spell() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::overmaster());
+    cast(&mut g, 0, spell, None);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let second = g.add_card_to_hand(0, catalog::lightning_bolt());
+    assert!(g.caster_grants_uncounterable(0, g.players[0].hand.iter().find(|c| c.id == bolt).unwrap()));
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Bolt");
+    drain_stack(&mut g);
+    assert!(
+        !g.caster_grants_uncounterable(0, g.players[0].hand.iter().find(|c| c.id == second).unwrap()),
+        "the grant was one-shot"
+    );
+}
+
+/// Llawan bounces blue creatures and stops opponents casting more.
+#[test]
+fn llawan_bounces_and_locks_blue() {
+    let mut g = main_phase();
+    let merfolk = g.add_card_to_battlefield(1, catalog::cephalid_illusionist());
+    let llawan = g.add_card_to_battlefield(0, catalog::llawan_cephalid_empress());
+    g.fire_self_etb_triggers(llawan, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(merfolk).is_none(), "the blue creature bounced");
+    let recast = g.players[1].hand.iter().find(|c| c.id == merfolk).map(|c| c.id).unwrap();
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    assert!(g
+        .perform_action(GameAction::CastSpell {
+            card_id: recast,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(), "and can't be recast");
+}
+
+/// Invigorating Falls counts creature cards in every graveyard.
+#[test]
+fn invigorating_falls_counts_all_graveyards() {
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::invigorating_falls());
+    let life = g.players[0].life;
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.players[0].life, life + 2, "two creature cards across both graveyards");
+}
+
+/// Mind Sludge scales with your Swamps.
+#[test]
+fn mind_sludge_counts_swamps() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    for _ in 0..5 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::mind_sludge());
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].hand.len(), 2, "discarded three");
+}
+
+/// Liquify exiles the spell it counters.
+#[test]
+fn liquify_exiles_what_it_counters() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Bolt");
+    let liquify = g.add_card_to_hand(0, catalog::liquify());
+    cast(&mut g, 0, liquify, Some(Target::Permanent(bolt)));
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the Bolt was exiled, not binned");
+}
+
+/// Mystic Familiar hardens once Threshold is on.
+#[test]
+fn mystic_familiar_grows_past_threshold() {
+    let mut g = main_phase();
+    let bird = g.add_card_to_battlefield(0, catalog::mystic_familiar());
+    let cp = g.computed_permanent(bird).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 2));
+    fill_graveyard(&mut g, 0);
+    let cp = g.computed_permanent(bird).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3));
+    assert!(cp.keywords.contains(&Keyword::Protection(Color::Black)));
+}
+
+/// Organ Grinder cashes three graveyard cards for three life.
+#[test]
+fn organ_grinder_drains_for_graveyard_cards() {
+    let mut g = main_phase();
+    let grinder = g.add_card_to_battlefield(0, catalog::organ_grinder());
+    g.clear_sickness(grinder);
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    activate(&mut g, 0, grinder, 0, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 17);
+    assert!(g.players[0].graveyard.is_empty(), "the three cards were exiled");
+}
+
+/// Mortal Combat wins with twenty creature cards in the graveyard.
+#[test]
+fn mortal_combat_wins_at_twenty() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::mortal_combat());
+    for _ in 0..20 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.game_over.is_some(), "the game ended");
+}

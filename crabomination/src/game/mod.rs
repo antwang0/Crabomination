@@ -17575,6 +17575,7 @@ fn static_effect_to_effects(
             // OpponentsCantCastNamed (Ashiok's Erasure) — cast-legality gate,
             // no layer effect.
             | StaticEffect::OpponentsCantCastNamed
+            | StaticEffect::OpponentsCantCastMatching { .. }
             | StaticEffect::OpponentsCantCastNamesExiledWithSource
             // CreatureSpellsMayPayExtraForCounters — an additional-cost offer
             // read at cast time; no continuous-layer effect.

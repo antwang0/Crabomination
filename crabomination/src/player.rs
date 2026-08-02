@@ -374,6 +374,11 @@ pub struct Player {
     /// turn boundary alongside `cant_play_lands_this_turn`.
     #[serde(default)]
     pub cant_cast_matching_this_turn: Vec<crate::card::SelectionRequirement>,
+    /// "The next [filter] spell you cast this turn can't be countered"
+    /// (Insist, Overmaster). Consumed by the next matching cast; cleared at
+    /// end of turn.
+    #[serde(default)]
+    pub next_spell_uncounterable: Vec<crate::card::SelectionRequirement>,
     /// CR 700.13 — this player has committed a crime this turn (cast a spell or
     /// activated an ability targeting an opponent / their stuff). Set when a
     /// `CommittedCrime` event fires, reset at the turn boundary. Powers
@@ -844,6 +849,7 @@ impl Player {
             extra_land_plays: 0,
             cant_play_lands_this_turn: false,
             cant_cast_matching_this_turn: Vec::new(),
+            next_spell_uncounterable: Vec::new(),
             extra_loyalty_activations: 0,
             activated_loyalty_this_turn: false,
             spells_cast_this_turn: 0,

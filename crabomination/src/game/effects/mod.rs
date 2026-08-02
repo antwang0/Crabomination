@@ -23765,6 +23765,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NextSpellCantBeCountered { filter } => {
+                self.players[ctx.controller].next_spell_uncounterable.push(filter.clone());
+                Ok(())
+            }
+
             Effect::RevealTopOfLibrary { who } => {
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
                 if !self.library_tops_revealed.contains(&seat) {

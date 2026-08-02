@@ -2038,6 +2038,8 @@ pub enum StaticEffect {
     /// the source's `named_card` (the exiled card's name). Unlike
     /// `NamedSpellCantBeCast` (which locks everyone), this is controller-scoped.
     OpponentsCantCastNamed,
+    /// "Your opponents can't cast [filter] spells" (Llawan, Cephalid Empress).
+    OpponentsCantCastMatching { filter: SelectionRequirement },
     /// Circu, Dimir Lobotomist — the controller's opponents can't cast spells
     /// sharing a name with any card exiled with the source (`exiled_with`).
     /// The broad sibling of `OpponentsCantCastNamed`, which reads one name.
