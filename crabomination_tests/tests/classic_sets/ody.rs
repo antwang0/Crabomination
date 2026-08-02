@@ -1109,3 +1109,258 @@ fn testament_of_faith_animates_for_x() {
     assert_eq!((cp.power, cp.toughness), (3, 3));
     assert!(cp.keywords.contains(&Keyword::Defender));
 }
+
+// ── Wave 9 ──────────────────────────────────────────────────────────────────
+
+/// Mindslicer's death empties every hand.
+#[test]
+fn mindslicer_death_empties_hands() {
+    let mut g = main_phase();
+    let slicer = g.add_card_to_battlefield(0, catalog::mindslicer());
+    for seat in [0, 1] {
+        for _ in 0..3 {
+            g.add_card_to_hand(seat, catalog::forest());
+        }
+    }
+    let mut events = Vec::new();
+    g.destroy_permanent(slicer, false, &mut events);
+    g.dispatch_triggers_for_events(&[GameEvent::CreatureDied { card_id: slicer }]);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.is_empty() && g.players[1].hand.is_empty());
+}
+
+/// Rotting Giant eats a graveyard card to attack, and dies without one.
+#[test]
+fn rotting_giant_pays_with_its_graveyard() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(0, catalog::rotting_giant());
+    g.battlefield_find_mut(giant).unwrap().summoning_sick = false;
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: giant,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_some(), "the graveyard card kept it alive");
+    assert!(g.players[0].graveyard.is_empty(), "the card was exiled to pay");
+
+    // A second attack with an empty graveyard sacrifices it.
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(0, catalog::rotting_giant());
+    g.battlefield_find_mut(giant).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: giant,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "nothing to pay with");
+}
+
+/// Tombfire only takes the flashback cards.
+#[test]
+fn tombfire_exiles_only_flashback_cards() {
+    let mut g = main_phase();
+    let fb = g.add_card_to_graveyard(1, catalog::seize_the_day());
+    let plain = g.add_card_to_graveyard(1, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::tombfire());
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert!(g.exile.iter().any(|c| c.id == fb), "the flashback card left");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == plain), "the land stayed");
+}
+
+/// Haunting Echoes strips the graveyard and the matching library copies.
+#[test]
+fn haunting_echoes_strips_library_copies() {
+    let mut g = main_phase();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::forest()); // basic — stays
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::wall_of_omens());
+    let spell = g.add_card_to_hand(0, catalog::haunting_echoes());
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].graveyard.len(), 1, "only the basic land is left");
+    assert!(
+        !g.players[1].library.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the library copy went too"
+    );
+    assert!(g.players[1].library.iter().any(|c| c.definition.name == "Wall of Omens"));
+}
+
+/// Unifying Theory offers each caster a {2} cantrip.
+#[test]
+fn unifying_theory_offers_a_cantrip() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::unifying_theory());
+    let before = g.players[0].hand.len();
+    let spell = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, 0, spell, None);
+    // AutoDecider declines the tax, so no card is drawn.
+    assert_eq!(g.players[0].hand.len(), before);
+}
+
+/// Aether Burst bounces one more creature per copy already in a graveyard.
+#[test]
+fn aether_burst_scales_with_its_own_copies() {
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::aether_burst());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::aether_burst());
+    cast_multi(&mut g, 0, spell, Some(Target::Permanent(a)), vec![Target::Permanent(b)]);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+}
+
+/// Seize the Day untaps an attacker and buys another combat.
+#[test]
+fn seize_the_day_grants_an_extra_combat() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::seize_the_day());
+    cast(&mut g, 0, spell, Some(Target::Permanent(bear)));
+    assert!(!g.battlefield_find(bear).unwrap().tapped);
+    assert_eq!(g.additional_post_main_combats, 1);
+}
+
+/// Repentant Vampire turns white and gains a tapper past Threshold.
+#[test]
+fn repentant_vampire_turns_white_past_threshold() {
+    let mut g = main_phase();
+    let vamp = g.add_card_to_battlefield(0, catalog::repentant_vampire());
+    assert!(!g.computed_permanent(vamp).unwrap().colors.contains(&Color::White));
+    assert!(g.granted_abilities_for(vamp).is_empty());
+    fill_graveyard(&mut g, 0);
+    assert!(g.computed_permanent(vamp).unwrap().colors.contains(&Color::White));
+    assert_eq!(g.granted_abilities_for(vamp).len(), 1, "the Threshold tapper is live");
+}
+
+/// Wayward Angel goes black, bigger and hungrier past Threshold.
+#[test]
+fn wayward_angel_falls_past_threshold() {
+    let mut g = main_phase();
+    let angel = g.add_card_to_battlefield(0, catalog::wayward_angel());
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    fill_graveyard(&mut g, 0);
+    let cp = g.computed_permanent(angel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7));
+    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.colors.contains(&Color::Black));
+}
+
+/// Stone-Tongue Basilisk lures every blocker past Threshold.
+#[test]
+fn stone_tongue_basilisk_lures_past_threshold() {
+    let mut g = main_phase();
+    let basilisk = g.add_card_to_battlefield(0, catalog::stone_tongue_basilisk());
+    assert!(!g.computed_permanent(basilisk).unwrap().keywords.contains(&Keyword::AllMustBlock));
+    fill_graveyard(&mut g, 0);
+    assert!(g.computed_permanent(basilisk).unwrap().keywords.contains(&Keyword::AllMustBlock));
+}
+
+/// Seton's Desire pumps, and lures past Threshold.
+#[test]
+fn setons_desire_lures_past_threshold() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::setons_desire());
+    cast(&mut g, 0, aura, Some(Target::Permanent(bear)));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(!cp.keywords.contains(&Keyword::AllMustBlock));
+    fill_graveyard(&mut g, 0);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::AllMustBlock));
+}
+
+/// Verdant Succession refills from the library when a green creature dies.
+#[test]
+fn verdant_succession_refetches_the_dead() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::verdant_succession());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let mut events = Vec::new();
+    g.destroy_permanent(bear, false, &mut events);
+    g.dispatch_triggers_for_events(&[GameEvent::CreatureDied { card_id: bear }]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count(),
+        1,
+        "the library copy replaced it"
+    );
+}
+
+/// Balancing Act trims every board down to the smallest one.
+#[test]
+fn balancing_act_levels_the_boards() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::balancing_act());
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 1);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 1);
+}
+
+/// Obstinate Familiar lets its controller decline a draw.
+#[test]
+fn obstinate_familiar_skips_a_draw() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::obstinate_familiar());
+    g.add_card_to_library(0, catalog::forest());
+    let before = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut events = Vec::new();
+    assert!(!g.draw_one(0, &mut events), "the draw was skipped");
+    assert_eq!(g.players[0].hand.len(), before);
+    // Declining the skip draws normally.
+    let mut events = Vec::new();
+    assert!(g.draw_one(0, &mut events));
+    assert_eq!(g.players[0].hand.len(), before + 1);
+}
+
+/// Decaying Soil eats a graveyard card each upkeep.
+#[test]
+fn decaying_soil_eats_the_graveyard_each_upkeep() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::decaying_soil());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 1);
+}
+
+/// Pulsating Illusion pumps once a turn off a discard.
+#[test]
+fn pulsating_illusion_pumps_once_a_turn() {
+    let mut g = main_phase();
+    let illusion = g.add_card_to_battlefield(0, catalog::pulsating_illusion());
+    for _ in 0..2 {
+        g.add_card_to_hand(0, catalog::forest());
+    }
+    activate(&mut g, 0, illusion, 0, None);
+    let cp = g.computed_permanent(illusion).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 5));
+    mana(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: illusion,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "only once each turn"
+    );
+}

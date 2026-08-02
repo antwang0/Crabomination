@@ -171,6 +171,7 @@ pub fn jund_charm() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::ExilePlayerGraveyard {
                 who: PlayerRef::Target(0),
+                filter: None,
             },
             Effect::ForEach {
                 selector: Selector::EachPermanent(SelectionRequirement::Creature),

@@ -232,6 +232,7 @@ impl Effect {
             Effect::Noop
             | Effect::SearchEachBasicLandType { .. }
             | Effect::SacrificeSourceUnlessReturn { .. }
+            | Effect::SacrificeSourceUnlessCost { .. }
             | Effect::ColoredManaBecomesThisTurn { .. }
             | Effect::SpellBecomesChosenColor { .. }
             | Effect::OtherPlayerMayPayToCounter { .. }
@@ -460,7 +461,8 @@ impl Effect {
             Effect::SearchSameNameAs { who, subject, .. } => {
                 player_has_target(who) || sel_has_target(subject)
             }
-            Effect::ExileChosenFromHandOrGraveyard { who, .. } => player_has_target(who),
+            Effect::ExileChosenFromHandOrGraveyard { who, .. }
+            | Effect::ExileFromGraveyard { who, .. } => player_has_target(who),
             Effect::DiscardUnlessKind { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
@@ -934,6 +936,9 @@ impl Effect {
             Effect::CopySpellForEachOtherLegalCreature { what }
             | Effect::EyeOfTheStorm { what }
             | Effect::SearchOpponentLibraryForSameName { what } => sel_has_target(what),
+            Effect::SearchSameNameToBattlefield { who, what } => {
+                player_has_target(who) || sel_has_target(what)
+            }
             Effect::ChooseColorForSelf => false,
             Effect::Populate { .. } => false,
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
@@ -1089,7 +1094,10 @@ impl Effect {
             Effect::MayExileFromYourGraveyard { then, .. } => then.requires_target(),
             Effect::ExileAllGraveyards { .. } => false,
             Effect::LivingEnd => false,
-            Effect::ExilePlayerGraveyard { who } => player_has_target(who),
+            Effect::ExilePlayerGraveyard { who, .. }
+            | Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who } => {
+                player_has_target(who)
+            }
             Effect::AddFirstSpellTax { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
@@ -1206,7 +1214,7 @@ impl Effect {
             | Effect::SacrificeLastCreatedTokensAtNextEndStep => false,
             Effect::EchoPayOrSacrifice { .. } => false,
             Effect::CumulativeUpkeepPayOrSacrifice { .. } => false,
-            Effect::Balance => false,
+            Effect::Balance | Effect::BalanceMatching { .. } => false,
             Effect::GenesisWave => false,
             Effect::ShuffleHandsDrawSame { who } => player_has_target(who),
             Effect::RevealAnyNumberFromHand { then, .. } => then.requires_target(),
@@ -1829,7 +1837,7 @@ impl Effect {
             Effect::DestroyLandOfEachBasicType => {
                 "choose a land of each basic land type, then destroy those lands".into()
             }
-            Effect::ExilePlayerGraveyard { who } => match who {
+            Effect::ExilePlayerGraveyard { who, .. } => match who {
                 crate::effect::PlayerRef::EachOpponent => "exile each opponent's graveyard".into(),
                 crate::effect::PlayerRef::You => "exile your graveyard".into(),
                 _ => "exile target player's graveyard".into(),
@@ -2859,7 +2867,8 @@ impl Effect {
                 Effect::ExileFromGraveyardBecomeCopy { what }
                 | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
-                Effect::ExilePlayerGraveyard { who }
+                Effect::ExilePlayerGraveyard { who, .. }
+                | Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who }
                 | Effect::ExileHand { who }
                 | Effect::ShuffleGraveyardCardsIntoLibrary { who, .. }
                 | Effect::RevealUntilFind { who, .. }

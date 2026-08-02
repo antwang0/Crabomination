@@ -27,6 +27,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::DiscardHand => false,
         WardCost::Blight(n) => *n == 0,
         WardCost::CollectEvidence(n) => *n == 0,
+        WardCost::ExileFromGraveyard(n) => *n == 0,
         WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => false,
         // "{X}" is only free when the declared X was 0, which the caller
         // can't see here.

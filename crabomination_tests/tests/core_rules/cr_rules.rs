@@ -318,7 +318,7 @@ fn mass_graveyard_exile_fires_left_graveyard_bookkeeping() {
     }
     let ctx = EffectContext::for_spell(0, None, 0, 0);
     let events = g
-        .resolve_effect(&Effect::ExilePlayerGraveyard { who: PlayerRef::EachPlayer }, &ctx)
+        .resolve_effect(&Effect::ExilePlayerGraveyard { who: PlayerRef::EachPlayer, filter: None }, &ctx)
         .unwrap();
     for p in 0..2 {
         assert_eq!(g.players[p].cards_left_graveyard_this_turn, 1, "P{p} tally");

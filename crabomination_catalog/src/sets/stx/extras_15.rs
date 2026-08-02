@@ -235,6 +235,7 @@ pub fn go_blank() -> CardDefinition {
             },
             Effect::ExilePlayerGraveyard {
                 who: PlayerRef::Target(0),
+                filter: None,
             },
         ]),
         ..Default::default()

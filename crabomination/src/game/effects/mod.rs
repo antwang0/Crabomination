@@ -5480,22 +5480,35 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Balance => {
-                // Restore Balance — for lands and creatures: every player
-                // sacrifices down to the fewest controlled by any player
-                // (keeping their highest-MV, then highest-power, permanents);
-                // hands discard down to the smallest hand (keeping highest MV).
-                for is_creature in [false, true] {
+            Effect::Balance => self.run_effect(
+                &Effect::BalanceMatching {
+                    filters: vec![
+                        crate::card::SelectionRequirement::Land,
+                        crate::card::SelectionRequirement::Creature,
+                    ],
+                    hands: true,
+                },
+                ctx,
+                events,
+            ),
+
+            Effect::BalanceMatching { filters, hands } => {
+                // Every player sacrifices down to the fewest matching
+                // permanents any player controls (keeping their highest-MV,
+                // then highest-power); hands then discard down to the
+                // smallest hand (keeping highest MV).
+                for filter in filters {
                     let count_for = |g: &Self, seat: usize| {
                         g.battlefield
                             .iter()
                             .filter(|c| {
                                 c.controller == seat
-                                    && if is_creature {
-                                        c.definition.is_creature()
-                                    } else {
-                                        c.definition.is_land()
-                                    }
+                                    && g.evaluate_requirement_static(
+                                        filter,
+                                        &Target::Permanent(c.id),
+                                        seat,
+                                        ctx.source,
+                                    )
                             })
                             .count()
                     };
@@ -5513,11 +5526,12 @@ impl GameState {
                             .iter()
                             .filter(|c| {
                                 c.controller == seat
-                                    && if is_creature {
-                                        c.definition.is_creature()
-                                    } else {
-                                        c.definition.is_land()
-                                    }
+                                    && self.evaluate_requirement_static(
+                                        filter,
+                                        &Target::Permanent(c.id),
+                                        seat,
+                                        ctx.source,
+                                    )
                             })
                             .map(|c| c.id)
                             .collect();
@@ -5535,24 +5549,83 @@ impl GameState {
                         }
                     }
                 }
-                let min_hand = (0..self.players.len())
-                    .filter(|&s| !self.players[s].eliminated)
-                    .map(|s| self.players[s].hand.len())
-                    .min()
-                    .unwrap_or(0);
-                for seat in 0..self.players.len() {
-                    if self.players[seat].eliminated {
-                        continue;
+                if *hands {
+                    let min_hand = (0..self.players.len())
+                        .filter(|&s| !self.players[s].eliminated)
+                        .map(|s| self.players[s].hand.len())
+                        .min()
+                        .unwrap_or(0);
+                    for seat in 0..self.players.len() {
+                        if self.players[seat].eliminated {
+                            continue;
+                        }
+                        while self.players[seat].hand.len() > min_hand {
+                            let pick = self.players[seat]
+                                .hand
+                                .iter()
+                                .min_by_key(|c| c.definition.cost.cmc())
+                                .map(|c| c.id);
+                            let Some(cid) = pick else { break };
+                            self.discard_card(seat, cid, events);
+                        }
                     }
-                    while self.players[seat].hand.len() > min_hand {
-                        let pick = self.players[seat]
-                            .hand
-                            .iter()
-                            .min_by_key(|c| c.definition.cost.cmc())
-                            .map(|c| c.id);
-                        let Some(cid) = pick else { break };
-                        self.discard_card(seat, cid, events);
+                }
+                Ok(())
+            }
+
+            Effect::ExileFromGraveyard { who, count, filter } => {
+                // Mandatory "exile N cards from your graveyard" (Decaying
+                // Soil). Auto-picks the cheapest matches.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                for p in self.resolve_players(who, ctx) {
+                    let mut hits: Vec<(CardId, u32)> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                        .map(|c| (c.id, c.definition.cost.cmc()))
+                        .collect();
+                    hits.sort_by_key(|&(_, mv)| mv);
+                    for (id, _) in hits.into_iter().take(n) {
+                        if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
+                            self.exile.push(card);
+                            self.players[p].cards_exiled_this_turn += 1;
+                            events.push(GameEvent::PermanentExiled { card_id: id });
+                            self.note_left_graveyard(p, id, events);
+                        }
                     }
+                }
+                Ok(())
+            }
+
+            Effect::SearchSameNameToBattlefield { who, what } => {
+                // Verdant Succession — `what` may already have left the
+                // battlefield, so the name is read from wherever the card is.
+                let Some(name) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .find_map(|id| self.find_card_anywhere(id).map(|c| c.definition.name))
+                else {
+                    return Ok(());
+                };
+                for p in self.resolve_players(who, ctx) {
+                    if let Some(hit) = self.players[p]
+                        .library
+                        .iter()
+                        .find(|c| c.definition.name == name)
+                        .map(|c| c.id)
+                    {
+                        self.move_card_to(
+                            hit,
+                            &crate::effect::ZoneDest::Battlefield {
+                                controller: crate::effect::PlayerRef::Seat(p),
+                                tapped: false,
+                            },
+                            ctx,
+                            events,
+                        );
+                    }
+                    self.shuffle_library(p, events);
                 }
                 Ok(())
             }
@@ -8920,13 +8993,23 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExilePlayerGraveyard { who } => {
+            Effect::ExilePlayerGraveyard { who, filter } => {
                 // Go Blank / Ashiok −10 — move graveyards to exile.
                 for p in self.resolve_players(who, ctx) {
                     let cards: Vec<CardInstance> = std::mem::take(&mut *self.players[p].graveyard);
                     for card in cards {
+                        let matches = filter
+                            .as_ref()
+                            .is_none_or(|f| self.evaluate_requirement_on_card(f, &card, p));
+                        if !matches {
+                            self.players[p].graveyard.push(card);
+                            continue;
+                        }
                         let cid = card.id;
                         self.exile.push(card);
+                        // Record for `Selector::ExiledThisResolution` and
+                        // Haunting Echoes' "for each card exiled this way".
+                        self.exiled_card_ids_this_resolution.push(cid);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
                         self.note_left_graveyard(p, cid, events);
                     }
@@ -13180,6 +13263,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who } => {
+                // Haunting Echoes' second half: every library card sharing a
+                // name with something exiled earlier in this resolution goes
+                // too, then the searched player shuffles.
+                let names: std::collections::HashSet<&'static str> = self
+                    .exiled_card_ids_this_resolution
+                    .iter()
+                    .filter_map(|cid| self.exile.iter().find(|c| c.id == *cid))
+                    .map(|c| c.definition.name)
+                    .collect();
+                if names.is_empty() {
+                    return Ok(());
+                }
+                for p in self.resolve_players(who, ctx) {
+                    let hits: Vec<CardId> = self.players[p]
+                        .library
+                        .iter()
+                        .filter(|c| names.contains(c.definition.name))
+                        .map(|c| c.id)
+                        .collect();
+                    for id in hits {
+                        if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                            self.exile.push(card);
+                            self.players[p].cards_exiled_this_turn += 1;
+                            events.push(GameEvent::PermanentExiled { card_id: id });
+                        }
+                    }
+                    self.shuffle_library(p, events);
+                }
+                Ok(())
+            }
+
             Effect::SearchOpponentLibraryForSameName { what } => {
                 let Some(pid) = self
                     .resolve_selector(what, ctx)
@@ -14829,7 +14944,6 @@ impl GameState {
                 // on the affected controller's behalf. If they can't pay,
                 // the stack item is removed (spells fall into their
                 // owner's graveyard; abilities just vanish).
-                use crate::card::WardCost;
 
                 let targets = self.resolve_selector(what, ctx);
                 let target_id = targets.into_iter().find_map(|t| match t {
@@ -14882,238 +14996,7 @@ impl GameState {
                 };
 
                 // Attempt auto-pay on the affected controller's behalf.
-                let paid = match cost {
-                    WardCost::Mana(mc) => {
-                        let saved_priority = self.priority.player_with_priority;
-                        self.priority.player_with_priority = affected_controller;
-                        let ok = self.try_pay_with_auto_tap(affected_controller, mc).is_ok();
-                        self.priority.player_with_priority = saved_priority;
-                        ok
-                    }
-                    // Not reachable as printed Ward taxes; treated as unpaid
-                    // so the ability resolves.
-                    WardCost::GenericXFromCost | WardCost::ManaCostOfAttached => false,
-                    WardCost::Life(n) => {
-                        // Ward—Pay N life. CR 119.4 forbids paying more
-                        // life than you have, so insufficient life means
-                        // payment fails.
-                        let n = *n as i32;
-                        if self.effective_life(affected_controller) >= n {
-                            self.pay_life_cost(affected_controller, n as u32);
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    WardCost::ManaAndLife(mc, n) => {
-                        // Compound "Ward—{cost}, Pay N life" (Ovika, Gisa):
-                        // check the life half first (no rollback needed),
-                        // then attempt the mana half.
-                        let life = *n as i32;
-                        if self.effective_life(affected_controller) < life {
-                            false
-                        } else {
-                            let saved_priority = self.priority.player_with_priority;
-                            self.priority.player_with_priority = affected_controller;
-                            let ok = self.try_pay_with_auto_tap(affected_controller, mc).is_ok();
-                            self.priority.player_with_priority = saved_priority;
-                            if ok {
-                                self.pay_life_cost(affected_controller, life as u32);
-                            }
-                            ok
-                        }
-                    }
-                    WardCost::DiscardMatching(filter, n) => {
-                        // Body Snatcher — the discard must match `filter`, so
-                        // the auto-pay takes the first N matching cards.
-                        let n = *n as usize;
-                        let hand = self.players[affected_controller].hand.clone();
-                        let picks: Vec<CardId> = hand
-                            .iter()
-                            .filter(|c| {
-                                self.evaluate_requirement_on_card(
-                                    filter,
-                                    c,
-                                    affected_controller,
-                                )
-                            })
-                            .take(n)
-                            .map(|c| c.id)
-                            .collect();
-                        if picks.len() == n {
-                            for id in picks {
-                                self.discard_card(affected_controller, id, events);
-                            }
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    WardCost::Discard(n) => {
-                        // Ward—Discard N cards. Payable only if the
-                        // controller has ≥ N cards in hand. Auto-pay
-                        // picks the first N cards. An interactive
-                        // surface should prompt.
-                        let n = *n as usize;
-                        if self.players[affected_controller].hand.len() >= n {
-                            // Through the shared discard funnel so
-                            // CardDiscarded fires and Madness applies
-                            // (CR 702.35).
-                            for _ in 0..n {
-                                let Some(card_id) = self
-                                    .players[affected_controller]
-                                    .hand
-                                    .first()
-                                    .map(|c| c.id)
-                                else {
-                                    break;
-                                };
-                                self.discard_card(affected_controller, card_id, events);
-                            }
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    WardCost::DiscardHand => {
-                        // "...unless its controller discards their hand."
-                        // Always payable (even from empty). Discard through
-                        // the shared funnel so CardDiscarded / Madness fire.
-                        let ids: Vec<CardId> = self.players[affected_controller]
-                            .hand
-                            .iter()
-                            .map(|c| c.id)
-                            .collect();
-                        for card_id in ids {
-                            self.discard_card(affected_controller, card_id, events);
-                        }
-                        true
-                    }
-                    WardCost::Blight(n) => {
-                        // Ward—Blight N (CR 701.68): the warding player puts N
-                        // -1/-1 counters on a creature they control. Auto-pay
-                        // picks their highest-toughness creature so the body
-                        // is likeliest to survive; unpayable with none.
-                        let pick = self
-                            .battlefield
-                            .iter()
-                            .filter(|c| {
-                                c.controller == affected_controller && c.definition.is_creature()
-                            })
-                            .max_by_key(|c| self.computed_permanent(c.id).map(|cp| cp.toughness).unwrap_or(0))
-                            .map(|c| c.id);
-                        if let Some(cid) = pick {
-                            if let Some(c) = self.battlefield_find_mut(cid) {
-                                c.add_counters(CounterType::MinusOneMinusOne, *n);
-                                events.push(GameEvent::CounterAdded {
-                                    card_id: cid,
-                                    counter_type: CounterType::MinusOneMinusOne,
-                                    count: *n,
-                                });
-                            }
-                            let mut sba = self.check_state_based_actions();
-                            events.append(&mut sba);
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    WardCost::CollectEvidence(n) => {
-                        // Ward—Collect evidence N (CR 701.59): the warding player
-                        // exiles cards with total MV ≥ N from their graveyard.
-                        // Auto-pay exiles the cheapest qualifying set; unpayable
-                        // if the graveyard can't reach the threshold.
-                        if self.graveyard_can_collect_evidence(affected_controller, *n) {
-                            let mut gy: Vec<(CardId, u32)> = self.players[affected_controller]
-                                .graveyard
-                                .iter()
-                                .map(|c| (c.id, c.definition.cost.cmc()))
-                                .collect();
-                            gy.sort_by_key(|&(_, mv)| mv);
-                            let mut acc = 0u32;
-                            let mut to_exile = Vec::new();
-                            for (id, mv) in gy {
-                                if acc >= *n {
-                                    break;
-                                }
-                                acc += mv;
-                                to_exile.push(id);
-                            }
-                            for id in to_exile {
-                                if let Some(card) = Self::take_card(
-                                    &mut self.players[affected_controller].graveyard, id,
-                                ) {
-                                    self.exile.push(card);
-                                    self.players[affected_controller].cards_exiled_this_turn += 1;
-                                    events.push(GameEvent::PermanentExiled { card_id: id });
-                                }
-                            }
-                            events.push(GameEvent::EvidenceCollected {
-                                player: affected_controller,
-                            });
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => {
-                        let matches = |g: &Self, c: &crate::card::CardInstance| match cost {
-                            WardCost::SacrificeMatching(f) => {
-                                g.evaluate_requirement_on_card(f, c, affected_controller)
-                            }
-                            _ => c.definition.is_creature(),
-                        };
-                        let pick = self
-                            .battlefield
-                            .iter()
-                            .find(|c| c.controller == affected_controller && matches(self, c))
-                            .map(|c| c.id);
-                        if let Some(sac_id) = pick {
-                            // Real sacrifice (CR 701.16): dies/sac events
-                            // and the die snapshot, not a bare removal.
-                            self.sacrifice_one(sac_id, affected_controller, events);
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    WardCost::SacrificePermanents(n) => {
-                        let picks: Vec<CardId> = self
-                            .battlefield
-                            .iter()
-                            .filter(|c| c.controller == affected_controller)
-                            .take(*n as usize)
-                            .map(|c| c.id)
-                            .collect();
-                        if picks.len() == *n as usize {
-                            for sac_id in picks {
-                                self.sacrifice_one(sac_id, affected_controller, events);
-                            }
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    WardCost::LifeSourcePower => {
-                        // Ward—Pay life equal to this creature's power.
-                        let n = ctx
-                            .source
-                            .and_then(|sid| self.computed_permanent(sid))
-                            .map(|c| c.power.max(0))
-                            .unwrap_or(0);
-                        if self.effective_life(affected_controller) >= n {
-                            self.pay_life_cost(affected_controller, n as u32);
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    WardCost::RemoveCounterFromPermanent => {
-                        self.remove_one_counter_from_own_permanent(affected_controller, events)
-                    }
-                    // Not a printed ward cost (UnlessPlayerPays-only).
-                    WardCost::GenericSourcePower => false,
-                };
+                let paid = self.try_pay_ward_cost(affected_controller, cost, ctx, events);
 
                 if !paid {
                     let removed = self.stack.remove(pos);
@@ -15135,7 +15018,6 @@ impl GameState {
                 // `PlayerRef::You` is the rider's controller. The question is
                 // seat-routed: a `wants_ui` payer (who may be an opponent of
                 // the resolving controller) gets the yes/no modal.
-                use crate::card::WardCost;
                 let Some(payer) = self.resolve_player(who, ctx) else {
                     return self.run_effect(then, ctx, events);
                 };
@@ -15151,110 +15033,8 @@ impl GameState {
                     return Ok(());
                 };
                 self.clear_answer_log();
-                let paid = wants_to_pay
-                    && match cost {
-                        WardCost::Mana(mc) => {
-                            let saved = self.priority.player_with_priority;
-                            self.priority.player_with_priority = payer;
-                            let ok = self.try_pay_with_auto_tap(payer, mc).is_ok();
-                            self.priority.player_with_priority = saved;
-                            ok
-                        }
-                        WardCost::Life(n) => {
-                            let n = *n as i32;
-                            if self.effective_life(payer) >= n {
-                                self.pay_life_cost(payer, n as u32);
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                        // "{X} where X is this creature's power" (Esper
-                        // Sentinel). Read the source's computed power and
-                        // auto-tap-pay that much generic.
-                        WardCost::GenericSourcePower => {
-                            let x = ctx
-                                .source
-                                .and_then(|sid| self.computed_permanent(sid))
-                                .map(|c| c.power.max(0) as u32)
-                                .unwrap_or(0);
-                            if x == 0 {
-                                true
-                            } else {
-                                let mc = crate::mana::cost(&[crate::mana::generic(x)]);
-                                let saved = self.priority.player_with_priority;
-                                self.priority.player_with_priority = payer;
-                                let ok = self.try_pay_with_auto_tap(payer, &mc).is_ok();
-                                self.priority.player_with_priority = saved;
-                                ok
-                            }
-                        }
-                        // "{X}" — the resolution's declared X (Excise).
-                        WardCost::GenericXFromCost => {
-                            let x = ctx.x_value;
-                            if x == 0 {
-                                true
-                            } else {
-                                let mc = crate::mana::cost(&[crate::mana::generic(x)]);
-                                let saved = self.priority.player_with_priority;
-                                self.priority.player_with_priority = payer;
-                                let ok = self.try_pay_with_auto_tap(payer, &mc).is_ok();
-                                self.priority.player_with_priority = saved;
-                                ok
-                            }
-                        }
-                        // Essence Leak — "pay its mana cost": the printed cost
-                        // of the permanent this Aura is attached to.
-                        WardCost::ManaCostOfAttached => {
-                            let mc = ctx
-                                .source
-                                .and_then(|sid| self.battlefield_find(sid))
-                                .and_then(|c| c.attached_to)
-                                .and_then(|host| self.battlefield_find(host))
-                                .map(|c| c.definition.cost.clone());
-                            match mc {
-                                None => true,
-                                Some(mc) => {
-                                    let saved = self.priority.player_with_priority;
-                                    self.priority.player_with_priority = payer;
-                                    let ok = self.try_pay_with_auto_tap(payer, &mc).is_ok();
-                                    self.priority.player_with_priority = saved;
-                                    ok
-                                }
-                            }
-                        }
-                        WardCost::RemoveCounterFromPermanent => {
-                            self.remove_one_counter_from_own_permanent(payer, events)
-                        }
-                        // Ogre Marauder — "unless defending player sacrifices a
-                        // creature of their choice." Auto-pay takes their
-                        // cheapest creature.
-                        WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => {
-                            let pick = self
-                                .battlefield
-                                .iter()
-                                .filter(|c| {
-                                    c.controller == payer
-                                        && match cost {
-                                            WardCost::SacrificeMatching(f) => self
-                                                .evaluate_requirement_on_card(f, c, payer),
-                                            _ => c.definition.is_creature(),
-                                        }
-                                })
-                                .min_by_key(|c| c.definition.cost.cmc())
-                                .map(|c| c.id);
-                            match pick {
-                                Some(cid) => {
-                                    self.sacrifice_one(cid, payer, events);
-                                    true
-                                }
-                                None => false,
-                            }
-                        }
-                        // The remaining printed ward costs aren't used by
-                        // tax riders; treat as unpaid so the effect runs.
-                        _ => false,
-                    };
+                let paid =
+                    wants_to_pay && self.try_pay_ward_cost(payer, cost, ctx, events);
                 if paid {
                     if let Some(e) = if_paid {
                         self.run_effect(e, ctx, events)?;
@@ -15857,6 +15637,34 @@ impl GameState {
                         self.sacrifice_one(id, p, events);
                     }
                 } else {
+                    self.run_effect(&Effect::SacrificeSource, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeSourceUnlessCost { cost } => {
+                // "Sacrifice this unless you [cost]" over the full WardCost
+                // menu. A UI seat gets the yes/no; everyone else pays when
+                // they can (`try_pay_ward_cost` is a no-op when they can't).
+                let Some(src) = ctx.source else { return Ok(()) };
+                let p = ctx.controller;
+                if self.seat_suspends(p) {
+                    let mut cursor = 0;
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        p,
+                        "Pay the cost to keep this permanent?".to_string(),
+                        src,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    if !yes {
+                        return self.run_effect(&Effect::SacrificeSource, ctx, events);
+                    }
+                }
+                if !self.try_pay_ward_cost(p, cost, ctx, events) {
                     self.run_effect(&Effect::SacrificeSource, ctx, events)?;
                 }
                 Ok(())
@@ -28589,4 +28397,314 @@ impl GameState {
                 Ok(())
             }
 
+}
+
+impl GameState {
+    /// Auto-pay `cost` on `payer`'s behalf, returning whether it was paid.
+    /// The single implementation behind every "unless [player] pays [cost]"
+    /// shape — Ward (CR 702.21), rhystic taxes (`UnlessPlayerPays`) and
+    /// `SacrificeSourceUnlessCost`. Unpayable costs return `false` without
+    /// side effects; partial payments are never left behind.
+    pub(crate) fn try_pay_ward_cost(
+        &mut self,
+        payer: usize,
+        cost: &crate::card::WardCost,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        use crate::card::WardCost;
+                match cost {
+                    WardCost::Mana(mc) => {
+                        let saved_priority = self.priority.player_with_priority;
+                        self.priority.player_with_priority = payer;
+                        let ok = self.try_pay_with_auto_tap(payer, mc).is_ok();
+                        self.priority.player_with_priority = saved_priority;
+                        ok
+                    }
+                    // "{X}" — the resolution's declared X (Excise).
+                    WardCost::GenericXFromCost => self.pay_generic(payer, ctx.x_value),
+                    // Essence Leak — the printed cost of the permanent this Aura is
+                    // attached to.
+                    WardCost::ManaCostOfAttached => {
+                        let mc = ctx
+                            .source
+                            .and_then(|sid| self.battlefield_find(sid))
+                            .and_then(|c| c.attached_to)
+                            .and_then(|host| self.battlefield_find(host))
+                            .map(|c| c.definition.cost.clone());
+                        match mc {
+                            None => true,
+                            Some(mc) => self.pay_mana_as(payer, &mc),
+                        }
+                    }
+                    WardCost::Life(n) => {
+                        // Ward—Pay N life. CR 119.4 forbids paying more
+                        // life than you have, so insufficient life means
+                        // payment fails.
+                        let n = *n as i32;
+                        if self.effective_life(payer) >= n {
+                            self.pay_life_cost(payer, n as u32);
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    WardCost::ManaAndLife(mc, n) => {
+                        // Compound "Ward—{cost}, Pay N life" (Ovika, Gisa):
+                        // check the life half first (no rollback needed),
+                        // then attempt the mana half.
+                        let life = *n as i32;
+                        if self.effective_life(payer) < life {
+                            false
+                        } else {
+                            let saved_priority = self.priority.player_with_priority;
+                            self.priority.player_with_priority = payer;
+                            let ok = self.try_pay_with_auto_tap(payer, mc).is_ok();
+                            self.priority.player_with_priority = saved_priority;
+                            if ok {
+                                self.pay_life_cost(payer, life as u32);
+                            }
+                            ok
+                        }
+                    }
+                    WardCost::DiscardMatching(filter, n) => {
+                        // Body Snatcher — the discard must match `filter`, so
+                        // the auto-pay takes the first N matching cards.
+                        let n = *n as usize;
+                        let hand = self.players[payer].hand.clone();
+                        let picks: Vec<CardId> = hand
+                            .iter()
+                            .filter(|c| {
+                                self.evaluate_requirement_on_card(
+                                    filter,
+                                    c,
+                                    payer,
+                                )
+                            })
+                            .take(n)
+                            .map(|c| c.id)
+                            .collect();
+                        if picks.len() == n {
+                            for id in picks {
+                                self.discard_card(payer, id, events);
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    WardCost::Discard(n) => {
+                        // Ward—Discard N cards. Payable only if the
+                        // controller has ≥ N cards in hand. Auto-pay
+                        // picks the first N cards. An interactive
+                        // surface should prompt.
+                        let n = *n as usize;
+                        if self.players[payer].hand.len() >= n {
+                            // Through the shared discard funnel so
+                            // CardDiscarded fires and Madness applies
+                            // (CR 702.35).
+                            for _ in 0..n {
+                                let Some(card_id) = self
+                                    .players[payer]
+                                    .hand
+                                    .first()
+                                    .map(|c| c.id)
+                                else {
+                                    break;
+                                };
+                                self.discard_card(payer, card_id, events);
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    WardCost::DiscardHand => {
+                        // "...unless its controller discards their hand."
+                        // Always payable (even from empty). Discard through
+                        // the shared funnel so CardDiscarded / Madness fire.
+                        let ids: Vec<CardId> = self.players[payer]
+                            .hand
+                            .iter()
+                            .map(|c| c.id)
+                            .collect();
+                        for card_id in ids {
+                            self.discard_card(payer, card_id, events);
+                        }
+                        true
+                    }
+                    WardCost::Blight(n) => {
+                        // Ward—Blight N (CR 701.68): the warding player puts N
+                        // -1/-1 counters on a creature they control. Auto-pay
+                        // picks their highest-toughness creature so the body
+                        // is likeliest to survive; unpayable with none.
+                        let pick = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == payer && c.definition.is_creature()
+                            })
+                            .max_by_key(|c| self.computed_permanent(c.id).map(|cp| cp.toughness).unwrap_or(0))
+                            .map(|c| c.id);
+                        if let Some(cid) = pick {
+                            if let Some(c) = self.battlefield_find_mut(cid) {
+                                c.add_counters(CounterType::MinusOneMinusOne, *n);
+                                events.push(GameEvent::CounterAdded {
+                                    card_id: cid,
+                                    counter_type: CounterType::MinusOneMinusOne,
+                                    count: *n,
+                                });
+                            }
+                            let mut sba = self.check_state_based_actions();
+                            events.append(&mut sba);
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    WardCost::CollectEvidence(n) => {
+                        // Ward—Collect evidence N (CR 701.59): the warding player
+                        // exiles cards with total MV ≥ N from their graveyard.
+                        // Auto-pay exiles the cheapest qualifying set; unpayable
+                        // if the graveyard can't reach the threshold.
+                        if self.graveyard_can_collect_evidence(payer, *n) {
+                            let mut gy: Vec<(CardId, u32)> = self.players[payer]
+                                .graveyard
+                                .iter()
+                                .map(|c| (c.id, c.definition.cost.cmc()))
+                                .collect();
+                            gy.sort_by_key(|&(_, mv)| mv);
+                            let mut acc = 0u32;
+                            let mut to_exile = Vec::new();
+                            for (id, mv) in gy {
+                                if acc >= *n {
+                                    break;
+                                }
+                                acc += mv;
+                                to_exile.push(id);
+                            }
+                            for id in to_exile {
+                                if let Some(card) = Self::take_card(
+                                    &mut self.players[payer].graveyard, id,
+                                ) {
+                                    self.exile.push(card);
+                                    self.players[payer].cards_exiled_this_turn += 1;
+                                    events.push(GameEvent::PermanentExiled { card_id: id });
+                                }
+                            }
+                            events.push(GameEvent::EvidenceCollected {
+                                player: payer,
+                            });
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    WardCost::ExileFromGraveyard(n) => {
+                        // "…unless you exile N cards from your graveyard"
+                        // (Rotting Giant). Auto-pay exiles the cheapest.
+                        let n = *n as usize;
+                        let mut gy: Vec<(CardId, u32)> = self.players[payer]
+                            .graveyard
+                            .iter()
+                            .map(|c| (c.id, c.definition.cost.cmc()))
+                            .collect();
+                        if gy.len() < n {
+                            false
+                        } else {
+                            gy.sort_by_key(|&(_, mv)| mv);
+                            for (id, _) in gy.into_iter().take(n) {
+                                if let Some(card) =
+                                    Self::take_card(&mut self.players[payer].graveyard, id)
+                                {
+                                    self.exile.push(card);
+                                    self.players[payer].cards_exiled_this_turn += 1;
+                                    events.push(GameEvent::PermanentExiled { card_id: id });
+                                    self.note_left_graveyard(payer, id, events);
+                                }
+                            }
+                            true
+                        }
+                    }
+                    WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => {
+                        let matches = |g: &Self, c: &crate::card::CardInstance| match cost {
+                            WardCost::SacrificeMatching(f) => {
+                                g.evaluate_requirement_on_card(f, c, payer)
+                            }
+                            _ => c.definition.is_creature(),
+                        };
+                        let pick = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == payer && matches(self, c))
+                            .min_by_key(|c| c.definition.cost.cmc())
+                            .map(|c| c.id);
+                        if let Some(sac_id) = pick {
+                            // Real sacrifice (CR 701.16): dies/sac events
+                            // and the die snapshot, not a bare removal.
+                            self.sacrifice_one(sac_id, payer, events);
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    WardCost::SacrificePermanents(n) => {
+                        let picks: Vec<CardId> = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == payer)
+                            .take(*n as usize)
+                            .map(|c| c.id)
+                            .collect();
+                        if picks.len() == *n as usize {
+                            for sac_id in picks {
+                                self.sacrifice_one(sac_id, payer, events);
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    WardCost::LifeSourcePower => {
+                        // Ward—Pay life equal to this creature's power.
+                        let n = ctx
+                            .source
+                            .and_then(|sid| self.computed_permanent(sid))
+                            .map(|c| c.power.max(0))
+                            .unwrap_or(0);
+                        if self.effective_life(payer) >= n {
+                            self.pay_life_cost(payer, n as u32);
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    WardCost::RemoveCounterFromPermanent => {
+                        self.remove_one_counter_from_own_permanent(payer, events)
+                    }
+                    // "{X}, where X is this creature's power" (Esper Sentinel).
+                    WardCost::GenericSourcePower => {
+                        let x = ctx
+                            .source
+                            .and_then(|sid| self.computed_permanent(sid))
+                            .map(|c| c.power.max(0) as u32)
+                            .unwrap_or(0);
+                        self.pay_generic(payer, x)
+                    }
+                }
+    }
+
+    /// Pay a mana cost as `payer`, auto-tapping their lands.
+    fn pay_mana_as(&mut self, payer: usize, mc: &crate::mana::ManaCost) -> bool {
+        let saved = self.priority.player_with_priority;
+        self.priority.player_with_priority = payer;
+        let ok = self.try_pay_with_auto_tap(payer, mc).is_ok();
+        self.priority.player_with_priority = saved;
+        ok
+    }
+
+    /// Pay `n` generic mana as `payer`; zero is always payable.
+    fn pay_generic(&mut self, payer: usize, n: u32) -> bool {
+        n == 0 || self.pay_mana_as(payer, &crate::mana::cost(&[crate::mana::generic(n)]))
+    }
 }

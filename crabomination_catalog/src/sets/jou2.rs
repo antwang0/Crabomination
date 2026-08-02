@@ -523,6 +523,7 @@ pub fn agent_of_erebos() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![constellation(Effect::ExilePlayerGraveyard {
             who: PlayerRef::Target(0),
+            filter: None,
         })],
         ..nyx_creature(
             "Agent of Erebos",

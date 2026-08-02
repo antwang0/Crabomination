@@ -2856,6 +2856,13 @@ impl GameState {
                         .keywords
                         .iter()
                         .any(|k| matches!(k, crate::card::Keyword::Disturb(_))),
+                    R::HasFlashback => card.definition.keywords.iter().any(|k| {
+                        matches!(
+                            k,
+                            crate::card::Keyword::Flashback(_)
+                                | crate::card::Keyword::FlashbackTap(_)
+                        )
+                    }),
                     R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
                     R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
                     R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
@@ -3501,6 +3508,12 @@ impl GameState {
                 .keywords
                 .iter()
                 .any(|k| matches!(k, crate::card::Keyword::Disturb(_))),
+            R::HasFlashback => card.definition.keywords.iter().any(|k| {
+                matches!(
+                    k,
+                    crate::card::Keyword::Flashback(_) | crate::card::Keyword::FlashbackTap(_)
+                )
+            }),
             R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
             // No source/battlefield context in the on-card evaluator (used

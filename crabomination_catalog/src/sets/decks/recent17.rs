@@ -121,6 +121,7 @@ pub fn angel_of_finality() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::ExilePlayerGraveyard {
             who: PlayerRef::EachOpponent,
+            filter: None,
         })],
         ..Default::default()
     }

@@ -634,6 +634,10 @@ pub enum WardCost {
     /// "Ward—Collect evidence N." (CR 701.59 — Axebane Ferox.) The warding
     /// player must exile cards with total mana value ≥ N from their graveyard.
     CollectEvidence(u32),
+    /// "…unless you exile N cards from your graveyard" (Rotting Giant).
+    /// Unpayable when the graveyard holds fewer than N cards; auto-pay takes
+    /// the cheapest.
+    ExileFromGraveyard(u32),
     SacrificeCreature,
     /// "…unless you sacrifice a [filter]" — the filtered sibling of
     /// `SacrificeCreature` (Endless Wurm's enchantment, Contamination's
@@ -1605,6 +1609,9 @@ pub enum SelectionRequirement {
     /// The card has Disturb (CR 702.146), regardless of its cost (Shipwreck
     /// Sifters' "Spirit card or a card with disturb" discard payoff).
     HasDisturb,
+    /// The card has flashback (CR 702.34) in any of its cost shapes
+    /// (Flashback / FlashbackTap). Tombfire's graveyard sweep.
+    HasFlashback,
     PowerAtMost(i32),
     ToughnessAtMost(i32),
     /// "Toughness X or less, where X is the number of [filter] you control"

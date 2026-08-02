@@ -3458,6 +3458,13 @@ pub enum Effect {
     /// smallest hand. Each player keeps their best (highest-MV, then power)
     /// permanents and highest-MV cards; a `wants_ui` picker is a follow-up.
     Balance,
+    /// The generalized Balance: for each entry in `filters`, every player
+    /// sacrifices down to the fewest matching permanents any player controls
+    /// (keeping their highest-MV, then highest-power); with `hands`, hands then
+    /// discard down to the smallest. `Balance` is
+    /// `BalanceMatching { filters: [Land, Creature], hands: true }`;
+    /// Balancing Act balances over `Permanent` as one group.
+    BalanceMatching { filters: Vec<SelectionRequirement>, hands: bool },
     /// Genesis Wave — reveal the top X cards (X from the cast cost), put
     /// every permanent card with mana value ≤ X onto the battlefield, and
     /// the rest into the graveyard. (Printed "any number" collapses to
@@ -4646,8 +4653,13 @@ pub enum Effect {
     /// control.
     LivingEnd,
     /// "Exile that player's graveyard" — graveyard hate scoped to a single
-    /// player (Go Blank). `who` resolves to the affected player.
-    ExilePlayerGraveyard { who: PlayerRef },
+    /// player (Go Blank). `who` resolves to the affected player; `filter`
+    /// narrows it to a subset (Tombfire's "all cards with flashback").
+    ExilePlayerGraveyard {
+        who: PlayerRef,
+        #[serde(default)]
+        filter: Option<crate::card::SelectionRequirement>,
+    },
     /// Exile all cards from `who`'s hand (each resolved player). Ashiok's
     /// −10 pairs this with `ExilePlayerGraveyard`.
     ExileHand { who: PlayerRef },
@@ -4693,6 +4705,16 @@ pub enum Effect {
     /// a card with that permanent's name and put it onto the battlefield under
     /// *your* control; then that player shuffles.
     SearchOpponentLibraryForSameName { what: Selector },
+    /// "Search `who`'s library for a card with the same name as `what`, put it
+    /// onto the battlefield under `who`'s control, then shuffle" (Verdant
+    /// Succession). Unlike `SearchOpponentLibraryForSameName`, `what` may be a
+    /// card that has already left the battlefield (a death trigger's subject).
+    SearchSameNameToBattlefield { who: PlayerRef, what: Selector },
+    /// "For each card exiled this way, search that player's library for all
+    /// cards with the same name and exile them. Then that player shuffles"
+    /// (Haunting Echoes). Names are read off the cards exiled earlier in this
+    /// resolution, so it pairs with a preceding graveyard exile.
+    ExileLibraryCardsNamedLikeExiledThisResolution { who: PlayerRef },
     /// Development — "create a 3/1 red Elemental token unless any opponent has
     /// you draw a card", `times` times. Each iteration asks an opponent.
     TokenUnlessOpponentLetsYouDraw { token: TokenDefinition, times: u32 },
@@ -4722,6 +4744,11 @@ pub enum Effect {
     /// and exile it." A single cross-zone choice (Memory Leak). Auto-picks
     /// the highest-mana-value match (a `wants_ui` chooser is a follow-up).
     ExileChosenFromHandOrGraveyard { who: PlayerRef, filter: SelectionRequirement },
+    /// "Exile `count` cards matching `filter` from `who`'s graveyard" — the
+    /// mandatory, graveyard-only sibling of `ExileChosenFromHandOrGraveyard`
+    /// (Decaying Soil's upkeep). Auto-picks the cheapest matches; fewer
+    /// matches than `count` exiles what there is.
+    ExileFromGraveyard { who: PlayerRef, count: Value, filter: SelectionRequirement },
     /// CR 701.31 — "Will of the council." Starting with the controller, each
     /// player votes for one permanent matching `filter` (evaluated relative to
     /// the controller, so Council's Judgment's "a nonland permanent you don't
@@ -6246,6 +6273,11 @@ pub enum Effect {
     /// its owner's hand" (the Invasion-block Lair lands). The bounce sibling of
     /// `SacrificeSourceUnlessSacrifice`.
     SacrificeSourceUnlessReturn { filter: SelectionRequirement },
+    /// "Sacrifice this permanent unless you pay [cost]" over the full
+    /// [`crate::card::WardCost`] menu — discard, exile-from-graveyard, life,
+    /// mana. Rotting Giant, Cursed Monstrosity. A UI seat gets a yes/no;
+    /// the AutoDecider pays whenever the cost is payable.
+    SacrificeSourceUnlessCost { cost: crate::card::WardCost },
     /// "Sacrifice any number of [filter]. [payoff] for each one." The
     /// controller chooses how many to sacrifice via `Decision::ChooseAmount`
     /// (AutoDecider sacrifices none). For each sacrifice, `per_each` runs

@@ -267,6 +267,7 @@ pub fn kutzils_flanker() -> CardDefinition {
                 ]),
                 Effect::ExilePlayerGraveyard {
                     who: PlayerRef::Target(0),
+                    filter: None,
                 },
             ]),
         }],

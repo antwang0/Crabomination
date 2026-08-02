@@ -4823,6 +4823,7 @@ pub fn elspeths_nightmare() -> CardDefinition {
                 3,
                 Effect::ExilePlayerGraveyard {
                     who: PlayerRef::Target(0),
+                    filter: None,
                 },
             ),
         ],

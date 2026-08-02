@@ -11215,6 +11215,18 @@ impl GameState {
         })
     }
 
+    /// `StaticEffect::ControllerMaySkipDraws` (Obstinate Familiar).
+    fn controller_may_skip_draws(&self, p: usize) -> bool {
+        self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    self.active_static(&sa.effect, c),
+                    Some(crate::effect::StaticEffect::ControllerMaySkipDraws)
+                )
+            })
+        })
+    }
+
     /// `StaticEffect::MayReplaceDrawWithRevealUntilKind` (Abundance).
     fn player_may_reveal_until_kind_instead_of_drawing(&self, p: usize) -> bool {
         self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
@@ -11272,6 +11284,24 @@ impl GameState {
         };
         if global_static(&crate::effect::StaticEffect::PlayersSkipDraws) {
             return false;
+        }
+        // CR 121.2a — Obstinate Familiar: "you may skip that draw instead."
+        // Controller-scoped and optional; the auto policy takes the skip only
+        // when the library is empty, i.e. when drawing would lose the game.
+        if self.controller_may_skip_draws(p) {
+            use crate::decision::{Decision, DecisionAnswer};
+            let empty = self.players[p].library.is_empty();
+            let yes = empty
+                || matches!(
+                    self.decider.decide(&Decision::OptionalTrigger {
+                        source: crate::card::CardId(0),
+                        description: "Skip this draw?".to_string(),
+                    }),
+                    DecisionAnswer::Bool(true)
+                );
+            if yes {
+                return false;
+            }
         }
         // CR 614 — Shared Fate: the draw becomes "exile the top card of one of
         // your opponents' libraries face down; you may play it from exile".
@@ -17852,6 +17882,7 @@ fn static_effect_to_effects(
             // MayReplaceDrawWithTutor — a draw replacement consulted in
             // `draw_one`; no layer effect.
             | StaticEffect::MayReplaceDrawWithTutor
+            | StaticEffect::ControllerMaySkipDraws
             | StaticEffect::MayReplaceDrawWithRevealUntilKind
             | StaticEffect::ControllerAssignsAttackersCombatDamage
             | StaticEffect::PlayersSkipDraws

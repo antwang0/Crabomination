@@ -311,6 +311,11 @@ pub enum StaticEffect {
     /// A controller-scoped, optional draw replacement (Archmage Ascension,
     /// usually behind `WhileCountersAtLeast`).
     MayReplaceDrawWithTutor,
+    /// CR 121.2a — "If you would draw a card, you may skip that draw instead"
+    /// (Obstinate Familiar). Controller-scoped and optional; the auto policy
+    /// skips only when the library is empty (the draw that would otherwise
+    /// lose the game).
+    ControllerMaySkipDraws,
     /// "[applies_to] you control get +per/+per for each Equipment attached to
     /// *this creature*" (Armament Master). The attachment-scaled sibling of
     /// `PumpTeamByControlledPermanents`, which counts board-wide instead.

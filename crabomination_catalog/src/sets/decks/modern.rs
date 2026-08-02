@@ -12674,6 +12674,7 @@ pub fn ashiok_nightmare_weaver() -> CardDefinition {
                 effect: Effect::Seq(vec![
                     Effect::ExilePlayerGraveyard {
                         who: PlayerRef::EachOpponent,
+                        filter: None,
                     },
                     Effect::ExileHand {
                         who: PlayerRef::EachOpponent,
@@ -56313,6 +56314,7 @@ pub fn ravenous_trap() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ExilePlayerGraveyard {
             who: PlayerRef::Target(0),
+            filter: None,
         },
         alternative_cost: Some(AlternativeCost {
             awaken: false,
@@ -60235,6 +60237,7 @@ pub fn kayas_guile() -> CardDefinition {
                 },
                 Effect::ExilePlayerGraveyard {
                     who: PlayerRef::EachOpponent,
+                    filter: None,
                 },
                 Effect::CreateToken {
                     who: PlayerRef::You,
@@ -65942,6 +65945,7 @@ pub fn rakdos_charm() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::ExilePlayerGraveyard {
                 who: PlayerRef::Target(0),
+                filter: None,
             },
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Artifact),

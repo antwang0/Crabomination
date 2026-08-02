@@ -439,6 +439,7 @@ pub fn callous_bloodmage() -> CardDefinition {
             // in for the target slot (see doc comment).
             Effect::ExilePlayerGraveyard {
                 who: PlayerRef::EachOpponent,
+                filter: None,
             },
         ]))],
         ..Default::default()
