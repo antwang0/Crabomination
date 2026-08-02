@@ -1203,6 +1203,7 @@ impl Effect {
             Effect::DestroyAllSharingNameWith { what } => sel_has_target(what),
             Effect::SkipPlayerDrawStep { player }
             | Effect::PlayerCantPlayLandsThisTurn { player } => player_has_target(player),
+            Effect::RestartGame { .. } => false,
             Effect::ExileAllCopiesOfTargetName { what }
             | Effect::ExileTokensSharingNameWith { what }
             | Effect::ExileAndReturnToOwner { what } => sel_has_target(what),

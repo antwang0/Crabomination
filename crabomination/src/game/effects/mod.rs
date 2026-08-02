@@ -23282,6 +23282,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RestartGame { deploy_source_exiles } => {
+                let starter = ctx.controller;
+                let exempt: Vec<CardInstance> = if *deploy_source_exiles {
+                    let src = ctx.source;
+                    let (keep, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut *self.exile)
+                        .into_iter()
+                        .partition(|c| src.is_some() && c.exiled_with == src);
+                    *self.exile = rest;
+                    keep
+                } else {
+                    Vec::new()
+                };
+                self.restart_game(starter, exempt, events);
+                Ok(())
+            }
+
             Effect::PlayerCantPlayLandsThisTurn { player } => {
                 if let Some(seat) = self.resolve_player(player, ctx) {
                     self.players[seat].cant_play_lands_this_turn = true;

@@ -38709,8 +38709,8 @@ pub fn wrenn_and_six() -> CardDefinition {
 /// Karn Liberated — {7} Legendary Planeswalker. 6 loyalty.
 /// **+4**: Target player exiles a card from their hand.
 /// **-3**: Exile target permanent.
-/// **-14**: Approximated as `WinGame` (the "restart the game, returning
-/// Karn-exiled cards under your control" ultimate collapses to a win).
+/// **-14**: Restart the game, leaving the cards Karn exiled in exile, then
+/// return them to the battlefield under your control (CR 727).
 pub fn karn_liberated() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
     CardDefinition {
@@ -38737,16 +38737,14 @@ pub fn karn_liberated() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -3,
-                effect: Effect::Exile {
+                effect: Effect::ExileWithSource {
                     what: target_filtered(SelectionRequirement::Permanent),
                 },
                 ..Default::default()
             },
             LoyaltyAbility {
                 loyalty_cost: -14,
-                effect: Effect::WinGame {
-                    who: PlayerRef::You,
-                },
+                effect: Effect::RestartGame { deploy_source_exiles: true },
                 ..Default::default()
             },
         ],

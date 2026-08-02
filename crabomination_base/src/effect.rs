@@ -4937,6 +4937,12 @@ pub enum Effect {
     /// "Target player skips their next draw step" (Fatigue). Adds one charge to
     /// `Player.skip_next_draw_step`.
     SkipPlayerDrawStep { player: PlayerRef },
+    /// CR 727 — "Restart the game." The current game ends with no winner and a
+    /// fresh one begins from every card involved, with the effect's controller
+    /// as starting player (727.1a). Cards exiled with the source are exempt
+    /// from the reshuffle (727.5) and, when `deploy_source_exiles`, enter the
+    /// battlefield under the controller's control — Karn Liberated's −14.
+    RestartGame { deploy_source_exiles: bool },
     /// CR 305.1 — "Target player can't play lands this turn" (Turf Wound).
     /// Sets `Player.cant_play_lands_this_turn`, cleared at the turn boundary.
     PlayerCantPlayLandsThisTurn { player: PlayerRef },

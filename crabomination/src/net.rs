@@ -2453,6 +2453,8 @@ pub enum GameEventWire {
     /// UIs log a Class levelling up.
     ClassLevelReached { player: usize, card_id: CardId, level: u8 },
     GameOver { winner: Option<usize> },
+    /// Wire mirror of `GameEvent::GameRestarted` (CR 727.1) — Karn Liberated.
+    GameRestarted { starter: usize },
 }
 
 impl From<&GameEvent> for GameEventWire {
@@ -2796,6 +2798,9 @@ impl From<&GameEvent> for GameEventWire {
                 }
             }
             GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
+            GameEvent::GameRestarted { starter } => {
+                GameEventWire::GameRestarted { starter: *starter }
+            }
             GameEvent::FirstCardDrawnThisTurn { player, .. } => {
                 GameEventWire::FirstCardDrawnThisTurn { player: *player }
             }
@@ -3023,6 +3028,9 @@ impl GameEventWire {
                 Some(p) => format!("Game over — {} wins", pn(*p)),
                 None => "Game over — draw".into(),
             },
+            E::GameRestarted { starter } => {
+                format!("Game restarted — {} takes the first turn", pn(*starter))
+            }
         }
     }
 }

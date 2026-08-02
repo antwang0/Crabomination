@@ -2020,6 +2020,8 @@ pub enum GameEvent {
     /// `GameOver` that the resulting state-based-action pass produces.
     PlayerConceded { player: usize },
     GameOver { winner: Option<usize> },
+    /// CR 727.1 — the game was restarted; `starter` takes the first turn.
+    GameRestarted { starter: usize },
 }
 
 // ── Priority ──────────────────────────────────────────────────────────────────

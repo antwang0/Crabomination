@@ -9224,6 +9224,103 @@ impl GameState {
     /// fixtures that call this once per card end up with the
     /// **first-pushed** card on top and successive pushes building down.
     /// For top-of-deck inserts use `Player::add_to_library_top` directly.
+    /// CR 727 — restart the game. The current game ends with no winner; a new
+    /// one begins from every card that was involved (727.2), shuffled into its
+    /// owner's library, with `starter` as the starting player (727.1a).
+    /// `exempt` cards skip the reshuffle (727.5) and enter the battlefield
+    /// under `starter`'s control — Karn Liberated's −14.
+    ///
+    /// Per 727.4 the restart finishes just before the first turn's untap step,
+    /// so no player has priority and any triggers wait for the upkeep.
+    pub fn restart_game(
+        &mut self,
+        starter: usize,
+        exempt: Vec<CardInstance>,
+        events: &mut Vec<GameEvent>,
+    ) {
+        // 727.2 — gather every card in the game, wherever it lives, plus the
+        // stack. Sideboards stay "outside the game" and are carried over as-is.
+        let mut owned: Vec<Vec<CardInstance>> = vec![Vec::new(); self.players.len()];
+        let collect = |cards: Vec<CardInstance>, owned: &mut Vec<Vec<CardInstance>>| {
+            for c in cards {
+                if let Some(bucket) = owned.get_mut(c.owner) {
+                    bucket.push(c);
+                }
+            }
+        };
+        collect(std::mem::take(&mut *self.battlefield), &mut owned);
+        collect(std::mem::take(&mut *self.phased_out), &mut owned);
+        collect(std::mem::take(&mut *self.exile), &mut owned);
+        for si in std::mem::take(&mut *self.stack) {
+            if let crate::game::types::StackItem::Spell { card, .. } = si
+                && let Some(bucket) = owned.get_mut(card.owner)
+            {
+                bucket.push(*card);
+            }
+        }
+        for p in 0..self.players.len() {
+            let pl = &mut self.players[p];
+            for zone in [&mut pl.library, &mut pl.hand, &mut pl.graveyard, &mut pl.command] {
+                collect(std::mem::take(&mut **zone), &mut owned);
+            }
+        }
+
+        // A fresh state carries only what survives a restart: seat identity,
+        // starting life, commander designations and the outside-the-game
+        // sideboard. Everything else resets to a game-start baseline.
+        let players: Vec<crate::player::Player> = self
+            .players
+            .iter()
+            .enumerate()
+            .map(|(i, old)| {
+                let mut pl = crate::player::Player::new(i, old.name.clone());
+                pl.starting_life = old.starting_life;
+                pl.life = old.starting_life;
+                pl.commanders = old.commanders.clone();
+                pl.sideboard = old.sideboard.clone();
+                pl
+            })
+            .collect();
+        let next_id = self.next_id;
+        let attack_option = self.attack_option;
+        let teams = self.teams.clone();
+        *self = GameState::new(players);
+        self.next_id = next_id;
+        self.attack_option = attack_option;
+        self.teams = teams;
+
+        // Every collected card returns as a brand-new object in its owner's
+        // library; the deck is then shuffled (CR 103.2).
+        for (p, cards) in owned.into_iter().enumerate() {
+            for c in cards {
+                let def = c.definition.clone();
+                self.players[p].library.push(CardInstance::new(c.id, def, p));
+            }
+            self.shuffle_library(p, events);
+        }
+
+        self.active_player_idx = starter;
+        self.priority = PriorityState::new(starter);
+        // CR 103.4 — opening hands. 727.3: a player short of seven cards will
+        // lose to the empty-library SBA, which the normal draw path enforces.
+        for p in 0..self.players.len() {
+            for _ in 0..7 {
+                self.draw_one(p, events);
+            }
+        }
+
+        // 727.5 — the exempt cards never joined a deck; Karn deploys them.
+        for c in exempt {
+            let def = c.definition.clone();
+            let id = c.id;
+            let mut inst = CardInstance::new(id, def, c.owner);
+            inst.controller = starter;
+            inst.battlefield_timestamp = self.next_timestamp();
+            self.battlefield.push(inst);
+        }
+        events.push(GameEvent::GameRestarted { starter });
+    }
+
     pub fn add_card_to_library(&mut self, player_idx: usize, def: CardDefinition) -> CardId {
         let id = self.next_id();
         self.players[player_idx].add_to_library_bottom(id, def);
