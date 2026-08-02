@@ -7050,7 +7050,7 @@ approximations (each documented at the card site):
 | Card / Feature | Current Approximation | Correct Behaviour |
 |---|---|---|
 | Copy-in-exile object | The spell copy materializes at cast time | A copy sits in exile while the creature is prepared, so "cast from exile" zone-watch triggers should see it |
-| Bot play | Bots never cast prepare spells (their enters-prepared creatures keep the counter) | Bot evaluates `prepare_castable` like other affordances |
+| Bot play | Bot casts prepare spells: main-phase candidates scored by the inset spell, instant insets fired in response to removal on the prepared body (`pick_prepare_response`), off-card re-prepare abilities used as a mana sink (`pick_reprepare`), and the counter priced into `permanent_value` | Residual: `CastPrepareSpell` candidates pass `x_value: None`, so an X-cost inset spell (Jadzi's Oracle's Gift) is cast at X=0 |
 | Emeritus of Truce ETB | Inkling token minted for *you* | "Target player creates…" (needs a trigger-scoped target slot for `CreateToken`) |
 | Harmonized Trio | Activation taps one other untapped creature | "Tap two untapped creatures you control" |
 | Scrollboost | Single target +2/+2 | "One or two target creatures" |

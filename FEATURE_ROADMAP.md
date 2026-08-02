@@ -2325,6 +2325,16 @@ Each a small targeted feature; sweep batch by batch.
   tests). SOS college mirrors run on the ladder (`bot_ladder --decks sos`)
   and probe (`bot_probe --deck sos`). Remaining: X sized by evaluation
   rather than max-dump.
+- 🟡 **SOS mechanic play** — Prepare: inset-spell candidates, response casts
+  when removal targets the prepared body (`pick_prepare_response`, plus the
+  own-main response-timing dispatch fix that also revived counterspells
+  there), a re-prepare mana sink, and a Prepared-counter term in
+  `permanent_value`. Paradigm: the free-copy prompt is a real suspension
+  now, and the bot declines life-draining copies at a low total
+  (`self_life_loss`). On-cast payoff steering: Opus (prefer 5+-mana casts)
+  and Infusion (lifegain first) score nudges; Repartee offers a
+  creature-aimed sibling candidate the outcome eval judges. Remaining:
+  Increment sequencing, converge-aware payment, prepare-cast X sizing.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
 
 ## Tier 14 — Replays, analysis & observability

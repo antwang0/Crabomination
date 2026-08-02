@@ -26996,18 +26996,36 @@ impl GameState {
                     .find(|c| c.id == source)
                     .map(|c| c.definition.clone());
                 let Some(def) = original_def else { return Ok(()); };
-                // Free copy = upside: Auto seats accept (the blanket "no"
-                // made the trigger dead); scripted deciders steer.
+                // "You *may* cast a copy" — a real prompt, same
+                // stash-and-rerun shape as `Effect::MayDo`. A wants_ui
+                // controller (human modal, bot policy) gets the choice;
+                // this is what lets the bot decline a Decorum
+                // Dissertation copy at low life instead of draining
+                // itself dead one main phase at a time. Headless Auto
+                // seats keep accepting (the blanket "no" made the
+                // trigger dead); scripted deciders steer.
                 use crate::decision::{Decision, DecisionAnswer};
-                let take = match self.decider.kind() {
-                    crate::decision::DeciderKind::Auto => true,
-                    _ => matches!(
-                        self.decider.decide(&Decision::OptionalTrigger {
-                            source,
-                            description: format!("Cast a copy of {}?", def.name),
-                        }),
-                        DecisionAnswer::Bool(true)
-                    ),
+                let decision = Decision::OptionalTrigger {
+                    source,
+                    description: format!("Cast a copy of {}?", def.name),
+                };
+                let take = match self.stashed_resolution_answer.take() {
+                    Some(a) => matches!(a, DecisionAnswer::Bool(true)),
+                    None if self.players[ctx.controller].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::MayDoAnswerPending,
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => match self.decider.kind() {
+                        crate::decision::DeciderKind::Auto => true,
+                        _ => matches!(
+                            self.decider.decide(&decision),
+                            DecisionAnswer::Bool(true)
+                        ),
+                    },
                 };
                 if !take {
                     return Ok(());

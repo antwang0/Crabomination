@@ -646,6 +646,20 @@ impl Bot for RandomBot {
                                 .battlefield_find(*source)
                                 .map(|c| permanent_value(state, c.id, &self.weights) >= 4 * self.weights.unit)
                                 .unwrap_or(false)
+                        } else if description.starts_with("Cast a copy of ") {
+                            // Paradigm recurrence (SOS): a free copy is pure
+                            // upside unless the spell's own body drains life
+                            // the bot can't spare — Decorum Dissertation's
+                            // draw-2-lose-2 recurs every main phase, and the
+                            // blanket yes played it straight into the
+                            // state-based loss.
+                            let loss = state
+                                .exile
+                                .iter()
+                                .find(|c| c.id == *source)
+                                .map(|c| self_life_loss(&c.definition.effect))
+                                .unwrap_or(0);
+                            state.effective_life(seat) - loss > 5
                         } else if description.starts_with("Reveal the top card (") {
                             let (cards, life_committed) = match &self.reveal_commit {
                                 Some((s, c, l)) if *s == *source => (*c, *l),
@@ -818,6 +832,20 @@ impl Bot for RandomBot {
                 }
             }
             TurnStep::PreCombatMain | TurnStep::PostCombatMain if is_active => {
+                // A non-empty stack in our own main is response timing,
+                // not sorcery timing: an opponent's answer is resolving,
+                // and the response layer sees threats the main-phase
+                // enumerator can't (counter it, fire a prepared inset
+                // spell before its body dies). Both pickers ignore the
+                // bot's own spells-in-flight, so a stack we put there
+                // falls through to the enumerator as before.
+                if !state.stack.is_empty()
+                    && let Some(a) = pick_stack_response(state, seat, &self.weights)
+                        .or_else(|| pick_ability_counter_response(state, seat))
+                        .or_else(|| pick_prepare_response(state, seat))
+                {
+                    return Some(a);
+                }
                 Some(main_phase_action_with(state, seat, self.scored, &self.weights))
             }
             // Opponent's end step with an empty stack — the bot's canonical
@@ -833,6 +861,7 @@ impl Bot for RandomBot {
             _ => Some(
                 pick_stack_response(state, seat, &self.weights)
                     .or_else(|| pick_ability_counter_response(state, seat))
+                    .or_else(|| pick_prepare_response(state, seat))
                     .unwrap_or(GameAction::PassPriority),
             ),
         }
@@ -1015,6 +1044,68 @@ fn pick_ability_counter_response(state: &GameState, seat: usize) -> Option<GameA
     None
 }
 
+/// SOS Prepare — the inset spell is a one-shot resource carried by a
+/// fragile body. When an opponent's spell on the stack targets one of the
+/// bot's prepared creatures, cast the inset spell in response, so the
+/// resource is spent before the body (and the Prepared counter with it)
+/// is answered. `would_accept` gates timing: only an instant-speed inset
+/// spell actually fires here, a sorcery copy is simply rejected.
+fn pick_prepare_response(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::game::types::StackItem;
+    let threatened: Vec<CardId> = state.stack.iter().rev().find_map(|si| {
+        let StackItem::Spell { caster, target, additional_targets, .. } = si else {
+            return None;
+        };
+        if *caster == seat {
+            return None;
+        }
+        let hits: Vec<CardId> = target
+            .iter()
+            .chain(additional_targets.iter())
+            .filter_map(|t| match t {
+                Target::Permanent(id) => state
+                    .battlefield_find(*id)
+                    .filter(|c| {
+                        c.controller == seat
+                            && c.definition.prepare_spell.is_some()
+                            && c.counter_count(crate::card::CounterType::Prepared) > 0
+                    })
+                    .map(|c| c.id),
+                _ => None,
+            })
+            .collect();
+        if hits.is_empty() { None } else { Some(hits) }
+    })?;
+    for creature_id in threatened {
+        let Some(c) = state.battlefield_find(creature_id) else { continue };
+        let Some(spell) = c.definition.prepare_spell.as_deref() else { continue };
+        // Same construction as the main-phase candidate block.
+        let (target, additional_targets) = if spell.effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(&spell.effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastPrepareSpell {
+            creature_id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if !ward_gate_ok(state, seat, &action) {
+            continue;
+        }
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
+}
+
 /// True when the effect tree's primary action counters a spell (the shapes
 /// a dedicated counterspell card uses — not buried `MayDo` riders).
 fn effect_counters_spells(eff: &Effect) -> bool {
@@ -1145,7 +1236,10 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
                 }
                 _ => None,
             })
-        });
+        })
+        // A Paradigm card prompts from EXILE (`CastFreeParadigmCopy`),
+        // as do other exile-resident recurrences.
+        .or_else(|| state.exile.iter().find(|c| c.id == source).map(|c| &c.definition));
     let Some(def) = def else { return true };
     // Find the `MayDo` body whose description matches the prompt. Scan the
     // card's spell effect, its triggered abilities, and any static-ability
@@ -1301,6 +1395,35 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
     }
 }
 
+/// Constant life the bot itself would lose to `eff` resolving on its own
+/// spell — the amount behind the Paradigm copy guard. Counts `You`-directed
+/// life loss AND `Target`-directed loss: a draw-plus-lose body (Decorum
+/// Dissertation's "target player draws two and loses 2") auto-targets the
+/// caster, so its Target(0) loss lands on the bot. That over-counts a
+/// drain the bot would aim at the opponent, which errs toward declining a
+/// free cast at low life — the cheap direction. Non-constant amounts count
+/// as zero (can't be sized without resolving).
+fn self_life_loss(eff: &Effect) -> i32 {
+    use crate::effect::{Selector, Value};
+    let hits = |sel: &Selector| {
+        matches!(sel, Selector::You | Selector::This | Selector::Target(_))
+    };
+    match eff {
+        Effect::LoseLife { who, amount: Value::Const(n) } if hits(who) => (*n).max(0),
+        Effect::Drain { from, amount: Value::Const(n), .. } if hits(from) => (*n).max(0),
+        Effect::Seq(v) => v.iter().map(self_life_loss).sum(),
+        Effect::If { then, else_, .. } => self_life_loss(then).max(self_life_loss(else_)),
+        Effect::ChooseMode(v)
+        | Effect::ChooseN { modes: v, .. }
+        | Effect::Escalate { modes: v, .. }
+        | Effect::EscalatingThisTurn { modes: v } => {
+            v.iter().map(self_life_loss).max().unwrap_or(0)
+        }
+        Effect::ForEach { body, .. } | Effect::MayDo { body, .. } => self_life_loss(body),
+        _ => 0,
+    }
+}
+
 /// Bot heuristic for `Decision::SearchLibrary`: pick a basic land that
 /// adds the bot's least-covered color, else (no basic land among the
 /// candidates) grab the highest-mana-value candidate — a creature/spell
@@ -1326,6 +1449,19 @@ fn permanent_value(state: &GameState, id: crate::card::CardId, w: &EvalWeights) 
     }
     if c.supertypes.contains(&Supertype::Legendary) {
         v += 2 * w.unit;
+    }
+    // A Prepared counter on a prepare-spell body is a castable spell in
+    // waiting (SOS): worth about the inset spell's mana value. Gives the
+    // eval, the mid-resolution mode picker (Biblioplex Tomekeeper's
+    // prepare-vs-unprepare), the attack simulation (attack-trigger
+    // preparers gain the counter mid-sim), and removal targeting a live
+    // read on the resource — an opponent's prepared creature IS the
+    // better kill at equal stats.
+    if let Some(inst) = inst
+        && inst.counter_count(CounterType::Prepared) > 0
+        && let Some(spell) = inst.definition.prepare_spell.as_deref()
+    {
+        v += (1 + spell.cost.cmc() as i32) * w.unit;
     }
     v
 }
@@ -2055,6 +2191,12 @@ fn cast_candidates(
     // targets, stolen permanents, etc.) — but for this main block it runs
     // *lazily* at the pick site below, in descending score order, so a
     // typical tick probes one or two candidates instead of the whole hand.
+    //
+    // SOS Repartee, computed once: it steers the plain-cast block toward
+    // offering creature-aimed sibling candidates.
+    let has_repartee = state.battlefield.iter().any(|c| {
+        c.controller == seat && c.definition.triggered_abilities.iter().any(is_repartee_trigger)
+    });
     let mut unvalidated: Vec<GameAction> = state.players[seat]
         .hand
         .iter()
@@ -2087,7 +2229,7 @@ fn cast_candidates(
             } else {
                 None
             };
-            modes.into_iter().filter_map(move |mode| {
+            modes.into_iter().flat_map(move |mode| {
                 // Pick a target appropriate to the chosen mode (ChooseMode
                 // mode-aware filter check happens in the cast paths).
                 // Multi-target shapes (Snow Day, Homesickness, Cost of
@@ -2102,19 +2244,24 @@ fn cast_candidates(
                 // No friendly host at all → skip the candidate rather than
                 // let the fallback pump an opposing creature.
                 let (target, additional_targets) = if is_beneficial_aura(&c.definition) {
-                    (Some(beneficial_aura_host(state, seat, c, w)?), vec![])
+                    match beneficial_aura_host(state, seat, c, w) {
+                        Some(t) => (Some(t), vec![]),
+                        None => return vec![],
+                    }
                 } else if mode_effect.requires_target() {
                     let (t, extras) =
                         state.auto_targets_for_effect_all_slots(mode_effect, seat, mode);
-                    t.as_ref()?;
+                    if t.is_none() {
+                        return vec![];
+                    }
                     (t, extras)
                 } else {
                     (None, vec![])
                 };
-                Some(GameAction::CastSpell {
+                let mut out = vec![GameAction::CastSpell {
                     card_id: c.id,
-                    target,
-                    additional_targets,
+                    target: target.clone(),
+                    additional_targets: additional_targets.clone(),
                     mode,
                     // For X-cost spells (Banefire, Earthquake, Wrath of the
                     // Skies, Mind Twist, Repeal, …), pump as much generic
@@ -2122,7 +2269,31 @@ fn cast_candidates(
                     // was a known dead end — Banefire dealt 0 damage, Mind
                     // Twist discarded nothing, Earthquake was a no-op.
                     x_value,
-                })
+                }];
+                // SOS Repartee: with a controlled payoff that wants an
+                // instant/sorcery to target a CREATURE, an "any target"
+                // spell the auto-targeter aimed at a player also gets a
+                // creature-aimed sibling candidate. The outcome eval sees
+                // the extra triggers fire when it resolves the sibling, so
+                // the swap is judged, not assumed.
+                if has_repartee
+                    && matches!(target, Some(Target::Player(_)))
+                    && {
+                        use crate::card::CardType;
+                        c.definition.card_types.contains(&CardType::Instant)
+                            || c.definition.card_types.contains(&CardType::Sorcery)
+                    }
+                    && let Some(swap) = best_hostile_creature_target(state, seat, mode_effect, w)
+                {
+                    out.push(GameAction::CastSpell {
+                        card_id: c.id,
+                        target: Some(swap),
+                        additional_targets,
+                        mode,
+                        x_value,
+                    });
+                }
+                out
             })
         })
         .collect();
@@ -3071,10 +3242,38 @@ fn main_phase_action_with(
             // candidates lazily, and hand the top few survivors to the
             // outcome evaluation for the final call. Most ticks this
             // probes 1-3 candidates instead of the whole hand.
+            //
+            // SOS on-cast payoff nudges — score-shaped siblings of the
+            // magecraft partition (nudges compose; partitions don't):
+            // * Opus: a controlled Opus permanent upgrades its trigger
+            //   when 5+ mana was spent on the cast.
+            // * Infusion: an Infusion-gated card in hand unlocks on any
+            //   lifegain, so lifegain casts go first while none has been
+            //   gained this turn.
+            // Each nudge is 8 = two score points ≈ one mana of cast
+            // value on `score_candidate`'s ×4 scale — a tiebreaker, not
+            // an override.
+            let has_opus = state.battlefield.iter().any(|c| {
+                c.controller == seat
+                    && c.definition.triggered_abilities.iter().any(is_opus_trigger)
+            });
+            let wants_lifegain = state.players[seat].life_gained_this_turn == 0
+                && state.players[seat]
+                    .hand
+                    .iter()
+                    .any(|c| card_infusion_gated(&c.definition));
             let mut ranked: Vec<(i32, GameAction, bool)> = pool
                 .into_iter()
                 .map(|(a, ok)| {
-                    (score_candidate(state, seat, &a, w) * 4 + r.random_range(0..4) as i32, a, ok)
+                    let mut s =
+                        score_candidate(state, seat, &a, w) * 4 + r.random_range(0..4) as i32;
+                    if has_opus && cast_mana_spent(state, seat, &a) >= 5 {
+                        s += 8 * w.unit;
+                    }
+                    if wants_lifegain && cast_gains_life(state, seat, &a) {
+                        s += 8 * w.unit;
+                    }
+                    (s, a, ok)
                 })
                 .collect();
             if has_magecraft {
@@ -3285,6 +3484,14 @@ fn main_phase_action_with(
         return action;
     }
 
+    // Re-arm an unprepared prepare-spell creature via an off-card "target
+    // creature becomes prepared" ability (SOS: Skycoach Waypoint). The
+    // counter is worth about the inset spell — see the `permanent_value`
+    // term — so this banks value on par with the draw sink above.
+    if let Some(action) = pick_reprepare(state, seat) {
+        return action;
+    }
+
     // Crew an uncrewed Vehicle so it can attack this turn (Vehicles are dead
     // cards to the bot otherwise). Dry-run-gated.
     if let Some(action) = pick_crew_vehicle(state, seat) {
@@ -3306,6 +3513,60 @@ fn main_phase_action_with(
     }
 
     GameAction::PassPriority
+}
+
+/// SOS Prepare mana sink: aim an off-card "target creature becomes
+/// prepared" ability (Skycoach Waypoint's `{3},{T}`) at the bot's best
+/// unprepared prepare-spell creature — biggest inset spell first, since
+/// that's what the counter is worth. Dry-run-gated through `would_accept`.
+fn pick_reprepare(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::card::CounterType;
+    use crate::effect::Selector;
+    fn prepares_target(e: &Effect) -> bool {
+        match e {
+            Effect::AddCounter { what, kind: CounterType::Prepared, .. } => {
+                matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. })
+            }
+            Effect::Seq(v) => v.iter().any(prepares_target),
+            _ => false,
+        }
+    }
+    let mut targets: Vec<&crate::card::CardInstance> = state
+        .battlefield
+        .iter()
+        .filter(|c| {
+            c.controller == seat
+                && c.definition.prepare_spell.is_some()
+                && c.counter_count(CounterType::Prepared) == 0
+        })
+        .collect();
+    if targets.is_empty() {
+        return None;
+    }
+    targets.sort_by_key(|c| {
+        std::cmp::Reverse(c.definition.prepare_spell.as_deref().map(|s| s.cost.cmc()).unwrap_or(0))
+    });
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in usable_abilities(state, card) {
+            if !prepares_target(&ab.effect) {
+                continue;
+            }
+            for t in &targets {
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(crate::game::Target::Permanent(t.id)),
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                    mode: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Activate a non-sacrifice "{cost}: create a token" ability as a last-resort
@@ -6207,6 +6468,137 @@ fn is_magecraft_trigger(ta: &crate::card::TriggeredAbility) -> bool {
     matches!(ta.event.kind, EventKind::SpellCast)
         && matches!(ta.event.scope, EventScope::YourControl)
         && ta.event.filter.is_some()
+}
+
+/// True when `ta` is an Opus-style rider (SOS): an on-cast trigger whose
+/// body branches on `Predicate::CastSpellManaSpentAtLeast` — "if five or
+/// more mana was spent to cast that spell, [big] instead". See
+/// `shortcut::opus_trigger`.
+fn is_opus_trigger(ta: &crate::card::TriggeredAbility) -> bool {
+    use crate::card::EventKind;
+    fn branches(e: &Effect) -> bool {
+        match e {
+            Effect::If { cond, then, else_ } => {
+                matches!(cond, crate::effect::Predicate::CastSpellManaSpentAtLeast(_))
+                    || branches(then)
+                    || branches(else_)
+            }
+            Effect::Seq(v) => v.iter().any(branches),
+            Effect::MayDo { body, .. } | Effect::ForEach { body, .. } => branches(body),
+            _ => false,
+        }
+    }
+    matches!(ta.event.kind, EventKind::SpellCast) && branches(&ta.effect)
+}
+
+/// True when `ta` is a Repartee trigger (SOS): an on-cast event filter
+/// that requires the spell to target a creature. See `shortcut::repartee`.
+fn is_repartee_trigger(ta: &crate::card::TriggeredAbility) -> bool {
+    use crate::card::EventKind;
+    use crate::effect::Predicate;
+    fn wants_creature_target(p: &Predicate) -> bool {
+        match p {
+            Predicate::CastSpellTargetsMatch(_) => true,
+            Predicate::All(v) => v.iter().any(wants_creature_target),
+            _ => false,
+        }
+    }
+    matches!(ta.event.kind, EventKind::SpellCast)
+        && ta.event.filter.as_ref().is_some_and(wants_creature_target)
+}
+
+/// True when `eff` carries a this-turn-lifegain gate (SOS Infusion) —
+/// the shape whose payoff a pre-gain cast wastes.
+fn effect_infusion_gated(eff: &Effect) -> bool {
+    use crate::effect::Predicate;
+    fn gated(p: &Predicate) -> bool {
+        match p {
+            Predicate::LifeGainedThisTurnAtLeast { .. }
+            | Predicate::FirstLifeGainThisTurn { .. } => true,
+            Predicate::All(v) => v.iter().any(gated),
+            _ => false,
+        }
+    }
+    match eff {
+        Effect::If { cond, then, else_ } => {
+            gated(cond) || effect_infusion_gated(then) || effect_infusion_gated(else_)
+        }
+        Effect::Seq(v) => v.iter().any(effect_infusion_gated),
+        Effect::MayDo { body, .. } | Effect::ForEach { body, .. } => effect_infusion_gated(body),
+        _ => false,
+    }
+}
+
+/// Whether any face of `def` is Infusion-gated — spell body or a
+/// triggered rider (the ETB Infusion shape).
+fn card_infusion_gated(def: &CardDefinition) -> bool {
+    effect_infusion_gated(&def.effect)
+        || def.triggered_abilities.iter().any(|t| effect_infusion_gated(&t.effect))
+}
+
+/// Mana the bot would spend casting `a`: printed cost plus the chosen X.
+/// Only the plain-cast shape is priced — it is the one that carries a
+/// live `x_value` — which is all the Opus nudge needs.
+fn cast_mana_spent(state: &GameState, seat: usize, a: &GameAction) -> u32 {
+    match a {
+        GameAction::CastSpell { card_id, x_value, .. } => state.players[seat]
+            .hand
+            .iter()
+            .find(|c| c.id == *card_id)
+            .map(|c| c.definition.cost.cmc() + x_value.unwrap_or(0))
+            .unwrap_or(0),
+        _ => 0,
+    }
+}
+
+/// True when resolving `a` gains the caster life — the Infusion unlock.
+/// Lifelink creatures count: cast precombat, they gain before a
+/// postcombat Infusion payoff checks the turn's total.
+fn cast_gains_life(state: &GameState, seat: usize, a: &GameAction) -> bool {
+    use crate::effect::{PlayerRef, Selector};
+    let GameAction::CastSpell { card_id, .. } = a else { return false };
+    let Some(c) = state.players[seat].hand.iter().find(|c| c.id == *card_id) else {
+        return false;
+    };
+    fn gains(e: &Effect) -> bool {
+        let hits_self = |s: &Selector| {
+            matches!(s, Selector::You | Selector::This)
+                || matches!(s, Selector::Player(PlayerRef::You))
+        };
+        match e {
+            Effect::GainLife { who, .. } => hits_self(who),
+            Effect::Drain { to, .. } => hits_self(to),
+            Effect::Seq(v) => v.iter().any(gains),
+            Effect::If { then, else_, .. } => gains(then) || gains(else_),
+            Effect::MayDo { body, .. } | Effect::ForEach { body, .. } => gains(body),
+            _ => false,
+        }
+    }
+    gains(&c.definition.effect)
+        || c.definition.keywords.contains(&crate::card::Keyword::Lifelink)
+}
+
+/// Best hostile creature the effect's primary slot accepts — the
+/// Repartee swap-in for an IS cast the auto-targeter aimed at a player.
+/// Highest board value first; `would_accept` re-checks full legality
+/// (hexproof, protection) at the probe site.
+fn best_hostile_creature_target(
+    state: &GameState,
+    seat: usize,
+    eff: &Effect,
+    w: &EvalWeights,
+) -> Option<Target> {
+    let filter = eff.primary_target_filter();
+    let mut foes: Vec<&crate::card::CardInstance> = state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+        .collect();
+    foes.sort_by_key(|c| std::cmp::Reverse(permanent_value(state, c.id, w)));
+    foes.into_iter().map(|c| Target::Permanent(c.id)).find(|t| match &filter {
+        Some(f) => state.evaluate_requirement_static(f, t, seat, None),
+        None => true,
+    })
 }
 
 /// True when the card with id `cid` in `seat`'s hand is an instant or
@@ -11231,6 +11623,195 @@ mod stack_response_tests {
         assert!(
             s_warded < s_plain,
             "identical bodies, one warded: {s_warded} !< {s_plain}"
+        );
+    }
+
+    /// SOS Repartee: with a payoff out that wants instants/sorceries to
+    /// target a creature, an "any target" burn spell gets a
+    /// creature-aimed sibling candidate, and the outcome eval takes the
+    /// creature kill over the face ping.
+    #[test]
+    fn repartee_offers_creature_target_for_any_target_burn() {
+        use crate::card::CardType;
+        use crate::effect::shortcut;
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.step = TurnStep::PostCombatMain;
+        let payoff = CardDefinition {
+            name: "Repartee Payoff",
+            card_types: vec![CardType::Creature],
+            power: 1,
+            toughness: 3,
+            triggered_abilities: vec![shortcut::repartee(Effect::Noop)],
+            ..Default::default()
+        };
+        g.add_card_to_battlefield(0, payoff);
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let shock = g.add_card_to_hand(0, catalog::shock());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 0;
+        let action = main_phase_action(&g, 0);
+        assert!(
+            matches!(
+                action,
+                GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                    if card_id == shock && t == bear
+            ),
+            "with a Repartee payoff out, Shock kills the bear instead of pinging face, \
+             got {action:?}"
+        );
+    }
+
+    /// The on-cast family detectors tell the SOS trigger shapes apart:
+    /// an Opus rider is not just magecraft, and an Infusion gate is
+    /// found on spell bodies and triggered riders alike.
+    #[test]
+    fn on_cast_family_detectors() {
+        use crate::effect::shortcut;
+        use crate::effect::{Predicate, Selector, Value};
+        let opus = shortcut::opus_trigger(Effect::Noop, Effect::Noop);
+        assert!(is_opus_trigger(&opus), "opus_trigger shape detected");
+        let mage = shortcut::magecraft(Effect::Noop);
+        assert!(!is_opus_trigger(&mage), "plain magecraft is not Opus");
+        assert!(is_repartee_trigger(&shortcut::repartee(Effect::Noop)));
+        assert!(!is_repartee_trigger(&mage), "plain magecraft is not Repartee");
+        let infusion = CardDefinition {
+            name: "Infusion Test",
+            effect: Effect::If {
+                cond: Predicate::LifeGainedThisTurnAtLeast {
+                    who: crate::effect::PlayerRef::You,
+                    at_least: Value::Const(1),
+                },
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+            ..Default::default()
+        };
+        assert!(card_infusion_gated(&infusion));
+        assert!(!card_infusion_gated(&catalog::shock()));
+    }
+
+    /// SOS Prepare — the inset spell is a one-shot resource on a fragile
+    /// body: with opponent removal on the stack aimed at the prepared
+    /// creature, the bot casts the inset instant in response instead of
+    /// letting the counter die with the body.
+    #[test]
+    fn prepare_inset_instant_fires_in_response_to_removal() {
+        use crate::card::CounterType;
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        let em = g.add_card_to_battlefield(0, catalog::emeritus_of_conflict());
+        g.battlefield.iter_mut().find(|c| c.id == em).unwrap()
+            .add_counters(CounterType::Prepared, 1);
+        g.players[0].mana_pool.add(Color::Red, 1);
+        // Opponent Doom Blades the prepared body, then passes priority.
+        let blade = g.add_card_to_hand(1, catalog::doom_blade());
+        g.players[1].mana_pool.add(Color::Black, 1);
+        g.players[1].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: blade,
+            target: Some(Target::Permanent(em)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("opponent casts removal");
+        while g.player_with_priority() != 0 {
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        let action = RandomBot::new().next_action(&g, 0).expect("bot holds priority");
+        assert!(
+            matches!(action, GameAction::CastPrepareSpell { creature_id, .. } if creature_id == em),
+            "inset Lightning Bolt fires before the body dies, got {action:?}"
+        );
+    }
+
+    /// The re-prepare mana sink: with spare mana and nothing better to do,
+    /// Skycoach Waypoint's `{3},{T}` re-arms an unprepared prepare-spell
+    /// creature.
+    #[test]
+    fn reprepare_sink_rearms_prepare_creature() {
+        let mut g = two_player_game();
+        g.step = TurnStep::PostCombatMain;
+        let em = g.add_card_to_battlefield(0, catalog::emeritus_of_conflict());
+        let waypoint = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
+        g.players[0].mana_pool.add_colorless(3);
+        g.priority.player_with_priority = 0;
+        let action = main_phase_action(&g, 0);
+        assert!(
+            matches!(
+                action,
+                GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. }
+                    if card_id == waypoint && t == em
+            ),
+            "spare mana re-arms the prepare creature, got {action:?}"
+        );
+    }
+
+    /// A Prepared counter on a prepare-spell body reads as material: the
+    /// same creature is worth more prepared than not, so removal aims at
+    /// it and the eval charges lines that waste the counter.
+    #[test]
+    fn prepared_counter_adds_permanent_value() {
+        use crate::card::CounterType;
+        let mut g = two_player_game();
+        let em = g.add_card_to_battlefield(0, catalog::emeritus_of_conflict());
+        let w = EvalWeights::default();
+        let unprepared = permanent_value(&g, em, &w);
+        g.battlefield.iter_mut().find(|c| c.id == em).unwrap()
+            .add_counters(CounterType::Prepared, 1);
+        let prepared = permanent_value(&g, em, &w);
+        assert!(
+            prepared > unprepared,
+            "prepared must out-value unprepared ({prepared} !> {unprepared})"
+        );
+    }
+
+    /// The Paradigm recurrence is a real choice under bot play: a free
+    /// Decorum Dissertation copy (draw 2, lose 2 — the loss rides the
+    /// auto-self-target) is taken at a healthy total and declined at a
+    /// low one, instead of the old unconditional engine-side yes that
+    /// drained the bot into the state-based loss two life at a time.
+    #[test]
+    fn paradigm_copy_declined_at_low_life() {
+        use crate::card::CardInstance;
+        use crate::decision::{Decision, DecisionAnswer};
+        use crate::game::TriggerPush;
+        let mut run_at = |life: i32| -> GameAction {
+            let mut g = two_player_game();
+            g.players[0].wants_ui = true;
+            g.players[0].life = life;
+            for _ in 0..4 {
+                g.add_card_to_library(0, catalog::forest());
+            }
+            let id = g.next_id();
+            g.exile.push(CardInstance::new(id, catalog::decorum_dissertation(), 0));
+            g.stack.push(TriggerPush::new(id, 0, Effect::CastFreeParadigmCopy).build());
+            let mut fuel = 20;
+            while g.pending_decision.is_none() && fuel > 0 {
+                g.perform_action(GameAction::PassPriority).unwrap();
+                fuel -= 1;
+            }
+            assert!(
+                matches!(
+                    g.pending_decision.as_ref().map(|p| &p.decision),
+                    Some(Decision::OptionalTrigger { .. })
+                ),
+                "paradigm copy must suspend as a real prompt, got {:?}",
+                g.pending_decision
+            );
+            RandomBot::new().next_action(&g, 0).expect("bot answers")
+        };
+        let at_low = run_at(4);
+        assert!(
+            matches!(at_low, GameAction::SubmitDecision(DecisionAnswer::Bool(false))),
+            "at 4 life the draw-2-lose-2 copy is declined, got {at_low:?}"
+        );
+        let at_healthy = run_at(20);
+        assert!(
+            matches!(at_healthy, GameAction::SubmitDecision(DecisionAnswer::Bool(true))),
+            "at 20 life the free copy is taken, got {at_healthy:?}"
         );
     }
 
