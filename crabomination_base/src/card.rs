@@ -374,6 +374,12 @@ pub enum CounterType {
     /// Fuse counter — Goblin Bomb's upkeep coin-flip tally; remove five to
     /// deal 20. Distinct from `Charge` so the two don't share a pool.
     Fuse,
+    /// Mine counter — Mine Layer's land trap; a mined land that taps is
+    /// destroyed.
+    Mine,
+    /// Delay counter — Delaying Shield banks damage dealt to its controller
+    /// here and cashes it in at upkeep.
+    Delay,
     Time,
     Poison,
     Lore,

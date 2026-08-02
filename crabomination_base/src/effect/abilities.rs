@@ -1900,6 +1900,16 @@ pub enum StaticEffect {
     /// at both the combat and noncombat self-damage sites; grows by the full
     /// amount rather than a single counter.
     ReplaceDamageToSelfWithCounters,
+    /// CR 614 — "If damage would be dealt to you, put that many `kind`
+    /// counters on this permanent instead" (Delaying Shield).
+    ReplaceDamageToYouWithCountersOnSource { kind: CounterType },
+    /// CR 614 — "If damage would be dealt to you, exile that many cards from
+    /// your graveyard instead. If you can't, you lose the game" (Nefarious
+    /// Lich).
+    ReplaceDamageToYouWithGraveyardExile,
+    /// CR 614 — "If you would gain life, draw that many cards instead"
+    /// (Nefarious Lich).
+    LifeGainBecomesDraw,
     /// CR 615 — "If damage would be dealt to this creature, prevent that
     /// damage, remove that many `counter` counters from it, and create that
     /// many `token` tokens." Sekki, Seasons' Guide. Consulted at both the

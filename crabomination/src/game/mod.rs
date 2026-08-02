@@ -2540,6 +2540,15 @@ impl GameState {
         if delta > 0 && self.life_gain_becomes_loss_now(seat) {
             return self.adjust_life(seat, -delta);
         }
+        // CR 614 — Nefarious Lich: "if you would gain life, draw that many
+        // cards instead." The gain never happens.
+        if delta > 0 && self.life_gain_becomes_draw_now(seat) {
+            let mut events = Vec::new();
+            for _ in 0..delta {
+                self.draw_one(seat, &mut events);
+            }
+            return self.effective_life(seat);
+        }
         if delta > 0 && self.player_cannot_gain_life_now(seat) {
             return self.effective_life(seat);
         }
@@ -5416,6 +5425,20 @@ impl GameState {
                     false
                 }
             })
+        })
+    }
+
+    /// CR 614 — Nefarious Lich: `seat`'s life gains become card draws.
+    pub fn life_gain_becomes_draw_now(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|src| {
+            src.controller == seat
+                && src.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, src),
+                        Some(StaticEffect::LifeGainBecomesDraw)
+                    )
+                })
         })
     }
 
@@ -17890,6 +17913,11 @@ fn static_effect_to_effects(
             // Catalyst Stone — read by `flashback_cost_shift` at cast time.
             | StaticEffect::FlashbackCostReduction { .. }
             | StaticEffect::OpponentFlashbackTax { .. }
+            // Delaying Shield / Nefarious Lich — CR 614 replacements read at
+            // damage/life-gain time; no layer effect.
+            | StaticEffect::ReplaceDamageToYouWithCountersOnSource { .. }
+            | StaticEffect::ReplaceDamageToYouWithGraveyardExile
+            | StaticEffect::LifeGainBecomesDraw
             | StaticEffect::MayReplaceDrawWithRevealUntilKind
             | StaticEffect::ControllerAssignsAttackersCombatDamage
             | StaticEffect::PlayersSkipDraws

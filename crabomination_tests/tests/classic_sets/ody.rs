@@ -4,6 +4,7 @@ use crabomination::card::{CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
 use crabomination::game::*;
+use crabomination::game::effects::EntityRef;
 use crabomination::mana::Color;
 
 fn mana(g: &mut GameState, seat: usize) {
@@ -1583,4 +1584,107 @@ fn graceful_antelope_has_plainswalk() {
             .keywords
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Plains))
     );
+}
+
+// ── Wave 11 ─────────────────────────────────────────────────────────────────
+
+/// Delaying Shield banks the damage as delay counters.
+#[test]
+fn delaying_shield_banks_damage_as_counters() {
+    let mut g = main_phase();
+    let shield = g.add_card_to_battlefield(0, catalog::delaying_shield());
+    let mut events = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 3, None, &mut events);
+    assert_eq!(g.players[0].life, 20, "no life was lost");
+    assert_eq!(g.battlefield_find(shield).unwrap().counter_count(CounterType::Delay), 3);
+}
+
+/// Nefarious Lich pays damage out of the graveyard and cashes life gain for
+/// cards.
+#[test]
+fn nefarious_lich_swaps_graveyard_for_life() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::nefarious_lich());
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    let mut events = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 3, None, &mut events);
+    assert_eq!(g.players[0].life, 20, "the graveyard soaked it");
+    assert_eq!(g.players[0].graveyard.len(), 1);
+
+    g.add_card_to_library(0, catalog::forest());
+    let before = g.players[0].hand.len();
+    g.adjust_life(0, 1);
+    assert_eq!(g.players[0].life, 20, "the gain became a draw");
+    assert_eq!(g.players[0].hand.len(), before + 1);
+}
+
+/// Nefarious Lich kills you when the graveyard runs dry.
+#[test]
+fn nefarious_lich_kills_you_when_the_graveyard_is_short() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::nefarious_lich());
+    let mut events = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 1, None, &mut events);
+    assert!(g.players[0].eliminated);
+}
+
+/// Mine Layer's counters blow up the land the moment it taps.
+#[test]
+fn mine_layer_destroys_a_mined_land_on_tap() {
+    let mut g = main_phase();
+    let layer = g.add_card_to_battlefield(0, catalog::mine_layer());
+    g.battlefield_find_mut(layer).unwrap().summoning_sick = false;
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    activate(&mut g, 0, layer, 0, Some(Target::Permanent(land)));
+    assert_eq!(g.battlefield_find(land).unwrap().counter_count(CounterType::Mine), 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "the mine went off");
+}
+
+/// Traveling Plague shrinks its host by one more each upkeep.
+#[test]
+fn traveling_plague_grows_each_upkeep() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let plague = g.add_card_to_hand(0, catalog::traveling_plague());
+    cast(&mut g, 0, plague, Some(Target::Permanent(bear)));
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "one plague counter");
+}
+
+/// Steam Vines blows up the land it sits on when it taps.
+#[test]
+fn steam_vines_destroys_the_land_it_taps() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let vines = g.add_card_to_hand(0, catalog::steam_vines());
+    cast(&mut g, 0, vines, Some(Target::Permanent(land)));
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "the land burned");
+    assert_eq!(g.players[1].life, 19);
 }

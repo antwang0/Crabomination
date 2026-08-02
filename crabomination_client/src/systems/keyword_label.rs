@@ -284,6 +284,8 @@ fn ward_suffix(cost: &WardCost) -> String {
         DiscardHand => "hand↓".into(),
         Blight(n) => format!("{n}☠"),
         CollectEvidence(n) => format!("ev{n}"),
+        ExileFromGraveyard(n) => format!("{n}gy⌫"),
+        DamageFromSource(n) => format!("{n}🗲"),
         SacrificeCreature | SacrificeMatching(_) => "sac".into(),
         SacrificePermanents(n) => format!("sac{n}"),
         RemoveCounterFromPermanent => "ctr-".into(),

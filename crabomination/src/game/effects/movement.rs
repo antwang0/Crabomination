@@ -960,6 +960,56 @@ impl GameState {
                     }
                     return;
                 }
+                // CR 614 — Delaying Shield: damage to its controller becomes
+                // delay counters on the enchantment instead.
+                if let Some(shield) = self.battlefield.iter().find_map(|c| {
+                    (c.controller == p).then(|| {
+                        c.definition.static_abilities.iter().find_map(|sa| {
+                            match &sa.effect {
+                                crate::effect::StaticEffect::
+                                    ReplaceDamageToYouWithCountersOnSource { kind } =>
+                                    Some((c.id, *kind)),
+                                _ => None,
+                            }
+                        })
+                    }).flatten()
+                }) {
+                    let (cid, kind) = shield;
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.add_counters(kind, amount);
+                    }
+                    events.push(GameEvent::CounterAdded {
+                        card_id: cid,
+                        counter_type: kind,
+                        count: amount,
+                    });
+                    return;
+                }
+                // CR 614 — Nefarious Lich: damage to its controller exiles
+                // that many graveyard cards instead; failing that, they lose.
+                if self.battlefield.iter().any(|c| {
+                    c.controller == p
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::
+                                    ReplaceDamageToYouWithGraveyardExile
+                            )
+                        })
+                }) {
+                    if (self.players[p].graveyard.len() as u32) < amount {
+                        self.players[p].eliminated = true;
+                    } else {
+                        for _ in 0..amount {
+                            let Some(card) = self.players[p].graveyard.pop() else { break };
+                            let cid = card.id;
+                            self.exile.push(card);
+                            events.push(GameEvent::PermanentExiled { card_id: cid });
+                            self.note_left_graveyard(p, cid, events);
+                        }
+                    }
+                    return;
+                }
                 // Phyrexian Unlife — at ≤ 0 life all damage lands as poison.
                 let unlife_infect = self.players[p].life <= 0 && self.player_unlife_active(p);
                 if source_has_infect || unlife_infect {
