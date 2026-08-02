@@ -1216,10 +1216,6 @@ pub struct KnownCard {
     /// to arm the targeting cursor before submitting `CastOmen`.
     #[serde(default)]
     pub omen_needs_target: bool,
-    /// CR 721 — for a Station card on the battlefield, the next `{N+}` charge
-    /// threshold it hasn't yet reached (so the client can show "Station → N"
-    /// progress next to its charge counters). `None` for non-station cards or
-    /// once every band is active. Pair with the `Charge` entry in `counters`.
     /// CR 702.172 Spree / FIN Tiered — one "[cost] — [effect]" label per
     /// additional mode; empty for non-Spree cards. Feeds the client's
     /// mode-pick modal on a `CastSpellSpree` cast.
@@ -1229,6 +1225,10 @@ pub struct KnownCard {
     /// checkboxes).
     #[serde(default)]
     pub spree_single_mode: bool,
+    /// CR 721 — for a Station card on the battlefield, the next `{N+}` charge
+    /// threshold it hasn't yet reached (so the client can show "Station → N"
+    /// progress next to its charge counters). `None` for non-station cards or
+    /// once every band is active. Pair with the `Charge` entry in `counters`.
     #[serde(default)]
     pub station_next_threshold: Option<u32>,
     /// CR 721 — current charge-counter count on this Station card (mirror of
@@ -1236,6 +1236,12 @@ pub struct KnownCard {
     /// `None` for non-station cards.
     #[serde(default)]
     pub station_charges: Option<u32>,
+    /// CR 902.5 — abilities this card can be activated for *from the zone it
+    /// is in*: a Vanguard avatar's command-zone abilities. Empty for every
+    /// other card, so a client that sees entries here knows to submit
+    /// `ActivateAbility` rather than a cast.
+    #[serde(default)]
+    pub zone_abilities: Vec<AbilityView>,
 }
 
 /// One activated ability as projected for the client.

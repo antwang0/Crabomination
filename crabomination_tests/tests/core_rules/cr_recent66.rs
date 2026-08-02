@@ -173,3 +173,19 @@ fn cr_902_5_chronatog_avatar_lifts_the_cap_and_limits_itself() {
         "only once each turn"
     );
 }
+
+/// The server view carries a Vanguard's command-zone abilities so the client
+/// activates the avatar where it lives instead of trying to cast it.
+#[test]
+fn view_projects_vanguard_command_zone_abilities() {
+    let mut g = main_phase();
+    g.seat_vanguard(0, catalog::ashling_the_pilgrim_avatar());
+    g.seat_commanders(0, vec![catalog::grizzly_bears()]);
+    let view = crabomination::server::view::project(&g, 0);
+    let mut seen = view.players[0].command.iter().map(|c| match c {
+        crabomination::net::HandCardView::Known(k) => (k.name.clone(), k.zone_abilities.len()),
+        crabomination::net::HandCardView::Hidden { .. } => (String::new(), 0),
+    });
+    assert_eq!(seen.next(), Some(("Ashling the Pilgrim Avatar".into(), 1)));
+    assert_eq!(seen.next(), Some(("Grizzly Bears".into(), 0)), "only avatars get zone abilities");
+}

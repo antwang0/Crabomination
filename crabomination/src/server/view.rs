@@ -929,7 +929,20 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
     let alt_cost = state
         .and_then(|st| st.effective_alternative_cost(card.owner, card.id))
         .or_else(|| card.definition.alternative_cost.clone());
+    // CR 902.5 — a Vanguard's command-zone abilities travel with the card
+    // view so the client can activate them where they live.
+    let zone_abilities: Vec<AbilityView> = if card.definition.is_vanguard() {
+        project_abilities(card).into_iter().filter(|a| {
+            card.definition
+                .activated_abilities
+                .get(a.index)
+                .is_some_and(|ab| ab.from_command_zone)
+        }).collect()
+    } else {
+        Vec::new()
+    };
     KnownCard {
+        zone_abilities,
         id: card.id,
         name: card.definition.name.to_string(),
         cost: card.definition.cost.clone(),

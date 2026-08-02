@@ -4897,8 +4897,8 @@ impl GameState {
         // Shaman's Trance — while one seat has pooled every graveyard, no
         // other player may play from a graveyard this turn.
         (matches!(zone, Zone::Graveyard)
-            && self.graveyard_play_pooled_for.is_some_and(|only| only != caster))
-            || (matches!(zone, Zone::Graveyard) && self.graveyard_locked())
+            && (self.graveyard_locked()
+                || self.graveyard_play_pooled_for.is_some_and(|only| only != caster)))
             || (matches!(zone, Zone::Library) && self.graveyard_library_locked())
             || (!def.is_creature()
                 && matches!(zone, Zone::Graveyard | Zone::Exile)

@@ -20223,7 +20223,7 @@ impl GameState {
 
             Effect::LoseAllButLifeRemembered { who, keep } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
-                let keep = self.evaluate_value(keep, ctx).max(0) as i32;
+                let keep = self.evaluate_value(keep, ctx).max(0);
                 let lost = self.players[p].life - keep;
                 if lost > 0 {
                     let applied = self.adjust_life_applied(p, -lost);

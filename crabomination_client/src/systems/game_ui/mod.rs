@@ -4362,7 +4362,26 @@ pub fn handle_game_input(
             })
         {
             {
-                if card.needs_target {
+                // CR 902.5 — a Vanguard avatar is never cast; clicking it
+                // activates its first command-zone ability instead.
+                if let Some(ability) = card.zone_abilities.first() {
+                    if ability.needs_target {
+                        targeting.active = true;
+                        targeting.pending_ability_source = Some(card.id);
+                        targeting.pending_ability_index = Some(ability.index);
+                        targeting.pending_ability_mode = None;
+                        targeting.back_face_pending = false;
+                    } else {
+                        outbox.submit(GameAction::ActivateAbility {
+                            card_id: card.id,
+                            ability_index: ability.index,
+                            target: None,
+                            additional_targets: vec![],
+                            mode: None,
+                            x_value: None,
+                        });
+                    }
+                } else if card.needs_target {
                     // Reuse the targeting modal — when the user picks a
                     // target it submits CastSpell today. We mark the
                     // pending cast as command-zone-sourced via a new
