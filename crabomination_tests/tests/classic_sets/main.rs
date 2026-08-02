@@ -47,6 +47,7 @@ mod nms3;
 mod nms4;
 mod inv_gaps;
 mod inv_gaps2;
+mod inv_gaps3;
 mod pls;
 mod pls2;
 mod pcy;

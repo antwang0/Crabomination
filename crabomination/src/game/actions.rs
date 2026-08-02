@@ -116,6 +116,12 @@ fn drainable_counters(c: &CardInstance, kinds: Option<&[crate::card::CounterType
 
 /// Returns true if the given effect is purely a mana ability — only adds
 /// mana and uses no targets. Mana abilities resolve immediately without the stack.
+/// Public wrapper for `is_mana_ability` — read by `SelectionRequirement::
+/// HasNonManaActivatedAbility` (Tsabo's Web).
+pub fn is_mana_ability_public(effect: &Effect) -> bool {
+    is_mana_ability(effect)
+}
+
 fn is_mana_ability(effect: &Effect) -> bool {
     // CR 605.1a — a mana ability could add mana, isn't a loyalty ability,
     // doesn't target, and doesn't have an illegal trigger. It may still carry

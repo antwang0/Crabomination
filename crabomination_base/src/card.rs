@@ -1944,6 +1944,12 @@ pub enum SelectionRequirement {
     /// ("Whenever you cast a multicolored spell, …") and similar
     /// "multicolored spell"/permanent payoffs.
     Multicolored,
+    /// A land whose activated abilities include at least one that isn't a mana
+    /// ability (CR 605.1a) — Tsabo's Web's untap lock.
+    HasNonManaActivatedAbility,
+    /// Another permanent on the battlefield shares this permanent's name
+    /// (Winnow). Never matches when the object is the only copy out.
+    SharesNameWithAnotherPermanent,
     /// Shares a colour with the most common colour among all permanents, or a
     /// colour tied for most common (Barrin's Unmaking, Tsabo's Assassin).
     /// Never matches a colourless object.

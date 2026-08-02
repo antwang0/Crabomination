@@ -3019,6 +3019,15 @@ impl GameState {
                         let top = self.most_common_permanent_colors();
                         card.definition.printed_colors().iter().any(|k| top.contains(k))
                     }
+                    R::HasNonManaActivatedAbility => card
+                        .definition
+                        .activated_abilities
+                        .iter()
+                        .any(|a| !crate::game::actions::is_mana_ability_public(&a.effect)),
+                    R::SharesNameWithAnotherPermanent => self
+                        .battlefield
+                        .iter()
+                        .any(|c| c.id != card.id && c.definition.name == card.definition.name),
                     // CR 702.114 — Devoid CDA: colorless despite colored pips.
                     R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
                         || card.definition.cost.distinct_colors() == 0,
@@ -3525,6 +3534,15 @@ impl GameState {
                 let top = self.most_common_permanent_colors();
                 card.definition.printed_colors().iter().any(|k| top.contains(k))
             }
+            R::HasNonManaActivatedAbility => card
+                .definition
+                .activated_abilities
+                .iter()
+                .any(|a| !crate::game::actions::is_mana_ability_public(&a.effect)),
+            R::SharesNameWithAnotherPermanent => self
+                .battlefield
+                .iter()
+                .any(|c| c.id != card.id && c.definition.name == card.definition.name),
             // CR 702.114 — Devoid CDA: colorless despite colored pips.
             R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
                 || card.definition.cost.distinct_colors() == 0,
