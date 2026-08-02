@@ -150,6 +150,20 @@ pub(crate) fn event_matches_spec(
         return false;
     }
 
+    // "Whenever a [filter] deals damage …" — the damage events bind the
+    // damaged object to `TriggerSource`, so the dealer is gated here.
+    if let Some(dealer) = &spec.dealer_filter {
+        let GameEvent::DamageDealt { from_card: Some(from), .. } = event else { return false };
+        if !state.evaluate_requirement_static(
+            dealer,
+            &crate::game::types::Target::Permanent(*from),
+            source.controller,
+            Some(source.id),
+        ) {
+            return false;
+        }
+    }
+
     // "…becomes tapped, if it isn't being declared as an attacker" (Verity
     // Circle) — exclude the CR 508.1f attacker tap.
     if spec.exclude_attacker_taps

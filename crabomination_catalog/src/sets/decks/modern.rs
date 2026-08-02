@@ -18538,6 +18538,7 @@ pub fn helix_pinnacle() -> CardDefinition {
                 per_subject_cap: None,
                 actor_is_opponent: false,
                 exclude_attacker_taps: false,
+                dealer_filter: None,
             },
             effect: Effect::WinGame {
                 who: PlayerRef::You,
@@ -54531,6 +54532,7 @@ pub fn the_ozolith() -> CardDefinition {
                 per_subject_cap: None,
                 actor_is_opponent: false,
                 exclude_attacker_taps: false,
+                dealer_filter: None,
             },
             effect: Effect::MoveAllCounters {
                 from: Selector::This,
@@ -54567,6 +54569,7 @@ pub fn nadu_winged_wisdom() -> CardDefinition {
                 per_subject_cap: Some(2),
                 actor_is_opponent: false,
                 exclude_attacker_taps: false,
+                dealer_filter: None,
             },
             effect: Effect::RevealTopLandToBattlefieldElseHand {
                 who: PlayerRef::You,

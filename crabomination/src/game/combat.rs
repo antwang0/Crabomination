@@ -3875,6 +3875,36 @@ impl GameState {
             }
         }
 
+        // Phase 1.6: `AnyPlayer`-scope listeners on *other* permanents —
+        // "whenever a Goblin deals combat damage to a player" (Cabal Slaver),
+        // which cares about the dealer's characteristics rather than its
+        // controller. `EventSpec.dealer_filter` gates on the dealing creature;
+        // the dealer's own `AnyPlayer` trigger already fired in Phase 1.
+        {
+            let kind_ref = &kind;
+            let dealer_ok: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.id != source)
+                .flat_map(|c| {
+                    c.definition.triggered_abilities.iter().filter_map(move |t| {
+                        (t.event.kind == *kind_ref
+                            && matches!(t.event.scope, crate::effect::EventScope::AnyPlayer))
+                        .then_some((c.id, c.controller, t))
+                    })
+                })
+                .filter(|(_, ctrl, t)| {
+                    t.event.dealer_filter.as_ref().is_none_or(|f| {
+                        self.evaluate_requirement_static(f, &Target::Permanent(source), *ctrl, None)
+                    })
+                })
+                .map(|(id, ctrl, t)| (id, t.effect.clone(), ctrl, t.event.filter.clone()))
+                .collect();
+            for (id, effect, ctrl, filter) in dealer_ok {
+                triggers.push((id, effect, ctrl, filter, true));
+            }
+        }
+
         // Phase 2: walk every player's graveyard for `FromYourGraveyard`
         // triggers. Only fire if the attacker is controlled by the gy
         // owner (the printed "creatures you control" filter on the

@@ -28026,7 +28026,18 @@ impl GameState {
                 // Substitute the resolving ability's X into the filter so
                 // `ManaValueExactlyXFromCost`-style atoms concretize (Sorin's
                 // −X "creature card with mana value X").
-                let filter = &filter.resolve_x(ctx.x_value);
+                // Also concretize the source's stamped creature-type choice —
+                // the hidden-zone evaluator below carries no source context
+                // ("creature cards of the creature type of your choice from
+                // your graveyard" — Aphetto Dredging).
+                let chosen = ctx
+                    .source
+                    .and_then(|s| self.find_card_anywhere(s))
+                    .and_then(|c| c.chosen_creature_type)
+                    // A resolving instant/sorcery is already off the stack, so
+                    // its pick lives in the resolution scratch instead.
+                    .or(self.chosen_creature_type_scratch);
+                let filter = &filter.resolve_x(ctx.x_value).resolve_chosen_creature_type(chosen);
                 let players = self.resolve_players(who, ctx);
                 let mut out: Vec<EntityRef> = Vec::new();
                 for p in players {

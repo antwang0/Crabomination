@@ -2219,13 +2219,6 @@ impl SelectionRequirement {
         }
     }
 
-    /// Replace X-dependent atoms with concrete values
-    /// (`ManaValueAtMostXFromCost` → `ManaValueAtMost(x)`), recursing
-    /// through And/Or/Not. Called by `Effect::Search` with the resolving
-    /// spell's paid X (Chord of Calling, CR 601.2b).
-    /// Concretize `IsSourceChosenCreatureType` against the source's stamped
-    /// choice (`HasCreatureType(ct)`, or "matches nothing" when unchosen),
-    /// recursing through And/Or/Not. Belbe's Portal.
     /// Concretize `SameNameAsTarget` against the effect's target name
     /// (`HasName`, or "matches nothing" with no target), recursing through
     /// And/Or/Not. Pack Hunt.
@@ -2247,6 +2240,9 @@ impl SelectionRequirement {
         }
     }
 
+    /// Concretize `IsSourceChosenCreatureType` against the source's stamped
+    /// choice (`HasCreatureType(ct)`, or "matches nothing" when unchosen),
+    /// recursing through And/Or/Not. Belbe's Portal.
     pub fn resolve_chosen_creature_type(&self, chosen: Option<CreatureType>) -> Self {
         match self {
             Self::IsSourceChosenCreatureType => match chosen {
@@ -2266,6 +2262,10 @@ impl SelectionRequirement {
         }
     }
 
+    /// Replace X-dependent atoms with concrete values
+    /// (`ManaValueAtMostXFromCost` → `ManaValueAtMost(x)`), recursing
+    /// through And/Or/Not. Called by `Effect::Search` with the resolving
+    /// spell's paid X (Chord of Calling, CR 601.2b).
     pub fn resolve_x(&self, x: u32) -> Self {
         match self {
             Self::ManaValueAtMostXFromCost => Self::ManaValueAtMost(x),

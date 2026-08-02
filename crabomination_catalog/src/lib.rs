@@ -146,6 +146,7 @@ pub use sets::sos::*;
 pub use sets::stx::*;
 pub use sets::thb::*;
 pub use sets::jud2::*;
+pub use sets::ons::*;
 pub use sets::vanguard::*;
 pub use sets::jud::*;
 pub use sets::tor::*;

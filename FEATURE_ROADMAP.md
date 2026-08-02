@@ -2359,8 +2359,9 @@ Each a small targeted feature; sweep batch by batch.
 ## Suggested sequencing
 
 0. **Next set to close.** The whole Odyssey block is done — Odyssey, Torment
-   and **Judgment** are all at zero (`set_gaps.py ody` / `tor` / `jud`). Pick
-   the next block (Onslaught is the natural follow-on).
+   and **Judgment** are all at zero (`set_gaps.py ody` / `tor` / `jud`).
+   **Onslaught** (`sets::ons`) is open at 219 gaps after one wave of 47; the
+   remaining bulk is Morph and the tribal commons. Then Legions / Scourge.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2374,6 +2375,16 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Onslaught (ONS) opened** — `set_gaps.py ons` 266 → 219 (`sets::ons`, 47
+  cards; tests in `classic_sets/ons`). New: `EventSpec.dealer_filter`
+  ("whenever a *Goblin* deals combat damage to a player" — the damage events
+  bind the damaged player to `TriggerSource`, so the dealer needed its own
+  gate) plus an `AnyPlayer`-scope combat-damage listener walk over *other*
+  permanents, which previously only ran for `YourControl`. `Selector::CardsInZone`
+  now concretizes the source's stamped creature-type choice (and the resolving
+  spell's `chosen_creature_type_scratch`), so "creature cards of the creature
+  type of your choice from your graveyard" works from a hidden zone.
 
 - **Judgment (JUD) complete** — `set_gaps.py jud` at zero (`sets::jud` +
   `sets::jud2`, 121 cards; tests in `classic_sets/jud`). The closing wave

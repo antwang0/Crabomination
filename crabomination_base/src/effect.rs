@@ -2687,6 +2687,12 @@ pub struct EventSpec {
     /// Circle). Defaults to false. Only meaningful for `Tapped`.
     #[serde(default)]
     pub exclude_attacker_taps: bool,
+    /// Restricts a damage event by the object that *dealt* it — "whenever a
+    /// Goblin deals combat damage to a player" (Cabal Slaver). `Selector::
+    /// TriggerSource` binds the damaged player on those events, so the dealer
+    /// can't be reached through `filter`. Only meaningful for damage kinds.
+    #[serde(default)]
+    pub dealer_filter: Option<crate::card::SelectionRequirement>,
 }
 
 impl EventSpec {
@@ -2699,6 +2705,7 @@ impl EventSpec {
             per_subject_cap: None,
             actor_is_opponent: false,
             exclude_attacker_taps: false,
+            dealer_filter: None,
         }
     }
     /// "…becomes tapped, if it isn't being declared as an attacker" (Verity Circle).
@@ -2708,6 +2715,11 @@ impl EventSpec {
     }
     pub fn with_filter(mut self, p: Predicate) -> Self {
         self.filter = Some(p);
+        self
+    }
+    /// "Whenever a [filter] deals damage …" — gate on the damage's dealer.
+    pub fn dealt_by(mut self, f: crate::card::SelectionRequirement) -> Self {
+        self.dealer_filter = Some(f);
         self
     }
     /// Require the triggering event's actor to be an opponent.
