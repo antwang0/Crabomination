@@ -1443,6 +1443,9 @@ fn project_permanent(
                 W::Blight(n) => format!("Ward—Blight {n}"),
                 W::CollectEvidence(n) => format!("Ward—Collect evidence {n}"),
                 W::ExileFromGraveyard(n) => format!("Ward—exile {n} card(s) from your graveyard"),
+                W::BottomFromGraveyard(n) => {
+                    format!("Ward—bottom {n} card(s) from your graveyard")
+                }
                 W::DamageFromSource(n) => format!("Ward—take {n} damage"),
                 W::SacrificeCreature => "Ward—sacrifice a creature".to_string(),
                 W::SacrificeMatching(_) => "Ward—sacrifice a matching permanent".to_string(),

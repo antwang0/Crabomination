@@ -646,6 +646,10 @@ pub enum WardCost {
     /// Unpayable when the graveyard holds fewer than N cards; auto-pay takes
     /// the cheapest.
     ExileFromGraveyard(u32),
+    /// "…unless you put N cards from your graveyard on the bottom of your
+    /// library" (Anurid Scavenger). Unpayable when the graveyard is too small;
+    /// auto-pay bottoms the cheapest.
+    BottomFromGraveyard(u32),
     /// "…unless [player] has [this source] deal N damage to them" — the
     /// Odyssey pay-in-damage menu (Blazing Salvo, Lava Blister, Molten
     /// Influence). Always payable; the damage comes from the effect's source.
@@ -2916,6 +2920,11 @@ pub struct CardDefinition {
     /// Defaults to empty via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub additional_cast_cost: Vec<AdditionalCastCost>,
+    /// CR 702.34a — additional cost(s) that apply only on the **flashback**
+    /// cast ("Flashback—{1}{B}, Pay 3 life"; "Flashback—Sacrifice a Mountain").
+    /// Paid on top of the flashback mana cost by `cast_flashback`.
+    #[serde(default)]
+    pub flashback_additional_cost: Vec<AdditionalCastCost>,
     /// CR 702.41 — a non-mana Entwine cost ("Entwine—Sacrifice two lands" —
     /// Solar Tide, Betrayal of Flesh). Paid as an additional cost of an
     /// entwined cast, alongside (or instead of) `Keyword::Entwine`'s mana.
@@ -3387,6 +3396,9 @@ pub enum AdditionalCastCost {
     /// (Acceptable Losses). The caster gets no pick, so the cost never
     /// suspends.
     DiscardRandom { count: u32 },
+    /// "Discard X cards", where X is the cast's chosen X (Conflagrate's
+    /// flashback). Concretized to a `Discard` of that count at cast time.
+    DiscardXFromCost,
     /// "As an additional cost to cast this spell, return N permanent(s) you
     /// control matching `filter` to their owner's hand." Devour in Flames
     /// ("return a land you control"). Auto-picker bounces the lowest-impact
@@ -4581,6 +4593,8 @@ pub enum ExileReturnZone {
     /// Illusion token, X = the exiled card's mana value (Skyclave
     /// Apparition).
     IllusionToken,
+    /// Return to its owner's graveyard (Gravegouger).
+    Graveyard,
 }
 
 /// Records that a card sits in exile because of another permanent's

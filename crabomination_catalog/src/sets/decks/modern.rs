@@ -259,12 +259,15 @@ pub fn lava_spike() -> CardDefinition {
 }
 
 /// Lava Dart — {R} Sorcery. Deals 1 damage to any target. Flashback—Sacrifice
-/// a Mountain (the `{0}` flashback mana cost plus the name-keyed
-/// `flashback_additional_cost_for_name` sacrifice).
+/// a Mountain (a `{0}` flashback mana cost plus the sacrifice rider).
 pub fn lava_dart() -> CardDefinition {
     let flashback_cost = ManaCost { symbols: vec![] };
     CardDefinition {
         name: "Lava Dart",
+        flashback_additional_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Land.and(SelectionRequirement::HasLandType(LandType::Mountain)),
+            count: 1,
+        }],
         cost: cost(&[r()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(flashback_cost)],

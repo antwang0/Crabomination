@@ -291,3 +291,148 @@ fn chainer_exiles_his_nightmares_when_he_dies() {
     assert!(g.battlefield_find(corpse).is_none(), "the Nightmare was exiled");
     assert!(g.exile.iter().any(|c| c.id == corpse));
 }
+
+/// Anurid Scavenger bottoms a graveyard card each upkeep, and dies without one.
+#[test]
+fn anurid_scavenger_eats_its_graveyard() {
+    let mut g = main_phase();
+    let frog = g.add_card_to_battlefield(0, catalog::anurid_scavenger());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(frog).is_some(), "paid with the graveyard card");
+    assert!(g.players[0].graveyard.is_empty(), "the card went to the library bottom");
+}
+
+/// Crazed Firecat grows by however many flips it won.
+#[test]
+fn crazed_firecat_counts_its_flips() {
+    let mut g = main_phase();
+    let cat = g.add_card_to_battlefield(0, catalog::crazed_firecat());
+    g.fire_self_etb_triggers(cat, 0);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(cat).unwrap();
+    let counters = g.battlefield_find(cat).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(cp.power, 4 + counters as i32, "power tracks the won flips");
+}
+
+/// Faceless Butcher jails a creature and gives it back when he leaves.
+#[test]
+fn faceless_butcher_jails_and_releases() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let butcher = g.add_card_to_battlefield(0, catalog::faceless_butcher());
+    g.fire_self_etb_triggers(butcher, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "jailed");
+    let mut events = Vec::new();
+    g.destroy_permanent(butcher, false, &mut events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_some(), "released");
+}
+
+/// Gravegouger holds graveyard cards hostage and returns them to the graveyard.
+#[test]
+fn gravegouger_holds_graveyard_cards() {
+    let mut g = main_phase();
+    let a = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let gouger = g.add_card_to_battlefield(0, catalog::gravegouger());
+    g.fire_self_etb_triggers(gouger, 0);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == a), "exiled from the graveyard: {:?}", g.exile.len());
+    let mut events = Vec::new();
+    g.destroy_permanent(gouger, false, &mut events);
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == a), "back in the graveyard");
+}
+
+/// Far Wanderings fetches one basic, or three past Threshold.
+#[test]
+fn far_wanderings_scales_with_threshold() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let picks: Vec<CardId> = (0..4).map(|_| g.add_card_to_library(0, catalog::forest())).collect();
+    fill_graveyard(&mut g, 0);
+    let spell = g.add_card_to_hand(0, catalog::far_wanderings());
+    let lands = g.battlefield.iter().filter(|c| c.definition.is_land()).count();
+    g.decider = Box::new(ScriptedDecider::new(
+        picks.iter().map(|id| DecisionAnswer::Search(Some(*id))).collect::<Vec<_>>(),
+    ));
+    cast(&mut g, 0, spell, None);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.is_land()).count(),
+        lands + 3,
+        "Threshold fetched three"
+    );
+}
+
+/// Flash of Defiance stops green and white blockers for the turn.
+#[test]
+fn flash_of_defiance_stops_green_blockers() {
+    let mut g = main_phase();
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::flash_of_defiance());
+    cast(&mut g, 0, spell, None);
+    assert!(
+        g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::CantBlock),
+        "the green bear can't block"
+    );
+}
+
+/// Hydromorph Guardian counters a spell aimed at your own creature.
+#[test]
+fn hydromorph_guardian_counters_targeted_removal() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let guardian = g.add_card_to_battlefield(0, catalog::hydromorph_guardian());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Bolt");
+    activate(&mut g, 0, guardian, 0, Some(Target::Permanent(bolt)));
+    assert!(g.battlefield_find(mine).is_some(), "the Bolt was countered");
+}
+
+/// Crippling Fatigue shrinks a creature, and flashes back for 3 life.
+#[test]
+fn crippling_fatigue_flashback_costs_life() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_graveyard(0, catalog::crippling_fatigue());
+    mana(&mut g, 0);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("flash back Crippling Fatigue");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the 2/2 died to -2/-2");
+    assert_eq!(g.players[0].life, life - 3, "paid the flashback life");
+}
+
+/// Ghostly Wings buys back its host for a card.
+#[test]
+fn ghostly_wings_bounces_its_host() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wings = g.add_card_to_battlefield(0, catalog::ghostly_wings());
+    g.battlefield.iter_mut().find(|c| c.id == wings).unwrap().attached_to = Some(bear);
+    g.add_card_to_hand(0, catalog::forest());
+    activate(&mut g, 0, wings, 0, None);
+    assert!(g.battlefield_find(bear).is_none(), "the host was bounced");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+}

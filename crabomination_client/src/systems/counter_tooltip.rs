@@ -1034,6 +1034,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
             crabomination::card::WardCost::CollectEvidence(n) => {
                 format!("Ward—Collect evidence {n}")
             }
+            crabomination::card::WardCost::BottomFromGraveyard(n) => {
+                format!("Ward — bottom {n} card(s) from your graveyard")
+            }
             crabomination::card::WardCost::ExileFromGraveyard(n) => {
                 format!("Ward—Exile {n} cards from your graveyard")
             }

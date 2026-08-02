@@ -522,11 +522,14 @@ pub fn mind_sculpt() -> CardDefinition {
 }
 
 /// Cabal Therapy — {B} Sorcery. Choose a nonland card name; target player
-/// discards every copy from their hand. Flashback — sacrifice a creature
-/// (`flashback_additional_cost_for_name`).
+/// discards every copy from their hand. Flashback — sacrifice a creature.
 pub fn cabal_therapy() -> CardDefinition {
     CardDefinition {
         name: "Cabal Therapy",
+        flashback_additional_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            count: 1,
+        }],
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(ManaCost::default())],
@@ -567,6 +570,10 @@ pub fn wear_down() -> CardDefinition {
 pub fn dread_return() -> CardDefinition {
     CardDefinition {
         name: "Dread Return",
+        flashback_additional_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            count: 3,
+        }],
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(crate::mana::ManaCost::default())],
@@ -1370,10 +1377,11 @@ pub fn jeskas_will() -> CardDefinition {
 
 /// Conflagrate — {X}{R} Sorcery. Deals X damage divided as you choose among
 /// any number of targets. Flashback—{R}{R}, Discard X cards
-/// (`flashback_additional_cost_for_name` supplies the variable discard).
+/// (`AdditionalCastCost::DiscardXFromCost` supplies the variable discard).
 pub fn conflagrate() -> CardDefinition {
     CardDefinition {
         name: "Conflagrate",
+        flashback_additional_cost: vec![crate::card::AdditionalCastCost::DiscardXFromCost],
         cost: cost(&[x(), x(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamageDivided {

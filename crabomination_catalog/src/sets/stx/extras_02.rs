@@ -400,6 +400,10 @@ pub fn inspired_idea() -> CardDefinition {
 pub fn resurgent_belief() -> CardDefinition {
     CardDefinition {
         name: "Resurgent Belief",
+        flashback_additional_cost: vec![AdditionalCastCost::ExileFromGraveyard {
+            filter: SelectionRequirement::Any,
+            count: 1,
+        }],
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(4), w()]))],
@@ -1440,10 +1444,11 @@ pub fn brawn() -> CardDefinition {
 /// Wired as `Seq(Draw 2, LoseLife 2)` against the targeted player
 /// (collapsed to `PlayerRef::Target(0)`). Flashback {1}{U} via
 /// `Keyword::Flashback`; the "Pay 3 life" flashback rider is applied via
-/// `flashback_additional_cost_for_name` (`AdditionalCastCost::PayLife`).
+/// `flashback_additional_cost` (`AdditionalCastCost::PayLife`).
 pub fn deep_analysis() -> CardDefinition {
     CardDefinition {
         name: "Deep Analysis",
+        flashback_additional_cost: vec![AdditionalCastCost::PayLife { amount: 3 }],
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(1), u()]))],

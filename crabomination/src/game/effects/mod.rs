@@ -2276,6 +2276,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::FlipUntilLoss { per_win } => {
+                // CR 705.1 — flip until a loss, then run the payoff once per win.
+                let mut wins = 0u32;
+                while self.flip_one_coin(ctx.controller) {
+                    events.push(GameEvent::CoinFlipWon { player: ctx.controller });
+                    wins += 1;
+                    // Backstop against a rigged/replaying decider.
+                    if wins >= 64 {
+                        break;
+                    }
+                }
+                events.push(GameEvent::CoinFlipLost { player: ctx.controller });
+                for _ in 0..wins {
+                    self.run_effect(per_win, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::FlipUntilLossThenTokenCopies { what } => {
                 // Mirror March — CR 705.1: flip until a loss, then mint one
                 // hasty token copy per win, exiled at the next end step.
@@ -9257,12 +9275,15 @@ impl GameState {
                 };
                 for ent in self.resolve_selector(what, ctx) {
                     let cid = match ent {
-                        EntityRef::Permanent(cid) => {
+                        // A chosen `Target` always resolves as `Permanent`, so
+                        // route by where the card actually is — the pick may be
+                        // a graveyard card (Gravegouger).
+                        EntityRef::Permanent(cid) if self.battlefield_find(cid).is_some() => {
                             self.remove_from_battlefield_to_exile(cid);
                             events.push(GameEvent::PermanentExiled { card_id: cid });
                             cid
                         }
-                        EntityRef::Card(cid) => {
+                        EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
                             self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                             cid
                         }
@@ -28764,6 +28785,31 @@ impl GameState {
                                     self.exile.push(card);
                                     self.players[payer].cards_exiled_this_turn += 1;
                                     events.push(GameEvent::PermanentExiled { card_id: id });
+                                    self.note_left_graveyard(payer, id, events);
+                                }
+                            }
+                            true
+                        }
+                    }
+                    WardCost::BottomFromGraveyard(n) => {
+                        // "…unless you put N cards from your graveyard on the
+                        // bottom of your library" (Anurid Scavenger). Auto-pay
+                        // bottoms the cheapest.
+                        let n = *n as usize;
+                        let mut gy: Vec<(CardId, u32)> = self.players[payer]
+                            .graveyard
+                            .iter()
+                            .map(|c| (c.id, c.definition.cost.cmc()))
+                            .collect();
+                        if gy.len() < n {
+                            false
+                        } else {
+                            gy.sort_by_key(|&(_, mv)| mv);
+                            for (id, _) in gy.into_iter().take(n) {
+                                if let Some(card) =
+                                    Self::take_card(&mut self.players[payer].graveyard, id)
+                                {
+                                    self.players[payer].library.push(card);
                                     self.note_left_graveyard(payer, id, events);
                                 }
                             }

@@ -1841,7 +1841,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         ichorid,
         silversmote_ghoul,
         bitterbloom_bearer,
-        // flashback "sacrifice three creatures" wired via flashback_additional_cost_for_name
+        // flashback "sacrifice three creatures" wired via flashback_additional_cost
         dread_return,
         tidehollow_sculler,
         phyrexian_arena,

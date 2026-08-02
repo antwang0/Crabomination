@@ -229,6 +229,7 @@ impl Effect {
             }
         }
         match self {
+            Effect::FlipUntilLoss { per_win } => per_win.requires_target(),
             Effect::Noop
             | Effect::SearchEachBasicLandType { .. }
             | Effect::SacrificeSourceUnlessReturn { .. }
@@ -1774,6 +1775,12 @@ impl Effect {
             Effect::If { then, else_, .. } => {
                 then.prefers_graveyard_target() || else_.prefers_graveyard_target()
             }
+            // "Exile target card from a graveyard until this leaves"
+            // (Gravegouger) — the pick only ever lives in a graveyard.
+            Effect::ExileUntilSourceLeaves { return_to, .. } => {
+                matches!(return_to, crate::card::ExileReturnZone::Graveyard)
+            }
+            Effect::ApplyToTargets { effect, .. } => effect.prefers_graveyard_target(),
             Effect::DelayUntilWithCapture { body, .. }
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }

@@ -27,7 +27,9 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::DiscardHand => false,
         WardCost::Blight(n) => *n == 0,
         WardCost::CollectEvidence(n) => *n == 0,
-        WardCost::ExileFromGraveyard(n) | WardCost::DamageFromSource(n) => *n == 0,
+        WardCost::ExileFromGraveyard(n)
+        | WardCost::BottomFromGraveyard(n)
+        | WardCost::DamageFromSource(n) => *n == 0,
         WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => false,
         // "{X}" is only free when the declared X was 0, which the caller
         // can't see here.
@@ -312,40 +314,22 @@ pub(crate) fn waterbend_amount(
 ///     pending charge taxes the caster's *next* spell {1} more. Consumed by
 ///     the caller on a successful cast (we only **read** here so callers
 ///     can see the tax before payment; the caster path decrements after).
-/// Flashback-only additional cost(s), keyed by card name (CR 702.34a). Some
-/// cards' Flashback cost is more than mana — "Flashback—Sacrifice a Mountain"
-/// (Lava Dart) or "Flashback—Sacrifice three creatures" (Dread Return). These
-/// apply *only* on the flashback cast, so they live here rather than on every
-/// CardDefinition. `cast_flashback`
-/// validates + pays them on top of the flashback mana cost.
-pub(crate) fn flashback_additional_cost_for_name(
-    name: &str,
+/// CR 702.34a — the card's flashback-only additional cost(s), with the cast's
+/// chosen `x` folded into any X-dependent count (Conflagrate's "Discard X
+/// cards"). `cast_flashback` validates + pays these on top of the flashback
+/// mana cost.
+pub(crate) fn flashback_additional_costs(
+    def: &crate::card::CardDefinition,
     x: u32,
 ) -> Vec<crate::card::AdditionalCastCost> {
-    use crate::card::{AdditionalCastCost as A, LandType, SelectionRequirement as S};
-    match name {
-        "Lava Dart" => vec![A::SacrificePermanent {
-            filter: S::Land.and(S::HasLandType(LandType::Mountain)),
-            count: 1,
-        }],
-        // Variable additional cost: "Flashback—{R}{R}, Discard X cards"
-        // (the flashback cast's chosen X defines the discard count).
-        "Conflagrate" => vec![A::Discard { count: x, filter: None }],
-        "Dread Return" => vec![A::SacrificePermanent {
-            filter: S::Creature.and(S::ControlledByYou),
-            count: 3,
-        }],
-        "Cabal Therapy" => vec![A::SacrificePermanent {
-            filter: S::Creature.and(S::ControlledByYou),
-            count: 1,
-        }],
-        // "Flashback—{1}{U}, Pay 3 life" (the {1}{U} is the printed flashback
-        // mana cost on the card; the life is the additional rider).
-        "Deep Analysis" => vec![A::PayLife { amount: 3 }],
-        // "Flashback—{4}{W}, Exile a card from your graveyard."
-        "Resurgent Belief" => vec![A::ExileFromGraveyard { filter: S::Any, count: 1 }],
-        _ => vec![],
-    }
+    use crate::card::AdditionalCastCost as A;
+    def.flashback_additional_cost
+        .iter()
+        .map(|c| match c {
+            A::DiscardXFromCost => A::Discard { count: x, filter: None },
+            other => other.clone(),
+        })
+        .collect()
 }
 
 /// CR 702.122 Strive (and Fireball's generic sibling): "this spell costs
@@ -6571,6 +6555,9 @@ impl GameState {
                 }).count();
                 matching >= *count as usize
             }
+            // Concretized into `Discard` by `flashback_additional_costs`
+            // before it reaches payment; a raw instance means X = 0.
+            A::DiscardXFromCost => true,
             // "Sacrifice one or more" — zero is a legal choice, so the cost
             // is always payable (the cast pipeline concretizes it into a
             // counted SacrificePermanent before payment).
@@ -6740,9 +6727,11 @@ impl GameState {
         let mut discard_override = chosen_discards;
         for cost in costs {
             match cost {
-                // Concretized into SacrificePermanent before payment; a raw
-                // instance here (flashback path etc.) means count 0 — no-op.
-                A::SacrificeAnyNumber { .. } | A::SacrificeAll { .. } => {}
+                // Concretized before payment; a raw instance here (flashback
+                // path etc.) means count 0 — no-op.
+                A::SacrificeAnyNumber { .. }
+                | A::SacrificeAll { .. }
+                | A::DiscardXFromCost => {}
                 A::SacrificePermanent { filter, count } => {
                     // Honor the player's explicit pick(s) when present and
                     // valid; auto-pick the `count` cheapest matching permanents
@@ -7960,7 +7949,7 @@ impl GameState {
         // every CardDefinition literal). Reject up front if unpayable so no
         // mana is spent on an uncastable flashback.
         let mut flashback_additional =
-            flashback_additional_cost_for_name(card.definition.name, x_value.unwrap_or(0));
+            flashback_additional_costs(&card.definition, x_value.unwrap_or(0));
         if jumpstart {
             flashback_additional.push(crate::card::AdditionalCastCost::Discard { count: 1, filter: None });
         }

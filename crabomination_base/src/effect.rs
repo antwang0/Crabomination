@@ -4813,6 +4813,9 @@ pub enum Effect {
     /// token copies of `what`. The copies gain haste and are exiled at the
     /// beginning of the next end step.
     FlipUntilLossThenTokenCopies { what: Selector },
+    /// CR 705.1 — "Flip a coin until you lose a flip", running `per_win` once
+    /// for each flip won (Crazed Firecat).
+    FlipUntilLoss { per_win: Box<Effect> },
     /// Amplifire — reveal from the top of your library until you reveal a
     /// creature card; until your next turn the source's base P/T become twice
     /// that card's. The reveal is bottomed in a random order.

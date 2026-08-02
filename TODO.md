@@ -3512,8 +3512,8 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   - **Torbran, Thane of Red Fell** ✅ — `StaticEffect::AddDamageToOpponents`;
     `scale_damage_to` is source-aware (`resolving_source` carries in-flight
     spell color/controller).
-  - **Conflagrate** ✅ — `flashback_additional_cost_for_name` takes the cast's
-    X (Flashback—discard X cards).
+  - **Conflagrate** ✅ — `AdditionalCastCost::DiscardXFromCost` takes the
+    cast's X (Flashback—discard X cards).
   - **Urza's Saga** ✅ — `Effect::GainActivatedAbility` →
     `CardInstance.granted_activated_abilities` (cleared on leave, CR 400.7);
     saga lands advance on the land drop (`place_land_card`).
@@ -4676,12 +4676,10 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   **all-colors / all-land-types static** (Leyline of the Guildpact);
   **tempting-offer multiplayer choice** (Tempt with Bunnies); **`LookPickToHand`
   take-N** (Consult the Star Charts); **parity attack-gate** (Sab-Sunen → ✅).
-- **Flashback with an additional cost** — ✅ done this run.
-  `flashback_additional_cost_for_name` (name-keyed, the `dynamic_pt_for_name`
-  idiom) + `cast_flashback` validation/payment; `AdditionalCastCost::
-  SacrificePermanent` gained a `count`. Lava Dart (sac a Mountain) + Dread
-  Return (sac three creatures) promoted. Next flashback rider that needs it:
-  pay-life / exile-from-gy flashback costs (none in the current pool).
+- **Flashback with an additional cost** — ✅ `CardDefinition::
+  flashback_additional_cost` + `cast_flashback` validation/payment; covers
+  sacrifice, discard (incl. `DiscardXFromCost`), pay-life and
+  exile-from-graveyard riders.
 - **Multi-target "choose two"** — `Effect::ChooseN` allocates a target slot
   per chosen mode; Cryptic Command (counter/bounce) and Kolaghan's Command
   (reanimate/any-target) now ship the faithful "choose two". Remaining:

@@ -682,3 +682,360 @@ pub fn coral_net() -> CardDefinition {
         ..enchantment("Coral Net", cost(&[u()]))
     }
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Alter Reality — {1}{U}. Swap a colour word on a spell or permanent.
+pub fn alter_reality() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), u()]))],
+        ..instant(
+            "Alter Reality",
+            cost(&[generic(1), u()]),
+            Effect::ReplaceColorWord {
+                what: target_filtered(R::Permanent.or(R::IsSpellOnStack)),
+                duration: Duration::Permanent,
+            },
+        )
+    }
+}
+
+/// Anurid Scavenger — {2}{G} 3/3 with protection from black that eats its own
+/// graveyard each upkeep or dies.
+pub fn anurid_scavenger() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Protection(Color::Black)],
+        triggered_abilities: vec![upkeep(Effect::SacrificeSourceUnlessCost {
+            cost: crate::card::WardCost::BottomFromGraveyard(1),
+        })],
+        ..creature(
+            "Anurid Scavenger",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Frog, CreatureType::Beast],
+            3,
+            3,
+        )
+    }
+}
+
+/// Crackling Club — {R} Aura. +1/+0, or cash it in for a ping.
+pub fn crackling_club() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus { power: 1, ..Default::default() }),
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(R::Creature),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Crackling Club", cost(&[r()]))
+    }
+}
+
+/// Crazed Firecat — {5}{R}{R} 4/4. Flip until you lose; grow by the wins.
+pub fn crazed_firecat() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::FlipUntilLoss {
+            per_win: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        })],
+        ..creature(
+            "Crazed Firecat",
+            cost(&[generic(5), r(), r()]),
+            vec![CreatureType::Elemental, CreatureType::Cat],
+            4,
+            4,
+        )
+    }
+}
+
+/// Crippling Fatigue — {1}{B}{B}. −2/−2, twice if you pay the life.
+pub fn crippling_fatigue() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), b()]))],
+        flashback_additional_cost: vec![crate::card::AdditionalCastCost::PayLife { amount: 3 }],
+        ..sorcery(
+            "Crippling Fatigue",
+            cost(&[generic(1), b(), b()]),
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+        )
+    }
+}
+
+/// Dwell on the Past — {G}. Shuffle up to four graveyard cards back in.
+pub fn dwell_on_the_past() -> CardDefinition {
+    sorcery(
+        "Dwell on the Past",
+        cost(&[g()]),
+        Effect::ApplyToTargets {
+            max_targets: 4,
+            min_targets: 0,
+            filter: R::InGraveyard,
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: crate::effect::LibraryPosition::Shuffled,
+                },
+            }),
+        },
+    )
+}
+
+/// Enslaved Dwarf — {R} 1/1. Sacrifice to pump a black creature.
+pub fn enslaved_dwarf() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::HasColor(Color::Black))),
+                    power: Value::Const(1),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::FirstStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Enslaved Dwarf", cost(&[r()]), vec![CreatureType::Dwarf], 1, 1)
+    }
+}
+
+/// Faceless Butcher — {2}{B}{B} 2/3. Jails another creature while it lives.
+pub fn faceless_butcher() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(R::Creature.and(R::OtherThanSource)),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
+        ..creature(
+            "Faceless Butcher",
+            cost(&[generic(2), b(), b()]),
+            vec![CreatureType::Nightmare, CreatureType::Horror],
+            2,
+            3,
+        )
+    }
+}
+
+/// Far Wanderings — {2}{G}. A basic land, or three past Threshold.
+pub fn far_wanderings() -> CardDefinition {
+    let fetch = |n: i32| Effect::SearchUpToN {
+        who: PlayerRef::You,
+        filter: R::Land.and(R::IsBasicLand),
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        count: Value::Const(n),
+    };
+    sorcery(
+        "Far Wanderings",
+        cost(&[generic(2), g()]),
+        Effect::If {
+            cond: threshold(),
+            then: Box::new(fetch(3)),
+            else_: Box::new(fetch(1)),
+        },
+    )
+}
+
+/// Flash of Defiance — {1}{R}. Green and white creatures can't block.
+pub fn flash_of_defiance() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), r()]))],
+        flashback_additional_cost: vec![crate::card::AdditionalCastCost::PayLife { amount: 3 }],
+        ..sorcery(
+            "Flash of Defiance",
+            cost(&[generic(1), r()]),
+            Effect::GrantKeywordToMatchingThisTurn {
+                filter: R::Creature.and(R::HasColor(Color::Green).or(R::HasColor(Color::White))),
+                keyword: Keyword::CantBlock,
+            },
+        )
+    }
+}
+
+/// Frantic Purification — {2}{W}. Naturalize for enchantments, with Madness.
+pub fn frantic_purification() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Madness(cost(&[w()]))],
+        ..instant(
+            "Frantic Purification",
+            cost(&[generic(2), w()]),
+            Effect::Destroy { what: target_filtered(R::Enchantment) },
+        )
+    }
+}
+
+/// Ghostly Wings — {1}{U} Aura. +1/+1 and flying; discard to bounce the host.
+pub fn ghostly_wings() -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::Move {
+                what: Selector::attached_to(Selector::This),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Ghostly Wings", cost(&[generic(1), u()]))
+    }
+}
+
+/// Gravegouger — {2}{B} 2/2. Holds two graveyard cards hostage.
+pub fn gravegouger() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 0,
+            filter: R::InGraveyard,
+            effect: Box::new(Effect::ExileUntilSourceLeaves {
+                what: Selector::Target(0),
+                return_to: crate::card::ExileReturnZone::Graveyard,
+            }),
+        })],
+        ..creature(
+            "Gravegouger",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Nightmare, CreatureType::Horror],
+            2,
+            2,
+        )
+    }
+}
+
+/// Grotesque Hybrid — {4}{B} 3/3. Its combat damage kills; discard to evade.
+pub fn grotesque_hybrid() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
+            effect: Effect::Destroy { what: Selector::TriggerSource },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Protection(Color::Green),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Protection(Color::White),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature("Grotesque Hybrid", cost(&[generic(4), b()]), vec![CreatureType::Zombie], 3, 3)
+    }
+}
+
+/// Hell-Bent Raider — {1}{R}{R} 2/2 first strike, haste. Random discard buys
+/// protection from white.
+pub fn hell_bent_raider() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike, Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            discard_cost_random: true,
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Protection(Color::White),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Hell-Bent Raider",
+            cost(&[generic(1), r(), r()]),
+            vec![CreatureType::Human, CreatureType::Barbarian],
+            2,
+            2,
+        )
+    }
+}
+
+/// The Hydromorph pair — {U}, sacrifice: counter a spell aimed at your side.
+fn hydromorph(
+    name: &'static str,
+    c: ManaCost,
+    types: Vec<CreatureType>,
+    p: i32,
+    t: i32,
+    keywords: Vec<Keyword>,
+) -> CardDefinition {
+    CardDefinition {
+        keywords,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            sac_cost: true,
+            effect: Effect::CounterSpell {
+                what: target_filtered(
+                    R::IsSpellOnStack.and(R::SpellTargetsControllerOrControlled),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..creature(name, c, types, p, t)
+    }
+}
+
+/// Hydromorph Guardian — {2}{U} 2/2.
+pub fn hydromorph_guardian() -> CardDefinition {
+    hydromorph(
+        "Hydromorph Guardian",
+        cost(&[generic(2), u()]),
+        vec![CreatureType::Elemental],
+        2,
+        2,
+        vec![],
+    )
+}
+
+/// Hydromorph Gull — {3}{U}{U} 3/3 flier.
+pub fn hydromorph_gull() -> CardDefinition {
+    hydromorph(
+        "Hydromorph Gull",
+        cost(&[generic(3), u(), u()]),
+        vec![CreatureType::Elemental, CreatureType::Bird],
+        3,
+        3,
+        vec![Keyword::Flying],
+    )
+}
