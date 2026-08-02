@@ -2671,6 +2671,11 @@ pub struct CardDefinition {
     /// Defaults to `false` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub exile_on_resolve: bool,
+    /// CR 601.2b — "You may cast this spell as though it had flash if you pay
+    /// [cost] more to cast it" (the Invasion "or Flight" cycle). The surcharge
+    /// is only owed when the spell is actually cast outside sorcery timing.
+    #[serde(default)]
+    pub flash_surcharge: Option<crate::mana::ManaCost>,
     /// "This spell costs {1} less to cast for each [filter] (on the
     /// battlefield)" — Affinity-class generic cost reduction whose discount
     /// scales off the caster's permanent count matching `filter`.

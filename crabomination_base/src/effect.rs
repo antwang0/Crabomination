@@ -4833,6 +4833,10 @@ pub enum Effect {
     /// in resolution order; auto-resolution favors highest-CMC lands
     /// for max mana refund.
     Untap   { what: Selector, #[serde(default)] up_to: Option<Value> },
+    /// "Simultaneously untap all tapped [what] and tap all untapped [what]"
+    /// (Breaking Wave). A sequenced Untap-then-Tap would re-tap everything it
+    /// just untapped, so the swap is read once and applied in one pass.
+    SwapTappedState { what: Selector },
     /// Give a temporary +P/+T bonus.
     PumpPT  { what: Selector, power: Value, toughness: Value, duration: Duration },
     /// Double the resolved creature's power `times` times for `duration`

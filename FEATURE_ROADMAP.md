@@ -2396,7 +2396,15 @@ Each a small targeted feature; sweep batch by batch.
 - **`all_damage_to_player_prevented` unwraps the CR 611.2 conditional
   wrappers** (`WhileCondition`, `WhileYourTurn`) instead of only matching the
   bare statics — Spirit of Resistance's five-colour gate now actually gates.
-- **Invasion (INV) 280 → 43** — `sets::inv::{gaps,gaps2,gaps3,gaps4}`, ~190
+- **CR 601.2b — "cast as though it had flash if you pay [cost] more"** —
+  `CardDefinition.flash_surcharge`. The surcharge is only owed when the spell
+  is actually cast outside sorcery timing, and it rides the same cost sites as
+  the coloured tax. Ghitu Fire, Breaking Wave, Saproling Symbiosis,
+  Twilight's Call.
+- **`Effect::SwapTappedState`** — "simultaneously untap all tapped X and tap
+  all untapped X" (Breaking Wave); reads every state before writing any, so it
+  can't re-tap what it just untapped.
+- **Invasion (INV) 280 → 41** — `sets::inv::{gaps,gaps2,gaps3,gaps4}`, ~190
   cards. Also `Effect::PlayerCantPlayLandsThisTurn` and
   `SelectionRequirement::{HasNonManaActivatedAbility,
   SharesNameWithAnotherPermanent}`. Remaining 43 are itemized in TODO.md.

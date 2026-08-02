@@ -31,10 +31,12 @@ shipped.
 
 ## Invasion — in progress
 
-`set_gaps.py inv` is at **43** (280 → 233 → 136 → 70 → 43; `sets::inv::{gaps,
+`set_gaps.py inv` is at **41** (280 → 233 → 136 → 70 → 41; `sets::inv::{gaps,
 gaps2, gaps3, gaps4}`, tests in `classic_sets/inv_gaps`–`inv_gaps4`).
-Primitives it shipped: `StaticEffect::{ColoredSpellTax, PreventSmallDamageToThis,
-CapLargeDamage}`, `Predicate::ColorIsMostCommonAmongPermanents`,
+Primitives it shipped: `CardDefinition.flash_surcharge` (CR 601.2b — the
+"cast as though it had flash if you pay {2} more" cycle),
+`Effect::SwapTappedState` (Breaking Wave's simultaneous flip),
+`StaticEffect::{ColoredSpellTax, PreventSmallDamageToThis, CapLargeDamage}`, `Predicate::ColorIsMostCommonAmongPermanents`,
 `SelectionRequirement::{SharesMostCommonColor, HasNonManaActivatedAbility,
 SharesNameWithAnotherPermanent}`, `Effect::PlayerCantPlayLandsThisTurn`, and
 `GameState::restart_game` / `Effect::RestartGame` (CR 727).
@@ -48,11 +50,6 @@ SharesNameWithAnotherPermanent}`, `Effect::PlayerCantPlayLandsThisTurn`, and
   add `CounterType::Feather` if anything else ever reads them.
 - **Darigaaz, the Igniter** — the damage count reads the hand live instead of
   snapshotting the reveal; only visible if the hand changes mid-resolution.
-- **Ghitu Fire / Breaking Wave / Saproling Symbiosis / Twilight's Call** — the
-  printed "cast as though it had flash if you pay {2} more" rider needs a
-  `flash_surcharge` field on `CardDefinition`. Ghitu Fire and Breaking Wave are
-  therefore not yet implemented; Saproling Symbiosis and Twilight's Call ship
-  as plain sorceries.
 - **Cauldron Dance / Spinal Embrace** — need a `cast_only_during_combat` cast
   restriction; not yet implemented.
 - **Void / Desperate Research** — need

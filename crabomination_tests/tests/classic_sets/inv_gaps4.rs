@@ -411,3 +411,46 @@ fn teferis_care_trades_enchantments() {
     assert!(g.battlefield.iter().all(|c| c.id != victim));
     assert!(g.battlefield.iter().all(|c| c.id != fodder), "an enchantment was the cost");
 }
+
+// ── CR 601.2b — the "pay {2} more for flash" rider ──────────────────────────
+
+/// Ghitu Fire costs its printed {X}{R} at sorcery speed and {2} more when it
+/// is cast outside it.
+#[test]
+fn ghitu_fire_pays_two_more_for_flash() {
+    let mut g = main_phase();
+    let card = g.add_card_to_hand(0, catalog::ghitu_fire());
+    let inst = g.players[0].hand.iter().find(|c| c.id == card).unwrap();
+    assert!(g.flash_surcharge_for(0, inst).is_none(), "main phase pays the printed cost");
+
+    // Off sorcery timing the surcharge applies — and the cast is now legal.
+    g.step = TurnStep::DeclareBlockers;
+    let inst = g.players[0].hand.iter().find(|c| c.id == card).unwrap();
+    assert_eq!(g.flash_surcharge_for(0, inst).map(|c| c.cmc()), Some(2));
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: card,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("flash cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+}
+
+/// Breaking Wave flips every creature's tapped state.
+#[test]
+fn breaking_wave_swaps_tapped_and_untapped() {
+    let mut g = main_phase();
+    let tapped = g.add_card_to_battlefield(0, catalog::noble_panther());
+    let untapped = g.add_card_to_battlefield(1, catalog::noble_panther());
+    g.battlefield.iter_mut().find(|c| c.id == tapped).unwrap().tapped = true;
+    g.battlefield.iter_mut().find(|c| c.id == untapped).unwrap().tapped = false;
+    let spell = g.add_card_to_hand(0, catalog::breaking_wave());
+    cast(&mut g, 0, spell, None);
+    assert!(!g.battlefield_find(tapped).unwrap().tapped);
+    assert!(g.battlefield_find(untapped).unwrap().tapped);
+}

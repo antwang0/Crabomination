@@ -669,7 +669,9 @@ pub fn saproling_infestation() -> CardDefinition {
 
 /// Saproling Symbiosis — {3}{G}. A Saproling per creature you control.
 pub fn saproling_symbiosis() -> CardDefinition {
-    sorcery(
+    CardDefinition {
+        flash_surcharge: Some(cost(&[generic(2)])),
+        ..sorcery(
         "Saproling Symbiosis",
         cost(&[generic(3), g()]),
         Effect::CreateToken {
@@ -681,6 +683,7 @@ pub fn saproling_symbiosis() -> CardDefinition {
             definition: saproling(),
         },
     )
+    }
 }
 
 /// Seer's Vision — {2}{U}{B}. Open hands, and one surgical discard.
@@ -708,4 +711,34 @@ pub fn seers_vision() -> CardDefinition {
 }
 
 // ── Spells ──────────────────────────────────────────────────────────────────
+
+
+// ── The "pay {2} more for flash" cycle (CR 601.2b) ──────────────────────────
+
+/// Ghitu Fire — {X}{R}. X damage anywhere, at instant speed for {2} more.
+pub fn ghitu_fire() -> CardDefinition {
+    CardDefinition {
+        flash_surcharge: Some(cost(&[generic(2)])),
+        ..sorcery(
+            "Ghitu Fire",
+            cost(&[x(), r()]),
+            Effect::DealDamage {
+                to: crate::effect::shortcut::target_any(),
+                amount: Value::XFromCost,
+            },
+        )
+    }
+}
+
+/// Breaking Wave — {2}{U}{U}. Every creature flips its tapped state.
+pub fn breaking_wave() -> CardDefinition {
+    CardDefinition {
+        flash_surcharge: Some(cost(&[generic(2)])),
+        ..sorcery(
+            "Breaking Wave",
+            cost(&[generic(2), u(), u()]),
+            Effect::SwapTappedState { what: Selector::EachPermanent(R::Creature) },
+        )
+    }
+}
 

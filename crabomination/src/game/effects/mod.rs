@@ -23298,6 +23298,34 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SwapTappedState { what } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                // Read every state first, then write — a sequenced untap-then-
+                // tap would re-tap what it had just untapped.
+                let states: Vec<(CardId, bool)> = ids
+                    .iter()
+                    .filter_map(|id| self.battlefield_find(*id).map(|c| (*id, c.tapped)))
+                    .collect();
+                for (id, was_tapped) in states {
+                    if was_tapped {
+                        self.untap_permanent(id, events);
+                    } else if let Some(c) = self.battlefield_find_mut(id) {
+                        c.tapped = true;
+                        self.permanents_tapped_this_resolution += 1;
+                        events.push(GameEvent::PermanentTapped {
+                            card_id: id,
+                            actor: Some(ctx.controller),
+                            as_attacker: false,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PlayerCantPlayLandsThisTurn { player } => {
                 if let Some(seat) = self.resolve_player(player, ctx) {
                     self.players[seat].cant_play_lands_this_turn = true;

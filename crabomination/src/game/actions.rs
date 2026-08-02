@@ -5663,7 +5663,9 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
+        let flash_granted = self_flash
+            || self.battlefield_grants_flash(p, &card)
+            || self.flash_surcharge_for(p, &card).is_some();
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed
@@ -6108,6 +6110,9 @@ impl GameState {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
         cost.symbols.extend(colored_spell_tax_for_spell(self, p, &card).symbols);
+        if let Some(extra) = self.flash_surcharge_for(p, &card) {
+            cost.symbols.extend(extra.symbols.iter().cloned());
+        }
         // Strive (CR 702.122) / Fireball — per-extra-target surcharge.
         cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
@@ -7863,7 +7868,9 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
+        let flash_granted = self_flash
+            || self.battlefield_grants_flash(p, &card)
+            || self.flash_surcharge_for(p, &card).is_some();
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -8173,7 +8180,9 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
+        let flash_granted = self_flash
+            || self.battlefield_grants_flash(p, &card)
+            || self.flash_surcharge_for(p, &card).is_some();
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -8267,7 +8276,9 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
+        let flash_granted = self_flash
+            || self.battlefield_grants_flash(p, &card)
+            || self.flash_surcharge_for(p, &card).is_some();
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -8377,7 +8388,9 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
+        let flash_granted = self_flash
+            || self.battlefield_grants_flash(p, &card)
+            || self.flash_surcharge_for(p, &card).is_some();
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
@@ -8705,7 +8718,9 @@ impl GameState {
                     false
                 }
             });
-        let flash_granted = self_flash || self.battlefield_grants_flash(p, &card);
+        let flash_granted = self_flash
+            || self.battlefield_grants_flash(p, &card)
+            || self.flash_surcharge_for(p, &card).is_some();
         let must_be_sorcery_speed = !(card.definition.is_instant_speed() || flash_granted)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed
@@ -8752,6 +8767,9 @@ impl GameState {
                 .push(crate::mana::ManaSymbol::Generic(tax));
         }
         cost.symbols.extend(colored_spell_tax_for_spell(self, p, &card).symbols);
+        if let Some(extra) = self.flash_surcharge_for(p, &card) {
+            cost.symbols.extend(extra.symbols.iter().cloned());
+        }
         cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
         let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
@@ -9176,6 +9194,9 @@ impl GameState {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
         mana_cost.symbols.extend(colored_spell_tax_for_spell(self, p, &card).symbols);
+        if let Some(extra) = self.flash_surcharge_for(p, &card) {
+            mana_cost.symbols.extend(extra.symbols.iter().cloned());
+        }
         mana_cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         mana_cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
         // CR 601.2f: cost reductions apply uniformly across cast paths
@@ -9426,6 +9447,19 @@ impl GameState {
     /// a `ControllerSpellsHaveFlash` (filtered) or `ControllerSorceriesAsFlash`
     /// (Teferi, Time Raveler; Hypersonic Dragon) static. Excludes the
     /// card-intrinsic `SelfFlashIf` path, which each cast site handles inline.
+    /// CR 601.2b — "you may cast this spell as though it had flash if you pay
+    /// [cost] more". Returns the surcharge only when the caster is actually
+    /// outside sorcery timing, so a main-phase cast pays the printed cost.
+    pub fn flash_surcharge_for<'a>(
+        &self,
+        player: usize,
+        card: &'a CardInstance,
+    ) -> Option<&'a crate::mana::ManaCost> {
+        let extra = card.definition.flash_surcharge.as_ref()?;
+        (!self.can_cast_sorcery_speed(player) && !self.player_locked_to_sorcery_timing(player))
+            .then_some(extra)
+    }
+
     pub(crate) fn battlefield_grants_flash(&self, player: usize, card: &CardInstance) -> bool {
         use crate::effect::StaticEffect;
         if self.player_locked_to_sorcery_timing(player) {

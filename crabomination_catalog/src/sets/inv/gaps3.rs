@@ -1302,7 +1302,9 @@ pub fn obliterate() -> CardDefinition {
 
 /// Twilight's Call — {4}{B}{B}. Everyone's graveyard creatures come back.
 pub fn twilights_call() -> CardDefinition {
-    sorcery(
+    CardDefinition {
+        flash_surcharge: Some(cost(&[generic(2)])),
+        ..sorcery(
         "Twilight's Call",
         cost(&[generic(4), b(), b()]),
         Effect::Move {
@@ -1314,6 +1316,7 @@ pub fn twilights_call() -> CardDefinition {
             to: ZoneDest::Battlefield { controller: PlayerRef::OwnerOfMoved, tapped: false },
         },
     )
+    }
 }
 
 /// Winnow — {1}{W}. Kill a permanent whose name is already on the board twice.
