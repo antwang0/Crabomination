@@ -1565,6 +1565,7 @@ fn mistform_ability(c: ManaCost) -> ActivatedAbility {
         effect: Effect::BecomeChosenCreatureType {
             what: Selector::This,
             duration: Duration::EndOfTurn,
+            excluded: vec![],
         },
         ..Default::default()
     }
@@ -1671,6 +1672,7 @@ pub fn mistform_mutant() -> CardDefinition {
             effect: Effect::BecomeChosenCreatureType {
                 what: target_filtered(R::Creature),
                 duration: Duration::EndOfTurn,
+                excluded: vec![CreatureType::Wall],
             },
             ..Default::default()
         }],
@@ -1700,6 +1702,7 @@ pub fn mistform_mask() -> CardDefinition {
             effect: Effect::BecomeChosenCreatureType {
                 what: Selector::AttachedTo(Box::new(Selector::This)),
                 duration: Duration::EndOfTurn,
+                excluded: vec![],
             },
             ..Default::default()
         }],
@@ -1715,6 +1718,7 @@ pub fn imagecrafter() -> CardDefinition {
             effect: Effect::BecomeChosenCreatureType {
                 what: target_filtered(R::Creature),
                 duration: Duration::EndOfTurn,
+                excluded: vec![CreatureType::Wall],
             },
             ..Default::default()
         }],
@@ -1737,6 +1741,7 @@ pub fn standardize() -> CardDefinition {
         effect: Effect::BecomeChosenCreatureType {
             what: Selector::EachPermanent(R::Creature),
             duration: Duration::EndOfTurn,
+            excluded: vec![CreatureType::Wall],
         },
         ..Default::default()
     }
@@ -2048,5 +2053,242 @@ pub fn undead_gladiator() -> CardDefinition {
             3,
             1,
         )
+    }
+}
+
+// ── The Gustcloak cycle (CR 506.4 — untap and leave combat) ─────────────────
+
+/// "Whenever this creature becomes blocked, you may untap it and remove it
+/// from combat."
+fn gustcloak_dodge(what: Selector) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+        effect: Effect::MayDo {
+            description: "Untap and remove it from combat?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Untap { what: what.clone(), up_to: None },
+                Effect::RemoveFromCombat { what },
+            ])),
+        },
+    }
+}
+
+/// Gustcloak Harrier — a 2/2 flier that slips its blockers.
+pub fn gustcloak_harrier() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![gustcloak_dodge(Selector::This)],
+        ..creature(
+            "Gustcloak Harrier",
+            cost(&[generic(1), w(), w()]),
+            vec![CreatureType::Bird, CreatureType::Soldier],
+            2,
+            2,
+        )
+    }
+}
+
+/// Gustcloak Sentinel — the ground-bound 3/3.
+pub fn gustcloak_sentinel() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![gustcloak_dodge(Selector::This)],
+        ..creature(
+            "Gustcloak Sentinel",
+            cost(&[generic(2), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            3,
+            3,
+        )
+    }
+}
+
+/// Gustcloak Skirmisher — a 2/3 flier that slips its blockers.
+pub fn gustcloak_skirmisher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![gustcloak_dodge(Selector::This)],
+        ..creature(
+            "Gustcloak Skirmisher",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Bird, CreatureType::Soldier],
+            2,
+            3,
+        )
+    }
+}
+
+/// Gustcloak Savior — extends the dodge to your whole team.
+pub fn gustcloak_savior() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Untap that creature and remove it from combat?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Untap { what: Selector::TriggerSource, up_to: None },
+                    Effect::RemoveFromCombat { what: Selector::TriggerSource },
+                ])),
+            },
+        }],
+        ..creature(
+            "Gustcloak Savior",
+            cost(&[generic(4), w()]),
+            vec![CreatureType::Bird, CreatureType::Soldier],
+            3,
+            4,
+        )
+    }
+}
+
+/// Leery Fogbeast — blocking it calls off the whole combat.
+pub fn leery_fogbeast() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::PreventAllCombatDamageThisTurn,
+        }],
+        ..creature("Leery Fogbeast", cost(&[generic(2), g()]), vec![CreatureType::Beast], 4, 2)
+    }
+}
+
+/// Shaleskin Bruiser — grows for each other attacking Beast.
+pub fn shaleskin_bruiser() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Times(
+                    Box::new(Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(
+                            R::Creature.and(R::IsAttacking).and(R::OtherThanSource),
+                        )),
+                        filter: R::HasCreatureType(CreatureType::Beast),
+                    }),
+                    Box::new(Value::Const(3)),
+                ),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature("Shaleskin Bruiser", cost(&[generic(6), r()]), vec![CreatureType::Beast], 4, 4)
+    }
+}
+
+/// Ebonblade Reaper — halves your life to attack, halves theirs on connect.
+pub fn ebonblade_reaper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(3), b(), b()]))],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::HalvedRoundUp(Box::new(Value::LifeOf(PlayerRef::You))),
+                },
+            },
+            on_combat_damage(Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::HalvedRoundUp(Box::new(Value::LifeOf(PlayerRef::Target(0)))),
+            }),
+        ],
+        ..creature(
+            "Ebonblade Reaper",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            1,
+        )
+    }
+}
+
+/// Haunted Cadaver — cash it in on connect to strip three cards.
+pub fn haunted_cadaver() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(1), b()]))],
+        triggered_abilities: vec![on_combat_damage(Effect::MayDo {
+            description: "Sacrifice this creature to strip three cards?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::SacrificePermanent { what: Selector::This },
+                Effect::Discard {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::Const(3),
+                    random: false,
+                },
+            ])),
+        })],
+        ..creature("Haunted Cadaver", cost(&[generic(3), b()]), vec![CreatureType::Zombie], 2, 2)
+    }
+}
+
+/// Nosy Goblin — sacrifice it to blow up a face-down creature.
+pub fn nosy_goblin() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Destroy { what: target_filtered(R::Creature.and(R::FaceDown)) },
+            ..Default::default()
+        }],
+        ..creature("Nosy Goblin", cost(&[generic(2), r()]), vec![CreatureType::Goblin], 2, 1)
+    }
+}
+
+/// Break Open — flip an opponent's face-down creature up.
+pub fn break_open() -> CardDefinition {
+    CardDefinition {
+        name: "Break Open",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::TurnFaceUpFree {
+            what: target_filtered(R::Creature.and(R::FaceDown).and(R::ControlledByOpponent)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Ixidor, Reality Sculptor — face-down creatures get +1/+1, and he unmasks
+/// them at will.
+pub fn ixidor_reality_sculptor() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        static_abilities: vec![StaticAbility {
+            description: "Face-down creatures get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(R::Creature.and(R::FaceDown)),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::TurnFaceUpFree {
+                what: target_filtered(R::Creature.and(R::FaceDown)),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Ixidor, Reality Sculptor",
+            cost(&[generic(3), u(), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            3,
+            4,
+        )
+    }
+}
+
+/// Dream Chisel — face-down creature spells cost {1} less.
+pub fn dream_chisel() -> CardDefinition {
+    CardDefinition {
+        name: "Dream Chisel",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Face-down creature spells you cast cost {1} less to cast.",
+            effect: StaticEffect::FaceDownSpellsCostLess { amount: 1 },
+        }],
+        ..Default::default()
     }
 }

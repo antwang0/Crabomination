@@ -17652,6 +17652,7 @@ fn static_effect_to_effects(
             | StaticEffect::ColoredCostReduction { .. }
             | StaticEffect::ColoredSpellTax { .. }
             | StaticEffect::NamedSpellCostReduction { .. }
+            | StaticEffect::FaceDownSpellsCostLess { .. }
             | StaticEffect::CostReductionPerControllerExperience { .. }
             | StaticEffect::CostReductionBySourcePower { .. }
             | StaticEffect::CostReductionWhile { .. }

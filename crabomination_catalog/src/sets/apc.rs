@@ -1291,6 +1291,7 @@ pub fn unnatural_selection() -> CardDefinition {
             effect: Effect::BecomeChosenCreatureType {
                 what: target_filtered(R::Creature),
                 duration: Duration::EndOfTurn,
+                excluded: vec![],
             },
             ..Default::default()
         }],

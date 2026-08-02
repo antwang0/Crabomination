@@ -4478,8 +4478,20 @@ impl GameState {
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
+        // CR 702.36b — the flat {3} morph cast, less any
+        // `FaceDownSpellsCostLess` reduction (Dream Chisel).
+        let reduction: u32 = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p)
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::FaceDownSpellsCostLess { amount } => Some(amount),
+                _ => None,
+            })
+            .sum();
         let cost = crate::mana::ManaCost {
-            symbols: vec![crate::mana::ManaSymbol::Generic(3)],
+            symbols: vec![crate::mana::ManaSymbol::Generic(3u32.saturating_sub(reduction))],
         };
         let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;

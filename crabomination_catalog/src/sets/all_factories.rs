@@ -9887,6 +9887,18 @@ static JUD: &[Factory] = &[
     super::ons2::standardize,
     super::ons2::sunfire_balm,
     super::ons2::undead_gladiator,
+    super::ons2::break_open,
+    super::ons2::dream_chisel,
+    super::ons2::ebonblade_reaper,
+    super::ons2::gustcloak_harrier,
+    super::ons2::gustcloak_savior,
+    super::ons2::gustcloak_sentinel,
+    super::ons2::gustcloak_skirmisher,
+    super::ons2::haunted_cadaver,
+    super::ons2::ixidor_reality_sculptor,
+    super::ons2::leery_fogbeast,
+    super::ons2::nosy_goblin,
+    super::ons2::shaleskin_bruiser,
 ];
 static KHM: &[Factory] = &[
     super::khm::dragonkin_berserker,

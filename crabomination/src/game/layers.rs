@@ -761,6 +761,9 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // recompute — safe to route through the dynamic CardMatch path
         // (Augusta, Dean of Order's tapped/untapped anthems).
         R::Tapped | R::Untapped => true,
+        // Face-down is likewise a live `CardInstance` flag (Ixidor, Reality
+        // Sculptor's "face-down creatures get +1/+1").
+        R::FaceDown => true,
         // Counter presence is live `CardInstance` state, likewise re-read each
         // layer recompute via the dynamic CardMatch path ("permanents you
         // control with counters on them have ward {1}" — Innkeeper's Talent).
@@ -823,6 +826,7 @@ pub(crate) fn requirement_matches_card(
         R::IsToken => card.is_token,
         R::NotToken => !card.is_token,
         R::Tapped => card.tapped,
+        R::FaceDown => card.face_down,
         R::Untapped => !card.tapped,
         R::WithCounter(k) => card.counter_count(*k) > 0,
         R::WithAnyCounter => card.counters.values().any(|&n| n > 0),

@@ -6346,6 +6346,30 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TurnFaceUpFree { what } => {
+                // CR 707.9 — turned up without paying the morph cost; the
+                // megamorph +1/+1 counter still applies (CR 702.36e).
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let Some(c) = self.battlefield_find_mut(cid) else { continue };
+                    if !c.face_down {
+                        continue;
+                    }
+                    let megamorph = c
+                        .face_up_def
+                        .as_ref()
+                        .is_some_and(|d| {
+                            d.keywords.iter().any(|k| matches!(k, Keyword::Megamorph(_)))
+                        });
+                    c.turn_face_up();
+                    if megamorph {
+                        c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
+                    }
+                    events.push(GameEvent::TurnedFaceUp { card_id: cid });
+                }
+                Ok(())
+            }
+
             Effect::ShareKeywordsAmongYourCreatures { keywords } => {
                 let p = ctx.controller;
                 let mine: Vec<CardId> = self
@@ -11655,7 +11679,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::BecomeChosenCreatureType { what, duration } => {
+            Effect::BecomeChosenCreatureType { what, duration, excluded } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
@@ -11673,11 +11697,21 @@ impl GameState {
                 // affected permanent (Standardize, Shade's Breath).
                 let decision = Decision::ChooseCreatureType {
                     source: affected[0],
-                    suggestions: self.creature_type_suggestions(chooser),
+                    suggestions: self
+                        .creature_type_suggestions(chooser)
+                        .into_iter()
+                        .filter(|t| !excluded.contains(t))
+                        .collect(),
+                    excluded: excluded.clone(),
                 };
                 let DecisionAnswer::CreatureType(ct) = self.decider.decide(&decision) else {
                     return Ok(());
                 };
+                // CR 205.3m — a decider that names a forbidden type doesn't
+                // get it (Imagecrafter's "other than Wall").
+                if excluded.contains(&ct) {
+                    return Ok(());
+                }
                 for cid in affected {
                     let ts = self.next_timestamp();
                     self.add_continuous_effect(ContinuousEffect {
@@ -23528,6 +23562,7 @@ impl GameState {
                 let Some(target_id) = candidate else { return Ok(()); };
                 let chooser = ctx.controller;
                 let decision = Decision::ChooseCreatureType {
+                    excluded: Vec::new(),
                     source: target_id,
                     suggestions: self.creature_type_suggestions(chooser),
                 };
@@ -25143,6 +25178,7 @@ impl GameState {
                 let t = self.evaluate_value(toughness, ctx);
                 let source_id = ctx.source.unwrap_or(CardId(0));
                 let decision = Decision::ChooseCreatureType {
+                    excluded: Vec::new(),
                     source: source_id,
                     suggestions: self.creature_type_suggestions(ctx.controller),
                 };

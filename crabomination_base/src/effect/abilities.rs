@@ -435,6 +435,10 @@ pub enum StaticEffect {
     /// (chosen via `Effect::NameCard`). Council of the Absolute — "spells with
     /// the chosen name you cast cost {2} less".
     NamedSpellCostReduction { amount: u32 },
+    /// CR 702.36b — "Face-down creature spells you cast cost {N} less to cast"
+    /// (Dream Chisel). The morph cast has no printed cost to filter on, so it
+    /// gets its own static rather than a `CostReduction` filter.
+    FaceDownSpellsCostLess { amount: u32 },
     /// Generic cost reduction equal to the controller's experience-counter
     /// count, for spells matching `filter` (Mizzix of the Izmagnus — "Instant
     /// and sorcery spells you cast cost {X} less, where X is the number of

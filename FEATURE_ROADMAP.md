@@ -2400,10 +2400,9 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** The whole Odyssey block is done — Odyssey, Torment
    and **Judgment** are all at zero (`set_gaps.py ody` / `tor` / `jud`).
-   **Onslaught** (`sets::ons` + `sets::ons2`) is open at ~119 gaps after three
-   waves (147 cards); the remaining bulk is the Chain spells, the Words
-   draw-replacement cycle, the "tap N of a tribe" rares and the face-down
-   matters cards (Ixidor, Backslide, Break Open). Then Legions / Scourge.
+   **Onslaught** (`sets::ons` + `sets::ons2`) is open at ~107 gaps after four
+   waves (159 cards); the remaining bulk is the Chain spells, the Words
+   draw-replacement cycle and the tribal rares. Then Legions / Scourge.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2418,10 +2417,15 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Onslaught (ONS) waves 2-3** — `set_gaps.py ons` 219 → ~119 (`sets::ons2`,
-  100 cards: the Morph commons, the tap-a-tribe activations, the Avatar cycle,
+- **Onslaught (ONS) waves 2-4** — `set_gaps.py ons` 219 → ~107 (`sets::ons2`,
+  112 cards: the Morph commons, the tap-a-tribe activations, the Avatar cycle,
   the tribal-count spells, the utility lands, the Crown / Courier / Mistform
-  cycles and the cycling spells with "when you cycle this card" riders). New:
+  cycles, the cycling spells with "when you cycle this card" riders, the
+  Gustcloak cycle and the face-down-matters shell). New:
+  `Effect::TurnFaceUpFree` (CR 707.9 — turn a morph up without paying its cost;
+  Break Open, Ixidor) and `StaticEffect::FaceDownSpellsCostLess` (Dream Chisel).
+  CR conformance: 506.4 (removed from combat), 205.3m (restricted creature-type
+  choice), 613.8 (type-gated grants see a retype). New:
   `DynamicPt::CreaturesOfTypeOnBattlefield { creature_type, also_graveyards }`
   ("*/* equal to the number of [tribe] on the battlefield", with Soulless One's
   all-graveyards rider). Correctness: `Effect::BecomeChosenCreatureType` now

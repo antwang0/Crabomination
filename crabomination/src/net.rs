@@ -2070,6 +2070,10 @@ pub enum DecisionWire {
         /// then tribal staples) rendered as pick buttons.
         #[serde(default)]
         suggestions: Vec<crate::card::CreatureType>,
+        /// CR 205.3m — types the printed effect forbids ("other than Wall").
+        /// The client must not offer these.
+        #[serde(default)]
+        excluded: Vec<crate::card::CreatureType>,
     },
     /// CR 201.3 — "As [card] enters, choose a card name." Pithing Needle.
     NameCard {
@@ -2233,10 +2237,11 @@ impl From<&Decision> for DecisionWire {
                     serum_powders: serum_powders.clone(),
                 }
             }
-            Decision::ChooseCreatureType { source, suggestions } => {
+            Decision::ChooseCreatureType { source, suggestions, excluded } => {
                 DecisionWire::ChooseCreatureType {
                     source: *source,
                     suggestions: suggestions.clone(),
+                    excluded: excluded.clone(),
                 }
             }
             Decision::NameCard { source, source_name, suggestions, restriction } => {

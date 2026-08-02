@@ -142,6 +142,10 @@ pub enum Decision {
         /// as pick buttons; an answer outside the list is still legal.
         #[serde(default)]
         suggestions: Vec<crate::card::CreatureType>,
+        /// CR 205.3m — types the printed effect forbids ("a creature type
+        /// other than Wall"). Never offered, and rejected if named anyway.
+        #[serde(default)]
+        excluded: Vec<crate::card::CreatureType>,
     },
 
     /// CR 201.3 — "As this enters, choose a card name." Pithing Needle,
@@ -504,8 +508,16 @@ impl Decider for AutoDecider {
             Decision::Mulligan { .. } => DecisionAnswer::Keep,
             // AutoDecider picks Demon — the demo Goryo's deck includes
             // Griselbrand (Demon), so this is the gameplay-optimal default.
-            Decision::ChooseCreatureType { .. } => {
-                DecisionAnswer::CreatureType(crate::card::CreatureType::Demon)
+            // CR 205.3m — never name a forbidden type; fall back to the top
+            // suggestion when the default (Demon) is excluded.
+            Decision::ChooseCreatureType { suggestions, excluded, .. } => {
+                let demon = crate::card::CreatureType::Demon;
+                let pick = if excluded.contains(&demon) {
+                    suggestions.iter().find(|t| !excluded.contains(t)).copied().unwrap_or(demon)
+                } else {
+                    demon
+                };
+                DecisionAnswer::CreatureType(pick)
             }
             // CR 201.3 — AutoDecider takes the engine's best suggestion
             // (most-common name in the relevant zone); names nothing when

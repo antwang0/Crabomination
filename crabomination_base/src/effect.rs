@@ -3965,6 +3965,10 @@ pub enum Effect {
     /// creature with no name, types, or abilities. A no-op on a permanent
     /// that is already face down (CR 708.2b). Ixidron.
     TurnFaceDown { what: Selector },
+    /// CR 707.9 — turn each face-down permanent the selector picks face up
+    /// *without* paying its morph cost (Break Open, Ixidor, Reality
+    /// Sculptor). Non-face-down picks are skipped.
+    TurnFaceUpFree { what: Selector },
     /// "Creatures you control gain each of `keywords` until end of turn if a
     /// creature you control already has it" (Concerted Effort's upkeep sweep).
     /// Reads the controller's *computed* keywords once, then grants the union
@@ -5132,9 +5136,17 @@ pub enum Effect {
     BecomeChosenColor { what: Selector, duration: Duration },
     /// CR 205.1b — the creature-type sibling of `BecomeChosenColor`: the
     /// controller names a creature type and every permanent picked by `what`
-    /// becomes exactly that type for `duration` (Unnatural Selection). The
-    /// printed "other than Wall" restriction isn't enforced.
-    BecomeChosenCreatureType { what: Selector, duration: Duration },
+    /// becomes exactly that type for `duration` (Unnatural Selection). One
+    /// choice covers the whole effect. `excluded` carries the printed
+    /// restriction ("a creature type other than Wall" — Imagecrafter,
+    /// Standardize, Mistform Mutant); the decision offers no excluded type
+    /// and a decider that names one anyway is overruled.
+    BecomeChosenCreatureType {
+        what: Selector,
+        duration: Duration,
+        #[serde(default)]
+        excluded: Vec<crate::card::CreatureType>,
+    },
     /// Each permanent picked by `what` becomes exactly `colors` (replacing
     /// its colors) for `duration` (CR 105 / layer-5 `SetColors`). The
     /// fixed-color sibling of `BecomeChosenColor`. Crimson Wisps ("becomes

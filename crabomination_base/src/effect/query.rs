@@ -879,6 +879,7 @@ impl Effect {
             | Effect::BecomeBlocked { what }
             | Effect::RememberPermanentOnSource { what }
             | Effect::PutAuraFromHandAttachedTo { host: what }
+            | Effect::TurnFaceUpFree { what }
             | Effect::Tap { what }
             | Effect::TapAndUntapLock { what }
             | Effect::TapAndLockWhileSourcePresent { what }
@@ -2930,6 +2931,7 @@ impl Effect {
                 | Effect::GrantSuspend { what, .. }
                 | Effect::ModularCounters { what }
                 | Effect::BecomeBlocked { what }
+                | Effect::TurnFaceUpFree { what }
                 | Effect::Tap { what }
                 | Effect::SetSaddled { what }
                 | Effect::TapAndUntapLock { what }

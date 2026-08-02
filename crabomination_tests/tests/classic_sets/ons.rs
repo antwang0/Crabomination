@@ -1874,3 +1874,222 @@ fn undead_gladiator_returns_during_upkeep() {
     activate(&mut g, 0, id, 0, None);
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "back in hand at upkeep");
 }
+
+// ── Wave 4 ───────────────────────────────────────────────────────────────────
+
+/// CR 506.4 — a Gustcloak untaps and leaves combat when it's blocked, so no
+/// combat damage is exchanged.
+#[test]
+fn gustcloak_sentinel_slips_its_blocker() {
+    let mut g = main_phase();
+    let sentinel = g.add_card_to_battlefield(0, catalog::gustcloak_sentinel());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(sentinel);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    advance_to_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sentinel,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    assert!(g.battlefield_find(sentinel).unwrap().tapped, "attacking taps it");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, sentinel)])).expect("block");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(sentinel).unwrap().tapped, "untapped by the trigger");
+    assert!(!g.attacking.iter().any(|a| a.attacker == sentinel), "removed from combat");
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    assert_eq!(g.battlefield_find(blocker).unwrap().damage, 0, "no damage was exchanged");
+}
+
+/// Gustcloak Savior extends the dodge to any creature you control.
+#[test]
+fn gustcloak_savior_saves_a_teammate() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::gustcloak_savior());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::krosan_colossus());
+    g.clear_sickness(attacker);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    advance_to_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).expect("block");
+    drain_stack(&mut g);
+    assert!(!g.attacking.iter().any(|a| a.attacker == attacker), "pulled out of combat");
+    assert!(g.battlefield_find(attacker).is_some(), "and survived the 9/9");
+}
+
+/// Leery Fogbeast fogs the whole combat when it's blocked.
+#[test]
+fn leery_fogbeast_fogs_combat() {
+    let mut g = main_phase();
+    let beast = g.add_card_to_battlefield(0, catalog::leery_fogbeast());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(beast);
+    advance_to_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: beast,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, beast)])).expect("block");
+    drain_stack(&mut g);
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    assert_eq!(g.battlefield_find(blocker).unwrap().damage, 0, "no damage dealt");
+    assert!(g.battlefield_find(beast).is_some(), "the 4/2 survived the 2/2");
+}
+
+/// Shaleskin Bruiser gets +3/+0 for each other attacking Beast.
+#[test]
+fn shaleskin_bruiser_scales_with_the_herd() {
+    let mut g = main_phase();
+    let bruiser = g.add_card_to_battlefield(0, catalog::shaleskin_bruiser());
+    let pal = g.add_card_to_battlefield(0, catalog::snapping_thragg()); // a Beast
+    g.clear_sickness(bruiser);
+    g.clear_sickness(pal);
+    advance_to_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bruiser, target: AttackTarget::Player(1) },
+        Attack { attacker: pal, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bruiser).unwrap().power, 7, "4 + 3 for one other Beast");
+}
+
+/// Ebonblade Reaper halves both life totals.
+#[test]
+fn ebonblade_reaper_halves_both_ways() {
+    let mut g = main_phase();
+    let reaper = g.add_card_to_battlefield(0, catalog::ebonblade_reaper());
+    g.clear_sickness(reaper);
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    swing(&mut g, reaper);
+    assert_eq!(g.players[0].life, 10, "you lose half on attack");
+    // 20 − 1 combat damage = 19, then half of 19 rounded up.
+    assert_eq!(g.players[1].life, 9, "they lose half on connect");
+}
+
+/// Haunted Cadaver trades itself for three cards.
+#[test]
+fn haunted_cadaver_strips_three() {
+    let mut g = main_phase();
+    let cadaver = g.add_card_to_battlefield(0, catalog::haunted_cadaver());
+    g.clear_sickness(cadaver);
+    for _ in 0..4 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    swing(&mut g, cadaver);
+    assert_eq!(g.players[1].hand.len(), 1, "discarded three");
+    assert!(g.battlefield_find(cadaver).is_none(), "and sacrificed itself");
+}
+
+/// CR 707.9 — Break Open and Ixidor turn a face-down creature up for free;
+/// Nosy Goblin blows one up.
+#[test]
+fn ons_face_down_matters() {
+    let mut g = main_phase();
+    let hidden = g.add_card_to_hand(1, catalog::krosan_colossus());
+    g.players[1].mana_pool.add_colorless(3);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastFaceDown { card_id: hidden }).expect("cast face down");
+    drain_stack(&mut g);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let spell = g.add_card_to_hand(0, catalog::break_open());
+    cast(&mut g, 0, spell, Some(Target::Permanent(hidden)));
+    let up = g.battlefield_find(hidden).expect("still there");
+    assert!(!up.face_down, "flipped up for free");
+    assert_eq!(up.definition.name, "Krosan Colossus");
+}
+
+/// Ixidor pumps face-down creatures and unmasks them.
+#[test]
+fn ixidor_pumps_and_unmasks() {
+    let mut g = main_phase();
+    let hidden = g.add_card_to_hand(0, catalog::spined_basher());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastFaceDown { card_id: hidden }).expect("cast face down");
+    drain_stack(&mut g);
+    let ixidor = g.add_card_to_battlefield(0, catalog::ixidor_reality_sculptor());
+    let cp = g.computed_permanent(hidden).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "face-down 2/2 gets +1/+1");
+    activate(&mut g, 0, ixidor, 0, Some(Target::Permanent(hidden)));
+    assert!(!g.battlefield_find(hidden).unwrap().face_down, "unmasked");
+}
+
+/// Nosy Goblin destroys a face-down creature.
+#[test]
+fn nosy_goblin_destroys_a_morph() {
+    let mut g = main_phase();
+    let hidden = g.add_card_to_hand(1, catalog::krosan_colossus());
+    g.players[1].mana_pool.add_colorless(3);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastFaceDown { card_id: hidden }).expect("cast face down");
+    drain_stack(&mut g);
+    g.active_player_idx = 0;
+    let goblin = g.add_card_to_battlefield(0, catalog::nosy_goblin());
+    g.clear_sickness(goblin);
+    activate(&mut g, 0, goblin, 0, Some(Target::Permanent(hidden)));
+    assert!(g.battlefield_find(hidden).is_none(), "the morph died");
+}
+
+/// Dream Chisel makes the morph cast cost {2}.
+#[test]
+fn dream_chisel_discounts_morphs() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::dream_chisel());
+    let hidden = g.add_card_to_hand(0, catalog::krosan_colossus());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastFaceDown { card_id: hidden }).expect("cast face down for {2}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hidden).is_some_and(|c| c.face_down));
+    assert_eq!(g.players[0].mana_pool.total(), 0, "exactly two mana spent");
+}
+
+/// CR 205.3m — "a creature type other than Wall" can't be answered with Wall.
+#[test]
+fn cr_205_3m_imagecrafter_cant_name_wall() {
+    let mut g = main_phase();
+    let crafter = g.add_card_to_battlefield(0, catalog::imagecrafter());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(crafter);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Wall)]));
+    activate(&mut g, 0, crafter, 0, Some(Target::Permanent(bear)));
+    assert!(
+        !g.computed_permanent(bear).unwrap().subtypes.creature_types.contains(&CreatureType::Wall),
+        "the forbidden type is overruled"
+    );
+}
+
+/// CR 613.8 — a keyword grant gated on a creature type sees the layer-4 retype
+/// even though it is evaluated inside the layer gather.
+#[test]
+fn cr_613_8_type_gated_grant_sees_a_retype() {
+    let mut g = main_phase();
+    let wall = g.add_card_to_battlefield(0, catalog::mistform_wall());
+    assert!(g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Bird)]));
+    activate(&mut g, 0, wall, 0, None);
+    assert!(!g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+}
