@@ -4934,6 +4934,16 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ CR 714.4 — DFC sagas
 - ✅ CR 702.103 — Jump-start
 - ✅ CR 707.2 — continuous copies
+- ✅ CR 707.10 — a spell copy is put on the stack, not cast: it bumps neither
+  the storm count nor any cast watcher (`cr_707_10_spell_copy_is_not_cast`).
+  `Effect::CopySpellForEachOtherTarget` (Radiate) rides the same path.
+- ✅ CR 611.2 — a static under a duration/predicate wrapper surfaces its
+  *granted activated ability* too, not just its granted trigger and its P/T
+  (`granted_abilities_for` and the `PumpSelfByValue` layer walk both go
+  through `active_static`; `cr_611_2_wrapped_grant_surfaces_only_while_open`).
+- ✅ CR 601.2b — "discard X cards" as an additional cast cost is concretized
+  on the main cast path, not only on flashback
+  (`cr_601_2b_discard_x_cost_is_paid_when_cast_from_hand`, `_rejects_an_empty_hand`).
 - ✅ CR 702.43 — Domain
 - ✅ CR 702.6e — Equipment-granted triggered abilities
 - ✅ CR 702.6 — Equip ability fidelity: sorcery-speed gate, equip-at-instant
