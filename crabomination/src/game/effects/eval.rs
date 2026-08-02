@@ -1217,6 +1217,13 @@ impl GameState {
                     .filter(|c| c.definition.name == name)
                     .count() as i32
             }
+            Value::RememberedAmountOfSource => {
+                let Some(src) = ctx.source else { return 0 };
+                self.find_card_anywhere(src)
+                    .or_else(|| self.died_card_snapshots.get(&src))
+                    .and_then(|c| c.remembered_amount)
+                    .unwrap_or(0)
+            }
             Value::IfPred { pred, then, else_ } => {
                 if self.evaluate_predicate(pred, ctx) {
                     self.evaluate_value(then, ctx)
@@ -2905,7 +2912,7 @@ impl GameState {
                         matches!(
                             k,
                             crate::card::Keyword::Flashback(_)
-                                | crate::card::Keyword::FlashbackTap(_)
+                                | crate::card::Keyword::FlashbackTap { .. }
                         )
                     }),
                     R::SharesCardTypeWithExiledBySource => self
@@ -3572,7 +3579,8 @@ impl GameState {
             R::HasFlashback => card.definition.keywords.iter().any(|k| {
                 matches!(
                     k,
-                    crate::card::Keyword::Flashback(_) | crate::card::Keyword::FlashbackTap(_)
+                    crate::card::Keyword::Flashback(_)
+                        | crate::card::Keyword::FlashbackTap { .. }
                 )
             }),
             // No source context in the on-card evaluator; the exile-linked

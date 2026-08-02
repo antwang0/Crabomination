@@ -2352,11 +2352,6 @@ pub enum StaticEffect {
     /// damage of each creature attacking you" (Defensive Formation). Rides the
     /// same assigner hook as Banding.
     ControllerAssignsAttackersCombatDamage,
-    /// CR 121.2a — "If you would draw a card, you may instead choose land or
-    /// nonland and reveal cards from the top of your library until you reveal a
-    /// card of the chosen kind. Put that card into your hand and put all other
-    /// cards revealed this way on the bottom of your library in any order."
-    /// Abundance.
     /// CR 615 — "Prevent all damage that would be dealt to a creature by
     /// another creature if they share a color" (Well-Laid Plans). Global.
     PreventDamageBetweenSharedColorCreatures,
@@ -2372,7 +2367,22 @@ pub enum StaticEffect {
     /// CR 601.2 — "Players can't cast spells that share a color with the spell
     /// most recently cast this turn" (Mana Maze).
     CantCastSharingColorWithLastCastSpell,
+    /// CR 121.2a — "If you would draw a card, you may instead choose land or
+    /// nonland and reveal cards from the top of your library until you reveal a
+    /// card of the chosen kind. Put that card into your hand and put all other
+    /// cards revealed this way on the bottom of your library in any order."
+    /// Abundance.
     MayReplaceDrawWithRevealUntilKind,
+    /// CR 502.4 — "Permanents don't untap during their controllers' untap
+    /// steps" (Mist of Stagnation). Global; skips every seat's untap step.
+    PermanentsDontUntap,
+    /// Like `GrantActivatedAbility`, but the granting card is active from its
+    /// owner's **graveyard** rather than the battlefield ("as long as this card
+    /// is in your graveyard, lands you control have …" — Riftstone Portal).
+    GrantActivatedAbilityFromGraveyard {
+        applies_to: Selector,
+        ability: Box<crate::card::ActivatedAbility>,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

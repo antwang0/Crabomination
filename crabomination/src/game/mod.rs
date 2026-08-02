@@ -1270,6 +1270,15 @@ pub struct GameState {
     /// (Fatespinner). `(seat, step)`; cleared at cleanup.
     #[serde(default)]
     pub skipped_steps_this_turn: Vec<(usize, TurnStep)>,
+    /// "Creatures `.0` controls can't attack `.1` this turn" (Web of Inertia).
+    /// Checked when attacks are declared; cleared at cleanup.
+    #[serde(default)]
+    pub cant_attack_player_this_turn: Vec<(usize, usize)>,
+    /// Shaman's Trance — for this turn, `Some(seat)` may play lands and cast
+    /// spells from *every* graveyard as though they were in theirs, and no
+    /// other player may play from a graveyard at all. Cleared at cleanup.
+    #[serde(default)]
+    pub graveyard_play_pooled_for: Option<usize>,
     /// CR 723.1 — `(controlled, controller)` pairs waiting for `controlled` to
     /// actually take a turn (Mindslaver). A later entry for the same seat
     /// overwrites the earlier one (CR 723.1a).
@@ -1770,6 +1779,8 @@ impl Clone for GameState {
             no_search_this_turn: self.no_search_this_turn,
             hands_revealed_to: self.hands_revealed_to.clone(),
             skipped_steps_this_turn: self.skipped_steps_this_turn.clone(),
+            cant_attack_player_this_turn: self.cant_attack_player_this_turn.clone(),
+            graveyard_play_pooled_for: self.graveyard_play_pooled_for,
             pending_player_control: self.pending_player_control.clone(),
             controlled_by: self.controlled_by.clone(),
             replacement_effects: self.replacement_effects.clone(),
@@ -2021,6 +2032,8 @@ impl GameState {
             no_search_this_turn: false,
             hands_revealed_to: Vec::new(),
             skipped_steps_this_turn: Vec::new(),
+            cant_attack_player_this_turn: Vec::new(),
+            graveyard_play_pooled_for: None,
             pending_player_control: Vec::new(),
             controlled_by: Vec::new(),
             replacement_effects: Vec::new(),
@@ -4852,7 +4865,11 @@ impl GameState {
         zone: crate::card::Zone,
     ) -> bool {
         use crate::card::Zone;
-        (matches!(zone, Zone::Graveyard) && self.graveyard_locked())
+        // Shaman's Trance — while one seat has pooled every graveyard, no
+        // other player may play from a graveyard this turn.
+        (matches!(zone, Zone::Graveyard)
+            && self.graveyard_play_pooled_for.is_some_and(|only| only != caster))
+            || (matches!(zone, Zone::Graveyard) && self.graveyard_locked())
             || (matches!(zone, Zone::Library) && self.graveyard_library_locked())
             || (!def.is_creature()
                 && matches!(zone, Zone::Graveyard | Zone::Exile)
@@ -8145,6 +8162,15 @@ impl GameState {
                 }
                 crate::card::DynamicPt::CardsDrawnThisTurnPower { base_t } => {
                     (self.players[card.controller].cards_drawn_this_turn as i32, base_t)
+                }
+                crate::card::DynamicPt::ExiledWithSourceTotals => {
+                    // Sutured Ghoul — the pile exiled as it entered.
+                    let (mut pw, mut tf) = (0, 0);
+                    for c in self.exile.iter().filter(|c| c.exiled_with == Some(card.id)) {
+                        pw += c.definition.power;
+                        tf += c.definition.toughness;
+                    }
+                    (pw, tf)
                 }
                 crate::card::DynamicPt::InstantSorceryCardsInControllerGraveyard { mult } => {
                     let n = self.players[card.controller].graveyard.iter()
@@ -16664,11 +16690,43 @@ impl GameState {
         Some(zone.remove(pos))
     }
 
-    /// Look up a card instance by id across every visible zone in
-    /// resolution order — battlefield → each player's graveyard / hand /
-    /// library → exile → stack. General-purpose helper for predicates
-    /// or effects that need to introspect a card regardless of where
-    /// it currently lives.
+    /// Which graveyard `p` may currently play `card_id` out of: their own, or
+    /// — while Shaman's Trance has pooled the graveyards for them — whichever
+    /// seat's graveyard holds it.
+    pub(crate) fn playable_graveyard_seat(&self, p: usize, card_id: CardId) -> Option<usize> {
+        if self.players[p].graveyard.iter().any(|c| c.id == card_id) {
+            return Some(p);
+        }
+        if self.graveyard_play_pooled_for != Some(p) {
+            return None;
+        }
+        (0..self.players.len()).find(|&s| self.players[s].graveyard.iter().any(|c| c.id == card_id))
+    }
+
+    /// [`playable_graveyard_seat`]'s read half.
+    pub(crate) fn find_in_playable_graveyard(
+        &self,
+        p: usize,
+        card_id: CardId,
+    ) -> Option<&CardInstance> {
+        let seat = self.playable_graveyard_seat(p, card_id)?;
+        self.players[seat].graveyard.iter().find(|c| c.id == card_id)
+    }
+
+    /// [`playable_graveyard_seat`]'s take half; bumps the *owning* seat's
+    /// left-graveyard tally.
+    pub(crate) fn take_from_playable_graveyard(
+        &mut self,
+        p: usize,
+        card_id: CardId,
+    ) -> Option<CardInstance> {
+        let seat = self.playable_graveyard_seat(p, card_id)?;
+        let card = Self::take_card(&mut self.players[seat].graveyard, card_id)?;
+        self.players[seat].cards_left_graveyard_this_turn =
+            self.players[seat].cards_left_graveyard_this_turn.saturating_add(1);
+        Some(card)
+    }
+
     /// CR 105.2 — the colors of `id` wherever it lives (battlefield permanents
     /// read their computed definition so layer effects count). Empty for
     /// colorless objects and for ids that have left every visible zone.
@@ -16695,6 +16753,11 @@ impl GameState {
         tally.into_iter().filter(|(_, n)| *n == top).map(|(k, _)| k).collect()
     }
 
+    /// Look up a card instance by id across every visible zone in
+    /// resolution order — battlefield → each player's graveyard / hand /
+    /// library → exile → stack. General-purpose helper for predicates
+    /// or effects that need to introspect a card regardless of where
+    /// it currently lives.
     pub fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c);
@@ -17554,6 +17617,8 @@ fn static_effect_to_effects(
             | StaticEffect::PreventDamageBetweenSharedColorCreatures
             | StaticEffect::RedirectChosenColorSpellDamageToController
             | StaticEffect::CantCastSharingColorWithLastCastSpell
+            | StaticEffect::PermanentsDontUntap
+            | StaticEffect::GrantActivatedAbilityFromGraveyard { .. }
             // Gated at their action dispatch (`can_player_play_land`,
             // the convoke cast path); no layer effect.
             | StaticEffect::ControllerCantPlayLands

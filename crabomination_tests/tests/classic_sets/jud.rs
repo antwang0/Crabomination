@@ -1,7 +1,7 @@
 //! Judgment (JUD) — the block-closing set: Threshold payoffs, the Dwarf
 //! tribe and the white Nomad/Cleric shell.
 
-use crabomination::card::{CardId, Keyword, LandType};
+use crabomination::card::{CardId, Keyword, LandType, Zone};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
@@ -60,6 +60,24 @@ fn fill_graveyard(g: &mut GameState, seat: usize) {
     for _ in 0..7 {
         g.add_card_to_graveyard(seat, catalog::forest());
     }
+}
+
+/// Send `attacker` in unblocked and run the combat-damage step.
+fn combat_damage_to_player(g: &mut GameState, attacker: CardId, defender: usize) {
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(defender),
+    }]))
+    .expect("attack");
+    drain_stack(g);
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    drain_stack(g);
 }
 
 /// Ancestor's Chosen banks a life per card in your graveyard.
@@ -783,4 +801,260 @@ fn wormfang_manta_trades_turns() {
     let _ = g.remove_to_graveyard_with_triggers(id);
     drain_stack(&mut g);
     assert_eq!(g.players[0].extra_turns, 1);
+}
+
+// ── Closing wave (jud2) ─────────────────────────────────────────────────────
+
+/// Burning Wish pulls a sorcery out of the sideboard and exiles itself.
+#[test]
+fn burning_wish_fetches_a_sorcery_and_exiles() {
+    let mut g = main_phase();
+    g.add_card_to_sideboard(0, catalog::grizzly_bears());
+    let wanted = g.add_card_to_sideboard(0, catalog::morality_shift());
+    let spell = g.add_card_to_hand(0, catalog::burning_wish());
+    cast(&mut g, 0, spell, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == wanted), "the sorcery, not the bear");
+    assert!(g.exile.iter().any(|c| c.id == spell), "Burning Wish exiles itself");
+}
+
+/// Death Wish takes any card and half your life, rounded up.
+#[test]
+fn death_wish_costs_half_your_life() {
+    let mut g = main_phase();
+    g.players[0].life = 21;
+    g.add_card_to_sideboard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::death_wish());
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.players[0].hand.len(), 1);
+    assert_eq!(g.players[0].life, 10, "21 - 11");
+}
+
+/// Grave Consequences drains for every card left in a graveyard.
+#[test]
+fn grave_consequences_drains_per_graveyard_card() {
+    let mut g = main_phase();
+    fill_graveyard(&mut g, 1);
+    let spell = g.add_card_to_hand(0, catalog::grave_consequences());
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.players[1].life, 13, "seven cards, seven life");
+    assert_eq!(g.players[0].life, 20, "an empty graveyard costs nothing");
+}
+
+/// Scalpelexis exiles four, then four more on a duplicate name.
+#[test]
+fn scalpelexis_repeats_on_duplicate_names() {
+    let mut g = main_phase();
+    let fish = g.add_card_to_battlefield(0, catalog::scalpelexis());
+    // First four share a name (repeat), the next four don't (stop).
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    for f in [catalog::grizzly_bears, catalog::mountain, catalog::island, catalog::plains] {
+        g.add_card_to_library(1, f());
+    }
+    combat_damage_to_player(&mut g, fish, 1);
+    assert_eq!(g.exile.len(), 8, "one repeat, then a clean batch");
+}
+
+/// Soulgorger Orgg takes you to 1 and pays it all back when it leaves.
+#[test]
+fn soulgorger_orgg_repays_the_life_it_took() {
+    let mut g = main_phase();
+    let orgg = g.add_card_to_hand(0, catalog::soulgorger_orgg());
+    cast(&mut g, 0, orgg, None);
+    assert_eq!(g.players[0].life, 1);
+    let id = g.battlefield.iter().find(|c| c.definition.name == "Soulgorger Orgg").unwrap().id;
+    let _ = g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20);
+}
+
+/// Sutured Ghoul's body is the pile it exiled on the way in.
+#[test]
+fn sutured_ghoul_is_its_exiled_pile() {
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let ghoul = g.add_card_to_hand(0, catalog::sutured_ghoul());
+    cast(&mut g, 0, ghoul, None);
+    let id = g.battlefield.iter().find(|c| c.definition.name == "Sutured Ghoul").unwrap().id;
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "two 2/2s stitched together");
+}
+
+/// Spelljack counters a spell and hands it to you for free.
+#[test]
+fn spelljack_steals_the_countered_spell() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: victim,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    let jack = g.add_card_to_hand(0, catalog::spelljack());
+    cast(&mut g, 0, jack, Some(Target::Permanent(victim)));
+    let exiled = g.exile.iter().find(|c| c.id == victim).expect("countered into exile");
+    assert_eq!(exiled.may_play_until.map(|m| m.player), Some(0));
+}
+
+/// Mist of Stagnation freezes the untap step and untaps one per graveyard card.
+#[test]
+fn mist_of_stagnation_freezes_and_ransoms_untaps() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::mist_of_stagnation());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(bear).unwrap().tapped, "nothing untaps");
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "one card, one untap");
+}
+
+/// Web of Inertia shuts down attacks unless the attacker pays a graveyard card.
+#[test]
+fn web_of_inertia_taxes_attacks_with_the_graveyard() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::web_of_inertia());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    g.active_player_idx = 1;
+    g.step = TurnStep::BeginCombat;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![])]));
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: bear,
+            target: AttackTarget::Player(0),
+        }]))
+        .is_err(),
+        "declining the exile locks out the attack"
+    );
+}
+
+/// Riftstone Portal turns your lands into Selesnya duals from the graveyard.
+#[test]
+fn riftstone_portal_fixes_from_the_graveyard() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(0, catalog::mountain());
+    assert_eq!(g.granted_abilities_for(land).len(), 0);
+    g.add_card_to_graveyard(0, catalog::riftstone_portal());
+    assert_eq!(g.granted_abilities_for(land).len(), 1, "lands you control gain the G/W tap");
+}
+
+/// Prismatic Strands' flashback only accepts a white creature's tap.
+#[test]
+fn prismatic_strands_flashback_needs_a_white_creature() {
+    let mut g = main_phase();
+    let strands = g.add_card_to_graveyard(0, catalog::prismatic_strands());
+    let green = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastFlashbackTap {
+            card_id: strands,
+            tap_creatures: vec![green],
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "a green bear can't pay a white tap"
+    );
+}
+
+/// Shaman's Trance opens every graveyard to you and closes them to everyone else.
+#[test]
+fn shamans_trance_pools_the_graveyards() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(0, catalog::shamans_trance());
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.graveyard_play_pooled_for, Some(0));
+    let bear = catalog::grizzly_bears();
+    assert!(
+        g.cast_from_zone_blocked(1, &bear, Zone::Graveyard),
+        "opponents lose their own graveyards"
+    );
+    assert!(!g.cast_from_zone_blocked(0, &bear, Zone::Graveyard));
+}
+
+/// Cephalid Constable bounces one permanent per point of combat damage.
+#[test]
+fn cephalid_constable_bounces_per_damage() {
+    let mut g = main_phase();
+    let cop = g.add_card_to_battlefield(0, catalog::cephalid_constable());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::forest());
+    combat_damage_to_player(&mut g, cop, 1);
+    assert_eq!(g.players[1].hand.len(), 1, "1 power, one permanent home");
+}
+
+/// Planar Chaos counters a spell whose caster loses the flip.
+#[test]
+fn planar_chaos_counters_on_a_lost_flip() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::planar_chaos());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    cast(&mut g, 0, bear, None);
+    assert!(g.battlefield_find(bear).is_none(), "tails counters it");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear));
+}
+
+/// Telekinetic Bonds buys a tap off any discard for {1}{U}.
+#[test]
+fn telekinetic_bonds_taps_on_a_discard() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::telekinetic_bonds());
+    let junk = g.add_card_to_hand(1, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut events = Vec::new();
+    g.discard_card(1, junk, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    mana(&mut g, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).unwrap().tapped);
+}
+
+/// Living Wish only reaches creature and land cards.
+#[test]
+fn living_wish_ignores_a_sideboard_instant() {
+    let mut g = main_phase();
+    g.add_card_to_sideboard(0, catalog::envelop());
+    let wanted = g.add_card_to_sideboard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::living_wish());
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.players[0].hand.iter().map(|c| c.id).collect::<Vec<_>>(), vec![wanted]);
+}
+
+/// Prismatic Strands fogs every source of the chosen colour.
+#[test]
+fn prismatic_strands_fogs_a_colour() {
+    let mut g = main_phase();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::prismatic_strands());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
+    cast(&mut g, 0, spell, None);
+    let before = g.players[0].life;
+    let mut events = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(0),
+        2,
+        Some(attacker),
+        &mut events,
+    );
+    assert_eq!(g.players[0].life, before, "green sources deal nothing");
 }

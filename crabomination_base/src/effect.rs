@@ -389,6 +389,10 @@ pub enum Selector {
     /// A single player, lifted to selector form.
     Player(PlayerRef),
 
+    /// Narrow another selector's result set to the entities matching `filter`
+    /// ("the *nonblack* creature blocking or blocked by this" — Deathgazer).
+    /// Player entities never match a permanent filter and are dropped.
+    MatchingAmong { inner: Box<Selector>, filter: SelectionRequirement },
     /// Take at most `count` entities from `inner` (in resolution order).
     /// Wraps another selector to clamp how many entities flow through —
     /// used by SOS Heated Argument's "you may exile *a card* from your
@@ -397,10 +401,6 @@ pub enum Selector {
     /// "up to two creature cards from your graveyard". The cap is
     /// evaluated against the controller's resolution context, so values
     /// like `Value::CountersOn(...)` work as expected.
-    /// Narrow another selector's result set to the entities matching `filter`
-    /// ("the *nonblack* creature blocking or blocked by this" — Deathgazer).
-    /// Player entities never match a permanent filter and are dropped.
-    MatchingAmong { inner: Box<Selector>, filter: SelectionRequirement },
     Take { inner: Box<Selector>, count: Box<Value> },
     /// Like `Take` but picks `count` entities uniformly at random instead of
     /// the first in resolution order (Capricious Hellraiser's random exile).
@@ -1083,6 +1083,10 @@ pub enum Value {
     /// Conditional value: `then` when `pred` holds, else `else_`.
     /// Polukranos, Unchained's "enters with six… escapes with twelve instead".
     IfPred { pred: Box<Predicate>, then: Box<Value>, else_: Box<Value> },
+    /// The number stamped on the source by `Effect::LoseAllButLifeRemembered`
+    /// — "the life you lost when it entered" (Soulgorger Orgg). Reads the
+    /// source's death LKI too, so a leave trigger still sees it.
+    RememberedAmountOfSource,
 }
 
 impl Value {
@@ -2777,6 +2781,10 @@ pub enum Effect {
         on_heads: Box<Effect>,
         on_tails: Box<Effect>,
     },
+    /// CR 705 — "that player flips a coin" (Planar Chaos): the flip is made by
+    /// `flipper` rather than the effect's controller, so their Krark's-Thumb
+    /// advantage and their win/lose triggers apply.
+    FlipCoinBy { flipper: PlayerRef, on_heads: Box<Effect>, on_tails: Box<Effect> },
     /// CR 705 — flip a coin repeatedly until the controller loses a flip or
     /// chooses to stop. Losing a flip cancels everything (zero wins). Then,
     /// in order, every `(threshold, effect)` whose threshold is at most the
@@ -7870,6 +7878,63 @@ pub enum Effect {
     /// Shift). A whole-zone swap; per-card leaves-graveyard triggers don't
     /// fire, matching `ExchangeHandAndGraveyard`.
     ExchangeGraveyardAndLibrary { who: PlayerRef },
+
+    /// "Each player may exile any number of cards from their graveyard,"
+    /// then `then` runs once (Grave Consequences). Each seat picks its own
+    /// batch via `Decision::ChooseCards`; unlike
+    /// [`Effect::AnyPlayerMayExileFromGraveyard`] every seat is asked and
+    /// `then` runs regardless.
+    EachPlayerMayExileAnyNumberFromGraveyard { then: Box<Effect> },
+
+    /// "Each player loses `per` life for each `filter` card in their
+    /// graveyard" — the graveyard twin of [`Effect::LoseLifePerControlled`],
+    /// so each seat's own graveyard sets its own loss (Grave Consequences).
+    LoseLifePerCardInGraveyard { who: Selector, filter: SelectionRequirement, per: Value },
+
+    /// "That player exiles the top `count` cards of their library. If two or
+    /// more of those cards have the same name, repeat this process"
+    /// (Scalpelexis). Capped at 20 iterations against a stacked library.
+    ExileTopRepeatOnDuplicateNames { who: PlayerRef, count: Value },
+
+    /// "You lose all but `keep` life," remembering how much was lost on the
+    /// source (`CardInstance.remembered_amount`) so a later trigger can pay it
+    /// back via [`Value::RememberedAmountOfSource`]. Soulgorger Orgg.
+    LoseAllButLifeRemembered { who: PlayerRef, keep: Value },
+
+    /// "Counter target spell. If that spell is countered this way, exile it
+    /// instead… You may play it without paying its mana cost for as long as it
+    /// remains exiled" (Spelljack). The exiled card gets a may-play grant for
+    /// the countering player with no duration.
+    CounterSpellExileMayPlayFree { what: Selector },
+
+    /// "Exile any number of `filter` cards from your graveyard," recording them
+    /// on the source's exile link so a CDA can read the pile (Sutured Ghoul's
+    /// as-enters clause). The controller picks; the headless default takes all.
+    ExileAnyNumberFromGraveyardOnSource { filter: SelectionRequirement },
+
+    /// "That player chooses a permanent for each card in their graveyard, then
+    /// untaps those permanents" (Mist of Stagnation). Auto-picks the player's
+    /// own tapped permanents when they aren't a UI seat.
+    UntapChosenPerCardInGraveyard { who: PlayerRef },
+
+    /// "`who` may exile a card from their graveyard. If they don't, `otherwise`"
+    /// (Web of Inertia). One seat, one card, one yes/no.
+    MayExileFromGraveyardElse { who: PlayerRef, otherwise: Box<Effect> },
+
+    /// "Creatures `who` controls can't attack `defender` this turn"
+    /// (Web of Inertia's punishment half). Cleared at cleanup.
+    CantAttackPlayerThisTurn { who: PlayerRef, defender: PlayerRef },
+
+    /// "Prevent all damage that sources of the color of your choice would deal
+    /// this turn" (Prismatic Strands) — the recipient-less sibling of
+    /// [`Effect::PreventAllDamageFromChosenColorThisTurn`].
+    PreventAllDamageFromChosenColorGlobally,
+
+    /// "Other players can't play lands or cast spells from their graveyards
+    /// this turn. You may play lands and cast spells from other players'
+    /// graveyards this turn as though those cards were in your graveyard"
+    /// (Shaman's Trance).
+    ShamansTrance,
 }
 
 /// CR 702.172 — one Spree mode: an additional mana cost paired with the

@@ -326,6 +326,24 @@ impl Effect {
             Effect::DamageTargetPlayerMayRedirect { .. } => true,
             Effect::CopySpellForEachOtherTarget { what } => sel_has_target(what),
             Effect::ExchangeGraveyardAndLibrary { who } => matches!(who, PlayerRef::Target(_)),
+            Effect::FlipCoinBy { on_heads, on_tails, .. } => {
+                on_heads.requires_target() || on_tails.requires_target()
+            }
+            Effect::EachPlayerMayExileAnyNumberFromGraveyard { then } => then.requires_target(),
+            Effect::LoseLifePerCardInGraveyard { who, .. } => sel_has_target(who),
+            Effect::MayExileFromGraveyardElse { who, otherwise } => {
+                player_has_target(who) || otherwise.requires_target()
+            }
+            Effect::CounterSpellExileMayPlayFree { what } => sel_has_target(what),
+            Effect::ExileTopRepeatOnDuplicateNames { who, .. }
+            | Effect::LoseAllButLifeRemembered { who, .. }
+            | Effect::UntapChosenPerCardInGraveyard { who } => player_has_target(who),
+            Effect::CantAttackPlayerThisTurn { who, defender } => {
+                player_has_target(who) || player_has_target(defender)
+            }
+            Effect::ExileAnyNumberFromGraveyardOnSource { .. }
+            | Effect::PreventAllDamageFromChosenColorGlobally
+            | Effect::ShamansTrance => false,
             Effect::AnyPlayerMayTakeDamageElse { who, otherwise, .. } => {
                 matches!(who, PlayerRef::Target(_))
                     || matches!(who, PlayerRef::ControllerOf(s) if sel_has_target(s))
@@ -1445,6 +1463,7 @@ impl Effect {
             | Effect::TapAndUntapLock { what }
             | Effect::TapAndLockWhileSourcePresent { what }
             | Effect::TapBlockedByAndSkipUntap { what }
+            | Effect::TapOrUntap { what }
             | Effect::Untap { what, .. } => {
                 sel_filter(what).or_else(|| implicit_player_if_controlled_by_target(what))
             }

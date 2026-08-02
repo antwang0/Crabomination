@@ -7881,14 +7881,12 @@ impl GameState {
         // CR 601.2g float-spend choice (None until answered).
         let spend_float = self.pending_cast_spend_float.take();
 
-        // Find the card in the controller's graveyard.
-        let graveyard_pos = self.players[p]
-            .graveyard
-            .iter()
-            .position(|c| c.id == card_id)
-            .ok_or(GameError::CardNotInHand(card_id))?;
-
-        let card = self.players[p].graveyard[graveyard_pos].clone();
+        // The controller's graveyard — or any graveyard, while Shaman's
+        // Trance has pooled them for this seat.
+        let card = self
+            .find_in_playable_graveyard(p, card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?
+            .clone();
         // Grafdigger's Cage / Soulless Jailer — no casting from graveyards.
         if self.cast_from_zone_blocked(p, &card.definition, crate::card::Zone::Graveyard) {
             return Err(GameError::CardNotInHand(card_id));
@@ -8238,10 +8236,9 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         // Re-locate by id at removal time: cost payments run before this and
         // can reshuffle the graveyard, so a stored index would be stale.
-        let mut card = Self::take_card(&mut self.players[p].graveyard, card_id)
+        let mut card = self
+            .take_from_playable_graveyard(p, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        self.players[p].cards_left_graveyard_this_turn =
-            self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         self.entered_from_graveyard_this_turn.insert(card_id);
         card.cast_via_flashback = true;
         // CR 702.187 — a Mayhem cast stamps the spell so "if the mayhem cost
@@ -8483,10 +8480,8 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        let card = self.players[p]
-            .graveyard
-            .iter()
-            .find(|c| c.id == card_id)
+        let card = self
+            .find_in_playable_graveyard(p, card_id)
             .ok_or(GameError::CardNotInHand(card_id))?
             .clone();
         let required_taps = card
@@ -8517,7 +8512,9 @@ impl GameState {
             return Err(GameError::FlashbackTapInvalid);
         }
         // Validate every creature in `tap_creatures` is currently untapped,
-        // controlled by the caster, and a creature.
+        // controlled by the caster, a creature, and matches the keyword's
+        // filter if it carries one ("an untapped white creature").
+        let tap_filter = card.definition.flashback_tap_filter().cloned();
         for cid in tap_creatures {
             let c = self
                 .battlefield
@@ -8525,6 +8522,11 @@ impl GameState {
                 .find(|c| c.id == *cid)
                 .ok_or(GameError::FlashbackTapInvalid)?;
             if c.tapped || c.controller != p || !c.definition.is_creature() {
+                return Err(GameError::FlashbackTapInvalid);
+            }
+            if let Some(f) = &tap_filter
+                && !self.evaluate_requirement_static(f, &Target::Permanent(*cid), p, Some(card_id))
+            {
                 return Err(GameError::FlashbackTapInvalid);
             }
         }
@@ -11349,6 +11351,24 @@ impl GameState {
                         }
                     }
                     _ => continue,
+                }
+            }
+        }
+        // Riftstone Portal — "as long as this card is in your graveyard,
+        // lands you control have '…'". The grant is live from the graveyard,
+        // scoped to the owning seat's permanents.
+        for seat in 0..self.players.len() {
+            for src in &self.players[seat].graveyard {
+                for sa in &src.definition.static_abilities {
+                    let StaticEffect::GrantActivatedAbilityFromGraveyard { applies_to, ability } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let Selector::EachPermanent(req) = applies_to else { continue };
+                    if self.evaluate_requirement_static(req, &tgt, seat, Some(src.id)) {
+                        out.push((**ability).clone());
+                    }
                 }
             }
         }

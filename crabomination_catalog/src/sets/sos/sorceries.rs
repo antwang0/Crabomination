@@ -314,7 +314,7 @@ pub fn group_project() -> CardDefinition {
         name: "Group Project",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Sorcery],
-        keywords: vec![Keyword::FlashbackTap(3)],
+        keywords: vec![Keyword::FlashbackTap { count: 3, filter: None }],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),

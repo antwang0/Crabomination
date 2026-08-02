@@ -517,11 +517,6 @@ impl GameState {
         Some(b)
     }
 
-    /// Ask `seat` to choose a number in `0..=max`, routed to a seat that may
-    /// not be the resolving controller (Choice of Damnations, Pain's Reward).
-    /// Shares `ask_seat_bool`'s replay-log contract — pass one `cursor` per
-    /// run, keep side effects after the final ask, and `clear_answer_log()`
-    /// on every completing path.
     /// CR 706.1 — one die roll routed through the decider, clamped to the
     /// die's face range. Shared by `Effect::RollDie` and the CR 706.8 stored-
     /// result effects.
@@ -532,6 +527,11 @@ impl GameState {
         }
     }
 
+    /// Ask `seat` to choose a number in `0..=max`, routed to a seat that may
+    /// not be the resolving controller (Choice of Damnations, Pain's Reward).
+    /// Shares `ask_seat_bool`'s replay-log contract — pass one `cursor` per
+    /// run, keep side effects after the final ask, and `clear_answer_log()`
+    /// on every completing path.
     pub(crate) fn ask_seat_amount(
         &mut self,
         cursor: &mut usize,
@@ -20121,6 +20121,324 @@ impl GameState {
                 self.players[p].graveyard = lib;
                 self.shuffle_library(p, events);
                 Ok(())
+            }
+
+            Effect::EachPlayerMayExileAnyNumberFromGraveyard { then } => {
+                // Grave Consequences — every seat is asked (turn order from
+                // the controller); `then` runs regardless of who exiled.
+                let mut cursor = 0usize;
+                let n = self.players.len();
+                for i in 0..n {
+                    let seat = (ctx.controller + i) % n;
+                    let candidates: Vec<(CardId, String)> = self.players[seat]
+                        .graveyard
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if candidates.is_empty() {
+                        continue;
+                    }
+                    let max = candidates.len() as u32;
+                    let Some(picked) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        seat,
+                        "Exile any number of cards from your graveyard".into(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates,
+                        0,
+                        max,
+                        effect,
+                        Vec::new(),
+                    ) else {
+                        return Ok(());
+                    };
+                    for cid in picked {
+                        if let Some(card) = Self::take_card(&mut self.players[seat].graveyard, cid) {
+                            self.exile.push(card);
+                            events.push(GameEvent::PermanentExiled { card_id: cid });
+                        }
+                    }
+                }
+                self.clear_answer_log();
+                self.run_effect(then, ctx, events)
+            }
+
+            Effect::LoseLifePerCardInGraveyard { who, filter, per } => {
+                let per = self.evaluate_value(per, ctx).max(0);
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                    .collect();
+                for p in self.apnap_sort(seats) {
+                    let n = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                        .count() as i64;
+                    let amt = (n * per as i64) as i32;
+                    if amt <= 0 {
+                        continue;
+                    }
+                    let applied = self.adjust_life_applied(p, -amt);
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::ExileTopRepeatOnDuplicateNames { who, count } => {
+                // Scalpelexis — exile a batch; repeat while the batch held a
+                // duplicate name. Bounded so a stacked library can't spin.
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
+                for _ in 0..20 {
+                    let batch: Vec<CardId> =
+                        self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                    if batch.is_empty() {
+                        return Ok(());
+                    }
+                    let mut names: Vec<&'static str> = Vec::with_capacity(batch.len());
+                    for cid in &batch {
+                        if let Some(card) = Self::take_card(&mut self.players[p].library, *cid) {
+                            names.push(card.definition.name);
+                            self.exile.push(card);
+                            events.push(GameEvent::PermanentExiled { card_id: *cid });
+                        }
+                    }
+                    names.sort_unstable();
+                    let repeat = names.windows(2).any(|w| w[0] == w[1]);
+                    if !repeat {
+                        return Ok(());
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::LoseAllButLifeRemembered { who, keep } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let keep = self.evaluate_value(keep, ctx).max(0) as i32;
+                let lost = self.players[p].life - keep;
+                if lost > 0 {
+                    let applied = self.adjust_life_applied(p, -lost);
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
+                    }
+                    if let Some(src) = ctx.source
+                        && let Some(c) = self.battlefield_find_mut(src)
+                    {
+                        c.remembered_amount = Some(-applied);
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::CounterSpellExileMayPlayFree { what } => {
+                // Spelljack — counter, exile instead of graveyard, and let the
+                // countering player cast it free for as long as it's exiled.
+                use crate::card::{MayPlayDuration, MayPlayPermission};
+                let targets = self.resolve_selector(what, ctx);
+                let mut to_remove: Vec<usize> = Vec::new();
+                for t in &targets {
+                    if let Some(cid) = t.as_card_id()
+                        && let Some(pos) = self.stack.iter().position(|si| {
+                            matches!(si, StackItem::Spell { card, uncounterable: false, .. } if card.id == cid)
+                        })
+                    {
+                        to_remove.push(pos);
+                    }
+                }
+                to_remove.sort_unstable_by(|a, b| b.cmp(a));
+                for pos in to_remove {
+                    if let StackItem::Spell { mut card, .. } = self.stack.remove(pos) {
+                        let card_id = card.id;
+                        card.may_play_until = Some(MayPlayPermission {
+                            player: ctx.controller,
+                            granted_turn: self.turn_number,
+                            duration: MayPlayDuration::WhileExiled,
+                            exile_after: false,
+                            miracle: false,
+                        });
+                        self.exile.push(*card);
+                        events.push(GameEvent::PermanentExiled { card_id });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ExileAnyNumberFromGraveyardOnSource { filter } => {
+                // Sutured Ghoul — the exiled pile is tagged `exiled_with` the
+                // source so `DynamicPt::ExiledWithSourceTotals` can read it.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let all: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+                let max = all.len() as u32;
+                let Some(picked) = self.choose_up_to_cards(
+                    p,
+                    "Exile any number of creature cards from your graveyard".into(),
+                    src,
+                    candidates,
+                    max,
+                    effect,
+                    all,
+                ) else {
+                    return Ok(());
+                };
+                for cid in picked {
+                    if let Some(mut card) = Self::take_card(&mut self.players[p].graveyard, cid) {
+                        card.exiled_with = Some(src);
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::UntapChosenPerCardInGraveyard { who } => {
+                // Mist of Stagnation — one permanent per card in that player's
+                // graveyard; the headless default untaps their own tapped ones.
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let n = self.players[p].graveyard.len() as u32;
+                if n == 0 {
+                    return Ok(());
+                }
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.tapped)
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let mine: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.tapped && c.controller == p)
+                    .map(|c| c.id)
+                    .collect();
+                let Some(picked) = self.choose_up_to_cards(
+                    p,
+                    "Untap which permanents?".into(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates,
+                    n,
+                    effect,
+                    mine,
+                ) else {
+                    return Ok(());
+                };
+                for cid in picked {
+                    self.untap_permanent(cid, events);
+                }
+                Ok(())
+            }
+
+            Effect::MayExileFromGraveyardElse { who, otherwise } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return self.run_effect(otherwise, ctx, events);
+                }
+                let Some(picked) = self.ask_seat_cards(
+                    p,
+                    "Exile a card from your graveyard?".into(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates,
+                    0,
+                    1,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                let Some(&cid) = picked.first() else {
+                    return self.run_effect(otherwise, ctx, events);
+                };
+                if let Some(card) = Self::take_card(&mut self.players[p].graveyard, cid) {
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                }
+                Ok(())
+            }
+
+            Effect::CantAttackPlayerThisTurn { who, defender } => {
+                let (Some(a), Some(d)) =
+                    (self.resolve_player(who, ctx), self.resolve_player(defender, ctx))
+                else {
+                    return Ok(());
+                };
+                if !self.cant_attack_player_this_turn.contains(&(a, d)) {
+                    self.cant_attack_player_this_turn.push((a, d));
+                }
+                Ok(())
+            }
+
+            Effect::PreventAllDamageFromChosenColorGlobally => {
+                // Prismatic Strands — a turn-long fog keyed to one source
+                // color, with no recipient restriction (CR 615.1).
+                use crate::decision::{Decision, DecisionAnswer};
+                let legal = vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+                let decision =
+                    Decision::ChooseColor { source: ctx.source.unwrap_or(CardId(0)), legal };
+                if self.seat_suspends(ctx.controller) {
+                    self.suspend_signal = Some((
+                        decision,
+                        PendingEffectState::PreventFromChosenColorPending {
+                            targets: vec![crate::game::types::PreventionTarget::Anything],
+                        },
+                        Effect::Noop,
+                    ));
+                    return Ok(());
+                }
+                let color = match self.decider.decide(&decision) {
+                    DecisionAnswer::Color(c) => c,
+                    _ => Color::Black,
+                };
+                self.prevention_shields.push(crate::game::types::PreventionShield {
+                    target: crate::game::types::PreventionTarget::Anything,
+                    source_color: Some(color),
+                    ..Default::default()
+                });
+                Ok(())
+            }
+
+            Effect::ShamansTrance => {
+                // Shaman's Trance — the controller treats every graveyard as
+                // their own for the turn; everyone else loses graveyard casts.
+                self.graveyard_play_pooled_for = Some(ctx.controller);
+                Ok(())
+            }
+
+            Effect::FlipCoinBy { flipper, on_heads, on_tails } => {
+                let Some(p) = self.resolve_player(flipper, ctx) else { return Ok(()) };
+                if self.flip_one_coin(p) {
+                    events.push(GameEvent::CoinFlipWon { player: p });
+                    self.run_effect(on_heads, ctx, events)
+                } else {
+                    events.push(GameEvent::CoinFlipLost { player: p });
+                    self.run_effect(on_tails, ctx, events)
+                }
             }
 
             Effect::AnyPlayerMayTakeDamageElse { who, amount, otherwise } => {

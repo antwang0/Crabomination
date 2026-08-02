@@ -359,6 +359,7 @@ pub mod ice;
 pub mod inv;
 pub mod jou;
 pub mod jud;
+pub mod jud2;
 pub mod jou2;
 pub mod jou3;
 pub mod khm;

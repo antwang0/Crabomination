@@ -176,6 +176,11 @@ impl GameState {
                         || self.same_team(self.active_player_idx, target_player)
                         || !self.players[target_player].is_alive()
                         || seat_restriction.is_some_and(|only| only != Some(target_player))
+                        // "Creatures they control can't attack you this turn"
+                        // (Web of Inertia).
+                        || self
+                            .cant_attack_player_this_turn
+                            .contains(&(self.active_player_idx, target_player))
                     {
                         return Err(GameError::InvalidAttackTarget(target_player));
                     }

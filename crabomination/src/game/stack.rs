@@ -2146,6 +2146,18 @@ impl GameState {
             } else {
                 false
             };
+        // CR 502.4 — Mist of Stagnation: nothing untaps during any untap step.
+        if self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::PermanentsDontUntap))
+        }) {
+            for c in self.battlefield.iter_mut().filter(|c| c.controller == p) {
+                c.summoning_sick = false;
+            }
+            return;
+        }
         let untappers: Vec<usize> = {
             let mut u = if active_skips_untap { vec![] } else { vec![p] };
             for c in &self.battlefield {
@@ -2981,6 +2993,8 @@ impl GameState {
         self.creature_deaths_drain_toughness_this_turn = false;
         self.no_search_this_turn = false;
         self.skipped_steps_this_turn.clear();
+        self.cant_attack_player_this_turn.clear();
+        self.graveyard_play_pooled_for = None;
         self.block_poison_this_turn = 0;
         // CR 500.4 — "kept this turn" mana (Savage Ventmaw) expires now, so the
         // final empty of the turn actually removes it.

@@ -921,12 +921,12 @@ pub enum Keyword {
     Flash,
     Flashback(crate::mana::ManaCost),
     /// "Flashback—Tap N untapped creatures you control" — a Flashback
-    /// cost paid not in mana but by tapping N creatures. Used by Group
-    /// Project (Tap three) and any future tap-creatures-as-flashback
-    /// card. Recognized by `GameAction::CastFlashbackTap`. Mutually
+    /// cost paid not in mana but by tapping N creatures, optionally
+    /// restricted by `filter` ("an untapped white creature" — Prismatic
+    /// Strands). Recognized by `GameAction::CastFlashbackTap`. Mutually
     /// exclusive with `Keyword::Flashback(_)` in practice (a card has
     /// one Flashback variant or the other).
-    FlashbackTap(u32),
+    FlashbackTap { count: u32, filter: Option<Box<SelectionRequirement>> },
     /// CR 702.103 — Jump-start: cast from the graveyard for the card's own
     /// mana cost plus discarding a card; exiles after resolving (rides the
     /// flashback cast path). Chemister's Insight, Radical Idea.
@@ -4011,6 +4011,9 @@ pub enum DynamicPt {
     /// Power = toughness = `mult` × the number of instant and sorcery cards in
     /// the controller's graveyard. Melek, Reforged Researcher (`*/*`, mult 2).
     InstantSorceryCardsInControllerGraveyard { mult: i32 },
+    /// Power = the total power, toughness = the total toughness, of the cards
+    /// exiled with this permanent (`CardInstance.exiled_with`). Sutured Ghoul.
+    ExiledWithSourceTotals,
 }
 
 fn one_i32() -> i32 { 1 }
@@ -4383,10 +4386,18 @@ impl CardDefinition {
         })
     }
     /// Returns the number of creatures that must be tapped to flashback
-    /// this card if it has `Keyword::FlashbackTap(N)`. None otherwise.
+    /// this card if it has `Keyword::FlashbackTap`. None otherwise.
     pub fn has_flashback_tap(&self) -> Option<u32> {
         self.keywords.iter().find_map(|kw| {
-            if let Keyword::FlashbackTap(n) = kw { Some(*n) } else { None }
+            if let Keyword::FlashbackTap { count, .. } = kw { Some(*count) } else { None }
+        })
+    }
+
+    /// The per-creature filter on this card's `Keyword::FlashbackTap`, if any.
+    pub fn flashback_tap_filter(&self) -> Option<&SelectionRequirement> {
+        self.keywords.iter().find_map(|kw| match kw {
+            Keyword::FlashbackTap { filter, .. } => filter.as_deref(),
+            _ => None,
         })
     }
     /// True if this card has Retrace (CR 702.81) — castable from the
@@ -4942,6 +4953,10 @@ pub struct CardInstance {
     /// (`Effect::RememberPlayerOnSource`). `PlayerRef::ChosenPlayerOfSource`
     /// resolves to it — "that player" on a later trigger (Soul Scourge).
     pub chosen_player: Option<usize>,
+    /// A number this permanent remembered (`Effect::LoseAllButLifeRemembered`
+    /// stamps the life lost). `Value::RememberedAmountOfSource` reads it —
+    /// "gain life equal to the life you lost" (Soulgorger Orgg).
+    pub remembered_amount: Option<i32>,
     /// Indices of activated abilities flagged `once_per_turn` that have
     /// already been used this turn. Cleared at the start of each turn by
     /// `clean_per_turn_state`. Empty for the common case (most abilities
@@ -5350,6 +5365,7 @@ impl CardInstance {
             name_choices_used: 0,
             chosen_permanent: None,
             chosen_player: None,
+            remembered_amount: None,
             once_per_turn_used: Vec::new(),
             exhausted_abilities: Vec::new(),
             granted_keywords_eot: Vec::new(),
@@ -5982,6 +5998,8 @@ struct CardInstanceWire {
     #[serde(default)]
     chosen_player: Option<usize>,
     #[serde(default)]
+    remembered_amount: Option<i32>,
+    #[serde(default)]
     once_per_turn_used: Vec<usize>,
     #[serde(default)]
     exhausted_abilities: Vec<usize>,
@@ -6215,6 +6233,7 @@ impl serde::Serialize for CardInstance {
             name_choices_used: self.name_choices_used,
             chosen_permanent: self.chosen_permanent,
             chosen_player: self.chosen_player,
+            remembered_amount: self.remembered_amount,
             once_per_turn_used: self.once_per_turn_used.clone(),
             exhausted_abilities: self.exhausted_abilities.clone(),
             may_play_until: self.may_play_until,
@@ -6414,6 +6433,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.split_cast = wire.split_cast;
         c.exiled_by = wire.exiled_by;
         c.exiled_with = wire.exiled_with;
+        c.remembered_amount = wire.remembered_amount;
         c.entered_turn = wire.entered_turn;
         c.battlefield_timestamp = wire.battlefield_timestamp;
         c.detained_by = wire.detained_by;
