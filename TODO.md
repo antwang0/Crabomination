@@ -102,19 +102,45 @@ Prison Barricade's kicked defender bypass is wired.
   Maneuvers, Charmed Pendant, Catalyst Stone (a flashback-cost modifier),
   Aura Graft, Seize the Day (an extra combat phase), Predict, Bamboozle.
 
-## Odyssey — opened
+## Odyssey — closed
 
-`set_gaps.py ody` 274 → 53 (`sets::ody::gaps`–`gaps8`, 221 cards; tests in
-`classic_sets/ody`). Threshold rides `Predicate::ThresholdActive`, flashback and
-the Aura/EquipBonus shell were already in place. New primitives:
-`Effect::{RevealHand, RevealTopOfLibrary, PlayerCantCastMatchingThisTurn}`,
-`StaticEffect::{ControllerMaxHandSizeReduced, ReduceColorDamageToYouBy}`,
-`SelectionRequirement::ToughnessAtMostGraveyardCount`, `CounterType::Feather`,
-`CreatureType::Mystic`, `Value::{CardsDrawnThisEffect,
-CardsNamedLikeTriggerSpellInAllGraveyards}` (the Shrine cycle),
-`DynamicPt::CardTypeInAllGraveyards` (the Lhurgoyf cycle),
-`AdditionalCastCost::DiscardRandom`, and `Player.cant_cast_matching_this_turn`
-(surfaced as `PlayerView.locked_cast_kinds` + a client `⊘ <kind>` chip).
+`set_gaps.py ody` is at **zero** (274 → 53 → 30 → 10 → 5 → 0;
+`sets::ody::gaps`–`gaps12`, tests in `classic_sets/ody`). Threshold rides
+`Predicate::ThresholdActive`; flashback and the Aura/EquipBonus shell were
+already in place. Primitives across the run: `Effect::{RevealHand,
+RevealTopOfLibrary, PlayerCantCastMatchingThisTurn, SacrificeSourceUnlessCost,
+ExileFromGraveyard, BalanceMatching, SearchSameNameToBattlefield,
+ExileLibraryCardsNamedLikeExiledThisResolution, RevealTopChooseToGraveyard,
+GainControlAndReattachAura, MillAddManaForColoredSymbols}`,
+`StaticEffect::{ControllerMaxHandSizeReduced, ReduceColorDamageToYouBy,
+ControllerMaySkipDraws, FlashbackCostReduction, OpponentFlashbackTax,
+ReplaceDamageToYouWithCountersOnSource, ReplaceDamageToYouWithGraveyardExile,
+LifeGainBecomesDraw}`, `WardCost::{ExileFromGraveyard, DamageFromSource}`,
+`Keyword::ProtectionFromOwnColors`, `EventKind::PermanentDestroyedByEffect`
+(CR 701.7), `SelectionRequirement::{ToughnessAtMostGraveyardCount, HasFlashback,
+SharesCardTypeWithExiledBySource, WithCounterAtLeast}`,
+`CounterType::{Feather, Mine, Delay}`, `CreatureType::Mystic`,
+`Value::{CardsDrawnThisEffect, CardsNamedLikeTriggerSpellInAllGraveyards}`,
+`DynamicPt::CardTypeInAllGraveyards`, `AdditionalCastCost::DiscardRandom`,
+`ActivatedAbility::exile_from_hand_cost`,
+`CardDefinition::counts_as_named_in_graveyard` and `ManaCost::colored_symbols`.
+
+Residual approximations, all documented in-source:
+- **Graceful Antelope's land change is permanent.** The printed clause is
+  "until this creature leaves the battlefield"; the engine has no such
+  duration (`Duration::WhileSourceRemains` would need SBA unwind like
+  `GainControlWhileSourceRemains`).
+- **Impulsive Maneuvers doubles/prevents for the turn**, not "the next time
+  that creature would deal combat damage".
+- **Liquid Fire's split is chosen at resolution**, not as the printed
+  additional cost (no cast-time choose-a-number cost exists).
+- **Karmic Justice retaliates against any opponent**, not specifically the one
+  whose effect destroyed the permanent — exact in two-player.
+- **Aegis of Honor binds its source at activation** (the shield's chosen-source
+  model), so it must be activated in response to the burn spell.
+- **Bomb Squad's four-counter check is not a real state trigger** — it runs at
+  the end of each of its own two abilities, which covers every way the counters
+  can accumulate.
 
 ## Apocalypse — closed
 

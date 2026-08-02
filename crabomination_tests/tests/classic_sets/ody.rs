@@ -1758,7 +1758,7 @@ fn impulsive_maneuvers_doubles_on_heads() {
     drain_stack(&mut g);
     // The winning flip doubles the attacker's damage for the turn.
     g.step = TurnStep::DeclareBlockers;
-    g.resolve_combat();
+    let _ = g.resolve_combat();
     assert_eq!(g.players[1].life, 16, "2 power doubled");
 }
 

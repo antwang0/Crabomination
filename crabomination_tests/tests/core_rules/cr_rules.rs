@@ -10135,3 +10135,156 @@ fn teferis_protection_locks_life_and_self_exiles() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, before, "life total can't change");
 }
+
+// ── CR 614 — player-damage and life-gain replacements (Odyssey rares) ────────
+
+/// CR 614.1b — Delaying Shield replaces damage dealt to its controller with
+/// delay counters on itself; the life total never moves.
+#[test]
+fn cr_614_1b_player_damage_replaced_with_counters_on_source() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    let shield = g.add_card_to_battlefield(0, catalog::delaying_shield());
+    let mut events = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 4, None, &mut events);
+    assert_eq!(g.players[0].life, 20);
+    assert_eq!(g.battlefield_find(shield).unwrap().counter_count(CounterType::Delay), 4);
+}
+
+/// CR 614.1b — Nefarious Lich pays damage out of the graveyard, and loses the
+/// game when the graveyard can't cover it.
+#[test]
+fn cr_614_1b_player_damage_replaced_with_graveyard_exile() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nefarious_lich());
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    let mut events = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 2, None, &mut events);
+    assert_eq!(g.players[0].life, 20);
+    assert!(g.players[0].graveyard.is_empty());
+    assert!(!g.players[0].eliminated);
+    g.deal_damage_to_from(EntityRef::Player(0), 1, None, &mut events);
+    assert!(g.players[0].eliminated, "no cards left to pay with");
+}
+
+/// CR 614.1b — Nefarious Lich's second replacement turns life gain into draws,
+/// so the gain event never happens.
+#[test]
+fn cr_614_1b_life_gain_replaced_with_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nefarious_lich());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let hand = g.players[0].hand.len();
+    g.adjust_life(0, 3);
+    assert_eq!(g.players[0].life, 20, "no life was gained");
+    assert_eq!(g.players[0].hand.len(), hand + 3);
+    assert_eq!(g.players[0].life_gained_this_turn, 0, "no life-gain event fired");
+}
+
+// ── CR 702.16 — protection from its own colors ──────────────────────────────
+
+/// CR 702.16e — "protection from its colors" is a real blocking restriction:
+/// under Earnest Fellowship a green attacker can't be blocked by a green
+/// creature.
+#[test]
+fn cr_702_16e_protection_from_own_colors_blocks_same_color_blockers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::earnest_fellowship());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    g.battlefield_find_mut(attacker).unwrap().summoning_sick = false;
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).is_err(),
+        "a green blocker can't block a creature with protection from green"
+    );
+    // A colourless blocker is unaffected.
+    let artifact = g.add_card_to_battlefield(1, catalog::ornithopter());
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(artifact, attacker)])).is_ok());
+}
+
+// ── CR 701.7 — destroying a permanent ───────────────────────────────────────
+
+/// CR 701.7a — "destroy" by a spell or ability an opponent controls is a
+/// distinct event from a combat/SBA death, and only the cross-team case fires
+/// the watcher (Karmic Justice).
+#[test]
+fn cr_701_7a_opponent_destroy_fires_the_retaliation_watcher() {
+    use crabomination::card::SelectionRequirement;
+    use crabomination::effect::{Effect, Selector};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::karmic_justice());
+    let mine = g.add_card_to_battlefield(0, catalog::catalyst_stone());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(mine, 1, None);
+    let events = g
+        .resolve_effect(
+            &Effect::Destroy {
+                what: Selector::EachPermanent(SelectionRequirement::Artifact),
+            },
+            &ctx,
+        )
+        .expect("destroy");
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, GameEvent::PermanentDestroyedByEffect { .. })),
+        "the destroy funnel emitted the CR 701.7 event"
+    );
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none());
+}
+
+/// CR 701.7a — destroying your *own* permanent emits no cross-team event, so
+/// the watcher stays quiet.
+#[test]
+fn cr_701_7a_self_destroy_does_not_fire_the_watcher() {
+    use crabomination::card::SelectionRequirement;
+    use crabomination::effect::{Effect, Selector};
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::catalyst_stone());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(mine, 0, None);
+    let events = g
+        .resolve_effect(
+            &Effect::Destroy {
+                what: Selector::EachPermanent(SelectionRequirement::Artifact),
+            },
+            &ctx,
+        )
+        .expect("destroy");
+    assert!(
+        !events
+            .iter()
+            .any(|e| matches!(e, GameEvent::PermanentDestroyedByEffect { .. }))
+    );
+}
+
+// ── CR 121.2a — replacing a draw ────────────────────────────────────────────
+
+/// CR 121.2a — "you may skip that draw instead" is a real optional draw
+/// replacement: declining draws normally.
+#[test]
+fn cr_121_2a_controller_may_skip_a_draw() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::obstinate_familiar());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut events = Vec::new();
+    assert!(!g.draw_one(0, &mut events), "the skip was taken");
+    assert!(g.draw_one(0, &mut events), "declining draws normally");
+}
+

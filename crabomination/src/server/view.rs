@@ -1177,6 +1177,8 @@ fn graveyard_entry(
         // Jump-start (CR 702.103) rides the flashback cast path at the
         // card's own cost (+ discard, paid at cast time). Lier grants
         // flashback (= mana cost) to I/S in the graveyard.
+        // Catalyst Stone shifts what the seat actually pays, so surface the
+        // adjusted cost rather than the printed one.
         flashback_cost: card
             .definition
             .has_flashback()
@@ -1187,7 +1189,17 @@ fn graveyard_entry(
                     .contains(&crate::card::Keyword::JumpStart)
                     .then(|| card.definition.cost.clone())
             })
-            .or_else(|| state.graveyard_flashback_grant(seat, card)),
+            .or_else(|| state.graveyard_flashback_grant(seat, card))
+            .map(|mut c| {
+                let (less, more) = state.flashback_cost_shift(seat);
+                if more > 0 {
+                    c.symbols.push(crate::mana::ManaSymbol::Generic(more));
+                }
+                if less > 0 {
+                    c.reduce_generic(less);
+                }
+                c
+            }),
         retrace: state.effective_retrace(card, seat),
         escape: state.effective_escape(card, seat),
         bestow_cost: card.definition.has_bestow().cloned(),
@@ -3361,6 +3373,34 @@ mod tests {
         let view = project(&state, 1);
         assert_eq!(view.players[0].graveyard.len(), 1);
         assert_eq!(view.players[0].graveyard[0].name, "Grizzly Bears");
+    }
+
+    /// CR 702.34a — flashback is a cast, so Catalyst Stone's cost shifts apply
+    /// and the view advertises the price each seat will actually pay.
+    #[test]
+    fn cr_702_34a_graveyard_view_shows_shifted_flashback_costs() {
+        let mut state = two_player_game();
+        state.add_card_to_battlefield(0, catalog::catalyst_stone());
+        let mine = state.add_card_to_graveyard(0, catalog::seize_the_day());
+        let theirs = state.add_card_to_graveyard(1, catalog::seize_the_day());
+        let mine_cost = project(&state, 0).players[0]
+            .graveyard
+            .iter()
+            .find(|c| c.id == mine)
+            .unwrap()
+            .flashback_cost
+            .clone()
+            .expect("flashback");
+        let theirs_cost = project(&state, 1).players[1]
+            .graveyard
+            .iter()
+            .find(|c| c.id == theirs)
+            .unwrap()
+            .flashback_cost
+            .clone()
+            .expect("flashback");
+        assert_eq!(mine_cost.cmc(), 1, "2R minus 2 generic");
+        assert_eq!(theirs_cost.cmc(), 5, "2R plus 2 generic");
     }
 
     #[test]

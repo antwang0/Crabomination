@@ -2358,9 +2358,9 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** Odyssey is open (`set_gaps.py ody` 274 → 53,
-   `sets::ody::gaps`–`gaps8`); keep the wave pattern going, then Torment and
-   Judgment finish the block.
+0. **Next set to close.** Odyssey is **complete** (`set_gaps.py ody` at zero,
+   `sets::ody::gaps`–`gaps12`). Torment then Judgment finish the block; keep the
+   wave pattern going.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2375,16 +2375,35 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Odyssey (ODY) opened** — 221 cards (`sets::ody::gaps`–`gaps8`, tests in
-  `classic_sets/ody`): the sac-land cycle, the Threshold shell (Mystics,
-  Frightcrawler, Krosan Avenger, the Desire Auras, Divine Sacrament), the
-  flashback commons, the Sphere cycle, Standstill / Battle of Wits / Ground
-  Seal / Price of Glory. New: `Effect::{RevealHand, RevealTopOfLibrary,
-  PlayerCantCastMatchingThisTurn}`, `StaticEffect::{ControllerMaxHandSizeReduced,
-  ReduceColorDamageToYouBy}`, `SelectionRequirement::ToughnessAtMostGraveyardCount`,
-  `CounterType::Feather`, `CreatureType::Mystic`, `Value::{CardsDrawnThisEffect,
-  CardsNamedLikeTriggerSpellInAllGraveyards}`,
-  `DynamicPt::CardTypeInAllGraveyards`, `AdditionalCastCost::DiscardRandom`.
+- **Odyssey (ODY) complete** — 274 cards, `set_gaps.py ody` at zero
+  (`sets::ody::gaps`–`gaps12`, tests in `classic_sets/ody`). The closing waves
+  brought: the discard/graveyard shell (Mindslicer, Last Rites, Rites of
+  Refusal, Decaying Soil, Haunting Echoes), the pay-in-damage rares (Blazing
+  Salvo, Lava Blister, Molten Influence), the CR 614 replacement rares
+  (Delaying Shield, Nefarious Lich), and the counter traps (Mine Layer, Bomb
+  Squad, Traveling Plague, Steam Vines).
+- **One "unless you pay [cost]" payment path.** `GameState::try_pay_ward_cost`
+  is now the single auto-pay implementation behind Ward (CR 702.21), the
+  rhystic-tax rider (`UnlessPlayerPays`) and the new
+  `Effect::SacrificeSourceUnlessCost`. The tax rider had been silently treating
+  Discard / DiscardHand / Blight / CollectEvidence / SacrificePermanents /
+  LifeSourcePower as unpayable; all three shapes now share one superset.
+  New `WardCost::{ExileFromGraveyard, DamageFromSource}`.
+- **CR 614 player-damage replacements** —
+  `StaticEffect::{ReplaceDamageToYouWithCountersOnSource,
+  ReplaceDamageToYouWithGraveyardExile, LifeGainBecomesDraw}`, installed at the
+  player-damage chokepoint alongside Crumbling Sanctuary's.
+- **CR 701.7 destroy trigger** — `EventKind::PermanentDestroyedByEffect`
+  ("a spell or ability an opponent controls destroys a permanent you control";
+  Karmic Justice), emitted only for the cross-team case.
+- **CR 702.16 `Keyword::ProtectionFromOwnColors`** (Earnest Fellowship), wired
+  through targeting, damage and blocking.
+- **CR 702.34 flashback cost shifts** —
+  `StaticEffect::{FlashbackCostReduction, OpponentFlashbackTax}` +
+  `flashback_cost_shift`, applied at cast time *and* surfaced in the server's
+  graveyard view so the client shows the price the seat will actually pay
+  (Catalyst Stone).
+- **CR 121.2a `StaticEffect::ControllerMaySkipDraws`** (Obstinate Familiar).
 - **CR 106.6 — mana provenance on an activation.** `StackItem::Trigger` carries
   the activation's per-colour spend into `EffectContext.mana_spent_by_color`,
   and `ActivatedAbility.x_mana_color` turns "spend only [colour] mana on X"
