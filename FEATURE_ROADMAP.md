@@ -2311,8 +2311,13 @@ Each a small targeted feature; sweep batch by batch.
   redirection. Value-ping removal also aims an "any target" ping at an opponent's
   face when that hit is exactly lethal (reach for the win). The bot crews
   Vehicles (`pick_crew`) **and now saddles Mounts** (`pick_saddle`) before
-  combat so attacks-while-saddled riders fire. Remaining: race math,
-  multi-blocker math, attacking-into-open-mana respect.
+  combat so attacks-while-saddled riders fire. **Attacking into open mana is
+  now respected**: the adopted default (`attack_search_sim`) lets both seats
+  cast spells inside the attack/block simulations, so the crack-back removal
+  and the defender's tricks are visible at declaration time — adopted at
+  54.4 % [53.0, 55.8] over 4 794 fixed+cube games with dimir control (the
+  blind search's documented −5.2 archetype) the biggest winner at 61.3 %.
+  Remaining: race math, multi-blocker math.
 - ⏳ **Better sequencing** (land drops, hold-up, when to cast).
 - 🟡 **Mulligan decisions** — `RandomBot` ships flood/screw mulligans with
   color-screw awareness. Remaining: transitive fetch/dual sources.

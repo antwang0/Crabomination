@@ -108,6 +108,16 @@ pub struct EvalWeights {
     /// the old pass with its land-tap half, which is the part the
     /// measurement in `main_phase_action_with` was of.
     pub legacy_pretap: bool,
+    /// Let the combat simulations cast spells: whichever seat holds
+    /// priority inside [`simulate_attack_outcome`] /
+    /// [`simulate_block_outcome`] fires the response layer, the
+    /// combat-trick window, and — inside the attack sim's one-turn
+    /// horizon — a static-ranked main-phase cast (see
+    /// [`sim_spell_action`]). Off, the sims are pure priority passes and
+    /// "an opponent holding removal, or ourselves holding a trick, are
+    /// invisible" — the documented blindness behind the over-attack the
+    /// SOS college probes measured.
+    pub attack_sim_spells: bool,
 }
 
 impl EvalWeights {
@@ -132,6 +142,7 @@ impl EvalWeights {
             attack_search: 0,
             block_search: 0,
             legacy_pretap: false,
+            attack_sim_spells: false,
         }
     }
 
@@ -182,6 +193,7 @@ impl EvalWeights {
             attack_search: 0,
             block_search: 0,
             legacy_pretap: false,
+            attack_sim_spells: false,
         }
     }
 
@@ -215,6 +227,7 @@ impl EvalWeights {
             attack_search: 0,
             block_search: 0,
             legacy_pretap: false,
+            attack_sim_spells: false,
         }
     }
 
@@ -332,16 +345,49 @@ impl EvalWeights {
     /// this re-asked the question where it should have mattered most.
     ///
     /// **Measured, and not adopted**: 49.4 % [46.3 %, 52.5 %] against
-    /// `atk` over 1000 SOS college-mirror games (seed 11) — and Prismari
-    /// itself read 46.0 %, the *worst* row. Holding cost tempo the
-    /// deferred casts never paid back, at +65 % wall clock for the extra
-    /// `improves_this_turn` simulations. The probe's real Prismari signal
-    /// is elsewhere: reactive spells rot because the response layer
-    /// under-fires, and the attack search over-swings on small boards
-    /// (82 % of eligible, 78 % all-in) — restraint, not timing, is the
-    /// open lead.
+    /// `atk` over 1000 SOS college-mirror games (seed 11) — statistically
+    /// indistinguishable from the atk-vs-atk control at the same seed
+    /// (48.9 %), i.e. holding bought nothing, at +65 % wall clock for the
+    /// extra `improves_this_turn` simulations. (An earlier reading of the
+    /// per-college rows as "Prismari got worse" was noise: the identical-
+    /// profile control swings its own college rows to 44.5 % at 200
+    /// games. Only the pooled total is a result.) The probe's real
+    /// Prismari signal is elsewhere: reactive spells rot because the
+    /// response layer under-fires, and the attack search over-swings on
+    /// small boards (82 % of eligible, 78 % all-in) — restraint, not
+    /// timing, is the open lead; see [`attack_search_sim`].
     pub const fn attack_search_hold() -> Self {
         Self { hold_instants: true, ..Self::attack_search() }
+    }
+
+    /// The adopted default with spell-casting combat simulations.
+    ///
+    /// The hypothesis, out of the SOS college diagnosis (per-college
+    /// probes plus the `atk-hold` and `blk` dead ends): the attack search
+    /// over-swings on small boards — 82 % of eligible declared, 78 %
+    /// all-in in Prismari, 41 % of creatures tapped when blocks come —
+    /// because its simulation casts nothing for either side, so a swing
+    /// into open mana and a hand full of removal sims as free. With
+    /// [`attack_sim_spells`](Self::attack_sim_spells) the crack-back is
+    /// visible at declaration time.
+    ///
+    /// **Measured, and adopted as the default.** Three runs against
+    /// `atk`, all positive, plus an identical-profile control:
+    ///
+    /// | field | result | games |
+    /// |---|---|---|
+    /// | SOS colleges, seed 11 | 51.7 % [48.6 %, 54.8 %] | 1 000 |
+    /// | SOS colleges, seed 7 | 53.2 % [50.1 %, 56.3 %] | 1 000 |
+    /// | fixed + cube, seed 11 | 54.4 % [53.0 %, 55.8 %] | 4 794 |
+    /// | control (atk vs atk, SOS) | 48.9 % [45.8 %, 52.0 %] | 1 000 |
+    ///
+    /// No archetype below 50 % on the deciding run, and the largest gain
+    /// is dimir control at 61.3 % — the archetype where the blind search
+    /// measured 44.8 % and the "restraint costs five points in the
+    /// control mirror" caveat was written. Cost: roughly 2-4× the ladder
+    /// wall clock of `atk`, all of it on DeclareAttackers/blocks ticks.
+    pub const fn attack_search_sim() -> Self {
+        Self { attack_sim_spells: true, ..Self::attack_search() }
     }
 
     /// The adopted default plus the searched block assignment.
@@ -375,11 +421,11 @@ impl EvalWeights {
     /// Re-measured on the SOS college mirrors (where the probes show the
     /// default profile leaving 72-78 % of attackers unblocked in the
     /// spell-heavy colleges): 50.1 % [47.0 %, 53.2 %] against `atk` over
-    /// 1000 games, Prismari 46.0 / Quandrix 47.5. The under-block there
-    /// is not an assignment problem either — the blockers are TAPPED
-    /// (41-42 % of creatures at DeclareBlockers, vs 27 % in the healthy
-    /// Witherbloom row), which points back at the over-attack, not at the
-    /// block search.
+    /// 1000 games — neutral there too. The under-block is not an
+    /// assignment problem — the blockers are TAPPED (41-42 % of creatures
+    /// at DeclareBlockers, vs 27 % in the healthy Witherbloom row), which
+    /// points back at the over-attack, not at the block search; see
+    /// [`attack_search_sim`].
     pub const fn block_search() -> Self {
         Self { block_search: 6, ..Self::attack_search() }
     }
@@ -529,12 +575,19 @@ impl Default for EvalWeights {
     /// | summon-sick gate | 51.5 % [50.8 %, 52.3 %] | 16 000 |
     /// | combat-aware evaluation | 51.3 % [50.4 %, 52.2 %] | 12 000 |
     /// | searched attacks | 52.4 % [51.3 %, 53.5 %] | 8 000 |
+    /// | spell-casting combat sims | 54.4 % [53.0 %, 55.8 %] | 4 794 |
     ///
     /// The attack search was additionally confirmed on cube decks —
     /// 53.8 % [53.0 %, 54.6 %] over 13 695 decided games — where the fixed
-    /// four archetypes could not have shown its deck-dependence.
+    /// four archetypes could not have shown its deck-dependence. The
+    /// spell-casting sims (see [`attack_search_sim`](Self::attack_search_sim))
+    /// were adopted on the fixed+cube row above plus two 1000-game SOS
+    /// college runs (51.7 % / 53.2 %, the second clearing 50 % alone),
+    /// against an identical-profile control at 48.9 % — and the largest
+    /// per-deck gain landed exactly where the blind attack search had its
+    /// documented regression: dimir control, 44.8 % blind → 61.3 % seeing.
     fn default() -> Self {
-        Self::attack_search()
+        Self::attack_search_sim()
     }
 }
 
@@ -5222,12 +5275,15 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
 /// turn. So the simulation has to reach their combat damage or it cannot
 /// see the thing it exists to weigh.
 ///
-/// Neither side casts anything during the simulation; both take the greedy
-/// combat declarations. That's a real simplification — an opponent holding
-/// removal, or ourselves holding a trick, are invisible — but it keeps the
-/// cost to one turn cycle of priority passes per candidate, and the greedy
-/// declarations are exactly the policy this search is trying to beat, which
-/// makes the comparison conservative rather than flattering.
+/// By default neither side casts anything during the simulation; both take
+/// the greedy combat declarations. That's a real simplification — an
+/// opponent holding removal, or ourselves holding a trick, are invisible —
+/// but it keeps the cost to one turn cycle of priority passes per
+/// candidate, and the greedy declarations are exactly the policy this
+/// search is trying to beat, which makes the comparison conservative
+/// rather than flattering. Under
+/// [`attack_sim_spells`](EvalWeights::attack_sim_spells) both seats cast
+/// via [`sim_spell_action`], which is what makes the crack-back visible.
 ///
 /// `None` when the declaration is rejected (a "must attack" creature we
 /// tried to hold back) or the simulation runs out of fuel — an unfinished
@@ -5287,6 +5343,9 @@ fn simulate_attack_outcome(
                     None => GameAction::PassPriority,
                 }
             }
+            _ if w.attack_sim_spells => {
+                sim_spell_action(&g, w).unwrap_or(GameAction::PassPriority)
+            }
             _ => GameAction::PassPriority,
         };
         if g.perform_action(action).is_err() && g.perform_action(GameAction::PassPriority).is_err() {
@@ -5294,6 +5353,42 @@ fn simulate_attack_outcome(
         }
     }
     Some(eval_material(&g, seat, w))
+}
+
+/// The spell a combat simulation lets the current priority holder cast —
+/// see [`EvalWeights::attack_sim_spells`]. The response layer and the
+/// post-block trick window mirror the real dispatch; a main phase inside
+/// the sim's horizon takes the best STATIC-ranked candidate. No outcome
+/// eval, no hold gates, no jitter: nesting the full pick inside a sim
+/// would multiply clone-and-resolve work per candidate, and a
+/// deterministic greedy stand-in carries exactly the information the sim
+/// is missing — "that mana will be spent on something".
+fn sim_spell_action(g: &GameState, w: &EvalWeights) -> Option<GameAction> {
+    let p = g.player_with_priority();
+    if !g.stack.is_empty() {
+        return pick_stack_response(g, p, w)
+            .or_else(|| pick_ability_counter_response(g, p))
+            .or_else(|| pick_prepare_response(g, p, w));
+    }
+    if g.step == TurnStep::DeclareBlockers && g.blockers_declared() {
+        return pick_combat_trick(g, p, w);
+    }
+    if matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
+        && g.active_player_idx == p
+    {
+        let probe = g.affordance_probe_template();
+        let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(g, p, &probe, w)
+            .into_iter()
+            .map(|(a, ok)| (score_candidate(g, p, &a, w), a, ok))
+            .collect();
+        ranked.sort_by_key(|(s, _, _)| std::cmp::Reverse(*s));
+        for (_, a, ok) in ranked {
+            if ok || GameState::would_accept_on(&probe, a.clone()) {
+                return Some(a);
+            }
+        }
+    }
+    None
 }
 
 /// The block assignment, chosen by search rather than by rule.
@@ -5377,7 +5472,17 @@ fn simulate_block_outcome(
             g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
             continue;
         }
-        if g.perform_action(GameAction::PassPriority).is_err() {
+        // Under `attack_sim_spells` the combat window is live: tricks and
+        // responses fire for whichever seat holds priority, so a block
+        // that only works until the attacker pumps is scored as such.
+        let action = if w.attack_sim_spells {
+            sim_spell_action(&g, w).unwrap_or(GameAction::PassPriority)
+        } else {
+            GameAction::PassPriority
+        };
+        if g.perform_action(action).is_err()
+            && g.perform_action(GameAction::PassPriority).is_err()
+        {
             return None;
         }
     }
@@ -11950,6 +12055,39 @@ mod stack_response_tests {
             ),
             "with a Repartee payoff out, Shock kills the bear instead of pinging face, \
              got {action:?}"
+        );
+    }
+
+    /// Under `attack_sim_spells` the attack simulation sees the
+    /// crack-back: an attacker that survives combat but dies to the
+    /// removal in the opponent's hand scores the line lower than the
+    /// spell-blind sim does.
+    #[test]
+    fn spell_sim_sees_crackback_removal() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        // The opponent holds real interaction: Doom Blade plus the mana
+        // to cast it on their turn.
+        g.add_card_to_battlefield(1, catalog::swamp());
+        g.add_card_to_battlefield(1, catalog::swamp());
+        g.add_card_to_hand(1, catalog::doom_blade());
+        // Both libraries stocked so the sim's draw steps don't deck anyone.
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::forest());
+            g.add_card_to_library(1, catalog::swamp());
+        }
+        let atk = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+        let blind = simulate_attack_outcome(&g, 0, &atk, &EvalWeights::attack_search())
+            .expect("spell-blind sim completes");
+        let seeing = simulate_attack_outcome(&g, 0, &atk, &EvalWeights::attack_search_sim())
+            .expect("spell-casting sim completes");
+        assert!(
+            seeing < blind,
+            "the sim that lets the opponent Doom Blade must score lower \
+             ({seeing} !< {blind})"
         );
     }
 
