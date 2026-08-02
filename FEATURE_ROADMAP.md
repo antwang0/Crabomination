@@ -2358,6 +2358,9 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
+0. **Next set to open.** Invasion, Planeshift and Apocalypse are all at zero
+   `set_gaps.py`, so the block is done; pick the next classic set (Odyssey
+   block or Mercadian Masques) and repeat the wave pattern.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio

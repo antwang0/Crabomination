@@ -74,6 +74,32 @@ arm can chain a card pick with further seat questions).
 - **The pile-split bodies must stay non-interactive** — a body that suspends
   would restart the split on its re-run (`Effect::SeparateIntoPiles`).
 
+### Noticed this run (Invasion closeout) — not tackled
+
+- **Mana-colour provenance on an activation's `{X}`.** Several cards gate X on
+  the *colour* of the mana spent (Atalya's "spend only white mana on X",
+  Protective Sphere's "shares a color with the mana spent on this activation
+  cost"). `mana_spent_by_color` exists for spells; activated abilities don't
+  record it.
+- **Cross-slot cast-time target filters.** `evaluate_requirement_static` sees
+  one target at a time, so "two target creatures controlled by the same
+  player" (Barrin's Spite) can't be enforced at cast. A slot-aware filter
+  variant would also cover Dead Ringers-style pairings more cleanly.
+- **Interactive bodies inside a pile split.** `Effect::SeparateIntoPiles` runs
+  its two bodies after the last ask; a body that itself suspends restarts the
+  whole split on its re-run. Either park the split result in the resume
+  context or forbid suspending bodies with a debug assert.
+- **`Effect::ChooseNewTargetsForSpell` only walks stack *spells*.** Psychic
+  Battle (and any future "change the target of that ability") can't repoint a
+  triggered or activated ability.
+- **A "chooses one or more targets" event.** `EventKind::BecameTarget` fires
+  per targeted object, so a per-decision listener over-fires under a
+  multi-target spell.
+- **CR 605.3c** — "once a player begins to activate a mana ability, it can't be
+  activated again until it has resolved" isn't modelled (mana abilities resolve
+  synchronously, so it has never mattered; it would for a future split-payment
+  UI).
+
 ## Apocalypse — closed
 
 `set_gaps.py apc` is at **zero** (123 → 88 → 55 → 43 → 26 → 11 → 0; `sets::apc`
