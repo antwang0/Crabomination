@@ -121,6 +121,11 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Spell-cast lock (Rule of Law / Deafening Silence / Ethersworn
         // Canonist) — a stern slate so a barred extra cast reads as "stop".
         StatChipKind::SpellLock => (Color::srgba(0.30, 0.14, 0.18, 1.0), theme::TEXT_PRIMARY),
+        // "Your next [kind] spell can't be countered" — a protective teal, the
+        // inverse of the SpellLock slate.
+        StatChipKind::Uncounterable => {
+            (Color::srgba(0.10, 0.28, 0.30, 1.0), theme::TEXT_PRIMARY)
+        }
         // The Ring tempts you (CR 701.54) — a One-Ring gold that deepens with
         // each temptation level.
         StatChipKind::Ring => (Color::srgba(0.36, 0.28, 0.06, 1.0), theme::TEXT_PRIMARY),
@@ -202,6 +207,9 @@ pub(super) enum StatChipKind {
     Coven,
     Dungeon,
     SpellLock,
+    /// Insist / Overmaster — the player's next spell of a class can't be
+    /// countered.
+    Uncounterable,
     Ring,
     Crime,
     Void,
@@ -942,6 +950,10 @@ pub fn update_player_stats_chips(
         // Cease-Fire — a turn-scoped filtered cast lock.
         for kind in &p.locked_cast_kinds {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, format!("⊘ {kind}"));
+        }
+        // Insist / Overmaster — the next spell of this kind can't be countered.
+        for kind in &p.uncounterable_next {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Uncounterable, format!("⛨ {kind}"));
         }
         // Damping Engine — the seat ahead on permanents can't develop until it
         // sacrifices something.

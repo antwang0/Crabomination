@@ -805,6 +805,12 @@ fn project_player(
             .iter()
             .map(|r| requirement_noun(r).to_string())
             .collect(),
+        // Insist / Overmaster — "your next [kind] spell can't be countered".
+        uncounterable_next: player
+            .next_spell_uncounterable
+            .iter()
+            .map(|r| requirement_noun(r).to_string())
+            .collect(),
         life_locked: player.life_locked_this_turn,
         has_hexproof,
         commander_damage_taken,

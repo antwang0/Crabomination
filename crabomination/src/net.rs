@@ -767,6 +767,11 @@ pub struct PlayerView {
     /// Ethersworn Canonist). UIs grey out further casts of the locked category.
     #[serde(default)]
     pub spell_cast_lock: SpellCastLock,
+    /// CR 702.34/605 — the player's next spell of each pending class can't be
+    /// countered (Insist, Overmaster). Short labels for the HUD; empty when no
+    /// grant is armed.
+    #[serde(default)]
+    pub uncounterable_next: Vec<String>,
     /// CR 601.3e — an opponent's Void Winnower is locking this player's
     /// even-mana-value spells (zero is even). UIs grey out even-MV cards in
     /// hand. Defaults to false.
