@@ -358,6 +358,7 @@ pub mod gtc9;
 pub mod ice;
 pub mod inv;
 pub mod jou;
+pub mod jud;
 pub mod jou2;
 pub mod jou3;
 pub mod khm;

@@ -31,6 +31,7 @@ mod gpt;
 mod gtc;
 mod innistrad;
 mod jou;
+mod jud;
 mod ktk;
 mod lci;
 mod ltr;
