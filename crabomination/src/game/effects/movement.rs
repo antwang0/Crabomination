@@ -1216,6 +1216,7 @@ impl GameState {
                             && ta.event.scope == EventScope::YourControl
                     })
                     .map(move |ta| crate::game::types::PendingTriggerPush {
+                        from_mana_ability: false,
                     actor: None,
                         source: c.id,
                         controller: c.controller,

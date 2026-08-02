@@ -908,6 +908,9 @@ pub struct TriggerCandidate {
     /// additional time" doubler.
     #[serde(default)]
     pub triggered_by_attack: bool,
+    /// CR 605.1b — fired from a mana ability (a permanent tapped for mana).
+    #[serde(default)]
+    pub from_mana_ability: bool,
     /// The seat that *caused* the firing event (`event_actor`) — the caster
     /// for a `BecameTarget`, the sacrificing player for a sacrifice, and so
     /// on. Read back at resolution through `PlayerRef::TriggerEventPlayer`
@@ -939,6 +942,12 @@ pub struct PendingTriggerPush {
     /// The seat that caused the firing event — see `TriggerCandidate.actor`.
     #[serde(default)]
     pub actor: Option<usize>,
+    /// CR 605.1b — this trigger fired from a mana ability (a land or other
+    /// permanent tapped for mana / mana added). Combined with a targetless
+    /// mana-adding body it makes the ability a *mana* ability, which CR 605.4a
+    /// resolves off-stack.
+    #[serde(default)]
+    pub from_mana_ability: bool,
 }
 
 /// Which "another permanent" activated-ability cost a suspended

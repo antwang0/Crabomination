@@ -3572,6 +3572,7 @@ impl GameState {
             {
                 self.push_pending_trigger(
                     PendingTriggerPush {
+                        from_mana_ability: false,
                         actor: None,
                         source: id,
                         controller: active,
@@ -3713,6 +3714,7 @@ impl GameState {
             if self.players.get(active).is_some_and(|p| p.wants_ui) {
                 self.push_pending_trigger(
                     PendingTriggerPush {
+                        from_mana_ability: false,
                         actor: None,
                         source: id,
                         controller: active,
@@ -12735,6 +12737,12 @@ impl GameState {
                                     | GameEvent::CreatureSacrificed { .. }
                             ),
                             triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
+                            from_mana_ability: matches!(
+                                ev,
+                                GameEvent::TappedForMana { .. }
+                                    | GameEvent::ManaAdded { .. }
+                                    | GameEvent::ColorlessManaAdded { .. }
+                            ),
                             actor: crate::game::effects::events::event_actor(self, ev),
                         });
                         if ta.event.once_per_turn && trig_idx < n_printed {
@@ -12810,6 +12818,7 @@ impl GameState {
                 for ev in events {
                     if crate::game::effects::event_matches_spec(self, ev, &ta.event, snap) {
                         candidates.push(TriggerCandidate {
+                            from_mana_ability: false,
                             actor: None,
                             source: snap.id,
                             effect: ta.effect.clone(),
@@ -12841,6 +12850,7 @@ impl GameState {
                 for ev in events {
                     if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
                         candidates.push(TriggerCandidate {
+                            from_mana_ability: false,
                             actor: None,
                             source: card.id,
                             effect: ta.effect.clone(),
@@ -12925,6 +12935,12 @@ impl GameState {
                                     | GameEvent::CreatureSacrificed { .. }
                             ),
                             triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
+                            from_mana_ability: matches!(
+                                ev,
+                                GameEvent::TappedForMana { .. }
+                                    | GameEvent::ManaAdded { .. }
+                                    | GameEvent::ColorlessManaAdded { .. }
+                            ),
                             });
                             break;
                         }
@@ -12950,6 +12966,7 @@ impl GameState {
                         }
                         if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
                             candidates.push(TriggerCandidate {
+                                from_mana_ability: false,
                             actor: None,
                                 source: card.id,
                                 effect: ta.effect.clone(),
@@ -12988,6 +13005,7 @@ impl GameState {
                     for ev in events {
                         if crate::game::effects::emblem_event_matches(self, ev, &ta.event, seat_idx) {
                             candidates.push(TriggerCandidate {
+                                from_mana_ability: false,
                             actor: None,
                                 source: CardId(0),
                                 effect: ta.effect.clone(),
@@ -13065,6 +13083,7 @@ impl GameState {
                         .collect();
                     for pid in prowess_ids {
                         candidates.push(TriggerCandidate {
+                            from_mana_ability: false,
                             actor: None,
                             source: pid,
                             effect: Effect::PumpPT {
@@ -13103,6 +13122,7 @@ impl GameState {
                             && self.effective_ring_bearer(seat) == Some(*attacker)
                         {
                             candidates.push(TriggerCandidate {
+                                from_mana_ability: false,
                             actor: None,
                                 source: *attacker,
                                 effect: Effect::Seq(vec![
@@ -13135,6 +13155,7 @@ impl GameState {
                         {
                             *done = true;
                             candidates.push(TriggerCandidate {
+                                from_mana_ability: false,
                             actor: None,
                                 source: *attacker,
                                 effect: Effect::SacrificeAtEndOfCombat {
@@ -13249,6 +13270,7 @@ impl GameState {
                 triggered_by_etb,
                 triggered_by_death,
                 triggered_by_attack,
+                from_mana_ability,
             } = candidate;
             if let Some(filter) = filter {
                 let ctx = crate::game::effects::EffectContext {
@@ -13315,6 +13337,7 @@ impl GameState {
                         event_amount,
                         mode,
                         intervening_if: None,
+                        from_mana_ability,
                     });
                 }
             } else {
@@ -13359,6 +13382,7 @@ impl GameState {
                         event_amount,
                         mode,
                         intervening_if: None,
+                        from_mana_ability,
                     });
                 }
             }
@@ -13608,6 +13632,25 @@ impl GameState {
         }
     }
 
+    /// CR 605.1b — could this triggered ability's body add mana to a pool?
+    /// (The caller checks the other two criteria: no target, and fired from a
+    /// mana ability.) Only mana-adding leaves qualify; a body that also does
+    /// something else (Overabundance's ping) is still a mana ability.
+    fn is_triggered_mana_ability(effect: &Effect) -> bool {
+        match effect {
+            Effect::AddMana { .. }
+            | Effect::AddManaEqualToPermanentCost { .. }
+            | Effect::AddManaKeptThisTurn { .. }
+            | Effect::AddManaKeptThisTurnCount { .. } => true,
+            Effect::Seq(v) => v.iter().any(Self::is_triggered_mana_ability),
+            Effect::If { then, else_, .. } => {
+                Self::is_triggered_mana_ability(then) || Self::is_triggered_mana_ability(else_)
+            }
+            Effect::MayDo { body, .. } => Self::is_triggered_mana_ability(body),
+            _ => false,
+        }
+    }
+
     /// Push a `PendingTriggerPush` onto the stack with the given
     /// (already-chosen) target. Mirrors the original inline push at
     /// the trigger-dispatch site.
@@ -13625,6 +13668,7 @@ impl GameState {
             event_amount,
             mode,
             intervening_if,
+            from_mana_ability,
         } = pending;
         // CR 603.10 — if this trigger's source just left the battlefield
         // (it's in the die-snapshot cache), stash its last-known instance
@@ -13643,6 +13687,35 @@ impl GameState {
             && let Some(snap) = self.died_card_snapshots.get(&sid)
         {
             self.leaves_bf_lki.insert(sid, snap.clone());
+        }
+        // CR 605.4a — a triggered MANA ability doesn't use the stack: it
+        // resolves immediately after the mana ability that triggered it, so
+        // its mana is available to the payment already in progress
+        // (Overabundance, Mana Flare). CR 605.1b: no target, triggered off a
+        // mana ability, and it could add mana.
+        if from_mana_ability
+            && !effect.requires_target()
+            && Self::is_triggered_mana_ability(&effect)
+        {
+            let mut ctx = crate::game::effects::EffectContext::for_trigger(
+                source,
+                controller,
+                target,
+                mode.unwrap_or(0),
+            );
+            ctx.trigger_source = subject;
+            ctx.event_amount = event_amount;
+            self.trigger_event_player_scratch = match subject {
+                Some(crate::game::effects::EntityRef::Player(p)) => Some(p),
+                _ => None,
+            };
+            let mut evs = self.resolve_effect(&effect, &ctx).unwrap_or_default();
+            self.trigger_event_player_scratch = None;
+            if !evs.is_empty() {
+                let batch = std::mem::take(&mut evs);
+                self.dispatch_triggers_for_events(&batch);
+            }
+            return;
         }
         // CR 115.1c — an engine-resolved "up to N target" triggered ability
         // (Gavony Silversmith) maximizes its targets: fill slots 1.. with

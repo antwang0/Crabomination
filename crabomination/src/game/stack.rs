@@ -779,6 +779,7 @@ impl GameState {
             if captured_target.is_some() {
                 self.push_pending_trigger(
                     PendingTriggerPush {
+                        from_mana_ability: false,
                     actor: None,
                         source,
                         controller,
@@ -793,6 +794,7 @@ impl GameState {
                 continue;
             }
             queue.push(PendingTriggerPush {
+                from_mana_ability: false,
                     actor: None,
                 source,
                 controller,
@@ -806,6 +808,7 @@ impl GameState {
         for (source, effect, controller, intervening_if) in triggers_with_filter {
             let mode = self.pick_trigger_mode(&effect, source, controller);
             queue.push(PendingTriggerPush {
+                from_mana_ability: false,
                     actor: None,
                 source,
                 controller,
@@ -884,6 +887,7 @@ impl GameState {
         for effect in effects {
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             queue.push(PendingTriggerPush {
+                from_mana_ability: false,
                     actor: None,
                 source: card_id,
                 controller,
@@ -935,6 +939,7 @@ impl GameState {
         for (_, effect) in chapters {
             let mode = self.pick_trigger_mode(&effect, card_id, controller);
             queue.push(PendingTriggerPush {
+                from_mana_ability: false,
                     actor: None,
                 source: card_id,
                 controller,
@@ -2033,9 +2038,11 @@ impl GameState {
         // Every other reason `do_untap` skips a permanent, so the client's
         // "won't untap" badge tells the same story the untap step will.
         if card.skip_next_untap
-            || card.definition.keywords.iter().any(|k| {
-                matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
-                    if card.counter_count(*kind) > 0)
+            || self.computed_permanent(card.id).is_some_and(|cp| {
+                cp.keywords.iter().any(|k| {
+                    matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
+                        if card.counter_count(*kind) > 0)
+                })
             })
             || card
                 .untap_locked_by
@@ -2396,6 +2403,22 @@ impl GameState {
             }
             set
         };
+        // CR 502.3 / 613 — "doesn't untap while it has a [kind] counter" must
+        // be read off the *computed* keywords, so a granted one counts too
+        // (Temporal Distortion's hourglass counters, Steel Dromedary's own).
+        let counter_locked: Vec<crate::card::CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                self.computed_permanent(c.id).is_some_and(|cp| {
+                    cp.keywords.iter().any(|k| {
+                        matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
+                            if c.counter_count(*kind) > 0)
+                    })
+                })
+            })
+            .map(|c| c.id)
+            .collect();
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
@@ -2433,12 +2456,9 @@ impl GameState {
                     }
                     continue;
                 }
-                // Steel Dromedary — "doesn't untap during your untap step if
-                // it has a [kind] counter on it".
-                if card.definition.keywords.iter().any(|k| {
-                    matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
-                        if card.counter_count(*kind) > 0)
-                }) {
+                // Steel Dromedary / Temporal Distortion — "doesn't untap …
+                // if it has a [kind] counter on it" (printed or granted).
+                if counter_locked.contains(&card.id) {
                     if active {
                         card.summoning_sick = false;
                     }
@@ -3290,6 +3310,7 @@ impl GameState {
             if self.steal_penalty_armed.insert(id) {
                 self.push_pending_trigger(
                     crate::game::types::PendingTriggerPush {
+                        from_mana_ability: false,
                     actor: None,
                         source: id,
                         controller: thief,
@@ -3369,6 +3390,7 @@ impl GameState {
             } else if self.no_other_sacrifice_armed.insert(id) {
                 self.push_pending_trigger(
                     crate::game::types::PendingTriggerPush {
+                        from_mana_ability: false,
                     actor: None,
                         source: id,
                         controller: seat,

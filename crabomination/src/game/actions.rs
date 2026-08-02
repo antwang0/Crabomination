@@ -5078,6 +5078,7 @@ impl GameState {
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(card_id));
             self.push_pending_trigger(
                 crate::game::types::PendingTriggerPush {
+                    from_mana_ability: false,
                     actor: None,
                     source: card_id,
                     controller,

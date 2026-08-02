@@ -1556,6 +1556,7 @@ fn queue_routed_up_to_one_trigger_offers_decline_to_ui_controller() {
         .clone();
 
     g.drain_trigger_queue(vec![PendingTriggerPush {
+        from_mana_ability: false,
         actor: None,
         source: ennis,
         controller: 0,
