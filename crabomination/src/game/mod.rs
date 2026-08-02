@@ -2226,8 +2226,13 @@ impl GameState {
         let mut out = Vec::new();
         for src in &self.battlefield {
             for sa in &src.definition.static_abilities {
-                if let crate::effect::StaticEffect::GrantTriggeredAbility { filter, ability } =
-                    &sa.effect
+                // Peel the gating wrappers (Threshold, "while your turn", …)
+                // so a conditionally granted trigger only surfaces while its
+                // condition holds — Decaying Soil, Cephalid Sage.
+                if let Some(crate::effect::StaticEffect::GrantTriggeredAbility {
+                    filter,
+                    ability,
+                }) = self.active_static(&sa.effect, src)
                     && self.evaluate_requirement_static(
                         filter,
                         &Target::Permanent(card.id),
@@ -2275,8 +2280,10 @@ impl GameState {
         let mut out = Vec::new();
         for src in &self.battlefield {
             for sa in &src.definition.static_abilities {
-                if let crate::effect::StaticEffect::GrantTriggeredAbility { filter, ability } =
-                    &sa.effect
+                if let Some(crate::effect::StaticEffect::GrantTriggeredAbility {
+                    filter,
+                    ability,
+                }) = self.active_static(&sa.effect, src)
                     && self.evaluate_requirement_on_card(filter, snap, src.controller)
                 {
                     out.push((**ability).clone());

@@ -102,6 +102,31 @@ Prison Barricade's kicked defender bypass is wired.
   Maneuvers, Charmed Pendant, Catalyst Stone (a flashback-cost modifier),
   Aura Graft, Seize the Day (an extra combat phase), Predict, Bamboozle.
 
+## Torment — opened
+
+`set_gaps.py tor` is open; `sets::tor` ships the first wave (17 cards, tests in
+`classic_sets/tor`): the Cephalid self-mill shell (Aristocrat, Illusionist,
+Sage, Snitch, Vandal), the Threshold bodies (Boneshard Slasher, Cabal Torturer,
+Centaur Chieftain), Chainer, Ambassador Laquatus, Circular Logic (Madness),
+Compulsion, Coral Net and the spells. New: `CounterType::Shred`.
+
+Engine fix it forced: `statics_granted_triggers_for` matched
+`StaticEffect::GrantTriggeredAbility` *literally*, so a trigger granted under a
+gating wrapper (`WhileCondition`, `WhileYourTurn`, …) never surfaced. It now
+peels through `active_static`, which is what made Decaying Soil's Threshold
+half, Wayward Angel's upkeep sacrifice, Boneshard Slasher and Cephalid Sage
+work at all.
+
+Open follow-up:
+- **Chainer's Nightmare grant dies with him.** His reanimation ability stamps
+  the Nightmare type via `Effect::AddCreatureTypes { duration: Permanent }`,
+  which is a continuous effect *sourced from Chainer*, so it's swept when he
+  leaves — which is exactly when his "exile all Nightmares" trigger looks. The
+  printed card sets the characteristic on the reanimated creature itself,
+  independent of Chainer. Wants a source-independent type stamp (the shape
+  `Effect::BecomeChosenCreatureType` uses) rather than a sourced layer-4
+  effect. The same gap keeps his anthem off creatures he reanimated.
+
 ## Odyssey — closed
 
 `set_gaps.py ody` is at **zero** (274 → 53 → 30 → 10 → 5 → 0;

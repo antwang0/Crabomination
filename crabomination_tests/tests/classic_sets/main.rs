@@ -67,6 +67,7 @@ mod spm;
 mod m15;
 mod tdm;
 mod thb;
+mod tor;
 mod ths;
 mod tla;
 mod war;

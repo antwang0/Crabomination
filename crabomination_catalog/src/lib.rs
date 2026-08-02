@@ -145,6 +145,7 @@ pub use sets::shm::*;
 pub use sets::sos::*;
 pub use sets::stx::*;
 pub use sets::thb::*;
+pub use sets::tor::*;
 pub use sets::ths::*;
 pub use sets::tmp::*;
 pub use sets::war::*;

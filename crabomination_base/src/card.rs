@@ -377,6 +377,8 @@ pub enum CounterType {
     /// Mine counter — Mine Layer's land trap; a mined land that taps is
     /// destroyed.
     Mine,
+    /// Shred counter — Cephalid Vandal's self-milling upkeep tally.
+    Shred,
     /// Delay counter — Delaying Shield banks damage dealt to its controller
     /// here and cashes it in at upkeep.
     Delay,

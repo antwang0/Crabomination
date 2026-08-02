@@ -1335,6 +1335,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Manifestation => "Manifestation",
         CounterType::Mine => "Mine",
         CounterType::Delay => "Delay",
+        CounterType::Shred => "Shred",
         CounterType::Stun => "Stun",
         CounterType::Time => "Time",
         CounterType::Poison => "Poison",

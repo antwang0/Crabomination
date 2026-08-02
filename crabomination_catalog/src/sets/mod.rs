@@ -403,6 +403,7 @@ pub mod shm;
 pub mod sos;
 pub mod stx;
 pub mod thb;
+pub mod tor;
 pub mod ths;
 pub mod tmp;
 pub mod war;
