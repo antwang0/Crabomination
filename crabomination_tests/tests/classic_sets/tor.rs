@@ -275,3 +275,19 @@ fn churning_eddy_bounces_both() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(land).is_none());
 }
+
+/// CR 611.2b — Chainer's permanent Nightmare stamp outlives him, so his own
+/// leaves-the-battlefield trigger exiles what he reanimated.
+#[test]
+fn chainer_exiles_his_nightmares_when_he_dies() {
+    let mut g = main_phase();
+    let corpse = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let chainer = g.add_card_to_battlefield(0, catalog::chainer_dementia_master());
+    activate(&mut g, 0, chainer, 0, Some(Target::Permanent(corpse)));
+    assert!(g.battlefield_find(corpse).is_some(), "reanimated");
+    let mut events = Vec::new();
+    g.destroy_permanent(chainer, false, &mut events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(corpse).is_none(), "the Nightmare was exiled");
+    assert!(g.exile.iter().any(|c| c.id == corpse));
+}

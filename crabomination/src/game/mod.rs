@@ -9191,9 +9191,14 @@ impl GameState {
         ts
     }
 
-    /// Remove all continuous effects whose source is `id` (source left battlefield).
+    /// Remove the continuous effects whose source is `id` (source left the
+    /// battlefield). CR 611.2b — a one-shot effect that created a continuous
+    /// effect with no duration (`EffectDuration::Indefinite`) doesn't depend on
+    /// its source sticking around, so those survive (Chainer's reanimated
+    /// Nightmares keep the type after he dies).
     pub(crate) fn remove_effects_from_source(&mut self, id: CardId) {
-        self.continuous_effects.retain(|e| e.source != id);
+        self.continuous_effects
+            .retain(|e| e.source != id || e.duration == EffectDuration::Indefinite);
     }
 
     /// Expire all `UntilEndOfTurn` continuous effects (called during Cleanup).

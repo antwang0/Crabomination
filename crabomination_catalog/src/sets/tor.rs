@@ -586,9 +586,6 @@ pub fn ambassador_laquatus() -> CardDefinition {
 /// Chainer, Dementia Master — {3}{B}{B} 3/3 that reanimates into Nightmares.
 pub fn chainer_dementia_master() -> CardDefinition {
     CardDefinition {
-        // Both the anthem and the leaves-the-battlefield exile read the
-        // Nightmare type through a continuous effect Chainer himself sources,
-        // so neither sees a creature he reanimated (see TODO.md).
         static_abilities: vec![StaticAbility {
             description: "All Nightmares get +1/+1.",
             effect: StaticEffect::AnthemForFilter {
