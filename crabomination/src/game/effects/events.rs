@@ -99,6 +99,10 @@ pub(crate) fn event_matches_spec(
         (EventKind::ChoseTargets, GameEvent::ChoseTargets { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
         (EventKind::CardMilled, GameEvent::CardMilled { .. }) => true,
+        (
+            EventKind::PermanentDestroyedByEffect,
+            GameEvent::PermanentDestroyedByEffect { .. },
+        ) => true,
         (EventKind::ManifestedDread, GameEvent::ManifestedDread { .. }) => true,
         (EventKind::BecomesUntapped, GameEvent::PermanentUntapped { .. }) => true,
         (EventKind::Tapped, GameEvent::PermanentTapped { .. }) => true,
@@ -624,6 +628,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::ClassLevelReached { player, .. }
         | GameEvent::PoisonAdded { player, .. }
         | GameEvent::CardMilled { player, .. }
+        | GameEvent::PermanentDestroyedByEffect { controller: player, .. }
         | GameEvent::ManifestedDread { player, .. }
         | GameEvent::ManaAdded { player, .. }
         | GameEvent::ColorlessManaAdded { player, .. }
@@ -703,6 +708,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentExiled { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentDied { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::PermanentDestroyedByEffect { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CreatureSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::PermanentSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::CreatureLeftWithoutDying { card_id, .. } => Some(EntityRef::Card(*card_id)),

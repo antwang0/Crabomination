@@ -1245,7 +1245,7 @@ impl Effect {
             Effect::EachPlayerExilesHandDrawsSeven
             | Effect::EachPlayerDiscardsHandReturnsExiledWithSource
             | Effect::IgnoreStaticFromSourceThisTurn
-            | Effect::PreventNextEventFromChosenSourceAnywhere
+            | Effect::PreventNextEventFromChosenSourceAnywhere { .. }
             | Effect::ReturnRandomExiledWithSource
             | Effect::GoblinGame
             | Effect::EachPlayerKeepsOneOfEachColorDiscardsRest

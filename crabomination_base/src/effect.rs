@@ -2155,6 +2155,12 @@ pub enum EventKind {
     PermanentSacrificed,
     /// Any permanent left the battlefield.
     PermanentLeavesBattlefield,
+    /// CR 701.7 — a permanent was destroyed by a spell or ability (not by
+    /// combat damage or a state-based action). The event's actor is the
+    /// destroying effect's controller, so `EventScope::YourControl` with
+    /// `actor_is_opponent` reads "a spell or ability an opponent controls
+    /// destroys a permanent you control" (Karmic Justice).
+    PermanentDestroyedByEffect,
     /// CR 603.6 — a creature left the battlefield *without dying* (moved to
     /// hand / exile / library, not to a graveyard). Dour Port-Mage, Three
     /// Tree Scribe. Distinct from `CreatureDied`/`PermanentLeavesBattlefield`,
@@ -7313,8 +7319,12 @@ pub enum Effect {
     /// any target this turn, prevent that damage." Unlike
     /// `PreventNextFromChosenSourceToTeam` the shield floats over every
     /// recipient, so it soaks whichever damage event the chosen source deals
-    /// first (Martyr's Cause).
-    PreventNextEventFromChosenSourceAnywhere,
+    /// first (Martyr's Cause). `what` names the source outright instead of
+    /// asking (Impulsive Maneuvers' losing flip aims at the attacker).
+    PreventNextEventFromChosenSourceAnywhere {
+        #[serde(default)]
+        what: Option<Selector>,
+    },
     /// "Creatures `what` gain protection from the colors of `of` until
     /// `duration`" (Samite Elder). Reads the live colors of the permanent(s)
     /// `of` resolves to and grants one `Keyword::Protection` per color.

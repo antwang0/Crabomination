@@ -8382,10 +8382,22 @@ impl GameState {
                             .map(|c| (c.controller, c.definition.is_creature()));
                         if self.destroy_permanent(cid, no_regen, events)
                             && let Some((owner, is_creature)) = victim
-                            && !is_creature
                             && !self.same_team(owner, ctx.controller)
                         {
-                            self.players[owner].noncreature_destroyed_by_opponent_this_turn = true;
+                            if !is_creature {
+                                self.players[owner]
+                                    .noncreature_destroyed_by_opponent_this_turn = true;
+                            }
+                            // CR 701.7 — "a spell or ability an opponent
+                            // controls destroys a permanent you control"
+                            // (Karmic Justice). Only the cross-team case is
+                            // emitted, so the scope reads off the victim.
+                            events.push(GameEvent::PermanentDestroyedByEffect {
+                                card_id: cid,
+                                controller: owner,
+                                destroyer: ctx.controller,
+                                is_creature,
+                            });
                         }
                     }
                 }
@@ -23900,15 +23912,21 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventNextEventFromChosenSourceAnywhere => {
+            Effect::PreventNextEventFromChosenSourceAnywhere { what } => {
                 // CR 615.7 — Martyr's Cause. One floating shield keyed to the
                 // chosen source; the first damage event it deals to anything is
                 // soaked whole.
-                let Some(chosen) = self
-                    .choose_damage_prevention_source(&crate::card::SelectionRequirement::Any, ctx)
-                else {
-                    return Ok(());
+                let chosen = match what {
+                    Some(sel) => self
+                        .resolve_selector(sel, ctx)
+                        .into_iter()
+                        .find_map(|e| e.as_permanent_id()),
+                    None => self.choose_damage_prevention_source(
+                        &crate::card::SelectionRequirement::Any,
+                        ctx,
+                    ),
                 };
+                let Some(chosen) = chosen else { return Ok(()) };
                 self.prevention_shields.push(crate::game::types::PreventionShield {
                     target: crate::game::types::PreventionTarget::Anything,
                     remaining: None,

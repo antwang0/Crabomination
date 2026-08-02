@@ -2677,6 +2677,11 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 card_id: *card_id,
             },
+            // Internal trigger plumbing (Karmic Justice) — the client already
+            // sees the resulting death, so mirror it as the ordinary one.
+            GameEvent::PermanentDestroyedByEffect { card_id, is_creature, .. } => {
+                GameEventWire::PermanentDied { card_id: *card_id, is_creature: *is_creature }
+            }
             GameEvent::ManifestedDread { player, milled } => GameEventWire::ManifestedDread {
                 player: *player,
                 milled: *milled,

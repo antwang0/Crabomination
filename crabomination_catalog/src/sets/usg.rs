@@ -665,7 +665,7 @@ pub fn sanctum_guardian() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
-            effect: Effect::PreventNextEventFromChosenSourceAnywhere,
+            effect: Effect::PreventNextEventFromChosenSourceAnywhere { what: None },
             ..Default::default()
         }],
         ..creature(

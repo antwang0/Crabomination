@@ -1643,6 +1643,8 @@ pub enum SelectionRequirement {
     /// `ToughnessAtMostYourCount`.
     PowerAtMostYourCount(Box<SelectionRequirement>),
     WithCounter(CounterType),
+    /// "…with N or more [kind] counters on it" (Bomb Squad's fuse check).
+    WithCounterAtLeast(CounterType, u32),
     /// True when the candidate has at least one counter of any kind on it —
     /// "a creature with a counter on it" (Delta Bloodflies, Stalwart
     /// Successor). The any-kind complement of `WithCounter`.

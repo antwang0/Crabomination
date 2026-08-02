@@ -1972,6 +1972,15 @@ pub enum GameEvent {
     /// what `EventScope::YourControl`/`OpponentControl` reads.
     SpellCountered { card_id: CardId, player: usize },
     CardMilled { player: usize, card_id: CardId },
+    /// CR 701.7 — a permanent was destroyed by a spell or ability. `destroyer`
+    /// is that effect's controller (Karmic Justice). Emitted only from the
+    /// `Effect::Destroy` funnel, so combat/SBA deaths don't match.
+    PermanentDestroyedByEffect {
+        card_id: CardId,
+        controller: usize,
+        destroyer: usize,
+        is_creature: bool,
+    },
     /// DSK — `player` manifested dread, putting `milled` into their graveyard
     /// this way (the non-manifested of the top two). Drives
     /// `EventKind::ManifestedDread`; the subject is `milled`.

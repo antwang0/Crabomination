@@ -1688,3 +1688,89 @@ fn steam_vines_destroys_the_land_it_taps() {
     assert!(g.battlefield_find(land).is_none(), "the land burned");
     assert_eq!(g.players[1].life, 19);
 }
+
+// ── Wave 12 ─────────────────────────────────────────────────────────────────
+
+/// Karmic Justice answers an opponent's removal on your artifacts.
+#[test]
+fn karmic_justice_answers_noncreature_removal() {
+    use crabomination::card::SelectionRequirement;
+    use crabomination::effect::{Effect, Selector};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::karmic_justice());
+    let mine = g.add_card_to_battlefield(0, catalog::catalyst_stone());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(mine, 1, None);
+    let events = g
+        .resolve_effect(
+            &Effect::Destroy {
+                what: Selector::EachPermanent(SelectionRequirement::Artifact),
+            },
+            &ctx,
+        )
+        .expect("opponent destroys it");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "Karmic Justice took one back");
+}
+
+/// Liquid Fire splits its five points.
+#[test]
+fn liquid_fire_splits_five_damage() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::liquid_fire());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    cast(&mut g, 0, spell, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none(), "2 damage killed the 2/2");
+    assert_eq!(g.players[1].life, 17, "the other 3 went to the face");
+}
+
+/// Bomb Squad detonates a creature at four fuse counters.
+#[test]
+fn bomb_squad_detonates_at_four_counters() {
+    let mut g = main_phase();
+    let squad = g.add_card_to_battlefield(0, catalog::bomb_squad());
+    g.battlefield_find_mut(squad).unwrap().summoning_sick = false;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::Fuse, 3);
+    activate(&mut g, 0, squad, 0, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none(), "the fourth counter set it off");
+    assert_eq!(g.players[1].life, 16);
+}
+
+/// Impulsive Maneuvers doubles an attacker's damage on a winning flip.
+#[test]
+fn impulsive_maneuvers_doubles_on_heads() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::impulsive_maneuvers());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+    // The winning flip doubles the attacker's damage for the turn.
+    g.step = TurnStep::DeclareBlockers;
+    g.resolve_combat();
+    assert_eq!(g.players[1].life, 16, "2 power doubled");
+}
+
+/// Shifty Doppelganger swaps itself out for something from hand.
+#[test]
+fn shifty_doppelganger_cheats_a_creature_in() {
+    let mut g = main_phase();
+    let dop = g.add_card_to_battlefield(0, catalog::shifty_doppelganger());
+    g.battlefield_find_mut(dop).unwrap().summoning_sick = false;
+    let big = g.add_card_to_hand(0, catalog::grizzly_bears());
+    activate(&mut g, 0, dop, 0, None);
+    assert!(g.battlefield_find(big).is_some(), "it came down");
+    assert!(g.computed_permanent(big).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.battlefield_find(dop).is_none(), "the Doppelganger exiled itself");
+}
