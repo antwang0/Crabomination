@@ -659,6 +659,140 @@ impl GameState {
         }
     }
 
+    /// Log-replaying sibling of [`ask_seat_cards`], usable in an arm that asks
+    /// more than one question (the stash variant only works as the arm's first
+    /// ask). Shares `ask_seat_bool`'s cursor contract. A headless `AutoDecider`
+    /// seat takes `auto_default` rather than its blanket empty answer.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn ask_seat_cards_logged(
+        &mut self,
+        cursor: &mut usize,
+        seat: usize,
+        prompt: String,
+        source: CardId,
+        candidates: Vec<(CardId, String)>,
+        min: u32,
+        max: u32,
+        effect: &Effect,
+        auto_default: Vec<CardId>,
+    ) -> Option<Vec<CardId>> {
+        use crate::decision::{Decision, DecisionAnswer};
+        let sane = |ids: &[CardId]| -> Vec<CardId> {
+            ids.iter()
+                .copied()
+                .filter(|id| candidates.iter().any(|(c, _)| c == id))
+                .take(max as usize)
+                .collect()
+        };
+        if let Some(DecisionAnswer::Cards(v)) = self.resolution_answer_log.get(*cursor) {
+            let v = sane(v);
+            *cursor += 1;
+            return Some(v);
+        }
+        let decision = Decision::ChooseCards { source, prompt, candidates: candidates.clone(), min, max };
+        if self.seat_suspends(seat) {
+            self.suspend_signal = Some((
+                decision,
+                PendingEffectState::SeatCardsAnswerPending { player: seat },
+                effect.clone(),
+            ));
+            return None;
+        }
+        let ids = if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+            sane(&auto_default)
+        } else {
+            match self.decider.decide(&decision) {
+                DecisionAnswer::Cards(v) => sane(&v),
+                _ => Vec::new(),
+            }
+        };
+        self.resolution_answer_log.push(DecisionAnswer::Cards(ids.clone()));
+        *cursor += 1;
+        Some(ids)
+    }
+
+    /// `Effect::SeparateIntoPiles` — `splitter` picks the first pile,
+    /// `chooser` says which pile is "chosen", then the two bodies run against
+    /// `Selector::SeparatedPile`. Bodies that themselves suspend would restart
+    /// the split on their re-run, so keep them non-interactive.
+    #[allow(clippy::too_many_arguments)]
+    fn run_separate_into_piles(
+        &mut self,
+        what: &Selector,
+        splitter: &PlayerRef,
+        chooser: &PlayerRef,
+        chosen: &Effect,
+        other: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let ids: Vec<CardId> = self
+            .resolve_selector(what, ctx)
+            .into_iter()
+            .filter_map(|e| e.as_card_id())
+            .collect();
+        let (Some(split_seat), Some(choose_seat)) =
+            (self.resolve_player(splitter, ctx), self.resolve_player(chooser, ctx))
+        else {
+            self.clear_answer_log();
+            return Ok(());
+        };
+        if ids.is_empty() {
+            self.clear_answer_log();
+            return Ok(());
+        }
+        let source = ctx.source.unwrap_or(CardId(0));
+        let candidates: Vec<(CardId, String)> = ids
+            .iter()
+            .filter_map(|id| {
+                self.find_card_anywhere(*id).map(|c| (*id, c.definition.name.to_string()))
+            })
+            .collect();
+        let mut cursor = 0;
+        // Headless split: as even as possible, so a bot's pile choice is a
+        // real decision rather than "all or nothing".
+        let auto: Vec<CardId> = ids.iter().copied().take(ids.len().div_ceil(2)).collect();
+        let n = ids.len() as u32;
+        let Some(first) = self.ask_seat_cards_logged(
+            &mut cursor,
+            split_seat,
+            "Separate into two piles — choose the first pile.".into(),
+            source,
+            candidates,
+            0,
+            n,
+            effect,
+            auto,
+        ) else {
+            return Ok(());
+        };
+        let second: Vec<CardId> = ids.iter().copied().filter(|id| !first.contains(id)).collect();
+        let names = |pile: &[CardId]| -> String {
+            if pile.is_empty() {
+                return "(empty)".into();
+            }
+            pile.iter()
+                .filter_map(|id| self.find_card_anywhere(*id).map(|c| c.definition.name))
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        let prompt =
+            format!("Choose the first pile [{}]? (No takes [{}])", names(&first), names(&second));
+        let Some(take_first) = self.ask_seat_bool(&mut cursor, choose_seat, prompt, source, effect)
+        else {
+            return Ok(());
+        };
+        self.clear_answer_log();
+        self.separated_piles =
+            if take_first { (first, second) } else { (second, first) };
+        let run = self
+            .run_effect(chosen, ctx, events)
+            .and_then(|()| self.run_effect(other, ctx, events));
+        self.separated_piles = (Vec::new(), Vec::new());
+        run
+    }
+
     /// Drop the multi-question replay log — call when a log-using effect
     /// reaches any completing path (see `ask_seat_bool`).
     pub(crate) fn clear_answer_log(&mut self) {
@@ -13629,6 +13763,134 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SeparateIntoPiles { what, splitter, chooser, chosen, other } => {
+                self.run_separate_into_piles(
+                    what, splitter, chooser, chosen, other, ctx, events, effect,
+                )
+            }
+
+            Effect::RevealTopTakeNamedExileRest { count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let p = ctx.controller;
+                let name = self
+                    .named_card_this_resolution
+                    .clone()
+                    .or_else(|| {
+                        ctx.source
+                            .and_then(|s| self.find_card_anywhere(s))
+                            .and_then(|c| c.named_card.clone())
+                    })
+                    .unwrap_or_default();
+                let taken: Vec<CardId> = self.players[p]
+                    .library
+                    .iter()
+                    .rev()
+                    .take(n)
+                    .map(|c| c.id)
+                    .collect();
+                self.cards_revealed_this_resolution += taken.len() as u32;
+                for cid in taken {
+                    let to_hand = self.players[p]
+                        .library
+                        .iter()
+                        .find(|c| c.id == cid)
+                        .is_some_and(|c| c.definition.name == name);
+                    let dest = if to_hand {
+                        ZoneDest::Hand(PlayerRef::You)
+                    } else {
+                        ZoneDest::Exile
+                    };
+                    self.move_card_to(cid, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerKeepsOneOfEachBasicTypeSacrificesRest => {
+                use crate::card::LandType::*;
+                for p in 0..self.players.len() {
+                    let mut keep: Vec<CardId> = Vec::new();
+                    for t in [Plains, Island, Swamp, Mountain, Forest] {
+                        if let Some(c) = self.battlefield.iter().find(|c| {
+                            c.controller == p
+                                && !keep.contains(&c.id)
+                                && self
+                                    .computed_permanent(c.id)
+                                    .is_some_and(|cp| cp.subtypes.land_types.contains(&t))
+                        }) {
+                            keep.push(c.id);
+                        }
+                    }
+                    let doomed: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p
+                                && !keep.contains(&c.id)
+                                && self
+                                    .computed_permanent(c.id)
+                                    .is_some_and(|cp| cp.card_types.contains(&CardType::Land))
+                        })
+                        .map(|c| c.id)
+                        .collect();
+                    for cid in doomed {
+                        self.sacrifice_one(cid, p, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeSelected { what } => {
+                for cid in self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect::<Vec<_>>()
+                {
+                    if let Some(owner) = self.battlefield_find(cid).map(|c| c.controller) {
+                        self.sacrifice_one(cid, owner, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ChooseOneAmong { what, chooser, chosen, other } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .collect();
+                let Some(seat) = self.resolve_player(chooser, ctx) else { return Ok(()) };
+                if ids.is_empty() {
+                    return Ok(());
+                }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let candidates: Vec<(CardId, String)> = ids
+                    .iter()
+                    .filter_map(|id| {
+                        self.find_card_anywhere(*id).map(|c| (*id, c.definition.name.to_string()))
+                    })
+                    .collect();
+                let Some(picked) = self.choose_up_to_cards(
+                    seat,
+                    "Choose one.".into(),
+                    source,
+                    candidates,
+                    1,
+                    effect,
+                    vec![ids[0]],
+                ) else {
+                    return Ok(());
+                };
+                let one = picked.first().copied().unwrap_or(ids[0]);
+                self.separated_piles =
+                    (vec![one], ids.into_iter().filter(|id| *id != one).collect());
+                let run = self
+                    .run_effect(chosen, ctx, events)
+                    .and_then(|()| self.run_effect(other, ctx, events));
+                self.separated_piles = (Vec::new(), Vec::new());
+                run
+            }
+
             Effect::ExchangeControlChoosing { filter, with } => self.resolve_exchange_control_choosing(filter, with, ctx, events),
 
 
@@ -26597,6 +26859,39 @@ impl GameState {
                 }
             }
 
+            Selector::SharingColorWith(inner) => {
+                let Some(anchor) = self
+                    .resolve_selector(inner, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return vec![];
+                };
+                let Some(colors) = self.computed_permanent(anchor).map(|cp| cp.colors.clone())
+                else {
+                    return vec![];
+                };
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.id != anchor)
+                    .filter(|c| {
+                        self.computed_permanent(c.id)
+                            .is_some_and(|cp| cp.colors.iter().any(|k| colors.contains(k)))
+                    })
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
+
+            Selector::Both(a, b) => {
+                let mut out = self.resolve_selector(a, ctx);
+                for e in self.resolve_selector(b, ctx) {
+                    if !out.contains(&e) {
+                        out.push(e);
+                    }
+                }
+                out
+            }
+
             Selector::SharingNameWith(inner) => {
                 // Resolve the anchor, read its printed name, then collect
                 // everything with that name in the anchor's zone: battlefield
@@ -26907,6 +27202,20 @@ impl GameState {
                 out
             }
 
+            Selector::SeparatedPile { chosen } => {
+                let pile =
+                    if *chosen { &self.separated_piles.0 } else { &self.separated_piles.1 };
+                pile.iter()
+                    .map(|cid| {
+                        if self.battlefield_find(*cid).is_some() {
+                            EntityRef::Permanent(*cid)
+                        } else {
+                            EntityRef::Card(*cid)
+                        }
+                    })
+                    .collect()
+            }
+
             Selector::DiscardedThisResolution { filter } => {
                 // Walk the IDs captured in `discarded_card_ids_this_resolution`
                 // and look them up in their owner's graveyard (where
@@ -27096,6 +27405,15 @@ impl GameState {
                         .collect(),
                 )
             }
+            PlayerRef::OpponentOf(inner) => {
+                let Some(of) = self.resolve_player(inner, ctx) else { return Vec::new() };
+                self.apnap_sort(
+                    self.opponents_of(of)
+                        .into_iter()
+                        .filter(|i| self.players[*i].is_alive())
+                        .collect(),
+                )
+            }
             _ => self.resolve_player(pref, ctx).into_iter().collect(),
         }
     }
@@ -27162,6 +27480,10 @@ impl GameState {
                     Some(b) if count(b) >= count(p) => Some(b),
                     _ => Some(p),
                 })
+            }
+            PlayerRef::OpponentOf(inner) => {
+                let of = self.resolve_player(inner, ctx)?;
+                self.opponents_of(of).into_iter().find(|i| self.players[*i].is_alive())
             }
             PlayerRef::TriggerEventPlayer => self.trigger_event_player_scratch,
             PlayerRef::Triggerer => ctx.trigger_source.and_then(|e| match e {

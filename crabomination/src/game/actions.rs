@@ -5956,6 +5956,12 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
+        // "Cast this spell only during combat" (Cauldron Dance).
+        if card.definition.cast_only_during_combat && !self.step.is_combat_phase() {
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // "Cast only during combat before blockers are declared" (Blaze of
         // Glory).
         if card.definition.cast_only_before_blockers

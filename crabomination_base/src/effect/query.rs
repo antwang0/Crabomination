@@ -156,7 +156,9 @@ impl Effect {
                 | Selector::AttachedToMe(i)
                 | Selector::RadianceGroup { subject: i }
                 | Selector::CreaturesInCombatWith(i)
-                | Selector::SharingNameWith(i) => sel_has_target(i),
+                | Selector::SharingNameWith(i)
+                | Selector::SharingColorWith(i) => sel_has_target(i),
+                Selector::Both(a, b) => sel_has_target(a) || sel_has_target(b),
                 Selector::MatchingAmong { inner, .. } => sel_has_target(inner),
                 Selector::Take { inner, count } | Selector::TakeRandom { inner, count } => {
                     sel_has_target(inner) || value_has_target(count)
@@ -346,6 +348,15 @@ impl Effect {
             Effect::ExileRandomGraveyardCopyTapped { .. } => false,
             // Registers a floating trigger; no cast-time target.
             Effect::OnMatchingAttacksThisTurn { .. } => false,
+            Effect::SeparateIntoPiles { what, splitter, chooser, .. } => {
+                sel_has_target(what) || player_has_target(splitter) || player_has_target(chooser)
+            }
+            Effect::SacrificeSelected { what } => sel_has_target(what),
+            Effect::RevealTopTakeNamedExileRest { .. }
+            | Effect::EachPlayerKeepsOneOfEachBasicTypeSacrificesRest => false,
+            Effect::ChooseOneAmong { what, chooser, .. } => {
+                sel_has_target(what) || player_has_target(chooser)
+            }
             Effect::CopyAbility { what, .. } => sel_has_target(what),
             Effect::StaggerPlayerUntilYourNextTurn { who } => player_has_target(who),
             Effect::LookTopKeepOneRestToGraveyard { who, .. } => {
@@ -2448,7 +2459,9 @@ impl Effect {
                 | Selector::AttachedToMe(i)
                 | Selector::RadianceGroup { subject: i }
                 | Selector::CreaturesInCombatWith(i)
-                | Selector::SharingNameWith(i) => sel_find(i, slot),
+                | Selector::SharingNameWith(i)
+                | Selector::SharingColorWith(i) => sel_find(i, slot),
+                Selector::Both(a, b) => sel_find(a, slot).or_else(|| sel_find(b, slot)),
                 Selector::MatchingAmong { inner, .. }
                 | Selector::Take { inner, .. }
                 | Selector::TakeRandom { inner, .. } => {
@@ -2980,6 +2993,11 @@ impl Effect {
                     sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }
                 Effect::DoubleLife { who } => sel_find(who, slot),
+                Effect::ChooseOneAmong { what, chooser, .. } => sel_find(what, slot)
+                    .or_else(|| implicit_player_for_ref_slot(chooser, slot)),
+                Effect::SeparateIntoPiles { what, splitter, chooser, .. } => sel_find(what, slot)
+                    .or_else(|| implicit_player_for_ref_slot(splitter, slot))
+                    .or_else(|| implicit_player_for_ref_slot(chooser, slot)),
                 // Wrappers that defer their target to an inner body.
                 Effect::Forage { then } | Effect::Process { then, .. } => {
                     eff_find(then, slot, mode, kicked)

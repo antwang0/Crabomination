@@ -60,6 +60,10 @@ pub enum PlayerRef {
     /// the Curse cycle, Psychic Possession). Resolves to nothing when the
     /// source isn't attached to a player.
     EnchantedPlayer,
+    /// An opponent of the referenced player. The singular resolver takes the
+    /// first alive one; `resolve_players` returns all of them. Lets a
+    /// per-player body name "one of *their* opponents" (Bend or Break).
+    OpponentOf(Box<PlayerRef>),
     /// The player who triggered the event (for triggered abilities).
     Triggerer,
     /// The seat that *caused* the firing event — the caster for a
@@ -413,6 +417,21 @@ pub enum Selector {
     /// Bile Blight-style sweepers. `inner` is typically `Target(0)`; if it
     /// resolves to nothing (or a non-permanent), this yields nothing.
     SharingNameWith(Box<Selector>),
+
+    /// Every *other* battlefield permanent sharing at least one colour with
+    /// the entity `inner` resolves to (Spreading Plague). Colourless
+    /// subjects match nothing.
+    SharingColorWith(Box<Selector>),
+
+    /// The union of two selectors, de-duplicated in left-then-right order.
+    /// Lets one effect name two target slots at once (Barrin's Spite).
+    Both(Box<Selector>, Box<Selector>),
+
+    /// One half of the split made by the enclosing `Effect::SeparateIntoPiles`
+    /// — the pile the chooser picked (`chosen: true`) or the leftover.
+    /// Backed by `GameState.separated_piles`; ids on the battlefield resolve
+    /// as permanents, the rest as cards (Death or Glory splits a graveyard).
+    SeparatedPile { chosen: bool },
 
     /// No entities (placeholder/default).
     None,
@@ -1070,6 +1089,11 @@ pub enum Predicate {
     /// colour with all the others (Common Cause). Vacuously true when nothing
     /// matches; false as soon as one match is colourless.
     AllMatchingShareAColor(crate::card::SelectionRequirement),
+    /// `who` controls a land of every basic land type (Coalition Victory).
+    ControlsLandOfEachBasicType(PlayerRef),
+    /// `who` controls at least one creature of each of the five colours
+    /// (Coalition Victory). A multicoloured creature covers every colour it is.
+    ControlsCreatureOfEachColor(PlayerRef),
     /// "…as long as [colour] is the most common colour among all permanents or
     /// is tied for most common" (the Invasion Djinn cycle). Each permanent
     /// counts once per colour it is; false when no permanent is coloured.
@@ -3210,6 +3234,29 @@ pub enum Effect {
     /// chosen at random. The split is round-robin over a shuffled list (no
     /// player choice).
     EachPlayerSplitsAndSacrificesRandomPile { piles: u8 },
+    /// "Separate [cards] into two piles. [chooser] chooses one." `splitter`
+    /// picks the first pile, `chooser` picks which pile is "chosen"; the two
+    /// bodies then run against `Selector::SeparatedPile`. Invasion's
+    /// Do or Die / Death or Glory / Bend or Break / Fight or Flight /
+    /// Stand or Fall.
+    SeparateIntoPiles {
+        what: Selector,
+        splitter: PlayerRef,
+        chooser: PlayerRef,
+        /// Runs against the pile `chooser` picked.
+        chosen: Box<Effect>,
+        /// Runs against the pile left over.
+        other: Box<Effect>,
+    },
+    /// `chooser` picks exactly one of `what`; `chosen` runs against it and
+    /// `other` against the rest, both via `Selector::SeparatedPile`.
+    /// Barrin's Spite ("their controller chooses and sacrifices one of them").
+    ChooseOneAmong {
+        what: Selector,
+        chooser: PlayerRef,
+        chosen: Box<Effect>,
+        other: Box<Effect>,
+    },
     /// CR 701.12 — exchange control of a permanent you control matching
     /// `filter` (chosen at resolution: `Decision::ChooseCards` for a
     /// `wants_ui` controller, lowest CardId otherwise) and the permanent
@@ -3873,6 +3920,15 @@ pub enum Effect {
     /// `Effect::NameCard` stamped on the source. Put that card into your hand
     /// and exile all other cards revealed this way." Divining Witch.
     ExileTopThenRevealUntilNamed { exile_count: Value },
+    /// "Reveal the top `count` cards of your library and put all of them with
+    /// the name a preceding `Effect::NameCard` stamped into your hand. Exile
+    /// the rest." Desperate Research.
+    RevealTopTakeNamedExileRest { count: Value },
+    /// "Each player chooses from the lands they control a land of each basic
+    /// land type, then sacrifices the rest." Global Ruin. Each player keeps
+    /// their first land of each basic type (a `Decision::ChooseCards` pick for
+    /// a UI seat) and sacrifices every other land.
+    EachPlayerKeepsOneOfEachBasicTypeSacrificesRest,
     /// "Each player chooses a card in their hand, then reveals it. The owner
     /// of each creature card revealed this way with the lowest mana value
     /// puts it onto the battlefield." Stronghold Gambit. Each player's pick
@@ -6081,6 +6137,9 @@ pub enum Effect {
     /// matching `filter` — no choice involved (CR 701.16). All Is Dust's
     /// "each player sacrifices all colored permanents they control".
     SacrificeAllMatching { who: Selector, filter: SelectionRequirement },
+    /// Sacrifice each permanent `what` resolves to, by its own controller
+    /// (CR 701.16). The targeted sibling of `SacrificeAllMatching`.
+    SacrificeSelected { what: Selector },
     /// CR 701.16 — "Each player sacrifices all [`filter`] they control except
     /// for `keep`" (Keldon Firebombers). Each player keeps their `keep`
     /// highest-mana-value matches; the rest go.

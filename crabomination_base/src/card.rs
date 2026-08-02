@@ -583,6 +583,9 @@ pub enum CounterType {
     /// Depletion counter — the MMQ depletion lands enter with two and are
     /// sacrificed once the last one is spent.
     Depletion,
+    /// Invasion's Temporal Distortion — a tap-tracking counter that blocks
+    /// the next untap.
+    Hourglass,
 }
 
 /// Every zone a card can occupy.
@@ -2887,6 +2890,10 @@ pub struct CardDefinition {
     /// "Cast this spell only during combat before blockers are declared"
     /// (Blaze of Glory). Gated in the cast-timing check.
     pub cast_only_before_blockers: bool,
+    /// "Cast this spell only during combat" (Cauldron Dance, Spinal Embrace).
+    /// Any combat step, either player's turn.
+    #[serde(default)]
+    pub cast_only_during_combat: bool,
     /// "Cast this spell only before attackers are declared" (Master Warcraft).
     /// Gated in the cast-timing check: legal until the Declare Attackers step
     /// has produced attackers.

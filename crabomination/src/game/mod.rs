@@ -735,6 +735,11 @@ pub struct GameState {
     /// to empty between independent resolutions.
     #[serde(skip)]
     pub(crate) discarded_card_ids_this_resolution: Vec<CardId>,
+    /// Transient: `(chosen, other)` for the `Effect::SeparateIntoPiles`
+    /// currently running its two bodies. Read by
+    /// `Selector::SeparatedPile`; set and cleared inside one resolution.
+    #[serde(skip)]
+    pub(crate) separated_piles: (Vec<CardId>, Vec<CardId>),
     /// Transient: set when a `wants_ui` caster answers an optional extra-
     /// target prompt with `DecisionAnswer::DeclineTarget`. The cast replay
     /// (`ResumeContext::CastExtraTargetPick`) re-enters `perform_action`,
@@ -1635,6 +1640,7 @@ impl Clone for GameState {
             cipher_encode_pending: self.cipher_encode_pending,
             haunt_pending: self.haunt_pending.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
+            separated_piles: self.separated_piles.clone(),
             suppress_extra_target_prompts: self.suppress_extra_target_prompts,
             exiled_card_ids_this_resolution: self.exiled_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
@@ -1879,6 +1885,7 @@ impl GameState {
             cipher_encode_pending: None,
             haunt_pending: None,
             discarded_card_ids_this_resolution: Vec::new(),
+            separated_piles: (Vec::new(), Vec::new()),
             suppress_extra_target_prompts: None,
             exiled_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
@@ -15495,6 +15502,15 @@ impl GameState {
                 // Raw stash — the re-run filters against its own candidate
                 // set and enforces min/max, so no sanitisation here.
                 self.stashed_resolution_answer = Some(DecisionAnswer::Cards(ids.clone()));
+                Ok(Vec::new())
+            }
+            PendingEffectState::SeatCardsAnswerPending { .. } => {
+                let DecisionAnswer::Cards(ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // Logged (not stashed) so the re-run can ask further
+                // questions after replaying this one.
+                self.resolution_answer_log.push(DecisionAnswer::Cards(ids.clone()));
                 Ok(Vec::new())
             }
             PendingEffectState::MayCastExiledPending { player, card, decline } => {

@@ -866,6 +866,7 @@ impl PendingEffectState {
             PendingEffectState::SeatBoolAnswerPending { player } => Some(*player),
             PendingEffectState::SeatAmountAnswerPending { player, .. } => Some(*player),
             PendingEffectState::CardsAnswerPending { player } => Some(*player),
+            PendingEffectState::SeatCardsAnswerPending { player } => Some(*player),
             PendingEffectState::MayCastExiledPending { player, .. } => Some(*player),
             PendingEffectState::StashNamePending { player } => Some(*player),
             _ => None,
@@ -1557,6 +1558,10 @@ pub enum PendingEffectState {
     /// picker isn't the resolving controller (an opponent choosing which
     /// of their permanents to bounce).
     CardsAnswerPending { player: usize },
+    /// As `CardsAnswerPending`, but the answer is *appended* to
+    /// `GameState.resolution_answer_log` so the arm can ask more questions
+    /// after it (`ask_seat_cards_logged` — the pile split's pick-then-choose).
+    SeatCardsAnswerPending { player: usize },
     /// Suspended on a "cast the exiled card without paying?" offer after a
     /// dig already mutated state (Cascade, Discover, Possibility Storm,
     /// Ripple, Amped Raptor). Completion-style — no re-run: the answer

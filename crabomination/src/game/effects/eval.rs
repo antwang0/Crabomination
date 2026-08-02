@@ -1265,6 +1265,30 @@ impl GameState {
             Predicate::ColorIsMostCommonAmongPermanents(k) => {
                 self.most_common_permanent_colors().contains(k)
             }
+            Predicate::ControlsLandOfEachBasicType(who) => {
+                use crate::card::LandType::*;
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                [Plains, Island, Swamp, Mountain, Forest].iter().all(|t| {
+                    self.battlefield.iter().any(|c| {
+                        c.controller == p
+                            && self
+                                .computed_permanent(c.id)
+                                .is_some_and(|cp| cp.subtypes.land_types.contains(t))
+                    })
+                })
+            }
+            Predicate::ControlsCreatureOfEachColor(who) => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                crate::mana::Color::ALL.iter().all(|k| {
+                    self.battlefield.iter().any(|c| {
+                        c.controller == p
+                            && self.computed_permanent(c.id).is_some_and(|cp| {
+                                cp.card_types.contains(&crate::card::CardType::Creature)
+                                    && cp.colors.contains(k)
+                            })
+                    })
+                })
+            }
             Predicate::ValueAtLeast(a, b) => self.evaluate_value(a, ctx) >= self.evaluate_value(b, ctx),
             Predicate::ValueAtMost(a, b) => self.evaluate_value(a, ctx) <= self.evaluate_value(b, ctx),
             Predicate::ValueEquals(a, b) => self.evaluate_value(a, ctx) == self.evaluate_value(b, ctx),
