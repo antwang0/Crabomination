@@ -29,46 +29,52 @@ Items are grouped by area and roughly ordered by impact within each group.
 `classic_sets/pls`, `pls2`). See FEATURE_ROADMAP.md for the primitives it
 shipped.
 
-## Invasion — in progress
+## Invasion — one card left
 
-`set_gaps.py inv` is at **40** (280 → 233 → 136 → 70 → 40; `sets::inv::{gaps,
-gaps2, gaps3, gaps4}`, tests in `classic_sets/inv_gaps`–`inv_gaps4`).
-Primitives it shipped: `CardDefinition.flash_surcharge` (CR 601.2b — the
-"cast as though it had flash if you pay {2} more" cycle),
-`Effect::SwapTappedState` (Breaking Wave's simultaneous flip),
-`StaticEffect::{ColoredSpellTax, PreventSmallDamageToThis, CapLargeDamage}`, `Predicate::ColorIsMostCommonAmongPermanents`,
-`SelectionRequirement::{SharesMostCommonColor, HasNonManaActivatedAbility,
-SharesNameWithAnotherPermanent, ManaValueEqualsChosenNumber}`, `Effect::PlayerCantPlayLandsThisTurn`, and
-`GameState::restart_game` / `Effect::RestartGame` (CR 727).
+`set_gaps.py inv` is at **1** (280 → 233 → 136 → 70 → 40 → 10 → 1;
+`sets::inv::{gaps,gaps2,gaps3,gaps4,gaps5}`, tests in `classic_sets/inv_gaps`–
+`inv_gaps5`). Primitives it shipped: `CardDefinition.{flash_surcharge (CR
+601.2b), cast_only_during_combat}`, `Effect::{SwapTappedState,
+SeparateIntoPiles, ChooseOneAmong, SacrificeSelected, GrantChosenTypeLandwalk,
+BidLifeToCounterTargetSpell (CR 601.2b life bidding),
+RevealTopTakeNamedExileRest, EachPlayerKeepsOneOfEachBasicTypeSacrificesRest,
+PlayerCantPlayLandsThisTurn, RestartGame (CR 727)}`,
+`Selector::{SeparatedPile, SharingColorWith, Both}`, `PlayerRef::OpponentOf`,
+`StaticEffect::{ColoredSpellTax, PreventSmallDamageToThis, CapLargeDamage,
+PreventDamageBetweenSharedColorCreatures,
+RedirectChosenColorSpellDamageToController,
+YourBasicLandsProduceChosenColorInstead,
+CantCastSharingColorWithLastCastSpell}`,
+`Predicate::{ColorIsMostCommonAmongPermanents, ControlsLandOfEachBasicType,
+ControlsCreatureOfEachColor}`, `SelectionRequirement::{SharesMostCommonColor,
+HasNonManaActivatedAbility, SharesNameWithAnotherPermanent,
+ManaValueEqualsChosenNumber, TargetsALandYouControl}`,
+`WardCost::ManaCostOfAttached`, `CounterType::Hourglass`, and
+`GameState::ask_seat_cards_logged` (a replay-logged `ChooseCards` ask, so an
+arm can chain a card pick with further seat questions).
 
-### Invasion remainder — each blocked on one primitive
+### Still open
 
-- **Prison Barricade** — the kicked "can attack as though it didn't have
-  defender" rider is dropped; needs a defender-bypass *grant* (the engine only
-  has the static `CanAttackIgnoringDefenderWhile`).
-- **Kangee, Aerie Keeper** — feather counters are modelled as charge counters;
-  add `CounterType::Feather` if anything else ever reads them.
-- **Darigaaz, the Igniter** — the damage count reads the hand live instead of
-  snapshotting the reveal; only visible if the hand changes mid-resolution.
-- **Cauldron Dance / Spinal Embrace** — need a `cast_only_during_combat` cast
-  restriction; not yet implemented.
-- **Desperate Research** — needs a name-then-reveal-seven effect.
-- **Spreading Plague** — needs `SelectionRequirement::SharesColorWithTriggerSource`
-  (plus an `OtherThanTriggerSource` exclusion).
-- **Pure Reflection** — needs a token whose P/T is the triggering spell's mana
-  value.
-- **Do or Die / Death or Glory / Bend or Break / Global Ruin / Fight or Flight
-  / Stand or Fall / Barrin's Spite** — all want a real "separate into two
-  piles, opponent chooses" decision; `EachPlayerSplitsAndSacrificesRandomPile`
-  splits randomly rather than by choice.
-- **Yawgmoth's Agenda / Mana Maze / Well-Laid Plans / Harsh Judgment /
-  Pledge of Loyalty / Essence Leak / Psychic Battle / Temporal Distortion /
-  Overabundance / Pulse of Llanowar / Protective Sphere / Atalya /
-  Traveler's Cloak / Metathran Aerostat / Coalition Victory / Crystal Spray /
-  Teferi's Response / Mages' Contest / Tsabo's Decree / Artifact Mutation /
-  Orim's Touch / Chaotic Strike / Loafing Giant / Aether Rift / Seer's Vision's
-  surgical discard** — each needs one new static/effect; see the wave-4 source
-  for the shapes that were sketched and cut.
+- **Psychic Battle** — needs a "whenever a player chooses one or more targets"
+  event plus a window where the top-card-reveal winner may repoint those
+  targets. `Effect::ChooseNewTargetsForSpell` exists; the event and the
+  reveal-and-compare wrapper don't.
+
+### Residuals in what shipped
+
+- **Barrin's Spite's second slot isn't restricted** to a creature controlled by
+  the same player as slot 0 (no cross-slot cast-time filter).
+- **Atalya, Samite Master's "spend only white mana on X"** and **Protective
+  Sphere's "shares a color with the mana spent"** are dropped (no per-
+  activation mana-colour provenance on the X payment).
+- **Samite Ministration's black/red lifegain rider** is dropped.
+- **Pledge of Loyalty snapshots your colours at ETB** rather than tracking them
+  continuously.
+- **Kangee's feather counters** ride `CounterType::Charge`; **Darigaaz, the
+  Igniter** reads the hand live instead of snapshotting the reveal; **Prison
+  Barricade's** kicked defender-bypass grant is dropped.
+- **The pile-split bodies must stay non-interactive** — a body that suspends
+  would restart the split on its re-run (`Effect::SeparateIntoPiles`).
 
 ## Apocalypse — closed
 
@@ -4994,7 +5000,13 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b). 208.3 noncreature P/T now observable for `*`-power Vehicles: `DynamicPt::LandsControlledPower` sets power off a count while toughness stays printed, `computed_permanent()` reports it on a non-crewed (noncreature) Vehicle (Lumbering Worldwagon `*`/4; test `lumbering_worldwagon_power_tracks_lands`). Conditional base-P/T set ✅ (`StaticEffect::SetBasePtIf` — live layer-7b SetPowerToughness gated on a predicate; counters/+N stack on top per 613.7c/f — Snowmelt Stag "5/2 during your turn"; `snowmelt_stag_*`). CR 604.3 CDAs: `DynamicPt::LandsControlledPlusLandsInControllerGraveyard` (Multani, Yavimaya's Avatar), `DynamicPt::CardTypesInOpponentsGraveyards` (Nighthawk Scavenger), `DynamicPt::InstantsSorceriesInControllerGraveyard` (Enigma Drake), `DynamicPt::CreaturesControlledPower` (Suki `*`/4), `DynamicPt::PlusCountersOnLandsControlledPower` (Toph `*`/3), `DynamicPt::NoncreatureNonlandCardsInControllerGraveyard` (Dragonfly Swarm `*`/3), `DynamicPt::ColorsAmongAlliesControlledPower` (Earthen Ally `*`/2), `DynamicPt::EnchantmentsInPlay` (Yavimaya Enchantress `2/2`, +1/+1 per enchantment in play — `tests/recent72.rs`), `DynamicPt::ForestsInPlay` (Traproot Kami `0/*`, toughness = Forests on the battlefield — `tests/recent100.rs`), all live-recomputed by `computed_permanent()`; `tests/recent47.rs`, `tests/recent50.rs`, `tests/tla.rs`.
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). 119.7 rest-of-game lifegain lock ✅ (`Effect::LifeGainLockGame` sets the permanent `Player.cannot_gain_life` flag, distinct from the turn-scoped lock — Screaming Nemesis via `Selector::Target(0)`; test `screaming_nemesis_redirects_damage`). Life-total-threshold statics ✅ (`Predicate::PlayerLifeAtLeast` gates a live self-anthem — Angel of Vitality's +2/+2 at 25+ life; `cr_119_*`, `tests/recent17.rs`). Life-vs-*starting*-total statics ✅ (`Predicate::PlayerLifeAtLeastAboveStarting` gates tiered self-pumps — Elenda, Saint of Dusk +1/+1/menace above starting, +5/+5 more at 10+ above; `elenda_scales_with_life`). Exact-life gate ✅ (`Predicate::PlayerLifeExactly` — Hidetsugu's Second Rite deals 10 only if the targeted player is at exactly 10; `hidetsugus_second_rite_needs_exactly_ten`). Redistribute-life-totals (119.7) is exact at two players — Reverse the Sands rides `ExchangeLifeTotals`, `reverse_the_sands_swaps_life_totals`; a true multiplayer redistribution (each player picks which total they get back) is still open. Remaining: per-source life-gain replacement breadth. (Audit follow-up closed: every `LifeGained` emitter now uses `adjust_life_applied`, and `SetLifeTotal`/`ExchangeLifeTotals` route through the funnel — so a can't-gain-life lock on the player who would gain blocks their half of an exchange while the other still loses; test `cr_119_7_exchange_life_totals_respects_cant_gain_life`.)
 - 🟡 **CR 121 — Drawing a Card** — draw-count replacement (121.2a) ✅ via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought Reflection; stacks per 614.5, reentrancy-guarded); **condition-gated** draw doubling ✅ (`ControllerDrawsDoubledIf` — Vnwxt's max-speed draw-two; test `cr_121_2a_conditional_draw_replacement`). Draw-count board gates ✅ via `SelectionRequirement::ControllerDrewAtLeastThisTurn(n)` (reads `Player.cards_drawn_this_turn`), wired as a `SelfHasKeywordWhile` condition (Foggy Swamp Hunters lifelink/menace, June unblockable). Choose-to-draw (121.3 / 121.2b) ✅ — `GameState::may_choose_to_draw` stops `Effect::MayDo` / `Effect::MayPay` offering an optional draw to a capped player (a rules-declined `MayPay` still runs its `else_`), and the per-turn cap now gates `draw_one` itself so *every* draw source is capped, not just `Effect::Draw`'s count; an empty library deliberately doesn't block the choice. Remaining: mid-cast face-down draw (121.8); reveal-on-draw (121.9).
-- 🟡 **CR 502 — Untap Step** — untap caps are now filtered (`StaticEffect::MaxOneUntapPerStep { filter }` — Winter Moon's nonbasic lands and Imi Statue's artifacts share one path; `imi_statue_caps_artifact_untaps_at_one`). Phasing (502.1 / 702.26) ✅: `do_phasing`
+- ✅ **CR 605.1b / 605.4a — triggered mana abilities** — a targetless
+  mana-adding trigger fired from a mana ability resolves off-stack, so its mana
+  reaches the pool before the payment in progress finishes (Overabundance).
+  `TriggerCandidate`/`PendingTriggerPush` carry `from_mana_ability`; tests
+  `cr_recent63::cr_605_{1b,4a,5a}_*`. Remaining ⏳: 605.3c ("can't be activated
+  again until it has resolved") isn't modelled.
+- 🟡 **CR 502 — Untap Step** — untap caps are now filtered (`StaticEffect::MaxOneUntapPerStep { filter }` — Winter Moon's nonbasic lands and Imi Statue's artifacts share one path; `imi_statue_caps_artifact_untaps_at_one`). CR 502.3 "doesn't untap while it has a [kind] counter" now reads the **computed** keywords at both untap gates, so a *granted* lock counts (Temporal Distortion's hourglass counters), not just a printed one — `cr_recent63::cr_502_3_counter_gated_permanent_doesnt_untap`. Phasing (502.1 / 702.26) ✅: `do_phasing`
   runs as a turn-based action at the top of the untap step, moving the active
   player's phasing permanents (and their attachments) to `GameState.phased_out`
   and phasing back in everything they control there — modelled as a side zone

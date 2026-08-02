@@ -901,6 +901,12 @@ pub struct PlayerView {
     pub arbiter_cant_cast: bool,
     #[serde(default)]
     pub arbiter_cant_attack: bool,
+    /// Mana Maze — colours no player may cast this turn (the last cast
+    /// spell's colours) while such a lock is on the battlefield. Empty when
+    /// nothing locks casting. Surfaced so a UI can grey out the hand instead
+    /// of just rejecting the cast. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub locked_cast_colors: Vec<crate::mana::Color>,
     /// True when this player's life total can't change this turn (Flare of
     /// Fortitude) — both gain and loss are dropped. Surfaced so UIs can show
     /// the life total is frozen. `#[serde(default)]` for snapshot back-compat.

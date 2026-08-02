@@ -2372,6 +2372,41 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **Invasion (INV) 40 → 1** — `sets::inv::gaps5`, 39 cards. The pile-splitting
+  rares land on a real decision: `Effect::SeparateIntoPiles` (splitter picks a
+  pile, chooser picks which one counts) and its exactly-one sibling
+  `Effect::ChooseOneAmong`, both reading `Selector::SeparatedPile` — Do or Die,
+  Death or Glory, Bend or Break, Fight or Flight, Stand or Fall, Barrin's
+  Spite. Enabling that needed `GameState::ask_seat_cards_logged` +
+  `PendingEffectState::SeatCardsAnswerPending`: a replay-**logged** ChooseCards
+  ask, so one arm can chain a card pick with further seat questions (the stash
+  variant only works as an arm's first ask). Also
+  `PlayerRef::OpponentOf`, `Selector::{SharingColorWith, Both}`,
+  `Effect::{SacrificeSelected, GrantChosenTypeLandwalk,
+  BidLifeToCounterTargetSpell, RevealTopTakeNamedExileRest,
+  EachPlayerKeepsOneOfEachBasicTypeSacrificesRest}`,
+  `StaticEffect::{PreventDamageBetweenSharedColorCreatures,
+  RedirectChosenColorSpellDamageToController,
+  YourBasicLandsProduceChosenColorInstead,
+  CantCastSharingColorWithLastCastSpell}`,
+  `Predicate::{ControlsLandOfEachBasicType, ControlsCreatureOfEachColor}`,
+  `SelectionRequirement::TargetsALandYouControl`,
+  `WardCost::ManaCostOfAttached`, `CardDefinition.cast_only_during_combat` and
+  `CounterType::Hourglass`. Psychic Battle is the only card left (TODO.md).
+  Tests in `classic_sets/inv_gaps5`.
+- **CR 605.1b / 605.4a — triggered mana abilities don't use the stack.** A
+  targetless mana-adding trigger fired from a mana ability now resolves
+  immediately, so its mana reaches the pool in time to pay for the spell being
+  cast (Overabundance, Mana Flare). `TriggerCandidate`/`PendingTriggerPush`
+  carry `from_mana_ability`.
+- **CR 502.3 / 613 — granted untap locks count.** Both untap gates read the
+  *computed* keywords, so a `DoesntUntapWhileCounter` handed out by a static
+  (Temporal Distortion's hourglass counters) stops the untap and drives the
+  client's "won't untap" badge, not just a printed one.
+- **Mana Maze's colour lock is surfaced.** `GameState.last_cast_spell_colors`
+  (cleared at Cleanup) drives the cast gate, `PlayerView.locked_cast_colors`
+  carries it per viewer only while such a lock is on the battlefield, and the
+  client renders a `⊘ WUBRG` stat chip so a rejected cast explains itself.
 - **CR 727 — restarting the game.** `GameState::restart_game` +
   `Effect::RestartGame`: every card in the game returns to its owner's shuffled
   library, the restarter takes the first turn (727.1a), and cards exiled with
@@ -2404,10 +2439,6 @@ Each a small targeted feature; sweep batch by batch.
 - **`Effect::SwapTappedState`** — "simultaneously untap all tapped X and tap
   all untapped X" (Breaking Wave); reads every state before writing any, so it
   can't re-tap what it just untapped.
-- **Invasion (INV) 280 → 41** — `sets::inv::{gaps,gaps2,gaps3,gaps4}`, ~190
-  cards. Also `Effect::PlayerCantPlayLandsThisTurn` and
-  `SelectionRequirement::{HasNonManaActivatedAbility,
-  SharesNameWithAnotherPermanent}`. Remaining 43 are itemized in TODO.md.
 - **Server `/status.json` is built from a shared field table** rather than one
   60-placeholder `format!`, with a drift test pinning every scalar JSON key to
   its `/metrics` sample.

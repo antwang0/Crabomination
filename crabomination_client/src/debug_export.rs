@@ -168,6 +168,7 @@ mod tests {
             attackable_players: Vec::new(),
             permanents_to_graveyard_this_turn: 0,
             players: vec![PlayerView {
+                locked_cast_colors: vec![],
                 prevention_remaining: None,
                 prevention_source_colors: Vec::new(),
                 prevention_next_instances: 0,

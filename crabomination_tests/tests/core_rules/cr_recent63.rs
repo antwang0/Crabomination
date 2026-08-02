@@ -166,3 +166,34 @@ fn cr_614_9_spell_damage_redirect_applies_once() {
     assert_eq!(g.players[1].life, them, "the aimed-at seat is spared");
     assert_eq!(g.players[0].life, me - 3, "the caster eats it, once");
 }
+
+// ── CR 601 — seat routing for the pile split ────────────────────────────────
+
+/// The pile split asks two different seats: the splitter picks the pile, the
+/// chooser picks which pile counts. A `wants_ui` splitter suspends first, and
+/// the pending decision is routed to *that* seat.
+#[test]
+fn pile_split_routes_each_ask_to_its_own_seat() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::do_or_die());
+    g.players[0].wants_ui = true;
+    g.players[0].mana_pool.add(Color::Black, 5);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let pending = g.pending_decision.as_ref().expect("the splitter was asked");
+    assert!(
+        matches!(pending.decision, crabomination::decision::Decision::ChooseCards { .. }),
+        "the split is a card pick"
+    );
+    assert_eq!(pending.acting_player(), 0, "the pick belongs to the splitting seat");
+}

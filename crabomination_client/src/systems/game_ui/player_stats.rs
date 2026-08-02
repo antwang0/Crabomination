@@ -924,6 +924,21 @@ pub fn update_player_stats_chips(
         if p.even_mv_cast_locked {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ even".to_string());
         }
+        // Mana Maze — no spell may share a colour with the turn's last cast.
+        if !p.locked_cast_colors.is_empty() {
+            let pips: String = p
+                .locked_cast_colors
+                .iter()
+                .map(|c| match c {
+                    crabomination::mana::Color::White => 'W',
+                    crabomination::mana::Color::Blue => 'U',
+                    crabomination::mana::Color::Black => 'B',
+                    crabomination::mana::Color::Red => 'R',
+                    crabomination::mana::Color::Green => 'G',
+                })
+                .collect();
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, format!("⊘ {pips}"));
+        }
         // Damping Engine — the seat ahead on permanents can't develop until it
         // sacrifices something.
         if p.development_locked {

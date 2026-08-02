@@ -783,6 +783,20 @@ fn project_player(
             && state.opponent_has_static(player_seat, |e| {
                 matches!(e, crate::effect::StaticEffect::OpponentsWhoCastCantAttack)
             }),
+        // Mana Maze — the turn's last-cast colours, but only while a lock is
+        // actually on the battlefield (otherwise the list means nothing).
+        locked_cast_colors: if state.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::CantCastSharingColorWithLastCastSpell
+                )
+            })
+        }) {
+            state.locked_cast_colors()
+        } else {
+            Vec::new()
+        },
         life_locked: player.life_locked_this_turn,
         has_hexproof,
         commander_damage_taken,
@@ -2610,6 +2624,32 @@ mod tests {
         g.remove_from_battlefield_to_graveyard_raw(b);
         let view = project(&g, 0);
         assert_eq!(view.permanents_to_graveyard_this_turn, 2);
+    }
+
+    #[test]
+    fn project_surfaces_the_mana_maze_colour_lock() {
+        // The lock is only meaningful while a Mana Maze is on the battlefield,
+        // and it must vanish with it.
+        let mut g = two_player_game();
+        g.step = crate::game::TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let maze = g.add_card_to_battlefield(0, catalog::mana_maze());
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 5);
+        g.perform_action(crate::game::types::GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(crate::game::types::Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        assert_eq!(
+            project(&g, 0).players[0].locked_cast_colors,
+            vec![crate::mana::Color::Red]
+        );
+        g.remove_from_battlefield_to_graveyard_raw(maze);
+        assert!(project(&g, 0).players[0].locked_cast_colors.is_empty());
     }
 
     #[test]

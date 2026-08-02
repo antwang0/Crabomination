@@ -8795,6 +8795,12 @@ impl GameState {
         })
     }
 
+    /// Mana Maze — the colours of the turn's most recently cast spell, which
+    /// no player may share while such a lock is on the battlefield.
+    pub fn locked_cast_colors(&self) -> Vec<crate::mana::Color> {
+        self.last_cast_spell_colors.clone()
+    }
+
     /// CR 615 — Well-Laid Plans: true when `src` and `tgt` are both creatures
     /// sharing a colour while any such static is on the battlefield.
     pub(crate) fn shared_color_creature_damage_prevented(
