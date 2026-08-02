@@ -2372,6 +2372,39 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **CR 727 — restarting the game.** `GameState::restart_game` +
+  `Effect::RestartGame`: every card in the game returns to its owner's shuffled
+  library, the restarter takes the first turn (727.1a), and cards exiled with
+  the source are exempt (727.5) and deployed under the controller's control.
+  Karn Liberated's −14 is now real instead of collapsing to `WinGame`, and its
+  −3 exiles *with the source* so the ultimate can find what it took.
+  `GameEvent`/`GameEventWire::GameRestarted`. Tests in `core_rules/cr_recent62`.
+- **Coloured cost *increases*** — `StaticEffect::ColoredSpellTax` (the Invasion
+  Leech cycle) is the mirror of `ColoredCostReduction`: controller-scoped,
+  applied before any reduction, and folded into the bot's affordability probe
+  so it can't submit casts the engine rejects. CR 601.2f test.
+- **Damage-threshold replacements** — `StaticEffect::PreventSmallDamageToThis`
+  (Callous Giant: all-or-nothing on an event of N or less) and
+  `StaticEffect::CapLargeDamage` (Divine Presence: an event of N or more is
+  replaced by M, applied after the doubling/halving chain).
+- **"Most common colour among all permanents"** —
+  `Predicate::ColorIsMostCommonAmongPermanents` +
+  `SelectionRequirement::SharesMostCommonColor`, backed by
+  `GameState::most_common_permanent_colors` (printed colours, so it stays
+  layer-safe). Powers the Djinn cycle, Barrin's Unmaking and Tsabo's Assassin;
+  the client's cast-time highlight mirrors it.
+- **`all_damage_to_player_prevented` unwraps the CR 611.2 conditional
+  wrappers** (`WhileCondition`, `WhileYourTurn`) instead of only matching the
+  bare statics — Spirit of Resistance's five-colour gate now actually gates.
+- **Invasion (INV) 280 → 43** — `sets::inv::{gaps,gaps2,gaps3,gaps4}`, ~190
+  cards. Also `Effect::PlayerCantPlayLandsThisTurn` and
+  `SelectionRequirement::{HasNonManaActivatedAbility,
+  SharesNameWithAnotherPermanent}`. Remaining 43 are itemized in TODO.md.
+- **Server `/status.json` is built from a shared field table** rather than one
+  60-placeholder `format!`, with a drift test pinning every scalar JSON key to
+  its `/metrics` sample.
+
+
 - **Planeshift (PLS) complete** — `set_gaps.py pls` at zero (`sets::pls`,
   `sets::pls2`). New primitives: `CardDefinition.self_cost_reduction_per`
   (Domain-scaled discounts), `Keyword::DomainLandwalk`,

@@ -23,17 +23,57 @@ Items are grouped by area and roughly ordered by impact within each group.
   (the mana value furthest from the line) and the guess is asked of the
   resolving decider rather than routed to the guesser's seat.
 
-## Planeshift — in progress
+## Planeshift — closed
 
-`set_gaps.py pls` is at **86** (132 → 112 → 98 → 86; `sets::pls`, tests in
-`classic_sets/pls`). New primitives: `LandType::Lair` and
-`Effect::SacrificeSourceUnlessReturn` (the bounce sibling of
-`SacrificeSourceUnlessSacrifice` — the Lair land cycle). Remaining is mostly the
-rest of the Lair cycle (Mossfire Valley, Rith's Grove), Draco's domain cost
-reduction and domain upkeep, Dralnu's Pet's discard-a-creature kicker, Forsaken
-City's exile-to-untap, Guard Dogs' shares-a-color prevention, Lashknife
-Barrier's damage-minus-one replacement, Keldon Twilight's no-attacks end step,
-and Goblin Game.
+`set_gaps.py pls` is at **zero** (`sets::pls`, `sets::pls2`; tests in
+`classic_sets/pls`, `pls2`). See FEATURE_ROADMAP.md for the primitives it
+shipped.
+
+## Invasion — in progress
+
+`set_gaps.py inv` is at **43** (280 → 233 → 136 → 70 → 43; `sets::inv::{gaps,
+gaps2, gaps3, gaps4}`, tests in `classic_sets/inv_gaps`–`inv_gaps4`).
+Primitives it shipped: `StaticEffect::{ColoredSpellTax, PreventSmallDamageToThis,
+CapLargeDamage}`, `Predicate::ColorIsMostCommonAmongPermanents`,
+`SelectionRequirement::{SharesMostCommonColor, HasNonManaActivatedAbility,
+SharesNameWithAnotherPermanent}`, `Effect::PlayerCantPlayLandsThisTurn`, and
+`GameState::restart_game` / `Effect::RestartGame` (CR 727).
+
+### Invasion remainder — each blocked on one primitive
+
+- **Prison Barricade** — the kicked "can attack as though it didn't have
+  defender" rider is dropped; needs a defender-bypass *grant* (the engine only
+  has the static `CanAttackIgnoringDefenderWhile`).
+- **Kangee, Aerie Keeper** — feather counters are modelled as charge counters;
+  add `CounterType::Feather` if anything else ever reads them.
+- **Darigaaz, the Igniter** — the damage count reads the hand live instead of
+  snapshotting the reveal; only visible if the hand changes mid-resolution.
+- **Ghitu Fire / Breaking Wave / Saproling Symbiosis / Twilight's Call** — the
+  printed "cast as though it had flash if you pay {2} more" rider needs a
+  `flash_surcharge` field on `CardDefinition`. Ghitu Fire and Breaking Wave are
+  therefore not yet implemented; Saproling Symbiosis and Twilight's Call ship
+  as plain sorceries.
+- **Cauldron Dance / Spinal Embrace** — need a `cast_only_during_combat` cast
+  restriction; not yet implemented.
+- **Void / Desperate Research** — need
+  `SelectionRequirement::ManaValueEqualsChosenNumber` and a
+  name-then-reveal-seven effect respectively.
+- **Spreading Plague** — needs `SelectionRequirement::SharesColorWithTriggerSource`
+  (plus an `OtherThanTriggerSource` exclusion).
+- **Pure Reflection** — needs a token whose P/T is the triggering spell's mana
+  value.
+- **Do or Die / Death or Glory / Bend or Break / Global Ruin / Fight or Flight
+  / Stand or Fall / Barrin's Spite** — all want a real "separate into two
+  piles, opponent chooses" decision; `EachPlayerSplitsAndSacrificesRandomPile`
+  splits randomly rather than by choice.
+- **Yawgmoth's Agenda / Mana Maze / Well-Laid Plans / Harsh Judgment /
+  Pledge of Loyalty / Essence Leak / Psychic Battle / Temporal Distortion /
+  Overabundance / Pulse of Llanowar / Protective Sphere / Atalya /
+  Traveler's Cloak / Metathran Aerostat / Coalition Victory / Crystal Spray /
+  Teferi's Response / Mages' Contest / Tsabo's Decree / Artifact Mutation /
+  Orim's Touch / Chaotic Strike / Loafing Giant / Aether Rift / Seer's Vision's
+  surgical discard** — each needs one new static/effect; see the wave-4 source
+  for the shapes that were sketched and cut.
 
 ## Apocalypse — closed
 

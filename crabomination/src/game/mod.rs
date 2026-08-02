@@ -8645,19 +8645,50 @@ impl GameState {
         if self.damage_cant_be_prevented_this_turn {
             return false;
         }
-        self.battlefield.iter().any(|c| {
-            c.controller == player
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        sa.effect,
-                        crate::effect::StaticEffect::PreventAllDamageToController
-                            // Energy Field's shield is total against every
-                            // source the player doesn't control, which is the
-                            // only kind an opponent can point at them.
-                            | crate::effect::StaticEffect::PreventAllDamageToControllerFromOthersSources
-                    )
-                })
+        let ids: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == player)
+            .map(|c| c.id)
+            .collect();
+        ids.into_iter().any(|id| {
+            let Some(c) = self.battlefield_find(id) else { return false };
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| self.blanket_player_shield_active(&sa.effect, id, player))
         })
+    }
+
+    /// True when `e` is a blanket "prevent all damage that would be dealt to
+    /// you" static that is currently ON — unwrapping the CR 611.2 conditional
+    /// wrappers (`WhileCondition` — Spirit of Resistance's five-colour gate,
+    /// `WhileYourTurn`) rather than only matching the bare variants.
+    fn blanket_player_shield_active(
+        &self,
+        e: &crate::effect::StaticEffect,
+        source: CardId,
+        player: usize,
+    ) -> bool {
+        use crate::effect::StaticEffect as S;
+        match e {
+            // Energy Field's shield is total against every source the player
+            // doesn't control, which is the only kind an opponent can point.
+            S::PreventAllDamageToController | S::PreventAllDamageToControllerFromOthersSources => {
+                true
+            }
+            S::WhileCondition { condition, inner } => {
+                let ctx =
+                    crate::game::effects::EffectContext::for_trigger(source, player, None, 0);
+                self.evaluate_predicate(condition, &ctx)
+                    && self.blanket_player_shield_active(inner, source, player)
+            }
+            S::WhileYourTurn { inner } => {
+                self.active_player_idx == player
+                    && self.blanket_player_shield_active(inner, source, player)
+            }
+            _ => false,
+        }
     }
 
     /// CR 615 — true if `target` is a creature whose controller has a
