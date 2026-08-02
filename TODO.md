@@ -92,18 +92,27 @@ Prison Barricade's kicked defender bypass is wired.
 - **Dwarven Recruiter / Aether Burst / Cultural Exchange** each need one
   primitive: search-any-number-onto-the-library-top, an as-you-cast target
   count, and a multi-way control exchange.
+- **Dreamwinder's attack gate is any Island**, not the defender's, and its
+  `{U}`, sacrifice-an-Island land-animation half is dropped (no one-shot
+  "target land becomes an Island").
+- **The remaining 94 ODY gaps** are mostly one-primitive cards: Bomb Squad /
+  Mine Layer (counter-driven board watchers), Braids / Delaying Shield /
+  Nefarious Lich (replacement effects), the Egg cycle and the filter lands,
+  Balancing Act, Cultural Exchange, Haunting Echoes, Impulsive Maneuvers.
 
 ## Odyssey — opened
 
-`set_gaps.py ody` 274 → 136 (`sets::ody::{gaps,gaps2,gaps3,gaps4}`, 138 cards;
-tests in `classic_sets/ody`). Threshold rides `Predicate::ThresholdActive`, flashback and
+`set_gaps.py ody` 274 → 94 (`sets::ody::gaps`–`gaps6`, 180 cards; tests in
+`classic_sets/ody`). Threshold rides `Predicate::ThresholdActive`, flashback and
 the Aura/EquipBonus shell were already in place. New primitives:
 `Effect::{RevealHand, RevealTopOfLibrary, PlayerCantCastMatchingThisTurn}`,
 `StaticEffect::{ControllerMaxHandSizeReduced, ReduceColorDamageToYouBy}`,
 `SelectionRequirement::ToughnessAtMostGraveyardCount`, `CounterType::Feather`,
-`CreatureType::Mystic`, `Value::CardsDrawnThisEffect`, and
-`Player.cant_cast_matching_this_turn` (surfaced as
-`PlayerView.locked_cast_kinds` + a client `⊘ <kind>` chip).
+`CreatureType::Mystic`, `Value::{CardsDrawnThisEffect,
+CardsNamedLikeTriggerSpellInAllGraveyards}` (the Shrine cycle),
+`DynamicPt::CardTypeInAllGraveyards` (the Lhurgoyf cycle),
+`AdditionalCastCost::DiscardRandom`, and `Player.cant_cast_matching_this_turn`
+(surfaced as `PlayerView.locked_cast_kinds` + a client `⊘ <kind>` chip).
 
 ## Apocalypse — closed
 

@@ -6557,6 +6557,7 @@ impl GameState {
                     .count()
                     >= *count as usize
             }
+            A::DiscardRandom { count } => self.players[p].hand.len() >= *count as usize,
             A::ReturnToHand { filter, count } => {
                 let matching = self.battlefield.iter().filter(|c| {
                     c.controller == p
@@ -6810,6 +6811,14 @@ impl GameState {
                         events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
                         let mut die = self.remove_to_graveyard_with_triggers(id);
                         events.append(&mut die);
+                    }
+                }
+                // Acceptable Losses — no pick, so no suspend; the discard
+                // funnel picks at random.
+                A::DiscardRandom { count } => {
+                    for _ in 0..*count {
+                        let Some(cid) = self.players[p].hand.first().map(|c| c.id) else { break };
+                        self.discard_card(p, cid, &mut events);
                     }
                 }
                 A::Discard { count, filter } => {

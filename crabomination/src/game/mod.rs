@@ -7801,6 +7801,15 @@ impl GameState {
                 crate::card::DynamicPt::CreatureCardsInAllGraveyardsPower { base_t } => {
                     (creatures_in_gys, base_t)
                 }
+                crate::card::DynamicPt::CardTypeInAllGraveyards(ty) => {
+                    let n = self
+                        .players
+                        .iter()
+                        .flat_map(|p| p.graveyard.iter())
+                        .filter(|c| c.definition.card_types.contains(&ty))
+                        .count() as i32;
+                    (n, n)
+                }
                 crate::card::DynamicPt::BasePlusLandsInControllerGraveyard { base_p, base_t } => {
                     let n = self.players[card.controller].graveyard.iter()
                         .filter(|c| c.definition.is_land()).count() as i32;

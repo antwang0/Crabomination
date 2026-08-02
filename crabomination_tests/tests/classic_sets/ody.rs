@@ -35,6 +35,26 @@ fn cast(g: &mut GameState, seat: usize, id: CardId, target: Option<Target>) {
     drain_stack(g);
 }
 
+fn cast_multi(
+    g: &mut GameState,
+    seat: usize,
+    id: CardId,
+    target: Option<Target>,
+    additional_targets: Vec<Target>,
+) {
+    mana(g, seat);
+    g.priority.player_with_priority = seat;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target,
+        additional_targets,
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(g);
+}
+
 fn activate(g: &mut GameState, seat: usize, card_id: CardId, index: usize, target: Option<Target>) {
     mana(g, seat);
     g.priority.player_with_priority = seat;
@@ -759,4 +779,101 @@ fn cabal_patriarch_shrinks_two_ways() {
     g.add_card_to_graveyard(0, catalog::grizzly_bears());
     activate(&mut g, 0, patriarch, 1, Some(Target::Permanent(victim)));
     assert!(g.battlefield_find(victim).is_none(), "the graveyard half works too");
+}
+
+// ── Wave 6 ──────────────────────────────────────────────────────────────────
+
+/// The Lhurgoyf cycle each counts its own card type across every graveyard.
+#[test]
+fn lhurgoyf_cycle_counts_its_card_type() {
+    let mut g = main_phase();
+    let cogni = g.add_card_to_battlefield(0, catalog::cognivore());
+    let magni = g.add_card_to_battlefield(0, catalog::magnivore());
+    assert_eq!(g.computed_permanent(cogni).unwrap().power, 0);
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::coffin_purge());
+    g.add_card_to_graveyard(0, catalog::skull_fracture());
+    assert_eq!(g.computed_permanent(cogni).unwrap().power, 2, "two instants");
+    assert_eq!(g.computed_permanent(magni).unwrap().power, 1, "one sorcery");
+}
+
+/// Dwarven Shrine reads the cast spell's name, not its own.
+#[test]
+fn dwarven_shrine_counts_the_cast_spells_copies() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::dwarven_shrine());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let before = g.players[1].life;
+    cast(&mut g, 1, bolt, Some(Target::Player(0)));
+    assert_eq!(g.players[1].life, before - 4, "twice two copies");
+}
+
+/// Acceptable Losses pays a random card and burns for five.
+#[test]
+fn acceptable_losses_pitches_at_random() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw());
+    g.add_card_to_hand(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::acceptable_losses());
+    cast(&mut g, 0, spell, Some(Target::Permanent(victim)));
+    assert_eq!(g.battlefield_find(victim).unwrap().damage, 5);
+    assert!(g.players[0].hand.is_empty(), "the random discard was paid");
+}
+
+/// Kirtar's Wrath leaves two Spirits behind past Threshold.
+#[test]
+fn kirtars_wrath_leaves_spirits_past_threshold() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wrath = g.add_card_to_hand(0, catalog::kirtars_wrath());
+    cast(&mut g, 0, wrath, None);
+    assert!(g.battlefield.iter().all(|c| !c.definition.is_creature()));
+
+    let mut g = main_phase();
+    fill_graveyard(&mut g, 0);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wrath = g.add_card_to_hand(0, catalog::kirtars_wrath());
+    cast(&mut g, 0, wrath, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count(), 2);
+}
+
+/// Junk Golem eats a counter each upkeep and dies once it runs out.
+#[test]
+fn junk_golem_counts_down() {
+    let mut g = main_phase();
+    let golem = g.add_card_to_hand(0, catalog::junk_golem());
+    cast(&mut g, 0, golem, None);
+    assert_eq!(g.battlefield_find(golem).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    for _ in 0..2 {
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(golem).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    // The third upkeep takes the last counter, leaving a 0/0 that dies to SBA.
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(golem).is_none(), "out of counters, out of Golem");
+}
+
+/// Decimate needs one legal target of each of its four types.
+#[test]
+fn decimate_takes_one_of_each() {
+    let mut g = main_phase();
+    let art = g.add_card_to_battlefield(1, catalog::millikin());
+    let cre = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ench = g.add_card_to_battlefield(1, catalog::battle_strain());
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::decimate());
+    cast_multi(
+        &mut g,
+        0,
+        spell,
+        Some(Target::Permanent(art)),
+        vec![Target::Permanent(cre), Target::Permanent(ench), Target::Permanent(land)],
+    );
+    for id in [art, cre, ench, land] {
+        assert!(g.battlefield_find(id).is_none(), "everything was destroyed");
+    }
 }

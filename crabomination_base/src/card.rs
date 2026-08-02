@@ -3345,6 +3345,10 @@ pub enum AdditionalCastCost {
         #[serde(default)]
         filter: Option<SelectionRequirement>,
     },
+    /// "As an additional cost to cast this spell, discard N cards at random"
+    /// (Acceptable Losses). The caster gets no pick, so the cost never
+    /// suspends.
+    DiscardRandom { count: u32 },
     /// "As an additional cost to cast this spell, return N permanent(s) you
     /// control matching `filter` to their owner's hand." Devour in Flames
     /// ("return a land you control"). Auto-picker bounces the lowest-impact
@@ -3780,6 +3784,10 @@ pub enum DynamicPt {
     /// Power = creature cards in all graveyards; toughness is the fixed
     /// `base_t`. Necrogoyf (`*`/4).
     CreatureCardsInAllGraveyardsPower { base_t: i32 },
+    /// CR 604.3 — "power and toughness are each equal to the number of
+    /// [card type] cards in all graveyards" (the Odyssey Lhurgoyf cycle:
+    /// Cantivore, Cognivore, Magnivore, Terravore).
+    CardTypeInAllGraveyards(CardType),
     /// Power = toughness = base + land cards in the *controller's*
     /// graveyard. Wight of the Reliquary (base 1/1, +1/+1 per land in
     /// your graveyard).

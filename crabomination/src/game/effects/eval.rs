@@ -598,6 +598,32 @@ impl GameState {
                     .filter(|c| c.definition.name == name)
                     .count() as i32
             }
+            // The Odyssey Shrine cycle — the *cast spell* is the trigger's
+            // subject, so read its name rather than the enchantment's.
+            Value::CardsNamedLikeTriggerSpellInAllGraveyards => {
+                let Some(name) = ctx
+                    .trigger_source
+                    .and_then(|e| e.as_card_id())
+                    .and_then(|id| self.find_card_anywhere(id).map(|c| c.definition.name))
+                    .or_else(|| {
+                        ctx.trigger_source.and_then(|e| e.as_card_id()).and_then(|id| {
+                            self.stack.iter().find_map(|si| match si {
+                                crate::game::StackItem::Spell { card, .. } if card.id == id => {
+                                    Some(card.definition.name)
+                                }
+                                _ => None,
+                            })
+                        })
+                    })
+                else {
+                    return 0;
+                };
+                self.players
+                    .iter()
+                    .flat_map(|p| p.graveyard.iter())
+                    .filter(|c| c.definition.name == name)
+                    .count() as i32
+            }
             Value::RevealedForCostPower => self.revealed_for_cost_power.unwrap_or(0),
             Value::GreatestManaValueAmongPermanents(who) => self
                 .resolve_player(who, ctx)

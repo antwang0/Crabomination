@@ -735,6 +735,9 @@ pub enum Value {
     /// Number of cards in *every* graveyard sharing the resolving source's
     /// name (Accumulated Knowledge).
     CardsNamedLikeSourceInAllGraveyards,
+    /// Number of cards in *every* graveyard sharing the name of the spell that
+    /// fired this trigger (the Odyssey Shrine cycle).
+    CardsNamedLikeTriggerSpellInAllGraveyards,
     /// Number of cards discarded so far within the current effect
     /// resolution. Bumped by every `GameEvent::CardDiscarded` emission
     /// in `Effect::Discard` / `Effect::DiscardChosen`. Used by Borrowed
