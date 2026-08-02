@@ -313,7 +313,18 @@ impl Effect {
             | Effect::ChooseBasicLandTypeForSource
             | Effect::ExileTopSelfPumpIfCreature
             | Effect::RandomGraveyardCardToBattlefieldElse { .. }
-            | Effect::DistributeCountersAmongLastCreated { .. } => false,
+            | Effect::DistributeCountersAmongLastCreated { .. }
+            | Effect::RevealAndReplayNamedPermanent
+            | Effect::CopyEachCreatureToken => false,
+            // Turn-scoped registrations whose "target" is a player slot or
+            // nothing at all.
+            Effect::RememberPlayerOnSource { who } | Effect::RedirectDrawsThisTurn { from: who } => {
+                matches!(who, PlayerRef::Target(_))
+            }
+            Effect::AnyPlayerMayExileFromGraveyard { then, .. } => then.requires_target(),
+            Effect::DamageBecomesThisTurn { .. } => false,
+            Effect::DamageTargetPlayerMayRedirect { .. } => true,
+            Effect::CopySpellForEachOtherTarget { what } => sel_has_target(what),
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
             Effect::MillThenBranchByType { .. } => false,
@@ -2937,6 +2948,7 @@ impl Effect {
                 | Effect::CopySpellWithRiders { what, .. }
                 | Effect::CopySpellMayChooseTargets { what, .. }
                 | Effect::CopySpellUnlessPaid { what, .. }
+                | Effect::CopySpellForEachOtherTarget { what }
                 | Effect::ChooseNewTargetsForSpell { what } => sel_find(what, slot),
                 Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => {
                     sel_find(who, slot)

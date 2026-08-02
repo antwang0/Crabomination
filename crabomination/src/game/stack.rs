@@ -2954,6 +2954,8 @@ impl GameState {
         self.combat_damage_prevented_creatures.clear();
         self.combat_damage_prevented_to_this_turn.clear();
         self.combat_damage_prevented_by_this_turn.clear();
+        self.draws_redirected_this_turn.clear();
+        self.damage_becomes_this_turn = None;
         self.combat_damage_prevented_to_players_this_turn.clear();
         self.auras_at_death.clear();
         self.creature_etb_steal_this_turn.clear();

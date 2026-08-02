@@ -1510,6 +1510,13 @@ impl GameState {
                     })
                 })
             }
+            // "a permanent OTHER than this one" — Last Laugh's self-gate.
+            Predicate::TriggerSourceIsSelf => {
+                match (ctx.source, ctx.trigger_source) {
+                    (Some(me), Some(e)) => e.as_card_id() == Some(me),
+                    _ => false,
+                }
+            }
             Predicate::TriggerSourceIsSourcesChosenPermanent => {
                 let stamped = ctx
                     .source
@@ -3146,6 +3153,16 @@ impl GameState {
                                 .unwrap_or_else(|| card.toughness())
                                 <= n
                     }
+                    // Temporary Insanity — "power < cards in your graveyard".
+                    R::PowerLessThanYourGraveyardCount => {
+                        let n = self.players[controller].graveyard.len() as i32;
+                        card.definition.is_creature()
+                            && self
+                                .computed_permanent(card.id)
+                                .map(|cp| cp.power)
+                                .unwrap_or_else(|| card.power())
+                                < n
+                    }
                     R::PowerAtMostYourCount(inner) => {
                         let n = self
                             .battlefield
@@ -3668,6 +3685,15 @@ impl GameState {
                         .map(|cp| cp.toughness)
                         .unwrap_or_else(|| card.toughness())
                         <= n
+            }
+            R::PowerLessThanYourGraveyardCount => {
+                let n = self.players[controller].graveyard.len() as i32;
+                card.definition.is_creature()
+                    && self
+                        .computed_permanent(card.id)
+                        .map(|cp| cp.power)
+                        .unwrap_or_else(|| card.power())
+                        < n
             }
             R::ToughnessAtMostYourCount(inner) => {
                 let n = self

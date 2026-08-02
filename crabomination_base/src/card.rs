@@ -1644,6 +1644,9 @@ pub enum SelectionRequirement {
     /// "Toughness less than or equal to the number of cards in your graveyard"
     /// (Ghastly Demise). Counted from the evaluating player's graveyard.
     ToughnessAtMostGraveyardCount,
+    /// "Power less than the number of cards in your graveyard" (Temporary
+    /// Insanity). Counted from the evaluating player's graveyard.
+    PowerLessThanYourGraveyardCount,
     /// "Power X or less, where X is the number of [filter] you control"
     /// (Vedalken Shackles' Islands) — the power-side mirror of
     /// `ToughnessAtMostYourCount`.
@@ -2195,6 +2198,22 @@ impl SelectionRequirement {
     }
     pub fn negate(self) -> Self {
         Self::Not(Box::new(self))
+    }
+
+    /// Rewrite every `IsSource` atom to a constant. Used when a filter is
+    /// evaluated against a card that has already left the battlefield, where
+    /// the "is this the granting source?" answer is known up front but the
+    /// card-only evaluator can't look it up (CR 603.10a death LKI).
+    pub fn resolve_is_source(&self, is_source: bool) -> Self {
+        match self {
+            Self::IsSource => {
+                if is_source { Self::Any } else { Self::Any.negate() }
+            }
+            Self::And(a, b) => a.resolve_is_source(is_source).and(b.resolve_is_source(is_source)),
+            Self::Or(a, b) => a.resolve_is_source(is_source).or(b.resolve_is_source(is_source)),
+            Self::Not(a) => a.resolve_is_source(is_source).negate(),
+            other => other.clone(),
+        }
     }
 
     /// Replace X-dependent atoms with concrete values
@@ -3399,6 +3418,9 @@ pub enum AdditionalCastCost {
     /// "Discard X cards", where X is the cast's chosen X (Conflagrate's
     /// flashback). Concretized to a `Discard` of that count at cast time.
     DiscardXFromCost,
+    /// "Discard X cards at random", where X is the cast's chosen X
+    /// (Devastating Dreams). Concretized to a `DiscardRandom` at cast time.
+    DiscardXRandomFromCost,
     /// "As an additional cost to cast this spell, return N permanent(s) you
     /// control matching `filter` to their owner's hand." Devour in Flames
     /// ("return a land you control"). Auto-picker bounces the lowest-impact
@@ -4916,6 +4938,10 @@ pub struct CardInstance {
     /// `Selector::ChosenPermanentOfSource` resolves to it. `None` until the
     /// ETB choice resolves (or if no legal choice existed).
     pub chosen_permanent: Option<CardId>,
+    /// A player chosen and remembered by this permanent
+    /// (`Effect::RememberPlayerOnSource`). `PlayerRef::ChosenPlayerOfSource`
+    /// resolves to it — "that player" on a later trigger (Soul Scourge).
+    pub chosen_player: Option<usize>,
     /// Indices of activated abilities flagged `once_per_turn` that have
     /// already been used this turn. Cleared at the start of each turn by
     /// `clean_per_turn_state`. Empty for the common case (most abilities
@@ -5323,6 +5349,7 @@ impl CardInstance {
             phased_out_by: None,
             name_choices_used: 0,
             chosen_permanent: None,
+            chosen_player: None,
             once_per_turn_used: Vec::new(),
             exhausted_abilities: Vec::new(),
             granted_keywords_eot: Vec::new(),
@@ -5953,6 +5980,8 @@ struct CardInstanceWire {
     #[serde(default)]
     chosen_permanent: Option<CardId>,
     #[serde(default)]
+    chosen_player: Option<usize>,
+    #[serde(default)]
     once_per_turn_used: Vec<usize>,
     #[serde(default)]
     exhausted_abilities: Vec<usize>,
@@ -6185,6 +6214,7 @@ impl serde::Serialize for CardInstance {
             phased_out_by: self.phased_out_by,
             name_choices_used: self.name_choices_used,
             chosen_permanent: self.chosen_permanent,
+            chosen_player: self.chosen_player,
             once_per_turn_used: self.once_per_turn_used.clone(),
             exhausted_abilities: self.exhausted_abilities.clone(),
             may_play_until: self.may_play_until,
@@ -6346,6 +6376,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.phased_out_by = wire.phased_out_by;
         c.name_choices_used = wire.name_choices_used;
         c.chosen_permanent = wire.chosen_permanent;
+        c.chosen_player = wire.chosen_player;
         c.once_per_turn_used = wire.once_per_turn_used;
         c.exhausted_abilities = wire.exhausted_abilities;
         c.may_play_until = wire.may_play_until;

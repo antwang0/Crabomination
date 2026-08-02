@@ -1395,6 +1395,7 @@ impl GameState {
         self.discarded_card_ids_this_resolution.clear();
         self.exiled_card_ids_this_resolution.clear();
         self.permanents_destroyed_this_resolution = 0;
+        self.destroyed_this_resolution.clear();
         self.excess_damage_this_resolution = 0;
         self.damage_dealt_this_resolution = 0;
         self.damaged_this_resolution.clear();
@@ -1653,6 +1654,7 @@ impl GameState {
         events.append(&mut dies);
         self.permanents_destroyed_this_resolution =
             self.permanents_destroyed_this_resolution.saturating_add(1);
+        self.destroyed_this_resolution.push(cid);
         true
     }
 
@@ -20016,6 +20018,266 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RememberPlayerOnSource { who } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let pick = self.resolve_player(who, ctx);
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.chosen_player = pick;
+                }
+                Ok(())
+            }
+
+            Effect::AnyPlayerMayExileFromGraveyard { count, then } => {
+                // Carrion Rats — walk the seats in turn order from the
+                // source's controller and take the first willing payer.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let seats: Vec<usize> =
+                    (0..self.players.len()).map(|i| (ctx.controller + i) % self.players.len()).collect();
+                let mut cursor = 0;
+                for seat in seats {
+                    if self.players[seat].graveyard.len() < n {
+                        continue;
+                    }
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        seat,
+                        format!("Exile {n} card(s) from your graveyard?"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    if !yes {
+                        continue;
+                    }
+                    for _ in 0..n {
+                        if self.players[seat].graveyard.is_empty() {
+                            break;
+                        }
+                        let card = self.players[seat].graveyard.remove(0);
+                        let card_id = card.id;
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id });
+                    }
+                    self.clear_answer_log();
+                    return self.run_effect(then, ctx, events);
+                }
+                self.clear_answer_log();
+                Ok(())
+            }
+
+            Effect::RedirectDrawsThisTurn { from } => {
+                let Some(victim) = self.resolve_player(from, ctx) else { return Ok(()) };
+                self.draws_redirected_this_turn.retain(|(f, _)| *f != victim);
+                self.draws_redirected_this_turn.push((victim, ctx.controller));
+                Ok(())
+            }
+
+            Effect::DamageBecomesThisTurn { at_least, becomes } => {
+                self.damage_becomes_this_turn = Some((*at_least, *becomes));
+                Ok(())
+            }
+
+            Effect::DamageTargetPlayerMayRedirect { amount } => {
+                // Flaming Gambit — the victim may take it on one of their own
+                // creatures instead.
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n == 0 {
+                    return Ok(());
+                }
+                let Some(ent) = self.resolve_selector(&Selector::Target(0), ctx).into_iter().next()
+                else {
+                    return Ok(());
+                };
+                let victim = match ent {
+                    EntityRef::Player(p) => Some(p),
+                    EntityRef::Permanent(c) => self.battlefield_find(c).map(|c| c.controller),
+                    EntityRef::Card(_) => None,
+                };
+                let Some(victim) = victim else { return Ok(()) };
+                let mine: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == victim && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                if !mine.is_empty() {
+                    let mut cursor = 0;
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        victim,
+                        format!("Redirect {n} damage to a creature you control?"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    if yes {
+                        // The victim picks their least valuable body.
+                        let pick = mine
+                            .iter()
+                            .copied()
+                            .min_by_key(|id| {
+                                self.computed_permanent(*id).map_or(0, |cp| cp.power + cp.toughness)
+                            })
+                            .expect("non-empty");
+                        self.deal_damage_to_from(
+                            EntityRef::Permanent(pick),
+                            n,
+                            ctx.source,
+                            events,
+                        );
+                        return Ok(());
+                    }
+                }
+                self.deal_damage_to_from(ent, n, ctx.source, events);
+                Ok(())
+            }
+
+            Effect::CopySpellForEachOtherTarget { what } => {
+                // Radiate — the chosen spell targets exactly one object; copy
+                // it once per other object it could legally target.
+                use crate::game::types::StackItem;
+                let Some(spell_id) =
+                    self.resolve_selector(what, ctx).into_iter().find_map(|e| e.as_card_id())
+                else {
+                    return Ok(());
+                };
+                let Some(idx) = self
+                    .stack
+                    .iter()
+                    .rposition(|s| matches!(s, StackItem::Spell { card, .. } if card.id == spell_id))
+                else {
+                    return Ok(());
+                };
+                let StackItem::Spell {
+                    card, caster, target, additional_targets, mode, x_value, converged_value, ..
+                } = &self.stack[idx]
+                else {
+                    return Ok(());
+                };
+                if !additional_targets.is_empty() {
+                    return Ok(());
+                }
+                let Some(original) = target.clone() else { return Ok(()) };
+                let (def, caster) = (card.definition.clone(), *caster);
+                let (mode, x_value, converged_value) = (*mode, *x_value, *converged_value);
+                let others: Vec<Target> = self
+                    .enumerate_legal_targets(&def.effect, caster)
+                    .into_iter()
+                    .filter(|t| *t != original)
+                    .collect();
+                let count = others.len() as u32;
+                for t in others {
+                    let new_id = self.next_id();
+                    let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), caster);
+                    copy_inst.is_token = true;
+                    self.stack.push(StackItem::Spell {
+                        card: Box::new(copy_inst),
+                        caster,
+                        target: Some(t),
+                        additional_targets: Vec::new(),
+                        mode,
+                        x_value,
+                        converged_value,
+                        mana_spent: 0,
+                        uncounterable: true,
+                    });
+                }
+                if count > 0 {
+                    events.push(GameEvent::SpellsCopied {
+                        original: spell_id,
+                        count,
+                        controller: caster,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::RevealAndReplayNamedPermanent => {
+                // Retraced Image — reveal a hand card that shares a name with
+                // some permanent and put it onto the battlefield.
+                use crate::decision::{Decision, DecisionAnswer};
+                let names: std::collections::HashSet<&'static str> =
+                    self.battlefield.iter().map(|c| c.definition.name).collect();
+                let candidates: Vec<(CardId, String)> = self.players[ctx.controller]
+                    .hand
+                    .iter()
+                    .filter(|c| names.contains(c.definition.name))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    return Ok(());
+                }
+                let decision = Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: "Reveal a card that shares a name with a permanent".to_string(),
+                    candidates: candidates.clone(),
+                    min: 1,
+                    max: 1,
+                };
+                let picked = match self.decider.decide(&decision) {
+                    DecisionAnswer::Cards(ids) => ids.first().copied(),
+                    _ => None,
+                };
+                let pick = picked.unwrap_or(candidates[0].0);
+                self.cards_revealed_this_resolution += 1;
+                let Some(pos) =
+                    self.players[ctx.controller].hand.iter().position(|c| c.id == pick)
+                else {
+                    return Ok(());
+                };
+                let _ = pos;
+                self.move_card_to(
+                    pick,
+                    &ZoneDest::Battlefield {
+                        controller: PlayerRef::Seat(ctx.controller),
+                        tapped: false,
+                    },
+                    ctx,
+                    events,
+                );
+                Ok(())
+            }
+
+            Effect::CopyEachCreatureToken => {
+                // Parallel Evolution — every creature token doubles, under its
+                // own controller.
+                let tokens: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.is_token && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                for id in tokens {
+                    let Some(owner) = self.battlefield_find(id).map(|c| c.controller) else {
+                        continue;
+                    };
+                    let mut sub = ctx.clone();
+                    sub.controller = owner;
+                    sub.targets = vec![Target::Permanent(id)];
+                    self.run_effect(
+                        &Effect::CreateTokenCopyOf {
+                            who: PlayerRef::You,
+                            count: crate::effect::Value::Const(1),
+                            source: Selector::Target(0),
+                            extra_creature_types: vec![],
+                            extra_card_types: vec![],
+                            override_pt: None,
+                            override_colors: None,
+                            enters_tapped: false,
+                            non_legendary: false,
+                            legendary: false,
+                            extra_keywords: vec![],
+                        },
+                        &sub,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::PutAuraFromHandAttachedTo { host } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(anchor) =
@@ -27493,6 +27755,21 @@ impl GameState {
                 out
             }
 
+            Selector::DestroyedThisResolution { filter } => self
+                .destroyed_this_resolution
+                .clone()
+                .into_iter()
+                .filter(|cid| {
+                    self.evaluate_requirement_static(
+                        filter,
+                        &Target::Permanent(*cid),
+                        ctx.controller,
+                        ctx.source,
+                    )
+                })
+                .map(EntityRef::Card)
+                .collect(),
+
             Selector::Player(p) => self
                 .resolve_players(p, ctx)
                 .into_iter()
@@ -27693,6 +27970,12 @@ impl GameState {
                     _ => Some(p),
                 })
             }
+            PlayerRef::ChosenPlayerOfSource => ctx.source.and_then(|s| {
+                self.battlefield_find(s)
+                    .or_else(|| self.died_card_snapshots.get(&s))
+                    .or_else(|| self.leaves_bf_lki.get(&s))
+                    .and_then(|c| c.chosen_player)
+            }),
             PlayerRef::OpponentOf(inner) => {
                 let of = self.resolve_player(inner, ctx)?;
                 self.opponents_of(of).into_iter().find(|i| self.players[*i].is_alive())

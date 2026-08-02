@@ -327,6 +327,7 @@ pub(crate) fn flashback_additional_costs(
         .iter()
         .map(|c| match c {
             A::DiscardXFromCost => A::Discard { count: x, filter: None },
+            A::DiscardXRandomFromCost => A::DiscardRandom { count: x },
             other => other.clone(),
         })
         .collect()
@@ -6107,6 +6108,19 @@ impl GameState {
                         count,
                     };
                 }
+                // "Discard X cards" (Sickening Dreams, the Torment Dreams
+                // cycle) — X is the cast's chosen X.
+                crate::card::AdditionalCastCost::DiscardXFromCost => {
+                    *c = crate::card::AdditionalCastCost::Discard {
+                        count: x_value.unwrap_or(0),
+                        filter: None,
+                    };
+                }
+                crate::card::AdditionalCastCost::DiscardXRandomFromCost => {
+                    *c = crate::card::AdditionalCastCost::DiscardRandom {
+                        count: x_value.unwrap_or(0),
+                    };
+                }
                 _ => {}
             }
         }
@@ -6573,7 +6587,7 @@ impl GameState {
             }
             // Concretized into `Discard` by `flashback_additional_costs`
             // before it reaches payment; a raw instance means X = 0.
-            A::DiscardXFromCost => true,
+            A::DiscardXFromCost | A::DiscardXRandomFromCost => true,
             // "Sacrifice one or more" — zero is a legal choice, so the cost
             // is always payable (the cast pipeline concretizes it into a
             // counted SacrificePermanent before payment).
@@ -6747,7 +6761,8 @@ impl GameState {
                 // path etc.) means count 0 — no-op.
                 A::SacrificeAnyNumber { .. }
                 | A::SacrificeAll { .. }
-                | A::DiscardXFromCost => {}
+                | A::DiscardXFromCost
+                | A::DiscardXRandomFromCost => {}
                 A::SacrificePermanent { filter, count } => {
                     // Honor the player's explicit pick(s) when present and
                     // valid; auto-pick the `count` cheapest matching permanents
@@ -11291,8 +11306,11 @@ impl GameState {
         }
         for src in &self.battlefield {
             for sa in &src.definition.static_abilities {
-                let StaticEffect::GrantActivatedAbility { applies_to, ability, condition } =
-                    &sa.effect
+                // CR 611.2 — a grant may sit under a duration/predicate
+                // wrapper ("Threshold — this creature has '…'"); unwrap it
+                // and honour the gate.
+                let Some(inner) = self.active_static(&sa.effect, src) else { continue };
+                let StaticEffect::GrantActivatedAbility { applies_to, ability, condition } = inner
                 else {
                     continue;
                 };

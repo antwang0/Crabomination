@@ -107,6 +107,10 @@ pub enum PlayerRef {
     /// The player controlling the most creatures; ties go to the earliest seat
     /// (Wild Mammoth's upkeep defection).
     MostCreatures,
+    /// The player the source remembered (`CardInstance.chosen_player`, stamped
+    /// by [`Effect::RememberPlayerOnSource`]) — "that player" on a later
+    /// trigger. Soul Scourge, Laquatus's Champion.
+    ChosenPlayerOfSource,
 }
 
 /// Which players a player-targeted static effect affects. The static
@@ -374,6 +378,13 @@ pub enum Selector {
     /// `Effect::Tap` reads the creatures, `CantCastNoncreatureThisTurn` reads
     /// the players.
     DamagedThisResolution { filter: SelectionRequirement },
+
+    /// Cards destroyed earlier in this same resolution that match `filter`,
+    /// read from `GameState.destroyed_this_resolution` (wherever they ended
+    /// up). "Destroy all enchantments, then return all enchantment cards put
+    /// into graveyards this way to the battlefield" — Cleansing Meditation's
+    /// Threshold half.
+    DestroyedThisResolution { filter: SelectionRequirement },
 
     /// A single player, lifted to selector form.
     Player(PlayerRef),
@@ -1272,6 +1283,9 @@ pub enum Predicate {
     /// `chosen_permanent` slot (Diabolic Servitude's "when the creature put
     /// onto the battlefield with this enchantment dies").
     TriggerSourceIsSourcesChosenPermanent,
+    /// The triggering object *is* this ability's own source — the gate behind
+    /// "a permanent **other than** this one" triggers (Last Laugh).
+    TriggerSourceIsSelf,
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
@@ -7801,6 +7815,49 @@ pub enum Effect {
     /// cards and puts it onto the battlefield tapped under their control,
     /// repeating until every exiled card is claimed.
     ThievesAuction,
+
+    /// Stamp the resolved player on the source's `chosen_player` slot so a
+    /// later `PlayerRef::ChosenPlayerOfSource` can name them — the player
+    /// twin of [`Effect::RememberPermanentOnSource`]. Backs the Torment
+    /// Nightmare Horrors' "that player gains N life" leave trigger.
+    RememberPlayerOnSource { who: PlayerRef },
+
+    /// "Any player may exile `count` cards from their graveyard. If a player
+    /// does, `then`." Walks the seats in turn order starting with the
+    /// source's controller and takes the first willing payer; `then` runs
+    /// once. Carrion Rats, Carrion Wurm.
+    AnyPlayerMayExileFromGraveyard { count: Value, then: Box<Effect> },
+
+    /// CR 614 — "Until end of turn, if `from` would draw a card, instead that
+    /// player skips that draw and you draw a card" (Plagiarize). Registered on
+    /// `GameState.draws_redirected_this_turn` and consumed in `draw_one`.
+    RedirectDrawsThisTurn { from: PlayerRef },
+
+    /// CR 615 — "If any source would deal `at_least` or more damage to a
+    /// permanent or player this turn, it deals `becomes` damage instead"
+    /// (Equal Treatment). A turn-scoped global damage rewrite applied in
+    /// `scale_damage_to`.
+    DamageBecomesThisTurn { at_least: u32, becomes: u32 },
+
+    /// "This deals `amount` damage to target player or planeswalker. That
+    /// player (or that planeswalker's controller) may instead have the damage
+    /// dealt to a creature they control" (Flaming Gambit). The redirect
+    /// choice belongs to the victim.
+    DamageTargetPlayerMayRedirect { amount: Value },
+
+    /// CR 707 — "Copy the target spell for each other permanent or player it
+    /// could target; each copy targets a different one of those" (Radiate).
+    /// The target spell must have exactly one target.
+    CopySpellForEachOtherTarget { what: Selector },
+
+    /// "Reveal a card in your hand, then put that card onto the battlefield if
+    /// it has the same name as a permanent" (Retraced Image). The reveal is
+    /// the controller's pick; nothing happens without a name match.
+    RevealAndReplayNamedPermanent,
+
+    /// "For each creature token on the battlefield, its controller creates a
+    /// token that's a copy of that creature" (Parallel Evolution).
+    CopyEachCreatureToken,
 }
 
 /// CR 702.172 — one Spree mode: an additional mana cost paired with the

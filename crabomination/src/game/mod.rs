@@ -787,6 +787,12 @@ pub struct GameState {
     /// between independent resolutions.
     #[serde(skip)]
     pub(crate) permanents_destroyed_this_resolution: u32,
+    /// Transient: the card ids destroyed by `Effect::Destroy` within the
+    /// current resolution, in destruction order. Read by
+    /// `Selector::DestroyedThisResolution` so a follow-up step can name the
+    /// cards it just killed (Cleansing Meditation's Threshold rebuild).
+    #[serde(skip)]
+    pub(crate) destroyed_this_resolution: Vec<CardId>,
     /// Transient: total excess damage (CR 120.10) dealt during the current
     /// resolution — for each creature/planeswalker/battle, damage beyond what
     /// would be lethal/its loyalty/its defense. Read by
@@ -1118,6 +1124,15 @@ pub struct GameState {
     /// The mirror of `combat_damage_prevented_to_this_turn`. Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_by_this_turn: Vec<CardId>,
+    /// CR 614 — "if `from` would draw a card, that player skips that draw and
+    /// `to` draws instead", as `(from, to)` pairs (Plagiarize). Cleared at
+    /// cleanup.
+    #[serde(default)]
+    pub(crate) draws_redirected_this_turn: Vec<(usize, usize)>,
+    /// CR 615 — "if any source would deal `.0` or more damage this turn, it
+    /// deals `.1` damage instead" (Equal Treatment). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) damage_becomes_this_turn: Option<(u32, u32)>,
     /// CR 615 — players who have "prevent all combat damage that would be dealt
     /// to you this turn" active (Druid's Deliverance). Consulted in
     /// `prevent_combat_to_target` for the player-target case. Cleared at cleanup.
@@ -1672,6 +1687,7 @@ impl Clone for GameState {
             suppress_extra_target_prompts: self.suppress_extra_target_prompts,
             exiled_card_ids_this_resolution: self.exiled_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
+            destroyed_this_resolution: self.destroyed_this_resolution.clone(),
             excess_damage_this_resolution: self.excess_damage_this_resolution,
             damage_dealt_this_resolution: self.damage_dealt_this_resolution,
             damaged_this_resolution: self.damaged_this_resolution.clone(),
@@ -1722,6 +1738,8 @@ impl Clone for GameState {
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
             combat_damage_prevented_to_this_turn: self.combat_damage_prevented_to_this_turn.clone(),
             combat_damage_prevented_by_this_turn: self.combat_damage_prevented_by_this_turn.clone(),
+            draws_redirected_this_turn: self.draws_redirected_this_turn.clone(),
+            damage_becomes_this_turn: self.damage_becomes_this_turn,
             combat_damage_prevented_to_players_this_turn: self
                 .combat_damage_prevented_to_players_this_turn
                 .clone(),
@@ -1925,6 +1943,7 @@ impl GameState {
             excess_damage_this_resolution: 0,
             damage_dealt_this_resolution: 0,
             damaged_this_resolution: Vec::new(),
+            destroyed_this_resolution: Vec::new(),
             countered_spell_mana_spent: 0,
             countered_spell_mana_value: 0,
             chosen_number_this_resolution: 0,
@@ -1972,6 +1991,8 @@ impl GameState {
             combat_damage_prevented_creatures: Vec::new(),
             combat_damage_prevented_to_this_turn: Vec::new(),
             combat_damage_prevented_by_this_turn: Vec::new(),
+            draws_redirected_this_turn: Vec::new(),
+            damage_becomes_this_turn: None,
             combat_damage_prevented_to_players_this_turn: Vec::new(),
             blocked_attackers: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),
@@ -2278,13 +2299,24 @@ impl GameState {
         snap: &CardInstance,
     ) -> Vec<crate::card::TriggeredAbility> {
         let mut out = Vec::new();
-        for src in &self.battlefield {
+        // CR 603.10a — the dying permanent's *own* self-granting static
+        // ("Threshold — this creature has 'when this dies, …'") is read off
+        // the snapshot; it is no longer on the battlefield to be walked.
+        let sources = self
+            .battlefield
+            .iter()
+            .chain(std::iter::once(snap).filter(|s| self.battlefield_find(s.id).is_none()));
+        for src in sources {
             for sa in &src.definition.static_abilities {
                 if let Some(crate::effect::StaticEffect::GrantTriggeredAbility {
                     filter,
                     ability,
                 }) = self.active_static(&sa.effect, src)
-                    && self.evaluate_requirement_on_card(filter, snap, src.controller)
+                    && self.evaluate_requirement_on_card(
+                        &filter.resolve_is_source(src.id == snap.id),
+                        snap,
+                        src.controller,
+                    )
                 {
                     out.push((**ability).clone());
                 }
@@ -4423,6 +4455,12 @@ impl GameState {
             }
         }
         let amount = amount.saturating_mul(1 << d.min(16)) >> h.min(16);
+        // CR 615 — Equal Treatment: "if any source would deal 1 or more
+        // damage this turn, it deals 2 damage instead."
+        let amount = match self.damage_becomes_this_turn {
+            Some((at_least, becomes)) if amount >= at_least => becomes,
+            _ => amount,
+        };
         // Divine Presence — a big event is replaced by a small one (CR 614).
         // Applied last so it caps the doubled/halved result.
         self.battlefield
@@ -6861,11 +6899,12 @@ impl GameState {
         // against the source, then emitted as a layer-7 self-effect.
         for card in &self.battlefield {
             for sa in &card.definition.static_abilities {
+                let Some(inner) = self.active_static(&sa.effect, card) else { continue };
                 let crate::effect::StaticEffect::PumpSelfByValue {
                     amount,
                     per_power,
                     per_toughness,
-                } = &sa.effect
+                } = inner
                 else {
                     continue;
                 };
@@ -11316,6 +11355,14 @@ impl GameState {
         }
         // CR 614 — Possessed Portal: "If a player would draw a card, that
         // player skips that draw instead."
+        // CR 614 — Plagiarize: "if that player would draw a card, instead
+        // they skip that draw and you draw a card."
+        if let Some((_, thief)) =
+            self.draws_redirected_this_turn.iter().find(|(from, _)| *from == p).copied()
+            && thief != p
+        {
+            return self.draw_one(thief, events);
+        }
         let global_static = |want: &crate::effect::StaticEffect| {
             self.battlefield.iter().any(|c| {
                 c.definition.static_abilities.iter().any(|sa| sa.effect == *want)
