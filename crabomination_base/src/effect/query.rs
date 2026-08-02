@@ -325,6 +325,7 @@ impl Effect {
             Effect::DamageBecomesThisTurn { .. } => false,
             Effect::DamageTargetPlayerMayRedirect { .. } => true,
             Effect::CopySpellForEachOtherTarget { what } => sel_has_target(what),
+            Effect::ExchangeGraveyardAndLibrary { who } => matches!(who, PlayerRef::Target(_)),
             Effect::AnyPlayerMayTakeDamageElse { who, otherwise, .. } => {
                 matches!(who, PlayerRef::Target(_))
                     || matches!(who, PlayerRef::ControllerOf(s) if sel_has_target(s))

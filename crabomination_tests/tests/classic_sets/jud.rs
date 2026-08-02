@@ -695,3 +695,92 @@ fn spirit_cairn_mints_on_a_discard() {
     activate(&mut g, 0, wurm, 0, None);
     assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Spirit"));
 }
+
+/// Barbarian Bully's pump only lands if nobody eats the four.
+#[test]
+fn barbarian_bully_pumps_when_declined() {
+    let mut g = main_phase();
+    g.add_card_to_hand(0, catalog::forest());
+    let bully = g.add_card_to_battlefield(0, catalog::barbarian_bully());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(false),
+    ]));
+    activate(&mut g, 0, bully, 0, None);
+    assert_eq!(g.computed_permanent(bully).unwrap().power, 4);
+}
+
+/// Infectious Rage hops to another creature when its host dies.
+#[test]
+fn infectious_rage_hops_on_death() {
+    let mut g = main_phase();
+    let host = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let next = g.add_card_to_battlefield(1, catalog::giant_warthog());
+    let aura = g.add_card_to_hand(0, catalog::infectious_rage());
+    cast(&mut g, 0, aura, Some(Target::Permanent(host)));
+    assert_eq!(g.computed_permanent(host).unwrap().power, 4, "+2/-1");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, 0, bolt, Some(Target::Permanent(host)));
+    assert_eq!(g.battlefield_find(aura).map(|c| c.attached_to), Some(Some(next)));
+}
+
+/// Lost in Thought switches the host off.
+#[test]
+fn lost_in_thought_locks_the_host_down() {
+    let mut g = main_phase();
+    let shade = g.add_card_to_battlefield(1, catalog::nantuko_shade());
+    let aura = g.add_card_to_hand(0, catalog::lost_in_thought());
+    cast(&mut g, 0, aura, Some(Target::Permanent(shade)));
+    let kws = g.computed_permanent(shade).unwrap().keywords;
+    assert!(kws.contains(&Keyword::CantAttack) && kws.contains(&Keyword::CantBlock));
+    assert!(kws.contains(&Keyword::CantActivateAbilities));
+}
+
+/// Morality Shift turns your graveyard into your library.
+#[test]
+fn morality_shift_swaps_the_zones() {
+    let mut g = main_phase();
+    for _ in 0..5 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::morality_shift());
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.players[0].library.len(), 5);
+    assert_eq!(g.players[0].graveyard.len(), 2, "the old library plus the spell");
+}
+
+/// Seedtime only takes the extra turn after a blue spell.
+#[test]
+fn seedtime_needs_a_blue_spell() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(0, catalog::seedtime());
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.players[0].extra_turns, 0, "no blue, no turn");
+    let counter = g.add_card_to_hand(1, catalog::envelop());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    let _ = g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    let again = g.add_card_to_hand(0, catalog::seedtime());
+    cast(&mut g, 0, again, None);
+    assert_eq!(g.players[0].extra_turns, 1);
+}
+
+/// Wormfang Manta mortgages your next turn and pays it back when it leaves.
+#[test]
+fn wormfang_manta_trades_turns() {
+    let mut g = main_phase();
+    let manta = g.add_card_to_hand(0, catalog::wormfang_manta());
+    cast(&mut g, 0, manta, None);
+    assert_eq!(g.players[0].skip_turns, 1);
+    let id = g.battlefield.iter().find(|c| c.definition.name == "Wormfang Manta").unwrap().id;
+    let _ = g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].extra_turns, 1);
+}

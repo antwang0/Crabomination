@@ -9713,6 +9713,14 @@ static JUD: &[Factory] = &[
     super::jud::wormfang_turtle,
     super::jud::wormfang_drake,
     super::jud::worldgorger_dragon,
+    super::jud::barbarian_bully,
+    super::jud::infectious_rage,
+    super::jud::lost_in_thought,
+    super::jud::morality_shift,
+    super::jud::seedtime,
+    super::jud::selfless_exorcist,
+    super::jud::wormfang_manta,
+    super::jud::wormfang_crab,
 ];
 static KHM: &[Factory] = &[
     super::khm::dragonkin_berserker,

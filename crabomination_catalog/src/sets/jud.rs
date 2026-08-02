@@ -2045,3 +2045,173 @@ pub fn worldgorger_dragon() -> CardDefinition {
         crate::card::ExileReturnZone::Battlefield,
     )
 }
+
+// ── Wave 4 ──────────────────────────────────────────────────────────────────
+
+/// Barbarian Bully — {2}{R} 2/2. A random discard buys +2/+2 unless someone
+/// eats four.
+pub fn barbarian_bully() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            once_per_turn: true,
+            discard_cost: Some((R::Any, 1)),
+            discard_cost_random: true,
+            effect: punisher(
+                PlayerRef::EachPlayer,
+                4,
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+            ),
+            ..Default::default()
+        }],
+        ..creature(
+            "Barbarian Bully",
+            cost(&[generic(2), r()]),
+            vec![CreatureType::Human, CreatureType::Barbarian],
+            2,
+            2,
+        )
+    }
+}
+
+/// Infectious Rage — {1}{R} Aura. +2/-1, and it jumps to a random creature
+/// when its host dies.
+pub fn infectious_rage() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::AttachAuraFromGraveyardTo {
+                aura: Selector::This,
+                host: Selector::RandomAmong(R::Creature),
+            },
+        }],
+        ..aura(
+            "Infectious Rage",
+            cost(&[generic(1), r()]),
+            EquipBonus { power: 2, toughness: -1, ..Default::default() },
+        )
+    }
+}
+
+/// Lost in Thought — {1}{U} Aura. The host stops attacking, blocking and
+/// activating. (The printed graveyard buy-off is not modeled.)
+pub fn lost_in_thought() -> CardDefinition {
+    aura(
+        "Lost in Thought",
+        cost(&[generic(1), u()]),
+        EquipBonus {
+            keywords: vec![Keyword::CantAttack, Keyword::CantBlock, Keyword::CantActivateAbilities],
+            ..Default::default()
+        },
+    )
+}
+
+/// Morality Shift — {5}{B}{B}. Your graveyard becomes your library.
+pub fn morality_shift() -> CardDefinition {
+    sorcery(
+        "Morality Shift",
+        cost(&[generic(5), b(), b()]),
+        Effect::ExchangeGraveyardAndLibrary { who: PlayerRef::You },
+    )
+}
+
+/// Seedtime — {1}{G}. An extra turn, if they showed you blue.
+pub fn seedtime() -> CardDefinition {
+    CardDefinition {
+        cast_condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+        ..instant(
+            "Seedtime",
+            cost(&[generic(1), g()]),
+            Effect::If {
+                cond: Predicate::CastSpellThisTurnWith {
+                    who: PlayerRef::EachOpponent,
+                    colors: vec![Color::Blue],
+                    types: vec![],
+                },
+                then: Box::new(Effect::TakeExtraTurn {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        )
+    }
+}
+
+/// Selfless Exorcist — {3}{W}{W} 3/4 that eats a graveyard creature and
+/// takes the hit for it.
+pub fn selfless_exorcist() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: Selector::This,
+                    amount: Value::PowerOf(Box::new(Selector::Target(0))),
+                },
+                Effect::Move {
+                    what: target_filtered(R::InGraveyard.and(R::Creature)),
+                    to: ZoneDest::Exile,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Selfless Exorcist",
+            cost(&[generic(3), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            3,
+            4,
+        )
+    }
+}
+
+/// Wormfang Manta — {5}{U}{U} 6/1 flier that mortgages your next turn.
+pub fn wormfang_manta() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            etb(Effect::SkipTurns { who: PlayerRef::You, count: Value::Const(1) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::Const(1) },
+            },
+        ],
+        ..creature(
+            "Wormfang Manta",
+            cost(&[generic(5), u(), u()]),
+            vec![CreatureType::Nightmare, CreatureType::Fish, CreatureType::Beast],
+            6,
+            1,
+        )
+    }
+}
+
+/// Wormfang Crab — {3}{U} 3/6 unblockable that holds one of your permanents
+/// hostage. (The printed "an opponent chooses" is your pick here.)
+pub fn wormfang_crab() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Unblockable],
+        ..wormfang(
+            creature(
+                "Wormfang Crab",
+                cost(&[generic(3), u()]),
+                vec![CreatureType::Nightmare, CreatureType::Crab],
+                3,
+                6,
+            ),
+            Selector::Take {
+                inner: Box::new(Selector::ControlledBy {
+                    who: PlayerRef::You,
+                    filter: R::Permanent.and(R::OtherThanSource),
+                }),
+                count: Box::new(Value::Const(1)),
+            },
+            crate::card::ExileReturnZone::Battlefield,
+        )
+    }
+}

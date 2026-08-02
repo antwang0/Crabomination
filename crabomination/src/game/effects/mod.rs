@@ -20114,6 +20114,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExchangeGraveyardAndLibrary { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let gy = std::mem::take(&mut self.players[p].graveyard);
+                let lib = std::mem::replace(&mut self.players[p].library, gy);
+                self.players[p].graveyard = lib;
+                self.shuffle_library(p, events);
+                Ok(())
+            }
+
             Effect::AnyPlayerMayTakeDamageElse { who, amount, otherwise } => {
                 // Book Burning / Breaking Point — the first willing seat eats
                 // the damage and cancels the punishment.

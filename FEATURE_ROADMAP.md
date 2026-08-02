@@ -2358,10 +2358,10 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** Odyssey and **Torment** are both complete
-   (`set_gaps.py ody` / `tor` at zero — `sets::ody::gaps`–`gaps12`,
-   `sets::tor` + `sets::tor2`). **Judgment closes the block** — start there.
-   Keep the wave pattern going.
+0. **Next set to close.** Odyssey and **Torment** are complete (`set_gaps.py
+   ody` / `tor` at zero). **Judgment** (`sets::jud`) is at 18 gaps after four
+   waves — five of them are the Wish cycle, blocked on the sideboard zone
+   (Tier 10). Finish the rest, then pick the next block.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2376,6 +2376,11 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **Judgment (JUD) opened** — `set_gaps.py jud` 118 → 18 (`sets::jud`, 103
+  cards, tests in `classic_sets/jud`). New:
+  `StaticEffect::PreventDamageByRemovingCounters.single` (the Phantom cycle
+  sheds one counter per damage *event*), `Effect::AnyPlayerMayTakeDamageElse`
+  (the punisher rares) and `Effect::ExchangeGraveyardAndLibrary`.
 - **Torment (TOR) complete** — `set_gaps.py tor` at zero (`sets::tor` +
   `sets::tor2`, 121 cards; tests in `classic_sets/{tor,tor2}`). The closing
   wave brought the Dreams cycle, the Possessed cycle, the Nightmare Horrors

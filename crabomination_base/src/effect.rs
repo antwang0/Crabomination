@@ -7865,6 +7865,11 @@ pub enum Effect {
     /// first taker; `otherwise` runs only when every seat declines. Book
     /// Burning, Breaking Point, Dwarven Driller, Dwarven Scorcher.
     AnyPlayerMayTakeDamageElse { who: PlayerRef, amount: Value, otherwise: Box<Effect> },
+
+    /// "Exchange your graveyard and your library, then shuffle" (Morality
+    /// Shift). A whole-zone swap; per-card leaves-graveyard triggers don't
+    /// fire, matching `ExchangeHandAndGraveyard`.
+    ExchangeGraveyardAndLibrary { who: PlayerRef },
 }
 
 /// CR 702.172 — one Spree mode: an additional mana cost paired with the

@@ -152,6 +152,36 @@ Open follow-ups:
   the target filter, but a spell whose one slot is a player target is copied
   onto permanents too.
 
+## Judgment — opened
+
+`set_gaps.py jud` is at **18** (118 → 73 → 51 → 26 → 18); `sets::jud` ships
+103 cards across four waves (tests in `classic_sets/jud`): the white
+Nomad/Cleric shell, the Threshold bodies, the Dwarf tribe, the Phantom cycle
+(damage traded for +1/+1 counters), the four Advocates, the Wormfang hostage
+cycle, Worldgorger Dragon, Mirari's Wake and the punisher rares.
+
+Primitives it shipped: `StaticEffect::PreventDamageByRemovingCounters.single`
+(one counter per damage *event*, the Phantoms — Polukranos still sheds one per
+point); `Effect::AnyPlayerMayTakeDamageElse` (the punisher shape — Book
+Burning, Breaking Point, Dwarven Driller, Dwarven Scorcher);
+`Effect::ExchangeGraveyardAndLibrary` (Morality Shift).
+
+Still open, and why:
+- **The five Wishes** (Burning / Cunning / Golden / Living / Death) need the
+  "outside the game" sideboard zone — the Tier-10 ⏳ roadmap item.
+- **Riftstone Portal, Shaman's Trance, Spelljack** need play-from-another-zone
+  permissions the engine grants only via `MayPlayPermission` on a specific
+  card.
+- **Cephalid Constable** — "return up to that many target permanents that
+  player controls" was built and reverted: `MoveChosen` off a
+  `ControlledBy { DefendingPlayer }` set inside a combat-damage trigger
+  returned nothing, and the cause wasn't isolated. Needs a debugging pass.
+- **Sutured Ghoul** (CDA from exiled creature cards), **Scalpelexis**
+  (repeat-while-duplicate exile), **Soulgorger Orgg** (remember the life
+  lost), **Web of Inertia** / **Mist of Stagnation** / **Telekinetic Bonds** /
+  **Planar Chaos** / **Grave Consequences** / **Prismatic Strands** each need
+  one new primitive.
+
 ## Odyssey — closed
 
 `set_gaps.py ody` is at **zero** (274 → 53 → 30 → 10 → 5 → 0;
