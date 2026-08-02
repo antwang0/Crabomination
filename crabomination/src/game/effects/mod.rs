@@ -13282,6 +13282,14 @@ impl GameState {
                     StackItem::Trigger { target: Some(t), .. } => t.clone(),
                     _ => return Ok(()),
                 };
+                // CR 115.7c — "change any targets" walks every declared slot,
+                // not just the primary one. Each additional slot is repointed
+                // against its own filter, keeping the current target when no
+                // other legal object exists.
+                let extra_count = match &self.stack[pos] {
+                    StackItem::Trigger { additional_targets, .. } => additional_targets.len(),
+                    _ => 0,
+                };
                 // CR 115.7a — the replacement must itself be a legal target
                 // for the ability, so enumerate against the ability's own
                 // effect rather than "anything on the board".
@@ -13316,6 +13324,46 @@ impl GameState {
                 };
                 if let StackItem::Trigger { target, .. } = &mut self.stack[pos] {
                     *target = Some(chosen);
+                }
+                // CR 115.7c — repoint each additional slot against its own
+                // filter (slot n is validated by the ability's slot-n filter).
+                for slot in 0..extra_count {
+                    let (was, filter) = match &self.stack[pos] {
+                        StackItem::Trigger { additional_targets, .. } => (
+                            additional_targets[slot].clone(),
+                            ability_effect
+                                .target_filter_for_slot((slot + 1) as u8)
+                                .cloned(),
+                        ),
+                        _ => break,
+                    };
+                    let Some(filter) = filter else { continue };
+                    let options: Vec<Target> = self
+                        .legal_targets_for_filter(
+                            &filter,
+                            matches!(filter, crate::card::SelectionRequirement::Player),
+                            ability_controller,
+                            Some(id),
+                        )
+                        .into_iter()
+                        .filter(|t| *t != was)
+                        .collect();
+                    if options.is_empty() {
+                        continue;
+                    }
+                    let pick = match self.decider.decide(&Decision::ChooseTarget {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        legal: options.clone(),
+                        source_name: "Reroute".to_string(),
+                        description: format!("Retarget slot {}", slot + 1),
+                        optional: false,
+                    }) {
+                        DecisionAnswer::Target(t) if options.contains(&t) => t,
+                        _ => options[0].clone(),
+                    };
+                    if let StackItem::Trigger { additional_targets, .. } = &mut self.stack[pos] {
+                        additional_targets[slot] = pick;
+                    }
                 }
                 Ok(())
             }

@@ -5538,6 +5538,18 @@ impl GameState {
     /// CR 121.2b — the smallest per-turn draw cap currently imposed on
     /// `seat` by any active `StaticEffect::CapDrawsPerTurn`, or `None` if
     /// the seat may draw freely. Multiple caps take the strictest (min).
+    /// CR 614 — the seat drawing `seat`'s cards for the rest of the turn
+    /// (Plagiarize), or `None`. Surfaced through `PlayerView.draws_stolen_by`.
+    pub fn draws_stolen_from(&self, seat: usize) -> Option<usize> {
+        self.draws_redirected_this_turn.iter().find(|(f, _)| *f == seat).map(|(_, t)| *t)
+    }
+
+    /// CR 615 — the turn's global damage rewrite `(at_least, becomes)`
+    /// (Equal Treatment), or `None`.
+    pub fn damage_rewritten_this_turn(&self) -> Option<(u32, u32)> {
+        self.damage_becomes_this_turn
+    }
+
     pub fn draw_cap_for(&self, seat: usize) -> Option<u32> {
         use crate::effect::{PlayerStaticTarget, StaticEffect};
         self.battlefield

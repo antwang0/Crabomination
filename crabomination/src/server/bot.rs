@@ -3107,6 +3107,13 @@ fn main_phase_action_with(
         return action;
     }
 
+    // Fire a repeatable "{cost}: Destroy target creature" (the Torment
+    // Possessed cycle's Threshold ability, Royal Assassin-style tappers) on
+    // the biggest legal foe. No trade math — the source survives.
+    if let Some(action) = pick_removal_destroy(state, seat) {
+        return action;
+    }
+
     // Unmask a face-down threat (Morph / Megamorph / Disguise / a cloaked or
     // manifested creature card) when the turn-up cost is affordable. Dry-run-
     // gated, so the cost / timing / "manifested noncreature can't turn up"
@@ -3446,13 +3453,79 @@ fn pick_turn_face_up(state: &GameState, seat: usize) -> Option<GameAction> {
 /// bottom out in `would_accept`. Points the ability at an opponent's face only
 /// when the hit is exactly lethal (reach for the win); otherwise never chips a
 /// player and never targets the bot's own creatures.
+/// Every activated ability a permanent can use right now, paired with the
+/// index `GameAction::ActivateAbility` expects: printed abilities first, then
+/// the statically granted ones at their virtual indices (CR 611.2 — the
+/// Threshold-granted removal on the Torment Possessed cycle, Cryptolith Rite).
+/// The bot's ability generators walk this instead of `definition
+/// .activated_abilities`, which silently skipped every grant.
+fn usable_abilities(
+    state: &GameState,
+    card: &crate::card::CardInstance,
+) -> Vec<(usize, crate::effect::ActivatedAbility)> {
+    let printed = card.definition.activated_abilities.clone();
+    let n = printed.len();
+    printed
+        .into_iter()
+        .enumerate()
+        .chain(
+            state
+                .granted_abilities_for(card.id)
+                .into_iter()
+                .enumerate()
+                .map(|(i, ab)| (n + i, ab)),
+        )
+        .collect()
+}
+
+/// "{cost}: Destroy target creature" on a permanent that survives the
+/// activation — the untargeted-at-self sibling of `pick_removal_sacrifice`.
+/// Fires on the biggest legal opposing creature.
+fn pick_removal_destroy(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::Selector;
+    let mut foes: Vec<(crate::card::CardId, i32)> = state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+        .filter_map(|c| state.computed_permanent(c.id).map(|cp| (c.id, cp.power)))
+        .collect();
+    foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in usable_abilities(state, card) {
+            if ab.sac_cost {
+                continue; // `pick_removal_sacrifice` owns the trade math.
+            }
+            let (Effect::Destroy { what } | Effect::DestroyNoRegen { what }) = &ab.effect else {
+                continue;
+            };
+            if !matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. }) {
+                continue;
+            }
+            for (foe, _) in &foes {
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(crate::game::Target::Permanent(*foe)),
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                    mode: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
+    None
+}
+
 fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
     use crate::effect::{Selector, Value};
     // Reach for the win first: if a constant-damage "any target" ability is
     // lethal to an opponent, point it at their face. Only fires when the hit
     // is actually lethal (life ≤ amount), so it's never a wasted chip ping.
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
-        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+        for (idx, ab) in usable_abilities(state, card) {
             let Effect::DealDamage { to, amount: Value::Const(n) } = &ab.effect else { continue };
             // Must be an untyped "any target" slot (a creature-only filter
             // can't be pointed at a player).
@@ -3485,7 +3558,7 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
         .collect();
     foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
-        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+        for (idx, ab) in usable_abilities(state, card) {
             // The effect must be a bare single-target DealDamage whose target
             // can be a creature (not a self/own-board selector).
             let Effect::DealDamage { to, amount } = &ab.effect else { continue };
@@ -3582,7 +3655,7 @@ fn pick_removal_sacrifice(state: &GameState, seat: usize) -> Option<GameAction> 
     foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         let src_power = state.computed_permanent(card.id).map(|cp| cp.power).unwrap_or(0);
-        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+        for (idx, ab) in usable_abilities(state, card) {
             if !ab.sac_cost {
                 continue;
             }

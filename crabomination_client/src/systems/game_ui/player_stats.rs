@@ -1140,9 +1140,30 @@ pub fn update_player_stats_chips(
         if let Some((_, name)) = &p.damage_redirect_to {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Redirect, format!("↪ dmg → {name}"));
         }
+        // CR 614 — Plagiarize: someone else is drawing this seat's cards.
+        if let Some(thief) = p.draws_stolen_by {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::Redirect,
+                format!("↪ draws → P{}", thief + 1),
+            );
+        }
         // CR 702.11 — player-level hexproof (Aegis, Leyline of Sanctity).
         if p.has_hexproof {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::PlayerHexproof, "◈ hexproof".to_string());
+        }
+        // CR 615 — Equal Treatment: every damage number on the board is a lie
+        // this turn. Global, so surface it once, on the active player's row.
+        if p.seat == cv.active_player
+            && let Some((at_least, becomes)) = cv.damage_rewritten_this_turn
+        {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::TurnEffect,
+                format!("⟲ dmg ≥{at_least} → {becomes}"),
+            );
         }
         // Turn-scoped rules changes with no board trace (a land-tap mana
         // replacement, a floating "this turn, whenever …" watcher). Global, so

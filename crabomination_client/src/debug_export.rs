@@ -167,10 +167,12 @@ mod tests {
             extra_phase: false,
             attackable_players: Vec::new(),
             permanents_to_graveyard_this_turn: 0,
+            damage_rewritten_this_turn: None,
             players: vec![PlayerView {
                 locked_cast_colors: vec![],
                 locked_cast_kinds: vec![],
                 uncounterable_next: vec![],
+                draws_stolen_by: None,
                 prevention_remaining: None,
                 prevention_source_colors: Vec::new(),
                 prevention_next_instances: 0,

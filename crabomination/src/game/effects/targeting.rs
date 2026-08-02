@@ -356,7 +356,20 @@ impl GameState {
         use crate::card::SelectionRequirement;
         let any_filter = SelectionRequirement::Any;
         let req = eff.primary_target_filter().unwrap_or(&any_filter);
-        let accepts_player = eff.accepts_player_target();
+        self.legal_targets_for_filter(req, eff.accepts_player_target(), controller, source)
+    }
+
+    /// Every object/player in any zone that satisfies `req` and passes the
+    /// CR 115.4 legality check. The filter-level core of
+    /// `enumerate_legal_targets_with_source`; a caller that already knows the
+    /// slot's own filter (CR 115.7c retargeting) uses it directly.
+    pub fn legal_targets_for_filter(
+        &self,
+        req: &crate::card::SelectionRequirement,
+        accepts_player: bool,
+        controller: usize,
+        source: Option<CardId>,
+    ) -> Vec<Target> {
         let is_legal = |t: &Target| -> bool {
             self.evaluate_requirement_static(req, t, controller, source)
                 && self.check_target_legality(t, controller).is_ok()

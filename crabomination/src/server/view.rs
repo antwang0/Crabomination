@@ -119,6 +119,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
         spend_mana_as_any_color: state.spend_mana_as_any_color_active(),
         combat_damage_prevented_this_turn: state.prevent_combat_damage_this_turn,
+        damage_rewritten_this_turn: state.damage_rewritten_this_turn(),
         attack_tax_this_turn: state.attack_tax_this_turn,
         turn_effects: state.turn_effect_notes(),
         block_tax_this_turn: state.block_tax_this_turn,
@@ -811,6 +812,7 @@ fn project_player(
             .iter()
             .map(|r| requirement_noun(r).to_string())
             .collect(),
+        draws_stolen_by: state.draws_stolen_from(player_seat),
         life_locked: player.life_locked_this_turn,
         has_hexproof,
         commander_damage_taken,

@@ -276,6 +276,11 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
+    /// CR 615 — "if any source would deal N or more damage this turn, it deals
+    /// M instead" (Equal Treatment), as `(at_least, becomes)`. Surfaced so UIs
+    /// can warn that every damage number on the board is a lie this turn.
+    #[serde(default)]
+    pub damage_rewritten_this_turn: Option<(u32, u32)>,
     /// CR 609.4b — true while any permanent lets every player spend mana as
     /// though it were mana of any colour (Mycosynth Lattice). Surfaced so UIs
     /// can stop rendering coloured pips as hard requirements.
@@ -772,6 +777,10 @@ pub struct PlayerView {
     /// grant is armed.
     #[serde(default)]
     pub uncounterable_next: Vec<String>,
+    /// CR 614 — the seat that draws this player's cards for the rest of the
+    /// turn (Plagiarize), or `None`. UIs warn that the draw step is stolen.
+    #[serde(default)]
+    pub draws_stolen_by: Option<usize>,
     /// CR 601.3e — an opponent's Void Winnower is locking this player's
     /// even-mana-value spells (zero is even). UIs grey out even-MV cards in
     /// hand. Defaults to false.
