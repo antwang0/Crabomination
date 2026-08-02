@@ -505,8 +505,10 @@ fn known_library_top(
             .iter()
             .any(|sa| matches!(sa.effect, StaticEffect::AllLibraryTopsRevealed))
     });
-    let revealed_to_all =
-        lantern || has_static(&|e| matches!(e, StaticEffect::TopOfLibraryRevealed));
+    let revealed_to_all = lantern
+        || has_static(&|e| matches!(e, StaticEffect::TopOfLibraryRevealed))
+        // Aven Windreader's one-shot reveal.
+        || state.library_top_revealed_by_effect(player_seat);
     let owner_may_look = viewer_seat == player_seat
         && (has_static(&|e| matches!(e, StaticEffect::PlayFromLibraryTop { .. }
                 | StaticEffect::PlayFromLibraryTopOncePerTurn { .. }
@@ -2908,7 +2910,7 @@ mod tests {
     fn source_side_prevention_surfaces_on_the_permanent() {
         let mut state = two_player_game();
         let bear = state.add_card_to_battlefield(1, catalog::grizzly_bears());
-        state.damage_prevented_sources.push((bear, None, false));
+        state.damage_prevented_sources.push(crate::game::types::PreventedSource::new(bear));
         let v = project(&state, 0);
         assert!(v.battlefield.iter().find(|p| p.id == bear).unwrap().damage_prevented_as_source);
         // CR 615.12 — with prevention off, the shield reports as inert.

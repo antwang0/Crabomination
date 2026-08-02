@@ -1158,6 +1158,7 @@ fn cr_608_2b_trigger_with_illegal_target_fizzles() {
         trigger_player: None,
         intervening_if: None,
         additional_targets: Vec::new(),
+        mana_spent_by_color: Vec::new(),
         activated: false,
     });
     let mut events = Vec::new();

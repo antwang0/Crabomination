@@ -421,7 +421,10 @@ impl Effect {
             Effect::ReturnGraveyardCreaturesUpToTotalManaValue { .. } => false,
             Effect::CommandTheDreadhorde => false,
             Effect::LookTopMayRevealMatchToHandElseBottom { .. } => false,
-            Effect::RevealHandDiscardAllMatching { who, .. } => player_has_target(who),
+            Effect::RevealHandDiscardAllMatching { who, .. }
+            | Effect::RevealHand { who }
+            | Effect::RevealTopOfLibrary { who }
+            | Effect::PlayerCantCastMatchingThisTurn { who, .. } => player_has_target(who),
             Effect::NameCardTargetDiscardsMatching
             | Effect::NameCardExileMatchingAllZones
             | Effect::FertileImagination { .. }

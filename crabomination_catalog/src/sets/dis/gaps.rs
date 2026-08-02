@@ -1386,7 +1386,7 @@ pub fn prahv_spires_of_order() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(4), w(), u()]),
                 tap_cost: true,
-                effect: Effect::PreventAllDamageFromChosenSourceThisTurn { filter: R::Any },
+                effect: Effect::PreventAllDamageFromChosenSourceThisTurn { filter: R::Any, gain_life_from_colors: vec![] },
                 ..Default::default()
             },
         ],

@@ -1116,7 +1116,7 @@ pub fn riths_charm() -> CardDefinition {
                 count: Value::Const(3),
                 definition: saproling(),
             },
-            Effect::PreventAllDamageFromChosenSourceThisTurn { filter: R::Permanent },
+            Effect::PreventAllDamageFromChosenSourceThisTurn { filter: R::Permanent, gain_life_from_colors: vec![] },
         ]),
     )
 }

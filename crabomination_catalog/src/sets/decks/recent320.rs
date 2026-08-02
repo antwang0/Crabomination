@@ -123,6 +123,7 @@ pub fn mourners_shield() -> CardDefinition {
             tap_cost: true,
             effect: Effect::PreventAllDamageFromChosenSourceThisTurn {
                 filter: R::SharesColorWithExiledBySource,
+                gain_life_from_colors: vec![],
             },
             ..Default::default()
         }],

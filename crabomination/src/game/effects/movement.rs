@@ -75,7 +75,7 @@ impl GameState {
     /// prevented for the turn (Hallow, Burrenton Forge-Tender's chosen source).
     pub(crate) fn source_damage_fully_prevented(&self, source: crate::card::CardId) -> bool {
         !self.damage_cant_be_prevented_this_turn
-            && self.damage_prevented_sources.iter().any(|(s, ..)| *s == source)
+            && self.damage_prevented_sources.iter().any(|sh| sh.source == source)
     }
 
     /// CR 120.6 — how much more damage would be lethal to `cid` right now,
@@ -148,13 +148,13 @@ impl GameState {
         // here rather than in `deal_damage_to_from` so the combat path — which
         // reaches this funnel directly — honours it too.
         if let Some(src) = source
-            && let Some((_, beneficiary, one_instance)) =
-                self.damage_prevented_sources.iter().find(|(s, ..)| *s == src).copied()
+            && let Some(shield) =
+                self.damage_prevented_sources.iter().find(|sh| sh.source == src).cloned()
         {
             // CR 615.8 — a "next time it would deal damage" shield expires
             // after soaking one instance.
-            if one_instance {
-                self.damage_prevented_sources.retain(|(s, ..)| *s != src);
+            if shield.one_instance {
+                self.damage_prevented_sources.retain(|sh| sh.source != src);
             }
             if amount > 0 {
                 let (to_player, to_card) = match ent {
@@ -163,8 +163,17 @@ impl GameState {
                 };
                 events.push(GameEvent::DamagePrevented { amount, to_player, to_card });
                 // Hallow / Awe Strike — "gain life equal to the damage
-                // prevented this way."
-                if let Some(seat) = beneficiary {
+                // prevented this way." Samite Ministration gates the refund on
+                // the source's colour, rechecked here (CR 615.9).
+                let color_ok = shield.gain_life_colors.is_empty()
+                    || self
+                        .computed_permanent(src)
+                        .map(|cp| cp.colors)
+                        .or_else(|| {
+                            self.find_card_anywhere(src).map(|c| c.definition.printed_colors())
+                        })
+                        .is_some_and(|cs| shield.gain_life_colors.iter().any(|c| cs.contains(c)));
+                if let Some(seat) = shield.gain_life_to.filter(|_| color_ok) {
                     let applied = self.adjust_life_applied(seat, amount as i32);
                     if applied > 0 {
                         events.push(GameEvent::LifeGained { player: seat, amount: applied as u32 });

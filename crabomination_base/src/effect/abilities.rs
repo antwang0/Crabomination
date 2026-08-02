@@ -1157,6 +1157,10 @@ pub enum StaticEffect {
     /// (Urza's Armor). Applied per damage event to the static controller's own
     /// life total, after the additive bonuses and before the doublers.
     ReduceDamageToYouBy(u32),
+    /// "If a [colour] source would deal damage to you, prevent `amount` of
+    /// that damage" (the Odyssey Sphere cycle). The colour-scoped sibling of
+    /// `ReduceDamageToYouBy`.
+    ReduceColorDamageToYouBy { color: crate::mana::Color, amount: u32 },
     /// "If a source would deal damage to a creature you control, it deals that
     /// much damage minus N to that creature instead" (Lashknife Barrier).
     /// The creature-side sibling of `ReduceDamageToYouBy`; applied in
@@ -2046,6 +2050,9 @@ pub enum StaticEffect {
     /// Trusted Advisor). Copies stack; folded into `effective_max_hand_size`
     /// after any `ControllerMaxHandSize` override.
     ControllerMaxHandSizeIncreased(u32),
+    /// "Your maximum hand size is reduced by N" (Thought Nibbler). The
+    /// controller-scoped mirror of `OpponentsMaxHandSizeReduced`.
+    ControllerMaxHandSizeReduced(u32),
     /// CR 305 / 718 — "You may play lands from your graveyard." Crucible of
     /// Worlds, Ramunap Excavator. Read by the land-play legality + the
     /// `PlayLandFromGraveyard` action: a land in the controller's graveyard
@@ -2423,6 +2430,10 @@ pub struct ActivatedAbility {
     /// Mutually independent from the fixed `life_cost`. Defaults to false.
     #[serde(default)]
     pub x_life_cost: bool,
+    /// CR 601.2g — "Spend only [colour] mana on X" (Atalya, Samite Master).
+    /// The announced X becomes that many coloured pips instead of generic.
+    #[serde(default)]
+    pub x_mana_color: Option<crate::mana::Color>,
     /// True if this ability is activated from the controller's graveyard
     /// rather than the battlefield. The activation walker searches the
     /// graveyard for the source instead of the battlefield. Used by

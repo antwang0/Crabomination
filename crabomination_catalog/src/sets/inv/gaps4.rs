@@ -142,22 +142,24 @@ pub fn rith_the_awakener() -> CardDefinition {
     )
 }
 
-/// Darigaaz, the Igniter — {3}{B}{R}{G}. Burn per card of a colour in hand.
-/// (The reveal is folded into the count — the hand is read live rather than
-/// snapshotted, which is only visible if the hand changes mid-resolution.)
+/// Darigaaz, the Igniter — {3}{B}{R}{G}. The damaged player reveals their
+/// hand; burn for their count of the chosen colour.
 pub fn darigaaz_the_igniter() -> CardDefinition {
     dragon_legend(
         "Darigaaz, the Igniter",
         cost(&[generic(3), b(), r(), g()]),
         cost(&[generic(2), r()]),
         "Pay {2}{R} to burn for their colour count?",
-        Effect::DealDamage {
-            to: Selector::Player(PlayerRef::TriggerEventPlayer),
-            amount: Value::CardsInHandMatching {
-                who: PlayerRef::TriggerEventPlayer,
-                filter: R::HasChosenColorOfSource,
+        Effect::Seq(vec![
+            Effect::RevealHand { who: PlayerRef::TriggerEventPlayer },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::TriggerEventPlayer),
+                amount: Value::CardsInHandMatching {
+                    who: PlayerRef::TriggerEventPlayer,
+                    filter: R::HasChosenColorOfSource,
+                },
             },
-        },
+        ]),
     )
 }
 
@@ -182,23 +184,26 @@ pub fn skizzik() -> CardDefinition {
     }
 }
 
-/// Prison Barricade — {1}{W} 1/3 Wall. Kicked, it enters with a counter.
-/// (The kicked "can attack as though it didn't have defender" rider needs a
-/// defender-bypass grant the engine doesn't have — tracked in TODO.md.)
+/// Prison Barricade — {1}{W} 1/3 Wall. Kicked, it enters with a +1/+1 counter
+/// and may attack as though it didn't have defender.
 pub fn prison_barricade() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Defender, Keyword::Kicker(cost(&[generic(1), w()]))],
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SpellWasKicked,
-            then: Box::new(Effect::Seq(vec![
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ONE,
-                },
-            ])),
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            }),
             else_: Box::new(Effect::Noop),
         })],
+        static_abilities: vec![StaticAbility {
+            description: "If this creature was kicked, it can attack as though it didn't have defender.",
+            effect: StaticEffect::CanAttackIgnoringDefenderWhile {
+                condition: Predicate::SpellWasKicked,
+            },
+        }],
         ..creature("Prison Barricade", cost(&[generic(1), w()]), vec![CreatureType::Wall], 1, 3)
     }
 }
@@ -323,8 +328,6 @@ pub fn verdeloth_the_ancient() -> CardDefinition {
 }
 
 /// Kangee, Aerie Keeper — {2}{W}{U} 2/2 Bird lord scaled by its kicked X.
-/// (Feather counters are modelled as charge counters — the engine has no
-/// dedicated kind and nothing else reads them.)
 pub fn kangee_aerie_keeper() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -334,7 +337,7 @@ pub fn kangee_aerie_keeper() -> CardDefinition {
                 .with_filter(Predicate::SpellWasKicked),
             effect: Effect::AddCounter {
                 what: Selector::This,
-                kind: CounterType::Charge,
+                kind: CounterType::Feather,
                 amount: Value::XFromCost,
             },
         }],
@@ -346,7 +349,7 @@ pub fn kangee_aerie_keeper() -> CardDefinition {
                         .and(R::HasCreatureType(CreatureType::Bird))
                         .and(R::OtherThanSource),
                 ),
-                kind: CounterType::Charge,
+                kind: CounterType::Feather,
                 per_power: 1,
                 per_toughness: 1,
             },

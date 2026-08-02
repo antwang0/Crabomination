@@ -467,3 +467,174 @@ fn psychic_battle_leaves_targets_alone_on_a_tie() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(theirs).is_none(), "a tie leaves the original target");
 }
+
+/// Atalya's X must be paid with white mana (CR 601.2g).
+#[test]
+fn atalya_spends_only_white_on_x() {
+    let mut g = main_phase();
+    let atalya = g.add_card_to_battlefield(0, catalog::atalya_samite_master());
+    g.battlefield_find_mut(atalya).unwrap().summoning_sick = false;
+    g.players[0].mana_pool.add(Color::Red, 3);
+    let activate = |g: &mut GameState, x: u32| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: atalya,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            mode: Some(1),
+            x_value: Some(x),
+        })
+    };
+    assert!(activate(&mut g, 3).is_err(), "red mana can't pay X");
+    g.players[0].mana_pool.add(Color::White, 3);
+    activate(&mut g, 3).expect("white mana pays X");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23);
+}
+
+/// Protective Sphere only shields a source sharing a colour with the mana
+/// spent on the activation.
+#[test]
+fn protective_sphere_matches_the_mana_spent() {
+    let mut g = main_phase();
+    let sphere = g.add_card_to_battlefield(0, catalog::protective_sphere());
+    let red = g.add_card_to_battlefield(1, catalog::raging_goblin());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sphere,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate with red mana");
+    drain_stack(&mut g);
+    assert!(
+        g.damage_prevented_sources_debug().iter().any(|s| s.source == red),
+        "the red source is shielded"
+    );
+}
+
+/// Samite Ministration refunds life only for a black or red source.
+#[test]
+fn samite_ministration_refunds_only_black_or_red() {
+    let mut g = main_phase();
+    let goblin = g.add_card_to_battlefield(1, catalog::raging_goblin());
+    let spell = g.add_card_to_hand(0, catalog::samite_ministration());
+    cast(&mut g, 0, spell, None);
+    let before = g.players[0].life;
+    let mut events = vec![];
+    let unprevented = g.apply_prevention_shields(
+        crabomination::game::effects::EntityRef::Player(0),
+        3,
+        Some(goblin),
+        &mut events,
+    );
+    assert_eq!(unprevented, 0, "the shield ate the damage");
+    assert_eq!(g.players[0].life, before + 3, "a red source refunds the life");
+}
+
+/// Barrin's Spite can only pair two creatures with the same controller.
+#[test]
+fn barrins_spite_needs_one_controller() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(1, catalog::raging_goblin());
+    let spell = g.add_card_to_hand(0, catalog::barrins_spite());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: Some(Target::Permanent(theirs)),
+            additional_targets: vec![Target::Permanent(mine)],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "the two slots must share a controller"
+    );
+    g.decider = split_decider(vec![theirs], true);
+    cast_multi(
+        &mut g,
+        0,
+        spell,
+        Some(Target::Permanent(theirs)),
+        vec![Target::Permanent(other)],
+    );
+    assert!(g.battlefield.iter().all(|c| c.id != theirs), "the chosen one was sacrificed");
+    assert!(g.players[1].hand.iter().any(|c| c.id == other), "the other bounced");
+}
+
+/// Pledge of Loyalty keeps granting protection as your colours change, and
+/// never sheds itself.
+#[test]
+fn pledge_of_loyalty_tracks_your_colors() {
+    let mut g = main_phase();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::pledge_of_loyalty());
+    cast(&mut g, 0, aura, Some(Target::Permanent(host)));
+    assert_eq!(g.battlefield_find(aura).map(|c| c.attached_to), Some(Some(host)));
+    // Only white (the Aura) and green (the host) are on board so far.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Permanent(host)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "protection from white blocks nothing red yet"
+    );
+    g.add_card_to_battlefield(0, catalog::raging_goblin());
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Permanent(host)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "a red permanent you control now blocks the Bolt"
+    );
+}
+
+/// Psychic Battle fires once per targeting decision, not once per target.
+#[test]
+fn psychic_battle_fires_once_per_decision() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::psychic_battle());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(1, catalog::forest());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::raging_goblin());
+    let spell = g.add_card_to_hand(0, catalog::barrins_spite());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    assert_eq!(
+        g.stack
+            .iter()
+            .filter(|s| matches!(s, StackItem::Trigger { .. }))
+            .count(),
+        1,
+        "one reveal contest for a two-target spell"
+    );
+}

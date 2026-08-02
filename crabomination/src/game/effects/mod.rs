@@ -945,21 +945,22 @@ impl GameState {
     /// and a friendly one toward them.
     fn retarget_spell(
         &mut self,
-        def: &crate::card::CardDefinition,
+        effect: &crate::effect::Effect,
+        name: &str,
         chooser: usize,
         original: &Option<crate::game::types::Target>,
     ) -> Option<crate::game::types::Target> {
         use crate::decision::{Decision, DecisionAnswer};
         use crate::game::types::Target;
         let mut legal: Vec<Target> = self
-            .enumerate_legal_targets(&def.effect, chooser)
+            .enumerate_legal_targets(effect, chooser)
             .into_iter()
             .filter(|t| Some(t) != original.as_ref())
             .collect();
         if legal.is_empty() {
             return original.clone();
         }
-        let friendly = def.effect.prefers_friendly_target();
+        let friendly = effect.prefers_friendly_target();
         let mine = |t: &Target| match t {
             Target::Player(p) => self.same_team(*p, chooser),
             Target::Permanent(c) => {
@@ -974,7 +975,7 @@ impl GameState {
                 _ => crate::card::CardId(0),
             },
             legal: legal.clone(),
-            source_name: def.name.to_string(),
+            source_name: name.to_string(),
             description: "change the target".to_string(),
         });
         match answer {
@@ -18047,6 +18048,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealHand { who } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                if !self.hands_revealed_to.contains(&(ctx.controller, seat)) {
+                    self.hands_revealed_to.push((ctx.controller, seat));
+                }
+                Ok(())
+            }
+
             Effect::NameCardExileMatchingAllZones => {
                 use crate::decision::Decision;
                 let who = self
@@ -22686,22 +22695,35 @@ impl GameState {
                 let Some(max) = tops.iter().map(|(_, mv)| *mv).max() else { return Ok(()) };
                 let mut winners = tops.iter().filter(|(_, mv)| *mv == max).map(|(i, _)| *i);
                 let (Some(who), None) = (winners.next(), winners.next()) else { return Ok(()) };
-                // The topmost spell on the stack is the one that just chose
-                // its targets.
-                let Some(sid) = self.stack.iter().rev().find_map(|s| match s {
-                    StackItem::Spell { card, .. } => Some(card.id),
-                    _ => None,
+                // The topmost *targeting* object on the stack is the one that
+                // just chose — a spell or an ability (CR 115.7).
+                let Some(idx) = self.stack.iter().rposition(|s| match s {
+                    StackItem::Spell { target, .. } => target.is_some(),
+                    StackItem::Trigger { target, .. } => target.is_some(),
                 }) else {
                     return Ok(());
                 };
-                let mut sub = ctx.clone();
-                sub.controller = who;
-                sub.targets = vec![Target::Permanent(sid)];
-                self.run_effect(
-                    &Effect::ChooseNewTargetsForSpell { what: Selector::Target(0) },
-                    &sub,
-                    events,
-                )
+                let (eff, name, orig) = match &self.stack[idx] {
+                    StackItem::Spell { card, target, .. } => (
+                        card.definition.effect.clone(),
+                        card.definition.name.to_string(),
+                        target.clone(),
+                    ),
+                    StackItem::Trigger { source, effect, target, .. } => (
+                        (**effect).clone(),
+                        self.find_card_anywhere(*source)
+                            .map(|c| c.definition.name.to_string())
+                            .unwrap_or_default(),
+                        target.clone(),
+                    ),
+                };
+                let new_target = self.retarget_spell(&eff, &name, who, &orig);
+                match &mut self.stack[idx] {
+                    StackItem::Spell { target, .. } | StackItem::Trigger { target, .. } => {
+                        *target = new_target;
+                    }
+                }
+                Ok(())
             }
 
             Effect::ChooseNewTargetsForSpell { what } => {
@@ -22735,7 +22757,8 @@ impl GameState {
                     if orig_target.is_none() {
                         continue;
                     }
-                    let new_target = self.retarget_spell(&def, chooser, &orig_target);
+                    let new_target =
+                        self.retarget_spell(&def.effect, def.name, chooser, &orig_target);
                     if let crate::game::types::StackItem::Spell { target, .. } =
                         &mut self.stack[idx]
                     {
@@ -23425,12 +23448,17 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventAllDamageFromChosenSourceThisTurn { filter } => {
+            Effect::PreventAllDamageFromChosenSourceThisTurn { filter, gain_life_from_colors } => {
                 let Some(chosen) = self.choose_damage_prevention_source(filter, ctx) else {
                     return Ok(());
                 };
-                if !self.damage_prevented_sources.iter().any(|(id, ..)| *id == chosen) {
-                    self.damage_prevented_sources.push((chosen, None, false));
+                if !self.damage_prevented_sources.iter().any(|sh| sh.source == chosen) {
+                    self.damage_prevented_sources.push(crate::game::types::PreventedSource {
+                        gain_life_to: (!gain_life_from_colors.is_empty())
+                            .then_some(ctx.controller),
+                        gain_life_colors: gain_life_from_colors.clone(),
+                        ..crate::game::types::PreventedSource::new(chosen)
+                    });
                 }
                 Ok(())
             }
@@ -23440,13 +23468,17 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     let (EntityRef::Permanent(id) | EntityRef::Card(id)) = ent else { continue };
                     if let Some(slot) =
-                        self.damage_prevented_sources.iter_mut().find(|(s, ..)| *s == id)
+                        self.damage_prevented_sources.iter_mut().find(|sh| sh.source == id)
                     {
-                        slot.1 = slot.1.or(beneficiary);
+                        slot.gain_life_to = slot.gain_life_to.or(beneficiary);
                         // A turn-long shield subsumes a one-instance one.
-                        slot.2 &= *next_instance_only;
+                        slot.one_instance &= *next_instance_only;
                     } else {
-                        self.damage_prevented_sources.push((id, beneficiary, *next_instance_only));
+                        self.damage_prevented_sources.push(crate::game::types::PreventedSource {
+                            gain_life_to: beneficiary,
+                            one_instance: *next_instance_only,
+                            ..crate::game::types::PreventedSource::new(id)
+                        });
                     }
                 }
                 Ok(())
@@ -23732,6 +23764,21 @@ impl GameState {
                             as_attacker: false,
                         });
                     }
+                }
+                Ok(())
+            }
+
+            Effect::PlayerCantCastMatchingThisTurn { who, filter } => {
+                if let Some(seat) = self.resolve_player(who, ctx) {
+                    self.players[seat].cant_cast_matching_this_turn.push(filter.clone());
+                }
+                Ok(())
+            }
+
+            Effect::RevealTopOfLibrary { who } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                if !self.library_tops_revealed.contains(&seat) {
+                    self.library_tops_revealed.push(seat);
                 }
                 Ok(())
             }
@@ -26622,6 +26669,22 @@ impl GameState {
             }
             (crate::card::SelectionRequirement::HasChosenColorOfSource, None) => {
                 return None;
+            }
+            // Protective Sphere — fold the activation's spent colours into an
+            // `Or` chain. Colourless mana prevents no damage, so an all-generic
+            // payment leaves nothing to choose.
+            (crate::card::SelectionRequirement::SharesColorWithManaSpent, _) => {
+                let mut colors = ctx.mana_spent_by_color.iter().filter(|(_, n)| *n > 0);
+                let first = colors.next()?;
+                colors.fold(
+                    crate::card::SelectionRequirement::HasColor(first.0),
+                    |acc, (c, _)| {
+                        crate::card::SelectionRequirement::Or(
+                            Box::new(acc),
+                            Box::new(crate::card::SelectionRequirement::HasColor(*c)),
+                        )
+                    },
+                )
             }
             (f, _) => f.clone(),
         };

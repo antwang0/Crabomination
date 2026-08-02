@@ -50,6 +50,7 @@ mod inv_gaps2;
 mod inv_gaps3;
 mod inv_gaps4;
 mod inv_gaps5;
+mod ody;
 mod pls;
 mod pls2;
 mod pcy;

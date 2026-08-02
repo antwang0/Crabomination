@@ -370,6 +370,10 @@ pub struct Player {
     /// Consulted by `can_player_play_land`, reset at the turn boundary.
     #[serde(default)]
     pub cant_play_lands_this_turn: bool,
+    /// "You can't cast [filter] spells this turn" (Cease-Fire). Cleared at the
+    /// turn boundary alongside `cant_play_lands_this_turn`.
+    #[serde(default)]
+    pub cant_cast_matching_this_turn: Vec<crate::card::SelectionRequirement>,
     /// CR 700.13 — this player has committed a crime this turn (cast a spell or
     /// activated an ability targeting an opponent / their stuff). Set when a
     /// `CommittedCrime` event fires, reset at the turn boundary. Powers
@@ -839,6 +843,7 @@ impl Player {
             lands_played_this_turn: 0,
             extra_land_plays: 0,
             cant_play_lands_this_turn: false,
+            cant_cast_matching_this_turn: Vec::new(),
             extra_loyalty_activations: 0,
             activated_loyalty_this_turn: false,
             spells_cast_this_turn: 0,

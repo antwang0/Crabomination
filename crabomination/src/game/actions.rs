@@ -1875,7 +1875,18 @@ impl crate::game::GameState {
                 StaticEffect::OpponentsMaxHandSizeReduced(n) => n as usize,
                 _ => 0,
             })
-            .sum();
+            .sum::<usize>()
+            // Thought Nibbler — the controller-scoped reduction.
+            + self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == player)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .map(|sa| match sa.effect {
+                    StaticEffect::ControllerMaxHandSizeReduced(n) => n as usize,
+                    _ => 0,
+                })
+                .sum::<usize>();
         // Set-to-N overrides (Necrodominance) — smallest wins.
         let set_to: Option<usize> = self
             .battlefield
@@ -2693,19 +2704,17 @@ impl GameState {
             // target slot (printed "target …" wording), and only for
             // battlefield permanents.
             if multiplier > 0 && effect.requires_target() {
-                let became: Vec<GameEvent> = auto_target
-                    .iter()
-                    .chain(additional.iter())
-                    .filter_map(|t| match t {
+                let mut became =
+                    vec![GameEvent::ChoseTargets { chooser: controller, object: card_id }];
+                became.extend(auto_target.iter().chain(additional.iter()).filter_map(|t| {
+                    match t {
                         Target::Permanent(id) if self.battlefield_find(*id).is_some() => {
                             Some(GameEvent::BecameTarget { target: *id, caster: controller })
                         }
                         _ => None,
-                    })
-                    .collect();
-                if !became.is_empty() {
-                    self.dispatch_triggers_for_events(&became);
-                }
+                    }
+                }));
+                self.dispatch_triggers_for_events(&became);
             }
         }
     }
@@ -5567,6 +5576,15 @@ impl GameState {
             return Err(GameError::CantCastNoncreature);
         }
 
+        // Cease-Fire — a turn-scoped, filtered cast lock.
+        if !self.players[p].cant_cast_matching_this_turn.is_empty() {
+            let locks = self.players[p].cant_cast_matching_this_turn.clone();
+            if locks.iter().any(|f| self.evaluate_requirement_on_card(f, &card, p)) {
+                self.players[p].hand.push(card);
+                return Err(GameError::CantCastNoncreature);
+            }
+        }
+
         // Codie lock — this player can't cast permanent spells.
         if card.definition.is_permanent() && self.player_cant_cast_permanent_spells(p) {
             self.players[p].hand.push(card);
@@ -5911,6 +5929,11 @@ impl GameState {
         // the printed one (Into the Flood Maw: creature → nonland permanent).
         // Compute the per-slot violation up front (releasing the borrow on
         // `card`) so a rejected cast can move the card back to hand.
+        // Cross-slot filters (Barrin's Spite's "controlled by the same player")
+        // read the whole chosen slot vector, not just their own target.
+        self.target_slots_scratch = std::iter::once(target.clone())
+            .chain(additional_targets.iter().cloned().map(Some))
+            .collect();
         let filter_violation = {
             let target_effect = if card.gift_promised {
                 card.definition.gift.as_ref().map(|g| &g.gifted_effect)
@@ -5932,6 +5955,7 @@ impl GameState {
                     .enumerate()
                     .any(|(idx, tgt)| slot_bad((idx + 1) as u8, tgt))
         };
+        self.target_slots_scratch.clear();
         if filter_violation {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
@@ -7451,20 +7475,18 @@ impl GameState {
             Some(t) => t,
             None => return,
         };
-        let events: Vec<GameEvent> = target
-            .into_iter()
-            .chain(additional_targets)
-            .filter_map(|t| match t {
-                Target::Permanent(id) => Some(GameEvent::BecameTarget {
-                    target: id,
-                    caster,
-                }),
-                _ => None,
-            })
-            .collect();
-        if !events.is_empty() {
-            self.dispatch_triggers_for_events(&events);
+        let slots: Vec<Target> = target.into_iter().chain(additional_targets).collect();
+        if slots.is_empty() {
+            return;
         }
+        // CR 601.2c — one "chose targets" event for the whole announcement,
+        // plus the per-object `BecameTarget`s.
+        let mut events = vec![GameEvent::ChoseTargets { chooser: caster, object: cast_card_id }];
+        events.extend(slots.into_iter().filter_map(|t| match t {
+            Target::Permanent(id) => Some(GameEvent::BecameTarget { target: id, caster }),
+            _ => None,
+        }));
+        self.dispatch_triggers_for_events(&events);
     }
 
     /// CR 702.21 — push a Ward triggered ability onto the stack for each
@@ -12705,7 +12727,11 @@ impl GameState {
             // the player has to actually pay X generic mana. Used by
             // Pernicious Deed's `{X}, Sacrifice this: …` activation,
             // future Walking Ballista-style `{X}` activations.
-            ability.mana_cost.with_x_value(x_value.unwrap_or(0))
+            match ability.x_mana_color {
+                // CR 601.2g — "spend only [colour] mana on X".
+                Some(c) => ability.mana_cost.with_x_value_colored(x_value.unwrap_or(0), c),
+                None => ability.mana_cost.with_x_value(x_value.unwrap_or(0)),
+            }
         } else {
             ability.mana_cost.clone()
         };
@@ -12972,6 +12998,9 @@ impl GameState {
         }
 
         let mut auto_mana_events = Vec::new();
+        // CR 106.6 — per-colour breakdown of what actually funded this
+        // activation, threaded to the resolving body (Protective Sphere).
+        let mut activation_mana_colors = Vec::new();
         if let Some(snapshot) = pre_snapshot {
             let forced_only = self.players[p].manual_mana;
             // Restricted mana may fund this only per the source's spend
@@ -12984,6 +13013,8 @@ impl GameState {
                 &ability_spend_kind,
                 spend_float,
             )?;
+            activation_mana_colors =
+                spent_by_color(&receipt.pool_before, &self.players[p].mana_pool);
             self.pay_life_cost(p, receipt.side_effects.life_lost);
             auto_mana_events = receipt.auto_events;
         }
@@ -13716,6 +13747,7 @@ impl GameState {
                     .mode(mode)
                     .x_value(activated_x)
                     .activated(true)
+                    .mana_spent_by_color(activation_mana_colors)
                     .build(),
             );
             // CR 702.21: Ward also fires on activated abilities targeting
@@ -13726,11 +13758,12 @@ impl GameState {
             // BecameTarget — fire per permanent target the activation
             // chose (CR 603.x). The unified dispatcher handles APNAP and
             // the trigger filter.
-            if let Some(Target::Permanent(target_id)) = &ability_target {
-                let evs = vec![GameEvent::BecameTarget {
-                    target: *target_id,
-                    caster: p,
-                }];
+            if ability_target.is_some() || !additional_targets.is_empty() {
+                let mut evs =
+                    vec![GameEvent::ChoseTargets { chooser: p, object: card_id }];
+                if let Some(Target::Permanent(target_id)) = &ability_target {
+                    evs.push(GameEvent::BecameTarget { target: *target_id, caster: p });
+                }
                 self.dispatch_triggers_for_events(&evs);
             }
             // CR 700.13 — activating a targeted ability against an opponent /

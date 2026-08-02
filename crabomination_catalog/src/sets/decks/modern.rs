@@ -47139,6 +47139,7 @@ pub fn burrenton_forge_tender() -> CardDefinition {
             sac_cost: true,
             effect: Effect::PreventAllDamageFromChosenSourceThisTurn {
                 filter: SelectionRequirement::HasColor(Color::Red),
+                gain_life_from_colors: vec![],
             },
             ..Default::default()
         }],

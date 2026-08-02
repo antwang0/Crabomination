@@ -3,6 +3,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
+    EquipBonus,
     EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, StaticAbility,
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
@@ -156,9 +157,8 @@ pub fn stand_or_fall() -> CardDefinition {
     }
 }
 
-/// Barrin's Spite — two creatures; their controller sacrifices one and the
-/// other bounces. (The printed "controlled by the same player" restriction on
-/// the second slot isn't enforced at cast time.)
+/// Barrin's Spite — two creatures controlled by the same player; their
+/// controller sacrifices one and the other bounces.
 pub fn barrins_spite() -> CardDefinition {
     sorcery(
         "Barrin's Spite",
@@ -166,7 +166,10 @@ pub fn barrins_spite() -> CardDefinition {
         Effect::ChooseOneAmong {
             what: Selector::Both(
                 Box::new(Selector::TargetFiltered { slot: 0, filter: R::Creature }),
-                Box::new(Selector::TargetFiltered { slot: 1, filter: R::Creature }),
+                Box::new(Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::SameControllerAsTargetSlot(0)),
+                }),
             ),
             chooser: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
             chosen: Box::new(Effect::SacrificeSelected { what: chosen_pile() }),
@@ -271,24 +274,30 @@ pub fn crystal_spray() -> CardDefinition {
     )
 }
 
-/// Samite Ministration — a prevention shield against one source. (The
-/// black/red lifegain rider is dropped.)
+/// Samite Ministration — a prevention shield against one source, refunding
+/// life for damage prevented from a black or red one.
 pub fn samite_ministration() -> CardDefinition {
     instant(
         "Samite Ministration",
         cost(&[generic(1), w()]),
-        Effect::PreventAllDamageFromChosenSourceThisTurn { filter: R::Any },
+        Effect::PreventAllDamageFromChosenSourceThisTurn {
+            filter: R::Any,
+            gain_life_from_colors: vec![Color::Black, Color::Red],
+        },
     )
 }
 
-/// Protective Sphere — a repeatable prevention shield against one source.
-/// (The colour-of-mana-spent restriction is dropped.)
+/// Protective Sphere — a repeatable prevention shield against one source that
+/// shares a colour with the mana spent on the activation.
 pub fn protective_sphere() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             life_cost: 1,
-            effect: Effect::PreventAllDamageFromChosenSourceThisTurn { filter: R::Any },
+            effect: Effect::PreventAllDamageFromChosenSourceThisTurn {
+                filter: R::SharesColorWithManaSpent,
+                gain_life_from_colors: vec![],
+            },
             ..Default::default()
         }],
         ..enchantment("Protective Sphere", cost(&[generic(2), w()]))
@@ -531,8 +540,7 @@ pub fn metathran_aerostat() -> CardDefinition {
     }
 }
 
-/// Atalya, Samite Master — {X} of prevention or {X} of life. (The
-/// white-mana-only spend restriction on X is dropped.)
+/// Atalya, Samite Master — {X} of prevention or {X} of life, X paid in white.
 pub fn atalya_samite_master() -> CardDefinition {
     CardDefinition {
         name: "Atalya, Samite Master",
@@ -548,6 +556,7 @@ pub fn atalya_samite_master() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[x()]),
             tap_cost: true,
+            x_mana_color: Some(Color::White),
             effect: Effect::ChooseMode(vec![
                 Effect::PreventNextDamage {
                     target: target_filtered(R::Creature),
@@ -739,8 +748,8 @@ pub fn spinal_embrace() -> CardDefinition {
     }
 }
 
-/// Pledge of Loyalty — the enchanted creature dodges the colours you had when
-/// the Aura landed.
+/// Pledge of Loyalty — the enchanted creature continuously dodges the colours
+/// of permanents its controller controls, keeping this Aura on.
 pub fn pledge_of_loyalty() -> CardDefinition {
     CardDefinition {
         subtypes: Subtypes {
@@ -748,11 +757,13 @@ pub fn pledge_of_loyalty() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
-        triggered_abilities: vec![etb(Effect::GrantProtectionFromColorsOf {
-            what: Selector::attached_to(Selector::This),
-            of: Selector::EachPermanent(R::ControlledByYou.and(R::OtherThanSource)),
-            duration: Duration::Permanent,
-        })],
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::ProtectionFromMatching(Box::new(
+                R::SharesColorWithPermanentYouControl,
+            ))],
+            protection_keeps_self: true,
+            ..Default::default()
+        }),
         ..enchantment("Pledge of Loyalty", cost(&[generic(1), w()]))
     }
 }
@@ -907,7 +918,7 @@ pub fn essence_leak() -> CardDefinition {
 pub fn psychic_battle() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::AnyPlayer),
+            event: EventSpec::new(EventKind::ChoseTargets, EventScope::AnyPlayer),
             effect: Effect::RevealTopGreatestMayChangeTargets,
         }],
         ..enchantment("Psychic Battle", cost(&[generic(3), u(), u()]))

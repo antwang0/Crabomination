@@ -46,6 +46,7 @@ pub enum CreatureType {
     Armadillo, Nautilus,
     Bear, Ape, Rat, Fungus, Snail, Treefolk, Giant, Ogre, Shaman, Druid,
     Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose, Clown, Dalek, Nomad,
+    Mystic,
     Doctor,
     Advisor, Assassin, Faerie, Skeleton, Spirit, Wall, Illusion,
     Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph, Demigod,
@@ -586,6 +587,8 @@ pub enum CounterType {
     /// Invasion's Temporal Distortion — a tap-tracking counter that blocks
     /// the next untap.
     Hourglass,
+    /// Kangee, Aerie Keeper's kicked-X counters, which pump other Birds.
+    Feather,
 }
 
 /// Every zone a card can occupy.
@@ -1603,6 +1606,9 @@ pub enum SelectionRequirement {
     /// (Scourge of Fleets' Islands). The count is taken from the evaluating
     /// player's battlefield.
     ToughnessAtMostYourCount(Box<SelectionRequirement>),
+    /// "Toughness less than or equal to the number of cards in your graveyard"
+    /// (Ghastly Demise). Counted from the evaluating player's graveyard.
+    ToughnessAtMostGraveyardCount,
     /// "Power X or less, where X is the number of [filter] you control"
     /// (Vedalken Shackles' Islands) — the power-side mirror of
     /// `ToughnessAtMostYourCount`.
@@ -1703,6 +1709,15 @@ pub enum SelectionRequirement {
     /// Shares a colour with the permanent sacrificed to pay this spell's
     /// additional cost (Mind Extraction). False with nothing sacrificed.
     SharesColorWithSacrificed,
+    /// Shares a colour with the mana spent on this activation's cost
+    /// (Protective Sphere). Concretized to an `Or` chain of `HasColor` at
+    /// resolution; colourless mana matches nothing.
+    SharesColorWithManaSpent,
+    /// CR 601.2c — cross-slot filter: controlled by the same player as the
+    /// target already chosen for slot `.0` ("two target creatures controlled
+    /// by the same player" — Barrin's Spite). Vacuously true while that slot
+    /// is unchosen, so it never blocks the first pick.
+    SameControllerAsTargetSlot(u8),
     /// The permanent's mana value equals the evaluating player's unspent
     /// (floating) mana — Glissa Sunseeker.
     ManaValueEqualsYourUnspentMana,
@@ -3499,6 +3514,11 @@ pub struct EquipBonus {
     /// so the 704.5m sweep skips that host entirely.
     #[serde(default)]
     pub protection_keeps_auras: bool,
+    /// CR 702.16k — "This effect doesn't remove this Aura" (Pledge of
+    /// Loyalty): the narrower sibling of `protection_keeps_auras`, exempting
+    /// only the granting Aura itself from the 704.5m shed.
+    #[serde(default)]
+    pub protection_keeps_self: bool,
     /// Triggered abilities granted to the equipped creature (CR 702.6e). Each
     /// fires as though printed on the equipped creature — `EventScope::
     /// SelfSource` reads the creature, and a `DealsCombatDamageToPlayer` body

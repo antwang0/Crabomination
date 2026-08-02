@@ -96,7 +96,11 @@ impl GameState {
         }) {
             return true;
         }
-        let ctx = crate::game::effects::EffectContext::for_ability(card.id, card.controller, None);
+        let mut ctx =
+            crate::game::effects::EffectContext::for_ability(card.id, card.controller, None);
+        // CR 702.32 — the gate may be "if this creature was kicked" (Prison
+        // Barricade), which reads the permanent's own cast-time flag.
+        ctx.kicked = card.kicked;
         card.definition.static_abilities.iter().any(|sa| {
             if let StaticEffect::CanAttackIgnoringDefenderWhile { condition } = &sa.effect {
                 self.evaluate_predicate(condition, &ctx)

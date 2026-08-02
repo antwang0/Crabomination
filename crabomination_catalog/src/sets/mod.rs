@@ -383,6 +383,7 @@ pub mod nms;
 pub mod nms2;
 pub mod nms3;
 pub mod nms4;
+pub mod ody;
 pub mod pls;
 pub mod pls2;
 pub mod pcy;

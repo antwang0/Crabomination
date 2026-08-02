@@ -1655,10 +1655,10 @@ impl GameState {
                                 && let Some(Target::Permanent(tid)) = &auto_target
                                 && self.battlefield_find(*tid).is_some()
                             {
-                                let evs = vec![GameEvent::BecameTarget {
-                                    target: *tid,
-                                    caster,
-                                }];
+                                let evs = vec![
+                                    GameEvent::ChoseTargets { chooser: caster, object: card_id },
+                                    GameEvent::BecameTarget { target: *tid, caster },
+                                ];
                                 self.dispatch_triggers_for_events(&evs);
                             }
                         }
@@ -1754,7 +1754,9 @@ impl GameState {
                 additional_targets,
                 activated: _,
                 trigger_player,
+                mana_spent_by_color,
             } => {
+                self.activation_mana_colors_scratch = mana_spent_by_color;
                 // CR 603.4 — re-check the intervening 'if' clause as the
                 // ability resolves. "If the condition isn't true at that
                 // time, the ability is removed from the stack and does
@@ -2659,6 +2661,7 @@ impl GameState {
             pl.double_your_source_damage_this_turn = false;
             // Turf Wound's land-play lock is turn-scoped.
             pl.cant_play_lands_this_turn = false;
+            pl.cant_cast_matching_this_turn.clear();
             // CR 700.13 — "committed a crime this turn" resets each turn.
             pl.committed_crime_this_turn = false;
             // CR 708 — "entered face down / turned face up this turn" resets.
@@ -4088,7 +4091,14 @@ impl GameState {
                             .as_ref()
                             .is_some_and(|b| b.protection_keeps_auras)
                 });
-                if !keeps_auras && self.is_protected_from(c.id, host) {
+                // CR 702.16k (narrow) — "this effect doesn't remove this
+                // Aura": the granting Aura exempts only itself.
+                let keeps_self = c
+                    .definition
+                    .equipped_bonus
+                    .as_ref()
+                    .is_some_and(|b| b.protection_keeps_self);
+                if !keeps_auras && !keeps_self && self.is_protected_from(c.id, host) {
                     return Some(c.id);
                 }
                 let filter = c.definition.aura_enchant_filter()?;

@@ -555,6 +555,21 @@ pub struct GameState {
     /// Firedancer).
     #[serde(skip)]
     pub(crate) trigger_event_player_scratch: Option<usize>,
+    /// Transient: per-colour mana spent paying the activation currently
+    /// resolving, stamped into `EffectContext.mana_spent_by_color`
+    /// (Protective Sphere's "shares a color with the mana spent").
+    #[serde(skip)]
+    pub(crate) activation_mana_colors_scratch: Vec<(crate::mana::Color, u32)>,
+    /// Transient: the targets chosen for each slot of the cast / activation
+    /// currently being validated, so a cross-slot filter
+    /// (`SameControllerAsTargetSlot` — Barrin's Spite) can see its sibling.
+    #[serde(skip)]
+    pub(crate) target_slots_scratch: Vec<Option<Target>>,
+    /// Seats whose library top has been revealed to everyone by a one-shot
+    /// effect (Aven Windreader). Cleared whenever that seat draws or the top
+    /// otherwise changes; see `reveal_library_top_for`.
+    #[serde(default)]
+    pub(crate) library_tops_revealed: Vec<usize>,
     /// Transient: id of the most-recently-created token within the current
     /// effect resolution. Set by `Effect::CreateToken` and read by
     /// `Selector::LastCreatedToken` so a follow-up `AddCounter` /
@@ -1123,12 +1138,11 @@ pub struct GameState {
     /// opponents of `controller`; cleared at `controller`'s untap.
     #[serde(default)]
     pub turn_scoped_spell_taxes: Vec<TurnScopedSpellTax>,
-    /// CR 615.7 — `(source, life-gain beneficiary, next-instance-only)`:
-    /// sources whose damage is prevented this turn (Burrenton Forge-Tender's
-    /// chosen source, Hallow's life refund, Awe Strike's single instance per
-    /// CR 615.8). Cleared at cleanup.
+    /// CR 615.7 — sources whose damage is prevented this turn (Burrenton
+    /// Forge-Tender's chosen source, Hallow's life refund, Awe Strike's single
+    /// instance per CR 615.8). Cleared at cleanup.
     #[serde(default)]
-    pub(crate) damage_prevented_sources: Vec<(CardId, Option<usize>, bool)>,
+    pub(crate) damage_prevented_sources: Vec<crate::game::types::PreventedSource>,
     /// CR 614 — turn-scoped replacements of what a land tap produces
     /// (Pale Moon, Harvest Mage). Applied at the mana-ability chokepoint;
     /// cleared at cleanup.
@@ -1616,6 +1630,9 @@ impl Clone for GameState {
             tapped_for_cost_power: self.tapped_for_cost_power,
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
             trigger_event_player_scratch: self.trigger_event_player_scratch,
+            activation_mana_colors_scratch: self.activation_mana_colors_scratch.clone(),
+            target_slots_scratch: self.target_slots_scratch.clone(),
+            library_tops_revealed: self.library_tops_revealed.clone(),
             last_created_token: self.last_created_token,
             last_die_roll: self.last_die_roll,
             extra_cast_reduction: self.extra_cast_reduction,
@@ -1862,6 +1879,9 @@ impl GameState {
             tapped_for_cost_power: None,
             trigger_event_amount_scratch: 0,
             trigger_event_player_scratch: None,
+            activation_mana_colors_scratch: Vec::new(),
+            target_slots_scratch: Vec::new(),
+            library_tops_revealed: Vec::new(),
             last_created_token: None,
             last_die_roll: 0,
             extra_cast_reduction: 0,
@@ -4231,6 +4251,16 @@ impl GameState {
                         {
                             amount = amount.saturating_sub(*n);
                         }
+                        // The Odyssey Sphere cycle — a colour-scoped shave.
+                        StaticEffect::ReduceColorDamageToYouBy { color, amount: n }
+                            if c.controller == p
+                                && matches!(ent, EntityRef::Player(_))
+                                && source_info
+                                    .as_ref()
+                                    .is_some_and(|(_, cs)| cs.contains(color)) =>
+                        {
+                            amount = amount.saturating_sub(*n);
+                        }
                         // Lashknife Barrier — the creature-side shave.
                         StaticEffect::ReduceDamageToYourCreaturesBy(n)
                             if c.controller == p
@@ -5257,10 +5287,9 @@ impl GameState {
         out
     }
 
-    /// Test/inspection accessor for the CR 615.7 chosen-source shields
-    /// (`(source, life-gain beneficiary, next-instance-only)`).
+    /// Test/inspection accessor for the CR 615.7 chosen-source shields.
     #[doc(hidden)]
-    pub fn damage_prevented_sources_debug(&self) -> Vec<(CardId, Option<usize>, bool)> {
+    pub fn damage_prevented_sources_debug(&self) -> Vec<crate::game::types::PreventedSource> {
         self.damage_prevented_sources.clone()
     }
 
@@ -11197,7 +11226,22 @@ impl GameState {
         })
     }
 
+    /// True while `seat`'s library top is public because a one-shot effect
+    /// revealed it (Aven Windreader) — the reveal lasts only as long as that
+    /// card stays on top.
+    pub(crate) fn library_top_revealed_by_effect(&self, seat: usize) -> bool {
+        self.library_tops_revealed.contains(&seat)
+    }
+
+    /// Test/inspection accessor for `library_top_revealed_by_effect`.
+    #[doc(hidden)]
+    pub fn library_top_revealed_by_effect_for_test(&self, seat: usize) -> bool {
+        self.library_top_revealed_by_effect(seat)
+    }
+
     pub fn draw_one(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
+        // A revealed top only stays public while it stays on top.
+        self.library_tops_revealed.retain(|s| *s != p);
         // CR 121.2b — a per-turn draw cap applies to *individual* card draws,
         // so it gates every draw source, not just `Effect::Draw`'s count.
         if self.draw_cap_for(p).is_some_and(|cap| self.players[p].cards_drawn_this_turn >= cap) {
@@ -13755,16 +13799,15 @@ impl GameState {
         // "becomes the target of a spell or ability" listeners (Tenured
         // Concocter); the cast and activated-ability paths already emit
         // this, triggered abilities previously never did.
-        let became: Vec<GameEvent> = target_slots
-            .iter()
-            .filter_map(|t| match t {
+        if !target_slots.is_empty() {
+            let mut became =
+                vec![GameEvent::ChoseTargets { chooser: controller, object: source }];
+            became.extend(target_slots.iter().filter_map(|t| match t {
                 Target::Permanent(id) if self.battlefield_find(*id).is_some() => {
                     Some(GameEvent::BecameTarget { target: *id, caster: controller })
                 }
                 _ => None,
-            })
-            .collect();
-        if !became.is_empty() {
+            }));
             self.dispatch_triggers_for_events(&became);
         }
     }
@@ -13890,8 +13933,11 @@ impl GameState {
                 Some(r) => r.clone(),
                 None => break,
             };
+            let filled: Vec<Option<Target>> =
+                std::iter::once(primary.clone()).chain(chosen.iter().cloned().map(Some)).collect();
             let is_legal = |t: &Target| -> bool {
                 self.evaluate_requirement_static(&req, t, controller, Some(source))
+                    && self.cross_slot_targets_ok(&req, t, &filled)
                     && self.check_target_legality(t, controller).is_ok()
             };
             // Player slots: an unclaimed player first (controller-biased),
@@ -16283,6 +16329,7 @@ impl GameState {
         ctx.targets.extend(additional_targets.iter().cloned());
         ctx.x_value = x_value;
         ctx.converged_value = converged_value;
+        ctx.mana_spent_by_color = std::mem::take(&mut self.activation_mana_colors_scratch);
         // CR 702.32 — an ETB/other trigger on a permanent reads the
         // source's `kicked` flag so "when ~ enters, if it was kicked, …"
         // riders (Goblin Bushwhacker) can branch on `SpellWasKicked`.
@@ -17375,6 +17422,8 @@ fn static_effect_to_effects(
             | StaticEffect::NoncombatDamageToOpponentsBonus { .. }
             | StaticEffect::HalveDamageToYou
             | StaticEffect::ReduceDamageToYouBy(_)
+            | StaticEffect::ReduceColorDamageToYouBy { .. }
+            | StaticEffect::ControllerMaxHandSizeReduced(_)
             | StaticEffect::ReduceDamageToYourCreaturesBy(_)
             | StaticEffect::AddDamageToOpponents { .. }
             | StaticEffect::AddDamageToOpponentsPerCounter { .. }

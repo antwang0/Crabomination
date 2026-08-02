@@ -2369,6 +2369,9 @@ pub enum EventKind {
     /// Concocter's "Whenever this creature becomes the target of a
     /// spell or ability an opponent controls, you may draw a card".
     BecameTarget,
+    /// CR 601.2c — "whenever a player chooses one or more targets": one event
+    /// per targeting decision, not per targeted object (Psychic Battle).
+    ChoseTargets,
     /// CR 702.29c — A card was cycled (the controller paid a cycling
     /// cost to discard it from hand and draw). This event is emitted
     /// from `GameState::cycle_card` *in addition* to `CardDiscarded`,
@@ -3985,6 +3988,14 @@ pub enum Effect {
     /// (Trapfinder's Trick). The reveal is knowledge-only; every match is
     /// discarded through the normal discard path so discard triggers fire.
     RevealHandDiscardAllMatching { who: PlayerRef, filter: SelectionRequirement },
+    /// "Target player reveals their hand" (Darigaaz, the Igniter). Knowledge
+    /// only: the hand becomes visible to the resolving controller for the rest
+    /// of the game via `hands_revealed_to`.
+    RevealHand { who: PlayerRef },
+    /// "Target player reveals the top card of their library" (Aven
+    /// Windreader). Knowledge only — the top card becomes visible to every
+    /// player for as long as it stays on top.
+    RevealTopOfLibrary { who: PlayerRef },
     /// Liar's Pendulum: name a card, then target opponent guesses whether a
     /// card with that name is in your hand. Reveal and draw when they guess
     /// wrong. The guess rides a `Decision::OptionalTrigger` asked of the
@@ -5006,6 +5017,9 @@ pub enum Effect {
     /// CR 305.1 — "Target player can't play lands this turn" (Turf Wound).
     /// Sets `Player.cant_play_lands_this_turn`, cleared at the turn boundary.
     PlayerCantPlayLandsThisTurn { player: PlayerRef },
+    /// "Target player can't cast [filter] spells this turn" (Cease-Fire).
+    /// Checked at the cast gate; cleared at cleanup.
+    PlayerCantCastMatchingThisTurn { who: PlayerRef, filter: SelectionRequirement },
     /// "Lands `who` controls don't untap during their next untap step"
     /// (Bontu's Last Reckoning). Adds one charge to
     /// `Player.lands_dont_untap_next_untap`; non-land permanents untap normally.
@@ -7168,8 +7182,13 @@ pub enum Effect {
     /// deal this turn." The source is chosen as the effect resolves among
     /// battlefield permanents and stack spells matching `filter` (AutoDecider
     /// picks a stack spell first, else the highest-power permanent).
-    /// Burrenton Forge-Tender.
-    PreventAllDamageFromChosenSourceThisTurn { filter: crate::card::SelectionRequirement },
+    /// Burrenton Forge-Tender. `gain_life_from_colors` adds Samite
+    /// Ministration's "whenever damage from a black or red source is prevented
+    /// this way, you gain that much life" rider (empty = no refund).
+    PreventAllDamageFromChosenSourceThisTurn {
+        filter: crate::card::SelectionRequirement,
+        gain_life_from_colors: Vec<crate::mana::Color>,
+    },
     /// "Put `amount` +1/+1 counters *or* charge counters on a permanent
     /// matching `onto` you control" (Dismantle) — both the counter kind and the
     /// recipient are picked as the effect resolves. A `wants_ui` controller

@@ -1708,6 +1708,30 @@ pub struct PreventionShield {
     pub redirect_to_player: Option<usize>,
 }
 
+/// CR 615.7 — a turn-long shield around one chosen damage *source*
+/// (Burrenton Forge-Tender, Hallow, Awe Strike, Protective Sphere).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PreventedSource {
+    pub source: CardId,
+    /// Seat that gains life equal to the damage prevented (Hallow). `None`
+    /// for a plain shield.
+    pub gain_life_to: Option<usize>,
+    /// CR 615.8 — the shield expires after soaking one damage event
+    /// (Awe Strike) rather than lasting the turn.
+    pub one_instance: bool,
+    /// Restricts `gain_life_to` to damage from a source of one of these
+    /// colours, rechecked at damage time (Samite Ministration's black-or-red
+    /// rider). Empty = no colour gate.
+    #[serde(default)]
+    pub gain_life_colors: Vec<crate::mana::Color>,
+}
+
+impl PreventedSource {
+    pub fn new(source: CardId) -> Self {
+        Self { source, gain_life_to: None, one_instance: false, gain_life_colors: Vec::new() }
+    }
+}
+
 /// CR 614 — "until end of turn, if a player taps a land for mana, it produces
 /// `output` instead of any other type and amount" (Pale Moon, Harvest Mage).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -2017,6 +2041,10 @@ pub enum GameEvent {
     /// ability is pushed). Used by SOS Tenured Concocter and any future
     /// "whenever this becomes the target of …" trigger.
     BecameTarget { target: CardId, caster: usize },
+    /// CR 601.2c / 602.2b — `chooser` finished choosing targets for a single
+    /// spell or ability (`object`). Fires ONCE per targeting decision, unlike
+    /// the per-object `BecameTarget` (Psychic Battle).
+    ChoseTargets { chooser: usize, object: CardId },
     /// CR 702.29c — `player` cycled `card_id` (paid the cycling cost
     /// and discarded the card to draw). Fires *in addition* to the
     /// `CardDiscarded` emission from the same activation, so cycle-
@@ -2179,6 +2207,11 @@ pub enum StackItem {
         /// right seat (CR 608.2b). `None` for events with no such player.
         #[serde(default)]
         trigger_player: Option<usize>,
+        /// Per-colour breakdown of the mana spent paying this *activation's*
+        /// cost (CR 106.6 — Protective Sphere's "shares a color with the mana
+        /// spent on this activation cost"). Empty for triggered abilities.
+        #[serde(default)]
+        mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
     },
 }
 
@@ -2202,6 +2235,7 @@ pub struct TriggerPush {
     intervening_if: Option<crate::card::Predicate>,
     activated: bool,
     trigger_player: Option<usize>,
+    mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
 }
 
 impl TriggerPush {
@@ -2221,6 +2255,7 @@ impl TriggerPush {
             intervening_if: None,
             activated: false,
             trigger_player: None,
+            mana_spent_by_color: Vec::new(),
         }
     }
     /// The player the firing event named (the damaged seat for a combat-damage
@@ -2270,6 +2305,11 @@ impl TriggerPush {
         self.intervening_if = p;
         self
     }
+    /// Per-colour mana spent paying an activation's cost (Protective Sphere).
+    pub fn mana_spent_by_color(mut self, m: Vec<(crate::mana::Color, u32)>) -> Self {
+        self.mana_spent_by_color = m;
+        self
+    }
     pub fn build(self) -> StackItem {
         StackItem::Trigger {
             source: self.source,
@@ -2286,6 +2326,7 @@ impl TriggerPush {
             additional_targets: self.additional_targets,
             activated: self.activated,
             trigger_player: self.trigger_player,
+            mana_spent_by_color: self.mana_spent_by_color,
         }
     }
 }

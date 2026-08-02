@@ -96,6 +96,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::PutIntoHandFromGraveyard, GameEvent::CardPutIntoHandFromGraveyard { .. }) => true,
         (EventKind::CardExiled, GameEvent::PermanentExiled { .. }) => true,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
+        (EventKind::ChoseTargets, GameEvent::ChoseTargets { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
         (EventKind::CardMilled, GameEvent::CardMilled { .. }) => true,
         (EventKind::ManifestedDread, GameEvent::ManifestedDread { .. }) => true,
@@ -655,6 +656,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // OpponentControl scope checks (Tenured Concocter wants
         // OpponentControl → caster is opponent of source's controller).
         GameEvent::BecameTarget { caster, .. } => Some(*caster),
+        GameEvent::ChoseTargets { chooser, .. } => Some(*chooser),
         // Sacrifice is performed by the controller of the sacrificed
         // permanent ("a player sacrifices a creature"). This routes the
         // YourControl / OpponentControl scope check correctly: a

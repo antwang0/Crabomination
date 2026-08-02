@@ -195,7 +195,7 @@ fn kangee_pumps_other_birds_per_counter() {
     })
     .expect("kicked cast");
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(kangee).unwrap().counter_count(CounterType::Charge), 2);
+    assert_eq!(g.battlefield_find(kangee).unwrap().counter_count(CounterType::Feather), 2);
     let bird = g.add_card_to_battlefield(0, catalog::rainbow_crow());
     let cp = g.computed_permanent(bird).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
@@ -472,4 +472,40 @@ fn void_clears_one_mana_value_everywhere() {
     assert!(g.battlefield.iter().any(|c| c.id == miss), "the 4-drop survived");
     assert!(g.players[1].hand.iter().all(|c| c.id != in_hand), "the 3-drop was discarded");
     assert!(g.players[1].hand.iter().any(|c| c.id == safe_land), "lands are exempt");
+}
+
+/// Prison Barricade's kicked half grants both the counter and the defender
+/// bypass; the unkicked copy stays home.
+#[test]
+fn prison_barricade_kicked_can_attack() {
+    let mut g = main_phase();
+    let plain = g.add_card_to_hand(0, catalog::prison_barricade());
+    cast(&mut g, 0, plain, None);
+    g.battlefield_find_mut(plain).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: plain,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_err(),
+        "an unkicked Wall still has defender"
+    );
+
+    let mut g = main_phase();
+    let kicked = g.add_card_to_hand(0, catalog::prison_barricade());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: kicked,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked cast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(kicked).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    g.battlefield_find_mut(kicked).unwrap().summoning_sick = false;
+    connect(&mut g, kicked);
+    assert_eq!(g.players[1].life, 18, "the kicked 2/4 Wall connected");
 }

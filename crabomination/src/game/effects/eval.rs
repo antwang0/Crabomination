@@ -2526,6 +2526,38 @@ impl GameState {
         })
     }
 
+    /// CR 601.2c — check the `SameControllerAsTargetSlot` constraints in `req`
+    /// against an explicit slot vector, for the `&self` auto-target walkers
+    /// that can't stamp `target_slots_scratch`.
+    pub(crate) fn cross_slot_targets_ok(
+        &self,
+        req: &SelectionRequirement,
+        target: &Target,
+        slots: &[Option<Target>],
+    ) -> bool {
+        use SelectionRequirement as R;
+        match req {
+            R::And(a, b) => {
+                self.cross_slot_targets_ok(a, target, slots)
+                    && self.cross_slot_targets_ok(b, target, slots)
+            }
+            R::SameControllerAsTargetSlot(slot) => {
+                let ctrl_of = |t: &Target| match t {
+                    Target::Permanent(cid) => self
+                        .battlefield_find(*cid)
+                        .map(|c| c.controller)
+                        .or_else(|| self.stack_spell_caster(*cid)),
+                    Target::Player(p) => Some(*p),
+                };
+                match slots.get(*slot as usize).and_then(|t| t.as_ref()) {
+                    Some(other) => ctrl_of(other).is_some() && ctrl_of(other) == ctrl_of(target),
+                    None => true,
+                }
+            }
+            _ => true,
+        }
+    }
+
     pub fn evaluate_requirement_static(
         &self,
         req: &SelectionRequirement,
@@ -2561,6 +2593,22 @@ impl GameState {
                     .unwrap_or(false),
                 Target::Player(p) => *p == controller,
             },
+            // CR 601.2c — "controlled by the same player as slot N". The
+            // already-chosen slots live in `target_slots_scratch`, stamped by
+            // the cast/activation validator; an unstamped slot passes.
+            R::SameControllerAsTargetSlot(slot) => {
+                let ctrl_of = |t: &Target| match t {
+                    Target::Permanent(cid) => self
+                        .battlefield_find(*cid)
+                        .map(|c| c.controller)
+                        .or_else(|| self.stack_spell_caster(*cid)),
+                    Target::Player(p) => Some(*p),
+                };
+                match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
+                    Some(other) => ctrl_of(other).is_some() && ctrl_of(other) == ctrl_of(target),
+                    None => true,
+                }
+            }
             R::ControlledByOpponent => match target {
                 Target::Permanent(cid) => self
                     .battlefield_find(*cid)
@@ -3006,6 +3054,16 @@ impl GameState {
                             .iter()
                             .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
                             .count() as i32;
+                        card.definition.is_creature()
+                            && self
+                                .computed_permanent(card.id)
+                                .map(|cp| cp.toughness)
+                                .unwrap_or_else(|| card.toughness())
+                                <= n
+                    }
+                    // Ghastly Demise — "toughness ≤ cards in your graveyard".
+                    R::ToughnessAtMostGraveyardCount => {
+                        let n = self.players[controller].graveyard.len() as i32;
                         card.definition.is_creature()
                             && self
                                 .computed_permanent(card.id)
@@ -3478,6 +3536,9 @@ impl GameState {
                     .as_ref()
                     .is_some_and(|cs| cs.iter().any(|c| colors.contains(c)))
             }
+            // Concretized before the walk (`choose_damage_prevention_source`)
+            // and slot-aware (`cross_slot_targets_ok`) respectively.
+            R::SharesColorWithManaSpent | R::SameControllerAsTargetSlot(_) => true,
             R::SharesColorWithPermanentYouControl => {
                 let colors = card.definition.printed_colors();
                 !colors.is_empty()
@@ -3511,6 +3572,15 @@ impl GameState {
                     .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
                     .count() as u32;
                 card.definition.cost.cmc() <= n
+            }
+            R::ToughnessAtMostGraveyardCount => {
+                let n = self.players[controller].graveyard.len() as i32;
+                card.definition.is_creature()
+                    && self
+                        .computed_permanent(card.id)
+                        .map(|cp| cp.toughness)
+                        .unwrap_or_else(|| card.toughness())
+                        <= n
             }
             R::ToughnessAtMostYourCount(inner) => {
                 let n = self

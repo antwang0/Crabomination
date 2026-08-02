@@ -310,6 +310,21 @@ impl ManaCost {
         }
     }
 
+    /// `with_x_value`, but each point of X becomes a coloured pip of `color`
+    /// — CR 601.2g's "spend only [colour] mana on X" (Atalya, Samite Master).
+    pub fn with_x_value_colored(&self, x_value: u32, color: Color) -> ManaCost {
+        ManaCost {
+            symbols: self
+                .symbols
+                .iter()
+                .flat_map(|s| match s {
+                    ManaSymbol::X => vec![ManaSymbol::Colored(color); x_value as usize],
+                    other => vec![*other],
+                })
+                .collect(),
+        }
+    }
+
     /// Subtract `amount` from this cost's total Generic pips, clamping at
     /// zero. Colored / colorless / hybrid / Phyrexian / snow / X pips are
     /// untouched — CR 601.2f and CR 117.7c forbid cost reductions from
