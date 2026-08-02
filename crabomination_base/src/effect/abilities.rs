@@ -2432,6 +2432,10 @@ pub struct ActivatedAbility {
     /// (Sunforger). Paid alongside `sac_cost` in `activate_ability`.
     #[serde(default)]
     pub unattach_cost: bool,
+    /// CR 902.5 — this ability functions while its source is in the command
+    /// zone (a Vanguard avatar).
+    #[serde(default)]
+    pub from_command_zone: bool,
     /// Optional gating predicate. When set, the activation is rejected
     /// before any cost is paid unless the predicate evaluates to true
     /// against the source/controller context. Used by activated abilities

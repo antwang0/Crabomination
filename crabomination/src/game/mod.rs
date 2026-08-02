@@ -2792,6 +2792,35 @@ impl GameState {
         ids
     }
 
+    /// CR 902.2–902.5 — seat `seat`'s Vanguard avatar: the card starts in the
+    /// command zone, its CR 211/212 modifiers adjust that player's maximum
+    /// hand size and starting life, and its abilities function from there.
+    /// (Static abilities from the command zone are not modelled — the shipped
+    /// avatars use activated and triggered abilities.)
+    pub fn seat_vanguard(
+        &mut self,
+        seat: usize,
+        def: crate::card::CardDefinition,
+    ) -> crate::card::CardId {
+        let id = crate::card::CardId(self.next_id);
+        self.next_id = self.next_id.saturating_add(1);
+        let (hand, life) = (def.hand_modifier, def.life_modifier);
+        // A command-zone avatar never leaves, so its "you have no maximum hand
+        // size" static (Chronatog Avatar) is applied once at seating.
+        let no_max = def.static_abilities.iter().any(|sa| {
+            matches!(sa.effect, crate::effect::StaticEffect::NoMaximumHandSize)
+        });
+        self.players[seat].command.push(crate::card::CardInstance::new(id, def, seat));
+        if no_max {
+            self.players[seat].max_hand_size = None;
+        } else if let Some(max) = self.players[seat].max_hand_size.as_mut() {
+            *max = (*max as i32 + hand).max(0) as usize;
+        }
+        self.players[seat].starting_life += life;
+        self.players[seat].life += life;
+        id
+    }
+
     // ── Replacement effects (Phase H) ─────────────────────────────────────
 
     /// Register `effect` with the engine. Returns the assigned id so the
@@ -13162,6 +13191,38 @@ impl GameState {
                                     | GameEvent::ManaAdded { .. }
                                     | GameEvent::ColorlessManaAdded { .. }
                             ),
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        // CR 902.5 — a Vanguard avatar's triggers fire from the command zone.
+        for player in &self.players {
+            for card in player.command.iter().filter(|c| c.definition.is_vanguard()) {
+                for ta in &card.definition.triggered_abilities {
+                    for ev in events {
+                        if is_event_hardcoded(ev, &ta.event) {
+                            continue;
+                        }
+                        if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                            candidates.push(TriggerCandidate {
+                                actor: None,
+                                source: card.id,
+                                effect: ta.effect.clone(),
+                                controller: card.owner,
+                                filter: ta.event.filter.clone(),
+                                subject: crate::game::effects::event_subject(ev, &ta.event.kind),
+                                event_amount: self.event_amount_for(ev),
+                                triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
+                                triggered_by_death: matches!(
+                                    ev,
+                                    GameEvent::CreatureDied { .. }
+                                        | GameEvent::CreatureSacrificed { .. }
+                                ),
+                                triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
+                                from_mana_ability: false,
                             });
                             break;
                         }

@@ -26,6 +26,9 @@ pub enum CardType {
     Instant,
     Sorcery,
     Kindred,
+    /// CR 313 — a Vanguard avatar. Never a permanent: it starts in the command
+    /// zone and its abilities function from there (CR 902.5).
+    Vanguard,
 }
 
 /// Supertypes that modify a card's identity and rules interactions.
@@ -2514,6 +2517,12 @@ pub struct CardDefinition {
     pub color_override: Option<Vec<Color>>,
     pub power: i32,
     pub toughness: i32,
+    /// CR 211 / 212 — a Vanguard's hand-size and starting-life modifiers,
+    /// applied by `GameState::seat_vanguard`. Zero for every other card.
+    #[serde(default)]
+    pub hand_modifier: i32,
+    #[serde(default)]
+    pub life_modifier: i32,
     pub base_loyalty: u32,
     /// CR 310.7 — printed defense of a Battle. The permanent enters with this
     /// many `CounterType::Defense` counters. 0 for non-battles.
@@ -4182,6 +4191,7 @@ impl CardDefinition {
     pub fn is_enchantment(&self) -> bool { self.card_types.contains(&CardType::Enchantment) }
     pub fn is_planeswalker(&self) -> bool { self.card_types.contains(&CardType::Planeswalker) }
     pub fn is_battle(&self) -> bool { self.card_types.contains(&CardType::Battle) }
+    pub fn is_vanguard(&self) -> bool { self.card_types.contains(&CardType::Vanguard) }
     pub fn is_permanent(&self) -> bool {
         self.card_types.iter().any(|t| {
             matches!(

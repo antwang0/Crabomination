@@ -669,6 +669,24 @@ impl GameState {
                 }
             }
         }
+        // CR 902.5 — a Vanguard avatar's step triggers fire from the command
+        // zone ("at the beginning of your upkeep" — Arcbound Overseer Avatar).
+        for (seat, player) in self.players.iter().enumerate() {
+            for c in player.command.iter().filter(|c| c.definition.is_vanguard()) {
+                for t in &c.definition.triggered_abilities {
+                    let scoped_to_owner = matches!(
+                        t.event.scope,
+                        EventScope::YourControl | EventScope::ActivePlayer | EventScope::SelfSource
+                    );
+                    if t.event.kind == kind
+                        && (matches!(t.event.scope, EventScope::AnyPlayer)
+                            || (scoped_to_owner && seat == active))
+                    {
+                        candidates.push((c.id, t.effect.clone(), seat, t.event.filter.clone()));
+                    }
+                }
+            }
+        }
         // CR 114 — step-keyed emblem triggers ("at the beginning of your
         // upkeep, draw a card"). "Your" scope fires only on the emblem
         // owner's step; `AnyPlayer` fires for every player's step.

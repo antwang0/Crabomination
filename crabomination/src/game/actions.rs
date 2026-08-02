@@ -10239,6 +10239,24 @@ impl GameState {
                 }
             }
         }
+        // CR 902.5 — a Vanguard avatar's cast trigger fires from the command
+        // zone (Serra Angel Avatar's "whenever you cast a spell, gain 2 life").
+        for (seat, pl) in self.players.iter().enumerate() {
+            for c in pl.command.iter().filter(|c| c.definition.is_vanguard()) {
+                for t in &c.definition.triggered_abilities {
+                    if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, seat) {
+                        candidates.push((
+                            c.id,
+                            seat,
+                            t.effect.clone(),
+                            t.event.filter.clone(),
+                            usize::MAX,
+                            false,
+                        ));
+                    }
+                }
+            }
+        }
         // CR — "Whenever you cast a multicolored spell, you may return this
         // from your graveyard to your hand" (the Dissension Eidolon cycle):
         // a `FromYourGraveyard`-scoped SpellCast trigger fires from its owner's
@@ -11627,26 +11645,33 @@ impl GameState {
         // hand when flagged `from_hand` (Spirit Guides' exile-to-pitch mana
         // abilities). We scan battlefield first; if missing, fall back to
         // graveyards then hands (any player's; ownership is verified below).
-        let (source_in_gy, source_in_hand, source_in_exile, source_owner) = {
+        let (source_in_gy, source_in_hand, source_in_exile, source_in_command, source_owner) = {
             let on_bf = self.battlefield.iter().any(|c| c.id == card_id);
             if on_bf {
-                (false, false, false, None)
+                (false, false, false, false, None)
             } else if let Some(o) = self
                 .players
                 .iter()
                 .position(|pl| pl.graveyard.iter().any(|c| c.id == card_id))
             {
-                (true, false, false, Some(o))
+                (true, false, false, false, Some(o))
             } else if let Some(o) = self
                 .players
                 .iter()
                 .position(|pl| pl.hand.iter().any(|c| c.id == card_id))
             {
-                (false, true, false, Some(o))
+                (false, true, false, false, Some(o))
             } else if let Some(owner) =
                 self.exile.iter().find(|c| c.id == card_id).map(|c| c.owner)
             {
-                (false, false, true, Some(owner))
+                (false, false, true, false, Some(owner))
+            // CR 902.5 — a Vanguard's abilities function from the command zone.
+            } else if let Some(o) = self
+                .players
+                .iter()
+                .position(|pl| pl.command.iter().any(|c| c.id == card_id))
+            {
+                (false, false, false, true, Some(o))
             } else {
                 return Err(GameError::CardNotOnBattlefield(card_id));
             }
@@ -11675,6 +11700,11 @@ impl GameState {
                 .ok_or(GameError::AbilityIndexOutOfBounds)?
         } else if source_in_exile {
             self.exile.iter()
+                .find(|c| c.id == card_id)
+                .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
+                .ok_or(GameError::AbilityIndexOutOfBounds)?
+        } else if source_in_command {
+            self.players[source_owner.unwrap()].command.iter()
                 .find(|c| c.id == card_id)
                 .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
                 .ok_or(GameError::AbilityIndexOutOfBounds)?
@@ -11777,6 +11807,9 @@ impl GameState {
                     .find(|c| c.id == card_id).map(|c| &c.definition)
             } else if source_in_exile {
                 self.exile.iter().find(|c| c.id == card_id).map(|c| &c.definition)
+            } else if source_in_command {
+                self.players[source_owner.unwrap()].command.iter()
+                    .find(|c| c.id == card_id).map(|c| &c.definition)
             } else {
                 self.battlefield.iter().find(|c| c.id == card_id).map(|c| &c.definition)
             };
@@ -11795,11 +11828,14 @@ impl GameState {
         if source_in_exile && !ability.from_exile {
             return Err(GameError::CardNotOnBattlefield(card_id));
         }
+        if source_in_command && !ability.from_command_zone {
+            return Err(GameError::CardNotOnBattlefield(card_id));
+        }
 
         // Only the controller (or graveyard/hand owner) can activate abilities,
         // except abilities flagged `opponents_only` (CR 602.5 — Detention
         // Vortex's escape clause), which only an opponent of the controller may.
-        if source_in_gy || source_in_hand || source_in_exile {
+        if source_in_gy || source_in_hand || source_in_exile || source_in_command {
             if source_owner != Some(p) {
                 return Err(GameError::NotYourPriority);
             }
@@ -11954,7 +11990,11 @@ impl GameState {
         // CR 602.5g/h — a creature's ability with a {T} or {Q} cost can't be
         // activated while the creature is summoning-sick, unless it has haste
         // or its controller has a Tyvar-style "as though they had haste" static.
-        if (ability.tap_cost || ability.untap_self_cost) && !source_in_gy && !source_in_hand {
+        if (ability.tap_cost || ability.untap_self_cost)
+            && !source_in_gy
+            && !source_in_hand
+            && !source_in_command
+        {
             let sick = self.battlefield_find(card_id).is_some_and(|c| {
                 c.summoning_sick
                     && self
@@ -11983,7 +12023,11 @@ impl GameState {
         // CR 602.5c — a permanent whose *computed* keyword set carries
         // `CantActivateAbilities` (Detention Vortex's Aura grant, etc.) can't
         // activate its non-mana abilities. Battlefield sources only.
-        if !is_mana_ability(&ability.effect) && !source_in_gy && !source_in_hand {
+        if !is_mana_ability(&ability.effect)
+            && !source_in_gy
+            && !source_in_hand
+            && !source_in_command
+        {
             let locked = self
                 .compute_battlefield()
                 .iter()
@@ -12000,7 +12044,7 @@ impl GameState {
         // payments / illegal targets don't burn the per-turn budget.
         // (Graveyard activations don't track per-card once-per-turn state
         // since the card may move between zones; the gate is no-op.)
-        if !source_in_gy && !source_in_hand && !source_in_exile && ability.once_per_turn {
+        if !source_in_gy && !source_in_hand && !source_in_exile && !source_in_command && ability.once_per_turn {
             let perm = self
                 .battlefield
                 .iter()
@@ -12014,7 +12058,7 @@ impl GameState {
         // abilities (the card stays in hand). The hand instance's
         // per-turn budget rides the global `triggered_once_per_turn_used`
         // set, which is cleared at turn cleanup.
-        if source_in_hand
+        if (source_in_hand || source_in_command)
             && ability.once_per_turn
             && self.triggered_once_per_turn_used.contains(&(card_id, ability_index))
         {
@@ -12024,7 +12068,7 @@ impl GameState {
         // CR 702.177 — Exhaust: an exhaust ability can be activated only once
         // per game. `exhausted_abilities` (never cleared at turn start) records
         // spent indices on the source permanent.
-        if !source_in_gy && !source_in_hand && !source_in_exile && (ability.exhaust || ability.activate_once) {
+        if !source_in_gy && !source_in_hand && !source_in_exile && !source_in_command && (ability.exhaust || ability.activate_once) {
             let perm = self
                 .battlefield
                 .iter()
@@ -13123,7 +13167,7 @@ impl GameState {
         // a permanent), so we reject any `tap_cost: true` ability from a
         // graveyard source as a guard against malformed card definitions.
         if ability.tap_cost {
-            if source_in_gy || source_in_hand || source_in_exile {
+            if source_in_gy || source_in_hand || source_in_exile || source_in_command {
                 return Err(GameError::CardIsTapped(card_id));
             }
             let perm = self
@@ -13255,8 +13299,9 @@ impl GameState {
         {
             card.once_per_turn_used.push(ability_index);
         }
-        // CR 702.56 — record a hand (Forecast) once-per-turn activation.
-        if ability.once_per_turn && source_in_hand {
+        // CR 702.56 / 902.5 — record a hand (Forecast) or command-zone
+        // (Vanguard) once-per-turn activation.
+        if ability.once_per_turn && (source_in_hand || source_in_command) {
             self.triggered_once_per_turn_used.insert((card_id, ability_index));
         }
         // CR 702.177 — record the exhaust activation (never cleared this game).

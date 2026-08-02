@@ -2358,10 +2358,9 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** Odyssey and **Torment** are complete (`set_gaps.py
-   ody` / `tor` at zero). **Judgment** (`sets::jud`) is at 18 gaps after four
-   waves — five of them are the Wish cycle, blocked on the sideboard zone
-   (Tier 10). Finish the rest, then pick the next block.
+0. **Next set to close.** The whole Odyssey block is done — Odyssey, Torment
+   and **Judgment** are all at zero (`set_gaps.py ody` / `tor` / `jud`). Pick
+   the next block (Onslaught is the natural follow-on).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2376,6 +2375,26 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **Judgment (JUD) complete** — `set_gaps.py jud` at zero (`sets::jud` +
+  `sets::jud2`, 121 cards; tests in `classic_sets/jud`). The closing wave
+  brought the Wish cycle (`Effect::WishToHand` + `exile_on_resolve`), the blue
+  prison enchantments and the graveyard rares. New primitives:
+  `Effect::{EachPlayerMayExileAnyNumberFromGraveyard, LoseLifePerCardInGraveyard,
+  ExileTopRepeatOnDuplicateNames, LoseAllButLifeRemembered,
+  CounterSpellExileMayPlayFree, ExileAnyNumberFromGraveyardOnSource,
+  UntapChosenPerCardInGraveyard, MayExileFromGraveyardElse,
+  CantAttackPlayerThisTurn, PreventAllDamageFromChosenColorGlobally,
+  ShamansTrance, FlipCoinBy}`,
+  `StaticEffect::{PermanentsDontUntap, GrantActivatedAbilityFromGraveyard}`,
+  `Value::RememberedAmountOfSource`, `DynamicPt::ExiledWithSourceTotals`, and a
+  per-creature filter on `Keyword::FlashbackTap`.
+- **Vanguard (CR 211 / 212 / 313 / 902)** — `CardType::Vanguard`,
+  `CardDefinition.{hand_modifier, life_modifier}` and
+  `GameState::seat_vanguard` seat an avatar in the command zone; its
+  activated (`ActivatedAbility.from_command_zone`), step and cast triggers
+  all function from there. Eight avatars in `sets::vanguard`; tests in
+  `core_rules/cr_recent66`. Residual: general static abilities from the
+  command zone (only `NoMaximumHandSize` is applied, at seating).
 - **Judgment (JUD) opened** — `set_gaps.py jud` 118 → 18 (`sets::jud`, 103
   cards, tests in `classic_sets/jud`). New:
   `StaticEffect::PreventDamageByRemovingCounters.single` (the Phantom cycle

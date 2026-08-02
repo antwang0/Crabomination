@@ -4796,6 +4796,22 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired
+- ✅ **CR 211 / 212 / 313 / 902 — Vanguard** — `CardType::Vanguard` +
+  `CardDefinition.{hand_modifier, life_modifier}`; `GameState::seat_vanguard`
+  seats the avatar in the command zone and applies both modifiers (and its
+  `NoMaximumHandSize` static). Its abilities function from there:
+  activated via `ActivatedAbility.from_command_zone`, step triggers via
+  `fire_step_triggers`, cast triggers via the SpellCast gather, other events
+  via `dispatch_triggers_for_events`. `sets::vanguard` (8 avatars);
+  `core_rules/cr_recent66`. ⏳ residual: general statics from the command zone.
+- ✅ **CR 102 — Players** — two-player opponents, team membership and the
+  no-teams "your team" collapse now carry conformance tests
+  (`cr_102_{2,3,4}_*`).
+- ✅ **CR 502.4 — "permanents don't untap"** — `StaticEffect::PermanentsDontUntap`
+  short-circuits `do_untap` for every seat while still clearing summoning
+  sickness (Mist of Stagnation; `cr_502_4_global_dont_untap_stops_every_seat`).
+  CR 502.2's active-player-only untap is covered by
+  `cr_502_2_only_the_active_player_untaps`.
 - ✅ **CR 104.3d — can't lose / can't win** — Angel's Grace's turn-scoped
   `Player.cant_lose_this_turn` (+ damage-to-1 floor) and the permanent
   `ControllerCant{Lose,Win}Game` statics (Platinum Angel, Abyssal Persecutor)
