@@ -2099,7 +2099,7 @@ fn decide_mode_by_outcome(
             continue;
         }
         let score = eval_material(&g, seat, w);
-        if best.map_or(true, |(b, _)| score > b) {
+        if best.is_none_or(|(b, _)| score > b) {
             best = Some((score, m));
         }
     }

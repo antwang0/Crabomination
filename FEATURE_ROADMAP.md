@@ -2389,8 +2389,10 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** The whole Odyssey block is done — Odyssey, Torment
    and **Judgment** are all at zero (`set_gaps.py ody` / `tor` / `jud`).
-   **Onslaught** (`sets::ons`) is open at 219 gaps after one wave of 47; the
-   remaining bulk is Morph and the tribal commons. Then Legions / Scourge.
+   **Onslaught** (`sets::ons` + `sets::ons2`) is open at ~154 gaps after two
+   waves (112 cards); the remaining bulk is the cycling spells with
+   "when you cycle this card" riders, the Crown/Courier cycles and the
+   Mistform shapeshifters. Then Legions / Scourge.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2404,6 +2406,13 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Onslaught (ONS) wave 2** — `set_gaps.py ons` 219 → ~154 (`sets::ons2`, 65
+  cards: the Morph commons, the tap-a-tribe activations, the Avatar cycle, the
+  tribal-count spells and the utility lands). New:
+  `DynamicPt::CreaturesOfTypeOnBattlefield { creature_type, also_graveyards }`
+  ("*/* equal to the number of [tribe] on the battlefield", with Soulless One's
+  all-graveyards rider).
 
 - **Onslaught (ONS) opened** — `set_gaps.py ons` 266 → 219 (`sets::ons`, 47
   cards; tests in `classic_sets/ons`). New: `EventSpec.dealer_filter`

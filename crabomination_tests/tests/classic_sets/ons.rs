@@ -694,3 +694,783 @@ fn onslaught_bodies_take_counters() {
     g.battlefield_find_mut(elf).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     assert_eq!(g.computed_permanent(elf).unwrap().power, 2);
 }
+
+// ── Wave 2 ───────────────────────────────────────────────────────────────────
+
+fn advance_to_attackers(g: &mut GameState) {
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
+/// Attack player 1 with `attacker` and resolve the combat-damage triggers.
+fn swing(g: &mut GameState, attacker: CardId) {
+    advance_to_attackers(g);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    drain_stack(g);
+}
+
+fn count_named(g: &GameState, controller: usize, name: &str) -> usize {
+    g.battlefield.iter().filter(|c| c.controller == controller && c.definition.name == name).count()
+}
+
+/// Destroy a battlefield permanent, firing its dies triggers.
+fn kill(g: &mut GameState, id: CardId) {
+    use crabomination::effect::{Effect, Selector};
+    let ctl = g.battlefield_find(id).unwrap().controller;
+    let ctx = crabomination::game::effects::EffectContext::for_ability(
+        id,
+        ctl,
+        Some(Target::Permanent(id)),
+    );
+    let ev = g.resolve_effect(&Effect::Destroy { what: Selector::Target(0) }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(g);
+}
+
+/// The Morph commons cast face down as 2/2s and flip up for their morph cost.
+#[test]
+fn ons_morph_bodies_cast_down_and_flip_up() {
+    for (make, name, up) in [
+        (catalog::battering_craghorn as fn() -> _, "Battering Craghorn", (3, 1)),
+        (catalog::crude_rampart, "Crude Rampart", (4, 5)),
+        (catalog::spined_basher, "Spined Basher", (3, 1)),
+        (catalog::spitting_gourna, "Spitting Gourna", (3, 4)),
+        (catalog::krosan_colossus, "Krosan Colossus", (9, 9)),
+        (catalog::towering_baloth, "Towering Baloth", (7, 6)),
+        (catalog::treespring_lorian, "Treespring Lorian", (5, 4)),
+    ] {
+        let mut g = main_phase();
+        let id = g.add_card_to_hand(0, make());
+        mana(&mut g, 0);
+        g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+        drain_stack(&mut g);
+        let fd = g.battlefield_find(id).expect("entered");
+        assert!(fd.face_down, "{name} entered face down");
+        assert_eq!((fd.power(), fd.toughness()), (2, 2), "{name} is a 2/2 face down");
+        mana(&mut g, 0);
+        g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up");
+        let cp = g.computed_permanent(id).unwrap();
+        assert_eq!((cp.power, cp.toughness), up, "{name} flips to its printed size");
+    }
+}
+
+/// The protection-from-a-tribe Morph creatures carry their printed protection.
+#[test]
+fn ons_tribal_protection_bodies() {
+    let mut g = main_phase();
+    for (make, tribe) in [
+        (catalog::fallen_cleric as fn() -> _, CreatureType::Cleric),
+        (catalog::foothill_guide, CreatureType::Goblin),
+        (catalog::riptide_biologist, CreatureType::Beast),
+    ] {
+        let id = g.add_card_to_battlefield(0, make());
+        assert!(
+            g.computed_permanent(id)
+                .unwrap()
+                .keywords
+                .contains(&Keyword::ProtectionFromCreatureType(tribe)),
+            "protection from {tribe:?}"
+        );
+    }
+}
+
+/// Ascending Aven can't block a ground creature.
+#[test]
+fn ascending_aven_blocks_only_fliers() {
+    let mut g = main_phase();
+    let aven = g.add_card_to_battlefield(1, catalog::ascending_aven());
+    let ground = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(ground);
+    advance_to_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ground,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(aven, ground)])).is_err(),
+        "the Aven can only block fliers"
+    );
+}
+
+/// Grinning Demon bleeds its controller for 2 each upkeep.
+#[test]
+fn grinning_demon_upkeep_drain() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::grinning_demon());
+    let before = g.players[0].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before - 2);
+}
+
+/// The combat-damage Morph creatures each fire their printed rider.
+#[test]
+fn ons_combat_damage_riders() {
+    // Headhunter strips a card; Silent Specter strips two.
+    for (make, discarded) in
+        [(catalog::headhunter as fn() -> _, 1), (catalog::silent_specter, 2)]
+    {
+        let mut g = main_phase();
+        let hitter = g.add_card_to_battlefield(0, make());
+        g.clear_sickness(hitter);
+        for _ in 0..3 {
+            g.add_card_to_hand(1, catalog::forest());
+        }
+        let before = g.players[1].hand.len();
+        swing(&mut g, hitter);
+        assert_eq!(g.players[1].hand.len(), before - discarded, "discard on connect");
+    }
+    // Cabal Executioner edicts the defender.
+    let mut g = main_phase();
+    let exec = g.add_card_to_battlefield(0, catalog::cabal_executioner());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(exec);
+    swing(&mut g, exec);
+    assert!(g.battlefield_find(victim).is_none(), "defender sacrificed a creature");
+    // Hystrodon draws.
+    let mut g = main_phase();
+    let hys = g.add_card_to_battlefield(0, catalog::hystrodon());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.clear_sickness(hys);
+    let before = g.players[0].hand.len();
+    swing(&mut g, hys);
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew on connect");
+}
+
+/// Skirk Commando shoots a creature the damaged player controls.
+#[test]
+fn skirk_commando_pings_a_defender_creature() {
+    let mut g = main_phase();
+    let commando = g.add_card_to_battlefield(0, catalog::skirk_commando());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.clear_sickness(commando);
+    swing(&mut g, commando);
+    assert!(g.battlefield_find(target).is_none(), "2 damage killed the 2/2");
+}
+
+/// Dawning Purist cracks an enchantment on connect.
+#[test]
+fn dawning_purist_destroys_an_enchantment() {
+    let mut g = main_phase();
+    let purist = g.add_card_to_battlefield(0, catalog::dawning_purist());
+    let ench = g.add_card_to_battlefield(1, catalog::dragon_roost());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.clear_sickness(purist);
+    swing(&mut g, purist);
+    assert!(g.battlefield_find(ench).is_none(), "enchantment destroyed");
+}
+
+/// The Avatar cycle sizes itself off every creature of its tribe in play —
+/// Soulless One also counts Zombie cards in graveyards.
+#[test]
+fn ons_avatar_cycle_counts_its_tribe() {
+    let mut g = main_phase();
+    let avatar = g.add_card_to_battlefield(0, catalog::heedless_one());
+    assert_eq!(g.computed_permanent(avatar).unwrap().power, 1, "counts itself");
+    g.add_card_to_battlefield(1, catalog::wirewood_elf()); // an opponent's Elf counts too
+    assert_eq!(g.computed_permanent(avatar).unwrap().power, 2);
+
+    let mut g = main_phase();
+    let soulless = g.add_card_to_battlefield(0, catalog::soulless_one());
+    g.add_card_to_graveyard(1, catalog::gluttonous_zombie());
+    assert_eq!(
+        g.computed_permanent(soulless).unwrap().power,
+        2,
+        "one in play plus one in a graveyard"
+    );
+}
+
+/// Doubtless One gains you life equal to the damage it deals.
+#[test]
+fn doubtless_one_drains_on_damage() {
+    let mut g = main_phase();
+    let one = g.add_card_to_battlefield(0, catalog::doubtless_one());
+    g.add_card_to_battlefield(0, catalog::ancestors_prophet()); // a second Cleric
+    g.clear_sickness(one);
+    let life = g.players[0].life;
+    swing(&mut g, one);
+    assert_eq!(g.players[0].life, life + 2, "gained life equal to its power");
+}
+
+/// The tap-a-tribe activations pay by tapping the named creatures.
+#[test]
+fn ancestors_prophet_taps_five_clerics_for_ten_life() {
+    let mut g = main_phase();
+    let prophet = g.add_card_to_battlefield(0, catalog::ancestors_prophet());
+    g.clear_sickness(prophet);
+    let mut clerics = vec![prophet];
+    for _ in 0..4 {
+        let c = g.add_card_to_battlefield(0, catalog::rotlung_reanimator());
+        g.clear_sickness(c);
+        clerics.push(c);
+    }
+    let life = g.players[0].life;
+    activate(&mut g, 0, prophet, 0, None);
+    assert_eq!(g.players[0].life, life + 10);
+    assert!(clerics.iter().all(|&c| g.battlefield_find(c).unwrap().tapped), "all five tapped");
+}
+
+/// Aphetto Grifter taps two Wizards to tap a permanent.
+#[test]
+fn aphetto_grifter_taps_a_permanent() {
+    let mut g = main_phase();
+    let grifter = g.add_card_to_battlefield(0, catalog::aphetto_grifter());
+    let helper = g.add_card_to_battlefield(0, catalog::nameless_one());
+    g.clear_sickness(grifter);
+    g.clear_sickness(helper);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, 0, grifter, 0, Some(Target::Permanent(victim)));
+    assert!(g.battlefield_find(victim).unwrap().tapped);
+}
+
+/// Birchlore Rangers turns two Elves into a mana of any color.
+#[test]
+fn birchlore_rangers_taps_elves_for_mana() {
+    let mut g = main_phase();
+    let rangers = g.add_card_to_battlefield(0, catalog::birchlore_rangers());
+    let elf = g.add_card_to_battlefield(0, catalog::wirewood_elf());
+    g.clear_sickness(rangers);
+    g.clear_sickness(elf);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rangers,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap two Elves");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}
+
+/// Gravespawn Sovereign reanimates out of any graveyard.
+#[test]
+fn gravespawn_sovereign_reanimates() {
+    let mut g = main_phase();
+    let sov = g.add_card_to_battlefield(0, catalog::gravespawn_sovereign());
+    g.clear_sickness(sov);
+    for _ in 0..4 {
+        let z = g.add_card_to_battlefield(0, catalog::gluttonous_zombie());
+        g.clear_sickness(z);
+    }
+    let corpse_id = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    activate(&mut g, 0, sov, 0, Some(Target::Permanent(corpse_id)));
+    assert_eq!(
+        g.battlefield_find(corpse_id).map(|c| c.controller),
+        Some(0),
+        "reanimated under your control"
+    );
+}
+
+/// Gangrenous Goliath buys itself back by tapping three Clerics.
+#[test]
+fn gangrenous_goliath_returns_from_the_graveyard() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        let c = g.add_card_to_battlefield(0, catalog::rotlung_reanimator());
+        g.clear_sickness(c);
+    }
+    let id = g.add_card_to_graveyard(0, catalog::gangrenous_goliath());
+    activate(&mut g, 0, id, 0, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "back in hand");
+}
+
+/// Skirk Fire Marshal's five-Goblin tap wipes the board and both players.
+#[test]
+fn skirk_fire_marshal_burns_everything() {
+    let mut g = main_phase();
+    let marshal = g.add_card_to_battlefield(0, catalog::skirk_fire_marshal());
+    g.clear_sickness(marshal);
+    for _ in 0..4 {
+        let gob = g.add_card_to_battlefield(0, catalog::reckless_one());
+        g.clear_sickness(gob);
+    }
+    let bystander = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life = g.players[1].life;
+    activate(&mut g, 0, marshal, 0, None);
+    assert!(g.battlefield_find(bystander).is_none(), "creatures took 10");
+    assert_eq!(g.players[1].life, life - 10, "players took 10");
+    assert!(g.battlefield_find(marshal).is_some(), "protection from red spared the Marshal");
+}
+
+/// Wirewood Pride and Feeding Frenzy scale off every creature of their tribe.
+#[test]
+fn ons_tribal_count_pumps() {
+    let mut g = main_phase();
+    let elf = g.add_card_to_battlefield(0, catalog::wirewood_elf());
+    g.add_card_to_battlefield(1, catalog::elvish_pioneer());
+    let pride = g.add_card_to_hand(0, catalog::wirewood_pride());
+    cast(&mut g, 0, pride, Some(Target::Permanent(elf)));
+    assert_eq!(g.computed_permanent(elf).unwrap().power, 3, "1/1 + two Elves");
+
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::gluttonous_zombie());
+    g.add_card_to_battlefield(0, catalog::spined_basher());
+    let frenzy = g.add_card_to_hand(0, catalog::feeding_frenzy());
+    cast(&mut g, 0, frenzy, Some(Target::Permanent(victim)));
+    assert!(g.battlefield_find(victim).is_none(), "-2/-2 killed the 2/2");
+}
+
+/// Profane Prayers drains for the number of Clerics on the battlefield.
+#[test]
+fn profane_prayers_drains_by_cleric_count() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::rotlung_reanimator());
+    g.add_card_to_battlefield(1, catalog::foothill_guide());
+    let spell = g.add_card_to_hand(0, catalog::profane_prayers());
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, theirs - 2);
+    assert_eq!(g.players[0].life, mine + 2);
+}
+
+/// Thunder of Hooves spares fliers and hits both players.
+#[test]
+fn thunder_of_hooves_spares_fliers() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::snapping_thragg()); // a Beast
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let flier = g.add_card_to_battlefield(1, catalog::screaming_seahawk());
+    let spell = g.add_card_to_hand(0, catalog::thunder_of_hooves());
+    let life = g.players[1].life;
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.battlefield_find(ground).unwrap().damage, 1, "ground creatures take X");
+    assert_eq!(g.battlefield_find(flier).unwrap().damage, 0, "fliers are spared");
+    assert_eq!(g.players[1].life, life - 1, "one Beast → 1 damage to each player");
+}
+
+/// Elvish Pioneer drops a basic land onto the battlefield tapped.
+#[test]
+fn elvish_pioneer_ramps_a_basic() {
+    let mut g = main_phase();
+    let land = g.add_card_to_hand(0, catalog::forest());
+    let pioneer = g.add_card_to_hand(0, catalog::elvish_pioneer());
+    cast(&mut g, 0, pioneer, None);
+    assert!(g.battlefield_find(land).is_some_and(|c| c.tapped), "basic entered tapped");
+}
+
+/// Doomed Necromancer sacrifices itself to reanimate.
+#[test]
+fn doomed_necromancer_reanimates() {
+    let mut g = main_phase();
+    let necro = g.add_card_to_battlefield(0, catalog::doomed_necromancer());
+    g.clear_sickness(necro);
+    let id = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    activate(&mut g, 0, necro, 0, Some(Target::Permanent(id)));
+    assert!(g.battlefield_find(id).is_some(), "reanimated");
+    assert!(g.battlefield_find(necro).is_none(), "the Necromancer sacrificed itself");
+}
+
+/// Rotlung Reanimator leaves a Zombie behind for every dying Cleric — itself
+/// included.
+#[test]
+fn rotlung_reanimator_mints_on_cleric_deaths() {
+    let mut g = main_phase();
+    let rot = g.add_card_to_battlefield(0, catalog::rotlung_reanimator());
+    let other = g.add_card_to_battlefield(0, catalog::foothill_guide());
+    kill(&mut g, other);
+    assert_eq!(count_named(&g, 0, "Zombie"), 1, "another Cleric died");
+    kill(&mut g, rot);
+    assert_eq!(count_named(&g, 0, "Zombie"), 2, "and its own death counts");
+}
+
+/// Aphetto Vulture stacks a Zombie back on top of your library when it dies.
+#[test]
+fn aphetto_vulture_restocks_a_zombie() {
+    let mut g = main_phase();
+    let vulture = g.add_card_to_battlefield(0, catalog::aphetto_vulture());
+    let zid = g.add_card_to_graveyard(0, catalog::gluttonous_zombie());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    kill(&mut g, vulture);
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(zid), "Zombie on top");
+}
+
+/// The "search your library for another copy" ETB cycle fetches its twin.
+#[test]
+fn ons_sibling_fetchers_find_their_twin() {
+    for make in [
+        catalog::daru_cavalier as fn() -> _,
+        catalog::avarax,
+        catalog::embermage_goblin,
+        catalog::screaming_seahawk,
+    ] {
+        let mut g = main_phase();
+        let twin = g.add_card_to_library(0, make());
+        let id = g.add_card_to_hand(0, make());
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::Bool(true),
+            DecisionAnswer::Search(Some(twin)),
+        ]));
+        cast(&mut g, 0, id, None);
+        assert!(g.players[0].hand.iter().any(|c| c.id == twin), "fetched the twin");
+    }
+}
+
+/// Stag Beetle enters sized by the rest of the board.
+#[test]
+fn stag_beetle_counts_the_other_creatures() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let beetle = g.add_card_to_hand(0, catalog::stag_beetle());
+    cast(&mut g, 0, beetle, None);
+    assert_eq!(g.computed_permanent(beetle).unwrap().power, 2, "two other creatures");
+}
+
+/// Unified Strike exiles an attacker only while your Soldier count covers it.
+#[test]
+fn unified_strike_gates_on_soldier_count() {
+    let mut g = main_phase();
+    let soldier = g.add_card_to_battlefield(1, catalog::ascending_aven()); // 3/2 Bird Soldier
+    g.clear_sickness(soldier);
+    g.active_player_idx = 1;
+    advance_to_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: soldier,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    let strike = g.add_card_to_hand(0, catalog::unified_strike());
+    cast(&mut g, 0, strike, Some(Target::Permanent(soldier)));
+    assert!(g.battlefield_find(soldier).is_some(), "power 3 > the lone Soldier: no exile");
+
+    g.add_card_to_battlefield(0, catalog::gustcloak_runner());
+    g.add_card_to_battlefield(0, catalog::catapult_squad());
+    let strike = g.add_card_to_hand(0, catalog::unified_strike());
+    cast(&mut g, 0, strike, Some(Target::Permanent(soldier)));
+    assert!(g.exile.iter().any(|c| c.id == soldier), "3 Soldiers now cover its power");
+}
+
+/// Ixidor's Will taxes by two per Wizard on the battlefield.
+#[test]
+fn ixidors_will_taxes_per_wizard() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::aphetto_grifter());
+    g.add_card_to_battlefield(1, catalog::nameless_one());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    mana(&mut g, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the Bolt");
+    let will = g.add_card_to_hand(0, catalog::ixidors_will());
+    g.players[1].mana_pool.empty();
+    cast(&mut g, 0, will, Some(Target::Permanent(bolt)));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "unpaid → countered");
+}
+
+/// Blackmail lets the caster pick the discard from three revealed cards.
+#[test]
+fn blackmail_picks_the_discard() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::blackmail());
+    let before = g.players[1].hand.len();
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].hand.len(), before - 1);
+}
+
+/// Dragon Roost mints a 5/5 flier.
+#[test]
+fn dragon_roost_makes_a_dragon() {
+    let mut g = main_phase();
+    let roost = g.add_card_to_battlefield(0, catalog::dragon_roost());
+    activate(&mut g, 0, roost, 0, None);
+    assert_eq!(count_named(&g, 0, "Dragon"), 1);
+}
+
+/// Starstorm sweeps for X and can be cycled away.
+#[test]
+fn starstorm_sweeps_for_x() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let big = g.add_card_to_battlefield(1, catalog::krosan_colossus());
+    let storm = g.add_card_to_hand(0, catalog::starstorm());
+    cast_x(&mut g, 0, storm, None, Some(3));
+    assert!(g.battlefield_find(victim).is_none(), "the 2/2 died");
+    assert!(g.battlefield_find(big).is_some(), "the 9/9 survived");
+}
+
+/// Pinpoint Avalanche's 4 damage ignores prevention shields.
+#[test]
+fn pinpoint_avalanche_ignores_prevention() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::krosan_colossus());
+    {
+        use crabomination::effect::{Effect, Selector, Value};
+        let ctx = crabomination::game::effects::EffectContext::for_ability(
+            victim,
+            1,
+            Some(Target::Permanent(victim)),
+        );
+        g.resolve_effect(
+            &Effect::PreventNextDamage { target: Selector::Target(0), amount: Value::Const(4) },
+            &ctx,
+        )
+        .unwrap();
+    }
+    let spell = g.add_card_to_hand(0, catalog::pinpoint_avalanche());
+    cast(&mut g, 0, spell, Some(Target::Permanent(victim)));
+    assert_eq!(
+        g.battlefield_find(victim).unwrap().damage,
+        4,
+        "the shield didn't stop it"
+    );
+}
+
+/// Unholy Grotto recycles a Zombie from the graveyard.
+#[test]
+fn unholy_grotto_restocks_a_zombie() {
+    let mut g = main_phase();
+    let grotto = g.add_card_to_battlefield(0, catalog::unholy_grotto());
+    let zid = g.add_card_to_graveyard(0, catalog::gluttonous_zombie());
+    activate(&mut g, 0, grotto, 1, Some(Target::Permanent(zid)));
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(zid));
+}
+
+/// Seaside Haven cashes a Bird in for a card.
+#[test]
+fn seaside_haven_draws_off_a_bird() {
+    let mut g = main_phase();
+    let haven = g.add_card_to_battlefield(0, catalog::seaside_haven());
+    let bird = g.add_card_to_battlefield(0, catalog::screaming_seahawk());
+    g.add_card_to_library(0, catalog::forest());
+    let hand = g.players[0].hand.len();
+    activate(&mut g, 0, haven, 1, None);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert!(g.battlefield_find(bird).is_none(), "the Bird was sacrificed");
+}
+
+/// Contested Cliffs sics a Beast on an opposing creature.
+#[test]
+fn contested_cliffs_fights() {
+    let mut g = main_phase();
+    let cliffs = g.add_card_to_battlefield(0, catalog::contested_cliffs());
+    let beast = g.add_card_to_battlefield(0, catalog::snapping_thragg()); // 3/3 Beast
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cliffs,
+        ability_index: 1,
+        target: Some(Target::Permanent(beast)),
+        additional_targets: vec![Target::Permanent(victim)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("fight");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "the 2/2 lost the fight");
+    assert_eq!(g.battlefield_find(beast).unwrap().damage, 2);
+}
+
+/// Grand Coliseum enters tapped and pings you for colored mana.
+#[test]
+fn grand_coliseum_hurts_for_color() {
+    let mut g = main_phase();
+    let land = g.add_card_to_hand(0, catalog::grand_coliseum());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped, "enters tapped");
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    let life = g.players[0].life;
+    activate(&mut g, 0, land, 1, None);
+    assert_eq!(g.players[0].life, life - 1, "colored mana costs a life");
+}
+
+/// Starlit Sanctum trades a Cleric for life or a drain.
+#[test]
+fn starlit_sanctum_cashes_in_clerics() {
+    let mut g = main_phase();
+    let sanctum = g.add_card_to_battlefield(0, catalog::starlit_sanctum());
+    g.add_card_to_battlefield(0, catalog::rotlung_reanimator()); // 2/2 Cleric
+    let life = g.players[0].life;
+    activate(&mut g, 0, sanctum, 1, None);
+    assert_eq!(g.players[0].life, life + 2, "gained its toughness");
+
+    let mut g = main_phase();
+    let sanctum = g.add_card_to_battlefield(0, catalog::starlit_sanctum());
+    g.add_card_to_battlefield(0, catalog::rotlung_reanimator());
+    let theirs = g.players[1].life;
+    activate(&mut g, 0, sanctum, 2, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, theirs - 2, "drained for its power");
+}
+
+/// Jareth grows to 11/14 when it blocks.
+#[test]
+fn jareth_grows_on_block() {
+    let mut g = main_phase();
+    let jareth = g.add_card_to_battlefield(0, catalog::jareth_leonine_titan());
+    let attacker = g.add_card_to_battlefield(1, catalog::krosan_colossus());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    advance_to_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(jareth, attacker)])).expect("block");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(jareth).unwrap();
+    assert_eq!((cp.power, cp.toughness), (11, 14), "+7/+7 on block");
+}
+
+/// Sage Aven and Aven Fateshaper both stack the top four.
+#[test]
+fn ons_top_four_lookers() {
+    let mut g = main_phase();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let aven = g.add_card_to_hand(0, catalog::sage_aven());
+    let lib = g.players[0].library.len();
+    cast(&mut g, 0, aven, None);
+    assert_eq!(g.players[0].library.len(), lib, "looking doesn't move cards");
+    let shaper = g.add_card_to_battlefield(0, catalog::aven_fateshaper());
+    activate(&mut g, 0, shaper, 0, None);
+    assert_eq!(g.players[0].library.len(), lib);
+}
+
+/// Discombobulate counters and then rearranges.
+#[test]
+fn discombobulate_counters() {
+    let mut g = main_phase();
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    mana(&mut g, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the Bolt");
+    let counter = g.add_card_to_hand(0, catalog::discombobulate());
+    cast(&mut g, 0, counter, Some(Target::Permanent(bolt)));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "countered");
+}
+
+/// The remaining wave-2 bodies ship with their printed keywords.
+#[test]
+fn ons_wave2_keyword_bodies() {
+    let mut g = main_phase();
+    let murkdiver = g.add_card_to_battlefield(0, catalog::anurid_murkdiver());
+    assert!(
+        g.computed_permanent(murkdiver)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::Landwalk(crabomination::card::LandType::Swamp))
+    );
+    let zombie = g.add_card_to_battlefield(0, catalog::gluttonous_zombie());
+    assert!(g.computed_permanent(zombie).unwrap().keywords.contains(&Keyword::Fear));
+    let bomber = g.add_card_to_battlefield(0, catalog::dive_bomber());
+    assert!(g.computed_permanent(bomber).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Dive Bomber sacrifices itself to shoot a blocker.
+#[test]
+fn dive_bomber_shoots_a_blocker() {
+    let mut g = main_phase();
+    let bomber = g.add_card_to_battlefield(0, catalog::dive_bomber());
+    g.clear_sickness(bomber);
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    advance_to_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    activate(&mut g, 0, bomber, 0, Some(Target::Permanent(attacker)));
+    assert!(g.battlefield_find(attacker).is_none(), "the attacker took 2");
+}
+
+/// Grassland Crusader, Elvish Pathcutter and Snarling Undorak each pump their
+/// printed tribe.
+#[test]
+fn ons_tribal_pumpers() {
+    let mut g = main_phase();
+    let crusader = g.add_card_to_battlefield(0, catalog::grassland_crusader());
+    g.clear_sickness(crusader);
+    let elf = g.add_card_to_battlefield(0, catalog::wirewood_elf());
+    activate(&mut g, 0, crusader, 0, Some(Target::Permanent(elf)));
+    assert_eq!(g.computed_permanent(elf).unwrap().power, 3);
+
+    let mut g = main_phase();
+    let cutter = g.add_card_to_battlefield(0, catalog::elvish_pathcutter());
+    let elf = g.add_card_to_battlefield(0, catalog::wirewood_elf());
+    activate(&mut g, 0, cutter, 0, Some(Target::Permanent(elf)));
+    assert!(
+        g.computed_permanent(elf)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::Landwalk(crabomination::card::LandType::Forest))
+    );
+
+    let mut g = main_phase();
+    let undorak = g.add_card_to_battlefield(0, catalog::snarling_undorak());
+    activate(&mut g, 0, undorak, 0, Some(Target::Permanent(undorak)));
+    assert_eq!(g.computed_permanent(undorak).unwrap().power, 4);
+}
+
+/// Spurred Wolverine taps two Beasts to grant first strike.
+#[test]
+fn spurred_wolverine_grants_first_strike() {
+    let mut g = main_phase();
+    let wolverine = g.add_card_to_battlefield(0, catalog::spurred_wolverine());
+    let beast = g.add_card_to_battlefield(0, catalog::snapping_thragg());
+    g.clear_sickness(wolverine);
+    g.clear_sickness(beast);
+    activate(&mut g, 0, wolverine, 0, Some(Target::Permanent(beast)));
+    assert!(g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Catapult Squad taps two Soldiers to shoot a combatant.
+#[test]
+fn catapult_squad_shoots_an_attacker() {
+    let mut g = main_phase();
+    let squad = g.add_card_to_battlefield(0, catalog::catapult_squad());
+    let soldier = g.add_card_to_battlefield(0, catalog::gustcloak_runner());
+    g.clear_sickness(squad);
+    g.clear_sickness(soldier);
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    advance_to_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    activate(&mut g, 0, squad, 0, Some(Target::Permanent(attacker)));
+    assert!(g.battlefield_find(attacker).is_none(), "the attacker took 2");
+}

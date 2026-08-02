@@ -7999,6 +7999,29 @@ impl GameState {
                     }).count() as i32;
                     (n, n)
                 }
+                crate::card::DynamicPt::CreaturesOfTypeOnBattlefield {
+                    creature_type,
+                    also_graveyards,
+                } => {
+                    let is_type = |c: &crate::card::CardInstance| {
+                        c.definition.subtypes.creature_types.contains(&creature_type)
+                            || c.has_keyword(&crate::card::Keyword::Changeling)
+                    };
+                    let mut n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.definition.is_creature() && is_type(c))
+                        .count() as i32;
+                    if also_graveyards {
+                        n += self
+                            .players
+                            .iter()
+                            .flat_map(|p| p.graveyard.iter())
+                            .filter(|c| c.definition.is_creature() && is_type(c))
+                            .count() as i32;
+                    }
+                    (n, n)
+                }
                 crate::card::DynamicPt::CreaturesOfSourceChosenType => {
                     let n = card.chosen_creature_type.map_or(0, |ct| {
                         self.battlefield.iter().filter(|c| {

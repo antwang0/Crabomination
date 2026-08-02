@@ -3901,6 +3901,14 @@ pub enum DynamicPt {
     /// controller) sharing the source's `chosen_creature_type`. Caller of
     /// the Hunt.
     CreaturesOfSourceChosenType,
+    /// Power = toughness = the number of `creature_type` creatures on the
+    /// battlefield, any controller; `also_graveyards` adds the matching
+    /// creature *cards* in every graveyard. The Onslaught Avatar cycle
+    /// (Doubtless One, Heedless One, Nameless One, Reckless One, Soulless One).
+    CreaturesOfTypeOnBattlefield {
+        creature_type: CreatureType,
+        also_graveyards: bool,
+    },
     /// Power = the number of lands of `land_type` on the battlefield (any
     /// controller); toughness = `base_t`. Coiling Woodworm (`*`/1).
     LandsOfTypeInPlayPower { land_type: LandType, base_t: i32 },
