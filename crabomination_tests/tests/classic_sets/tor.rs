@@ -578,3 +578,100 @@ fn mortal_combat_wins_at_twenty() {
     drain_stack(&mut g);
     assert!(g.game_over.is_some(), "the game ended");
 }
+
+/// Tainted Peak only makes coloured mana while you control a Swamp.
+#[test]
+fn tainted_peak_needs_a_swamp() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(0, catalog::tainted_peak());
+    assert!(g
+        .clone()
+        .perform_action(GameAction::ActivateAbility {
+            card_id: land,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    activate(&mut g, 0, land, 1, None);
+    assert!(g.players[0].mana_pool.total() >= 1, "the Swamp turned the ability on");
+}
+
+/// Petravark takes a land hostage and gives it back when it dies.
+#[test]
+fn petravark_holds_a_land() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let vark = g.add_card_to_battlefield(0, catalog::petravark());
+    g.fire_self_etb_triggers(vark, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "the land is gone");
+    let mut events = Vec::new();
+    g.destroy_permanent(vark, false, &mut events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_some(), "and comes back");
+}
+
+/// Psychotic Haze pings every creature and every player.
+#[test]
+fn psychotic_haze_sweeps_the_table() {
+    let mut g = main_phase();
+    let x1 = g.add_card_to_battlefield(0, catalog::mystic_familiar());
+    let spell = g.add_card_to_hand(0, catalog::psychotic_haze());
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.players[0].life, 19);
+    assert_eq!(g.players[1].life, 19);
+    assert_eq!(g.battlefield_find(x1).unwrap().damage, 1);
+}
+
+/// Skullscorch lets the target take 4 instead of pitching two cards.
+#[test]
+fn skullscorch_offers_the_damage_menu() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::skullscorch());
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    let took_damage = g.players[1].life == 16;
+    let discarded = g.players[1].hand.len() == 1;
+    assert!(took_damage || discarded, "one half of the menu was paid");
+}
+
+/// Strength of Lunacy pumps its host and walls off white.
+#[test]
+fn strength_of_lunacy_grants_protection() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::strength_of_lunacy());
+    cast(&mut g, 0, aura, Some(Target::Permanent(bear)));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3));
+    assert!(cp.keywords.contains(&Keyword::Protection(Color::White)));
+}
+
+/// Sickening Dreams sweeps for the number of cards discarded.
+#[test]
+fn sickening_dreams_sweeps_for_x() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..2 {
+        g.add_card_to_hand(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::sickening_dreams());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast for X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "the 2/2 took 2");
+    assert_eq!(g.players[1].life, 18);
+}

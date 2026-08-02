@@ -1423,3 +1423,337 @@ pub fn pay_no_heed() -> CardDefinition {
         },
     )
 }
+
+// ── Wave 4 ──────────────────────────────────────────────────────────────────
+
+/// The Tainted land cycle — {T}: Add {C}, or a coloured pair while you control
+/// a Swamp.
+fn tainted_land(name: &'static str, colors: Vec<Color>) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                condition: Some(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        R::ControlledByYou
+                            .and(R::HasLandType(crate::card::LandType::Swamp)),
+                    ),
+                    n: Value::Const(1),
+                }),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::OfColors(colors, Value::Const(1)),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Tainted Field — {W} or {B} while you control a Swamp.
+pub fn tainted_field() -> CardDefinition {
+    tainted_land("Tainted Field", vec![Color::White, Color::Black])
+}
+
+/// Tainted Isle — {U} or {B} while you control a Swamp.
+pub fn tainted_isle() -> CardDefinition {
+    tainted_land("Tainted Isle", vec![Color::Blue, Color::Black])
+}
+
+/// Tainted Peak — {B} or {R} while you control a Swamp.
+pub fn tainted_peak() -> CardDefinition {
+    tainted_land("Tainted Peak", vec![Color::Black, Color::Red])
+}
+
+/// Tainted Wood — {B} or {G} while you control a Swamp.
+pub fn tainted_wood() -> CardDefinition {
+    tainted_land("Tainted Wood", vec![Color::Black, Color::Green])
+}
+
+/// Petravark — {3}{R} 2/2. Sits on a land until it leaves.
+pub fn petravark() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(R::Land),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
+        ..creature(
+            "Petravark",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Nightmare, CreatureType::Beast],
+            2,
+            2,
+        )
+    }
+}
+
+/// Slithery Stalker — {1}{B}{B} 1/1 swampwalker that jails a green or white
+/// creature an opponent controls.
+pub fn slithery_stalker() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Landwalk(crate::card::LandType::Swamp)],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                R::Creature
+                    .and(R::ControlledByOpponent)
+                    .and(R::HasColor(Color::Green).or(R::HasColor(Color::White))),
+            ),
+            return_to: crate::card::ExileReturnZone::Battlefield,
+        })],
+        ..creature(
+            "Slithery Stalker",
+            cost(&[generic(1), b(), b()]),
+            vec![CreatureType::Nightmare, CreatureType::Horror],
+            1,
+            1,
+        )
+    }
+}
+
+/// "Deals `amount` damage to each creature and each player."
+fn sweep_everything(amount: Value) -> Effect {
+    Effect::Seq(vec![
+        Effect::ForEach {
+            selector: Selector::EachPermanent(R::Creature),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: amount.clone(),
+            }),
+        },
+        Effect::ForEach {
+            selector: Selector::Player(PlayerRef::EachPlayer),
+            body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount }),
+        },
+    ])
+}
+
+/// Psychotic Haze — {2}{B}{B}. A one-point sweep, with Madness.
+pub fn psychotic_haze() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Madness(cost(&[generic(1), b()]))],
+        ..instant("Psychotic Haze", cost(&[generic(2), b(), b()]), sweep_everything(Value::Const(1)))
+    }
+}
+
+/// Sickening Dreams — {1}{B}. Discard X, sweep for X.
+pub fn sickening_dreams() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::DiscardXFromCost],
+        ..sorcery(
+            "Sickening Dreams",
+            cost(&[x(), b()]),
+            sweep_everything(Value::XFromCost),
+        )
+    }
+}
+
+/// Pyromania — {2}{R}. Random discard or cash in for a ping.
+pub fn pyromania() -> CardDefinition {
+    let ping = || Effect::DealDamage {
+        to: crate::effect::shortcut::target_any(),
+        amount: Value::Const(1),
+    };
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), r()]),
+                discard_cost: Some((R::Any, 1)),
+                discard_cost_random: true,
+                effect: ping(),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), r()]),
+                sac_cost: true,
+                effect: ping(),
+                ..Default::default()
+            },
+        ],
+        ..enchantment("Pyromania", cost(&[generic(2), r()]))
+    }
+}
+
+/// Rancid Earth — {1}{B}{B}. Stone Rain that sweeps past Threshold.
+pub fn rancid_earth() -> CardDefinition {
+    sorcery(
+        "Rancid Earth",
+        cost(&[generic(1), b(), b()]),
+        Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Land) },
+            Effect::If {
+                cond: threshold(),
+                then: Box::new(sweep_everything(Value::Const(1))),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Skywing Aven — {2}{U} 2/1 flier that buys itself back for a card.
+pub fn skywing_aven() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Skywing Aven",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Bird, CreatureType::Soldier],
+            2,
+            1,
+        )
+    }
+}
+
+/// Sonic Seizure — {R}. Three damage for a random card.
+pub fn sonic_seizure() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::DiscardRandom { count: 1 }],
+        ..instant(
+            "Sonic Seizure",
+            cost(&[r()]),
+            Effect::DealDamage {
+                to: crate::effect::shortcut::target_any(),
+                amount: Value::Const(3),
+            },
+        )
+    }
+}
+
+/// Waste Away — {4}{B}. Discard a card, shrink a creature to death.
+pub fn waste_away() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
+            count: 1,
+            filter: None,
+        }],
+        ..instant(
+            "Waste Away",
+            cost(&[generic(4), b()]),
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(-5),
+                toughness: Value::Const(-5),
+                duration: Duration::EndOfTurn,
+            },
+        )
+    }
+}
+
+/// Skullscorch — {R}{R}. Two random cards, or four to the face.
+pub fn skullscorch() -> CardDefinition {
+    sorcery(
+        "Skullscorch",
+        cost(&[r(), r()]),
+        Effect::UnlessPlayerPays {
+            who: PlayerRef::Target(0),
+            cost: crate::card::WardCost::DamageFromSource(4),
+            then: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+                random: true,
+            }),
+            if_paid: None,
+        },
+    )
+}
+
+/// The Madness Aura pair — a stat boost plus protection from a colour.
+fn madness_aura(
+    name: &'static str,
+    c: ManaCost,
+    madness: ManaCost,
+    power: i32,
+    toughness: i32,
+    protection: Color,
+) -> CardDefinition {
+    CardDefinition {
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Madness(madness)],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power,
+            toughness,
+            keywords: vec![Keyword::Protection(protection)],
+            ..Default::default()
+        }),
+        ..enchantment(name, c)
+    }
+}
+
+/// Strength of Isolation — {1}{W} Aura. +1/+2 and protection from black.
+pub fn strength_of_isolation() -> CardDefinition {
+    madness_aura(
+        "Strength of Isolation",
+        cost(&[generic(1), w()]),
+        cost(&[w()]),
+        1,
+        2,
+        Color::Black,
+    )
+}
+
+/// Strength of Lunacy — {1}{B} Aura. +2/+1 and protection from white.
+pub fn strength_of_lunacy() -> CardDefinition {
+    madness_aura(
+        "Strength of Lunacy",
+        cost(&[generic(1), b()]),
+        cost(&[b()]),
+        2,
+        1,
+        Color::White,
+    )
+}
+
+/// Teroh's Faithful — {3}{W} 1/4. Four life on the way in.
+pub fn terohs_faithful() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(4),
+        })],
+        ..creature(
+            "Teroh's Faithful",
+            cost(&[generic(3), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            4,
+        )
+    }
+}
+
+/// Unhinge — {2}{B}. A discard and a card.
+pub fn unhinge() -> CardDefinition {
+    sorcery(
+        "Unhinge",
+        cost(&[generic(2), b()]),
+        Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(1),
+                random: false,
+            },
+            draw(1),
+        ]),
+    )
+}
