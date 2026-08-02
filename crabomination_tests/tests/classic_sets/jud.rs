@@ -341,3 +341,175 @@ fn epic_struggle_wins_at_twenty_creatures() {
     drain_stack(&mut g);
     assert!(g.is_game_over() && g.players[0].is_alive(), "you win at twenty creatures");
 }
+
+/// A Phantom trades exactly one counter per damage event, however big.
+#[test]
+fn phantom_centaur_sheds_one_counter_per_hit() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(0, catalog::phantom_centaur());
+    cast(&mut g, 0, spell, None);
+    let centaur = g.battlefield.iter().find(|c| c.definition.name == "Phantom Centaur").unwrap().id;
+    let cp = g.computed_permanent(centaur).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 3), "2/0 plus three counters");
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Permanent(centaur)));
+    let cp = g.computed_permanent(centaur).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 2), "three damage cost exactly one counter");
+    assert_eq!(g.battlefield_find(centaur).unwrap().damage, 0, "the damage was prevented");
+}
+
+/// Phantom Nantuko can rebuild its own counters.
+#[test]
+fn phantom_nantuko_regrows_counters() {
+    let mut g = main_phase();
+    let nantuko = g.add_card_to_battlefield(0, catalog::phantom_nantuko());
+    g.battlefield_find_mut(nantuko).unwrap().summoning_sick = false;
+    let before = g.computed_permanent(nantuko).unwrap().power;
+    activate(&mut g, 0, nantuko, 0, None);
+    assert_eq!(g.computed_permanent(nantuko).unwrap().power, before + 1);
+}
+
+/// Forcemage Advocate pays an opponent a card for a +1/+1 counter.
+#[test]
+fn forcemage_advocate_trades_a_card_for_a_counter() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mage = g.add_card_to_battlefield(0, catalog::forcemage_advocate());
+    g.battlefield_find_mut(mage).unwrap().summoning_sick = false;
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage,
+        ability_index: 0,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![Target::Permanent(mine)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "they got the card back");
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3, "and you got the counter");
+}
+
+/// Mirari's Wake anthems the team and doubles a land tap.
+#[test]
+fn miraris_wake_anthems_and_doubles_mana() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::miraris_wake());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap the Forest");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "the Wake doubled it");
+}
+
+/// Mirror Wall buys its way out of Defender for a turn.
+#[test]
+fn mirror_wall_can_be_let_off_the_leash() {
+    let mut g = main_phase();
+    let wall = g.add_card_to_battlefield(0, catalog::mirror_wall());
+    assert!(g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+    activate(&mut g, 0, wall, 0, None);
+    assert!(!g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+}
+
+/// Nantuko Monastery only animates past Threshold.
+#[test]
+fn nantuko_monastery_animates_at_threshold() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(0, catalog::nantuko_monastery());
+    mana(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: land,
+            ability_index: 1,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "closed before Threshold"
+    );
+    fill_graveyard(&mut g, 0);
+    activate(&mut g, 0, land, 1, None);
+    let cp = g.computed_permanent(land).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "it's still a land");
+}
+
+/// Quiet Speculation stocks a graveyard with flashback cards.
+#[test]
+fn quiet_speculation_stocks_flashback() {
+    let mut g = main_phase();
+    let a = g.add_card_to_library(0, catalog::ray_of_revelation());
+    let b = g.add_card_to_library(0, catalog::canopy_claws());
+    g.add_card_to_library(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::quiet_speculation());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(a)),
+        DecisionAnswer::Search(Some(b)),
+        DecisionAnswer::Search(None),
+    ]));
+    cast(&mut g, 0, spell, Some(Target::Player(0)));
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.id == a || c.id == b).count(), 2);
+}
+
+/// Rats' Feast eats X cards out of one graveyard.
+#[test]
+fn rats_feast_eats_x_cards() {
+    let mut g = main_phase();
+    for _ in 0..4 {
+        g.add_card_to_graveyard(1, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::rats_feast());
+    cast_x(&mut g, 0, spell, Some(Target::Player(1)), Some(3));
+    assert_eq!(g.players[1].graveyard.len(), 1);
+}
+
+/// Masked Gorgon gives green and white creatures protection from Gorgons.
+#[test]
+fn masked_gorgon_walls_off_green_and_white() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::masked_gorgon());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(
+        g.computed_permanent(bear)
+            .unwrap()
+            .keywords
+            .iter()
+            .any(|k| matches!(k, Keyword::ProtectionFromMatching(_)))
+    );
+}
+
+/// Nomad Mythmaker replays an Aura out of a graveyard.
+#[test]
+fn nomad_mythmaker_replays_an_aura() {
+    let mut g = main_phase();
+    let aura = g.add_card_to_graveyard(1, catalog::cagemail());
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mythmaker = g.add_card_to_battlefield(0, catalog::nomad_mythmaker());
+    g.battlefield_find_mut(mythmaker).unwrap().summoning_sick = false;
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mythmaker,
+        ability_index: 0,
+        target: Some(Target::Permanent(aura)),
+        additional_targets: vec![Target::Permanent(host)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(aura).map(|c| c.attached_to), Some(Some(host)));
+}

@@ -3086,6 +3086,7 @@ pub fn ugins_conjurant() -> CardDefinition {
             description: "If damage would be dealt to this while it has a +1/+1 counter, prevent it and remove that many +1/+1 counters.",
             effect: StaticEffect::PreventDamageByRemovingCounters {
                 kind: CounterType::PlusOnePlusOne,
+                single: false,
             },
         }],
         ..Default::default()

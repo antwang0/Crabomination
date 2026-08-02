@@ -3,7 +3,7 @@
 //! `classic_sets/jud`.
 
 use crate::card::{
-    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CreatureType,
+    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, EquipBonus, Keyword, LandType, Predicate, SelectionRequirement as R,
     StaticAbility, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Zone,
 };
@@ -995,4 +995,475 @@ pub fn balthor_the_defiled() -> CardDefinition {
             2,
         )
     }
+}
+
+// ── The Phantom cycle ───────────────────────────────────────────────────────
+
+/// "Enters with N +1/+1 counters. If damage would be dealt to this creature,
+/// prevent that damage and remove a +1/+1 counter from it."
+fn phantom(
+    name: &'static str,
+    c: ManaCost,
+    types: Vec<CreatureType>,
+    counters: i32,
+    keywords: Vec<Keyword>,
+) -> CardDefinition {
+    CardDefinition {
+        keywords,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(counters))),
+        static_abilities: vec![StaticAbility {
+            description: "Damage to this is prevented; remove a +1/+1 counter instead.",
+            effect: StaticEffect::PreventDamageByRemovingCounters {
+                kind: CounterType::PlusOnePlusOne,
+                single: true,
+            },
+        }],
+        ..creature(name, c, types, 0, 0)
+    }
+}
+
+/// Phantom Nomad — {1}{W} 0/0 with two counters.
+pub fn phantom_nomad() -> CardDefinition {
+    phantom(
+        "Phantom Nomad",
+        cost(&[generic(1), w()]),
+        vec![CreatureType::Spirit, CreatureType::Nomad],
+        2,
+        vec![],
+    )
+}
+
+/// Phantom Flock — {3}{W}{W} 0/0 flier with three counters.
+pub fn phantom_flock() -> CardDefinition {
+    phantom(
+        "Phantom Flock",
+        cost(&[generic(3), w(), w()]),
+        vec![CreatureType::Bird, CreatureType::Soldier, CreatureType::Spirit],
+        3,
+        vec![Keyword::Flying],
+    )
+}
+
+/// Phantom Tiger — {2}{G} 1/0 with two counters.
+pub fn phantom_tiger() -> CardDefinition {
+    CardDefinition {
+        power: 1,
+        ..phantom(
+            "Phantom Tiger",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Cat, CreatureType::Spirit],
+            2,
+            vec![],
+        )
+    }
+}
+
+/// Phantom Centaur — {2}{G}{G} 2/0 pro-black with three counters.
+pub fn phantom_centaur() -> CardDefinition {
+    CardDefinition {
+        power: 2,
+        ..phantom(
+            "Phantom Centaur",
+            cost(&[generic(2), g(), g()]),
+            vec![CreatureType::Centaur, CreatureType::Spirit],
+            3,
+            vec![Keyword::Protection(Color::Black)],
+        )
+    }
+}
+
+/// Phantom Nantuko — {2}{G} 0/0 trampler that grows itself.
+pub fn phantom_nantuko() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..phantom(
+            "Phantom Nantuko",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Insect, CreatureType::Spirit],
+            2,
+            vec![Keyword::Trample],
+        )
+    }
+}
+
+/// Phantom Nishoba — {5}{G}{W} 0/0 trampling lifelink with seven counters.
+pub fn phantom_nishoba() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamage, EventScope::SelfSource),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::TriggerEventAmount },
+        }],
+        ..phantom(
+            "Phantom Nishoba",
+            cost(&[generic(5), g(), w()]),
+            vec![CreatureType::Cat, CreatureType::Beast, CreatureType::Spirit],
+            7,
+            vec![Keyword::Trample],
+        )
+    }
+}
+
+// ── The Advocate cycle ──────────────────────────────────────────────────────
+
+/// "{T}: Return `n` target cards from an opponent's graveyard to their hand.
+/// [payoff]" — the Judgment Advocates buy their effect with graveyard hate in
+/// reverse.
+fn advocate(
+    name: &'static str,
+    c: ManaCost,
+    types: Vec<CreatureType>,
+    p: i32,
+    t: i32,
+    give_back: u8,
+    payoff: Effect,
+) -> CardDefinition {
+    let mut steps: Vec<Effect> = (0..give_back)
+        .map(|slot| Effect::Move {
+            what: Selector::TargetFiltered {
+                slot,
+                filter: R::InGraveyard.and(R::OwnedByYou.negate()),
+            },
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        })
+        .collect();
+    steps.push(payoff);
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(steps),
+            ..Default::default()
+        }],
+        ..creature(name, c, types, p, t)
+    }
+}
+
+/// Forcemage Advocate — {1}{G} 2/1. One card back for a +1/+1 counter.
+pub fn forcemage_advocate() -> CardDefinition {
+    advocate(
+        "Forcemage Advocate",
+        cost(&[generic(1), g()]),
+        vec![CreatureType::Centaur, CreatureType::Shaman],
+        2,
+        1,
+        1,
+        Effect::AddCounter {
+            what: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
+    )
+}
+
+/// Nullmage Advocate — {2}{G} 2/3. Two cards back for a Naturalize.
+pub fn nullmage_advocate() -> CardDefinition {
+    advocate(
+        "Nullmage Advocate",
+        cost(&[generic(2), g()]),
+        vec![CreatureType::Insect, CreatureType::Druid],
+        2,
+        3,
+        2,
+        Effect::Destroy {
+            what: Selector::TargetFiltered {
+                slot: 2,
+                filter: R::Artifact.or(R::Enchantment),
+            },
+        },
+    )
+}
+
+/// Pulsemage Advocate — {2}{W} 1/3. Three cards back for a reanimation.
+pub fn pulsemage_advocate() -> CardDefinition {
+    advocate(
+        "Pulsemage Advocate",
+        cost(&[generic(2), w()]),
+        vec![CreatureType::Human, CreatureType::Cleric],
+        1,
+        3,
+        3,
+        Effect::Move {
+            what: Selector::TargetFiltered {
+                slot: 3,
+                filter: R::InGraveyard.and(R::Creature).and(R::OwnedByYou),
+            },
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+    )
+}
+
+/// Shieldmage Advocate — {2}{W} 1/3. One card back for a damage shield.
+pub fn shieldmage_advocate() -> CardDefinition {
+    advocate(
+        "Shieldmage Advocate",
+        cost(&[generic(2), w()]),
+        vec![CreatureType::Human, CreatureType::Cleric],
+        1,
+        3,
+        1,
+        Effect::PreventAllDamageFromChosenSourceThisTurn {
+            filter: R::Any,
+            gain_life_from_colors: vec![],
+        },
+    )
+}
+
+// ── The rest of wave 2 ──────────────────────────────────────────────────────
+
+/// Aven Warcraft — {2}{W}. +0/+2 for the team, plus a colour of protection
+/// past Threshold.
+pub fn aven_warcraft() -> CardDefinition {
+    instant(
+        "Aven Warcraft",
+        cost(&[generic(2), w()]),
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+                power: Value::Const(0),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: threshold(),
+                then: Box::new(Effect::GrantProtectionFromChosenColor {
+                    what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+    )
+}
+
+/// Laquatus's Disdain — {1}{U}. Counter a flashback, and a card.
+pub fn laquatuss_disdain() -> CardDefinition {
+    instant(
+        "Laquatus's Disdain",
+        cost(&[generic(1), u()]),
+        Effect::Seq(vec![
+            Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack.and(R::SpellNotCastFromHand)),
+            },
+            draw(1),
+        ]),
+    )
+}
+
+/// Masked Gorgon — {4}{B} 5/5 that green and white can't touch, and that
+/// can't be touched back past Threshold.
+pub fn masked_gorgon() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Green and white creatures have protection from Gorgons.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        R::Creature
+                            .and(R::HasColor(Color::Green).or(R::HasColor(Color::White))),
+                    ),
+                    keyword: Keyword::ProtectionFromMatching(Box::new(R::HasCreatureType(
+                        CreatureType::Gorgon,
+                    ))),
+                },
+            },
+            threshold_pump(0, 0, vec![
+                Keyword::Protection(Color::Green),
+                Keyword::Protection(Color::White),
+            ]),
+        ],
+        ..creature("Masked Gorgon", cost(&[generic(4), b()]), vec![CreatureType::Gorgon], 5, 5)
+    }
+}
+
+/// Mirari's Wake — {3}{G}{W}. An anthem and a mana doubler in one.
+pub fn miraris_wake() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+                    power: 1,
+                    toughness: 1,
+                },
+            },
+            StaticAbility {
+                description: "Whenever you tap a land for mana, add one of the same.",
+                effect: StaticEffect::ExtraManaOnLandTap {
+                    enchanted_only: false,
+                    filter: R::Land.and(R::ControlledByYou),
+                    extra: crate::effect::ExtraManaKind::Mirror,
+                    while_monarch: false,
+                },
+            },
+        ],
+        ..enchantment("Mirari's Wake", cost(&[generic(3), g(), w()]))
+    }
+}
+
+/// Mirror Wall — {3}{U} 3/4 Defender that white mana lets off the leash.
+pub fn mirror_wall() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            effect: Effect::LoseKeywordThisTurn {
+                what: Selector::This,
+                keyword: Keyword::Defender,
+            },
+            ..Default::default()
+        }],
+        ..creature("Mirror Wall", cost(&[generic(3), u()]), vec![CreatureType::Wall], 3, 4)
+    }
+}
+
+/// Nantuko Monastery — a land that stands up as a 4/4 first striker past
+/// Threshold.
+pub fn nantuko_monastery() -> CardDefinition {
+    CardDefinition {
+        name: "Nantuko Monastery",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[g(), w()]),
+                condition: Some(threshold()),
+                effect: Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(4),
+                    toughness: Value::Const(4),
+                    creature_types: vec![CreatureType::Insect, CreatureType::Monk],
+                    keywords: vec![Keyword::FirstStrike],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Nantuko Tracer — {1}{G} 2/1 that bottoms a graveyard card.
+pub fn nantuko_tracer() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Put a card from a graveyard on the bottom of its owner's library?".into(),
+            body: Box::new(Effect::Move {
+                what: target_filtered(R::InGraveyard),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOfMoved,
+                    pos: LibraryPosition::Bottom,
+                },
+            }),
+        })],
+        ..creature(
+            "Nantuko Tracer",
+            cost(&[generic(1), g()]),
+            vec![CreatureType::Insect, CreatureType::Druid],
+            2,
+            1,
+        )
+    }
+}
+
+/// Nomad Mythmaker — {2}{W} 2/2 that replays Auras out of any graveyard.
+pub fn nomad_mythmaker() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            tap_cost: true,
+            effect: Effect::AttachAuraFromGraveyardTo {
+                aura: target_filtered(
+                    R::InGraveyard.and(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura)),
+                ),
+                host: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Nomad Mythmaker",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Human, CreatureType::Nomad, CreatureType::Cleric],
+            2,
+            2,
+        )
+    }
+}
+
+/// Quiet Speculation — {1}{U}. Stock a graveyard with flashback.
+pub fn quiet_speculation() -> CardDefinition {
+    sorcery(
+        "Quiet Speculation",
+        cost(&[generic(1), u()]),
+        Effect::SearchUpToN {
+            who: PlayerRef::Target(0),
+            filter: R::HasFlashback,
+            to: ZoneDest::Graveyard,
+            count: Value::Const(3),
+        },
+    )
+}
+
+/// Rats' Feast — {X}{B}. Eat X cards out of one graveyard.
+pub fn rats_feast() -> CardDefinition {
+    sorcery(
+        "Rats' Feast",
+        cost(&[x(), b()]),
+        Effect::MoveChosen {
+            from: Selector::CardsInZone {
+                who: PlayerRef::Target(0),
+                zone: Zone::Graveyard,
+                filter: R::Any,
+            },
+            filter: None,
+            count: Value::XFromCost,
+            up_to: true,
+            to: ZoneDest::Exile,
+        },
+    )
+}
+
+/// Ray of Revelation — {1}{W}. Naturalize an enchantment, twice.
+pub fn ray_of_revelation() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flashback(cost(&[g()]))],
+        ..instant(
+            "Ray of Revelation",
+            cost(&[generic(1), w()]),
+            Effect::Destroy { what: target_filtered(R::Enchantment) },
+        )
+    }
+}
+
+/// Serene Sunset — {X}{G}. Fog X attackers.
+pub fn serene_sunset() -> CardDefinition {
+    instant(
+        "Serene Sunset",
+        cost(&[x(), g()]),
+        Effect::ApplyToTargets {
+            max_targets: 8,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::PreventCombatDamageByTargetThisTurn {
+                target: Selector::Target(0),
+            }),
+        },
+    )
 }

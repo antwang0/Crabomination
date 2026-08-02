@@ -2099,7 +2099,15 @@ pub enum StaticEffect {
     /// counter on it, prevent that damage and remove that many [kind]
     /// counters from it." Polukranos, Unchained. Consulted at both damage
     /// funnels for the source permanent itself.
-    PreventDamageByRemovingCounters { kind: crate::card::CounterType },
+    PreventDamageByRemovingCounters {
+        kind: crate::card::CounterType,
+        /// Remove exactly *one* counter per damage event rather than one per
+        /// point of damage — the Judgment Phantom cycle ("prevent that damage.
+        /// Remove a +1/+1 counter from this creature"). Polukranos, Unchained
+        /// removes "that many", so it leaves this `false`.
+        #[serde(default)]
+        single: bool,
+    },
     /// Mindsplice Apparatus — "[filter] spells you cast cost {1} less to
     /// cast for each [kind] counter on this artifact."
     CostReductionPerCounterOnSource {

@@ -311,6 +311,7 @@ pub fn polukranos_unchained() -> CardDefinition {
                           prevent it and remove that many counters",
             effect: crate::effect::StaticEffect::PreventDamageByRemovingCounters {
                 kind: CounterType::PlusOnePlusOne,
+                single: false,
             },
         }],
         activated_abilities: vec![ActivatedAbility {
