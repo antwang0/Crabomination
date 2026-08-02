@@ -8054,6 +8054,10 @@ in the topical sections above, are:
   mana+life costs; MDFC back-face cost in the cast-button tooltip when flipped.
 
 ### Server
+- `PlayerView.face_down_cast_cost` reports the real morph price (the flat {3}
+  less any `FaceDownSpellsCostLess` static — Dream Chisel), so the client can
+  label the "cast face down" affordance instead of assuming {3}. Client-side
+  rendering of that label is still to do.
 - Trigger-filter debug logging (`TriggerFiltered { source, kind, scope, reason }`);
   a mana-paid-for-optional audit event; per-cast-face metrics. (Snapshot
   round-trip coverage for each run's new `#[serde(default)]` fields now lands

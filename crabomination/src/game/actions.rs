@@ -4462,6 +4462,23 @@ impl GameState {
     /// The card is set face down (its real definition stashed) before going on
     /// the stack, so it's a nameless colorless 2/2 creature spell and enters the
     /// battlefield face down; turn it up later for its Morph cost.
+    /// CR 702.36b — the generic mana a face-down cast costs `seat`: the flat
+    /// {3}, less every `FaceDownSpellsCostLess` static they control (Dream
+    /// Chisel). Surfaced as `PlayerView.face_down_cast_cost`.
+    pub fn face_down_cast_cost(&self, seat: usize) -> u32 {
+        let reduction: u32 = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter_map(|sa| match sa.effect {
+                crate::effect::StaticEffect::FaceDownSpellsCostLess { amount } => Some(amount),
+                _ => None,
+            })
+            .sum();
+        3u32.saturating_sub(reduction)
+    }
+
     pub(crate) fn cast_face_down(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         let has_morph = self
@@ -4478,20 +4495,8 @@ impl GameState {
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
-        // CR 702.36b — the flat {3} morph cast, less any
-        // `FaceDownSpellsCostLess` reduction (Dream Chisel).
-        let reduction: u32 = self
-            .battlefield
-            .iter()
-            .filter(|c| c.controller == p)
-            .flat_map(|c| &c.definition.static_abilities)
-            .filter_map(|sa| match sa.effect {
-                crate::effect::StaticEffect::FaceDownSpellsCostLess { amount } => Some(amount),
-                _ => None,
-            })
-            .sum();
         let cost = crate::mana::ManaCost {
-            symbols: vec![crate::mana::ManaSymbol::Generic(3u32.saturating_sub(reduction))],
+            symbols: vec![crate::mana::ManaSymbol::Generic(self.face_down_cast_cost(p))],
         };
         let forced_only = self.players[p].manual_mana;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;

@@ -592,9 +592,9 @@ pub fn spawn_decision_ui(
                 .collect();
             spawn_divide_damage_modal(&mut commands, &ui_fonts, &title, *total, noun, &rows, &state.divide);
         }
-        DecisionWire::ChooseCreatureType { suggestions, .. } => {
+        DecisionWire::ChooseCreatureType { suggestions, excluded, .. } => {
             state.spawned_for = Some(key);
-            spawn_creature_type_modal(&mut commands, &ui_fonts, suggestions);
+            spawn_creature_type_modal(&mut commands, &ui_fonts, suggestions, excluded);
         }
         DecisionWire::CoinFlip { .. } => {
             state.spawned_for = Some(key);
@@ -3695,17 +3695,23 @@ fn spawn_creature_type_modal(
     commands: &mut Commands,
     ui_fonts: &UiFonts,
     suggestions: &[crabomination::card::CreatureType],
+    excluded: &[crabomination::card::CreatureType],
 ) {
     let panel = spawn_modal_panel(commands, 420.0);
     let fonts18 = ui_fonts.tf(18.0);
     let fonts14 = ui_fonts.tf(14.0);
-    let types: Vec<crabomination::card::CreatureType> = suggestions.to_vec();
+    // CR 205.3m — a forbidden type is never offered, and the title says so
+    // ("other than Wall").
+    let types: Vec<crabomination::card::CreatureType> =
+        suggestions.iter().copied().filter(|t| !excluded.contains(t)).collect();
+    let title = if excluded.is_empty() {
+        "Choose a creature type".to_string()
+    } else {
+        let names: Vec<String> = excluded.iter().map(|t| format!("{t:?}")).collect();
+        format!("Choose a creature type other than {}", names.join(" or "))
+    };
     commands.entity(panel).with_children(|p| {
-        p.spawn((
-            Text::new("Choose a creature type"),
-            fonts18.clone(),
-            TextColor(theme::TEXT_PRIMARY),
-        ));
+        p.spawn((Text::new(title), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
         p.spawn(Node {
             flex_direction: FlexDirection::Row,
             flex_wrap: FlexWrap::Wrap,

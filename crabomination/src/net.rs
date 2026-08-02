@@ -507,10 +507,15 @@ pub struct ClientView {
     #[serde(default)]
     pub hand_activatable: Vec<CardId>,
     /// CR 702.36 — CardIds in the viewer's hand with Morph/Megamorph that can
-    /// be cast face down for {3} right now. Lets the client offer "cast face
-    /// down". Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// be cast face down right now. Lets the client offer "cast face down".
+    /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub morphable_hand: Vec<CardId>,
+    /// Generic mana a face-down cast currently costs the viewer — {3} by
+    /// default, less any `FaceDownSpellsCostLess` static (Dream Chisel). Lets
+    /// the client label the "cast face down" affordance with the real price.
+    #[serde(default)]
+    pub face_down_cast_cost: u32,
     /// CR 708.5 — face-down permanents the viewer controls that can be turned
     /// face up right now (turn-up cost payable). Lets the client offer "turn
     /// face up". Empty off-priority. `#[serde(default)]` for snapshot back-compat.

@@ -164,6 +164,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         activatable_permanents: affordances.activatable_permanents,
         hand_activatable: affordances.hand_activatable,
         morphable_hand: affordances.morphable,
+        face_down_cast_cost: state.face_down_cast_cost(viewer_seat),
         turn_up_able: affordances.turn_up_able,
         reinforceable_hand: affordances.reinforceable,
         discard_activatable_hand: affordances.discard_activatable,
@@ -3099,6 +3100,17 @@ mod tests {
         assert_eq!(v.players[0].devotion[2], 3, "devotion to black = 3");
         assert_eq!(v.players[0].devotion[0], 0, "no white devotion");
         assert_eq!(v.players[1].devotion[2], 0, "opponent has no devotion");
+    }
+
+    /// CR 702.36b — the view reports the real morph price, discounted by a
+    /// `FaceDownSpellsCostLess` static the viewer controls (Dream Chisel).
+    #[test]
+    fn face_down_cast_cost_reflects_a_morph_discount() {
+        let mut state = two_player_game();
+        assert_eq!(project(&state, 0).face_down_cast_cost, 3, "the flat morph cast");
+        state.add_card_to_battlefield(0, catalog::dream_chisel());
+        assert_eq!(project(&state, 0).face_down_cast_cost, 2, "Dream Chisel shaves one generic");
+        assert_eq!(project(&state, 1).face_down_cast_cost, 3, "the opponent pays full");
     }
 
     #[test]
