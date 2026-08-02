@@ -1383,6 +1383,7 @@ impl GameState {
         // only counts discards from *this* resolution (Borrowed Knowledge
         // mode 1's "draw cards equal to the number discarded this way").
         self.cards_discarded_this_resolution = 0;
+        self.cards_drawn_this_resolution = 0;
         self.energy_paid_this_resolution = 0;
         self.permanents_returned_this_resolution = 0;
         self.permanents_tapped_this_resolution = 0;

@@ -1703,6 +1703,9 @@ impl GameState {
                     PlayerRef::OwnerOfMoved => card.owner,
                     _ => self.resolve_player(who, &ctx).unwrap_or(default_player),
                 };
+                // A one-shot top reveal (Aven Windreader) only covers the card
+                // that was on top; any insertion can displace it.
+                self.library_tops_revealed.retain(|s| *s != p);
                 match pos {
                     LibraryPosition::Top => self.players[p].library.insert(0, card),
                     LibraryPosition::Bottom => self.players[p].library.push(card),

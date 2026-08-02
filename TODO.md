@@ -95,13 +95,14 @@ Prison Barricade's kicked defender bypass is wired.
 
 ## Odyssey — opened
 
-`set_gaps.py ody` 274 → ~173 (`sets::ody::{gaps,gaps2}`, 101 cards; tests in
-`classic_sets/ody`). Threshold rides `Predicate::ThresholdActive`, flashback and
+`set_gaps.py ody` 274 → 136 (`sets::ody::{gaps,gaps2,gaps3,gaps4}`, 138 cards;
+tests in `classic_sets/ody`). Threshold rides `Predicate::ThresholdActive`, flashback and
 the Aura/EquipBonus shell were already in place. New primitives:
 `Effect::{RevealHand, RevealTopOfLibrary, PlayerCantCastMatchingThisTurn}`,
 `StaticEffect::{ControllerMaxHandSizeReduced, ReduceColorDamageToYouBy}`,
 `SelectionRequirement::ToughnessAtMostGraveyardCount`, `CounterType::Feather`,
-`CreatureType::Mystic`, and `Player.cant_cast_matching_this_turn` (surfaced as
+`CreatureType::Mystic`, `Value::CardsDrawnThisEffect`, and
+`Player.cant_cast_matching_this_turn` (surfaced as
 `PlayerView.locked_cast_kinds` + a client `⊘ <kind>` chip).
 
 ## Apocalypse — closed

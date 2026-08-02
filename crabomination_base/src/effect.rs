@@ -744,6 +744,10 @@ pub enum Value {
     /// between independent resolutions, so a `Seq([Discard, Draw])`
     /// reads exactly the discards from this resolution.
     CardsDiscardedThisEffect,
+    /// Number of cards drawn so far within the current effect resolution — the
+    /// draw-side twin of `CardsDiscardedThisEffect` ("draws that many cards,
+    /// then discards that many cards" — Laquatus's Creativity).
+    CardsDrawnThisEffect,
     /// Mana value of the last card exiled within the current resolution
     /// (Undying Flames' "damage equal to that card's mana value"). 0 when
     /// nothing was exiled. Reset between independent resolutions.

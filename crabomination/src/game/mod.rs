@@ -631,6 +631,11 @@ pub struct GameState {
     /// independent resolutions.
     #[serde(skip)]
     pub cards_discarded_this_resolution: u32,
+    /// Cards drawn so far within the current effect resolution — the draw-side
+    /// twin of `cards_discarded_this_resolution`, read by
+    /// `Value::CardsDrawnThisEffect` (Laquatus's Creativity).
+    #[serde(default)]
+    pub cards_drawn_this_resolution: u32,
     /// Transient: amount of {E} paid by `Effect::PayAnyEnergy` within the
     /// current resolution. Read by `Value::EnergyPaidThisEffect` so a later
     /// step in the same `Effect::Seq` can scale off "each {E} paid this way"
@@ -1642,6 +1647,7 @@ impl Clone for GameState {
             last_created_tokens: self.last_created_tokens.clone(),
             last_moved_cards: self.last_moved_cards.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
+            cards_drawn_this_resolution: self.cards_drawn_this_resolution,
             energy_paid_this_resolution: self.energy_paid_this_resolution,
             permanents_returned_this_resolution: self.permanents_returned_this_resolution,
             permanents_tapped_this_resolution: self.permanents_tapped_this_resolution,
@@ -1891,6 +1897,7 @@ impl GameState {
             last_created_tokens: Vec::new(),
             last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
+            cards_drawn_this_resolution: 0,
             energy_paid_this_resolution: 0,
             permanents_returned_this_resolution: 0,
             permanents_tapped_this_resolution: 0,
@@ -11433,6 +11440,7 @@ impl GameState {
             .flatten();
         let drew = match self.players[p].draw_top() {
             Some(id) => {
+                self.cards_drawn_this_resolution += 1;
                 events.push(GameEvent::CardDrawn { player: p, card_id: id });
                 if self.players[p].cards_drawn_this_turn == 1 {
                     events.push(GameEvent::FirstCardDrawnThisTurn { player: p, card_id: id });
@@ -14229,6 +14237,9 @@ impl GameState {
     pub(crate) fn shuffle_library(&mut self, seat: usize, events: &mut Vec<GameEvent>) {
         use rand::seq::SliceRandom;
         self.players[seat].library.shuffle(&mut rand::rng());
+        // A one-shot top reveal (Aven Windreader) only covers the card that was
+        // on top; a shuffle moves it.
+        self.library_tops_revealed.retain(|s| *s != seat);
         events.push(GameEvent::LibraryShuffled { player: seat });
     }
 

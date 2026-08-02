@@ -2358,9 +2358,9 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** Odyssey is open (`set_gaps.py ody` 274 → ~173,
-   `sets::ody::{gaps,gaps2}`); keep the wave pattern going, then Torment and
-   Judgment finish the block.
+0. **Next set to close.** Odyssey is open (`set_gaps.py ody` 274 → 136,
+   `sets::ody::{gaps,gaps2,gaps3,gaps4}`); keep the wave pattern going, then
+   Torment and Judgment finish the block.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2375,14 +2375,14 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Odyssey (ODY) opened** — 101 cards (`sets::ody::{gaps,gaps2}`, tests in
+- **Odyssey (ODY) opened** — 138 cards (`sets::ody::{gaps,gaps2,gaps3,gaps4}`, tests in
   `classic_sets/ody`): the sac-land cycle, the Threshold shell (Mystics,
   Frightcrawler, Krosan Avenger, the Desire Auras, Divine Sacrament), the
   flashback commons, the Sphere cycle, Standstill / Battle of Wits / Ground
   Seal / Price of Glory. New: `Effect::{RevealHand, RevealTopOfLibrary,
   PlayerCantCastMatchingThisTurn}`, `StaticEffect::{ControllerMaxHandSizeReduced,
   ReduceColorDamageToYouBy}`, `SelectionRequirement::ToughnessAtMostGraveyardCount`,
-  `CounterType::Feather`, `CreatureType::Mystic`.
+  `CounterType::Feather`, `CreatureType::Mystic`, `Value::CardsDrawnThisEffect`.
 - **CR 106.6 — mana provenance on an activation.** `StackItem::Trigger` carries
   the activation's per-colour spend into `EffectContext.mana_spent_by_color`,
   and `ActivatedAbility.x_mana_color` turns "spend only [colour] mana on X"

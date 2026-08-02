@@ -467,3 +467,296 @@ fn ground_seal_protects_graveyards() {
         "graveyard cards can't be targeted"
     );
 }
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────────
+
+/// Hallowed Healer's bigger shield is Threshold-gated.
+#[test]
+fn hallowed_healer_upgrades_past_threshold() {
+    let mut g = main_phase();
+    let healer = g.add_card_to_battlefield(0, catalog::hallowed_healer());
+    g.battlefield_find_mut(healer).unwrap().summoning_sick = false;
+    mana(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: healer,
+            ability_index: 1,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "the 4-point shield needs Threshold"
+    );
+    fill_graveyard(&mut g, 0);
+    g.battlefield_find_mut(healer).unwrap().tapped = false;
+    activate(&mut g, 0, healer, 1, Some(Target::Player(0)));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let before = g.players[0].life;
+    cast(&mut g, 1, bolt, Some(Target::Player(0)));
+    assert_eq!(g.players[0].life, before, "4 soaks a Bolt");
+}
+
+/// Master Apothecary taps a fellow Cleric rather than itself.
+#[test]
+fn master_apothecary_taps_a_cleric() {
+    let mut g = main_phase();
+    let apothecary = g.add_card_to_battlefield(0, catalog::master_apothecary());
+    mana(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: apothecary,
+            ability_index: 0,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "no other untapped Cleric to tap"
+    );
+    let helper = g.add_card_to_battlefield(0, catalog::dedicated_martyr());
+    g.battlefield_find_mut(helper).unwrap().summoning_sick = false;
+    activate(&mut g, 0, apothecary, 0, Some(Target::Player(0)));
+    assert!(g.battlefield_find(helper).unwrap().tapped, "the helper paid the cost");
+}
+
+/// Thought Devourer stacks its hand-size tax with Thought Eater's.
+#[test]
+fn hand_size_reductions_stack() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::thought_eater());
+    assert_eq!(g.effective_max_hand_size(0), Some(4));
+    g.add_card_to_battlefield(0, catalog::thought_devourer());
+    assert_eq!(g.effective_max_hand_size(0), Some(0));
+}
+
+/// Painbringer's -X/-X scales with the graveyard cards it exiles.
+#[test]
+fn painbringer_scales_with_exiled_cards() {
+    let mut g = main_phase();
+    let bringer = g.add_card_to_battlefield(0, catalog::painbringer());
+    g.battlefield_find_mut(bringer).unwrap().summoning_sick = false;
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bringer,
+        ability_index: 0,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("activate for X=3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "a 3/3 dies to -3/-3");
+    assert!(g.players[0].graveyard.is_empty(), "all three were exiled");
+}
+
+/// Whipkeeper doubles the damage already marked on a creature.
+#[test]
+fn whipkeeper_doubles_marked_damage() {
+    let mut g = main_phase();
+    let keeper = g.add_card_to_battlefield(0, catalog::whipkeeper());
+    g.battlefield_find_mut(keeper).unwrap().summoning_sick = false;
+    let victim = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw());
+    g.battlefield_find_mut(victim).unwrap().damage = 2;
+    activate(&mut g, 0, keeper, 0, Some(Target::Permanent(victim)));
+    assert_eq!(g.battlefield_find(victim).unwrap().damage, 4);
+}
+
+/// Zombie Assassin pays with two graveyard cards and itself.
+#[test]
+fn zombie_assassin_eats_a_nonblack_creature() {
+    let mut g = main_phase();
+    let assassin = g.add_card_to_battlefield(0, catalog::zombie_assassin());
+    g.battlefield_find_mut(assassin).unwrap().summoning_sick = false;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: assassin,
+            ability_index: 0,
+            target: Some(Target::Permanent(victim)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "an empty graveyard can't pay"
+    );
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    activate(&mut g, 0, assassin, 0, Some(Target::Permanent(victim)));
+    assert!(g.battlefield_find(victim).is_none(), "the nonblack creature died");
+    assert!(g.battlefield_find(assassin).is_none(), "the Assassin sacrificed itself");
+}
+
+/// Aboshan taps the whole ground for {U}{U}{U}.
+#[test]
+fn aboshan_taps_the_ground() {
+    let mut g = main_phase();
+    let aboshan = g.add_card_to_battlefield(0, catalog::aboshan_cephalid_emperor());
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let flier = g.add_card_to_battlefield(1, catalog::storm_crow());
+    activate(&mut g, 0, aboshan, 1, None);
+    assert!(g.battlefield_find(ground).unwrap().tapped);
+    assert!(!g.battlefield_find(flier).unwrap().tapped, "fliers are spared");
+}
+
+// ── Wave 4 ──────────────────────────────────────────────────────────────────
+
+/// Epicenter takes one land, or every land past Threshold.
+#[test]
+fn epicenter_scales_with_threshold() {
+    let mut g = main_phase();
+    for seat in [0, 1] {
+        for _ in 0..2 {
+            g.add_card_to_battlefield(seat, catalog::forest());
+        }
+    }
+    let quake = g.add_card_to_hand(0, catalog::epicenter());
+    cast(&mut g, 0, quake, Some(Target::Player(1)));
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_land()).count(), 1);
+
+    let mut g = main_phase();
+    fill_graveyard(&mut g, 0);
+    for seat in [0, 1] {
+        for _ in 0..2 {
+            g.add_card_to_battlefield(seat, catalog::forest());
+        }
+    }
+    let quake = g.add_card_to_hand(0, catalog::epicenter());
+    cast(&mut g, 0, quake, Some(Target::Player(1)));
+    assert!(g.battlefield.iter().all(|c| !c.definition.is_land()), "Threshold wipes every land");
+}
+
+/// Burning Sands taxes the dead creature's controller a land.
+#[test]
+fn burning_sands_taxes_a_land_per_death() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::burning_sands());
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, 0, bolt, Some(Target::Permanent(victim)));
+    assert!(g.battlefield_find(land).is_none(), "its controller lost a land");
+}
+
+/// Laquatus's Creativity swaps a hand of the same size.
+#[test]
+fn laquatuss_creativity_swaps_the_hand() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::forest());
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::laquatuss_creativity());
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].hand.len(), 3, "drew three, discarded three");
+    assert_eq!(g.players[1].graveyard.len(), 3);
+}
+
+/// Need for Speed converts a spare land into haste.
+#[test]
+fn need_for_speed_sacrifices_a_land_for_haste() {
+    let mut g = main_phase();
+    let engine = g.add_card_to_battlefield(0, catalog::need_for_speed());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let body = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate(&mut g, 0, engine, 0, Some(Target::Permanent(body)));
+    assert!(g.battlefield_find(land).is_none(), "the land paid the cost");
+    assert!(g.computed_permanent(body).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+// ── Wave 5 ──────────────────────────────────────────────────────────────────
+
+/// Terravore is the size of every graveyard's lands.
+#[test]
+fn terravore_counts_every_graveyards_lands() {
+    let mut g = main_phase();
+    let vore = g.add_card_to_battlefield(0, catalog::terravore());
+    let cp = g.computed_permanent(vore).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 0));
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(1, catalog::forest());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let cp = g.computed_permanent(vore).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "only the lands count");
+}
+
+/// Squirrel Mob grows with each other Squirrel, and Nut Collector lords them
+/// past Threshold.
+#[test]
+fn squirrel_mob_and_nut_collector_scale_together() {
+    let mut g = main_phase();
+    let mob = g.add_card_to_battlefield(0, catalog::squirrel_mob());
+    assert_eq!(g.computed_permanent(mob).unwrap().power, 2);
+    let nest = g.add_card_to_battlefield(0, catalog::squirrel_nest());
+    let _ = nest;
+    g.add_card_to_battlefield(0, catalog::squirrel_mob());
+    assert_eq!(g.computed_permanent(mob).unwrap().power, 3, "one other Squirrel");
+    g.add_card_to_battlefield(0, catalog::nut_collector());
+    fill_graveyard(&mut g, 0);
+    assert_eq!(g.computed_permanent(mob).unwrap().power, 5, "+2/+2 from Threshold");
+}
+
+/// Screams of the Damned trades graveyard cards for a board-wide ping.
+#[test]
+fn screams_of_the_damned_pings_everything() {
+    let mut g = main_phase();
+    let screams = g.add_card_to_battlefield(0, catalog::screams_of_the_damned());
+    g.add_card_to_graveyard(0, catalog::forest());
+    let victim = g.add_card_to_battlefield(1, catalog::raging_goblin());
+    let before = g.players[1].life;
+    activate(&mut g, 0, screams, 0, None);
+    assert!(g.battlefield_find(victim).is_none(), "the 1/1 died");
+    assert_eq!(g.players[1].life, before - 1);
+    assert!(g.players[0].graveyard.is_empty(), "the cost exiled the card");
+}
+
+/// Skeletal Scrying pays X out of the graveyard, then draws and drains X.
+#[test]
+fn skeletal_scrying_pays_with_the_graveyard() {
+    let mut g = main_phase();
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::forest());
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let scry = g.add_card_to_hand(0, catalog::skeletal_scrying());
+    mana(&mut g, 0);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: scry,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast for X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2);
+    assert_eq!(g.players[0].life, life - 2);
+}
+
+/// Cabal Patriarch shrinks a creature off a body or off the graveyard.
+#[test]
+fn cabal_patriarch_shrinks_two_ways() {
+    let mut g = main_phase();
+    let patriarch = g.add_card_to_battlefield(0, catalog::cabal_patriarch());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, 0, patriarch, 0, Some(Target::Permanent(victim)));
+    assert!(g.battlefield_find(victim).is_none(), "-2/-2 killed the 2/2");
+    assert!(g.battlefield_find(fodder).is_none(), "the body paid the cost");
+
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    activate(&mut g, 0, patriarch, 1, Some(Target::Permanent(victim)));
+    assert!(g.battlefield_find(victim).is_none(), "the graveyard half works too");
+}

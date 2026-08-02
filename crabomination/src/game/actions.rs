@@ -13767,13 +13767,16 @@ impl GameState {
             // BecameTarget — fire per permanent target the activation
             // chose (CR 603.x). The unified dispatcher handles APNAP and
             // the trigger filter.
-            if ability_target.is_some() || !additional_targets.is_empty() {
-                let mut evs =
-                    vec![GameEvent::ChoseTargets { chooser: p, object: card_id }];
-                if let Some(Target::Permanent(target_id)) = &ability_target {
-                    evs.push(GameEvent::BecameTarget { target: *target_id, caster: p });
-                }
+            if let Some(Target::Permanent(target_id)) = &ability_target {
+                let evs = vec![GameEvent::BecameTarget { target: *target_id, caster: p }];
                 self.dispatch_triggers_for_events(&evs);
+            }
+            // CR 601.2c — one "chose targets" event per activation. Queued
+            // rather than dispatched inline: an out-of-band dispatch here
+            // would drain the sacrifice-cost death events before
+            // `perform_action` folds them in.
+            if ability_target.is_some() || !additional_targets.is_empty() {
+                events.push(GameEvent::ChoseTargets { chooser: p, object: card_id });
             }
             // CR 700.13 — activating a targeted ability against an opponent /
             // their permanents is also a crime. Queue the event alongside the
