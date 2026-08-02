@@ -4744,6 +4744,20 @@ pub enum Effect {
     /// and exile it." A single cross-zone choice (Memory Leak). Auto-picks
     /// the highest-mana-value match (a `wants_ui` chooser is a follow-up).
     ExileChosenFromHandOrGraveyard { who: PlayerRef, filter: SelectionRequirement },
+    /// "Target player reveals the top `reveal` cards of their library. You
+    /// choose `pick` of those cards and put them into that player's graveyard.
+    /// Put the rest on top in any order." Bamboozle; Balshan Beguiler at
+    /// (2, 1). The chooser is the effect's controller (auto-picks the
+    /// highest-mana-value cards).
+    RevealTopChooseToGraveyard { who: PlayerRef, reveal: Value, pick: Value },
+    /// "Gain control of target Aura that's attached to a permanent. Attach it
+    /// to another permanent it can enchant." Aura Graft — the new host is
+    /// chosen by the effect's controller (auto-picks their own cheapest legal
+    /// permanent, else any legal one).
+    GainControlAndReattachAura { what: Selector },
+    /// "Mill a card. For each coloured mana symbol in the milled card's mana
+    /// cost, add one mana of that colour." Charmed Pendant.
+    MillAddManaForColoredSymbols { who: PlayerRef },
     /// "Exile `count` cards matching `filter` from `who`'s graveyard" — the
     /// mandatory, graveyard-only sibling of `ExileChosenFromHandOrGraveyard`
     /// (Decaying Soil's upkeep). Auto-picks the cheapest matches; fewer

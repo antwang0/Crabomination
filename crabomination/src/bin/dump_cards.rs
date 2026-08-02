@@ -171,6 +171,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::ProtectionFromMulticolored
         | Keyword::ProtectionFromMonocolored
         | Keyword::ProtectionFromInstants
+        | Keyword::ProtectionFromOwnColors
         | Keyword::ProtectionFromEverything => "Protection",
         Keyword::Landwalk(lt) => {
             return Some(format!("{:?}walk", lt));

@@ -9,6 +9,7 @@ mod gaps6;
 mod gaps7;
 mod gaps8;
 mod gaps9;
+mod gaps10;
 
 pub use gaps::*;
 pub use gaps2::*;
@@ -19,3 +20,4 @@ pub use gaps6::*;
 pub use gaps7::*;
 pub use gaps8::*;
 pub use gaps9::*;
+pub use gaps10::*;

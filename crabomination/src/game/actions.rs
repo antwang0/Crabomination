@@ -27,7 +27,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::DiscardHand => false,
         WardCost::Blight(n) => *n == 0,
         WardCost::CollectEvidence(n) => *n == 0,
-        WardCost::ExileFromGraveyard(n) => *n == 0,
+        WardCost::ExileFromGraveyard(n) | WardCost::DamageFromSource(n) => *n == 0,
         WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => false,
         // "{X}" is only free when the declared X was 0, which the caller
         // can't see here.
@@ -611,6 +611,33 @@ pub fn cost_reduction_for_spell(
 /// Like `cost_reduction_for_spell`, but `from_graveyard` toggles the
 /// graveyard-cast-only statics (Gravebreaker Lamia). The graveyard-cast paths
 /// (flashback / retrace / escape / disturb / aftermath) pass `true`.
+impl crate::game::GameState {
+    /// Catalyst Stone (CR 702.34) — `(less, more)` generic shift applied to
+    /// `p`'s flashback costs by battlefield statics.
+    pub(crate) fn flashback_cost_shift(&self, p: usize) -> (u32, u32) {
+        use crate::effect::StaticEffect;
+        let (mut less, mut more) = (0u32, 0u32);
+        for c in &self.battlefield {
+            for sa in &c.definition.static_abilities {
+                match self.active_static(&sa.effect, c) {
+                    Some(StaticEffect::FlashbackCostReduction { amount })
+                        if c.controller == p =>
+                    {
+                        less += amount
+                    }
+                    Some(StaticEffect::OpponentFlashbackTax { amount })
+                        if !self.same_team(c.controller, p) =>
+                    {
+                        more += amount
+                    }
+                    _ => {}
+                }
+            }
+        }
+        (less, more)
+    }
+}
+
 pub fn cost_reduction_for_spell_zoned(
     state: &crate::game::GameState,
     caster: usize,
@@ -7972,6 +7999,15 @@ impl GameState {
             cost.reduce_generic(reduction);
         }
         cost.reduce_by_cost(&colored_cost_reduction_for_spell(self, p, &card));
+        // Catalyst Stone — flashback-specific shifts, applied after the
+        // generic reductions so the tax can't be reduced away.
+        let (fb_less, fb_more) = self.flashback_cost_shift(p);
+        if fb_more > 0 {
+            cost.symbols.push(crate::mana::ManaSymbol::Generic(fb_more));
+        }
+        if fb_less > 0 {
+            cost.reduce_generic(fb_less);
+        }
         apply_spell_cost_floor(self, &mut cost);
         // CR 601.2g — float-spend confirmation. Nothing is mutated yet (the
         // card is still in the graveyard; additional costs unpaid), so suspend
@@ -9816,6 +9852,7 @@ impl GameState {
                     | Keyword::ProtectionFromMulticolored
                     | Keyword::ProtectionFromMonocolored
                     | Keyword::ProtectionFromCardType(_)
+                    | Keyword::ProtectionFromOwnColors
                     | Keyword::ProtectionFromEverything
                     | Keyword::HexproofExceptColors(_)
             )
@@ -9852,6 +9889,10 @@ impl GameState {
         }
         tgt.keywords.iter().any(|kw| match kw {
             Keyword::Protection(color) => src.colors.contains(color),
+            // CR 702.16 — "protection from its colors" (Earnest Fellowship).
+            Keyword::ProtectionFromOwnColors => {
+                tgt.colors.iter().any(|c| src.colors.contains(c))
+            }
             Keyword::ProtectionFromCreatures => src_is_creature,
             Keyword::ProtectionFromCreatureType(ty) => src.subtypes.creature_types.contains(ty),
             Keyword::ProtectionFromMatching(f) => {
@@ -12177,6 +12218,25 @@ impl GameState {
         // no-real-choice case keep the lowest-CMC auto-pick so higher-value
         // graveyard cards stay put. Affects Grim Lavamancer, Scrapheap
         // Scrounger, et al.
+        // Exile-a-card-from-HAND as an additional cost (Holistic Wisdom).
+        // Validated here so tap/mana aren't burned on an unpayable cost; the
+        // exile itself happens once payment succeeds.
+        let exile_from_hand_pick: Option<CardId> =
+            if let Some(filter) = ability.exile_from_hand_cost.as_ref() {
+                let pick = self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .min_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| c.id);
+                match pick {
+                    None => return Err(GameError::SelectionRequirementViolated),
+                    some => some,
+                }
+            } else {
+                None
+            };
+
         let exile_other_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.exile_other_filter.as_ref()
         {
@@ -13626,6 +13686,18 @@ impl GameState {
                     .cards_left_graveyard_this_turn
                     .saturating_add(1);
             }
+        }
+
+        // Exile-a-card-from-hand-as-cost: stamp `exiled_with` so the body can
+        // read the exiled card back (Holistic Wisdom's shared-card-type gate).
+        if let Some(hand_cid) = exile_from_hand_pick
+            && let Some(mut card) = Self::take_card(&mut self.players[p].hand, hand_cid)
+        {
+            card.exiled_with = Some(card_id);
+            self.exile.push(card);
+            self.players[p].cards_exiled_this_turn =
+                self.players[p].cards_exiled_this_turn.saturating_add(1);
+            events.push(GameEvent::PermanentExiled { card_id: hand_cid });
         }
 
         // Exile-self-as-cost (graveyard activations): with tap/mana/life

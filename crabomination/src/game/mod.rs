@@ -9067,6 +9067,10 @@ impl GameState {
             });
         tgt.keywords.iter().any(|kw| match kw {
             Keyword::Protection(color) => src_colors.contains(color),
+            // CR 702.16 — "protection from its colors" (Earnest Fellowship).
+            Keyword::ProtectionFromOwnColors => {
+                tgt.colors.iter().any(|c| src_colors.contains(c))
+            }
             Keyword::ProtectionFromCreatureType(ty) => src_creature_types.contains(ty),
             Keyword::ProtectionFromMatching(f) => self.evaluate_requirement_static(
                 f,
@@ -17883,6 +17887,9 @@ fn static_effect_to_effects(
             // `draw_one`; no layer effect.
             | StaticEffect::MayReplaceDrawWithTutor
             | StaticEffect::ControllerMaySkipDraws
+            // Catalyst Stone — read by `flashback_cost_shift` at cast time.
+            | StaticEffect::FlashbackCostReduction { .. }
+            | StaticEffect::OpponentFlashbackTax { .. }
             | StaticEffect::MayReplaceDrawWithRevealUntilKind
             | StaticEffect::ControllerAssignsAttackersCombatDamage
             | StaticEffect::PlayersSkipDraws
@@ -18466,6 +18473,13 @@ pub fn can_block_attacker_computed(
     for kw in attacker_kws {
         if let Keyword::Protection(color) = kw
             && blocker_computed.colors.contains(color)
+        {
+            return false;
+        }
+        // CR 702.16e — "protection from its colors": can't be blocked by a
+        // creature sharing any of the attacker's own colors.
+        if matches!(kw, Keyword::ProtectionFromOwnColors)
+            && blocker_computed.colors.iter().any(|c| attacker_colors.contains(c))
         {
             return false;
         }

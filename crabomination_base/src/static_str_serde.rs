@@ -57,3 +57,27 @@ pub fn intern(s: String) -> &'static str {
     table.insert(leaked);
     leaked
 }
+
+/// `Option<&'static str>` sibling of this module, for optional name fields
+/// (`CardDefinition::counts_as_named_in_graveyard`). Use as
+/// `#[serde(with = "crate::static_str_serde::opt", default)]`.
+pub mod opt {
+    use serde::de::Deserialize;
+    use serde::{Deserializer, Serializer};
+
+    pub fn serialize<S: Serializer>(
+        s: &Option<super::StaticStr>,
+        ser: S,
+    ) -> Result<S::Ok, S::Error> {
+        match s {
+            Some(v) => ser.serialize_some(v),
+            None => ser.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        de: D,
+    ) -> Result<Option<super::StaticStr>, D::Error> {
+        Ok(Option::<String>::deserialize(de)?.map(super::intern))
+    }
+}

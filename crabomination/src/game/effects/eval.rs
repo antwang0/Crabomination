@@ -592,11 +592,7 @@ impl GameState {
                 else {
                     return 0;
                 };
-                self.players
-                    .iter()
-                    .flat_map(|p| p.graveyard.iter())
-                    .filter(|c| c.definition.name == name)
-                    .count() as i32
+                self.graveyard_cards_named(name)
             }
             // The Odyssey Shrine cycle — the *cast spell* is the trigger's
             // subject, so read its name rather than the enchantment's.
@@ -618,11 +614,7 @@ impl GameState {
                 else {
                     return 0;
                 };
-                self.players
-                    .iter()
-                    .flat_map(|p| p.graveyard.iter())
-                    .filter(|c| c.definition.name == name)
-                    .count() as i32
+                self.graveyard_cards_named(name)
             }
             Value::RevealedForCostPower => self.revealed_for_cost_power.unwrap_or(0),
             Value::GreatestManaValueAmongPermanents(who) => self
@@ -2585,6 +2577,34 @@ impl GameState {
         }
     }
 
+    /// CR 400.7 — does `def` share a card type with a card this source
+    /// exiled (`exiled_with == source`)? Holistic Wisdom's return gate.
+    pub(crate) fn shares_card_type_with_exiled_by(
+        &self,
+        source: Option<crate::card::CardId>,
+        def: &crate::card::CardDefinition,
+    ) -> bool {
+        let Some(src) = source else { return false };
+        self.exile
+            .iter()
+            .filter(|c| c.exiled_with == Some(src))
+            .any(|c| c.definition.card_types.iter().any(|t| def.card_types.contains(t)))
+    }
+
+    /// Cards in every graveyard counting as named `name` — the card's own
+    /// name, or its `counts_as_named_in_graveyard` alias (Pardic Firecat
+    /// counting as Flame Burst).
+    fn graveyard_cards_named(&self, name: &str) -> i32 {
+        self.players
+            .iter()
+            .flat_map(|p| p.graveyard.iter())
+            .filter(|c| {
+                c.definition.name == name
+                    || c.definition.counts_as_named_in_graveyard.is_some_and(|a| a == name)
+            })
+            .count() as i32
+    }
+
     pub fn evaluate_requirement_static(
         &self,
         req: &SelectionRequirement,
@@ -2863,6 +2883,8 @@ impl GameState {
                                 | crate::card::Keyword::FlashbackTap(_)
                         )
                     }),
+                    R::SharesCardTypeWithExiledBySource => self
+                        .shares_card_type_with_exiled_by(source, &card.definition),
                     R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
                     R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
                     R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
@@ -3317,6 +3339,9 @@ impl GameState {
                     R::NamedBySource => source
                         .and_then(|sid| self.battlefield_find(sid))
                         .and_then(|s| s.named_card.as_deref())
+                        // A resolving spell that named a card is off-zone, so
+                        // fall back to the per-resolution scratchpad (Predict).
+                        .or(self.named_card_this_resolution.as_deref())
                         .is_some_and(|n| n == card.definition.name),
                     R::IsSourceChosenCardType => source
                         .and_then(|sid| self.battlefield_find(sid))
@@ -3514,6 +3539,9 @@ impl GameState {
                     crate::card::Keyword::Flashback(_) | crate::card::Keyword::FlashbackTap(_)
                 )
             }),
+            // No source context in the on-card evaluator; the exile-linked
+            // share check only resolves through `evaluate_requirement_static`.
+            R::SharesCardTypeWithExiledBySource => false,
             R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
             // No source/battlefield context in the on-card evaluator (used
@@ -3751,7 +3779,12 @@ impl GameState {
             R::HasName(name) => card.definition.name == name.as_str(),
             // Resolved to a concrete `HasName` by callers that have the
             // source in hand (RevealUntilFind); vacuously false otherwise.
-            R::NamedBySource => false,
+            // No source context here; the per-resolution scratchpad is the
+            // only readable stamp (Predict's milled-card check).
+            R::NamedBySource => self
+                .named_card_this_resolution
+                .as_deref()
+                .is_some_and(|n| n == card.definition.name),
             R::IsSourceChosenCardType => false,
             R::IsSourceChosenCreatureType => false,
             R::SameNameAsTarget | R::TargetsALandYouControl => false,

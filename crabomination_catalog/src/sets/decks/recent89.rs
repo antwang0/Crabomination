@@ -8,13 +8,20 @@ use crate::effect::shortcut::{deal, etb, target};
 use crate::effect::{Effect, PlayerRef, Selector, Value};
 use crate::mana::{cost, generic, r};
 
-/// Flame Burst — {1}{R} Instant. Deals 2 damage to any target.
+/// Flame Burst — {1}{R} Instant. Deals 2 damage to any target, plus 1 for
+/// each card named Flame Burst in all graveyards.
 pub fn flame_burst() -> CardDefinition {
     CardDefinition {
         name: "Flame Burst",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
-        effect: deal(2, target()),
+        effect: Effect::DealDamage {
+            to: crate::effect::shortcut::target_any(),
+            amount: Value::Sum(vec![
+                Value::Const(2),
+                Value::CardsNamedLikeSourceInAllGraveyards,
+            ]),
+        },
         ..Default::default()
     }
 }

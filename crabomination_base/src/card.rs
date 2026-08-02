@@ -638,6 +638,10 @@ pub enum WardCost {
     /// Unpayable when the graveyard holds fewer than N cards; auto-pay takes
     /// the cheapest.
     ExileFromGraveyard(u32),
+    /// "…unless [player] has [this source] deal N damage to them" — the
+    /// Odyssey pay-in-damage menu (Blazing Salvo, Lava Blister, Molten
+    /// Influence). Always payable; the damage comes from the effect's source.
+    DamageFromSource(u32),
     SacrificeCreature,
     /// "…unless you sacrifice a [filter]" — the filtered sibling of
     /// `SacrificeCreature` (Endless Wurm's enchantment, Contamination's
@@ -893,6 +897,10 @@ pub enum Keyword {
     /// `StackItem::Spell.uncounterable` flag when the X paid is at
     /// least the threshold.
     CantBeCounteredIfXAtLeast(u32),
+    /// CR 702.16 — "has protection from its colors" (Earnest Fellowship).
+    /// Resolved against the bearer's own computed colours at check time, so a
+    /// colour change tracks.
+    ProtectionFromOwnColors,
     Indestructible,
     Regenerate(u32),
     Persist,
@@ -1612,6 +1620,9 @@ pub enum SelectionRequirement {
     /// The card has flashback (CR 702.34) in any of its cost shapes
     /// (Flashback / FlashbackTap). Tombfire's graveyard sweep.
     HasFlashback,
+    /// The card shares a card type with a card exiled by the evaluating
+    /// source (`exiled_with == source`) — Holistic Wisdom's return gate.
+    SharesCardTypeWithExiledBySource,
     PowerAtMost(i32),
     ToughnessAtMost(i32),
     /// "Toughness X or less, where X is the number of [filter] you control"
@@ -2564,6 +2575,11 @@ pub struct CardDefinition {
     /// CardDefinition initialisations pick up the new field automatically.
     #[serde(default)]
     pub enters_with_counters: Option<(CounterType, crate::effect::Value)>,
+    /// "If this card is in a graveyard, effects from spells named X count it
+    /// as a card named X" (Pardic Firecat / Flame Burst). Read by the
+    /// name-counting `Value`s alongside the card's real name.
+    #[serde(with = "crate::static_str_serde::opt", default)]
+    pub counts_as_named_in_graveyard: Option<crate::static_str_serde::StaticStr>,
     /// CR 707 — "You may have this enter as a copy of [filter] permanent."
     /// Applied during ETB placement (in `continue_spell_resolution`), before
     /// the first state-based-action sweep, so a printed 0/0 body (Clone,

@@ -1364,3 +1364,223 @@ fn pulsating_illusion_pumps_once_a_turn() {
         "only once each turn"
     );
 }
+
+// ── Wave 10 ─────────────────────────────────────────────────────────────────
+
+/// Blazing Salvo burns the creature when its controller declines the 5.
+#[test]
+fn blazing_salvo_burns_when_the_offer_is_declined() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::blazing_salvo());
+    cast(&mut g, 0, spell, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none(), "3 damage killed the 2/2");
+    assert_eq!(g.players[1].life, 20, "the face was spared");
+}
+
+/// Lava Blister eats a nonbasic land on the same decline.
+#[test]
+fn lava_blister_destroys_the_nonbasic() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(1, catalog::abandoned_outpost());
+    let spell = g.add_card_to_hand(0, catalog::lava_blister());
+    cast(&mut g, 0, spell, Some(Target::Permanent(land)));
+    assert!(g.battlefield_find(land).is_none());
+}
+
+/// Bamboozle bins two of the four it reveals.
+#[test]
+fn bamboozle_bins_two_of_four() {
+    let mut g = main_phase();
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    let spell = g.add_card_to_hand(0, catalog::bamboozle());
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].graveyard.len(), 2);
+    assert_eq!(g.players[1].library.len(), 2);
+}
+
+/// Predict draws two on a hit and one on a miss.
+#[test]
+fn predict_pays_off_on_a_hit() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = main_phase();
+    g.add_card_to_library(1, catalog::grizzly_bears());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::predict());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Grizzly Bears".into())]));
+    let before = g.players[0].hand.len();
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2, "named it — two cards");
+}
+
+/// Cephalid Shrine taxes a spell by its copies already in graveyards.
+#[test]
+fn cephalid_shrine_taxes_by_graveyard_copies() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::cephalid_shrine());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    // The trigger auto-pays the {1} tax off the caster's floating mana.
+    cast(&mut g, 0, bear, None);
+    assert!(g.battlefield_find(bear).is_some(), "the tax was paid, so it resolved");
+}
+
+/// Charmed Pendant banks one mana per coloured pip on the milled card.
+#[test]
+fn charmed_pendant_banks_the_milled_pips() {
+    let mut g = main_phase();
+    let pendant = g.add_card_to_battlefield(0, catalog::charmed_pendant());
+    g.battlefield_find_mut(pendant).unwrap().summoning_sick = false;
+    g.add_card_to_library(0, catalog::grizzly_bears()); // {1}{G}
+    g.players[0].mana_pool = Default::default();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pendant,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "one green mana from the single green pip");
+    assert_eq!(g.players[0].graveyard.len(), 1);
+}
+
+/// Earnest Fellowship makes every creature dodge same-coloured removal.
+#[test]
+fn earnest_fellowship_grants_protection_from_own_colors() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::earnest_fellowship());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    assert!(
+        g.computed_permanent(bear)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::ProtectionFromOwnColors)
+    );
+}
+
+/// Savage Firecat sheds a counter every time you tap a land.
+#[test]
+fn savage_firecat_sheds_counters_on_land_taps() {
+    let mut g = main_phase();
+    let cat = g.add_card_to_battlefield(0, catalog::savage_firecat());
+    g.battlefield_find_mut(cat).unwrap().add_counters(CounterType::PlusOnePlusOne, 7);
+    assert_eq!(g.computed_permanent(cat).unwrap().power, 7);
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(cat).unwrap().power, 6);
+}
+
+/// Catalyst Stone discounts your flashbacks and taxes theirs.
+#[test]
+fn catalyst_stone_shifts_flashback_costs() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::catalyst_stone());
+    let seize = g.add_card_to_graveyard(0, catalog::seize_the_day());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    // Flashback {2}{R} - {2} = {R}: one red mana is enough.
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: seize,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("discounted flashback");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bear).unwrap().tapped);
+}
+
+/// Pardic Firecat counts as a Flame Burst from the graveyard.
+#[test]
+fn pardic_firecat_counts_as_flame_burst() {
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::pardic_firecat());
+    let burst = g.add_card_to_hand(0, catalog::flame_burst());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast(&mut g, 0, burst, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none(), "2 + 1 for the Firecat killed the 2/2");
+}
+
+/// Aura Graft steals an Aura and moves it off its old host.
+#[test]
+fn aura_graft_moves_the_aura() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura_card = g.add_card_to_battlefield(1, catalog::setons_desire());
+    g.battlefield_find_mut(aura_card).unwrap().attached_to = Some(theirs);
+    let graft = g.add_card_to_hand(0, catalog::aura_graft());
+    cast(&mut g, 0, graft, Some(Target::Permanent(aura_card)));
+    assert_eq!(g.battlefield_find(aura_card).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(aura_card).unwrap().attached_to, Some(mine));
+}
+
+/// Holistic Wisdom trades a hand card for a same-type graveyard card.
+#[test]
+fn holistic_wisdom_buys_back_a_shared_type() {
+    let mut g = main_phase();
+    let wisdom = g.add_card_to_battlefield(0, catalog::holistic_wisdom());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // creature — the exile cost
+    let target = g.add_card_to_graveyard(0, catalog::wall_of_omens()); // creature
+    activate(&mut g, 0, wisdom, 0, Some(Target::Permanent(target)));
+    assert!(g.players[0].hand.iter().any(|c| c.id == target), "shared type — it came back");
+}
+
+/// Immobilizing Ink locks the creature down until a card is paid.
+#[test]
+fn immobilizing_ink_locks_the_creature() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ink = g.add_card_to_hand(0, catalog::immobilizing_ink());
+    cast(&mut g, 0, ink, Some(Target::Permanent(bear)));
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    assert!(g.untap_prevented_by_static(bear), "the Ink holds it down");
+}
+
+/// Spiritualize turns a creature's damage into life and cantrips.
+#[test]
+fn spiritualize_grants_lifelink_and_draws() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::spiritualize());
+    let before = g.players[0].hand.len();
+    cast(&mut g, 0, spell, Some(Target::Permanent(bear)));
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert_eq!(g.players[0].hand.len(), before - 1 + 1);
+}
+
+/// Graceful Antelope walks over Plains.
+#[test]
+fn graceful_antelope_has_plainswalk() {
+    let mut g = main_phase();
+    let antelope = g.add_card_to_battlefield(0, catalog::graceful_antelope());
+    assert!(
+        g.computed_permanent(antelope)
+            .unwrap()
+            .keywords
+            .contains(&Keyword::Landwalk(crabomination::card::LandType::Plains))
+    );
+}

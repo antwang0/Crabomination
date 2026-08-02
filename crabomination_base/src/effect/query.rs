@@ -462,7 +462,10 @@ impl Effect {
                 player_has_target(who) || sel_has_target(subject)
             }
             Effect::ExileChosenFromHandOrGraveyard { who, .. }
-            | Effect::ExileFromGraveyard { who, .. } => player_has_target(who),
+            | Effect::ExileFromGraveyard { who, .. }
+            | Effect::RevealTopChooseToGraveyard { who, .. }
+            | Effect::MillAddManaForColoredSymbols { who } => player_has_target(who),
+            Effect::GainControlAndReattachAura { what } => sel_has_target(what),
             Effect::DiscardUnlessKind { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
@@ -1391,7 +1394,8 @@ impl Effect {
             | Effect::ExileFromGraveyardBecomeCopy { what }
             | Effect::ReturnSameNameFromAllGraveyards { what }
             | Effect::CounterAbilityAndDestroySource { what }
-            | Effect::WeldArtifacts { what } => sel_filter(what),
+            | Effect::WeldArtifacts { what }
+            | Effect::GainControlAndReattachAura { what } => sel_filter(what),
             Effect::LookExileAnyNumberRestBack { who, .. }
             | Effect::PutTopOnBottom { who }
             | Effect::LookAtHandCastFree { who } => sel_filter(who),
@@ -2863,7 +2867,8 @@ impl Effect {
                 | Effect::TokenUnlessOpponentLetsYouDraw { .. } => None,
                 Effect::CopySpellForEachOtherLegalCreature { what }
                 | Effect::EyeOfTheStorm { what }
-                | Effect::SearchOpponentLibraryForSameName { what } => sel_find(what, slot),
+                | Effect::SearchOpponentLibraryForSameName { what }
+                | Effect::GainControlAndReattachAura { what } => sel_find(what, slot),
                 Effect::ExileFromGraveyardBecomeCopy { what }
                 | Effect::ReturnSameNameFromAllGraveyards { what } => sel_find(what, slot),
                 Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),

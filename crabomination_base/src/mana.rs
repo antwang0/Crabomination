@@ -269,6 +269,21 @@ impl ManaCost {
         s
     }
 
+    /// One entry per coloured mana symbol, in printed order — `{3}{U}{U}{B}`
+    /// yields `[U, U, B]` (Charmed Pendant). Hybrids count once, as their
+    /// first colour; Phyrexian pips count as their colour.
+    pub fn colored_symbols(&self) -> Vec<Color> {
+        self.symbols
+            .iter()
+            .filter_map(|s| match s {
+                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => Some(*c),
+                ManaSymbol::Hybrid(a, _) | ManaSymbol::PhyrexianHybrid(a, _) => Some(*a),
+                ManaSymbol::MonoHybrid(_, c) => Some(*c),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// Returns the set of colors present in this mana cost.
     pub fn colors(&self) -> Vec<Color> {
         let mut result = Vec::new();

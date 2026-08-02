@@ -5573,6 +5573,120 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopChooseToGraveyard { who, reveal, pick } => {
+                // Bamboozle / Balshan Beguiler — reveal the top N, the
+                // effect's controller bins `pick` of them (auto-picks the
+                // priciest), the rest stay on top.
+                let n = self.evaluate_value(reveal, ctx).max(0) as usize;
+                let k = self.evaluate_value(pick, ctx).max(0) as usize;
+                for p in self.resolve_players(who, ctx) {
+                    let top: Vec<CardId> =
+                        self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                    for id in &top {
+                        if let Some(c) = self.players[p].library.iter().find(|c| c.id == *id) {
+                            events.push(GameEvent::TopCardRevealed {
+                                player: p,
+                                card_name: c.definition.name,
+                                is_land: c.definition.is_land(),
+                            });
+                        }
+                    }
+                    let mut ranked = top.clone();
+                    ranked.sort_by_key(|id| {
+                        std::cmp::Reverse(
+                            self.players[p]
+                                .library
+                                .iter()
+                                .find(|c| c.id == *id)
+                                .map(|c| c.definition.cost.cmc())
+                                .unwrap_or(0),
+                        )
+                    });
+                    for id in ranked.into_iter().take(k) {
+                        if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
+                            self.players[p].graveyard.push(card);
+                            events.push(GameEvent::CardMilled { player: p, card_id: id });
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GainControlAndReattachAura { what } => {
+                // Aura Graft — take the Aura and move it to another legal
+                // host, preferring one the new controller owns.
+                let Some(aura) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let (old_host, enchant) = {
+                    let Some(c) = self.battlefield_find(aura) else { return Ok(()) };
+                    (c.attached_to, c.definition.aura_enchant_filter().cloned())
+                };
+                let filter = enchant.unwrap_or(crate::card::SelectionRequirement::Permanent);
+                let candidates: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| Some(c.id) != old_host && c.id != aura)
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            &filter,
+                            &Target::Permanent(c.id),
+                            ctx.controller,
+                            Some(aura),
+                        )
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                if let Some(c) = self.battlefield_find_mut(aura) {
+                    c.controller = ctx.controller;
+                }
+                // Prefer a permanent the new controller already owns; the
+                // Aura is usually a benefit to graft onto your own side.
+                let pick = candidates
+                    .iter()
+                    .copied()
+                    .min_by_key(|id| {
+                        self.battlefield_find(*id)
+                            .map(|c| (c.controller != ctx.controller, c.definition.cost.cmc()))
+                            .unwrap_or((true, 0))
+                    });
+                if let Some(host) = pick
+                    && let Some(c) = self.battlefield_find_mut(aura)
+                {
+                    c.attached_to = Some(host);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::MillAddManaForColoredSymbols { who } => {
+                // Charmed Pendant — mill one, then bank one mana per coloured
+                // pip in the milled card's cost.
+                for p in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[p].library.first().map(|c| c.id) else {
+                        continue;
+                    };
+                    let colors: Vec<crate::mana::Color> = self.players[p]
+                        .library
+                        .first()
+                        .map(|c| c.definition.cost.colored_symbols())
+                        .unwrap_or_default();
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, top) {
+                        self.players[p].graveyard.push(card);
+                        events.push(GameEvent::CardMilled { player: p, card_id: top });
+                    }
+                    for color in colors {
+                        self.players[p].mana_pool.add(color, 1);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileFromGraveyard { who, count, filter } => {
                 // Mandatory "exile N cards from your graveyard" (Decaying
                 // Soil). Auto-picks the cheapest matches.
@@ -28599,6 +28713,18 @@ impl GameState {
                         } else {
                             false
                         }
+                    }
+                    WardCost::DamageFromSource(n) => {
+                        // "…unless [player] has [this] deal N damage to them"
+                        // (Blazing Salvo). Always payable — the payer simply
+                        // takes the damage from the effect's source.
+                        self.deal_damage_to_from(
+                            EntityRef::Player(payer),
+                            *n,
+                            ctx.source,
+                            events,
+                        );
+                        true
                     }
                     WardCost::ExileFromGraveyard(n) => {
                         // "…unless you exile N cards from your graveyard"

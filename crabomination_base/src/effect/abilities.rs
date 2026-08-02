@@ -462,6 +462,12 @@ pub enum StaticEffect {
     /// graveyard* (Gravebreaker Lamia — "Spells you cast from your graveyard
     /// cost {1} less"). Applied only on the graveyard-cast paths (flashback /
     /// retrace / escape / disturb / aftermath); clamped at the generic pip.
+    /// "Flashback costs you pay cost {N} less" (Catalyst Stone). Applies to
+    /// the source controller's flashback casts only.
+    FlashbackCostReduction { amount: u32 },
+    /// "Flashback costs your opponents pay cost {N} more" (Catalyst Stone) —
+    /// the mirror of `FlashbackCostReduction`.
+    OpponentFlashbackTax { amount: u32 },
     GraveyardCastCostReduction { amount: u32 },
     /// Generic cost reduction for spells the controller casts *from exile*
     /// (Doc Aurlock — "Spells you cast … from exile cost {2} less"). Applied on
@@ -2496,6 +2502,12 @@ pub struct ActivatedAbility {
     /// your graveyard as an additional cost".
     #[serde(default)]
     pub exile_other_filter: Option<(SelectionRequirement, u32)>,
+    /// Optional additional cost: exile one card matching the filter from the
+    /// controller's **hand**, stamped `exiled_with = source` so the body can
+    /// read it back (`SelectionRequirement::SharesCardTypeWithExiledBySource`
+    /// — Holistic Wisdom). Auto-pay exiles the cheapest match.
+    #[serde(default)]
+    pub exile_from_hand_cost: Option<SelectionRequirement>,
     /// When true, `exile_other_filter`'s count is the activation's X value
     /// rather than the fixed `u32` (which is then ignored). Mirrors
     /// `sac_other_x`. Used by "{X}, {T}, Exile X cards from your graveyard:"
