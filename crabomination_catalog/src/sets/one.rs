@@ -515,7 +515,7 @@ pub fn swooping_lookout() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian, CreatureType::Bird],
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Construct],
             ..Default::default()
         },
         power: 1,
@@ -533,7 +533,7 @@ pub fn malcators_watcher() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian, CreatureType::Bird],
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Drone],
             ..Default::default()
         },
         power: 1,
@@ -555,7 +555,7 @@ pub fn sheoldreds_headcleaver() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Warrior],
             ..Default::default()
         },
         power: 2,
@@ -608,7 +608,7 @@ pub fn chrome_prowler() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Cat],
             ..Default::default()
         },
         power: 3,
@@ -664,7 +664,7 @@ pub fn shrapnel_slinger() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian, CreatureType::Rebel],
+            creature_types: vec![CreatureType::Beast, CreatureType::Phyrexian],
             ..Default::default()
         },
         power: 2,

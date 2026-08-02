@@ -115,7 +115,7 @@ pub fn daxos_the_returned() -> CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::God],
+            creature_types: vec![CreatureType::Soldier, CreatureType::Zombie],
             ..Default::default()
         },
         power: 2,
@@ -207,7 +207,7 @@ pub fn kalemne_disciple_of_iroas() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Vigilance],
+        keywords: vec![Keyword::DoubleStrike, Keyword::Vigilance],
         dynamic_pt: Some(DynamicPt::ControllerExperience {
             base_p: 2,
             base_t: 4,

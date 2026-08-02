@@ -1015,14 +1015,14 @@ fn thundermaw_hellkite_is_5_5_flying_haste() {
 }
 
 #[test]
-fn craterhoof_behemoth_is_5_5_haste_trample() {
+fn craterhoof_behemoth_is_5_5_haste() {
     use crabomination::card::Keyword;
     let card = catalog::craterhoof_behemoth();
     assert_eq!(card.name, "Craterhoof Behemoth");
     assert_eq!(card.power, 5);
     assert_eq!(card.toughness, 5);
     assert!(card.keywords.contains(&Keyword::Haste));
-    assert!(card.keywords.contains(&Keyword::Trample));
+    assert!(!card.keywords.contains(&Keyword::Trample), "it grants trample, it doesn't have it");
     assert_eq!(card.triggered_abilities.len(), 1, "ETB pump trigger");
 }
 

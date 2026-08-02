@@ -4413,7 +4413,7 @@ pub fn craterhoof_behemoth() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
-        keywords: vec![Keyword::Haste, Keyword::Trample],
+        keywords: vec![Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ForEach {
@@ -5366,7 +5366,7 @@ pub fn descendant_of_storms() -> CardDefinition {
         colors: vec![Color::White],
         supertypes: vec![],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
             ..Default::default()
         },
         activated_abilities: vec![],

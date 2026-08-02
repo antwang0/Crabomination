@@ -4800,10 +4800,18 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   `{X}` spells that spelled X as `generic(0)` or omitted it entirely
   (Lunar Frenzy, Form a Posse, March of Otherworldly Light, Primal Might, Bond
   of Agony, Overrule) — those never offered the caster an X prompt.
-- ⏳ **31 TYPE + 52 KEYWORD drifts remain** (mostly `decks`). Run
-  `python3 scripts/audit_catalog_stats.py decks` for the list; each needs a
+- ⏳ **3 TYPE + 46 KEYWORD drifts remain**, down from 33/52. Run
+  `python3 scripts/audit_catalog_stats.py <set>` for the list; each needs a
   per-card read (some are deliberate — a granted keyword modelled as a static
-  isn't printed on the card).
+  isn't printed on the card, and Silhana Ledgewalker's flagged "Flying" is the
+  audit's regex reading the nested `CantBeBlockedExceptBy(HasKeyword(Flying))`).
+  The 3 remaining type rows are Changeling-style cards whose "every creature
+  type" is modelled by listing a handful (Stonework Packbeast, Tajuru Paragon).
+- ⏳ **Fabricated real-name bodies surfaced by the stat sweep.** Correcting the
+  printed stats made a few name/body mismatches obvious — Mai, Scornful Striker
+  is printed "whenever a player casts a noncreature spell, they lose 2 life" but
+  is modelled as an attack drain; Surging Sentinels and Descendant of Storms
+  likewise carry synthesized bodies. Same class as the STX fabricated-name row.
 - ⏳ **Vanguard statics from the command zone.** `seat_vanguard` applies
   `NoMaximumHandSize` at seating; a general "a command-zone avatar's static
   abilities apply" pass would need the ~100 battlefield-scanning static

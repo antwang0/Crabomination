@@ -217,7 +217,7 @@ pub fn hushwing_gryff() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Griffin],
+            creature_types: vec![CreatureType::Hippogriff],
             ..Default::default()
         },
         power: 2,

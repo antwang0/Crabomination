@@ -3003,7 +3003,7 @@ pub fn ty_lee_artful_acrobat() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            creature_types: vec![CreatureType::Human, CreatureType::Performer],
             ..Default::default()
         },
         power: 3,

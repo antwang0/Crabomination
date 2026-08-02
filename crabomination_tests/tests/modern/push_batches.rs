@@ -3268,7 +3268,7 @@ fn mai_scornful_striker_drains_opp_on_attack() {
     let attacker = g.add_card_to_battlefield(0, catalog::mai_scornful_striker());
     g.clear_sickness(attacker);
     let mai = g.battlefield_find(attacker).expect("Mai on bf");
-    assert!(mai.has_keyword(&Keyword::Menace), "Has menace");
+    assert!(mai.has_keyword(&Keyword::FirstStrike), "Has first strike");
     let life1_before = g.players[1].life;
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {

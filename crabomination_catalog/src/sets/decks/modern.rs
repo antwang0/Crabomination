@@ -8135,7 +8135,7 @@ pub fn crabomination() -> CardDefinition {
         supertypes: vec![Sup::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Crab, CreatureType::Horror],
+            creature_types: vec![CreatureType::Crab, CreatureType::Demon],
             ..Default::default()
         },
         power: 5,
@@ -16182,7 +16182,7 @@ pub fn changeling_hero() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Changeling],
+        keywords: vec![Keyword::Changeling, Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Champion {
@@ -16242,7 +16242,7 @@ pub fn changeling_titan() -> CardDefinition {
         },
         power: 7,
         toughness: 7,
-        keywords: vec![Keyword::Changeling, Keyword::Trample],
+        keywords: vec![Keyword::Changeling],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileUntilSourceLeaves {
@@ -16686,7 +16686,7 @@ pub fn apex_devastator() -> CardDefinition {
         cost: cost(&[generic(8), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Kavu],
+            creature_types: vec![CreatureType::Chimera, CreatureType::Hydra],
             ..Default::default()
         },
         power: 10,
@@ -17490,7 +17490,7 @@ pub fn omenspeaker() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
         power: 1,
@@ -18321,7 +18321,7 @@ pub fn mai_scornful_striker() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Menace],
+        keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![on_attack(Effect::LoseLife {
             who: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
@@ -24848,7 +24848,7 @@ pub fn greater_basilisk() -> CardDefinition {
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Lizard],
+            creature_types: vec![CreatureType::Basilisk],
             ..Default::default()
         },
         power: 3,
@@ -32812,7 +32812,7 @@ pub fn concealing_curtains() -> CardDefinition {
         name: "Revealing Eye",
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Wall],
+            creature_types: vec![CreatureType::Eye, CreatureType::Horror],
             ..Default::default()
         },
         power: 3,
@@ -32869,7 +32869,7 @@ pub fn delver_of_secrets() -> CardDefinition {
         name: "Insectile Aberration",
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Insect],
             ..Default::default()
         },
         power: 3,
@@ -33096,7 +33096,7 @@ pub fn kessig_prowler() -> CardDefinition {
         name: "Sinuous Predator",
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Werewolf, CreatureType::Horror],
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Werewolf],
             ..Default::default()
         },
         power: 4,
@@ -33479,7 +33479,7 @@ pub fn ulvenwald_captive() -> CardDefinition {
         name: "Ulvenwald Abomination",
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Werewolf, CreatureType::Horror],
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Werewolf],
             ..Default::default()
         },
         power: 4,

@@ -248,12 +248,16 @@ def helper_table(text):
         body = text[m.end() : j]
         mapping = {}
         for field in ("name", "cost", "power", "toughness", "creature_types"):
-            # `power: p,` (explicit) or `name,` (shorthand field init).
-            fm = re.search(r"\b" + field + r":\s*(\w+)\s*[,}]", body) or (
-                re.search(r"\b(" + field + r")\s*,", body)
+            # `power: p,` (explicit) or `name,` (shorthand field init). Take the
+            # LAST assignment: a helper that also builds a DFC back face
+            # (`vanilla_werewolf`) writes the back's fields first and returns
+            # the front, so the first match would audit the wrong face.
+            hits = re.findall(r"\b" + field + r":\s*(\w+)\s*[,}]", body) or re.findall(
+                r"\b(" + field + r")\s*,", body
             )
-            if fm and fm.group(1) in params:
-                mapping[field] = params.index(fm.group(1))
+            hits = [h for h in hits if h in params]
+            if hits:
+                mapping[field] = params.index(hits[-1])
         # A helper that layers on another helper (`legend` → `creature`)
         # forwards its own parameters; resolve one level.
         base = re.search(r"\.\.(\w+)\(", body)

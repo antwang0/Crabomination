@@ -514,7 +514,7 @@ pub fn firebrand_ranger() -> CardDefinition {
         ..creature(
             "Firebrand Ranger",
             cost(&[generic(1), r()]),
-            vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Scout],
+            vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Ranger],
             2,
             1,
         )

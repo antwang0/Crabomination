@@ -366,7 +366,7 @@ pub fn skarrg_guildmage() -> CardDefinition {
                     what: target_filtered(R::Land.and(R::ControlledByYou)),
                     power: Value::Const(4),
                     toughness: Value::Const(4),
-                    creature_types: vec![CreatureType::Elemental],
+                    creature_types: vec![CreatureType::Human, CreatureType::Shaman],
                     keywords: vec![],
                     duration: Duration::EndOfTurn,
                 },

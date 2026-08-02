@@ -317,7 +317,7 @@ pub fn gryff_rider() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
             ..Default::default()
         },
         power: 2,
@@ -382,7 +382,7 @@ pub fn dawnhart_wardens() -> CardDefinition {
         cost: cost(&[generic(1), g(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
             ..Default::default()
         },
         power: 3,
@@ -418,7 +418,7 @@ pub fn brimstone_trebuchet() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goblin],
+            creature_types: vec![CreatureType::Wall],
             ..Default::default()
         },
         power: 1,
@@ -4106,7 +4106,7 @@ pub fn emberheart_challenger() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Haste],
+        keywords: vec![Keyword::Haste, Keyword::Prowess],
         triggered_abilities: vec![
             crate::effect::shortcut::prowess(),
             crate::effect::shortcut::valiant(Effect::ExileTopAndGrantMayPlay {
@@ -7959,7 +7959,7 @@ pub fn surging_sentinels() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
             ..Default::default()
         },
         power: 2,

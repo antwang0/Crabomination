@@ -1031,7 +1031,7 @@ fn changeling_titan_champions_a_creature() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bear), "championed bear exiled");
     let t = g.battlefield.iter().find(|c| c.definition.name == "Changeling Titan").unwrap();
-    assert!(t.has_keyword(&crabomination::card::Keyword::Trample), "Titan has trample");
+    assert!(t.has_keyword(&crabomination::card::Keyword::Changeling), "Titan is every type");
 }
 
 /// Changeling Berserker enters with Haste (and champions a creature).
