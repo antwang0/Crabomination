@@ -100,8 +100,6 @@ Prison Barricade's kicked defender bypass is wired.
   (damage replacements), Balancing Act, Cultural Exchange, Haunting Echoes,
   Impulsive Maneuvers, Charmed Pendant, Catalyst Stone (flashback-cost
   modifiers), Aura Graft.
-- **Otarian Juggernaut's "can't be blocked by Walls"** is dropped — no
-  creature-type-scoped block restriction.
 
 ## Odyssey — opened
 

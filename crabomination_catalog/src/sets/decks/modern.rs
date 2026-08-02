@@ -22898,7 +22898,10 @@ pub fn juggernaut() -> CardDefinition {
         },
         power: 5,
         toughness: 3,
-        keywords: vec![crate::card::Keyword::MustAttack],
+        keywords: vec![
+            crate::card::Keyword::MustAttack,
+            crate::card::Keyword::CantBeBlockedByCreatureType(CreatureType::Wall),
+        ],
         ..Default::default()
     }
 }

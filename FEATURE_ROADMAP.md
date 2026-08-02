@@ -2403,6 +2403,9 @@ Each a small targeted feature; sweep batch by batch.
   colour gate on the life refund (Samite Ministration) rechecked at damage time.
 - **`EquipBonus.protection_keeps_self`** (CR 702.16k, narrow) — a
   protection-granting Aura is exempt from its own 704.5m shed.
+- **CR 509.1b — `Keyword::CantBeBlockedByCreatureType`** reads the blocker's
+  *computed* types, so a changeling still counts. Juggernaut (which had been
+  shipping without its Wall clause) and Otarian Juggernaut.
 
 - **Invasion (INV) complete** — `set_gaps.py inv` at zero (`sets::inv::gaps5`,
   40 cards this push). The pile-splitting

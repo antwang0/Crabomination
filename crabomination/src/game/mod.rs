@@ -18384,6 +18384,13 @@ pub fn can_block_attacker_computed(
     }) {
         return false;
     }
+    // Juggernaut (CR 509.1b): can't be blocked by a given creature type.
+    if attacker_kws.iter().any(|k| {
+        matches!(k, Keyword::CantBeBlockedByCreatureType(t)
+            if blocker_computed.subtypes.creature_types.contains(t))
+    }) {
+        return false;
+    }
     // Squeak By (CR 509.1b): can't be blocked by creatures with power N or
     // greater — the fixed-threshold mirror of `CantBeBlockedByPowerAtMost`.
     if attacker_kws.iter().any(|k| {

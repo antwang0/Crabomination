@@ -1428,6 +1428,11 @@ pub enum Keyword {
     /// blocker's computed power being `<= N`. Enforced in
     /// `can_block_attacker_computed`.
     CantBeBlockedByPowerAtMost(u32),
+    /// CR 509.1b — "can't be blocked by [creature type]" (Juggernaut, Otarian
+    /// Juggernaut: Walls). Reads the blocker's *computed* creature types, so a
+    /// changeling blocker still counts. Enforced in
+    /// `can_block_attacker_computed`.
+    CantBeBlockedByCreatureType(CreatureType),
     /// "Can't be blocked by creatures with power N or greater" (Squeak By —
     /// N=3). Fixed-threshold mirror of `CantBeBlockedByPowerAtMost`; gates on
     /// the blocker's computed power being `>= N`. Enforced in

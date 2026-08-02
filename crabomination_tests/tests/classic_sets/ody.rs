@@ -983,3 +983,23 @@ fn divert_repoints_an_unpaid_spell() {
     cast(&mut g, 0, divert, Some(Target::Permanent(bolt)));
     assert!(g.battlefield_find(mine).is_some(), "the Bolt was pointed elsewhere");
 }
+
+/// Otarian Juggernaut walks past Walls (CR 509.1b).
+#[test]
+fn otarian_juggernaut_ignores_walls() {
+    let mut g = main_phase();
+    let jug = g.add_card_to_battlefield(0, catalog::otarian_juggernaut());
+    g.battlefield_find_mut(jug).unwrap().summoning_sick = false;
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_omens());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: jug,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(wall, jug)])).is_err(),
+        "a Wall can't block it"
+    );
+}

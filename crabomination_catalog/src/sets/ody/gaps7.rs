@@ -276,12 +276,12 @@ pub fn sandstone_deadfall() -> CardDefinition {
     }
 }
 
-/// Otarian Juggernaut — {4} 2/3 that goes berserk past Threshold.
-/// (The printed "can't be blocked by Walls" is dropped — no Wall-scoped block
-/// restriction yet.)
+/// Otarian Juggernaut — {4} 2/3 that Walls can't stop and that goes berserk
+/// past Threshold.
 pub fn otarian_juggernaut() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::CantBeBlockedByCreatureType(CreatureType::Wall)],
         static_abilities: vec![StaticAbility {
             description: "Threshold — +3/+0 and attacks each combat if able.",
             effect: StaticEffect::PumpSelfIf {

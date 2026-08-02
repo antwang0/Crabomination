@@ -216,6 +216,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBeBlockedByMoreThanOne | Keyword::CantBeBlockedExceptByN(_)
         | Keyword::CantBeBlockedByPowerLess
         | Keyword::CantBeBlockedByPowerAtMost(_)
+        | Keyword::CantBeBlockedByCreatureType(_)
         | Keyword::CantBeBlockedByPowerAtLeast(_)
         | Keyword::CantBeBlockedIfControllerCastSpells(_)
         | Keyword::CantBeBlockedIfDefenderControls(_)
