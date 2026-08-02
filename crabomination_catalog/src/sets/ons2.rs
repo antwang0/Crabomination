@@ -3,9 +3,9 @@
 //! `classic_sets/ons`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, DynamicPt, Keyword, LandType,
-    Predicate, SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, DynamicPt, EnchantmentSubtype,
+    EquipBonus, Keyword, LandType, Predicate, SelectionRequirement as R, StaticAbility, Subtypes,
+    Supertype, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition, ManaPayload, PlayerRef,
@@ -1379,6 +1379,674 @@ pub fn jareth_leonine_titan() -> CardDefinition {
             vec![CreatureType::Cat, CreatureType::Giant],
             4,
             7,
+        )
+    }
+}
+
+// ── The Crown cycle (sacrifice for a tribe-wide pump) ───────────────────────
+
+/// A Crown Aura: a static bonus on the host, plus a sacrifice ability that
+/// spreads the same bonus to every creature sharing a type with it.
+fn crown(
+    name: &'static str,
+    c: ManaCost,
+    power: i32,
+    toughness: i32,
+    keywords: Vec<Keyword>,
+) -> CardDefinition {
+    let shared = || R::Creature.and(R::SharesCreatureTypeWithAttachedHost);
+    let mut spread = vec![Effect::PumpPT {
+        what: Selector::EachPermanent(shared()),
+        power: Value::Const(power),
+        toughness: Value::Const(toughness),
+        duration: Duration::EndOfTurn,
+    }];
+    spread.extend(keywords.iter().map(|kw| Effect::GrantKeyword {
+        what: Selector::EachPermanent(shared()),
+        keyword: kw.clone(),
+        duration: Duration::EndOfTurn,
+    }));
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus {
+            power,
+            toughness,
+            keywords: keywords.clone(),
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Seq(spread),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crown of Ascension — flying, then flying for the whole tribe.
+pub fn crown_of_ascension() -> CardDefinition {
+    crown("Crown of Ascension", cost(&[generic(1), u()]), 0, 0, vec![Keyword::Flying])
+}
+
+/// Crown of Awe — protection from black and from red.
+pub fn crown_of_awe() -> CardDefinition {
+    crown(
+        "Crown of Awe",
+        cost(&[generic(1), w()]),
+        0,
+        0,
+        vec![Keyword::Protection(Color::Black), Keyword::Protection(Color::Red)],
+    )
+}
+
+/// Crown of Fury — +1/+0 and first strike.
+pub fn crown_of_fury() -> CardDefinition {
+    crown("Crown of Fury", cost(&[generic(1), r()]), 1, 0, vec![Keyword::FirstStrike])
+}
+
+/// Crown of Suspicion — +2/-1.
+pub fn crown_of_suspicion() -> CardDefinition {
+    crown("Crown of Suspicion", cost(&[generic(1), b()]), 2, -1, vec![])
+}
+
+/// Crown of Vigor — +1/+1.
+pub fn crown_of_vigor() -> CardDefinition {
+    crown("Crown of Vigor", cost(&[generic(1), g()]), 1, 1, vec![])
+}
+
+// ── The Courier cycle (stay tapped to lend +2/+2 and a keyword) ─────────────
+
+fn courier(
+    name: &'static str,
+    c: ManaCost,
+    self_types: Vec<CreatureType>,
+    activation: ManaCost,
+    tribe: CreatureType,
+    keyword: Keyword,
+) -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::MayChooseNotToUntap],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: activation,
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::HasCreatureType(tribe))),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::WhileSourceTapped,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword,
+                    duration: Duration::WhileSourceTapped,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(name, c, self_types, 2, 1)
+    }
+}
+
+/// Everglove Courier — lends an Elf +2/+2 and trample.
+pub fn everglove_courier() -> CardDefinition {
+    courier(
+        "Everglove Courier",
+        cost(&[generic(2), g()]),
+        vec![CreatureType::Elf],
+        cost(&[generic(2), g()]),
+        CreatureType::Elf,
+        Keyword::Trample,
+    )
+}
+
+/// Flamestick Courier — lends a Goblin +2/+2 and haste.
+pub fn flamestick_courier() -> CardDefinition {
+    courier(
+        "Flamestick Courier",
+        cost(&[generic(2), r()]),
+        vec![CreatureType::Goblin],
+        cost(&[generic(2), r()]),
+        CreatureType::Goblin,
+        Keyword::Haste,
+    )
+}
+
+/// Frightshroud Courier — lends a Zombie +2/+2 and fear.
+pub fn frightshroud_courier() -> CardDefinition {
+    courier(
+        "Frightshroud Courier",
+        cost(&[generic(2), b()]),
+        vec![CreatureType::Zombie],
+        cost(&[generic(2), b()]),
+        CreatureType::Zombie,
+        Keyword::Fear,
+    )
+}
+
+/// Ghosthelm Courier — lends a Wizard +2/+2 and shroud.
+pub fn ghosthelm_courier() -> CardDefinition {
+    courier(
+        "Ghosthelm Courier",
+        cost(&[generic(2), u()]),
+        vec![CreatureType::Human, CreatureType::Wizard],
+        cost(&[generic(2), u()]),
+        CreatureType::Wizard,
+        Keyword::Shroud,
+    )
+}
+
+/// Pearlspear Courier — lends a Soldier +2/+2 and vigilance.
+pub fn pearlspear_courier() -> CardDefinition {
+    courier(
+        "Pearlspear Courier",
+        cost(&[generic(2), w()]),
+        vec![CreatureType::Human, CreatureType::Soldier],
+        cost(&[generic(2), w()]),
+        CreatureType::Soldier,
+        Keyword::Vigilance,
+    )
+}
+
+// ── The Mistform shapeshifters ──────────────────────────────────────────────
+
+/// `{1}: This creature becomes the creature type of your choice until end of
+/// turn.`
+fn mistform_ability(c: ManaCost) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: c,
+        effect: Effect::BecomeChosenCreatureType {
+            what: Selector::This,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Mistform Dreamer — a 2/1 flier that shifts types.
+pub fn mistform_dreamer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![mistform_ability(cost(&[generic(1)]))],
+        ..creature("Mistform Dreamer", cost(&[generic(2), u()]), vec![CreatureType::Illusion], 2, 1)
+    }
+}
+
+/// Mistform Shrieker — a 3/3 flier that shifts types; Morph {3}{U}{U}.
+pub fn mistform_shrieker() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Morph(cost(&[generic(3), u(), u()]))],
+        activated_abilities: vec![mistform_ability(cost(&[generic(1)]))],
+        ..creature(
+            "Mistform Shrieker",
+            cost(&[generic(3), u(), u()]),
+            vec![CreatureType::Illusion],
+            3,
+            3,
+        )
+    }
+}
+
+/// Mistform Skyreaver — a 6/6 flier that shifts types.
+pub fn mistform_skyreaver() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![mistform_ability(cost(&[generic(1)]))],
+        ..creature(
+            "Mistform Skyreaver",
+            cost(&[generic(5), u(), u()]),
+            vec![CreatureType::Illusion],
+            6,
+            6,
+        )
+    }
+}
+
+/// Mistform Stalker — shifts types, and can suit up for the air.
+pub fn mistform_stalker() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            mistform_ability(cost(&[generic(1)])),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), u(), u()]),
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: Value::Const(2),
+                        toughness: Value::Const(2),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::Flying,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..creature("Mistform Stalker", cost(&[generic(1), u()]), vec![CreatureType::Illusion], 1, 1)
+    }
+}
+
+/// Mistform Wall — a 1/4 that has defender only while it's still a Wall.
+pub fn mistform_wall() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature has defender as long as it's a Wall.",
+            effect: StaticEffect::WhileCondition {
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: R::HasCreatureType(CreatureType::Wall),
+                },
+                inner: Box::new(StaticEffect::GrantKeyword {
+                    applies_to: Selector::This,
+                    keyword: Keyword::Defender,
+                }),
+            },
+        }],
+        activated_abilities: vec![mistform_ability(cost(&[generic(1)]))],
+        ..creature(
+            "Mistform Wall",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Illusion, CreatureType::Wall],
+            1,
+            4,
+        )
+    }
+}
+
+/// Mistform Mutant — retypes any creature, not just itself.
+pub fn mistform_mutant() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::BecomeChosenCreatureType {
+                what: target_filtered(R::Creature),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Mistform Mutant",
+            cost(&[generic(4), u(), u()]),
+            vec![CreatureType::Illusion, CreatureType::Mutant],
+            3,
+            4,
+        )
+    }
+}
+
+/// Mistform Mask — the Aura that retypes its host.
+pub fn mistform_mask() -> CardDefinition {
+    CardDefinition {
+        name: "Mistform Mask",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::BecomeChosenCreatureType {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Imagecrafter — retypes a creature every turn for free.
+pub fn imagecrafter() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::BecomeChosenCreatureType {
+                what: target_filtered(R::Creature),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Imagecrafter",
+            cost(&[u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Standardize — every creature becomes one chosen type.
+pub fn standardize() -> CardDefinition {
+    CardDefinition {
+        name: "Standardize",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::BecomeChosenCreatureType {
+            what: Selector::EachPermanent(R::Creature),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+// ── Cycling spells with "when you cycle this card" riders ───────────────────
+
+/// `When you cycle this card, [effect].`
+fn on_cycle(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::CardCycled, EventScope::SelfSource),
+        effect: Effect::MayDo { description: "Use the cycling trigger?".into(), body: Box::new(effect) },
+    }
+}
+
+/// Solar Blast — 3 damage, or 1 on the cycle.
+pub fn solar_blast() -> CardDefinition {
+    CardDefinition {
+        name: "Solar Blast",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(1), r(), r()]))],
+        effect: Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(3) },
+        triggered_abilities: vec![on_cycle(Effect::DealDamage {
+            to: target_filtered(R::Any),
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Death Pulse — -4/-4, or -1/-1 on the cycle.
+pub fn death_pulse() -> CardDefinition {
+    CardDefinition {
+        name: "Death Pulse",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(1), b(), b()]))],
+        effect: Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::Const(-4),
+            toughness: Value::Const(-4),
+            duration: Duration::EndOfTurn,
+        },
+        triggered_abilities: vec![on_cycle(Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Primal Boost — +4/+4, or +1/+1 on the cycle.
+pub fn primal_boost() -> CardDefinition {
+    CardDefinition {
+        name: "Primal Boost",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2), g()]))],
+        effect: Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::Const(4),
+            toughness: Value::Const(4),
+            duration: Duration::EndOfTurn,
+        },
+        triggered_abilities: vec![on_cycle(Effect::PumpPT {
+            what: target_filtered(R::Creature),
+            power: Value::ONE,
+            toughness: Value::ONE,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sunfire Balm — prevent 4, or 1 on the cycle.
+pub fn sunfire_balm() -> CardDefinition {
+    CardDefinition {
+        name: "Sunfire Balm",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(1), w()]))],
+        effect: Effect::PreventNextDamage {
+            target: target_filtered(R::Any),
+            amount: Value::Const(4),
+        },
+        triggered_abilities: vec![on_cycle(Effect::PreventNextDamage {
+            target: target_filtered(R::Any),
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dirge of Dread — fear for everyone, or for one on the cycle.
+pub fn dirge_of_dread() -> CardDefinition {
+    CardDefinition {
+        name: "Dirge of Dread",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(1), b()]))],
+        effect: Effect::GrantKeyword {
+            what: Selector::EachPermanent(R::Creature),
+            keyword: Keyword::Fear,
+            duration: Duration::EndOfTurn,
+        },
+        triggered_abilities: vec![on_cycle(Effect::GrantKeyword {
+            what: target_filtered(R::Creature),
+            keyword: Keyword::Fear,
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Choking Tethers — tap up to four, or one on the cycle.
+pub fn choking_tethers() -> CardDefinition {
+    CardDefinition {
+        name: "Choking Tethers",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(1), u()]))],
+        effect: Effect::ApplyToTargets {
+            max_targets: 4,
+            min_targets: 0,
+            filter: R::Creature,
+            effect: Box::new(Effect::Tap { what: Selector::Target(0) }),
+        },
+        triggered_abilities: vec![on_cycle(Effect::Tap { what: target_filtered(R::Creature) })],
+        ..Default::default()
+    }
+}
+
+/// Complicate — a {3} tax, or a {1} tax on the cycle.
+pub fn complicate() -> CardDefinition {
+    let tax = |n| Effect::CounterUnlessPaid {
+        what: target_filtered(R::IsSpellOnStack),
+        mana_cost: cost(&[generic(n)]),
+        exile: false,
+        extra_generic: None,
+    };
+    CardDefinition {
+        name: "Complicate",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2), u()]))],
+        effect: tax(3),
+        triggered_abilities: vec![on_cycle(tax(1))],
+        ..Default::default()
+    }
+}
+
+/// Slice and Dice — 4 to each creature, or 1 on the cycle.
+pub fn slice_and_dice() -> CardDefinition {
+    CardDefinition {
+        name: "Slice and Dice",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2), r()]))],
+        effect: Effect::DealDamage {
+            to: Selector::EachPermanent(R::Creature),
+            amount: Value::Const(4),
+        },
+        triggered_abilities: vec![on_cycle(Effect::DealDamage {
+            to: Selector::EachPermanent(R::Creature),
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}
+
+// ── Plain cycling spells ────────────────────────────────────────────────────
+
+/// Akroma's Blessing — team-wide protection from a chosen color.
+pub fn akromas_blessing() -> CardDefinition {
+    CardDefinition {
+        name: "Akroma's Blessing",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[w()]))],
+        effect: Effect::GrantProtectionFromChosenColor {
+            what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Aura Extraction — stack an enchantment back on its owner's library.
+pub fn aura_extraction() -> CardDefinition {
+    CardDefinition {
+        name: "Aura Extraction",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::Move {
+            what: target_filtered(R::Enchantment),
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                pos: LibraryPosition::Top,
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Fade from Memory — cheap graveyard hate that cycles for {B}.
+pub fn fade_from_memory() -> CardDefinition {
+    CardDefinition {
+        name: "Fade from Memory",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[b()]))],
+        effect: Effect::Exile { what: target_filtered(R::InGraveyard) },
+        ..Default::default()
+    }
+}
+
+/// Mage's Guile — shroud for a turn, or a cantrip.
+pub fn mages_guile() -> CardDefinition {
+    CardDefinition {
+        name: "Mage's Guile",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[u()]))],
+        effect: Effect::GrantKeyword {
+            what: target_filtered(R::Creature),
+            keyword: Keyword::Shroud,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Essence Fracture — bounce two, or cycle it away.
+pub fn essence_fracture() -> CardDefinition {
+    CardDefinition {
+        name: "Essence Fracture",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2), u()]))],
+        effect: Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 2,
+            filter: R::Creature,
+            effect: Box::new(Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Improvised Armor — a +2/+5 Aura that cycles when you don't want it.
+pub fn improvised_armor() -> CardDefinition {
+    CardDefinition {
+        name: "Improvised Armor",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Cycling(cost(&[generic(3)]))],
+        effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 5, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Slipstream Eel — a 6/6 that needs an Island across the table.
+pub fn slipstream_eel() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::CanAttackOnlyIfDefenderControls(Box::new(R::Land.and(R::HasLandType(
+                LandType::Island,
+            )))),
+            Keyword::Cycling(cost(&[generic(1), u()])),
+        ],
+        ..creature(
+            "Slipstream Eel",
+            cost(&[generic(5), u(), u()]),
+            vec![CreatureType::Fish, CreatureType::Beast],
+            6,
+            6,
+        )
+    }
+}
+
+/// Undead Gladiator — a recursive Zombie that also cycles.
+pub fn undead_gladiator() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Cycling(cost(&[generic(1), b()]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            from_graveyard: true,
+            discard_cost: Some((R::Any, 1)),
+            condition: Some(Predicate::CurrentStepIs(crate::game::TurnStep::Upkeep)),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Undead Gladiator",
+            cost(&[generic(1), b(), b()]),
+            vec![CreatureType::Zombie, CreatureType::Barbarian],
+            3,
+            1,
         )
     }
 }

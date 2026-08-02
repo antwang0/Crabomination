@@ -1474,3 +1474,403 @@ fn catapult_squad_shoots_an_attacker() {
     activate(&mut g, 0, squad, 0, Some(Target::Permanent(attacker)));
     assert!(g.battlefield_find(attacker).is_none(), "the attacker took 2");
 }
+
+// ── Wave 3 ───────────────────────────────────────────────────────────────────
+
+/// A Crown pumps its host, then spreads the same bonus to the host's whole
+/// tribe when sacrificed.
+#[test]
+fn crown_of_fury_spreads_to_the_tribe() {
+    let mut g = main_phase();
+    let host = g.add_card_to_battlefield(0, catalog::wirewood_elf()); // 1/2 Elf
+    let kin = g.add_card_to_battlefield(0, catalog::elvish_pioneer()); // a 1/1 Elf
+    let outsider = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let crown = g.add_card_to_hand(0, catalog::crown_of_fury());
+    cast(&mut g, 0, crown, Some(Target::Permanent(host)));
+    assert_eq!(g.computed_permanent(host).unwrap().power, 2, "+1/+0 on the host");
+    activate(&mut g, 0, crown, 0, None);
+    assert_eq!(g.computed_permanent(kin).unwrap().power, 2, "the tribe got +1/+0");
+    assert!(
+        g.computed_permanent(kin).unwrap().keywords.contains(&Keyword::FirstStrike),
+        "and first strike"
+    );
+    assert_eq!(g.computed_permanent(outsider).unwrap().power, 2, "off-tribe untouched");
+}
+
+/// The other Crowns carry their printed host bonus.
+#[test]
+fn ons_crown_cycle_host_bonuses() {
+    for (make, name, pt, kw) in [
+        (
+            catalog::crown_of_ascension as fn() -> _,
+            "Crown of Ascension",
+            (1, 2),
+            Some(Keyword::Flying),
+        ),
+        (catalog::crown_of_awe, "Crown of Awe", (1, 2), Some(Keyword::Protection(Color::Black))),
+        (catalog::crown_of_suspicion, "Crown of Suspicion", (3, 1), None),
+        (catalog::crown_of_vigor, "Crown of Vigor", (2, 3), None),
+    ] {
+        let mut g = main_phase();
+        let host = g.add_card_to_battlefield(0, catalog::wirewood_elf()); // 1/1
+        let crown = g.add_card_to_hand(0, make());
+        cast(&mut g, 0, crown, Some(Target::Permanent(host)));
+        let cp = g.computed_permanent(host).unwrap();
+        assert_eq!((cp.power, cp.toughness), pt, "{name} bonus");
+        if let Some(k) = kw {
+            assert!(cp.keywords.contains(&k), "{name} keyword");
+        }
+    }
+}
+
+/// A Courier lends +2/+2 and its keyword for as long as it stays tapped.
+#[test]
+fn everglove_courier_lends_while_tapped() {
+    let mut g = main_phase();
+    let courier = g.add_card_to_battlefield(0, catalog::everglove_courier());
+    let elf = g.add_card_to_battlefield(0, catalog::wirewood_elf());
+    g.clear_sickness(courier);
+    activate(&mut g, 0, courier, 0, Some(Target::Permanent(elf)));
+    let cp = g.computed_permanent(elf).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4), "+2/+2 while the Courier stays tapped");
+    assert!(cp.keywords.contains(&Keyword::Trample));
+    g.battlefield_find_mut(courier).unwrap().tapped = false;
+    g.check_state_based_actions();
+    assert_eq!(g.computed_permanent(elf).unwrap().power, 1, "the bonus ends when it untaps");
+}
+
+/// Every Courier carries "you may choose not to untap" and its tribe's keyword.
+#[test]
+fn ons_courier_cycle_shapes() {
+    for (make, kw) in [
+        (catalog::flamestick_courier as fn() -> _, Keyword::Haste),
+        (catalog::frightshroud_courier, Keyword::Fear),
+        (catalog::ghosthelm_courier, Keyword::Shroud),
+        (catalog::pearlspear_courier, Keyword::Vigilance),
+    ] {
+        let def = make();
+        assert!(def.keywords.contains(&Keyword::MayChooseNotToUntap), "{}", def.name);
+        let granted = &def.activated_abilities[0].effect;
+        assert!(format!("{granted:?}").contains(&format!("{kw:?}")), "{} grants {kw:?}", def.name);
+    }
+}
+
+/// The Mistforms become the creature type of your choice.
+#[test]
+fn mistform_dreamer_becomes_a_chosen_type() {
+    let mut g = main_phase();
+    let dreamer = g.add_card_to_battlefield(0, catalog::mistform_dreamer());
+    g.decider =
+        Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Goblin)]));
+    activate(&mut g, 0, dreamer, 0, None);
+    assert!(
+        g.computed_permanent(dreamer)
+            .unwrap()
+            .subtypes
+            .creature_types
+            .contains(&CreatureType::Goblin)
+    );
+}
+
+/// Mistform Wall keeps defender only while it's still a Wall.
+#[test]
+fn mistform_wall_loses_defender_when_retyped() {
+    let mut g = main_phase();
+    let wall = g.add_card_to_battlefield(0, catalog::mistform_wall());
+    assert!(g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Bird)]));
+    activate(&mut g, 0, wall, 0, None);
+    assert!(
+        !g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender),
+        "no longer a Wall, no longer a defender"
+    );
+}
+
+/// Imagecrafter and Mistform Mutant retype someone else; Standardize retypes
+/// the whole board.
+#[test]
+fn ons_retypers_hit_other_creatures() {
+    let mut g = main_phase();
+    let crafter = g.add_card_to_battlefield(0, catalog::imagecrafter());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(crafter);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Elf)]));
+    activate(&mut g, 0, crafter, 0, Some(Target::Permanent(bear)));
+    assert!(
+        g.computed_permanent(bear).unwrap().subtypes.creature_types.contains(&CreatureType::Elf)
+    );
+
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::standardize());
+    g.decider =
+        Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Zombie)]));
+    cast(&mut g, 0, spell, None);
+    for id in [mine, theirs] {
+        assert!(
+            g.computed_permanent(id)
+                .unwrap()
+                .subtypes
+                .creature_types
+                .contains(&CreatureType::Zombie)
+        );
+    }
+}
+
+/// Mistform Mask retypes the creature it enchants.
+#[test]
+fn mistform_mask_retypes_its_host() {
+    let mut g = main_phase();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mask = g.add_card_to_hand(0, catalog::mistform_mask());
+    cast(&mut g, 0, mask, Some(Target::Permanent(host)));
+    g.decider =
+        Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Wizard)]));
+    activate(&mut g, 0, mask, 0, None);
+    assert!(
+        g.computed_permanent(host)
+            .unwrap()
+            .subtypes
+            .creature_types
+            .contains(&CreatureType::Wizard)
+    );
+}
+
+/// Solar Blast burns for 3 on cast and 1 on the cycle.
+#[test]
+fn solar_blast_casts_big_and_cycles_small() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(0, catalog::solar_blast());
+    let life = g.players[1].life;
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 3);
+
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(0, catalog::solar_blast());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    mana(&mut g, 0);
+    g.perform_action(GameAction::Cycle { card_id: spell, x_value: None }).expect("cycle");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "the cycle trigger pinged for 1");
+}
+
+/// Slice and Dice sweeps for 4, or for 1 when cycled.
+#[test]
+fn slice_and_dice_sweeps() {
+    let mut g = main_phase();
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let big = g.add_card_to_battlefield(1, catalog::krosan_colossus());
+    let spell = g.add_card_to_hand(0, catalog::slice_and_dice());
+    cast(&mut g, 0, spell, None);
+    assert!(g.battlefield_find(small).is_none());
+    assert_eq!(g.battlefield_find(big).unwrap().damage, 4);
+}
+
+/// Choking Tethers taps up to four creatures.
+#[test]
+fn choking_tethers_taps_up_to_four() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::choking_tethers());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped);
+}
+
+/// Complicate taxes {3}; the cycle trigger taxes {1}.
+#[test]
+fn complicate_taxes_three() {
+    let mut g = main_phase();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 1;
+    mana(&mut g, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast the Bolt");
+    g.players[1].mana_pool.empty();
+    let comp = g.add_card_to_hand(0, catalog::complicate());
+    cast(&mut g, 0, comp, Some(Target::Permanent(bolt)));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "unpaid → countered");
+}
+
+/// Death Pulse and Primal Boost swing P/T by their printed amounts.
+#[test]
+fn ons_cycling_pump_spells() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::snapping_thragg()); // 3/3
+    let pulse = g.add_card_to_hand(0, catalog::death_pulse());
+    cast(&mut g, 0, pulse, Some(Target::Permanent(victim)));
+    assert!(g.battlefield_find(victim).is_none(), "-4/-4 killed the 3/3");
+
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let boost = g.add_card_to_hand(0, catalog::primal_boost());
+    cast(&mut g, 0, boost, Some(Target::Permanent(bear)));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 6);
+}
+
+/// Dirge of Dread gives the whole board fear.
+#[test]
+fn dirge_of_dread_grants_fear() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::dirge_of_dread());
+    cast(&mut g, 0, spell, None);
+    for id in [mine, theirs] {
+        assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Fear));
+    }
+}
+
+/// Sunfire Balm shields the next 4 damage.
+#[test]
+fn sunfire_balm_prevents_four() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::krosan_colossus());
+    let balm = g.add_card_to_hand(0, catalog::sunfire_balm());
+    cast(&mut g, 0, balm, Some(Target::Permanent(bear)));
+    let blast = g.add_card_to_hand(0, catalog::solar_blast());
+    cast(&mut g, 0, blast, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "all 3 prevented");
+}
+
+/// Akroma's Blessing gives your team protection from a chosen color.
+#[test]
+fn akromas_blessing_protects_the_team() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::akromas_blessing());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    cast(&mut g, 0, spell, None);
+    assert!(
+        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Protection(Color::Red))
+    );
+}
+
+/// Aura Extraction stacks an enchantment on its owner's library.
+#[test]
+fn aura_extraction_stacks_an_enchantment() {
+    let mut g = main_phase();
+    let roost = g.add_card_to_battlefield(1, catalog::dragon_roost());
+    let spell = g.add_card_to_hand(0, catalog::aura_extraction());
+    cast(&mut g, 0, spell, Some(Target::Permanent(roost)));
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(roost));
+}
+
+/// Fade from Memory exiles a graveyard card.
+#[test]
+fn fade_from_memory_exiles() {
+    let mut g = main_phase();
+    let corpse = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::fade_from_memory());
+    cast(&mut g, 0, spell, Some(Target::Permanent(corpse)));
+    assert!(g.exile.iter().any(|c| c.id == corpse));
+}
+
+/// Mage's Guile hands out shroud.
+#[test]
+fn mages_guile_grants_shroud() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::mages_guile());
+    cast(&mut g, 0, spell, Some(Target::Permanent(bear)));
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Shroud));
+}
+
+/// Essence Fracture bounces two creatures.
+#[test]
+fn essence_fracture_bounces_two() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::essence_fracture());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 2, "both went home");
+}
+
+/// Improvised Armor is a +2/+5 Aura.
+#[test]
+fn improvised_armor_pumps() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::improvised_armor());
+    cast(&mut g, 0, aura, Some(Target::Permanent(bear)));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 7));
+}
+
+/// Slipstream Eel can't attack without an Island across the table.
+#[test]
+fn slipstream_eel_needs_an_island() {
+    let mut g = main_phase();
+    let eel = g.add_card_to_battlefield(0, catalog::slipstream_eel());
+    g.clear_sickness(eel);
+    advance_to_attackers(&mut g);
+    assert!(
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: eel,
+            target: AttackTarget::Player(1),
+        }]))
+        .is_err(),
+        "no Island → no attack"
+    );
+    g.add_card_to_battlefield(1, catalog::island());
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: eel,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Island across the table → attack");
+}
+
+/// Undead Gladiator buys itself back, but only during your upkeep.
+#[test]
+fn undead_gladiator_returns_during_upkeep() {
+    let mut g = main_phase();
+    let id = g.add_card_to_graveyard(0, catalog::undead_gladiator());
+    g.add_card_to_hand(0, catalog::forest());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "main phase is too late"
+    );
+    g.step = TurnStep::Upkeep;
+    activate(&mut g, 0, id, 0, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "back in hand at upkeep");
+}

@@ -11660,14 +11660,25 @@ impl GameState {
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 let chooser = ctx.controller;
-                for ent in self.resolve_selector(what, ctx) {
-                    let Some(cid) = ent.as_permanent_id() else { continue };
-                    let decision = Decision::ChooseCreatureType {
-                        source: cid,
-                        suggestions: self.creature_type_suggestions(chooser),
-                    };
-                    let answer = self.decider.decide(&decision);
-                    let DecisionAnswer::CreatureType(ct) = answer else { continue };
+                let affected: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                if affected.is_empty() {
+                    return Ok(());
+                }
+                // One type for the whole effect (CR 700.6 — "choose a creature
+                // type. Each creature becomes that type"), not one prompt per
+                // affected permanent (Standardize, Shade's Breath).
+                let decision = Decision::ChooseCreatureType {
+                    source: affected[0],
+                    suggestions: self.creature_type_suggestions(chooser),
+                };
+                let DecisionAnswer::CreatureType(ct) = self.decider.decide(&decision) else {
+                    return Ok(());
+                };
+                for cid in affected {
                     let ts = self.next_timestamp();
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,

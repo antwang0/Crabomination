@@ -2847,9 +2847,18 @@ impl GameState {
                 // *computed* subtypes on the battlefield; off-battlefield cards
                 // (incl. die-snapshots, whose grants were stamped in at death)
                 // fall back to the definition.
-                let has_ctype = |ct: &crate::card::CreatureType| match &computed {
-                    Some(cp) => cp.subtypes.creature_types.contains(ct),
-                    None => card.definition.subtypes.creature_types.contains(ct),
+                // Mid-gather the full computed view is off-limits, but stored
+                // layer-4 type changes are already in `continuous_effects` —
+                // read them shallowly so a "as long as it's a Wall" gate sees a
+                // retyped permanent (CR 613.8; Mistform Wall).
+                let shallow_types = computed
+                    .is_none()
+                    .then(|| self.shallow_creature_types(*cid))
+                    .flatten();
+                let has_ctype = |ct: &crate::card::CreatureType| match (&computed, &shallow_types) {
+                    (Some(cp), _) => cp.subtypes.creature_types.contains(ct),
+                    (None, Some(types)) => types.contains(ct),
+                    (None, None) => card.definition.subtypes.creature_types.contains(ct),
                 };
                 // CR 613.2 layer-4 — subtypes/supertypes a permanent gained (or
                 // lost) from a continuous effect (Vraska's Treasure, Song of the
@@ -3445,7 +3454,15 @@ impl GameState {
                     R::SharesColorWithAttachedHost | R::SharesCreatureTypeWithAttachedHost => {
                         let by_color = matches!(req, R::SharesColorWithAttachedHost);
                         source
-                            .and_then(|sid| self.battlefield_find(sid))
+                            // CR 603.10 — an Aura sacrificed as its own
+                            // ability's cost is already gone when the body
+                            // resolves, so fall back to its leave snapshot
+                            // for the host link (the ONS Crown cycle).
+                            .and_then(|sid| {
+                                self.battlefield_find(sid)
+                                    .or_else(|| self.died_card_snapshots.get(&sid))
+                                    .or_else(|| self.leaves_bf_lki.get(&sid))
+                            })
                             .and_then(|src| src.attached_to)
                             .and_then(|host| self.battlefield_find(host))
                             .is_some_and(|host| {

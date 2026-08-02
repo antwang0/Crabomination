@@ -8726,6 +8726,43 @@ impl GameState {
     /// object currently being read as LKI (the resolving trigger's source or
     /// its dead subject) and it's no longer on the battlefield. Backs
     /// `Value::PowerOf`/`ToughnessOf` reads of a just-died creature.
+    /// CR 613.2 layer 4 — the creature types a battlefield permanent has after
+    /// the stored type-changing continuous effects that name it directly.
+    /// Cheap and non-reentrant (no layer pass), so requirement walks running
+    /// *inside* the layer gather can still see a retype. Returns `None` when
+    /// no such effect applies, letting callers keep the printed types.
+    pub(crate) fn shallow_creature_types(
+        &self,
+        cid: CardId,
+    ) -> Option<Vec<crate::card::CreatureType>> {
+        use crate::game::layers::{AffectedPermanents, Modification};
+        let card = self.battlefield_find(cid)?;
+        let mut hits: Vec<&crate::game::layers::ContinuousEffect> = self
+            .continuous_effects
+            .iter()
+            .filter(|e| matches!(&e.affected, AffectedPermanents::Specific(ids) if ids.contains(&cid)))
+            .filter(|e| {
+                matches!(
+                    e.modification,
+                    Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_)
+                )
+            })
+            .collect();
+        if hits.is_empty() {
+            return None;
+        }
+        hits.sort_by_key(|e| e.timestamp);
+        let mut types = card.definition.subtypes.creature_types.clone();
+        for e in hits {
+            match &e.modification {
+                Modification::SetCreatureTypes(ts) => types = ts.clone(),
+                Modification::AddCreatureType(t) if !types.contains(t) => types.push(*t),
+                _ => {}
+            }
+        }
+        Some(types)
+    }
+
     pub(crate) fn lki_snapshot(&self, cid: CardId) -> Option<&CardInstance> {
         if self.battlefield_find(cid).is_some() {
             return None;

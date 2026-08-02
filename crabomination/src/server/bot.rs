@@ -7237,7 +7237,7 @@ fn simulate_through_combat(g: &mut GameState, fuel: &mut u32, w: &EvalWeights) -
         if g.pending_decision.is_some() {
             let answer = {
                 let pending = g.pending_decision.as_ref().unwrap();
-                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
+                decide_pending_policy(g, pending.acting_player(), w, &pending.decision, false)
             };
             if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
                 return CombatSim::Incomplete;
@@ -12242,7 +12242,7 @@ mod stack_response_tests {
         use crate::card::CardInstance;
         use crate::decision::{Decision, DecisionAnswer};
         use crate::game::TriggerPush;
-        let mut run_at = |life: i32| -> GameAction {
+        let run_at = |life: i32| -> GameAction {
             let mut g = two_player_game();
             g.players[0].wants_ui = true;
             g.players[0].life = life;
