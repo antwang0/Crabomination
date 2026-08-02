@@ -2358,10 +2358,10 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** Odyssey is **complete** (`set_gaps.py ody` at zero,
-   `sets::ody::gaps`–`gaps12`). **Torment is in progress** — `sets::tor` is at
-   73 cards / ~48 gaps after waves 1–4; finish it, then Judgment closes the
-   block. Keep the wave pattern going.
+0. **Next set to close.** Odyssey and **Torment** are both complete
+   (`set_gaps.py ody` / `tor` at zero — `sets::ody::gaps`–`gaps12`,
+   `sets::tor` + `sets::tor2`). **Judgment closes the block** — start there.
+   Keep the wave pattern going.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2376,6 +2376,28 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
+- **Torment (TOR) complete** — `set_gaps.py tor` at zero (`sets::tor` +
+  `sets::tor2`, 121 cards; tests in `classic_sets/{tor,tor2}`). The closing
+  wave brought the Dreams cycle, the Possessed cycle, the Nightmare Horrors
+  and the rares. New primitives: `Effect::RememberPlayerOnSource` +
+  `PlayerRef::ChosenPlayerOfSource` + `CardInstance.chosen_player` ("that
+  player" on a later trigger), `Effect::{AnyPlayerMayExileFromGraveyard,
+  RedirectDrawsThisTurn (CR 614), DamageBecomesThisTurn (CR 615),
+  DamageTargetPlayerMayRedirect, CopySpellForEachOtherTarget (CR 707),
+  RevealAndReplayNamedPermanent, CopyEachCreatureToken}`,
+  `Selector::DestroyedThisResolution`,
+  `AdditionalCastCost::DiscardXRandomFromCost`,
+  `SelectionRequirement::PowerLessThanYourGraveyardCount`,
+  `Predicate::TriggerSourceIsSelf`. Correctness: CR 601.2b (a main-phase
+  "discard X cards" cost discarded nothing — only the flashback path
+  concretized it), CR 611.2 (a grant under a `WhileCondition` wrapper never
+  surfaced — `granted_abilities_for` and the `PumpSelfByValue` layer walk now
+  go through `active_static`), CR 603.10a (a permanent's own self-granting
+  static survives into its death LKI), CR 400.7 (`ZoneDest::Battlefield {
+  controller: OwnerOfMoved }`).
+- **CR 115.7c — "change any targets"** repoints every declared slot, each
+  against its own filter (Reroute on Drooling Groodion). New
+  `GameState::legal_targets_for_filter`.
 - **Odyssey (ODY) complete** — 274 cards, `set_gaps.py ody` at zero
   (`sets::ody::gaps`–`gaps12`, tests in `classic_sets/ody`). The closing waves
   brought: the discard/graveyard shell (Mindslicer, Last Rites, Rites of

@@ -102,47 +102,55 @@ Prison Barricade's kicked defender bypass is wired.
   Maneuvers, Charmed Pendant, Catalyst Stone (a flashback-cost modifier),
   Aura Graft, Seize the Day (an extra combat phase), Predict, Bamboozle.
 
-## Torment — opened
+## Torment — closed
 
-`set_gaps.py tor` is open (143 → ~48 gaps); `sets::tor` ships waves 1–4
-(73 cards, tests in `classic_sets/tor`): the Cephalid self-mill shell, the
-Threshold bodies, Chainer, the Nightmare Horror jailers (Faceless Butcher,
-Gravegouger, Petravark, Slithery Stalker), the Madness Auras, the Tainted land
-cycle and the sweepers.
+`set_gaps.py tor` is at **zero** (143 → ~48 → 0); `sets::tor` + `sets::tor2`
+ship 121 cards (tests in `classic_sets/{tor,tor2}`): the Cephalid self-mill
+shell, the Threshold bodies, Chainer, the Nightmare Horrors, the Madness Auras,
+the Tainted land cycle, the sweepers, the Dreams cycle and the Possessed cycle.
 
-Primitives it shipped: `CounterType::Shred`; `CardDefinition::
+Primitives it shipped, by wave: `CounterType::Shred`; `CardDefinition::
 flashback_additional_cost` (+ `AdditionalCastCost::DiscardXFromCost`) replacing
 the old name-keyed flashback-rider table; `WardCost::BottomFromGraveyard`;
 `Effect::FlipUntilLoss` (CR 705.1); `ExileReturnZone::Graveyard`;
 `StaticEffect::OpponentsCantCastMatching`; `Effect::NextSpellCantBeCountered`
 (+ `PlayerView::uncounterable_next` and its HUD chip);
-`Value::CardsInAllGraveyardsMatching`.
+`Value::CardsInAllGraveyardsMatching`. Then the closing wave:
+`Effect::RememberPlayerOnSource` + `PlayerRef::ChosenPlayerOfSource` +
+`CardInstance.chosen_player`; `Effect::{AnyPlayerMayExileFromGraveyard,
+RedirectDrawsThisTurn, DamageBecomesThisTurn, DamageTargetPlayerMayRedirect,
+CopySpellForEachOtherTarget, RevealAndReplayNamedPermanent,
+CopyEachCreatureToken}`; `Selector::DestroyedThisResolution`;
+`AdditionalCastCost::DiscardXRandomFromCost`;
+`SelectionRequirement::{PowerLessThanYourGraveyardCount, resolve_is_source}`;
+`Predicate::TriggerSourceIsSelf`.
 
 Engine fixes it forced:
 - `statics_granted_triggers_for` matched `StaticEffect::GrantTriggeredAbility`
   *literally*, so a trigger granted under a gating wrapper (`WhileCondition`,
-  `WhileYourTurn`, …) never surfaced. It now peels through `active_static`.
+  `WhileYourTurn`, …) never surfaced. It now peels through `active_static` —
+  and so do `granted_abilities_for` and the `PumpSelfByValue` layer walk.
 - CR 611.2b — `remove_effects_from_source` swept `EffectDuration::Indefinite`
   effects too, so a `Duration::Permanent` type stamp died with its source.
-  Indefinite effects now survive (Chainer's Nightmares keep the type).
 - `Effect::ExileUntilSourceLeaves` routed every `Target` through the
   battlefield path, so a graveyard pick silently no-oped (Gravegouger).
+- CR 601.2b — `DiscardXFromCost` was concretized only on the flashback cast
+  path, so a main-phase "discard X cards" cost discarded nothing.
+- CR 603.10a — a permanent's own self-granting static now survives into its
+  death LKI ("Threshold — when this dies, …", Reborn Hero).
+- CR 400.7 — `ZoneDest::Battlefield { controller: OwnerOfMoved }`.
 
 Open follow-ups:
-- **Floating Shield / Zombie Trailblazer** want a *host* grant keyed to the
-  Aura's chosen colour / a one-shot "target land becomes a Swamp"; neither
-  shape exists (`EquipBonus` keywords are static).
-- **Carrion Rats / Carrion Wurm** need "any player may exile N cards from their
-  graveyard; if a player does, this assigns no combat damage".
-- **Equal Treatment** needs a turn-scoped "damage is dealt as 2 instead of 1+"
-  replacement (not a doubler).
-- **Flaming Gambit** needs the "that player may redirect it to a creature they
-  control" damage menu.
-- **Stupefying Touch** needs a host-scoped "activated abilities can't be
-  activated" lock.
-- **Laquatus's Champion / Soul Scourge** model the leaves-the-battlefield
-  life-back half against the ETB target; the trigger has no memory of which
-  player was chosen, so both cards are deferred.
+- **Shambling Swarm** distributes its three -1/-1 counters but doesn't remove
+  them at the next end step; that needs a "the counters *this effect* placed"
+  selector (a `Selector::CounteredThisResolution` twin of
+  `DamagedThisResolution`).
+- **Hypnox** gates its hand-exile on `Predicate::TriggerSourceEnteredByCast`,
+  which is "cast from anywhere" rather than the printed "cast from your hand".
+- **Radiate** copies for each other legal target of the *whole spell*; the
+  printed "targets only a single permanent or player" pre-check is enforced by
+  the target filter, but a spell whose one slot is a player target is copied
+  onto permanents too.
 
 ## Odyssey — closed
 
@@ -535,9 +543,10 @@ complete. Follow-ups:
 - **`Effect::AlternatingExileFromHand` never suspends.** Struggle for Sanity
   drives both sides through the synchronous decider, so a UI seat doesn't get
   its own picks.
-- **`Effect::ChangeTargetOfAbility` handles one target slot.** CR 115.7c
-  ("change any targets") and multi-slot abilities are out of scope; the
-  effect bails unless the ability has exactly one target.
+- **`Effect::ChangeTargetOfAbility` retargets the whole slot vector** (CR
+  115.7c) — each additional slot is repointed against its own filter, keeping
+  the current target when nothing else is legal. Remaining: the chooser is
+  all-or-nothing per slot rather than "any subset".
 - **`Effect::WarpWorld` deploys in printed name order, not player choice.**
   The two waves are correct (artifact/creature/land, then enchantment) but a
   player never chooses the order within a wave, and Auras revealed this way
@@ -5338,8 +5347,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   (`bot_soaks_the_swing_with_an_idle_wall`).
 - ⏳ **CR 121.8 / 121.9** — mid-cast face-down draw and reveal-on-draw, the two
   remaining CR 121 clauses.
-- ⏳ **CR 115.7c** — "change any targets" (any subset). `Effect::
-  ChangeTargetOfAbility` ships 115.7a/b for a single-target ability only.
+- 🟡 **CR 115.7c** — "change any targets" now walks every declared slot
+  (`Effect::ChangeTargetOfAbility`; test `cr_115_7c_reroute_repoints_every_slot`).
+  Remaining: letting the chooser keep a *subset* of the current targets rather
+  than repointing each slot that has an alternative.
 - ⏳ **Sector designations are auto-assigned.** `GameState::assign_sectors`
   (CR 704.5u) spreads a player's creatures round-robin instead of asking; a
   `wants_ui` seat should get the real choice. `Effect::ChooseSector` likewise
