@@ -46,6 +46,7 @@ const BOT_HANDLED: &[&str] = &[
     "PutOnLibrary",
     "Scry",
     "ChooseMode",
+    "ChooseColor",
 ];
 
 fn deck(spec: &[(CardFactory, usize)]) -> Vec<CardFactory> {
@@ -496,7 +497,7 @@ fn main() {
                     "bot_probe [--deck NAME] [--games N] [--profile baseline|combat]\n\
                      [--seed N, matches bot_ladder's cube and sos decks]\n\
                      [--vs PROFILE puts a different bot in seat 1]\n\
-                     decks: {}, cube, sos",
+                     decks: {}, cube, sos, sos:<college>",
                     DECKS.join(", ")
                 );
                 return;
@@ -564,19 +565,47 @@ fn probe(
         report("cube", &c, &profile);
         return;
     }
-    if which.as_deref() == Some("sos") {
+    if let Some(sos) = which.as_deref().and_then(|s| s.strip_prefix("sos")) {
         // Same seeded construction as the ladder's `--decks sos`, so the
-        // probe describes the decks the ladder measures. All five colleges
-        // fold into one report: the question this mode answers is "what
-        // decision mix does SOS play produce", and that is a property of
-        // the format's card pool, not of one college.
+        // probe describes the decks the ladder measures — every college's
+        // deck is drawn from the stream even when only one is probed, so
+        // `--deck sos:prismari --seed N` plays the exact deck the ladder's
+        // "sos Prismari" row played at seed N. Bare `sos` folds all five
+        // into one report (the decision mix of the format); `sos:<college>`
+        // isolates one (what the pilot does differently in THAT deck).
+        let only = match sos.strip_prefix(':') {
+            None if sos.is_empty() => None,
+            Some(name) => match College::ALL
+                .into_iter()
+                .find(|c| c.name().eq_ignore_ascii_case(name))
+            {
+                Some(c) => Some(c),
+                None => {
+                    eprintln!(
+                        "unknown college {name}; expected one of: {}",
+                        College::ALL.map(|c| c.name()).join(", ")
+                    );
+                    std::process::exit(2);
+                }
+            },
+            None => {
+                eprintln!("unknown deck sos{sos}; try sos or sos:<college>");
+                std::process::exit(2);
+            }
+        };
         let mut rng = StdRng::seed_from_u64(seed ^ 0x0505_ACAD);
         let mut c = Counts::default();
         for college in College::ALL {
             let d = sos_deck(college, &mut rng);
-            run(&d, games, weights, weights_b, &mut c);
+            if only.is_none_or(|o| o == college) {
+                run(&d, games, weights, weights_b, &mut c);
+            }
         }
-        report("sos", &c, &profile);
+        let label = match only {
+            Some(o) => format!("sos:{}", o.name()),
+            None => "sos".to_string(),
+        };
+        report(&label, &c, &profile);
         return;
     }
     let decks: Vec<&str> = match &which {

@@ -318,6 +318,32 @@ impl EvalWeights {
         Self { attack_search: 6, ..Self::hold_sick_combat() }
     }
 
+    /// The adopted default plus [`hold_instants`](Self::hold_instants).
+    ///
+    /// The hypothesis this existed to test, straight out of the SOS
+    /// college probes (`bot_probe --deck sos:prismari --vs baseline`):
+    /// in the instant-speed college the default profile cast exactly ONE
+    /// spell at instant timing across 60 games, main-phased its instants
+    /// proactively, tapped out, and pitched 42 hands' worth of reactive
+    /// spells to cleanup — while the ladder read Prismari ≈ 49 % against
+    /// the control. `hold_instants` had measured neutral on the four
+    /// constructed decks (see [`hold_instants`]), but none of those decks
+    /// was built from a pool where half the playables are instants, so
+    /// this re-asked the question where it should have mattered most.
+    ///
+    /// **Measured, and not adopted**: 49.4 % [46.3 %, 52.5 %] against
+    /// `atk` over 1000 SOS college-mirror games (seed 11) — and Prismari
+    /// itself read 46.0 %, the *worst* row. Holding cost tempo the
+    /// deferred casts never paid back, at +65 % wall clock for the extra
+    /// `improves_this_turn` simulations. The probe's real Prismari signal
+    /// is elsewhere: reactive spells rot because the response layer
+    /// under-fires, and the attack search over-swings on small boards
+    /// (82 % of eligible, 78 % all-in) — restraint, not timing, is the
+    /// open lead.
+    pub const fn attack_search_hold() -> Self {
+        Self { hold_instants: true, ..Self::attack_search() }
+    }
+
     /// The adopted default plus the searched block assignment.
     ///
     /// **Measured, and not adopted**: 50.4 % [49.8 %, 51.0 %] over 30 000
@@ -345,6 +371,15 @@ impl EvalWeights {
     /// first strike, deathtouch, trample, protection, indestructible,
     /// rampage, planeswalker defense and poison. There was much less room
     /// above it than there was above the alpha strike.
+    ///
+    /// Re-measured on the SOS college mirrors (where the probes show the
+    /// default profile leaving 72-78 % of attackers unblocked in the
+    /// spell-heavy colleges): 50.1 % [47.0 %, 53.2 %] against `atk` over
+    /// 1000 games, Prismari 46.0 / Quandrix 47.5. The under-block there
+    /// is not an assignment problem either — the blockers are TAPPED
+    /// (41-42 % of creatures at DeclareBlockers, vs 27 % in the healthy
+    /// Witherbloom row), which points back at the over-attack, not at the
+    /// block search.
     pub const fn block_search() -> Self {
         Self { block_search: 6, ..Self::attack_search() }
     }
@@ -874,6 +909,29 @@ fn decide_pending_policy(
         // Bottom flood and unplayable spells, draw wants first.
         crate::decision::Decision::Scry { player, cards, mode } if *player == seat => {
             decide_scry(state, seat, cards, *mode)
+        }
+        // AutoDecider takes the first legal color (usually White). Pick
+        // the color the bot's HAND actually demands — the most colored
+        // pips across held cards — so mana-fixing sources (any-color
+        // ramp, the Quandrix Fractal fixers) fix toward castability.
+        // The Quandrix probe showed this fall-through at 11 % of all
+        // decisions in that college. Ties keep the engine's order.
+        crate::decision::Decision::ChooseColor { legal, .. } if !legal.is_empty() => {
+            let pips = |color: crate::mana::Color| {
+                state.players[seat]
+                    .hand
+                    .iter()
+                    .flat_map(|c| c.definition.cost.symbols.iter())
+                    .filter(|s| matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == color))
+                    .count()
+            };
+            let mut best = legal[0];
+            for &c in &legal[1..] {
+                if pips(c) > pips(best) {
+                    best = c;
+                }
+            }
+            crate::decision::DecisionAnswer::Color(best)
         }
         // AutoDecider answers every mid-resolution modal with
         // mode 0. Evaluate each mode's settled outcome instead.
@@ -11892,6 +11950,28 @@ mod stack_response_tests {
             ),
             "with a Repartee payoff out, Shock kills the bear instead of pinging face, \
              got {action:?}"
+        );
+    }
+
+    /// A mana-fixing color choice reads the hand: holding double-green
+    /// spells, "add one mana of any color" picks Green, not
+    /// AutoDecider's first-legal White.
+    #[test]
+    fn choose_color_follows_hand_demand() {
+        use crate::decision::{Decision, DecisionAnswer};
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        let src = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+        g.add_card_to_hand(0, catalog::giant_growth()); // {G}
+        g.add_card_to_hand(0, catalog::craw_wurm()); // {4}{G}{G}
+        let d = Decision::ChooseColor {
+            source: src,
+            legal: vec![Color::White, Color::Blue, Color::Black, Color::Red, Color::Green],
+        };
+        let ans = decide_pending_policy(&g, 0, &EvalWeights::default(), &d, false);
+        assert!(
+            matches!(ans, DecisionAnswer::Color(Color::Green)),
+            "three green pips in hand → Green, got {ans:?}"
         );
     }
 

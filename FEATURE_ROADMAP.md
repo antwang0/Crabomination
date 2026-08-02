@@ -2343,9 +2343,20 @@ Each a small targeted feature; sweep batch by batch.
   (`increment_threshold`); Converge casts pre-float one source per missing
   college color so the payment drains distinct colors
   (`pick_converge_prefloat` — bot-side, the engine payment funnel is
-  untouched). Prepare-cast X is sized like a hand cast. Remaining: none
-  tracked; next leads live in the per-college ladder splits (Prismari /
-  Quandrix ≈ 49 % for the default profile).
+  untouched). Prepare-cast X is sized like a hand cast. The Prismari /
+  Quandrix ≈ 49 % split was probed per college (`bot_probe --deck
+  sos:<college> --vs baseline`): the losing pattern is over-attacking on
+  small boards (82 % of eligible, 78 % all-in in Prismari; 41-42 % of
+  creatures tapped at DeclareBlockers vs 27 % in healthy Witherbloom) plus
+  reactive spells rotting in hand (42 cleanup discards / 60 games; ONE
+  instant-timing cast). Two hypotheses measured and killed on 1000-game
+  SOS ladders each: `atk-hold` (hold_instants — 49.4 %, Prismari *worse*
+  at 46.0) and `blk` (block search — 50.1 %, tapped blockers are the
+  cause, not assignment). Open lead: attack restraint that respects the
+  defender's open mana / lets the attack sim cast spells for both sides
+  (the sim casts nothing today, `simulate_attack_outcome` doc). A real
+  `ChooseColor` policy (hand-pip demand) also landed off the Quandrix
+  probe (11 % of its decisions were first-legal-White).
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
 
 ## Tier 14 — Replays, analysis & observability
