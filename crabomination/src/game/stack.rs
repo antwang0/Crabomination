@@ -2636,6 +2636,8 @@ impl GameState {
             pl.dealt_combat_damage_to_player_this_turn = false;
             // Quest for Pure Flame's turn-scoped source-damage doubling.
             pl.double_your_source_damage_this_turn = false;
+            // Turf Wound's land-play lock is turn-scoped.
+            pl.cant_play_lands_this_turn = false;
             // CR 700.13 — "committed a crime this turn" resets each turn.
             pl.committed_crime_this_turn = false;
             // CR 708 — "entered face down / turned face up this turn" resets.

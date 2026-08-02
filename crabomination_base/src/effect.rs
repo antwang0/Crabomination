@@ -1070,6 +1070,10 @@ pub enum Predicate {
     /// colour with all the others (Common Cause). Vacuously true when nothing
     /// matches; false as soon as one match is colourless.
     AllMatchingShareAColor(crate::card::SelectionRequirement),
+    /// "…as long as [colour] is the most common colour among all permanents or
+    /// is tied for most common" (the Invasion Djinn cycle). Each permanent
+    /// counts once per colour it is; false when no permanent is coloured.
+    ColorIsMostCommonAmongPermanents(crate::mana::Color),
     /// lhs ≥ rhs.
     ValueAtLeast(Value, Value),
     /// lhs ≤ rhs.
@@ -4933,6 +4937,9 @@ pub enum Effect {
     /// "Target player skips their next draw step" (Fatigue). Adds one charge to
     /// `Player.skip_next_draw_step`.
     SkipPlayerDrawStep { player: PlayerRef },
+    /// CR 305.1 — "Target player can't play lands this turn" (Turf Wound).
+    /// Sets `Player.cant_play_lands_this_turn`, cleared at the turn boundary.
+    PlayerCantPlayLandsThisTurn { player: PlayerRef },
     /// "Lands `who` controls don't untap during their next untap step"
     /// (Bontu's Last Reckoning). Adds one charge to
     /// `Player.lands_dont_untap_next_untap`; non-land permanents untap normally.

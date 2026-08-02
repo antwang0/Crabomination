@@ -1201,7 +1201,8 @@ impl Effect {
                 sel_has_target(aura) || sel_has_target(host)
             }
             Effect::DestroyAllSharingNameWith { what } => sel_has_target(what),
-            Effect::SkipPlayerDrawStep { player } => player_has_target(player),
+            Effect::SkipPlayerDrawStep { player }
+            | Effect::PlayerCantPlayLandsThisTurn { player } => player_has_target(player),
             Effect::ExileAllCopiesOfTargetName { what }
             | Effect::ExileTokensSharingNameWith { what }
             | Effect::ExileAndReturnToOwner { what } => sel_has_target(what),

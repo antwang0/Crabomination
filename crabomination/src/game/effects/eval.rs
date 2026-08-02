@@ -1262,6 +1262,9 @@ impl GameState {
                 }
                 true
             }
+            Predicate::ColorIsMostCommonAmongPermanents(k) => {
+                self.most_common_permanent_colors().contains(k)
+            }
             Predicate::ValueAtLeast(a, b) => self.evaluate_value(a, ctx) >= self.evaluate_value(b, ctx),
             Predicate::ValueAtMost(a, b) => self.evaluate_value(a, ctx) <= self.evaluate_value(b, ctx),
             Predicate::ValueEquals(a, b) => self.evaluate_value(a, ctx) == self.evaluate_value(b, ctx),
@@ -3012,6 +3015,10 @@ impl GameState {
                         }
                     }
                     R::Multicolored => card.definition.cost.distinct_colors() >= 2,
+                    R::SharesMostCommonColor => {
+                        let top = self.most_common_permanent_colors();
+                        card.definition.printed_colors().iter().any(|k| top.contains(k))
+                    }
                     // CR 702.114 — Devoid CDA: colorless despite colored pips.
                     R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
                         || card.definition.cost.distinct_colors() == 0,
@@ -3514,6 +3521,10 @@ impl GameState {
                         }
                     }
             R::Multicolored => card.definition.cost.distinct_colors() >= 2,
+            R::SharesMostCommonColor => {
+                let top = self.most_common_permanent_colors();
+                card.definition.printed_colors().iter().any(|k| top.contains(k))
+            }
             // CR 702.114 — Devoid CDA: colorless despite colored pips.
             R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
                 || card.definition.cost.distinct_colors() == 0,

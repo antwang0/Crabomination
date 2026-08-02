@@ -566,6 +566,32 @@ pub fn colored_cost_reduction_for_spell(
     out
 }
 
+/// CR 601.2f — the COLORED half of static cost *increases*
+/// (`StaticEffect::ColoredSpellTax`, the Invasion Leech cycle). Only the
+/// source's controller pays it. Callers append the returned pips to the cost
+/// before any reduction runs, so a discount can never eat the surcharge.
+pub fn colored_spell_tax_for_spell(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+) -> crate::mana::ManaCost {
+    use crate::effect::StaticEffect;
+    let mut out = crate::mana::ManaCost::default();
+    for src in &state.battlefield {
+        if src.controller != caster {
+            continue;
+        }
+        for sa in &src.definition.static_abilities {
+            if let StaticEffect::ColoredSpellTax { filter, more } = &sa.effect
+                && state.evaluate_requirement_on_card(filter, card, caster)
+            {
+                out.symbols.extend(more.symbols.iter().cloned());
+            }
+        }
+    }
+    out
+}
+
 pub fn cost_reduction_for_spell(
     state: &crate::game::GameState,
     caster: usize,
@@ -1784,6 +1810,10 @@ impl crate::game::GameState {
                         ))
             })
         }) {
+            return false;
+        }
+        // Turf Wound — a turn-scoped, player-scoped lock.
+        if self.players[player].cant_play_lands_this_turn {
             return false;
         }
         // Damping Engine — the player ahead on permanents can't play lands.
@@ -6071,6 +6101,7 @@ impl GameState {
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
+        cost.symbols.extend(colored_spell_tax_for_spell(self, p, &card).symbols);
         // Strive (CR 702.122) / Fireball — per-extra-target surcharge.
         cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
@@ -8714,6 +8745,7 @@ impl GameState {
             cost.symbols
                 .push(crate::mana::ManaSymbol::Generic(tax));
         }
+        cost.symbols.extend(colored_spell_tax_for_spell(self, p, &card).symbols);
         cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
         let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
@@ -9137,6 +9169,7 @@ impl GameState {
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
+        mana_cost.symbols.extend(colored_spell_tax_for_spell(self, p, &card).symbols);
         mana_cost.symbols.extend(strive_cost_for_spell(&card, additional_targets.len()).symbols);
         mana_cost.symbols.extend(or_pay_cost_symbols(self, p, &card));
         // CR 601.2f: cost reductions apply uniformly across cast paths

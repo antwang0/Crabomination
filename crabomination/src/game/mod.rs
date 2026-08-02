@@ -4354,7 +4354,20 @@ impl GameState {
                 }
             }
         }
-        amount.saturating_mul(1 << d.min(16)) >> h.min(16)
+        let amount = amount.saturating_mul(1 << d.min(16)) >> h.min(16);
+        // Divine Presence — a big event is replaced by a small one (CR 614).
+        // Applied last so it caps the doubled/halved result.
+        self.battlefield
+            .iter()
+            .flat_map(|c| &c.definition.static_abilities)
+            .filter_map(|sa| match sa.effect {
+                StaticEffect::CapLargeDamage { at_least, capped } if amount >= at_least => {
+                    Some(capped)
+                }
+                _ => None,
+            })
+            .min()
+            .unwrap_or(amount)
     }
 
     /// CR 122.1 — true if any active `StaticEffect::CountersCantBePlaced`
@@ -16149,6 +16162,22 @@ impl GameState {
         self.find_card_anywhere(id).map(|c| c.definition.printed_colors()).unwrap_or_default()
     }
 
+    /// The colour(s) tied for most common among all battlefield permanents —
+    /// each permanent counts once per colour it is (Barrin's Unmaking, the
+    /// Djinn cycle, Tsabo's Assassin). Empty when nothing coloured is out.
+    /// Reads printed colours: the callers sit inside the layer walk, so asking
+    /// for computed colours here would recurse.
+    pub fn most_common_permanent_colors(&self) -> Vec<crate::mana::Color> {
+        let mut tally = std::collections::HashMap::<crate::mana::Color, u32>::new();
+        for c in &self.battlefield {
+            for k in c.definition.printed_colors() {
+                *tally.entry(k).or_default() += 1;
+            }
+        }
+        let Some(&top) = tally.values().max() else { return Vec::new() };
+        tally.into_iter().filter(|(_, n)| *n == top).map(|(k, _)| k).collect()
+    }
+
     pub fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c);
@@ -16920,6 +16949,7 @@ fn static_effect_to_effects(
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }
             | StaticEffect::ColoredCostReduction { .. }
+            | StaticEffect::ColoredSpellTax { .. }
             | StaticEffect::NamedSpellCostReduction { .. }
             | StaticEffect::CostReductionPerControllerExperience { .. }
             | StaticEffect::CostReductionBySourcePower { .. }
@@ -16989,6 +17019,8 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllCombatDamageToThis
             | StaticEffect::PreventAllCombatDamageToAttached
             | StaticEffect::PreventAllDamageToThis
+            | StaticEffect::PreventSmallDamageToThis { .. }
+            | StaticEffect::CapLargeDamage { .. }
             | StaticEffect::PreventAllCombatDamageToThisFromBlockers
             // Prevention statics read at damage time in
             // `apply_prevention_shields`; no layer effect.

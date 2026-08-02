@@ -366,6 +366,10 @@ pub struct Player {
     /// for Pure Flame). Read in `scale_damage_to`, reset at the turn boundary.
     #[serde(default)]
     pub double_your_source_damage_this_turn: bool,
+    /// CR 305.1 — "target player can't play lands this turn" (Turf Wound).
+    /// Consulted by `can_player_play_land`, reset at the turn boundary.
+    #[serde(default)]
+    pub cant_play_lands_this_turn: bool,
     /// CR 700.13 — this player has committed a crime this turn (cast a spell or
     /// activated an ability targeting an opponent / their stuff). Set when a
     /// `CommittedCrime` event fires, reset at the turn boundary. Powers
@@ -834,6 +838,7 @@ impl Player {
             commanders: Vec::new(),
             lands_played_this_turn: 0,
             extra_land_plays: 0,
+            cant_play_lands_this_turn: false,
             extra_loyalty_activations: 0,
             activated_loyalty_this_turn: false,
             spells_cast_this_turn: 0,

@@ -222,6 +222,24 @@ impl GameState {
                 }
             }
         }
+        // Callous Giant — "if a source would deal N or less damage to this,
+        // prevent that damage": all-or-nothing on the whole event.
+        if let EntityRef::Permanent(cid) = ent
+            && amount > 0
+            && self.battlefield_find(cid).is_some_and(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect,
+                        crate::effect::StaticEffect::PreventSmallDamageToThis { max } if amount <= max)
+                })
+            })
+        {
+            events.push(GameEvent::DamagePrevented {
+                amount,
+                to_player: None,
+                to_card: Some(cid),
+            });
+            return 0;
+        }
         // CR 702.64 — Absorb N on the damaged creature prevents N of this
         // event's damage per instance (each instance applies separately).
         if let EntityRef::Permanent(cid) = ent {

@@ -1944,6 +1944,10 @@ pub enum SelectionRequirement {
     /// ("Whenever you cast a multicolored spell, …") and similar
     /// "multicolored spell"/permanent payoffs.
     Multicolored,
+    /// Shares a colour with the most common colour among all permanents, or a
+    /// colour tied for most common (Barrin's Unmaking, Tsabo's Assassin).
+    /// Never matches a colourless object.
+    SharesMostCommonColor,
     /// True when the card's mana cost contains *no* colored pips
     /// (generic + colorless + Snow only). Used by colorless-spell
     /// payoffs and the "colorless permanent" variant of various

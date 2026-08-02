@@ -5533,9 +5533,15 @@ pub fn can_afford_in_state(
     // and never casts it. Target-dependent reductions are skipped (no target
     // chosen yet), so this stays conservative.
     let reduction = crate::game::actions::cost_reduction_for_spell(state, seat, card, None);
+    // Coloured surcharges (the Leech cycle) can't ride the generic `extra`
+    // channel, so they join the printed cost before relaxation.
+    let mut printed = card.definition.cost.clone();
+    printed
+        .symbols
+        .extend(crate::game::actions::colored_spell_tax_for_spell(state, seat, card).symbols);
     // Mirror the payment funnel's Lattice relaxation so the bot doesn't
     // pass on a spell whose coloured pips any mana can now cover.
-    let cost = state.relax_cost_colors(&card.definition.cost);
+    let cost = state.relax_cost_colors(&printed);
     if w.legacy_pretap {
         return can_afford_with_extra(&cost, &state.players[seat].mana_pool, extra, reduction);
     }
@@ -5605,7 +5611,9 @@ pub fn max_affordable_x(
     };
     let fixed_cmc = card.definition.cost.with_x_value(0).cmc();
     let extra = state.extra_cost_for_card_in_hand(seat, card.id);
-    let needed = fixed_cmc + extra;
+    let needed = fixed_cmc
+        + extra
+        + crate::game::actions::colored_spell_tax_for_spell(state, seat, card).cmc();
     let affordable = pool_total.saturating_sub(needed);
     // Don't overkill: an `{X}: deal X damage to target creature` spell
     // (creature-only target — can't go to the face) never needs more X

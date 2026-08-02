@@ -421,6 +421,11 @@ pub enum StaticEffect {
     /// `ManaCost::reduce_by_cost`, so an unmatched colored pip falls back to
     /// removing one generic instead. Mandatory, like every cost reduction.
     ColoredCostReduction { filter: SelectionRequirement, less: crate::mana::ManaCost },
+    /// CR 601.2f — "[filter] spells you cast cost `more` more to cast", where
+    /// `more` names COLORED pips (the Invasion Leech cycle's "{W} more"). Only
+    /// the source's controller pays it; applied before any reduction so a
+    /// discount can't eat the surcharge.
+    ColoredSpellTax { filter: SelectionRequirement, more: crate::mana::ManaCost },
     /// Cost reduction for spells whose name matches the source's `named_card`
     /// (chosen via `Effect::NameCard`). Council of the Absolute — "spells with
     /// the chosen name you cast cost {2} less".
@@ -1079,6 +1084,14 @@ pub enum StaticEffect {
     /// on both damage funnels. Wrap in `WhileYourTurn` for turn-gated
     /// protection (Gideon Blackblade during your turn).
     PreventAllDamageToThis,
+    /// CR 615 — "If a source would deal `max` or less damage to this creature,
+    /// prevent that damage" (Callous Giant). Per-event, all-or-nothing: a
+    /// larger event is unaffected.
+    PreventSmallDamageToThis { max: u32 },
+    /// CR 614 — "If a source would deal `at_least` or more damage to a
+    /// permanent or player, that source deals `capped` damage instead"
+    /// (Divine Presence). Global; applied after doubling/halving.
+    CapLargeDamage { at_least: u32, capped: u32 },
     /// "Prevent all damage that would be dealt to and dealt by enchanted
     /// creature" (Heart of Light) — both directions, any damage type. Read
     /// off the source Aura's live host.

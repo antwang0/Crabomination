@@ -23282,6 +23282,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PlayerCantPlayLandsThisTurn { player } => {
+                if let Some(seat) = self.resolve_player(player, ctx) {
+                    self.players[seat].cant_play_lands_this_turn = true;
+                }
+                Ok(())
+            }
+
             Effect::DestroyAllSharingNameWith { what } => {
                 let names: Vec<&'static str> = self
                     .resolve_selector(what, ctx)
