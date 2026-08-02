@@ -2666,6 +2666,7 @@ impl GameState {
             pl.prowl_any_type_this_turn = false;
             // Veil of Summer's "this turn" riders clear at the turn boundary
             // for every seat (CR 514.2 cleanup-scope grants).
+            pl.next_draw_replacements.clear();
             pl.spells_uncounterable_this_turn = false;
             pl.creature_spells_uncounterable_this_turn = false;
             pl.hexproof_from_colors_this_turn.clear();

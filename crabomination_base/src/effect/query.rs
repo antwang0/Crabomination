@@ -1185,6 +1185,8 @@ impl Effect {
             }
             Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
             Effect::PreventAllCombatDamageThisTurn => false,
+            // The queued body picks its own targets when the draw is replaced.
+            Effect::ReplaceYourNextDrawThisTurn { .. } => false,
             Effect::PreventCombatDamageExceptDealtBy { .. } => false,
             Effect::PreventAllCombatDamageToPlayerThisTurn { .. } => false,
             Effect::SacrificeSourceUnlessPayManaValue | Effect::SacrificeSourceUnlessPay { .. } => false,

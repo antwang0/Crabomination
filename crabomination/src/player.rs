@@ -651,6 +651,12 @@ pub struct Player {
     /// per draw step.
     #[serde(default)]
     pub skip_next_draw_step: u32,
+    /// CR 614 — queued one-shot draw replacements: "the next time you would
+    /// draw a card this turn, [effect] instead" (the Onslaught Words cycle).
+    /// Each entry is `(source, effect)`; `draw_one` pops the front instead of
+    /// drawing. Cleared at the turn boundary.
+    #[serde(default)]
+    pub next_draw_replacements: Vec<(crate::card::CardId, crate::effect::Effect)>,
     /// CR 506 — number of this player's upcoming combat phases to skip
     /// (Stonehorn Dignitary). Consumed when their turn reaches Begin Combat,
     /// jumping straight to the postcombat main. Defaults to 0 for snapshot
@@ -955,6 +961,7 @@ impl Player {
             skip_turns: 0,
             skip_next_untap_step: 0,
             skip_next_draw_step: 0,
+            next_draw_replacements: Vec::new(),
             skip_next_combat: 0,
             lands_dont_untap_next_untap: 0,
             creatures_dont_untap_next_untap: 0,

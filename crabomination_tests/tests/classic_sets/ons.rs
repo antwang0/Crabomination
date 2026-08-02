@@ -2611,3 +2611,54 @@ fn ons_wave5_activations() {
     cast(&mut g, 0, blast, Some(Target::Permanent(bear)));
     assert_eq!(g.battlefield_find(bear).unwrap().damage, 2, "1 of the 3 prevented");
 }
+
+/// CR 614 — the Words cycle replaces your next draw for the turn, one charge
+/// per activation, and unused charges evaporate at end of turn.
+#[test]
+fn words_cycle_replaces_the_next_draw() {
+    let mut g = main_phase();
+    let words = g.add_card_to_battlefield(0, catalog::words_of_worship());
+    g.add_card_to_library(0, catalog::forest());
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    activate(&mut g, 0, words, 0, None);
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    assert_eq!(g.players[0].life, life + 5, "the draw became 5 life");
+    assert_eq!(g.players[0].hand.len(), hand, "and no card was drawn");
+    // The charge is spent — the next draw is a real one.
+    g.draw_one(0, &mut ev);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+
+    // Words of War turns the draw into 2 damage.
+    let mut g = main_phase();
+    let words = g.add_card_to_battlefield(0, catalog::words_of_war());
+    g.add_card_to_library(0, catalog::forest());
+    let their_life = g.players[1].life;
+    activate(&mut g, 0, words, 0, None);
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, their_life - 2);
+}
+
+/// Words of Wilding and Words of Waste swap the draw for a Bear / a discard.
+#[test]
+fn words_of_wilding_and_waste() {
+    let mut g = main_phase();
+    let words = g.add_card_to_battlefield(0, catalog::words_of_wilding());
+    g.add_card_to_library(0, catalog::forest());
+    activate(&mut g, 0, words, 0, None);
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    assert_eq!(count_named(&g, 0, "Bear"), 1);
+
+    let mut g = main_phase();
+    let words = g.add_card_to_battlefield(0, catalog::words_of_waste());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_hand(1, catalog::forest());
+    activate(&mut g, 0, words, 0, None);
+    let mut ev = vec![];
+    g.draw_one(0, &mut ev);
+    assert!(g.players[1].hand.is_empty(), "the opponent discarded instead");
+}

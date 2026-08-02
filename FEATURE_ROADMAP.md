@@ -2400,10 +2400,10 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** The whole Odyssey block is done — Odyssey, Torment
    and **Judgment** are all at zero (`set_gaps.py ody` / `tor` / `jud`).
-   **Onslaught** (`sets::ons` + `sets::ons2`) is open at ~72 gaps after five
-   waves (194 cards); the remaining bulk is the Chain spells, the Words
-   draw-replacement cycle and the "each player chooses a creature type" rares
-   (Harsh Mercy, Patriarch's Bidding, Peer Pressure). Then Legions / Scourge.
+   **Onslaught** (`sets::ons` + `sets::ons2`) is open at ~67 gaps after six
+   waves (199 cards); the remaining bulk is the Chain spells and the "each
+   player chooses a creature type" rares (Harsh Mercy, Patriarch's Bidding,
+   Peer Pressure). Then Legions / Scourge.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2418,12 +2418,17 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Onslaught (ONS) waves 2-5** — `set_gaps.py ons` 219 → ~72 (`sets::ons2`,
-  147 cards: the Morph commons, the tap-a-tribe activations, the Avatar cycle,
+- **Onslaught (ONS) waves 2-6** — `set_gaps.py ons` 219 → ~67 (`sets::ons2`,
+  152 cards: the Morph commons, the tap-a-tribe activations, the Avatar cycle,
   the tribal-count spells, the utility lands, the Crown / Courier / Mistform
   cycles, the cycling spells with "when you cycle this card" riders, the
   Gustcloak cycle, the face-down-matters shell, the charms and the utility
-  shell). New: `Keyword::CantBlockGreaterPowerThanSelf` (Spitfire Handler),
+  shell, the Words draw-replacement cycle). New:
+  `Effect::ReplaceYourNextDrawThisTurn` (CR 614 — a queued one-shot "the next
+  time you would draw a card this turn, [X] instead" charge on
+  `Player.next_draw_replacements`, spent in `draw_one` and cleared at the turn
+  boundary; the Words cycle),
+  `Keyword::CantBlockGreaterPowerThanSelf` (Spitfire Handler),
   `StaticEffect::ReduceDamageToYourMatchingCreaturesBy` (Daunting Defender's
   Clerics) and `StaticEffect::PreventAllCombatDamageToAndFromEnchanted`
   (Sandskin). New:

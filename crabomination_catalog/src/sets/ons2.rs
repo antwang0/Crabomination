@@ -3129,3 +3129,84 @@ pub fn vitality_charm() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── The Words cycle (CR 614 — replace your next draw) ───────────────────────
+
+/// A Words enchantment: `{1}: The next time you would draw a card this turn,
+/// [body] instead.`
+fn words(name: &'static str, c: ManaCost, body: Effect) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::ReplaceYourNextDrawThisTurn { body: Box::new(body) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Words of War — draws become 2 damage.
+pub fn words_of_war() -> CardDefinition {
+    words(
+        "Words of War",
+        cost(&[generic(2), r()]),
+        Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(2) },
+    )
+}
+
+/// Words of Waste — draws become opponent discards.
+pub fn words_of_waste() -> CardDefinition {
+    words(
+        "Words of Waste",
+        cost(&[generic(2), b()]),
+        Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::ONE,
+            random: false,
+        },
+    )
+}
+
+/// Words of Wilding — draws become Bears.
+pub fn words_of_wilding() -> CardDefinition {
+    let bear = TokenDefinition {
+        name: "Bear".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        ..Default::default()
+    };
+    words(
+        "Words of Wilding",
+        cost(&[generic(2), g()]),
+        Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: bear },
+    )
+}
+
+/// Words of Wind — draws become a symmetrical bounce.
+pub fn words_of_wind() -> CardDefinition {
+    words(
+        "Words of Wind",
+        cost(&[generic(2), u()]),
+        Effect::PlayerReturnsPermanentsToHand {
+            who: PlayerRef::EachPlayer,
+            count: Value::ONE,
+            filter: R::Permanent,
+            up_to: false,
+        },
+    )
+}
+
+/// Words of Worship — draws become 5 life.
+pub fn words_of_worship() -> CardDefinition {
+    words(
+        "Words of Worship",
+        cost(&[generic(2), w()]),
+        Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+    )
+}

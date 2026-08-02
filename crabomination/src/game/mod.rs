@@ -11584,6 +11584,24 @@ impl GameState {
             events.push(GameEvent::PermanentExiled { card_id });
             return true;
         }
+        // CR 614 — a queued "the next time you would draw a card this turn,
+        // [X] instead" charge (the Words cycle). Spent front-first, before the
+        // optional replacements below, since the printed effect is mandatory
+        // once the charge is bought.
+        if !self.players[p].next_draw_replacements.is_empty() {
+            let (src, body) = self.players[p].next_draw_replacements.remove(0);
+            // The body picks its own target as it applies (Words of War's
+            // "deals 2 damage to any target").
+            let target = body
+                .requires_target()
+                .then(|| self.auto_target_for_effect_avoiding(&body, p, Some(src)))
+                .flatten();
+            let ctx = crate::game::effects::EffectContext::for_ability(src, p, target);
+            if let Ok(mut evs) = self.resolve_effect(&body, &ctx) {
+                events.append(&mut evs);
+            }
+            return true;
+        }
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
         }

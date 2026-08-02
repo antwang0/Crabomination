@@ -6346,6 +6346,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReplaceYourNextDrawThisTurn { body } => {
+                let src = ctx.source.unwrap_or(CardId(0));
+                self.players[ctx.controller]
+                    .next_draw_replacements
+                    .push((src, (**body).clone()));
+                Ok(())
+            }
+
             Effect::TurnFaceUpFree { what } => {
                 // CR 707.9 — turned up without paying the morph cost; the
                 // megamorph +1/+1 counter still applies (CR 702.36e).

@@ -3965,6 +3965,11 @@ pub enum Effect {
     /// creature with no name, types, or abilities. A no-op on a permanent
     /// that is already face down (CR 708.2b). Ixidron.
     TurnFaceDown { what: Selector },
+    /// CR 614 — "The next time you would draw a card this turn, [`body`]
+    /// instead." Queues a one-shot replacement on the controller consumed by
+    /// the next draw (the Onslaught Words cycle). Charges stack and are
+    /// spent front-first; unused ones evaporate at end of turn.
+    ReplaceYourNextDrawThisTurn { body: Box<Effect> },
     /// CR 707.9 — turn each face-down permanent the selector picks face up
     /// *without* paying its morph cost (Break Open, Ixidor, Reality
     /// Sculptor). Non-face-down picks are skipped.
