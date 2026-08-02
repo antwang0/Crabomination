@@ -675,3 +675,58 @@ fn sickening_dreams_sweeps_for_x() {
     assert!(g.battlefield_find(victim).is_none(), "the 2/2 took 2");
     assert_eq!(g.players[1].life, 18);
 }
+
+/// Dwell on the Past shuffles graveyard cards back into the library.
+#[test]
+fn dwell_on_the_past_reshuffles_graveyard_cards() {
+    let mut g = main_phase();
+    let a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::dwell_on_the_past());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].library.iter().any(|c| c.id == a), "back in the library");
+}
+
+/// Crackling Club pumps its host, then cashes in for a ping.
+#[test]
+fn crackling_club_pumps_then_pings() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::mystic_familiar());
+    let club = g.add_card_to_hand(0, catalog::crackling_club());
+    cast(&mut g, 0, club, Some(Target::Permanent(mine)));
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3);
+    let club = g.battlefield.iter().find(|c| c.definition.name == "Crackling Club").unwrap().id;
+    activate(&mut g, 0, club, 0, Some(Target::Permanent(victim)));
+    assert_eq!(g.battlefield_find(victim).unwrap().damage, 1);
+}
+
+/// Major Teroh's swan song exiles every black creature.
+#[test]
+fn major_teroh_exiles_black_creatures() {
+    let mut g = main_phase();
+    let shade = g.add_card_to_battlefield(1, catalog::nantuko_shade());
+    let teroh = g.add_card_to_battlefield(0, catalog::major_teroh());
+    activate(&mut g, 0, teroh, 0, None);
+    assert!(g.battlefield_find(shade).is_none(), "the black creature was exiled");
+}
+
+/// Enslaved Dwarf trades itself for a pumped, first-striking black creature.
+#[test]
+fn enslaved_dwarf_pumps_a_black_creature() {
+    let mut g = main_phase();
+    let shade = g.add_card_to_battlefield(0, catalog::nantuko_shade());
+    let dwarf = g.add_card_to_battlefield(0, catalog::enslaved_dwarf());
+    activate(&mut g, 0, dwarf, 0, Some(Target::Permanent(shade)));
+    let cp = g.computed_permanent(shade).unwrap();
+    assert_eq!(cp.power, 3);
+    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+}
