@@ -95,15 +95,16 @@ Prison Barricade's kicked defender bypass is wired.
 - **Dreamwinder's attack gate is any Island**, not the defender's, and its
   `{U}`, sacrifice-an-Island land-animation half is dropped (no one-shot
   "target land becomes an Island").
-- **The remaining 71 ODY gaps** are mostly one-primitive cards: Bomb Squad /
-  Mine Layer (counter-driven board watchers), Delaying Shield / Nefarious Lich
-  (damage replacements), Balancing Act, Cultural Exchange, Haunting Echoes,
-  Impulsive Maneuvers, Charmed Pendant, Catalyst Stone (flashback-cost
-  modifiers), Aura Graft.
+- **The remaining 53 ODY gaps** each want one primitive: Bomb Squad / Mine
+  Layer (counter-driven board watchers), Delaying Shield / Nefarious Lich
+  (damage replacements), Obstinate Familiar (an optional controller-scoped
+  draw skip), Balancing Act, Cultural Exchange, Haunting Echoes, Impulsive
+  Maneuvers, Charmed Pendant, Catalyst Stone (a flashback-cost modifier),
+  Aura Graft, Seize the Day (an extra combat phase), Predict, Bamboozle.
 
 ## Odyssey — opened
 
-`set_gaps.py ody` 274 → 71 (`sets::ody::gaps`–`gaps7`, 203 cards; tests in
+`set_gaps.py ody` 274 → 53 (`sets::ody::gaps`–`gaps8`, 221 cards; tests in
 `classic_sets/ody`). Threshold rides `Predicate::ThresholdActive`, flashback and
 the Aura/EquipBonus shell were already in place. New primitives:
 `Effect::{RevealHand, RevealTopOfLibrary, PlayerCantCastMatchingThisTurn}`,

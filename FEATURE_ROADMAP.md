@@ -2358,8 +2358,8 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** Odyssey is open (`set_gaps.py ody` 274 → 71,
-   `sets::ody::gaps`–`gaps7`); keep the wave pattern going, then Torment and
+0. **Next set to close.** Odyssey is open (`set_gaps.py ody` 274 → 53,
+   `sets::ody::gaps`–`gaps8`); keep the wave pattern going, then Torment and
    Judgment finish the block.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
@@ -2375,7 +2375,7 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Odyssey (ODY) opened** — 203 cards (`sets::ody::gaps`–`gaps7`, tests in
+- **Odyssey (ODY) opened** — 221 cards (`sets::ody::gaps`–`gaps8`, tests in
   `classic_sets/ody`): the sac-land cycle, the Threshold shell (Mystics,
   Frightcrawler, Krosan Avenger, the Desire Auras, Divine Sacrament), the
   flashback commons, the Sphere cycle, Standstill / Battle of Wits / Ground

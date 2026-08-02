@@ -1003,3 +1003,109 @@ fn otarian_juggernaut_ignores_walls() {
         "a Wall can't block it"
     );
 }
+
+// ── Wave 8 ──────────────────────────────────────────────────────────────────
+
+/// Psychatog feeds on the hand and on the graveyard.
+#[test]
+fn psychatog_eats_hand_and_graveyard() {
+    let mut g = main_phase();
+    let tog = g.add_card_to_battlefield(0, catalog::psychatog());
+    g.add_card_to_hand(0, catalog::forest());
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    activate(&mut g, 0, tog, 0, None);
+    assert_eq!(g.computed_permanent(tog).unwrap().power, 2, "the hand fed it");
+    activate(&mut g, 0, tog, 1, None);
+    assert_eq!(g.computed_permanent(tog).unwrap().power, 3, "the graveyard fed it");
+    // Two of the three (the two originals plus the discarded card) were exiled.
+    assert_eq!(g.players[0].graveyard.len(), 1);
+}
+
+/// Nomad Decoy's double tap is Threshold-gated.
+#[test]
+fn nomad_decoy_double_taps_past_threshold() {
+    let mut g = main_phase();
+    let decoy = g.add_card_to_battlefield(0, catalog::nomad_decoy());
+    g.battlefield_find_mut(decoy).unwrap().summoning_sick = false;
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: decoy,
+            ability_index: 1,
+            target: Some(Target::Permanent(a)),
+            additional_targets: vec![Target::Permanent(b)],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "the double tap needs Threshold"
+    );
+    fill_graveyard(&mut g, 0);
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: decoy,
+        ability_index: 1,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("double tap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped);
+}
+
+/// Persuasion steals the creature for as long as it stays attached.
+#[test]
+fn persuasion_steals_until_it_leaves() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::persuasion());
+    cast(&mut g, 0, aura, Some(Target::Permanent(victim)));
+    assert_eq!(g.battlefield_find(victim).unwrap().controller, 0);
+    let _ = g.remove_to_graveyard_with_triggers(aura);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(victim).unwrap().controller, 1, "control reverts");
+}
+
+/// Demoralize hands out menace, or shuts blocking off past Threshold.
+#[test]
+fn demoralize_scales_with_threshold() {
+    let mut g = main_phase();
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::demoralize());
+    cast(&mut g, 0, spell, None);
+    assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::Menace));
+
+    let mut g = main_phase();
+    fill_graveyard(&mut g, 0);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::demoralize());
+    cast(&mut g, 0, spell, None);
+    assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::CantBlock));
+}
+
+/// Testament of Faith stands up as an X/X Wall.
+#[test]
+fn testament_of_faith_animates_for_x() {
+    let mut g = main_phase();
+    let test = g.add_card_to_battlefield(0, catalog::testament_of_faith());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: test,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("animate for X=3");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(test).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords.contains(&Keyword::Defender));
+}
