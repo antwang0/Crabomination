@@ -61,94 +61,135 @@ fn render_status(started: Instant, slots: &SlotManager) -> String {
 /// the same numbers the plaintext page carries, so Prometheus/textfile or a
 /// simple `jq` probe can read them without parsing the human summary. Split
 /// from the serving loop for testing.
-fn render_status_json(started: Instant, slots: &SlotManager) -> String {
+/// One `/status.json` field. Built as an explicit `(key, rendered value)`
+/// list rather than a single 60-placeholder `format!`, whose positional
+/// arguments silently mis-align the moment a field is inserted in the middle.
+struct JsonField {
+    key: &'static str,
+    /// Already-rendered JSON value (number, quoted string, or array).
+    value: String,
+}
+
+fn num(key: &'static str, v: impl std::fmt::Display) -> JsonField {
+    JsonField { key, value: v.to_string() }
+}
+
+fn fixed2(key: &'static str, v: f32) -> JsonField {
+    JsonField { key, value: format!("{v:.2}") }
+}
+
+fn text(key: &'static str, v: &str) -> JsonField {
+    JsonField { key, value: format!("\"{}\"", html_escape_json(v)) }
+}
+
+/// Minimal JSON string escaping for the small, server-controlled strings that
+/// reach `/status.json` (bucket labels). Quotes and backslashes only — the
+/// values never carry control characters.
+fn html_escape_json(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+/// Every scalar `/status.json` field, in output order. Shared by the renderer
+/// and by the drift test that pins JSON keys against `/metrics` sample names.
+fn status_fields(started: Instant, slots: &SlotManager) -> Vec<JsonField> {
     let st = *match_stats().lock().unwrap_or_else(|p| p.into_inner());
     let sl = slots.snapshot();
     let refused = sl.refused_global + sl.refused_per_ip;
-    format!(
-        "{{\"uptime_secs\":{},\"matches\":{},\"bot_matches\":{},\"pair_matches\":{},\
-         \"avg_turns\":{},\"avg_decisive_turns\":{},\"avg_draw_turns\":{},\"stalemate_grind_pct\":{},\
-         \"min_turns\":{},\"max_turns\":{},\"turn_stddev\":{:.2},\"turn_cv_pct\":{},\
-         \"median_turns\":{},\"turn_p10\":{},\"turn_p90\":{},\"turn_p95\":{},\"turn_iqr\":{},\
-         \"modal_turn_band\":\"{}\",\"fast_game_pct\":{},\"slow_game_pct\":{},\
-         \"inconclusive\":{},\"inconclusive_pct\":{},\"decisive_pct\":{},\"draw_pct\":{},\
-         \"draws\":{},\"damage_wins\":{},\"poison_wins\":{},\
-         \"deckout_wins\":{},\"commander_damage_wins\":{},\"concede_wins\":{},\"other_wins\":{},\
-         \"first_seat_win_pct\":{},\"avg_win_life_delta\":{},\
-         \"median_win_life_delta\":{},\"win_life_delta_p90\":{},\"win_life_delta_stddev\":{:.2},\
-         \"win_life_delta_iqr\":{},\"close_win_pct\":{},\"blowout_win_pct\":{},\
-         \"connections_current\":{},\"connections_peak\":{},\
-         \"accepted\":{},\"refused\":{},\"refused_global\":{},\"refused_per_ip\":{},\
-         \"refusal_rate_pct\":{},\"distinct_ips\":{},\"max_per_ip\":{},\"peak_per_ip\":{},\
-         \"avg_duration_secs\":{},\"min_duration_secs\":{},\"max_duration_secs\":{},\
-         \"duration_stddev_secs\":{},\"duration_p95_secs\":{},\"duration_buckets\":[{},{},{},{},{},{}],\
-         \"avg_winner_board\":{},\"winner_board_stddev\":{:.2},\"winner_board_cv_pct\":{},\
-         \"catalog_cards\":{}}}\n",
-        started.elapsed().as_secs(),
-        st.total_matches(),
-        st.bot_matches,
-        st.pair_matches,
-        st.avg_turns(),
-        st.avg_decisive_turns(),
-        st.avg_draw_turns(),
-        st.stalemate_grind_pct(),
-        st.min_turns.unwrap_or(0),
-        st.max_turns.unwrap_or(0),
-        st.turn_count_stddev(),
-        st.turn_count_cv_pct(),
-        st.turn_percentile(0.5),
-        st.turn_percentile(0.1),
-        st.turn_percentile(0.9),
-        st.turn_percentile(0.95),
-        st.turn_count_iqr(),
-        st.turn_count_mode_bucket().unwrap_or("n/a"),
-        st.fast_game_pct(),
-        st.slow_game_pct(),
-        st.inconclusive,
-        st.inconclusive_pct(),
-        st.decisive_pct(),
-        st.draw_pct(),
-        st.draws,
-        st.damage_wins,
-        st.poison_wins,
-        st.deck_wins,
-        st.commander_damage_wins,
-        st.concede_wins,
-        st.other_wins,
-        st.first_seat_win_pct(),
-        st.avg_win_life_delta(),
-        st.win_life_delta_median(),
-        st.win_life_delta_percentile(0.9),
-        st.win_life_delta_stddev(),
-        st.win_life_delta_iqr(),
-        st.close_win_pct(),
-        st.blowout_win_pct(),
-        sl.current,
-        sl.peak,
-        sl.accepted,
-        refused,
-        sl.refused_global,
-        sl.refused_per_ip,
-        sl.refusal_rate_pct(),
-        sl.distinct_ips,
-        sl.max_per_ip,
-        sl.peak_per_ip,
-        st.avg_duration().as_secs(),
-        st.min_duration.map(|d| d.as_secs()).unwrap_or(0),
-        st.max_duration.map(|d| d.as_secs()).unwrap_or(0),
-        st.duration_stddev().as_secs(),
-        st.percentile(0.95).as_secs(),
-        st.duration_buckets[0],
-        st.duration_buckets[1],
-        st.duration_buckets[2],
-        st.duration_buckets[3],
-        st.duration_buckets[4],
-        st.duration_buckets[5],
-        st.avg_winner_board(),
-        st.winner_board_stddev(),
-        st.winner_board_cv_pct(),
-        catalog_card_count(),
-    )
+    vec![
+        num("uptime_secs", started.elapsed().as_secs()),
+        num("matches", st.total_matches()),
+        num("bot_matches", st.bot_matches),
+        num("pair_matches", st.pair_matches),
+        num("bot_match_pct", st.bot_match_pct()),
+        num("avg_turns", st.avg_turns()),
+        num("avg_decisive_turns", st.avg_decisive_turns()),
+        num("avg_draw_turns", st.avg_draw_turns()),
+        num("stalemate_grind_pct", st.stalemate_grind_pct()),
+        num("min_turns", st.min_turns.unwrap_or(0)),
+        num("max_turns", st.max_turns.unwrap_or(0)),
+        fixed2("turn_stddev", st.turn_count_stddev()),
+        num("turn_cv_pct", st.turn_count_cv_pct()),
+        num("median_turns", st.turn_percentile(0.5)),
+        num("turn_p10", st.turn_percentile(0.1)),
+        num("turn_p90", st.turn_percentile(0.9)),
+        num("turn_p95", st.turn_percentile(0.95)),
+        num("turn_iqr", st.turn_count_iqr()),
+        text("modal_turn_band", st.turn_count_mode_bucket().unwrap_or("n/a")),
+        num("fast_game_pct", st.fast_game_pct()),
+        num("slow_game_pct", st.slow_game_pct()),
+        num("inconclusive", st.inconclusive),
+        num("inconclusive_pct", st.inconclusive_pct()),
+        num("unresolved", st.unresolved()),
+        num("unresolved_pct", st.unresolved_pct()),
+        num("decisive_pct", st.decisive_pct()),
+        num("draw_pct", st.draw_pct()),
+        num("draws", st.draws),
+        num("damage_wins", st.damage_wins),
+        num("poison_wins", st.poison_wins),
+        num("deckout_wins", st.deck_wins),
+        num("commander_damage_wins", st.commander_damage_wins),
+        num("concede_wins", st.concede_wins),
+        num("other_wins", st.other_wins),
+        num("avg_concede_turn", st.avg_concede_turn()),
+        num("concede_earliness_pct", st.concede_earliness_pct()),
+        num("first_seat_win_pct", st.first_seat_win_pct()),
+        num("avg_win_life_delta", st.avg_win_life_delta()),
+        num("median_win_life_delta", st.win_life_delta_median()),
+        num("win_life_delta_p90", st.win_life_delta_percentile(0.9)),
+        fixed2("win_life_delta_stddev", st.win_life_delta_stddev()),
+        num("win_life_delta_iqr", st.win_life_delta_iqr()),
+        num("win_life_delta_cv_pct", st.win_life_delta_cv_pct()),
+        num("close_win_pct", st.close_win_pct()),
+        num("blowout_win_pct", st.blowout_win_pct()),
+        num("connections_current", sl.current),
+        num("connections_peak", sl.peak),
+        num("accepted", sl.accepted),
+        num("refused", refused),
+        num("refused_global", sl.refused_global),
+        num("refused_per_ip", sl.refused_per_ip),
+        num("refusal_rate_pct", sl.refusal_rate_pct()),
+        num("distinct_ips", sl.distinct_ips),
+        num("max_per_ip", sl.max_per_ip),
+        num("peak_per_ip", sl.peak_per_ip),
+        num("connections_global_cap", sl.global_cap),
+        num("connections_occupancy_pct", sl.occupancy_pct()),
+        num("avg_duration_secs", st.avg_duration().as_secs()),
+        num("min_duration_secs", st.min_duration.map(|d| d.as_secs()).unwrap_or(0)),
+        num("max_duration_secs", st.max_duration.map(|d| d.as_secs()).unwrap_or(0)),
+        num("median_duration_secs", st.percentile(0.5).as_secs()),
+        num("duration_p90_secs", st.percentile(0.9).as_secs()),
+        num("duration_stddev_secs", st.duration_stddev().as_secs()),
+        num("duration_p95_secs", st.percentile(0.95).as_secs()),
+        JsonField {
+            key: "duration_buckets",
+            value: render_u64_array(&st.duration_buckets),
+        },
+        JsonField {
+            key: "turn_buckets",
+            value: render_u64_array(&st.turn_buckets),
+        },
+        JsonField {
+            key: "seat_wins",
+            value: render_u64_array(&st.seat_wins),
+        },
+        num("avg_winner_board", st.avg_winner_board()),
+        fixed2("winner_board_stddev", st.winner_board_stddev()),
+        num("winner_board_cv_pct", st.winner_board_cv_pct()),
+        num("catalog_cards", catalog_card_count()),
+    ]
+}
+
+fn render_u64_array(xs: &[impl std::fmt::Display]) -> String {
+    let inner: Vec<String> = xs.iter().map(|x| x.to_string()).collect();
+    format!("[{}]", inner.join(","))
+}
+
+fn render_status_json(started: Instant, slots: &SlotManager) -> String {
+    let body: Vec<String> = status_fields(started, slots)
+        .into_iter()
+        .map(|f| format!("\"{}\":{}", f.key, f.value))
+        .collect();
+    format!("{{{}}}\n", body.join(","))
 }
 
 /// Render a Prometheus text-exposition (`/metrics`) snapshot — the same numbers
@@ -704,6 +745,118 @@ mod tests {
                     "\"duration_stddev_secs\":0", "\"duration_p95_secs\":0",
                     "\"duration_buckets\":[0,0,0,0,0,0]"] {
             assert!(body.contains(key), "missing {key} in {body}");
+        }
+    }
+
+    /// `/status.json` and `/metrics` are two views of the same numbers. Every
+    /// scalar JSON field must have a `crab_*` sample on the metrics page (under
+    /// its metric-side name), so a field added to one endpoint can't silently
+    /// go missing from the other.
+    #[test]
+    fn status_json_and_metrics_expose_the_same_scalars() {
+        let now = Instant::now();
+        let slots = SlotManager::new(10, 5);
+        let metrics = render_metrics(now, &slots);
+        // JSON key -> metrics sample name (`crab_` prefix implied). Array
+        // fields are exposed as labelled series and are checked separately.
+        let map = [
+            ("uptime_secs", "uptime_seconds"),
+            ("matches", "matches_total"),
+            ("bot_matches", "bot_matches_total"),
+            ("pair_matches", "pair_matches_total"),
+            ("bot_match_pct", "bot_match_pct"),
+            ("avg_turns", "avg_turns"),
+            ("avg_decisive_turns", "avg_decisive_turns"),
+            ("avg_draw_turns", "avg_draw_turns"),
+            ("stalemate_grind_pct", "stalemate_grind_pct"),
+            ("min_turns", "min_turns"),
+            ("max_turns", "max_turns"),
+            ("turn_stddev", "turn_stddev"),
+            ("turn_cv_pct", "turn_cv_pct"),
+            ("median_turns", "median_turns"),
+            ("turn_p10", "turn_p10"),
+            ("turn_p90", "turn_p90"),
+            ("turn_p95", "turn_p95"),
+            ("turn_iqr", "turn_iqr"),
+            ("fast_game_pct", "fast_game_pct"),
+            ("slow_game_pct", "slow_game_pct"),
+            ("inconclusive", "inconclusive_total"),
+            ("inconclusive_pct", "inconclusive_pct"),
+            ("unresolved", "unresolved_total"),
+            ("unresolved_pct", "unresolved_pct"),
+            ("decisive_pct", "decisive_pct"),
+            ("draw_pct", "draw_pct"),
+            ("draws", "draws_total"),
+            ("avg_concede_turn", "avg_concede_turn"),
+            ("concede_earliness_pct", "concede_earliness_pct"),
+            ("first_seat_win_pct", "first_seat_win_pct"),
+            ("avg_win_life_delta", "avg_win_life_delta"),
+            ("median_win_life_delta", "median_win_life_delta"),
+            ("win_life_delta_p90", "win_life_delta_p90"),
+            ("win_life_delta_stddev", "win_life_delta_stddev"),
+            ("win_life_delta_iqr", "win_life_delta_iqr"),
+            ("win_life_delta_cv_pct", "win_life_delta_cv_pct"),
+            ("close_win_pct", "close_win_pct"),
+            ("blowout_win_pct", "blowout_win_pct"),
+            ("connections_current", "connections_current"),
+            ("connections_peak", "connections_peak"),
+            ("accepted", "connections_accepted_total"),
+            ("refused", "connections_refused_total"),
+            ("refusal_rate_pct", "connections_refused_pct"),
+            ("distinct_ips", "distinct_ips"),
+            ("max_per_ip", "connections_max_per_ip"),
+            ("peak_per_ip", "peak_per_ip"),
+            ("connections_global_cap", "connections_global_cap"),
+            ("connections_occupancy_pct", "connections_occupancy_pct"),
+            ("avg_duration_secs", "avg_duration_seconds"),
+            ("min_duration_secs", "min_duration_seconds"),
+            ("max_duration_secs", "max_duration_seconds"),
+            ("median_duration_secs", "median_duration_seconds"),
+            ("duration_p90_secs", "duration_p90_seconds"),
+            ("duration_stddev_secs", "duration_stddev_seconds"),
+            ("duration_p95_secs", "duration_p95_seconds"),
+            ("avg_winner_board", "winner_board_avg"),
+            ("winner_board_stddev", "winner_board_stddev"),
+            ("winner_board_cv_pct", "winner_board_cv_pct"),
+            ("catalog_cards", "catalog_cards"),
+        ];
+        let fields = status_fields(now, &slots);
+        let keys: Vec<&str> = fields.iter().map(|f| f.key).collect();
+        for (json_key, metric) in map {
+            assert!(keys.contains(&json_key), "/status.json lost {json_key}");
+            assert!(
+                metrics.contains(&format!("\ncrab_{metric} ")),
+                "/metrics lost crab_{metric} (JSON key {json_key})"
+            );
+        }
+        // The rest reach /metrics as labelled series rather than bare samples.
+        for series in [
+            "crab_connections_refused_by_reason_total{reason=\"global\"}",
+            "crab_connections_refused_by_reason_total{reason=\"per_ip\"}",
+            "crab_wins_total{kind=\"damage\"}",
+            "crab_wins_total{kind=\"poison\"}",
+            "crab_wins_total{kind=\"decked\"}",
+            "crab_wins_total{kind=\"commander_damage\"}",
+            "crab_wins_total{kind=\"concede\"}",
+            "crab_wins_total{kind=\"other\"}",
+            "crab_match_duration_bucket{band=",
+            "crab_match_turn_bucket{band=",
+            "crab_seat_wins_total{seat=",
+        ] {
+            assert!(metrics.contains(series), "/metrics lost {series}");
+        }
+        // Every JSON field is either mapped to a bare sample or is one of the
+        // labelled/array forms checked just above.
+        let mapped: Vec<&str> = map.iter().map(|(j, _)| *j).collect();
+        for k in keys {
+            assert!(
+                mapped.contains(&k)
+                    || matches!(k, "duration_buckets" | "turn_buckets" | "seat_wins"
+                        | "modal_turn_band" | "damage_wins" | "poison_wins" | "deckout_wins"
+                        | "commander_damage_wins" | "concede_wins" | "other_wins"
+                        | "refused_global" | "refused_per_ip"),
+                "{k} is in /status.json but not mapped to a metric"
+            );
         }
     }
 

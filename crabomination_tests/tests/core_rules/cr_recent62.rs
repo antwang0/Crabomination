@@ -53,11 +53,11 @@ fn cr_727_1_restart_returns_every_card_to_its_owners_library() {
     assert!(g.game_over.is_none(), "the restarted game is live, not over");
     assert_eq!(g.active_player_idx, 1, "CR 727.1a — the restarter goes first");
     assert!(g.battlefield.is_empty(), "no permanents carry over");
-    for p in 0..2 {
+    for (p, before) in owned_before.iter().enumerate() {
         assert_eq!(g.players[p].hand.len(), 7, "CR 103.4 — a fresh opening hand");
         assert_eq!(
             g.players[p].library.len() + g.players[p].hand.len(),
-            owned_before[p],
+            *before,
             "every owned card is back in the deck"
         );
         assert_eq!(g.players[p].life, g.players[p].starting_life);

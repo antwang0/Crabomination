@@ -60,6 +60,7 @@ pub fn enumerate_for_cast(
         description: String::new(),
     };
     let ignore = viewer_hexproof_ignores(cv);
+    let board = BoardCtx::new(cv);
     for p in &cv.players {
         // Skip an opponent shielded by hexproof (CR 702.11) — the server would
         // reject the cast. `has_hexproof` is already surfaced from the viewer's
@@ -75,7 +76,7 @@ pub fn enumerate_for_cast(
         if perm.controller != cv.your_seat && untargetable_by_hexproof_or_shroud(perm, ignore) {
             continue;
         }
-        if evaluate_permanent(&filter, perm, cv.your_seat) {
+        if evaluate_permanent(&filter, perm, &board) {
             out.permanents.insert(perm.id);
         }
     }
@@ -138,23 +139,54 @@ fn evaluate_player(req: &SelectionRequirement, p: &PlayerView, your_seat: usize)
     }
 }
 
+/// The slice of board state a permanent filter can need beyond the permanent
+/// itself: the viewer's seat and the colour(s) tied for most common among all
+/// permanents (Barrin's Unmaking, Tsabo's Assassin).
+#[derive(Clone)]
+struct BoardCtx {
+    your_seat: usize,
+    top_colors: Vec<crabomination::mana::Color>,
+}
+
+impl BoardCtx {
+    fn new(cv: &ClientView) -> Self {
+        let mut tally = std::collections::HashMap::<crabomination::mana::Color, u32>::new();
+        for perm in &cv.battlefield {
+            let Some(def) = crabomination::catalog::lookup_by_name(&perm.name) else { continue };
+            for k in def.printed_colors() {
+                *tally.entry(k).or_default() += 1;
+            }
+        }
+        let top = tally.values().copied().max().unwrap_or(0);
+        Self {
+            your_seat: cv.your_seat,
+            top_colors: tally
+                .into_iter()
+                .filter(|(_, n)| top > 0 && *n == top)
+                .map(|(k, _)| k)
+                .collect(),
+        }
+    }
+}
+
 fn evaluate_permanent(
     req: &SelectionRequirement,
     perm: &PermanentView,
-    your_seat: usize,
+    ctx: &BoardCtx,
 ) -> bool {
+    let your_seat = ctx.your_seat;
     use crabomination::card::CardType;
     use SelectionRequirement as R;
     match req {
         R::Any | R::Permanent => true,
         R::Player => false,
         R::And(a, b) => {
-            evaluate_permanent(a, perm, your_seat) && evaluate_permanent(b, perm, your_seat)
+            evaluate_permanent(a, perm, ctx) && evaluate_permanent(b, perm, ctx)
         }
         R::Or(a, b) => {
-            evaluate_permanent(a, perm, your_seat) || evaluate_permanent(b, perm, your_seat)
+            evaluate_permanent(a, perm, ctx) || evaluate_permanent(b, perm, ctx)
         }
-        R::Not(inner) => !evaluate_permanent(inner, perm, your_seat),
+        R::Not(inner) => !evaluate_permanent(inner, perm, ctx),
         R::ControlledByYou => perm.controller == your_seat,
         R::ControlledByOpponent => perm.controller != your_seat,
         R::Creature => perm.card_types.contains(&CardType::Creature),
@@ -192,14 +224,14 @@ fn evaluate_permanent(
         // Catalog-only predicates (mana cost, colour, supertypes,
         // subtypes, name) need the card definition. Look it up by name
         // when present, fall back to permissive otherwise.
-        _ => evaluate_via_catalog(req, perm, your_seat),
+        _ => evaluate_via_catalog(req, perm, ctx),
     }
 }
 
 fn evaluate_via_catalog(
     req: &SelectionRequirement,
     perm: &PermanentView,
-    _your_seat: usize,
+    ctx: &BoardCtx,
 ) -> bool {
     use SelectionRequirement as R;
     let Some(def) = crabomination::catalog::lookup_by_name(&perm.name) else {
@@ -222,6 +254,9 @@ fn evaluate_via_catalog(
         // classify the same way the engine's `printed_colors()` does.
         R::HasColor(c) => def.printed_colors().contains(c),
         R::Multicolored => def.printed_colors().len() >= 2,
+        R::SharesMostCommonColor => {
+            def.printed_colors().iter().any(|k| ctx.top_colors.contains(k))
+        }
         R::Colorless => def.printed_colors().is_empty(),
         R::Monocolored => def.printed_colors().len() == 1,
         R::HasXInCost => def.cost.has_x(),
@@ -258,7 +293,7 @@ pub fn evaluate(
             .battlefield
             .iter()
             .find(|p| p.id == *id)
-            .is_some_and(|p| evaluate_permanent(req, p, your_seat)),
+            .is_some_and(|p| evaluate_permanent(req, p, &BoardCtx::new(cv))),
     }
 }
 
