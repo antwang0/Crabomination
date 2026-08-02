@@ -445,3 +445,25 @@ fn pain_suffering_has_a_right_half() {
     assert_eq!(split.right.cost.cmc(), 4, "Suffering costs four");
     assert!(!split.fuse && !split.aftermath);
 }
+
+/// Psychic Battle leaves a spell's target alone when the top-card reveal ties.
+#[test]
+fn psychic_battle_leaves_targets_alone_on_a_tie() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::psychic_battle());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(1, catalog::forest());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "a tie leaves the original target");
+}

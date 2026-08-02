@@ -22672,6 +22672,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopGreatestMayChangeTargets => {
+                // Each player reveals their top card; a UNIQUE greatest mana
+                // value wins the right to repoint (CR: a tie leaves the
+                // targets alone).
+                let tops: Vec<(usize, u32)> = self
+                    .players
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, p)| p.library.last().map(|c| (i, c.definition.cost.cmc())))
+                    .collect();
+                self.cards_revealed_this_resolution += tops.len() as u32;
+                let Some(max) = tops.iter().map(|(_, mv)| *mv).max() else { return Ok(()) };
+                let mut winners = tops.iter().filter(|(_, mv)| *mv == max).map(|(i, _)| *i);
+                let (Some(who), None) = (winners.next(), winners.next()) else { return Ok(()) };
+                // The topmost spell on the stack is the one that just chose
+                // its targets.
+                let Some(sid) = self.stack.iter().rev().find_map(|s| match s {
+                    StackItem::Spell { card, .. } => Some(card.id),
+                    _ => None,
+                }) else {
+                    return Ok(());
+                };
+                let mut sub = ctx.clone();
+                sub.controller = who;
+                sub.targets = vec![Target::Permanent(sid)];
+                self.run_effect(
+                    &Effect::ChooseNewTargetsForSpell { what: Selector::Target(0) },
+                    &sub,
+                    events,
+                )
+            }
+
             Effect::ChooseNewTargetsForSpell { what } => {
                 // CR 115.7 — repoint the targeted spell's primary target in
                 // place. The controller of *this* effect (Redirect's caster)

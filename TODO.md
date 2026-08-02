@@ -29,9 +29,9 @@ Items are grouped by area and roughly ordered by impact within each group.
 `classic_sets/pls`, `pls2`). See FEATURE_ROADMAP.md for the primitives it
 shipped.
 
-## Invasion — one card left
+## Invasion — closed
 
-`set_gaps.py inv` is at **1** (280 → 233 → 136 → 70 → 40 → 10 → 1;
+`set_gaps.py inv` is at **zero** (280 → 233 → 136 → 70 → 40 → 10 → 1 → 0;
 `sets::inv::{gaps,gaps2,gaps3,gaps4,gaps5}`, tests in `classic_sets/inv_gaps`–
 `inv_gaps5`). Primitives it shipped: `CardDefinition.{flash_surcharge (CR
 601.2b), cast_only_during_combat}`, `Effect::{SwapTappedState,
@@ -49,18 +49,16 @@ CantCastSharingColorWithLastCastSpell}`,
 ControlsCreatureOfEachColor}`, `SelectionRequirement::{SharesMostCommonColor,
 HasNonManaActivatedAbility, SharesNameWithAnotherPermanent,
 ManaValueEqualsChosenNumber, TargetsALandYouControl}`,
-`WardCost::ManaCostOfAttached`, `CounterType::Hourglass`, and
+`WardCost::ManaCostOfAttached`, `CounterType::Hourglass`,
+`Effect::RevealTopGreatestMayChangeTargets`, and
 `GameState::ask_seat_cards_logged` (a replay-logged `ChooseCards` ask, so an
 arm can chain a card pick with further seat questions).
 
-### Still open
-
-- **Psychic Battle** — needs a "whenever a player chooses one or more targets"
-  event plus a window where the top-card-reveal winner may repoint those
-  targets. `Effect::ChooseNewTargetsForSpell` exists; the event and the
-  reveal-and-compare wrapper don't.
-
 ### Residuals in what shipped
+
+- **Psychic Battle fires on `BecameTarget`** (per targeted object) rather than
+  once per "chooses one or more targets" decision, and it repoints only the
+  topmost *spell* on the stack — an ability's targets are left alone.
 
 - **Barrin's Spite's second slot isn't restricted** to a creature controlled by
   the same player as slot 0 (no cross-slot cast-time filter).

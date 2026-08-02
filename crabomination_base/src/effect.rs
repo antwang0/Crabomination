@@ -5933,6 +5933,10 @@ pub enum Effect {
     /// keeps it. Unlike `CopySpellMayChooseTargets` this mutates the
     /// original spell rather than a copy.
     ChooseNewTargetsForSpell { what: Selector },
+    /// Psychic Battle — each player reveals the top card of their library; the
+    /// player who revealed the greatest mana value (uniquely) may repoint the
+    /// targets of the spell that just chose them. A tie changes nothing.
+    RevealTopGreatestMayChangeTargets,
     /// Demonstrate (CR 702.150) — copy this spell for its caster, then pick an
     /// opponent who also copies it; every copy may choose new targets. Modeled
     /// as a non-optional "always demonstrate" (the printed "you may" collapses

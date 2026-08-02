@@ -2372,7 +2372,8 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Invasion (INV) 40 → 1** — `sets::inv::gaps5`, 39 cards. The pile-splitting
+- **Invasion (INV) complete** — `set_gaps.py inv` at zero (`sets::inv::gaps5`,
+  40 cards this push). The pile-splitting
   rares land on a real decision: `Effect::SeparateIntoPiles` (splitter picks a
   pile, chooser picks which one counts) and its exactly-one sibling
   `Effect::ChooseOneAmong`, both reading `Selector::SeparatedPile` — Do or Die,
@@ -2391,9 +2392,9 @@ Each a small targeted feature; sweep batch by batch.
   CantCastSharingColorWithLastCastSpell}`,
   `Predicate::{ControlsLandOfEachBasicType, ControlsCreatureOfEachColor}`,
   `SelectionRequirement::TargetsALandYouControl`,
-  `WardCost::ManaCostOfAttached`, `CardDefinition.cast_only_during_combat` and
-  `CounterType::Hourglass`. Psychic Battle is the only card left (TODO.md).
-  Tests in `classic_sets/inv_gaps5`.
+  `WardCost::ManaCostOfAttached`, `CardDefinition.cast_only_during_combat`,
+  `CounterType::Hourglass` and `Effect::RevealTopGreatestMayChangeTargets`
+  (Psychic Battle). Tests in `classic_sets/inv_gaps5`.
 - **CR 605.1b / 605.4a — triggered mana abilities don't use the stack.** A
   targetless mana-adding trigger fired from a mana ability now resolves
   immediately, so its mana reaches the pool in time to pay for the spell being

@@ -901,3 +901,15 @@ pub fn essence_leak() -> CardDefinition {
         ..enchantment("Essence Leak", cost(&[u()]))
     }
 }
+
+/// Psychic Battle — every targeting decision is contested by a top-card
+/// reveal; the biggest mana value may repoint it.
+pub fn psychic_battle() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::AnyPlayer),
+            effect: Effect::RevealTopGreatestMayChangeTargets,
+        }],
+        ..enchantment("Psychic Battle", cost(&[generic(3), u(), u()]))
+    }
+}

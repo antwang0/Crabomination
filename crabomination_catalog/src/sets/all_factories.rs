@@ -9477,6 +9477,7 @@ static INV: &[Factory] = &[
     super::inv::mages_contest,
     super::inv::pain_suffering,
     super::inv::essence_leak,
+    super::inv::psychic_battle,
     super::inv::seers_vision,
     super::inv::ghitu_fire,
     super::inv::breaking_wave,

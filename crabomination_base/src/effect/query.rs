@@ -354,7 +354,8 @@ impl Effect {
             Effect::SacrificeSelected { what } => sel_has_target(what),
             Effect::GrantChosenTypeLandwalk { what } => sel_has_target(what),
             Effect::BidLifeToCounterTargetSpell { what } => sel_has_target(what),
-            Effect::RevealTopTakeNamedExileRest { .. }
+            Effect::RevealTopGreatestMayChangeTargets
+            | Effect::RevealTopTakeNamedExileRest { .. }
             | Effect::EachPlayerKeepsOneOfEachBasicTypeSacrificesRest => false,
             Effect::ChooseOneAmong { what, chooser, .. } => {
                 sel_has_target(what) || player_has_target(chooser)
