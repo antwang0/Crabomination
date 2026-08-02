@@ -1467,3 +1467,581 @@ pub fn serene_sunset() -> CardDefinition {
         },
     )
 }
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────────
+
+/// The Judgment punisher shape: "any player may have this deal N damage to
+/// them. If no one does, [otherwise]."
+fn punisher(who: PlayerRef, amount: i32, otherwise: Effect) -> Effect {
+    Effect::AnyPlayerMayTakeDamageElse {
+        who,
+        amount: Value::Const(amount),
+        otherwise: Box::new(otherwise),
+    }
+}
+
+/// Book Burning — {1}{R}. Six damage, or six cards.
+pub fn book_burning() -> CardDefinition {
+    sorcery(
+        "Book Burning",
+        cost(&[generic(1), r()]),
+        punisher(
+            PlayerRef::EachPlayer,
+            6,
+            Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(6) },
+        ),
+    )
+}
+
+/// Breaking Point — {1}{R}{R}. Six damage, or a Wrath.
+pub fn breaking_point() -> CardDefinition {
+    sorcery(
+        "Breaking Point",
+        cost(&[generic(1), r(), r()]),
+        punisher(
+            PlayerRef::EachPlayer,
+            6,
+            Effect::DestroyNoRegen { what: Selector::EachPermanent(R::Creature) },
+        ),
+    )
+}
+
+/// Dwarven Driller — {3}{R} 2/2. A land, or two damage to its controller.
+pub fn dwarven_driller() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: punisher(
+                PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                2,
+                Effect::Destroy { what: target_filtered(R::Land) },
+            ),
+            ..Default::default()
+        }],
+        ..creature("Dwarven Driller", cost(&[generic(3), r()]), vec![CreatureType::Dwarf], 2, 2)
+    }
+}
+
+/// Dwarven Scorcher — {R} 1/1. A ping, or two to the face.
+pub fn dwarven_scorcher() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![sac_ability(punisher(
+            PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+            2,
+            Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(1) },
+        ))],
+        ..creature("Dwarven Scorcher", cost(&[r()]), vec![CreatureType::Dwarf], 1, 1)
+    }
+}
+
+/// Silver Seraph — {5}{W}{W}{W} 6/6 flier that anthems the team past
+/// Threshold.
+pub fn silver_seraph() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Threshold — other creatures you control get +2/+2.",
+            effect: StaticEffect::WhileCondition {
+                condition: threshold(),
+                inner: Box::new(StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        R::Creature.and(R::ControlledByYou).and(R::OtherThanSource),
+                    ),
+                    power: 2,
+                    toughness: 2,
+                }),
+            },
+        }],
+        ..creature(
+            "Silver Seraph",
+            cost(&[generic(5), w(), w(), w()]),
+            vec![CreatureType::Angel],
+            6,
+            6,
+        )
+    }
+}
+
+/// Stitch Together — {B}{B}. A creature back to hand, or straight to play
+/// past Threshold.
+pub fn stitch_together() -> CardDefinition {
+    sorcery(
+        "Stitch Together",
+        cost(&[b(), b()]),
+        Effect::If {
+            cond: threshold(),
+            then: Box::new(Effect::Move {
+                what: target_filtered(R::InGraveyard.and(R::Creature).and(R::OwnedByYou)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+            else_: Box::new(Effect::Move {
+                what: target_filtered(R::InGraveyard.and(R::Creature).and(R::OwnedByYou)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        },
+    )
+}
+
+/// Sudden Strength — {3}{G}. +3/+3 and a card.
+pub fn sudden_strength() -> CardDefinition {
+    instant(
+        "Sudden Strength",
+        cost(&[generic(3), g()]),
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            draw(1),
+        ]),
+    )
+}
+
+/// Swelter — {3}{R}. Two damage to each of two creatures.
+pub fn swelter() -> CardDefinition {
+    sorcery(
+        "Swelter",
+        cost(&[generic(3), r()]),
+        Effect::ApplyToTargets {
+            max_targets: 2,
+            min_targets: 2,
+            filter: R::Creature,
+            effect: Box::new(Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(2),
+            }),
+        },
+    )
+}
+
+/// Swirling Sandstorm — {3}{R}. A five-point ground sweep, past Threshold.
+pub fn swirling_sandstorm() -> CardDefinition {
+    sorcery(
+        "Swirling Sandstorm",
+        cost(&[generic(3), r()]),
+        Effect::If {
+            cond: threshold(),
+            then: Box::new(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    R::Creature.and(R::HasKeyword(Keyword::Flying).negate()),
+                ),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(5),
+                }),
+            }),
+            else_: Box::new(Effect::Noop),
+        },
+    )
+}
+
+/// Thriss, Nantuko Primus — {5}{G}{G} 5/5 that hands out +5/+5.
+pub fn thriss_nantuko_primus() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            tap_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(5),
+                toughness: Value::Const(5),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Thriss, Nantuko Primus",
+            cost(&[generic(5), g(), g()]),
+            vec![CreatureType::Insect, CreatureType::Druid],
+            5,
+            5,
+        )
+    }
+}
+
+/// Toxic Stench — {1}{B}. A shrink, or a kill past Threshold.
+pub fn toxic_stench() -> CardDefinition {
+    instant(
+        "Toxic Stench",
+        cost(&[generic(1), b()]),
+        Effect::If {
+            cond: threshold(),
+            then: Box::new(Effect::DestroyNoRegen {
+                what: target_filtered(R::Creature.and(R::HasColor(Color::Black).negate())),
+            }),
+            else_: Box::new(Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::HasColor(Color::Black).negate())),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+    )
+}
+
+/// Trained Pronghorn — {1}{W} 1/1 that discards for a shield.
+pub fn trained_pronghorn() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::PreventAllDamageThisTurn {
+                target: Selector::This,
+                redirect_to: None,
+            },
+            ..Default::default()
+        }],
+        ..creature("Trained Pronghorn", cost(&[generic(1), w()]), vec![CreatureType::Antelope], 1, 1)
+    }
+}
+
+/// "Threshold — this creature gets +2/+2 and has 'When this dies, you lose
+/// `life` life.'"
+fn treacherous(
+    name: &'static str,
+    c: ManaCost,
+    types: Vec<CreatureType>,
+    p: i32,
+    t: i32,
+    life: i32,
+) -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            threshold_pump(2, 2, vec![]),
+            StaticAbility {
+                description: "Threshold — when this dies, you lose life.",
+                effect: StaticEffect::WhileCondition {
+                    condition: threshold(),
+                    inner: Box::new(StaticEffect::GrantTriggeredAbility {
+                        filter: R::IsSource,
+                        ability: Box::new(TriggeredAbility {
+                            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                            effect: Effect::LoseLife {
+                                who: Selector::You,
+                                amount: Value::Const(life),
+                            },
+                        }),
+                    }),
+                },
+            },
+        ],
+        ..creature(name, c, types, p, t)
+    }
+}
+
+/// Treacherous Werewolf — {2}{B} 2/2 that costs you 4 on the way out past
+/// Threshold.
+pub fn treacherous_werewolf() -> CardDefinition {
+    treacherous(
+        "Treacherous Werewolf",
+        cost(&[generic(2), b()]),
+        vec![CreatureType::Werewolf, CreatureType::Minion],
+        2,
+        2,
+        4,
+    )
+}
+
+/// Treacherous Vampire — {4}{B} 4/4 flier that eats its own graveyard to
+/// stay in combat.
+pub fn treacherous_vampire() -> CardDefinition {
+    let feed = || TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+        effect: Effect::SacrificeSourceUnlessCost {
+            cost: crate::card::WardCost::ExileFromGraveyard(1),
+        },
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            feed(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                ..feed()
+            },
+        ],
+        ..treacherous(
+            "Treacherous Vampire",
+            cost(&[generic(4), b()]),
+            vec![CreatureType::Vampire],
+            4,
+            4,
+            6,
+        )
+    }
+}
+
+/// Tunneler Wurm — {6}{G}{G} 6/6 that discards to regenerate.
+pub fn tunneler_wurm() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((R::Any, 1)),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..creature("Tunneler Wurm", cost(&[generic(6), g(), g()]), vec![CreatureType::Wurm], 6, 6)
+    }
+}
+
+/// Venomous Vines — {2}{G}{G}. Kill anything wearing an Aura.
+pub fn venomous_vines() -> CardDefinition {
+    sorcery(
+        "Venomous Vines",
+        cost(&[generic(2), g(), g()]),
+        Effect::Destroy { what: target_filtered(R::IsEnchanted) },
+    )
+}
+
+/// Vigilant Sentry — {1}{W}{W} 2/2 that becomes a combat trick past
+/// Threshold.
+pub fn vigilant_sentry() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            threshold_pump(1, 1, vec![]),
+            StaticAbility {
+                description: "Threshold — {T}: a combatant gets +3/+3.",
+                effect: StaticEffect::WhileCondition {
+                    condition: threshold(),
+                    inner: Box::new(StaticEffect::GrantActivatedAbility {
+                        applies_to: Selector::This,
+                        condition: None,
+                        ability: ActivatedAbility {
+                            tap_cost: true,
+                            effect: Effect::PumpPT {
+                                what: target_filtered(
+                                    R::Creature.and(R::IsAttacking.or(R::IsBlocking)),
+                                ),
+                                power: Value::Const(3),
+                                toughness: Value::Const(3),
+                                duration: Duration::EndOfTurn,
+                            },
+                            ..Default::default()
+                        },
+                    }),
+                },
+            },
+        ],
+        ..creature(
+            "Vigilant Sentry",
+            cost(&[generic(1), w(), w()]),
+            vec![CreatureType::Human, CreatureType::Nomad],
+            2,
+            2,
+        )
+    }
+}
+
+/// Spurnmage Advocate — {W} 1/1. Two cards back to kill an attacker.
+pub fn spurnmage_advocate() -> CardDefinition {
+    advocate(
+        "Spurnmage Advocate",
+        cost(&[w()]),
+        vec![CreatureType::Human, CreatureType::Nomad],
+        1,
+        1,
+        2,
+        Effect::Destroy {
+            what: Selector::TargetFiltered {
+                slot: 2,
+                filter: R::Creature.and(R::IsAttacking),
+            },
+        },
+    )
+}
+
+/// Spirit Cairn — {2}{W}. Every discard is a Spirit for {W}.
+pub fn spirit_cairn() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::AnyPlayer),
+            effect: Effect::MayPay {
+                description: "Pay {W} for a Spirit?".into(),
+                mana_cost: cost(&[w()]),
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Spirit".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::White],
+                        keywords: vec![Keyword::Flying],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Spirit],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                }),
+                else_: None,
+            },
+        }],
+        ..enchantment("Spirit Cairn", cost(&[generic(2), w()]))
+    }
+}
+
+/// Soulcatchers' Aerie — {1}{W}. Every dead Bird makes the flock bigger.
+pub fn soulcatchers_aerie() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Bird),
+                },
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Feather,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Bird creatures get +1/+1 for each feather counter.",
+            effect: StaticEffect::PumpPTByValue {
+                applies_to: Selector::EachPermanent(R::HasCreatureType(CreatureType::Bird)),
+                power: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Feather,
+                },
+                toughness: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Feather,
+                },
+            },
+        }],
+        ..enchantment("Soulcatchers' Aerie", cost(&[generic(1), w()]))
+    }
+}
+
+// ── The Wormfang cycle ──────────────────────────────────────────────────────
+
+/// "When this enters, exile [what]. When it leaves the battlefield, return
+/// the exiled cards."
+fn wormfang(
+    body: CardDefinition,
+    hostage: Selector,
+    back_to: crate::card::ExileReturnZone,
+) -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: hostage,
+            return_to: back_to,
+        })],
+        ..body
+    }
+}
+
+/// Wormfang Behemoth — {3}{U}{U} 5/5 that holds your hand hostage.
+pub fn wormfang_behemoth() -> CardDefinition {
+    wormfang(
+        creature(
+            "Wormfang Behemoth",
+            cost(&[generic(3), u(), u()]),
+            vec![CreatureType::Nightmare, CreatureType::Fish, CreatureType::Beast],
+            5,
+            5,
+        ),
+        Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Hand, filter: R::Any },
+        crate::card::ExileReturnZone::Hand,
+    )
+}
+
+/// Wormfang Newt — {1}{U} 2/2 that holds a land hostage.
+pub fn wormfang_newt() -> CardDefinition {
+    wormfang(
+        creature(
+            "Wormfang Newt",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Nightmare, CreatureType::Salamander, CreatureType::Beast],
+            2,
+            2,
+        ),
+        Selector::Take {
+            inner: Box::new(Selector::ControlledBy { who: PlayerRef::You, filter: R::Land }),
+            count: Box::new(Value::Const(1)),
+        },
+        crate::card::ExileReturnZone::Battlefield,
+    )
+}
+
+/// Wormfang Turtle — {2}{U} 2/4 that holds a land hostage.
+pub fn wormfang_turtle() -> CardDefinition {
+    wormfang(
+        creature(
+            "Wormfang Turtle",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Nightmare, CreatureType::Turtle, CreatureType::Beast],
+            2,
+            4,
+        ),
+        Selector::Take {
+            inner: Box::new(Selector::ControlledBy { who: PlayerRef::You, filter: R::Land }),
+            count: Box::new(Value::Const(1)),
+        },
+        crate::card::ExileReturnZone::Battlefield,
+    )
+}
+
+/// Wormfang Drake — {2}{U} 3/4 flier that holds one of your creatures
+/// hostage.
+pub fn wormfang_drake() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ExileUntilSourceLeaves {
+                what: Selector::Take {
+                    inner: Box::new(Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: R::Creature.and(R::OtherThanSource),
+                    }),
+                    count: Box::new(Value::Const(1)),
+                },
+                return_to: crate::card::ExileReturnZone::Battlefield,
+            },
+            Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::SelectorExists(
+                    Selector::CardExiledWithSource,
+                ))),
+                then: Box::new(Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: R::IsSource,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
+        ..creature(
+            "Wormfang Drake",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Nightmare, CreatureType::Drake],
+            3,
+            4,
+        )
+    }
+}
+
+/// Worldgorger Dragon — {3}{R}{R}{R} 7/7 that eats your whole board while
+/// it's out.
+pub fn worldgorger_dragon() -> CardDefinition {
+    wormfang(
+        CardDefinition {
+            keywords: vec![Keyword::Flying, Keyword::Trample],
+            ..creature(
+                "Worldgorger Dragon",
+                cost(&[generic(3), r(), r(), r()]),
+                vec![CreatureType::Nightmare, CreatureType::Dragon],
+                7,
+                7,
+            )
+        },
+        Selector::ControlledBy {
+            who: PlayerRef::You,
+            filter: R::Permanent.and(R::OtherThanSource),
+        },
+        crate::card::ExileReturnZone::Battlefield,
+    )
+}

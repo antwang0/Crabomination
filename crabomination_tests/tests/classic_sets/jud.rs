@@ -513,3 +513,185 @@ fn nomad_mythmaker_replays_an_aura() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(aura).map(|c| c.attached_to), Some(Some(host)));
 }
+
+/// Book Burning mills when nobody takes the six.
+#[test]
+fn book_burning_mills_when_nobody_bites() {
+    let mut g = main_phase();
+    for _ in 0..8 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::book_burning());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(false),
+    ]));
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].graveyard.len(), 6);
+    assert_eq!(g.players[1].life, 20);
+}
+
+/// …and deals the six to the first taker instead.
+#[test]
+fn book_burning_burns_the_volunteer() {
+    let mut g = main_phase();
+    for _ in 0..8 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::book_burning());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[0].life, 14, "the caster is asked first");
+    assert_eq!(g.players[1].graveyard.len(), 0, "no mill");
+}
+
+/// Breaking Point wraths when nobody takes the six.
+#[test]
+fn breaking_point_wraths_when_declined() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::breaking_point());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(false),
+    ]));
+    cast(&mut g, 0, spell, None);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none());
+}
+
+/// Dwarven Driller kills the land unless its controller eats the two.
+#[test]
+fn dwarven_driller_punishes_the_land() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let driller = g.add_card_to_battlefield(0, catalog::dwarven_driller());
+    g.battlefield_find_mut(driller).unwrap().summoning_sick = false;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    activate(&mut g, 0, driller, 0, Some(Target::Permanent(land)));
+    assert!(g.battlefield_find(land).is_none(), "they declined, so the land died");
+}
+
+/// Toxic Stench upgrades to a kill past Threshold.
+#[test]
+fn toxic_stench_kills_at_threshold() {
+    let mut g = main_phase();
+    fill_graveyard(&mut g, 0);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::toxic_stench());
+    cast(&mut g, 0, spell, Some(Target::Permanent(victim)));
+    assert!(g.battlefield_find(victim).is_none());
+}
+
+/// Stitch Together reanimates straight to play past Threshold.
+#[test]
+fn stitch_together_reanimates_at_threshold() {
+    let mut g = main_phase();
+    fill_graveyard(&mut g, 0);
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::stitch_together());
+    cast(&mut g, 0, spell, Some(Target::Permanent(dead)));
+    assert!(g.battlefield_find(dead).is_some());
+}
+
+/// Silver Seraph anthems the rest of the team, not itself.
+#[test]
+fn silver_seraph_anthems_the_others() {
+    let mut g = main_phase();
+    fill_graveyard(&mut g, 0);
+    let seraph = g.add_card_to_battlefield(0, catalog::silver_seraph());
+    let friend = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(friend).unwrap().power, 4);
+    assert_eq!(g.computed_permanent(seraph).unwrap().power, 6, "not itself");
+}
+
+/// Treacherous Werewolf costs you 4 when it dies past Threshold.
+#[test]
+fn treacherous_werewolf_bites_back_at_threshold() {
+    let mut g = main_phase();
+    fill_graveyard(&mut g, 0);
+    let wolf = g.add_card_to_battlefield(0, catalog::treacherous_werewolf());
+    assert_eq!(g.computed_permanent(wolf).unwrap().power, 4);
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+        cast(&mut g, 1, bolt, Some(Target::Permanent(wolf)));
+    }
+    assert!(g.battlefield_find(wolf).is_none(), "six damage kills the 4/4");
+    assert_eq!(g.players[0].life, 16);
+}
+
+/// Wormfang Newt holds a land hostage until it leaves.
+#[test]
+fn wormfang_newt_holds_a_land_hostage() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let newt = g.add_card_to_hand(0, catalog::wormfang_newt());
+    cast(&mut g, 0, newt, None);
+    assert!(g.battlefield_find(land).is_none(), "the land is jailed");
+    let id = g.battlefield.iter().find(|c| c.definition.name == "Wormfang Newt").unwrap().id;
+    let _ = g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_some(), "and back when the Newt goes");
+}
+
+/// Worldgorger Dragon eats your board while it's out.
+#[test]
+fn worldgorger_dragon_eats_the_board() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dragon = g.add_card_to_hand(0, catalog::worldgorger_dragon());
+    cast(&mut g, 0, dragon, None);
+    assert!(g.battlefield_find(land).is_none() && g.battlefield_find(bear).is_none());
+    let id = g.battlefield.iter().find(|c| c.definition.name == "Worldgorger Dragon").unwrap().id;
+    let _ = g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_some() && g.battlefield_find(bear).is_some());
+}
+
+/// Soulcatchers' Aerie grows the flock for each dead Bird.
+#[test]
+fn soulcatchers_aerie_counts_dead_birds() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::soulcatchers_aerie());
+    let flock = g.add_card_to_battlefield(0, catalog::battlewise_aven());
+    let dead_bird = g.add_card_to_battlefield(0, catalog::phantom_flock());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    cast(&mut g, 1, bolt, Some(Target::Permanent(dead_bird)));
+    let _ = g.remove_to_graveyard_with_triggers(dead_bird);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(flock).unwrap().power, 3, "2/2 plus one feather");
+}
+
+/// Swelter splits two damage onto two creatures.
+#[test]
+fn swelter_hits_two_creatures() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::swelter());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none());
+}
+
+/// Spirit Cairn turns any discard into a Spirit for {W}.
+#[test]
+fn spirit_cairn_mints_on_a_discard() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::spirit_cairn());
+    let wurm = g.add_card_to_battlefield(0, catalog::tunneler_wurm());
+    g.add_card_to_hand(0, catalog::forest());
+    mana(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    activate(&mut g, 0, wurm, 0, None);
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Spirit"));
+}

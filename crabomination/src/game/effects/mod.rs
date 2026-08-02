@@ -20114,6 +20114,34 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AnyPlayerMayTakeDamageElse { who, amount, otherwise } => {
+                // Book Burning / Breaking Point — the first willing seat eats
+                // the damage and cancels the punishment.
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let mut seats = self.resolve_players(who, ctx);
+                // Turn order from the controller, so the caster is asked first.
+                seats.sort_by_key(|s| (s + self.players.len() - ctx.controller) % self.players.len());
+                let mut cursor = 0;
+                for seat in seats {
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        seat,
+                        format!("Take {n} damage to stop this?"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    if yes {
+                        self.clear_answer_log();
+                        self.deal_damage_to_from(EntityRef::Player(seat), n, ctx.source, events);
+                        return Ok(());
+                    }
+                }
+                self.clear_answer_log();
+                self.run_effect(otherwise, ctx, events)
+            }
+
             Effect::RedirectDrawsThisTurn { from } => {
                 let Some(victim) = self.resolve_player(from, ctx) else { return Ok(()) };
                 self.draws_redirected_this_turn.retain(|(f, _)| *f != victim);

@@ -325,6 +325,11 @@ impl Effect {
             Effect::DamageBecomesThisTurn { .. } => false,
             Effect::DamageTargetPlayerMayRedirect { .. } => true,
             Effect::CopySpellForEachOtherTarget { what } => sel_has_target(what),
+            Effect::AnyPlayerMayTakeDamageElse { who, otherwise, .. } => {
+                matches!(who, PlayerRef::Target(_))
+                    || matches!(who, PlayerRef::ControllerOf(s) if sel_has_target(s))
+                    || otherwise.requires_target()
+            }
             // Mills the controller's own library, then branches on the milled
             // card's type into token-minting sub-effects — no cast-time target.
             Effect::MillThenBranchByType { .. } => false,

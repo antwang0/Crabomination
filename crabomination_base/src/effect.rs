@@ -7858,6 +7858,13 @@ pub enum Effect {
     /// "For each creature token on the battlefield, its controller creates a
     /// token that's a copy of that creature" (Parallel Evolution).
     CopyEachCreatureToken,
+
+    /// The Judgment punisher shape — "any player may have [source] deal
+    /// `amount` damage to them. If no one does, `otherwise`." Walks the seats
+    /// `who` resolves to (in turn order from the controller) and takes the
+    /// first taker; `otherwise` runs only when every seat declines. Book
+    /// Burning, Breaking Point, Dwarven Driller, Dwarven Scorcher.
+    AnyPlayerMayTakeDamageElse { who: PlayerRef, amount: Value, otherwise: Box<Effect> },
 }
 
 /// CR 702.172 — one Spree mode: an additional mana cost paired with the
