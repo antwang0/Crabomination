@@ -1369,7 +1369,11 @@ fn project_permanent(
             .iter()
             .filter_map(|(b, a)| (*b == card.id).then_some(*a))
             .collect(),
-        abilities: project_abilities_with_granted(card, &state.granted_abilities_for(card.id)),
+        abilities: project_abilities_with_granted(
+            card,
+            &state.granted_abilities_for(card.id),
+            Some(state),
+        ),
         loyalty_abilities: project_loyalty_abilities(card, battlefield),
         loyalty_uses_remaining: card.definition.is_planeswalker().then(|| {
             let allowed: u8 = if card.definition.loyalty_twice_each_turn
@@ -1947,7 +1951,7 @@ fn project_loyalty_abilities(
 /// Printed abilities only — for zones where no battlefield context applies
 /// (a Vanguard's command-zone abilities).
 fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
-    project_abilities_with_granted(card, &[])
+    project_abilities_with_granted(card, &[], None)
 }
 
 /// The full clickable list: printed abilities, then everything
@@ -1958,6 +1962,7 @@ fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
 fn project_abilities_with_granted(
     card: &CardInstance,
     granted: &[crate::effect::ActivatedAbility],
+    state: Option<&crate::game::GameState>,
 ) -> Vec<AbilityView> {
     card.definition
         .activated_abilities
@@ -1965,16 +1970,22 @@ fn project_abilities_with_granted(
         .chain(granted.iter())
         .enumerate()
         .map(|(i, a)| {
+            // The "activate only if …" gate, described for the tooltip and
+            // evaluated live so the client can grey the row out.
             let (gate_label, gate_blocked) = match &a.condition {
-                Some(p) => (predicate_short_label(p), false),
+                Some(p) => {
+                    let blocked = state.is_some_and(|st| {
+                        let ctx = crate::game::effects::EffectContext::for_ability(
+                            card.id,
+                            card.controller,
+                            None,
+                        );
+                        !st.evaluate_predicate(p, &ctx)
+                    });
+                    (predicate_short_label(p), blocked)
+                }
                 None => (String::new(), false),
             };
-            // `gate_blocked` requires evaluating the predicate against
-            // the current GameState — `project_permanent` doesn't carry
-            // a state reference. The view layer's caller fills this in
-            // separately (see `project_permanent_with_state`); the
-            // snapshot here is the static description only.
-            let _ = gate_blocked;
             AbilityView {
                 index: i,
                 cost_label: ability_cost_label(a),
@@ -1983,7 +1994,7 @@ fn project_abilities_with_granted(
                 is_mana: is_mana_ability(&a.effect),
                 once_per_turn_used: a.once_per_turn && card.once_per_turn_used.contains(&i),
                 gate_label,
-                gate_blocked: false,
+                gate_blocked,
                 opponents_only: a.opponents_only,
                 any_player: a.any_player,
                 modes: ability_mode_labels(&a.effect),
@@ -3978,6 +3989,26 @@ mod tests {
             "gate_label should describe the printed condition");
         assert!(draw_ability.gate_label.contains("hand"),
             "gate_label should mention 'hand' (got {:?})", draw_ability.gate_label);
+        // An empty hand doesn't meet "seven or more cards in hand", so the
+        // client can grey the row out instead of offering a doomed click.
+        assert!(draw_ability.gate_blocked, "gate_blocked reads the live board");
+    }
+
+    /// A statics-granted activation (Cryptolith Rite's "creatures you control
+    /// have '{T}: Add one mana of any color'") is live in the engine, so it
+    /// must appear in the view at the index `activate_ability` resolves.
+    #[test]
+    fn statics_granted_ability_is_surfaced_at_its_activation_index() {
+        let mut state = two_player_game();
+        state.add_card_to_battlefield(0, catalog::cryptolith_rite());
+        let bear = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == bear).unwrap();
+        let printed = catalog::grizzly_bears().activated_abilities.len();
+        let granted = perm.abilities.iter().find(|a| a.index == printed);
+        let granted = granted.expect("the granted ability is in the view");
+        assert_eq!(granted.cost_label, "{T}");
+        assert!(granted.effect_label.contains("mana"));
     }
 
     /// Omen Hawker taps for spend-restricted `{C}{U}` (`ManaPayload::Restricted`).

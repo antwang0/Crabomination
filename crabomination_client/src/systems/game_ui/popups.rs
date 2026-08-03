@@ -72,8 +72,19 @@ pub fn spawn_ability_menu(
             let blocked = !a.any_player
                 && ((a.opponents_only && viewer_controls)
                     || (!a.opponents_only && !viewer_controls)
-                    || a.once_per_turn_used);
-            let suffix = if a.once_per_turn_used { " (used)" } else { "" };
+                    || a.once_per_turn_used
+                    || a.gate_blocked);
+            // "Activate only if …" — show the printed condition, and mark it
+            // when the board doesn't satisfy it right now.
+            let suffix = if a.once_per_turn_used {
+                " (used)".to_string()
+            } else if a.gate_label.is_empty() {
+                String::new()
+            } else if a.gate_blocked {
+                format!("  — needs {}", a.gate_label)
+            } else {
+                format!("  ({})", a.gate_label)
+            };
             if a.modes.len() > 1 {
                 a.modes
                     .iter()
@@ -135,10 +146,10 @@ pub fn spawn_ability_menu(
             ));
             for (ability_index, mode, label, used) in abilities {
                 let bg = if used {
-                    // Darkened background for once-per-turn abilities
-                    // already activated this turn — clicks still go
-                    // through, but the engine returns
-                    // `AbilityAlreadyUsedThisTurn`.
+                    // Darkened background for an ability that can't be
+                    // activated right now — already used this turn, or its
+                    // "activate only if …" gate isn't met. Clicks still go
+                    // through; the engine reports why.
                     theme::PANEL_BG_RAISED
                 } else {
                     theme::BUTTON_NEUTRAL_BG
