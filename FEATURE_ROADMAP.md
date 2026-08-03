@@ -2405,7 +2405,7 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** The whole Odyssey block is done — Odyssey, Torment
    and **Judgment** are all at zero (`set_gaps.py ody` / `tor` / `jud`).
-   **Onslaught** (`sets::ons` + `sets::ons2`) is open at ~62 gaps after seven
+   **Onslaught** (`sets::ons` + `sets::ons2`) is open at 61 gaps after seven
    waves (204 cards); the remaining bulk is the "each player chooses a creature
    type" rares (Harsh Mercy, Patriarch's Bidding, Peer Pressure) and the
    face-down/tribal one-offs. Then Legions / Scourge.
@@ -2423,7 +2423,7 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Onslaught (ONS) waves 2-7** — `set_gaps.py ons` 219 → ~62 (`sets::ons2`,
+- **Onslaught (ONS) waves 2-7** — `set_gaps.py ons` 219 → 61 (`sets::ons2`,
   157 cards: the Morph commons, the tap-a-tribe activations, the Avatar cycle,
   the tribal-count spells, the utility lands, the Crown / Courier / Mistform
   cycles, the cycling spells with "when you cycle this card" riders, the
