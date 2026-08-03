@@ -206,7 +206,11 @@ fn main() {
         let mut rng = StdRng::seed_from_u64(args.seed ^ 0x1EA4);
         let mut consumed = 0u64;
         let mut step = 0u64;
-        let mut loss_ema = f32::NAN;
+        // EMAs of [total, win, life, len] — decomposed so a regime change
+        // in one head (or in effective sample reuse) is visible.
+        let mut loss_ema = [f32::NAN; 4];
+        // (samples consumed when the actors finished, tail allowance).
+        let mut tail_budget = None::<(u64, u64)>;
         let stats_path = args.out.join("stats.jsonl");
         loop {
             if let Some(max) = args.steps
@@ -216,6 +220,23 @@ fn main() {
             }
             let pushed = shared.rows_pushed.load(Ordering::Relaxed);
             let actors_live = shared.live_actors.load(Ordering::Relaxed) > 0;
+            // Once generation ends, the global reuse budget stops meaning
+            // "≤ reuse visits per row": every further sample lands on the
+            // final window, concentrating budget/window_len visits there
+            // (measured ~14× on the first release run, where generation
+            // outpaced the single-threaded learner 5:1). Grant the tail
+            // half the nominal reuse on the window it has — the rows
+            // already absorbed roughly the other half while streaming —
+            // and stop.
+            if !actors_live && tail_budget.is_none() {
+                let wlen = shared.window.lock().unwrap().len() as u64;
+                tail_budget = Some((consumed, (args.reuse * wlen as f64 / 2.0) as u64));
+            }
+            if let Some((at, budget)) = tail_budget
+                && consumed - at + args.batch as u64 > budget
+            {
+                break;
+            }
             let budget = (args.reuse * pushed as f64) as u64;
             if pushed < args.min_window || consumed + args.batch as u64 > budget {
                 if !actors_live {
@@ -229,7 +250,12 @@ fn main() {
             let loss = trainer.train_step(&refs).expect("train step");
             consumed += args.batch as u64;
             step += 1;
-            loss_ema = if loss_ema.is_nan() { loss } else { 0.99 * loss_ema + 0.01 * loss };
+            for (ema, part) in loss_ema
+                .iter_mut()
+                .zip([loss.total, loss.win, loss.life, loss.len])
+            {
+                *ema = if ema.is_nan() { part } else { 0.99 * *ema + 0.01 * part };
+            }
 
             if step.is_multiple_of(args.checkpoint_every) {
                 checkpoint(&trainer, &args, &shared, step, consumed, loss_ema, start, &stats_path);
@@ -265,7 +291,7 @@ fn checkpoint(
     shared: &Shared,
     step: u64,
     consumed: u64,
-    loss_ema: f32,
+    loss_ema: [f32; 4],
     start: Instant,
     stats_path: &std::path::Path,
 ) {
@@ -276,8 +302,9 @@ fn checkpoint(
     let rows = shared.rows_pushed.load(Ordering::Relaxed);
     let stalls = shared.stalls.load(Ordering::Relaxed);
     let secs = start.elapsed().as_secs_f64();
+    let [total, win, life, len] = loss_ema;
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{loss_ema:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"elapsed_s\":{secs:.0}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"stalls\":{stalls},\"elapsed_s\":{secs:.0}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()
@@ -287,7 +314,7 @@ fn checkpoint(
         .expect("stats.jsonl");
     f.write_all(line.as_bytes()).expect("stats write");
     eprintln!(
-        "step {step}: loss_ema {loss_ema:.4}, {games} games, {rows} rows ({:.1} games/s)",
+        "step {step}: loss {total:.4} (win {win:.4}), {games} games, {rows} rows ({:.1} games/s)",
         games as f64 / secs.max(0.001)
     );
 }

@@ -57,14 +57,18 @@ pub struct RecordedGame {
     pub turns: u32,
 }
 
-/// Play one bot game from `template`, snapshotting each turn from both
+/// Play one bot game from `template`, snapshotting along the way from both
 /// seats' perspectives, and stamp the outcome labels at the end.
 ///
-/// Snapshot cadence: once per (turn, active player) change, i.e. at the
-/// top of every turn, from each seat's own view (own hand visible,
-/// opponent's hidden). Two rows per turn keeps the win labels balanced by
-/// construction — every position appears once as the eventual winner's
-/// view and once as the loser's.
+/// Snapshot cadence: at the top of every turn, on entering the postcombat
+/// main, and on entering the end step (consecutive duplicates skipped).
+/// The mid-turn points exist because of a measured failure, not taste:
+/// nets trained on turn boundaries alone gated at 43.6 % / 42.3 % across a
+/// 4× data jump — `eval_material` consumes post-action and post-combat
+/// positions, which turn-boundary training never shows the net. Both
+/// seats' views are always pushed together (two rows per point, one
+/// eventual winner and one loser), keeping the win labels balanced by
+/// construction.
 pub fn play_recorded_game(
     template: &GameState,
     weights: [EvalWeights; 2],
@@ -84,14 +88,27 @@ pub fn play_recorded_game(
     // (turn, seat, encoded state) — labelled after the game decides.
     let mut snaps = Vec::new();
     let mut last_turn = (0u32, usize::MAX);
+    let mut last_step = crate::game::TurnStep::Untap;
+    let mut last_pair: Option<[crabomination_nn::EncodedState; 2]> = None;
     let (mut actions, mut stale) = (0usize, 0usize);
     while !g.is_game_over() && actions < max_actions && stale < 8 {
-        if (g.turn_number, g.active_player_idx) != last_turn {
+        let new_turn = (g.turn_number, g.active_player_idx) != last_turn;
+        let step_point = g.step != last_step
+            && matches!(
+                g.step,
+                crate::game::TurnStep::PostCombatMain | crate::game::TurnStep::End
+            );
+        if new_turn || step_point {
             last_turn = (g.turn_number, g.active_player_idx);
-            for seat in 0..2 {
-                snaps.push((g.turn_number, seat, encode_state(&g, seat, vocab)));
+            let pair = [encode_state(&g, 0, vocab), encode_state(&g, 1, vocab)];
+            if last_pair.as_ref() != Some(&pair) {
+                for (seat, s) in pair.iter().enumerate() {
+                    snaps.push((g.turn_number, seat, s.clone()));
+                }
+                last_pair = Some(pair);
             }
         }
+        last_step = g.step;
         let mut any = false;
         for (s, bot) in bots.iter_mut().enumerate() {
             let Some(a) = bot.next_action(&g, s) else { continue };

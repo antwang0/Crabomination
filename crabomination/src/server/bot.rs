@@ -133,12 +133,15 @@ pub struct EvalWeights {
     /// falls back to the heuristic — a weights file is a runtime input,
     /// never a build requirement.
     pub net_slot: u8,
-    /// Blend instead of replace: keep the heuristic evaluation and add
-    /// the net's opinion as a bias (±50·unit at full confidence). The
-    /// heuristic stays sharp on small material deltas the net can't
-    /// resolve; the net weighs in proportionally to how far from a coin
-    /// flip it judges the position. Requires [`net_slot`](Self::net_slot).
-    pub net_blend: bool,
+    /// With [`net_slot`](Self::net_slot) set: 0 replaces the heuristic
+    /// evaluation with the net's win probability outright; a positive
+    /// value blends instead — heuristic plus a `(p − 0.5) · scale · unit`
+    /// bias, so full confidence is worth ±scale/2 units. The heuristic
+    /// stays sharp on small material deltas the net can't resolve; the
+    /// net weighs in proportionally to how far from a coin flip it judges
+    /// the position. A knob rather than a constant because the right
+    /// loudness is a measurement (see the `net_eval_blend*` profiles).
+    pub net_blend_scale: i32,
 }
 
 impl EvalWeights {
@@ -166,7 +169,7 @@ impl EvalWeights {
             attack_sim_spells: false,
             attack_race_horizon: false,
             net_slot: 0,
-            net_blend: false,
+            net_blend_scale: 0,
         }
     }
 
@@ -220,7 +223,7 @@ impl EvalWeights {
             attack_sim_spells: false,
             attack_race_horizon: false,
             net_slot: 0,
-            net_blend: false,
+            net_blend_scale: 0,
         }
     }
 
@@ -257,7 +260,7 @@ impl EvalWeights {
             attack_sim_spells: false,
             attack_race_horizon: false,
             net_slot: 0,
-            net_blend: false,
+            net_blend_scale: 0,
         }
     }
 
@@ -459,11 +462,18 @@ impl EvalWeights {
     /// exactly `attack_search_sim`. Gate on sealed mirrors (`bot_ladder
     /// --decks sealed`) before any adoption claim.
     ///
-    /// **Round-1 gate, measured and not adopted**: the first bootstrap
-    /// net (25 000 heuristic self-play games, 21 234 steps, loss plateau
-    /// ≈0.22) lost 43.6 % [40.8 %, 46.4 %] over 1 200 sealed-mirror
-    /// games vs `atk-sim`. Better than the MCTS attempt's 41.5 %, worse
-    /// than the tuned heuristic — the expected round-1 shape.
+    /// **Measured across three checkpoints, and not adopted** (1 200
+    /// sealed-mirror games vs `atk-sim` each): 43.6 % [40.8, 46.4] on the
+    /// round-1 net (25 k games), 42.3 % [39.6, 45.1] on the round-2 net
+    /// (4× the data), 43.4 % [40.6, 46.2] after round 2's over-reused
+    /// training tail. Better than the MCTS attempt's 41.5 %, worse than
+    /// the tuned heuristic, and — the finding — *flat across a 4× data
+    /// jump and a 4× step jump*: data volume is not the binding
+    /// constraint. The two suspects the flatness points at are the
+    /// train/inference distribution gap (turn-boundary snapshots vs the
+    /// post-action states eval consumes — since addressed by the
+    /// mid-turn snapshot cadence in `selfplay`) and probability
+    /// compression near 0.5 making candidate deltas ride on noise.
     pub const fn net_eval() -> Self {
         Self { net_slot: super::net_eval::SLOT_BEST, ..Self::attack_search_sim() }
     }
@@ -473,13 +483,28 @@ impl EvalWeights {
     /// labor: the heuristic resolves small material deltas exactly, the
     /// net tilts close calls it has an opinion about.
     ///
-    /// **Round-1 gate**: 49.3 % [46.5 %, 52.2 %] over 1 200
-    /// sealed-mirror games vs `atk-sim` with the same first bootstrap
-    /// net that scored 43.6 % as a full replacement — the blend recovers
-    /// the −6.4 to statistical parity. Not adopted (inconclusive is not
-    /// a pass), but this is the profile round 2 gates.
+    /// **Measured three times**: 49.3 % [46.5, 52.2] (round-1 net),
+    /// 49.2 % [46.4, 52.1] (round-2 net, 4× the data), 50.7 %
+    /// [47.9, 53.6] (round 2 after its over-reused tail) over 1 200
+    /// sealed-mirror games each vs `atk-sim` — stable statistical parity
+    /// while the same nets score 42–44 % as full replacements. The
+    /// stability says the ±50-unit bias is mostly inert (the net's
+    /// probability hovers near 0.5 in balanced positions, so the bias
+    /// rarely clears a decision margin) — hence the louder
+    /// [`net_eval_blend300`](Self::net_eval_blend300). The tail
+    /// comparison also priced tail over-reuse: loss EMA fell 0.30 → 0.14
+    /// during it with no strength change — pure window memorization,
+    /// which is why the trainer now caps the tail.
     pub const fn net_eval_blend() -> Self {
-        Self { net_blend: true, ..Self::net_eval() }
+        Self { net_blend_scale: 100, ..Self::net_eval() }
+    }
+
+    /// [`net_eval_blend`](Self::net_eval_blend) at 3× loudness — full
+    /// confidence worth ±150 units, enough to outvote a mid-size body.
+    /// Exists because the 100-scale blend measured as inert; where the
+    /// right loudness lies is a ladder question, not an argument.
+    pub const fn net_eval_blend300() -> Self {
+        Self { net_blend_scale: 300, ..Self::net_eval() }
     }
 
     /// The adopted default plus the searched block assignment.
@@ -7481,8 +7506,8 @@ fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
         && state.game_over.is_none()
         && let Some(p) = super::net_eval::win_prob(state, seat, w.net_slot)
     {
-        if w.net_blend {
-            let bias = ((p - 0.5) * (100 * w.unit) as f32) as i32;
+        if w.net_blend_scale > 0 {
+            let bias = ((p - 0.5) * (w.net_blend_scale * w.unit) as f32) as i32;
             return eval_material_inner(state, seat, w, false) + bias;
         }
         return (p * 10_000.0) as i32;

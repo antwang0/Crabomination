@@ -171,6 +171,16 @@ pub struct Trainer {
 /// Loss weights: the auxiliary targets regularize, they don't compete.
 const AUX_WEIGHT: f64 = 0.25;
 
+/// One training step's loss, whole and by head. `total` is what the
+/// gradient descends (`win + 0.25·(life + len)`); the parts are raw MSEs.
+#[derive(Debug, Clone, Copy)]
+pub struct LossParts {
+    pub total: f32,
+    pub win: f32,
+    pub life: f32,
+    pub len: f32,
+}
+
 impl Trainer {
     pub fn new(cfg: &NetConfig, lr: f64) -> CResult<Trainer> {
         let dev = Device::Cpu;
@@ -181,16 +191,27 @@ impl Trainer {
         Ok(Trainer { varmap, model, opt, dev })
     }
 
-    /// One SGD step over `rows`; returns the (pre-step) combined loss.
-    pub fn train_step(&mut self, rows: &[&TrainRow]) -> CResult<f32> {
+    /// One SGD step over `rows`; returns the (pre-step) loss, decomposed.
+    /// The components exist because a single number hid a real regime
+    /// change once already: the round-1/round-2 EMAs (0.22 vs 0.30) were
+    /// incomparable — different effective sample reuse — and there was no
+    /// way to see whether the win head or the aux heads moved.
+    pub fn train_step(&mut self, rows: &[&TrainRow]) -> CResult<LossParts> {
         let batch = make_batch(rows, &self.dev)?;
         let (win, life, len_p) = self.model.forward(&batch)?;
         let loss_win = candle_nn::loss::mse(&win, &batch.win)?;
-        let loss_life = candle_nn::loss::mse(&life, &batch.life)?.affine(AUX_WEIGHT, 0.0)?;
-        let loss_len = candle_nn::loss::mse(&len_p, &batch.len_t)?.affine(AUX_WEIGHT, 0.0)?;
-        let loss = loss_win.add(&loss_life)?.add(&loss_len)?;
+        let loss_life = candle_nn::loss::mse(&life, &batch.life)?;
+        let loss_len = candle_nn::loss::mse(&len_p, &batch.len_t)?;
+        let loss = loss_win
+            .add(&loss_life.affine(AUX_WEIGHT, 0.0)?)?
+            .add(&loss_len.affine(AUX_WEIGHT, 0.0)?)?;
         self.opt.backward_step(&loss)?;
-        loss.to_scalar::<f32>()
+        Ok(LossParts {
+            total: loss.to_scalar::<f32>()?,
+            win: loss_win.to_scalar::<f32>()?,
+            life: loss_life.to_scalar::<f32>()?,
+            len: loss_len.to_scalar::<f32>()?,
+        })
     }
 
     /// Win probability for one encoded state — the trainer-side twin of
@@ -331,13 +352,13 @@ mod tests {
         let first = {
             let batch: Vec<&TrainRow> = rows[..64].iter().collect();
             let mut t2 = Trainer::new(&cfg, 0.0).expect("probe trainer");
-            t2.train_step(&batch).expect("loss probe")
+            t2.train_step(&batch).expect("loss probe").total
         };
         let mut last = f32::MAX;
         for step in 0..400 {
             let batch: Vec<&TrainRow> =
                 (0..64).map(|_| &rows[rng.random_range(0..rows.len())]).collect();
-            last = trainer.train_step(&batch).expect("step");
+            last = trainer.train_step(&batch).expect("step").total;
             if step % 100 == 0 && last < 0.02 {
                 break;
             }

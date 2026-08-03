@@ -2409,12 +2409,18 @@ Each a small targeted feature; sweep batch by batch.
   sealed games/s on 22 debug-build actors), the `net_eval` slot registry,
   the `net`/`net-blend` bot profiles, and `bot_ladder --decks sealed`
   (same-deck sealed mirrors — build quality cancels, rows measure
-  piloting). First bootstrap round (25k games, 21k steps), gated over
-  1 200 sealed-mirror games each: full net replacement **43.6 %**
-  [40.8, 46.4] (better than MCTS's 41.5, worse than the heuristic);
-  heuristic+net **blend 49.3 %** [46.5, 52.2] — parity on round-1
-  weights. Nothing adopted yet; the loop iterates from here
-  (`--use-best` self-improvement rounds, capacity, richer snapshots).
+  piloting). Release builds approved for the ML tooling (~82 games/s
+  generation, 7.7× debug; gates cost ~15 s). Gates so far, 1 200
+  sealed-mirror games each vs `atk-sim`: full net replacement 43.6 / 42.3
+  / 43.4 % across round 1 (25k games), round 2 (100k), and round 2's
+  over-reused tail — **flat across a 4× data jump**, so data volume is
+  not the constraint; heuristic+net blend 49.3 / 49.2 / 50.7 % — stable
+  parity. The tail experiment also priced window over-reuse (loss 0.30 →
+  0.14, zero strength change → the trainer now caps the tail). Round 3
+  in flight: mid-turn snapshot cadence (the eval-time states are
+  post-action, which turn-boundary training never showed the net),
+  per-head loss logging, and a blend-loudness sweep (`net-blend300`).
+  Nothing adopted yet.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
 
 ## Tier 14 — Replays, analysis & observability
