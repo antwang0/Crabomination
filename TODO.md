@@ -185,6 +185,15 @@ general "any player may …, if no one does …" shape, with
 `Effect::KnowledgePool`, `StaticEffect::HasActivatedAbilitiesOfExiledWithSelf`
 (Myr Welder) and `SelectionRequirement::SameNameAsAPermanent`.
 
+## Legends — opened
+
+`set_gaps.py leg` is at **268** (277 → 268; `sets::leg`, 8 cards, tests in
+`classic_sets/leg`). The wave exists to exercise CR 702.22's "bands with
+other [quality]" (`Keyword::BandsWithOther`): the five legendary band lands,
+Master of the Hunt's self-banding Wolves, and the two band-hosers (Shelkin
+Brownie, Tolaria). The rest of the set is untouched — Legends is a large,
+mechanically odd set and is a lower priority than closing the Scars block.
+
 ## New Phyrexia — opened
 
 `set_gaps.py nph` is at **2** (111 → 30 → 10 → 2; `sets::nph`, 109 cards,
