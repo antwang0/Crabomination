@@ -2723,6 +2723,17 @@ impl GameState {
             card.attacked_this_turn = false;
             card.blocked_this_turn = false;
             card.blocked_attackers_this_turn.clear();
+            if card.controller == p {
+                // "…during your last turn" rolls over as its controller's turn
+                // begins (Giant Turtle), and so does a pending Wall of Dust
+                // attack ban — armed on the previous turn, live on this one.
+                card.attacked_last_turn = card.attacked_own_turn;
+                card.attacked_own_turn = false;
+                card.attack_ban = match card.attack_ban {
+                    crate::card::AttackBan::Pending => crate::card::AttackBan::Active,
+                    _ => crate::card::AttackBan::None,
+                };
+            }
         }
         self.players[p].lands_played_this_turn = 0;
         self.players[p].graveyard_cast_types_this_turn.clear();
@@ -4043,6 +4054,8 @@ impl GameState {
             if controller_idx < self.players.len() {
                 self.players[controller_idx].creatures_died_this_turn =
                     self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
+                self.creatures_died_this_resolution =
+                    self.creatures_died_this_resolution.saturating_add(1);
                 // Zubera cycle: count Zubera deaths separately (read off the
                 // still-present dying creature's subtypes).
                 if self.battlefield.iter().any(|c| c.id == id
@@ -4992,6 +5005,8 @@ impl GameState {
         {
             self.players[controller_idx].creatures_died_this_turn =
                 self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
+            self.creatures_died_this_resolution =
+                self.creatures_died_this_resolution.saturating_add(1);
             if self.battlefield.iter().any(|c| c.id == id
                 && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Zubera))
             {

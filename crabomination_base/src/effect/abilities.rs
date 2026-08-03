@@ -2695,6 +2695,13 @@ pub struct ActivatedAbility {
     /// `sac_other_filter`; the source itself is included when it matches.
     #[serde(default)]
     pub sac_all_matching_cost: Option<SelectionRequirement>,
+    /// "…and any number of [filter] you control" as an activation cost
+    /// (Sword of the Ages). A hand-paying activator picks the subset via a
+    /// `ChooseCards` modal (zero is legal); everything else sacrifices every
+    /// candidate, which is the shape's only sensible auto-line. Feeds the
+    /// same `Value::Sacrificed{Count,TotalPower}` batch as `sac_other_filter`.
+    #[serde(default)]
+    pub sac_any_number_filter: Option<SelectionRequirement>,
     /// When true, `sac_other_filter`'s count is the activation's X value
     /// ("Sacrifice X [filter]:" costs — Lonis, Genetics Expert). The X is
     /// threaded to the effect as `Value::XFromCost`.

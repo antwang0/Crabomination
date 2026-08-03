@@ -1524,6 +1524,7 @@ pub fn hunted_wumpus() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::EachPlayerMayPutPermanentFromHand {
             filter: R::Creature,
             others_only: true,
+            repeat: false,
         })],
         ..creature("Hunted Wumpus", cost(&[generic(3), g()]), vec![CreatureType::Beast], 6, 6)
     }
@@ -1536,6 +1537,7 @@ pub fn charmed_griffin() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::EachPlayerMayPutPermanentFromHand {
             filter: R::Artifact.or(R::Enchantment),
             others_only: true,
+            repeat: false,
         })],
         ..creature("Charmed Griffin", cost(&[generic(3), w()]), vec![CreatureType::Griffin], 3, 3)
     }

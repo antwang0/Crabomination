@@ -814,6 +814,20 @@ pub struct GameState {
     /// was dealt this way" riders (Orbital Plunge). Reset between resolutions.
     #[serde(skip)]
     pub excess_damage_this_resolution: u32,
+    /// Transient: creatures that died during the current resolution, so a
+    /// sweeper can bill its caster for its own kills (Hellfire's "X is the
+    /// number of creatures that died this way"). Reset between resolutions.
+    #[serde(skip)]
+    pub creatures_died_this_resolution: u32,
+    /// Re-entrancy depth of `resolve_effect`, so resolution-scoped scratch
+    /// that must survive nested resolutions is reset once at the top.
+    #[serde(skip)]
+    pub(crate) resolution_depth: u32,
+    /// Transient: the permanents sacrificed to pay the activation currently
+    /// on the stack, so its body can exile them (Sword of the Ages). Stamped
+    /// by `activate_ability`, consumed by `Effect::ExileCostSacrificedBatch`.
+    #[serde(skip)]
+    pub cost_sacrificed_batch: Vec<CardId>,
     /// Transient: entities (creatures + players) that actually took damage
     /// during the current resolution. Powers `Selector::DamagedThisResolution`
     /// — "tap each creature damaged this way / those players can't cast
@@ -1001,6 +1015,12 @@ pub struct GameState {
     /// consumed by `activate_ability`.
     #[serde(skip, default)]
     pub(crate) pending_ability_exile_other: Option<Vec<CardId>>,
+    /// Transient sibling of [`pending_ability_sac_other`] for an activated
+    /// ability's "…and any number of [filter] you control" cost
+    /// (`sac_any_number_filter` — Sword of the Ages). Carries the chosen
+    /// subset, which may legally be empty.
+    #[serde(skip, default)]
+    pub(crate) pending_ability_sac_any: Option<Vec<CardId>>,
     /// Resolves player choices encountered during effect resolution. Used for
     /// *non-suspending* decisions (e.g. `AddManaAnyColor` auto-picks a color).
     /// Suspending decisions (currently Scry) surface through `pending_decision`
@@ -1788,6 +1808,9 @@ impl Clone for GameState {
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             destroyed_this_resolution: self.destroyed_this_resolution.clone(),
             excess_damage_this_resolution: self.excess_damage_this_resolution,
+            creatures_died_this_resolution: self.creatures_died_this_resolution,
+            resolution_depth: self.resolution_depth,
+            cost_sacrificed_batch: self.cost_sacrificed_batch.clone(),
             damage_dealt_this_resolution: self.damage_dealt_this_resolution,
             damaged_this_resolution: self.damaged_this_resolution.clone(),
             countered_spell_mana_spent: self.countered_spell_mana_spent,
@@ -1819,6 +1842,7 @@ impl Clone for GameState {
             pending_ability_sac_other: self.pending_ability_sac_other,
             pending_ability_tap_other: self.pending_ability_tap_other,
             pending_ability_exile_other: self.pending_ability_exile_other.clone(),
+            pending_ability_sac_any: self.pending_ability_sac_any.clone(),
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
@@ -2074,6 +2098,9 @@ impl GameState {
             exiled_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
             excess_damage_this_resolution: 0,
+            creatures_died_this_resolution: 0,
+            resolution_depth: 0,
+            cost_sacrificed_batch: Vec::new(),
             damage_dealt_this_resolution: 0,
             damaged_this_resolution: Vec::new(),
             destroyed_this_resolution: Vec::new(),
@@ -2106,6 +2133,7 @@ impl GameState {
             pending_ability_sac_other: None,
             pending_ability_tap_other: None,
             pending_ability_exile_other: None,
+            pending_ability_sac_any: None,
             decider: Box::new(AutoDecider),
             pending_decision: None,
             suspend_signal: None,
@@ -15617,6 +15645,14 @@ impl GameState {
                         // minus the source); `activate_ability` re-checks each id
                         // is still in the graveyard and matches the filter.
                         self.pending_ability_exile_other = Some(ids);
+                    }
+                    K::SacAnyNumber => {
+                        let DecisionAnswer::Cards(ids) = answer else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        // May legally be empty; `activate_ability` re-checks
+                        // each id is still a controlled, matching permanent.
+                        self.pending_ability_sac_any = Some(ids);
                     }
                     K::XValue => {
                         let DecisionAnswer::Amount(n) = answer else {

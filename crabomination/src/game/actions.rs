@@ -11942,6 +11942,7 @@ impl GameState {
         let chosen_sac_other = self.pending_ability_sac_other.take();
         let chosen_tap_other = self.pending_ability_tap_other.take();
         let chosen_exile_other = self.pending_ability_exile_other.take();
+        let chosen_sac_any = self.pending_ability_sac_any.take();
         // CR 601.2g float-spend choice (None until answered; consumed up front
         // so a failure can't leak it onto a later activation).
         let spend_float = self.pending_cast_spend_float.take();
@@ -12880,10 +12881,69 @@ impl GameState {
             Vec::new()
         };
 
+        let mut sac_other_picks = sac_other_picks;
+
+        // CR 602.5b — "…and any number of [filter] you control". Zero is a
+        // legal payment, so there is no candidate-count gate; a hand-paying
+        // activator picks the subset, everything else sacrifices all of them
+        // (Sword of the Ages is a finisher — a partial auto-pick has no
+        // sensible size).
+        if let Some(filter) = ability.sac_any_number_filter.as_ref() {
+            let candidates: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.id != card_id && c.controller == p)
+                .map(|c| c.id)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .filter(|id| {
+                    self.evaluate_requirement_static(filter, &Target::Permanent(*id), p, Some(card_id))
+                })
+                .collect();
+            match chosen_sac_any {
+                Some(chosen) => {
+                    sac_other_picks.extend(chosen.into_iter().filter(|id| candidates.contains(id)));
+                }
+                None if !candidates.is_empty() && self.players[p].manual_mana => {
+                    let source_name = self
+                        .battlefield_find(card_id)
+                        .map(|c| c.definition.name.to_string())
+                        .unwrap_or_default();
+                    let named: Vec<(CardId, String)> = candidates
+                        .iter()
+                        .filter_map(|id| {
+                            self.battlefield_find(*id)
+                                .map(|c| (*id, c.definition.name.to_string()))
+                        })
+                        .collect();
+                    let max = named.len() as u32;
+                    self.pending_decision = Some(crate::game::types::PendingDecision {
+                        decision: crate::decision::Decision::ChooseCards {
+                            source: card_id,
+                            prompt: format!("{source_name}: sacrifice any number of them"),
+                            candidates: named,
+                            min: 0,
+                            max,
+                        },
+                        resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                            activator: p,
+                            card_id,
+                            ability_index,
+                            target,
+                            additional_targets: additional_targets.clone(),
+                            x_value,
+                            kind: crate::game::types::AbilityCostChoice::SacAnyNumber,
+                        },
+                    });
+                    return Ok(vec![]);
+                }
+                None => sac_other_picks.extend(candidates),
+            }
+        }
+
         // CR 602.5b — statics that bolt an extra "Sacrifice a [filter]" onto
         // matching permanents' activated abilities (Brutal Suppression).
         // Mana abilities are exempt, matching the other activation taxes.
-        let mut sac_other_picks = sac_other_picks;
         if !is_mana_ability(&ability.effect) {
             let taxes: Vec<crate::card::SelectionRequirement> = self
                 .battlefield
@@ -13639,6 +13699,12 @@ impl GameState {
         // so the `ManaValueEqualsSacrificedPlus` search filter resolves
         // correctly at ability resolution (Transfigure → Fleshwrither).
         let mut cost_sac_mv: u32 = 0;
+        // Whole-batch tally across `sac_cost` + `sac_other_picks` +
+        // `sac_all_matching_cost`, threaded the same way so
+        // `Value::Sacrificed{Count,TotalPower}` read the batch and not the
+        // last permanent (Sword of the Ages' "total power sacrificed").
+        let mut cost_sac_count: u32 = 0;
+        let mut cost_sac_total_power: i32 = 0;
 
         // Sacrifice-as-cost: with tap and mana costs paid, sacrifice the
         // source. The effect runs/queues after, and any selectors that
@@ -13764,6 +13830,8 @@ impl GameState {
                     self.sacrificed_mana_value = Some(mv);
                     cost_sac_pt = Some((p_val, t_val));
                     cost_sac_mv = mv;
+                    cost_sac_count += 1;
+                    cost_sac_total_power += p_val;
                     // Cache the dying card's snapshot so AnotherOfYours
                     // triggers and type-filter predicates fire off
                     // sacrifices even when the dying card is a token.
@@ -13863,14 +13931,19 @@ impl GameState {
         // for an effect" activations.
         // CR 602.5b — the whole cost-sacrifice batch feeds
         // `Value::Sacrificed{Count,TotalPower}` (Sword of the Ages sacrifices
-        // any number of creatures and reads their total power). Reset here so
-        // an earlier resolution's tally can't leak in.
-        self.sacrificed_count = 0;
-        self.sacrificed_total_power = 0;
+        // any number of creatures and reads their total power). Seed from the
+        // source's own `sac_cost` so an earlier resolution's tally can't leak
+        // in but this activation's does.
+        self.sacrificed_count = cost_sac_count;
+        self.sacrificed_total_power = cost_sac_total_power;
+        self.cost_sacrificed_batch = if ability.sac_cost { vec![card_id] } else { Vec::new() };
+        self.cost_sacrificed_batch.extend(sac_other_picks.iter().copied());
         for other_cid in sac_other_picks {
+            let sac_power = self.battlefield_find(other_cid).map(|c| c.power()).unwrap_or(0);
             self.sacrificed_count += 1;
-            self.sacrificed_total_power +=
-                self.battlefield_find(other_cid).map(|c| c.power()).unwrap_or(0);
+            self.sacrificed_total_power += sac_power;
+            cost_sac_count += 1;
+            cost_sac_total_power += sac_power;
             let is_creature = self
                 .battlefield_find(other_cid)
                 .map(|c| c.definition.is_creature())
@@ -14254,9 +14327,9 @@ impl GameState {
             let effect = match cost_sac_pt {
                 Some((power, toughness)) => Effect::WithSacrificedPt {
                     power,
-                    total_power: power,
+                    total_power: cost_sac_total_power,
                     toughness,
-                    count: 1,
+                    count: cost_sac_count,
                     mana_value: cost_sac_mv,
                     card: Some(card_id),
                     body: Box::new(ability.effect.clone()),
@@ -14293,9 +14366,9 @@ impl GameState {
             let mut queued_effect = match cost_sac_pt {
                 Some((power, toughness)) => Effect::WithSacrificedPt {
                     power,
-                    total_power: power,
+                    total_power: cost_sac_total_power,
                     toughness,
-                    count: 1,
+                    count: cost_sac_count,
                     mana_value: cost_sac_mv,
                     card: Some(card_id),
                     body: Box::new(ability.effect),

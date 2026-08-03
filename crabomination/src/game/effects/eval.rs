@@ -283,6 +283,20 @@ impl GameState {
                 })
                 .map(|c| c.damage_dealt_to_this_turn as i32)
                 .unwrap_or(0),
+            Value::DamageToSourceThisTurnFromOthersNamedSame => ctx
+                .source
+                .and_then(|id| {
+                    self.battlefield_find(id).or_else(|| self.leaves_bf_lki.get(&id))
+                })
+                .map(|c| {
+                    c.damage_by_source_name_this_turn
+                        .iter()
+                        .filter(|(name, _)| *name == c.definition.name)
+                        .map(|(_, n)| *n as i32)
+                        .sum()
+                })
+                .unwrap_or(0),
+            Value::CreaturesDiedThisResolution => self.creatures_died_this_resolution as i32,
             Value::CardsInExileOwnedBy(p) => self
                 .resolve_players(p, ctx)
                 .iter()
@@ -2917,6 +2931,21 @@ impl GameState {
                     R::DamagedBySourceThisTurn => {
                         source.is_some_and(|s| card.damaged_by_this_turn.contains(&s))
                     }
+                    // Sentinel — "blocking or blocked by this creature",
+                    // read off `block_map` in both directions.
+                    R::BlockingOrBlockedBySource => source.is_some_and(|s| {
+                        self.block_map.get(&card.id).is_some_and(|atk| atk.contains(&s))
+                            || self.block_map.get(&s).is_some_and(|atk| atk.contains(&card.id))
+                    }),
+                    // Brine Hag fires from the graveyard, so the source's own
+                    // damage log comes off its leaves-battlefield LKI.
+                    R::DealtDamageToSourceThisTurn => source
+                        .and_then(|s| {
+                            self.battlefield_find(s)
+                                .or_else(|| self.leaves_bf_lki.get(&s))
+                                .or_else(|| self.died_card_snapshots.get(&s))
+                        })
+                        .is_some_and(|src| src.damaged_by_this_turn.contains(&card.id)),
                     // CR 105.2/202.2 — color is the union of the mana cost's
                     // colors and the color indicator (tokens, DFC backs), and
                     // empty under Devoid. `printed_colors` folds all three in.
@@ -4020,7 +4049,9 @@ impl GameState {
             | R::SpellWithSingleTarget
             | R::DealtDamageToControllerThisTurn | R::IsBestowed
             | R::EquippedByAtLeast(_) | R::IsModified | R::DealtDamageThisTurn
-            | R::DamagedBySourceThisTurn | R::PlayerDamagedBySourceThisTurn => false,
+            | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
+            | R::BlockingOrBlockedBySource
+            | R::PlayerDamagedBySourceThisTurn => false,
         }
     }
 }

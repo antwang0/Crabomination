@@ -371,6 +371,7 @@ pub fn show_and_tell() -> CardDefinition {
         effect: Effect::EachPlayerMayPutPermanentFromHand {
             filter: SelectionRequirement::Permanent,
             others_only: false,
+            repeat: false,
         },
         ..Default::default()
     }

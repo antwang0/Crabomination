@@ -618,8 +618,17 @@ impl GameState {
                         .iter()
                         .enumerate()
                         .any(|(i, pl)| !self.same_team(i, p) && pl.was_dealt_damage_this_turn),
+                    // Giant Turtle — "can't attack if it attacked during your
+                    // last turn".
+                    Keyword::CantAttackIfAttackedLastTurn => {
+                        self.battlefield_find(id).is_some_and(|c| c.attacked_last_turn)
+                    }
                     _ => false,
                 });
+                // CR 508.1a — Wall of Dust's ban, live for exactly this turn.
+                let banned = self
+                    .battlefield_find(id)
+                    .is_some_and(|c| c.attack_ban == crate::card::AttackBan::Active);
                 // CR 508.1a — Okk: needs a strictly bigger partner in the same
                 // declared batch (already-declared attackers count too).
                 let okk_locked = kws.contains(&Keyword::CantAttackUnlessGreaterPowerAttacks) && {
@@ -645,6 +654,7 @@ impl GameState {
                     && !defender_locked
                     && !kws.contains(&Keyword::CantAttack)
                     && !predicate_locked
+                    && !banned
                     && !cohort_locked
                     && !land_locked
                     && !hand_locked
@@ -662,6 +672,7 @@ impl GameState {
                     if card.detained_by.is_some()
                         || defender_locked
                         || kws.contains(&Keyword::CantAttack)
+                        || banned
                         || cohort_locked
                         || land_locked
                         || hand_locked
@@ -929,6 +940,7 @@ impl GameState {
             }
             // CR 702.142 — record that this creature attacked (gates Boast).
             card.attacked_this_turn = true;
+            card.attacked_own_turn = true;
             self.attacking.push(atk);
             // Raid (CR 702.108 ability word): the controller attacked this turn.
             self.players[p].attacked_this_turn = true;

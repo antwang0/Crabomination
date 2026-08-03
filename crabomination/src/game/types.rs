@@ -983,6 +983,9 @@ pub enum AbilityCostChoice {
     /// Lavamancer, Scrapheap Scrounger). Answered via a `ChooseCards` modal
     /// since graveyard cards aren't selectable with the in-scene cursor.
     ExileOther,
+    /// `sac_any_number_filter` — "…and any number of [filter] you control"
+    /// (Sword of the Ages). Answered via a `ChooseCards` modal with `min: 0`.
+    SacAnyNumber,
     /// The ability's *effect* targets a graveyard card ("Return target
     /// creature card from your graveyard" — Cauldron of Essence). Answered
     /// via a `ChooseCards` modal; the resume binds the pick as the

@@ -403,6 +403,7 @@ pub mod leg2;
 pub mod leg3;
 pub mod leg4;
 pub mod leg5;
+pub mod leg6;
 pub mod lgn;
 pub mod ons;
 pub mod ons2;

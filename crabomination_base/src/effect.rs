@@ -576,6 +576,14 @@ pub enum Value {
     /// dealt to it this turn" (Rushing-Tide Zubera). Reads death-time LKI so a
     /// dies-trigger sees the damage that killed it.
     DamageDealtToSourceThisTurn,
+    /// Damage dealt to the source this turn by *other* sources sharing its
+    /// name (Blazing Effigy). Reads the per-name tally on the death LKI
+    /// snapshot, so a dies-trigger sees the whole turn.
+    DamageToSourceThisTurnFromOthersNamedSame,
+    /// Creatures that died during the resolution currently underway — a
+    /// sweeper billing its caster for its own kills (Hellfire). The turn-wide
+    /// `CreaturesDiedThisTurn` over-counts on a busy turn.
+    CreaturesDiedThisResolution,
     /// Number of cards `who` owns in the exile zone (Kaya, Orzhov Usurper's −5).
     CardsInExileOwnedBy(PlayerRef),
     /// Distinct card types among cards in `who`'s graveyard (the delirium
@@ -4051,6 +4059,14 @@ pub enum Effect {
     /// revealed cards go to their graveyard and the named card goes back on
     /// top. Otherwise they shuffle." Tunnel Vision.
     NameCardRevealUntilThenBin { who: PlayerRef },
+    /// "`who` chooses a card name, then reveals the top card of their
+    /// library. On a match it goes to their hand, otherwise to their
+    /// graveyard." Petra Sphinx.
+    NameCardThenRevealTopBin { who: PlayerRef },
+    /// Exile every permanent card sacrificed to pay the *current* activation's
+    /// cost (Sword of the Ages' "then exile this artifact and those creature
+    /// cards"). Reads the batch stashed by `activate_ability`.
+    ExileCostSacrificedBatch,
     /// "Exile the top `exile_count` cards of your library, then reveal cards
     /// from the top until you reveal a card with the name a preceding
     /// `Effect::NameCard` stamped on the source. Put that card into your hand
@@ -4221,6 +4237,10 @@ pub enum Effect {
     /// Register a delayed trigger sacrificing each resolved permanent at the
     /// beginning of the controller's next upkeep (Firion's copy token).
     SacrificeAtNextUpkeep { what: Selector },
+    /// CR 603.7a — "At the beginning of your next upkeep, `body`." A general
+    /// one-shot delayed trigger bound to the resolving source (Giant Slug,
+    /// Hazezon Tamar).
+    AtYourNextUpkeep { body: Box<Effect> },
     /// CR 702.141 Encore — for each opponent, create a token copy of the
     /// source (read from exile after the encore cost exiled it) that attacks
     /// that opponent this turn if able (goad-style requirement). The tokens
@@ -5064,6 +5084,15 @@ pub enum Effect {
     /// It stops being an attacking/blocking creature but stays on the
     /// battlefield (Labyrinth of Skophos, Falter-style effects).
     RemoveFromCombat { what: Selector },
+    /// CR 508.1a — "that creature can't attack during its controller's next
+    /// turn" (Wall of Dust). Arms `CardInstance.attack_ban`, which the
+    /// controller's untap step promotes and that turn's cleanup clears.
+    CantAttackNextTurn { what: Selector },
+    /// CR 701.3c — "attach target Aura attached to a [type] to another
+    /// permanent of that type" (Enchantment Alteration). Moves the *targeted*
+    /// Aura rather than the source; the new host must satisfy the Aura's own
+    /// enchant filter, else the move is illegal and nothing happens.
+    ReattachTargetAura { aura: Selector, to: Selector },
     /// CR 702.26 — phase out every permanent the selector resolves to. The
     /// permanent moves to `GameState.phased_out` (treated as nonexistent) and
     /// phases back in during its controller's next untap step. Vodalian
@@ -6417,6 +6446,10 @@ pub enum Effect {
         filter: SelectionRequirement,
         #[serde(default)]
         others_only: bool,
+        /// Eureka — "repeat this process until no one puts a card onto the
+        /// battlefield". Loops the whole APNAP pass while any seat played.
+        #[serde(default)]
+        repeat: bool,
     },
     /// "`who` exiles `count` permanents they control of their choice" — the
     /// exile analogue of Annihilator's forced sacrifice (Bane of Bala Ged).

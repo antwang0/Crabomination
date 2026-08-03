@@ -383,6 +383,13 @@ pub enum CounterType {
     Hatchling,
     /// Intervention counter (Divine Intervention).
     Intervention,
+    /// Pupa counter (Cocoon) — the enchanted creature is locked down while it
+    /// carries one, and sheds one each upkeep.
+    Pupa,
+    /// Dream counter (Rasputin Dreamweaver) — spent for mana or prevention.
+    Dream,
+    /// Pin counter (Voodoo Doll) — one per upkeep, spent as damage.
+    Pin,
     Loyalty,
     Charge,
     /// CR 122 — the manifestation counter Arbiter of the Ideal puts on the
@@ -1258,6 +1265,10 @@ pub enum Keyword {
     /// CR 508.1a restriction — "This creature can't attack if defending player
     /// controls an untapped land" (Branded Brawlers).
     CantAttackIfDefenderHasUntappedLand,
+    /// CR 508.1a restriction — "This creature can't attack if it attacked
+    /// during your last turn" (Giant Turtle). Reads the bearer's
+    /// `attacked_last_turn` roll-over flag.
+    CantAttackIfAttackedLastTurn,
     /// CR 509.1b restriction — the blocking half of Branded Brawlers: "can't
     /// block if you control an untapped land."
     CantBlockIfYouHaveUntappedLand,
@@ -1688,6 +1699,10 @@ pub enum SelectionRequirement {
     /// (Bushi Tenderfoot's "a creature dealt damage by this creature this
     /// turn"). Reads the dying object's LKI snapshot.
     DamagedBySourceThisTurn,
+    /// The inverse of `DamagedBySourceThisTurn` — the permanent dealt damage
+    /// *to* the evaluating source this turn (Brine Hag). Reads the source's
+    /// `damaged_by_this_turn`, off its death LKI when it has already left.
+    DealtDamageToSourceThisTurn,
     /// The *player* target was dealt damage by the evaluating source this turn
     /// (Wicked Akuba's "target player dealt damage by this creature this turn").
     PlayerDamagedBySourceThisTurn,
@@ -1885,6 +1900,10 @@ pub enum SelectionRequirement {
     /// combat state — Smite's "destroy target blocked creature".
     IsBlocked,
     IsBlocking,
+    /// CR 509 — the permanent is blocking the evaluating source, or is
+    /// blocked by it (Sentinel's "target creature blocking or blocked by
+    /// this creature"). Reads `block_map` both ways.
+    BlockingOrBlockedBySource,
     /// True when the candidate is blocking, or is blocked by, the ability's
     /// source — the symmetric combat-partner filter (Sisters of Stone Death's
     /// "creature blocking or blocked by this creature").
@@ -4794,6 +4813,18 @@ pub struct ExileLink {
 
 /// A card in play.  Tracks mutable game state layered on top of the static definition.
 ///
+/// CR 508.1a — a pending or active "can't attack during its controller's
+/// next turn" ban (Wall of Dust). Set to `Pending` when the ban lands; the
+/// bearer's untap step promotes it to `Active`, and that turn's cleanup
+/// clears it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum AttackBan {
+    #[default]
+    None,
+    Pending,
+    Active,
+}
+
 /// `Serialize`/`Deserialize` are implemented manually below — `definition`
 /// is round-tripped by *card name* (via `catalog::lookup_by_name`) rather
 /// than by serializing the full `CardDefinition` tree, which would force
@@ -5201,6 +5232,24 @@ pub struct CardInstance {
     /// this turn"). Cleared in per-turn cleanup. Transient — not
     /// serialized (defaults to false on snapshot reload).
     pub attacked_this_turn: bool,
+    /// Whether this creature attacked during its controller's *current or
+    /// most recent* turn. Unlike `attacked_this_turn` it survives the
+    /// intervening turns, and rolls into `attacked_last_turn` at its
+    /// controller's untap step.
+    pub attacked_own_turn: bool,
+    /// Whether this creature attacked during its controller's *previous*
+    /// turn, so `Keyword::CantAttackIfAttackedLastTurn` (Giant Turtle) can
+    /// read it.
+    pub attacked_last_turn: bool,
+    /// Wall of Dust — "that creature can't attack during its controller's
+    /// next turn". `Pending` is set when the ban lands; it promotes to
+    /// `Active` at the bearer's controller's untap step and clears at that
+    /// turn's cleanup.
+    pub attack_ban: AttackBan,
+    /// Damage dealt to this permanent this turn, tallied per damaging
+    /// source's *name* (Blazing Effigy's "other sources named Blazing
+    /// Effigy"). Reset at cleanup; in-memory only.
+    pub damage_by_source_name_this_turn: Vec<(&'static str, u32)>,
     /// Set when this creature is declared as a blocker; powers "creature that
     /// attacked or blocked this turn" filters (Gideon's Triumph). Cleared in
     /// per-turn cleanup. Transient — not serialized (defaults false on reload).
@@ -5534,6 +5583,10 @@ impl CardInstance {
             damage_prevention_off_eot: false,
             untap_locked_while_present: None,
             attacked_this_turn: false,
+            attacked_own_turn: false,
+            attacked_last_turn: false,
+            attack_ban: AttackBan::None,
+            damage_by_source_name_this_turn: Vec::new(),
             blocked_this_turn: false,
             blocked_attackers_this_turn: Vec::new(),
             must_block: None,
@@ -5918,6 +5971,15 @@ impl CardInstance {
                 .is_some_and(|f| f.keywords.iter().any(|k| matches!(k, Keyword::Disturb(_))))
     }
 
+    /// Fold `amount` damage from a source named `name` into this turn's
+    /// per-name tally (Blazing Effigy).
+    pub fn record_damage_from_named(&mut self, name: &'static str, amount: u32) {
+        match self.damage_by_source_name_this_turn.iter_mut().find(|(n, _)| *n == name) {
+            Some((_, n)) => *n += amount,
+            None => self.damage_by_source_name_this_turn.push((name, amount)),
+        }
+    }
+
     pub fn clear_end_of_turn_effects(&mut self) {
         self.power_bonus = 0;
         self.toughness_bonus = 0;
@@ -5936,6 +5998,7 @@ impl CardInstance {
         self.dealt_damage_this_turn = false;
         self.damage_dealt_to_this_turn = 0;
         self.damaged_by_this_turn.clear();
+        self.damage_by_source_name_this_turn.clear();
         // CR 701.15g — unused regeneration shields expire at end of turn,
         // and so does the "can't be regenerated this turn" lock.
         self.regeneration_shields = 0;

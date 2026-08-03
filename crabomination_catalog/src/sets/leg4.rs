@@ -1008,7 +1008,7 @@ pub fn triassic_egg() -> CardDefinition {
 
 // ── Spells ─────────────────────────────────────────────────────────────────
 
-/// Hellfire — a black sweeper that bills you for it.
+/// Hellfire — a black sweeper that bills you for its own kills.
 pub fn hellfire() -> CardDefinition {
     sorcery(
         "Hellfire",
@@ -1021,7 +1021,10 @@ pub fn hellfire() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: you(),
-                amount: Value::Sum(vec![Value::Const(3), Value::CreaturesDiedThisTurn(PlayerRef::EachPlayer)]),
+                amount: Value::Sum(vec![
+                    Value::Const(3),
+                    Value::CreaturesDiedThisResolution,
+                ]),
             },
         ]),
     )

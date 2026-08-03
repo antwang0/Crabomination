@@ -154,6 +154,7 @@ pub use sets::leg2::*;
 pub use sets::leg3::*;
 pub use sets::leg4::*;
 pub use sets::leg5::*;
+pub use sets::leg6::*;
 pub use sets::mbs::*;
 pub use sets::nph::*;
 pub use sets::scg::*;

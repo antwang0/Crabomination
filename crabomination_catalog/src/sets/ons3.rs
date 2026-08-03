@@ -579,6 +579,7 @@ pub fn tempting_wurm() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::EachPlayerMayPutPermanentFromHand {
             filter: R::Artifact.or(R::Creature).or(R::Enchantment).or(R::Land),
             others_only: true,
+            repeat: false,
         })],
         ..creature("Tempting Wurm", cost(&[generic(1), g()]), vec![CreatureType::Wurm], 5, 5)
     }

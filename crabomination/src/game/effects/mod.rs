@@ -1455,6 +1455,14 @@ impl GameState {
         self.permanents_destroyed_this_resolution = 0;
         self.destroyed_this_resolution.clear();
         self.excess_damage_this_resolution = 0;
+        // Deaths caused by this resolution are tallied for the OUTERMOST
+        // resolution only — a sweeper's own kills can re-enter `resolve_effect`
+        // (replacements, death triggers) and would otherwise zero the running
+        // count mid-sweep (Hellfire).
+        if self.resolution_depth == 0 {
+            self.creatures_died_this_resolution = 0;
+        }
+        self.resolution_depth += 1;
         self.damage_dealt_this_resolution = 0;
         self.damaged_this_resolution.clear();
         self.countered_spell_mana_spent = 0;
@@ -1466,7 +1474,9 @@ impl GameState {
         self.named_card_this_resolution = None;
         self.names_this_resolution.clear();
         let mut events = vec![];
-        self.run_effect(effect, ctx, &mut events)?;
+        let ran = self.run_effect(effect, ctx, &mut events);
+        self.resolution_depth = self.resolution_depth.saturating_sub(1);
+        ran?;
         // Quina — a resolution that minted one or more tokens under a
         // player's control mints one extra rider token per
         // `TokenCreationAddsToken` static that player controls (single
@@ -6866,6 +6876,39 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NameCardThenRevealTopBin { who } => {
+                // Petra Sphinx — the namer knows their own deck, so the auto
+                // policy names its densest card; the top card then goes to
+                // hand on a match and to the graveyard otherwise.
+                let Some(victim) = self.resolve_players(who, ctx).first().copied() else {
+                    return Ok(());
+                };
+                let named = rank_names_by_frequency(
+                    self.players[victim].library.iter().map(|c| c.definition.name),
+                )
+                .into_iter()
+                .next();
+                let (Some(named), false) = (named, self.players[victim].library.is_empty()) else {
+                    return Ok(());
+                };
+                let card = self.players[victim].library.remove(0);
+                if card.definition.name == named {
+                    self.players[victim].hand.push(card);
+                } else {
+                    self.players[victim].send_to_graveyard(card);
+                }
+                Ok(())
+            }
+
+            Effect::ExileCostSacrificedBatch => {
+                // Sword of the Ages — the batch is already in graveyards; move
+                // each card on to exile from wherever it landed.
+                for cid in std::mem::take(&mut self.cost_sacrificed_batch) {
+                    self.move_card_to(cid, &crate::effect::ZoneDest::Exile, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::ExileTopThenRevealUntilNamed { exile_count } => {
                 // Divining Witch — the six exiled cards are gone whether or
                 // not the named card ever shows up.
@@ -7870,6 +7913,53 @@ impl GameState {
                         self.remove_from_combat(cid);
                     }
                 }
+                Ok(())
+            }
+
+            Effect::CantAttackNextTurn { what } => {
+                // CR 508.1a — arm the ban; the bearer's untap step makes it
+                // live for exactly that turn (Wall of Dust).
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.attack_ban = crate::card::AttackBan::Pending;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ReattachTargetAura { aura, to } => {
+                // CR 701.3c — move the *targeted* Aura onto a new host that
+                // satisfies its own enchant filter; an illegal host is a no-op
+                // (Enchantment Alteration).
+                let Some(aura_id) =
+                    self.resolve_selector(aura, ctx).first().and_then(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let Some(host_id) =
+                    self.resolve_selector(to, ctx).first().and_then(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let enchant = self
+                    .battlefield_find(aura_id)
+                    .and_then(|c| c.definition.aura_enchant_filter().cloned());
+                let legal = enchant.is_none_or(|f| {
+                    self.evaluate_requirement_static(
+                        &f,
+                        &Target::Permanent(host_id),
+                        ctx.controller,
+                        Some(aura_id),
+                    )
+                });
+                if !legal || host_id == aura_id {
+                    return Ok(());
+                }
+                if let Some(c) = self.battlefield_find_mut(aura_id) {
+                    c.attached_to = Some(host_id);
+                }
+                events.push(GameEvent::AuraAttached { aura: aura_id, attached_to: host_id });
                 Ok(())
             }
 
@@ -16062,10 +16152,19 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::EachPlayerMayPutPermanentFromHand { filter, others_only } => {
-                // APNAP order (active player first).
+            Effect::EachPlayerMayPutPermanentFromHand { filter, others_only, repeat } => {
+                // APNAP order (active player first). Eureka repeats the whole
+                // pass while any seat played (capped at the total hand size,
+                // which is the most cards the loop can consume).
                 let order = self.apnap_sort((0..self.players.len()).collect());
-                for p in order {
+                let rounds = if *repeat {
+                    self.players.iter().map(|p| p.hand.len()).sum::<usize>().max(1)
+                } else {
+                    1
+                };
+                for _ in 0..rounds {
+                let mut played_any = false;
+                for p in order.clone() {
                     if *others_only && p == ctx.controller {
                         continue;
                     }
@@ -16105,6 +16204,11 @@ impl GameState {
                         &octx,
                         events,
                     );
+                    played_any = true;
+                }
+                if !played_any {
+                    break;
+                }
                 }
                 Ok(())
             }
@@ -26661,6 +26765,20 @@ impl GameState {
                         }
                     }
                 }
+                Ok(())
+            }
+
+            Effect::AtYourNextUpkeep { body } => {
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    kind: crate::game::types::DelayedKind::YourNextUpkeep,
+                    effect: (**body).clone(),
+                    target: ctx.targets.first().cloned(),
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: true,
+                });
                 Ok(())
             }
 

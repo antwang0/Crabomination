@@ -1181,12 +1181,20 @@ impl GameState {
                         self.excess_damage_this_resolution =
                             self.excess_damage_this_resolution.saturating_add(excess);
                     }
+                    // Name of the damaging source, read before the mutable
+                    // borrow (Blazing Effigy's per-name tally).
+                    let source_name = source
+                        .filter(|s| *s != cid)
+                        .and_then(|s| self.find_card_anywhere(s).map(|c| c.definition.name));
                     if let Some(c) = self.battlefield_find_mut(cid) {
                     if c.definition.is_creature() {
                         c.dealt_damage_this_turn = true;
                         c.damage_dealt_to_this_turn += amount;
                         if let Some(src) = source {
                             c.damaged_by_this_turn.push(src);
+                        }
+                        if let Some(name) = source_name {
+                            c.record_damage_from_named(name, amount);
                         }
                     }
                     if source_has_wither && c.definition.is_creature() {

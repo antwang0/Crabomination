@@ -234,13 +234,16 @@ impl Effect {
             }
         }
         match self {
-            Effect::AbandonThisScheme | Effect::GameIsADraw => false,
+            Effect::AbandonThisScheme | Effect::GameIsADraw
+            | Effect::ExileCostSacrificedBatch => false,
             Effect::AnteTopOfLibrary { who, then, else_, .. } => {
                 player_has_target(who)
                     || then.as_ref().is_some_and(|e| e.requires_target())
                     || else_.as_ref().is_some_and(|e| e.requires_target())
             }
-            Effect::Ante { what } => sel_has_target(what),
+            Effect::Ante { what } | Effect::CantAttackNextTurn { what } => sel_has_target(what),
+            Effect::AtYourNextUpkeep { body } => body.requires_target(),
+            Effect::ReattachTargetAura { aura, to } => sel_has_target(aura) || sel_has_target(to),
             Effect::AnteToGraveyard { who }
             | Effect::TakeAnteCardForLibraryTop { who }
             | Effect::MaySpendManaAsAnyColorThisTurn { who } => player_has_target(who),
@@ -796,6 +799,7 @@ impl Effect {
             }
             Effect::LookTopExileOneOfN { who, .. }
             | Effect::NameCardRevealUntilThenBin { who }
+            | Effect::NameCardThenRevealTopBin { who }
             | Effect::BottomHandThenDrawThatMany { who } => {
                 matches!(who, PlayerRef::Target(_))
             }
@@ -1427,6 +1431,7 @@ impl Effect {
             // The targeted side may be `b` when `a` is the source itself
             // (Volatile Stormdrake exchanges `This` with a targeted creature).
             Effect::ExchangeControl { a, b } => sel_filter(a).or_else(|| sel_filter(b)),
+            Effect::ReattachTargetAura { aura, to } => sel_filter(aura).or_else(|| sel_filter(to)),
             Effect::RedirectNextDamage { target, to, .. } => {
                 sel_filter(target).or_else(|| sel_filter(to))
             }
@@ -2779,6 +2784,9 @@ impl Effect {
                 | Effect::ExileAndReturnToOwner { what } => sel_find(what, slot),
                 Effect::RedirectNextDamageBackAtSource { what, to } => {
                     sel_find(what, slot).or_else(|| sel_find(to, slot))
+                }
+                Effect::ReattachTargetAura { aura, to } => {
+                    sel_find(aura, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::DealDamageExcessTo { to, amount, excess_to, .. } => sel_find(to, slot)
                     .or_else(|| val_find(amount, slot))
