@@ -12591,6 +12591,15 @@ static LGN: &[Factory] = &[
     super::lgn::keeper_of_the_nine_gales,
     super::lgn::magma_sliver,
     super::lgn::skirk_drill_sergeant,
+    super::lgn::beacon_of_destiny,
+    super::lgn::dark_supplicant,
+    super::lgn::dermoplasm,
+    super::lgn::goblin_assassin,
+    super::lgn::goblin_goon,
+    super::lgn::hollow_specter,
+    super::lgn::planar_guide,
+    super::lgn::riptide_mangler,
+    super::lgn::whipgrass_entangler,
 ];
 static ONS3: &[Factory] = &[
     super::ons3::astral_slide,

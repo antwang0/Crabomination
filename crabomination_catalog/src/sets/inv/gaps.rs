@@ -508,6 +508,7 @@ pub fn firebrand_ranger() -> CardDefinition {
                 haste: false,
                 sacrifice_eot: false,
                 return_eot: false,
+                then: None,
             },
             ..Default::default()
         }],

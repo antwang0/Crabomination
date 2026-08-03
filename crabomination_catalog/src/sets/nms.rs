@@ -1399,6 +1399,7 @@ pub fn belbes_portal() -> CardDefinition {
                 haste: false,
                 sacrifice_eot: false,
                 return_eot: false,
+                then: None,
             },
             ..Default::default()
         }],
@@ -1594,6 +1595,7 @@ pub fn terrain_generator() -> CardDefinition {
                     haste: false,
                     sacrifice_eot: false,
                 return_eot: false,
+                then: None,
                 },
                 ..Default::default()
             },

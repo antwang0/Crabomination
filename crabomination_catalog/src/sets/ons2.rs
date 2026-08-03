@@ -729,6 +729,7 @@ pub fn elvish_pioneer() -> CardDefinition {
             haste: false,
             sacrifice_eot: false,
             return_eot: false,
+            then: None,
         })],
         ..creature(
             "Elvish Pioneer",

@@ -542,6 +542,7 @@ pub fn iwamori_of_the_open_fist() -> CardDefinition {
             haste: false,
             sacrifice_eot: false,
                 return_eot: false,
+                then: None,
         })],
         ..legend(
             "Iwamori of the Open Fist",

@@ -1290,6 +1290,7 @@ pub fn wumpus_aberration() -> CardDefinition {
                 haste: false,
                 sacrifice_eot: false,
                 return_eot: false,
+                then: None,
             }),
             else_: Box::new(Effect::Noop),
         })],

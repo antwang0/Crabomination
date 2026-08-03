@@ -1575,6 +1575,7 @@ pub fn surprise_deployment() -> CardDefinition {
                 haste: false,
                 sacrifice_eot: false,
                 return_eot: true,
+                then: None,
             },
         )
     }

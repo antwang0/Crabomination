@@ -524,6 +524,7 @@ pub fn metathran_aerostat() -> CardDefinition {
                     haste: false,
                     sacrifice_eot: false,
                     return_eot: false,
+                    then: None,
                 },
                 Effect::If {
                     cond: Predicate::SelectorExists(Selector::LastMoved),
@@ -701,6 +702,7 @@ pub fn cauldron_dance() -> CardDefinition {
                     haste: true,
                     sacrifice_eot: true,
                     return_eot: false,
+                    then: None,
                 },
             ]),
         )

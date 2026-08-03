@@ -127,6 +127,7 @@ pub fn smugglers_surprise() -> CardDefinition {
                         haste: false,
                         sacrifice_eot: false,
                 return_eot: false,
+                then: None,
                     },
                 ),
                 spree_mode(

@@ -165,6 +165,7 @@ pub fn kona_rescue_beastie() -> CardDefinition {
             haste: false,
             sacrifice_eot: false,
                 return_eot: false,
+                then: None,
         })],
         ..Default::default()
     }

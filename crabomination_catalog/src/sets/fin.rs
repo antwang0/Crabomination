@@ -6,7 +6,7 @@ use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Effect,
     EnchantmentSubtype, EquipBonus, EquipScale, EventKind, EventScope, EventSpec, Keyword,
     Predicate, SelectionRequirement, Selector, StaticAbility, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility, Value,
+    TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
     etb, etb_mint_token, etb_surveil, grant_tap_for_any_color, mint_treasures, target_filtered,
@@ -4004,6 +4004,7 @@ pub fn pupu_ufo() -> CardDefinition {
                     haste: false,
                     sacrifice_eot: false,
                 return_eot: false,
+                then: None,
                 },
                 ..Default::default()
             },
@@ -6702,8 +6703,9 @@ pub fn delivery_moogle() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::SearchLibraryOrGraveyard {
+        triggered_abilities: vec![etb(Effect::SearchZones {
             who: PlayerRef::You,
+            zones: vec![Zone::Library, Zone::Graveyard],
             filter: SelectionRequirement::Artifact.and(SelectionRequirement::ManaValueAtMost(2)),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
@@ -7582,6 +7584,7 @@ pub fn summoners_grimoire() -> CardDefinition {
                     haste: false,
                     sacrifice_eot: false,
                 return_eot: false,
+                then: None,
                 },
             }],
             ..Default::default()

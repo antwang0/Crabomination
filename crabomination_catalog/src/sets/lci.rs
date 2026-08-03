@@ -1681,6 +1681,7 @@ pub fn spelunking() -> CardDefinition {
                 haste: false,
                 sacrifice_eot: false,
                 return_eot: false,
+                then: None,
             },
         ]))],
         static_abilities: vec![StaticAbility {
@@ -3733,6 +3734,7 @@ pub fn ghalta_stampede_tyrant() -> CardDefinition {
             haste: false,
             sacrifice_eot: false,
                 return_eot: false,
+                then: None,
         })],
         ..Default::default()
     }
@@ -6262,6 +6264,7 @@ pub fn nicanzil_current_conductor() -> CardDefinition {
                         haste: false,
                         sacrifice_eot: false,
                 return_eot: false,
+                then: None,
                     }),
                 },
             },

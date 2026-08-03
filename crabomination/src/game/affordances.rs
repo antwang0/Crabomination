@@ -358,9 +358,15 @@ impl GameState {
                         .battlefield
                         .iter()
                         .any(|p| p.definition.subtypes.land_types.contains(lt)),
-                    // CR 508.1g — the pay gate is legal only if the seat can
-                    // actually produce {N} (pool + auto-tappable sources).
-                    Keyword::CantAttackOrBlockUnlessPay(n) => self.could_pay_generic(seat, *n),
+                    // CR 508.1g — the whole pay-gate family is legal only if the
+                    // seat can produce the tax (pool + auto-tappable sources).
+                    Keyword::CantAttackOrBlockUnlessPay(_)
+                    | Keyword::CantAttackOrBlockUnlessPayPerCounter(_)
+                    | Keyword::CantAttackOrBlockUnlessPayPerCardInEnchanterHand
+                    | Keyword::CantAttackOrBlockUnlessPayPerPermanent(_) => self.could_pay_generic(
+                        seat,
+                        self.attack_block_keyword_tax(c.id, &kws),
+                    ),
                     // CR 508.1g — Hollow Warrior needs a spare untapped match
                     // that isn't the attacker itself.
                     Keyword::AttackBlockCostTapAnother(f) => self.battlefield.iter().any(|p| {

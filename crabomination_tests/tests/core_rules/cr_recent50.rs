@@ -114,6 +114,7 @@ fn cr_403_4_reentering_permanent_is_a_new_object() {
             haste: false,
             sacrifice_eot: false,
             return_eot: false,
+            then: None,
         },
         &ctx,
     )

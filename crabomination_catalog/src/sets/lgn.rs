@@ -4,7 +4,7 @@
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Keyword,
     Predicate, SelectionRequirement as R, StaticAbility, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility,
+    TriggeredAbility, Zone,
 };
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, ManaPayload, PlayerRef, Selector,
@@ -2398,6 +2398,223 @@ pub fn skirk_drill_sergeant() -> CardDefinition {
             vec![CreatureType::Goblin],
             2,
             1,
+        )
+    }
+}
+
+/// Beacon of Destiny — {T}: bounce the next hit from a chosen source onto itself.
+pub fn beacon_of_destiny() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PreventNextDamageFromChosenSource {
+                filter: R::Any,
+                reflect: false,
+                to: None,
+                gain_life: false,
+                redirect_to: Some(Selector::This),
+                whole_turn: false,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Beacon of Destiny",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            3,
+        )
+    }
+}
+
+/// Dark Supplicant — three Clerics fetch Scion of Darkness from any of three zones.
+pub fn dark_supplicant() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::HasCreatureType(CreatureType::Cleric), 3)),
+            effect: Effect::SearchZones {
+                who: PlayerRef::You,
+                zones: vec![Zone::Graveyard, Zone::Hand, Zone::Library],
+                filter: R::HasName("Scion of Darkness".into()),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Dark Supplicant",
+            cost(&[b()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            1,
+        )
+    }
+}
+
+/// Dermoplasm — flipping it up swaps it for a morph creature straight from hand.
+pub fn dermoplasm() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Morph(cost(&[generic(2), u(), u()]))],
+        triggered_abilities: vec![on_turn_up(Effect::PutFromHandOntoBattlefield {
+            who: PlayerRef::You,
+            filter: R::Creature.and(R::HasMorphAbility),
+            count: Value::ONE,
+            tapped: false,
+            haste: false,
+            sacrifice_eot: false,
+            return_eot: false,
+            then: Some(Box::new(Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+            })),
+        })],
+        ..creature(
+            "Dermoplasm",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Shapeshifter],
+            1,
+            1,
+        )
+    }
+}
+
+/// Goblin Assassin — every Goblin arrival is a coin flip away from a sacrifice.
+pub fn goblin_assassin() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Goblin),
+                },
+            ),
+            effect: Effect::EachPlayerFlipsCoin {
+                who: PlayerRef::EachPlayer,
+                on_heads: Box::new(Effect::Noop),
+                on_tails: Box::new(Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::You),
+                    count: Value::ONE,
+                    filter: R::Creature,
+                }),
+            },
+        }],
+        ..creature(
+            "Goblin Assassin",
+            cost(&[generic(3), r(), r()]),
+            vec![CreatureType::Goblin, CreatureType::Assassin],
+            2,
+            2,
+        )
+    }
+}
+
+/// Goblin Goon — a 6/6 that only fights when your board outnumbers theirs.
+pub fn goblin_goon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![
+            Keyword::CantAttackUnlessMoreCreaturesThanDefender,
+            Keyword::CantBlockUnlessMoreCreaturesThanAttacker,
+        ],
+        ..creature(
+            "Goblin Goon",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Goblin, CreatureType::Mutant],
+            6,
+            6,
+        )
+    }
+}
+
+/// Hollow Specter — pay {X} on connect to strip the best of X revealed cards.
+pub fn hollow_specter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::MayPayX {
+                description: "Pay {X} to strip X revealed cards down to one?".into(),
+                body: Box::new(Effect::DiscardChosenFromRevealed {
+                    from: Selector::Player(PlayerRef::Target(0)),
+                    reveal: Value::XFromCost,
+                }),
+            },
+        }],
+        ..creature(
+            "Hollow Specter",
+            cost(&[generic(1), b(), b()]),
+            vec![CreatureType::Specter],
+            2,
+            2,
+        )
+    }
+}
+
+/// Planar Guide — exiles itself to blink every creature until the end step.
+pub fn planar_guide() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            exile_self_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::ExileLinked { what: Selector::EachPermanent(R::Creature) },
+                Effect::AtNextEndStep {
+                    body: Box::new(Effect::Move {
+                        what: Selector::CardExiledWithSource,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOfMoved,
+                            tapped: false,
+                        },
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Planar Guide",
+            cost(&[w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            1,
+        )
+    }
+}
+
+/// Riptide Mangler — copies a creature's power onto its own base, indefinitely.
+pub fn riptide_mangler() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::SetBasePower {
+                what: Selector::This,
+                power: Value::PowerOf(Box::new(target_filtered(R::Creature))),
+                duration: Duration::Permanent,
+            },
+            ..Default::default()
+        }],
+        ..creature("Riptide Mangler", cost(&[generic(1), u()]), vec![CreatureType::Beast], 0, 3)
+    }
+}
+
+/// Whipgrass Entangler — taxes a creature {1} per Cleric to attack or block.
+pub fn whipgrass_entangler() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(R::Creature),
+                keyword: Keyword::CantAttackOrBlockUnlessPayPerPermanent(Box::new(
+                    R::HasCreatureType(CreatureType::Cleric),
+                )),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Whipgrass Entangler",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            3,
         )
     }
 }

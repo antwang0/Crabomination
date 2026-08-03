@@ -3635,6 +3635,12 @@ impl GameState {
                     })
                     .map(|a| self.players[a.controller].hand.len() as u32)
                     .sum(),
+                // Whipgrass Entangler — one per matching permanent anywhere.
+                Keyword::CantAttackOrBlockUnlessPayPerPermanent(filter) => self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, c.controller))
+                    .count() as u32,
                 _ => 0,
             })
             .sum()

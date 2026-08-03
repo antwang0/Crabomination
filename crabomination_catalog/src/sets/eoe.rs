@@ -1825,6 +1825,7 @@ pub fn sledge_class_seedship() -> CardDefinition {
                     haste: false,
                     sacrifice_eot: false,
                 return_eot: false,
+                then: None,
                 }),
             },
         }],
@@ -4509,6 +4510,7 @@ pub fn anticausal_vestige() -> CardDefinition {
                     haste: false,
                     sacrifice_eot: false,
                 return_eot: false,
+                then: None,
                 },
             ]),
         }],
@@ -6203,6 +6205,7 @@ pub fn terminal_velocity() -> CardDefinition {
             haste: true,
             sacrifice_eot: true,
                 return_eot: false,
+                then: None,
         },
         ..Default::default()
     }

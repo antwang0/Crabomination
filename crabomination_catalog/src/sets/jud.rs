@@ -833,6 +833,7 @@ pub fn krosan_wayfarer() -> CardDefinition {
             haste: false,
             sacrifice_eot: false,
             return_eot: false,
+            then: None,
         })],
         ..creature(
             "Krosan Wayfarer",
@@ -913,6 +914,7 @@ pub fn hunting_grounds() -> CardDefinition {
                                 haste: false,
                                 sacrifice_eot: false,
                                 return_eot: false,
+                                then: None,
                             }),
                         },
                     }),

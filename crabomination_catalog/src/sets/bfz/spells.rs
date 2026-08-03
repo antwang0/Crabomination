@@ -232,6 +232,7 @@ pub fn swell_of_growth() -> CardDefinition {
                 haste: false,
                 sacrifice_eot: false,
                 return_eot: false,
+                then: None,
             },
         ]),
     )

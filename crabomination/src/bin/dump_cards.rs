@@ -198,6 +198,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackOrBlockUnlessPay(_)
         | Keyword::CantAttackOrBlockUnlessPayPerCounter(_)
         | Keyword::CantAttackOrBlockUnlessPayPerCardInEnchanterHand
+        | Keyword::CantAttackOrBlockUnlessPayPerPermanent(_)
         | Keyword::AttackBlockCostTapAnother(_)
         | Keyword::LivingMetal
         | Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn

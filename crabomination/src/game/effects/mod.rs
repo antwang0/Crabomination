@@ -16249,8 +16249,8 @@ impl GameState {
                 haste,
                 sacrifice_eot,
                 return_eot,
+                then,
             } => {
-                
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let max = self.evaluate_value(count, ctx).max(0) as u32;
                 if max == 0 { return Ok(()); }
@@ -16311,10 +16311,12 @@ impl GameState {
                 // their battlefield), so a "target opponent may put …" (Wumpus
                 // Aberration) doesn't hand it to the effect's controller.
                 let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: *tapped };
+                let mut put_any = false;
                 for cid in chosen {
                     // Only move cards that are still in the hand and match.
                     if !self.players[p].hand.iter().any(|c| c.id == cid) { continue; }
                     self.move_card_to(cid, &dest, ctx, events);
+                    put_any = true;
                     if *haste {
                         self.grant_keyword_eot(cid, Keyword::Haste);
                     }
@@ -16337,6 +16339,10 @@ impl GameState {
                             fires_once: true,
                         });
                     }
+                }
+                // "If you do, …" — Dermoplasm returns itself to hand.
+                if put_any && let Some(then) = then {
+                    self.run_effect(then, ctx, events)?;
                 }
                 Ok(())
             }
@@ -16837,48 +16843,61 @@ impl GameState {
 
             e @ (Effect::Search { .. }
             | Effect::SearchPickedBy { .. }
-            | Effect::SearchLibraryOrGraveyard { .. }) => {
+            | Effect::SearchZones { .. }) => {
+                use crate::card::Zone;
                 use crate::decision::Decision;
                 let mut include_graveyard = false;
+                let mut include_hand = false;
+                let mut include_library = true;
                 let (who, picker_ref, filter, to) = match e {
                     Effect::Search { who, filter, to } => (who, None, filter, to),
                     Effect::SearchPickedBy { who, picker, filter, to } => {
                         (who, Some(picker), filter, to)
                     }
-                    Effect::SearchLibraryOrGraveyard { who, filter, to } => {
-                        include_graveyard = true;
+                    Effect::SearchZones { who, zones, filter, to } => {
+                        include_graveyard = zones.contains(&Zone::Graveyard);
+                        include_hand = zones.contains(&Zone::Hand);
+                        include_library = zones.contains(&Zone::Library);
                         (who, None, filter, to)
                     }
                     _ => unreachable!(),
                 };
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
-                // Shadow of Doubt — no player may search a library this turn, so
-                // the search simply doesn't happen (CR 701.19 "can't search").
-                if self.no_search_this_turn {
-                    return Ok(());
-                }
-                // Ashiok, Dream Render — an opponent's `OpponentsCantSearchLibraries`
-                // static stops `p` from searching their own library.
-                if self.player_search_locked_by_opponent(p) {
-                    return Ok(());
+                // The library-search prohibitions only bite when a library is
+                // actually being searched; a hand/graveyard-only search
+                // (Dark Supplicant with an empty library clause) goes ahead.
+                if include_library {
+                    // Shadow of Doubt — no player may search a library this turn,
+                    // so the search simply doesn't happen (CR 701.19 "can't search").
+                    if self.no_search_this_turn {
+                        return Ok(());
+                    }
+                    // Ashiok, Dream Render — an opponent's `OpponentsCantSearchLibraries`
+                    // static stops `p` from searching their own library.
+                    if self.player_search_locked_by_opponent(p) {
+                        return Ok(());
+                    }
+                    // Leonin Arbiter — an unpayable search tax means the search
+                    // happens but finds nothing (CR 701.19d).
+                    if !self.pay_search_tax(p) {
+                        return Ok(());
+                    }
+                    // CR 701.19 — `p` searched their library this turn (Archive
+                    // Trap) and the search itself is an event (Ob Nixilis).
+                    self.players[p].searched_library_this_turn = true;
+                    events.push(GameEvent::PlayerSearchedLibrary { player: p });
                 }
                 // CR 701.19a — the picker (when distinct) makes the pick;
                 // the searched library is still `p`'s.
                 let picker = picker_ref
                     .and_then(|pr| self.resolve_player(pr, ctx))
                     .unwrap_or(p);
-
-                // Leonin Arbiter — an unpayable search tax means the search
-                // happens but finds nothing (CR 701.19d).
-                if !self.pay_search_tax(p) {
-                    return Ok(());
-                }
-                // CR 701.19 — `p` searched their library this turn (Archive
-                // Trap) and the search itself is an event (Ob Nixilis).
-                self.players[p].searched_library_this_turn = true;
-                events.push(GameEvent::PlayerSearchedLibrary { player: p });
                 // Aven Mindcensor — an opponent's search only sees the top N.
-                let limit = self.search_top_limit_for(p).unwrap_or(usize::MAX);
+                let limit = if include_library {
+                    self.search_top_limit_for(p).unwrap_or(usize::MAX)
+                } else {
+                    0
+                };
 
                 // Collect candidates from the library using definition-level evaluation
                 // (cards are not on the battlefield so battlefield_find would fail).
@@ -16902,11 +16921,21 @@ impl GameState {
                     .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
-                // Dual-zone search also pools the graveyard (Delivery Moogle).
+                // Multi-zone search also pools the graveyard / hand
+                // (Delivery Moogle, Dark Supplicant).
                 if include_graveyard {
                     candidates.extend(
                         self.players[p]
                             .graveyard
+                            .iter()
+                            .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
+                            .map(|c| (c.id, c.definition.name.to_string())),
+                    );
+                }
+                if include_hand {
+                    candidates.extend(
+                        self.players[p]
+                            .hand
                             .iter()
                             .filter(|c| self.evaluate_requirement_on_card(&filter, c, p))
                             .map(|c| (c.id, c.definition.name.to_string())),
@@ -16945,6 +16974,8 @@ impl GameState {
                     to,
                     eligible,
                     include_graveyard,
+                    include_hand,
+                    include_library,
                 };
 
                 if self.players[picker].wants_ui {
@@ -20674,6 +20705,22 @@ impl GameState {
                     events.push(GameEvent::CoinFlipLost { player: p });
                     self.run_effect(on_tails, ctx, events)
                 }
+            }
+
+            // CR 705 — each player flips their own coin; the branch runs with
+            // that seat as controller so the body reads "that player".
+            Effect::EachPlayerFlipsCoin { who, on_heads, on_tails } => {
+                for p in self.apnap_sort(self.resolve_players(who, ctx)) {
+                    let sub = EffectContext { controller: p, ..ctx.clone() };
+                    if self.flip_one_coin(p) {
+                        events.push(GameEvent::CoinFlipWon { player: p });
+                        self.run_effect(on_heads, &sub, events)?;
+                    } else {
+                        events.push(GameEvent::CoinFlipLost { player: p });
+                        self.run_effect(on_tails, &sub, events)?;
+                    }
+                }
+                Ok(())
             }
 
             Effect::AnyPlayerMayTakeDamageElse { who, amount, otherwise } => {

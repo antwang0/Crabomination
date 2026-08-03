@@ -5,7 +5,7 @@ use crate::card::SelectionRequirement as R;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
     EventKind, EventScope, EventSpec, Keyword, PlaneswalkerSubtype, StaticAbility, Subtypes,
-    Supertype, TokenDefinition, TriggeredAbility, Value,
+    Supertype, TokenDefinition, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
     cast_is_noncreature, deal, draw, etb, on_attack, on_dies, target_any, target_filtered,
@@ -1582,6 +1582,7 @@ pub fn arboreal_grazer() -> CardDefinition {
             haste: false,
             sacrifice_eot: false,
                 return_eot: false,
+                then: None,
         })],
         ..vanilla(
             "Arboreal Grazer",
@@ -2963,8 +2964,9 @@ pub fn gideons_battle_cry() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::ONE,
             },
-            Effect::SearchLibraryOrGraveyard {
+            Effect::SearchZones {
                 who: PlayerRef::You,
+                zones: vec![Zone::Library, Zone::Graveyard],
                 filter: R::HasName("Gideon, the Oathsworn".into()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
@@ -4236,8 +4238,9 @@ pub fn jaces_ruse() -> CardDefinition {
                     to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 }),
             },
-            Effect::SearchLibraryOrGraveyard {
+            Effect::SearchZones {
                 who: PlayerRef::You,
+                zones: vec![Zone::Library, Zone::Graveyard],
                 filter: R::HasName("Jace, Arcane Strategist".into()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },

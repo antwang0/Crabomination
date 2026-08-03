@@ -177,6 +177,7 @@ pub fn shifty_doppelganger() -> CardDefinition {
                     haste: true,
                     sacrifice_eot: true,
                     return_eot: false,
+                    then: None,
                 },
                 Effect::AtNextEndStep {
                     body: Box::new(Effect::ReturnSelf),

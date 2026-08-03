@@ -11,6 +11,12 @@ pub fn one() -> usize {
     1
 }
 
+/// serde default for `SearchPending.include_library` (back-compat: a snapshot
+/// without the field was a plain library search).
+pub fn default_true() -> bool {
+    true
+}
+
 // ── Turn step sequence ────────────────────────────────────────────────────────
 
 // `TurnStep` now lives in `crabomination_base` (below the card catalog in the
@@ -1355,10 +1361,16 @@ pub enum PendingEffectState {
         /// names" across sequential searches).
         #[serde(default)]
         eligible: Option<Vec<crate::card::CardId>>,
-        /// Dual-zone search (library *and/or* graveyard — Delivery Moogle): when
-        /// true, a pick not found in the library is taken from the graveyard.
+        /// Multi-zone search (library *and/or* graveyard/hand — Delivery
+        /// Moogle, Dark Supplicant): a pick not found in the library is taken
+        /// from whichever of these zones holds it.
         #[serde(default)]
         include_graveyard: bool,
+        #[serde(default)]
+        include_hand: bool,
+        /// False for a zones-search that omits the library — no shuffle.
+        #[serde(default = "crate::game::types::default_true")]
+        include_library: bool,
     },
     /// Dakkon −6: the picked hand/graveyard card enters the battlefield.
     PutFromZonesPending { player: usize },

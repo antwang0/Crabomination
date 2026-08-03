@@ -4834,6 +4834,7 @@ pub fn emergency_powers() -> CardDefinition {
                     haste: false,
                     sacrifice_eot: false,
                 return_eot: false,
+                then: None,
                 }),
                 else_: Box::new(Effect::Noop),
             },

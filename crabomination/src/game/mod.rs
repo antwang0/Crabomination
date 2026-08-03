@@ -10071,13 +10071,19 @@ impl GameState {
         {
             return false;
         }
-        // Hazoret-class hand-size gate, the {N} pay gate, delirium, "a creature
-        // died this turn", Descend N and the city's blessing.
+        // CR 508.1g — the whole "unless its controller pays {N}" family (flat,
+        // per-counter, per-enchanter-hand-card, per-permanent) is legal only if
+        // the seat can actually produce the tax.
+        let tax = self.attack_block_keyword_tax(blocker.id, &blocker_cp.keywords);
+        if tax > 0 && !self.could_pay_generic(owner, tax) {
+            return false;
+        }
+        // Hazoret-class hand-size gate, delirium, "a creature died this turn",
+        // Descend N and the city's blessing.
         if blocker_cp.keywords.iter().any(|k| match k {
             Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
                 self.players[owner].hand.len() as u32 > *n
             }
-            Keyword::CantAttackOrBlockUnlessPay(n) => !self.could_pay_generic(owner, *n),
             Keyword::CantAttackOrBlockUnlessDelirium => !self.delirium_active(owner),
             Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
                 self.players[owner].creatures_died_this_turn == 0
@@ -15466,7 +15472,14 @@ impl GameState {
                 self.apply_learn_choice(player, choice.clone(), &mut events);
                 Ok(events)
             }
-            PendingEffectState::SearchPending { player, to, eligible, include_graveyard } => {
+            PendingEffectState::SearchPending {
+                player,
+                to,
+                eligible,
+                include_graveyard,
+                include_hand,
+                include_library,
+            } => {
                 let DecisionAnswer::Search(chosen_id) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
@@ -15478,32 +15491,33 @@ impl GameState {
                 // top") are exempt — the multi-pick search chains single
                 // searches, and a later link's shuffle would bury the cards
                 // an earlier link already placed on top.
-                if !matches!(to, crate::effect::ZoneDest::Library { .. }) {
+                if include_library && !matches!(to, crate::effect::ZoneDest::Library { .. }) {
                     self.shuffle_library(player, &mut events);
                 }
                 if let Some(card_id) = chosen_id
                     && eligible.as_ref().is_none_or(|e| e.contains(card_id))
                 {
-                    // The pick may sit in the library, or (dual-zone search:
-                    // Delivery Moogle) in the graveyard.
-                    let from_zone = if self.players[player].library.iter().any(|c| c.id == *card_id)
-                    {
+                    // The pick may sit in the library, or (multi-zone search:
+                    // Delivery Moogle, Dark Supplicant) in the graveyard/hand.
+                    let holds = |zone: &Vec<crate::card::CardInstance>| {
+                        zone.iter().any(|c| c.id == *card_id)
+                    };
+                    let from_zone = if include_library && holds(&self.players[player].library) {
                         Some(crate::card::Zone::Library)
-                    } else if include_graveyard
-                        && self.players[player].graveyard.iter().any(|c| c.id == *card_id)
-                    {
+                    } else if include_graveyard && holds(&self.players[player].graveyard) {
                         Some(crate::card::Zone::Graveyard)
+                    } else if include_hand && holds(&self.players[player].hand) {
+                        Some(crate::card::Zone::Hand)
                     } else {
                         None
                     };
                     if let Some(from_zone) = from_zone {
-                        let is_gy = from_zone == crate::card::Zone::Graveyard;
                         // Grafdigger's Cage — a locked card can't leave the
                         // library/graveyard for the battlefield while up.
-                        let src = if is_gy {
-                            &self.players[player].graveyard
-                        } else {
-                            &self.players[player].library
+                        let src = match from_zone {
+                            crate::card::Zone::Graveyard => &self.players[player].graveyard,
+                            crate::card::Zone::Hand => &self.players[player].hand,
+                            _ => &self.players[player].library,
                         };
                         let def = src.iter().find(|c| c.id == *card_id).map(|c| c.definition.clone());
                         let blocked = matches!(to, crate::effect::ZoneDest::Battlefield { .. })
@@ -15512,10 +15526,15 @@ impl GameState {
                             });
                         let taken = if blocked {
                             None
-                        } else if is_gy {
-                            Self::take_card(&mut self.players[player].graveyard, *card_id)
                         } else {
-                            Self::take_card(&mut self.players[player].library, *card_id)
+                            let src = match from_zone {
+                                crate::card::Zone::Graveyard => {
+                                    &mut self.players[player].graveyard
+                                }
+                                crate::card::Zone::Hand => &mut self.players[player].hand,
+                                _ => &mut self.players[player].library,
+                            };
+                            Self::take_card(src, *card_id)
                         };
                         if let Some(card) = taken {
                             self.place_card_in_dest(card, player, &to, &mut events);

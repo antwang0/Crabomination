@@ -1251,6 +1251,11 @@ pub enum Keyword {
     /// *your* hand" (Cowed by Wisdom). Summed per attached Aura carrying the
     /// grant, so the enchanter's hand is what's counted, not the host's.
     CantAttackOrBlockUnlessPayPerCardInEnchanterHand,
+    /// CR 508.1a / 509.1a — the tax scaled by a battlefield count: "can't
+    /// attack or block unless its controller pays {1} for each Cleric on the
+    /// battlefield" (Whipgrass Entangler). Every matching permanent counts,
+    /// whoever controls it.
+    CantAttackOrBlockUnlessPayPerPermanent(Box<SelectionRequirement>),
     /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
     /// unless there are four or more card types among cards in your graveyard"
     /// (Delirium; Patchwork Beastie). Enforced against `delirium_active`.

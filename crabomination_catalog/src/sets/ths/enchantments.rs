@@ -946,6 +946,7 @@ pub fn purphoros_bronze_blooded() -> CardDefinition {
                 haste: false,
                 sacrifice_eot: true,
                 return_eot: false,
+                then: None,
             },
             ..Default::default()
         }],

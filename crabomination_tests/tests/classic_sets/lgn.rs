@@ -4,6 +4,7 @@
 use crabomination::card::{CardDefinition, CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+use crabomination::game::effects::EntityRef;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -924,4 +925,171 @@ fn celestial_gatekeeper_recurs_two_on_death() {
     // slots (a UI seat picks both) — see TODO.md.
     assert!(g.battlefield_find(a).is_some() || g.battlefield_find(b).is_some());
     assert!(g.exile.iter().any(|c| c.id == keeper), "the Gatekeeper exiled itself");
+}
+
+// ── The last nine (LGN closeout) ────────────────────────────────────────────
+
+/// Beacon of Destiny redirects the next hit from a chosen source onto itself.
+#[test]
+fn beacon_of_destiny_takes_the_hit_for_you() {
+    let mut g = main_phase();
+    let beacon = g.add_card_to_battlefield(0, catalog::beacon_of_destiny());
+    let bolt_source = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(beacon);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(bolt_source))]));
+    activate(&mut g, 0, beacon, 0, None);
+    let life = g.players[0].life;
+    let mut events = vec![];
+    g.deal_damage_to_from(EntityRef::Player(0), 3, Some(bolt_source), &mut events);
+    assert_eq!(g.players[0].life, life, "the damage was redirected");
+    assert_eq!(g.battlefield_find(beacon).unwrap().damage, 3);
+}
+
+/// Dark Supplicant sacrifices three Clerics to pull Scion of Darkness out of
+/// the graveyard — a zone a plain library search would never see.
+#[test]
+fn dark_supplicant_fetches_the_scion_from_the_graveyard() {
+    let mut g = main_phase();
+    let supplicant = g.add_card_to_battlefield(0, catalog::dark_supplicant());
+    g.clear_sickness(supplicant);
+    for _ in 0..3 {
+        let c = g.add_card_to_battlefield(0, catalog::daru_mender()); // Human Cleric
+        g.clear_sickness(c);
+    }
+    let scion = CardId(9310);
+    g.players[0].graveyard.push(crabomination::card::CardInstance::new(
+        scion,
+        catalog::scion_of_darkness(),
+        0,
+    ));
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(scion))]));
+    activate(&mut g, 0, supplicant, 0, None);
+    assert!(g.battlefield_find(scion).is_some(), "the Scion came back from the graveyard");
+}
+
+/// Dermoplasm's flip swaps it for a morph creature from hand.
+#[test]
+fn dermoplasm_swaps_itself_for_a_morph_from_hand() {
+    let mut g = main_phase();
+    let derm = g.add_card_to_battlefield(0, catalog::dermoplasm());
+    let hulk = g.add_card_to_hand(0, catalog::skinthinner()); // Morph {3}{B}{B}
+    g.battlefield.iter_mut().find(|c| c.id == derm).unwrap().turn_face_down();
+    mana(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Cards(vec![hulk])]));
+    g.perform_action(GameAction::TurnFaceUp { card_id: derm }).expect("unmorph");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hulk).is_some(), "the morph creature deployed face up");
+    assert!(g.players[0].hand.iter().any(|c| c.id == derm), "Dermoplasm bounced itself");
+}
+
+/// Goblin Assassin: every player flips, and each tails sacrifices a creature.
+#[test]
+fn goblin_assassin_makes_both_players_flip() {
+    let mut g = main_phase();
+    let victim0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let assassin = g.add_card_to_hand(0, catalog::goblin_assassin());
+    // Both coins come up tails; each seat then sacrifices its only creature.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Cards(vec![victim0]),
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Cards(vec![victim1]),
+    ]));
+    cast(&mut g, 0, assassin, None);
+    assert!(g.battlefield_find(victim0).is_none(), "seat 0 sacrificed");
+    assert!(g.battlefield_find(victim1).is_none(), "seat 1 sacrificed");
+}
+
+/// Goblin Goon can't attack while the defender's board is at least as wide.
+#[test]
+fn goblin_goon_needs_the_wider_board() {
+    let mut g = main_phase();
+    let goon = g.add_card_to_battlefield(0, catalog::goblin_goon());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(goon);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let swing =
+        vec![Attack { attacker: goon, target: AttackTarget::Player(1) }];
+    assert!(g.perform_action(GameAction::DeclareAttackers(swing.clone())).is_err(), "1 vs 1");
+    g.remove_to_graveyard_with_triggers(blocker);
+    g.perform_action(GameAction::DeclareAttackers(swing)).expect("1 vs 0 is legal");
+}
+
+/// Hollow Specter's {X} strips one of X revealed cards.
+#[test]
+fn hollow_specter_pays_x_to_strip_a_card() {
+    let mut g = main_phase();
+    let specter = g.add_card_to_battlefield(0, catalog::hollow_specter());
+    g.clear_sickness(specter);
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    attack_with(&mut g, specter);
+    while g.step != TurnStep::CombatDamage {
+        g.advance_step(vec![]).expect("advance");
+    }
+    // Float the {X} first: mana abilities can't be activated mid-resolution.
+    mana(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Amount(2)]));
+    g.advance_step(vec![]).expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 2, "one of the two revealed cards was discarded");
+}
+
+/// Planar Guide exiles itself and blinks every creature until the end step.
+#[test]
+fn planar_guide_blinks_the_board_until_the_end_step() {
+    let mut g = main_phase();
+    let guide = g.add_card_to_battlefield(0, catalog::planar_guide());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(guide);
+    activate(&mut g, 0, guide, 0, None);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none());
+    while g.step != TurnStep::End {
+        g.advance_step(vec![]).expect("advance");
+    }
+    g.advance_step(vec![]).expect("end step");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_some(), "returned under its owner's control");
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 1);
+}
+
+/// Riptide Mangler copies a creature's power onto its own base, and it sticks.
+#[test]
+fn riptide_mangler_takes_the_targets_base_power() {
+    let mut g = main_phase();
+    let mangler = g.add_card_to_battlefield(0, catalog::riptide_mangler());
+    let baloth = g.add_card_to_battlefield(1, catalog::enormous_baloth()); // 7/7
+    g.clear_sickness(mangler);
+    activate(&mut g, 0, mangler, 0, Some(Target::Permanent(baloth)));
+    assert_eq!(power_of(&g, mangler), 7);
+    // Indefinite: it survives the cleanup that clears end-of-turn effects.
+    g.do_cleanup(&mut vec![]);
+    assert_eq!(power_of(&g, mangler), 7);
+}
+
+/// Whipgrass Entangler taxes {1} per Cleric on the battlefield.
+#[test]
+fn whipgrass_entangler_taxes_per_cleric() {
+    let mut g = main_phase();
+    let entangler = g.add_card_to_battlefield(0, catalog::whipgrass_entangler());
+    g.add_card_to_battlefield(0, catalog::daru_mender()); // a second Cleric
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(entangler);
+    g.clear_sickness(attacker);
+    activate(&mut g, 0, entangler, 0, Some(Target::Permanent(bear)));
+    attack_with(&mut g, attacker);
+    g.advance_step(vec![]).expect("to blockers");
+    // Two Clerics on the battlefield, so the tax is {2} — unpayable by a
+    // tapped-out seat, which makes the block illegal (CR 509.1a).
+    assert!(!g.legal_blockers(1).contains(&bear), "taxed out of blocking");
+    for _ in 0..2 {
+        g.add_card_to_battlefield(1, catalog::swamp());
+    }
+    assert!(g.legal_blockers(1).contains(&bear), "two lands can pay the tax");
 }

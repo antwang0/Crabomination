@@ -2826,6 +2826,11 @@ pub enum Effect {
     /// `flipper` rather than the effect's controller, so their Krark's-Thumb
     /// advantage and their win/lose triggers apply.
     FlipCoinBy { flipper: PlayerRef, on_heads: Box<Effect>, on_tails: Box<Effect> },
+    /// CR 705 — "each player flips a coin" (Goblin Assassin). Every seat `who`
+    /// resolves to flips its own coin in APNAP order; `on_heads` / `on_tails`
+    /// then run with that seat as the controller, so a body written against
+    /// `PlayerRef::You` reads "that player".
+    EachPlayerFlipsCoin { who: PlayerRef, on_heads: Box<Effect>, on_tails: Box<Effect> },
     /// CR 705 — flip a coin repeatedly until the controller loses a flip or
     /// chooses to stop. Losing a flip cancels everything (zero wins). Then,
     /// in order, every `(threshold, effect)` whose threshold is at most the
@@ -4343,11 +4348,18 @@ pub enum Effect {
     PutIntoLibraryBeneathTop { what: Selector, count: Value },
     /// Search `who`'s library for a card matching `filter` and move to `to`.
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
-    /// Search `who`'s library *and/or graveyard* for a card matching `filter`
-    /// and move it to `to` (Delivery Moogle — "search your library and/or
-    /// graveyard for an artifact card …, put it into your hand"). Candidates
-    /// pool both zones; the pick is taken from whichever zone holds it.
-    SearchLibraryOrGraveyard { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
+    /// Search several of `who`'s zones at once for a card matching `filter`
+    /// and move it to `to` — "search your graveyard, hand, and/or library"
+    /// (Dark Supplicant, Delivery Moogle). Candidates pool every listed zone;
+    /// the pick is taken from whichever zone holds it. Listing
+    /// [`Zone::Library`] makes it a real library search (shuffle, search
+    /// taxes/locks, `PlayerSearchedLibrary`); omitting it skips all of that.
+    SearchZones {
+        who: PlayerRef,
+        zones: Vec<crate::card::Zone>,
+        filter: SelectionRequirement,
+        to: ZoneDest,
+    },
     /// "Search your library for a land card of each basic land type, put those
     /// cards onto the battlefield, then shuffle" (Gaea's Balance). One card per
     /// basic type, each chosen from the cards carrying that type; a type with
@@ -6637,6 +6649,10 @@ pub enum Effect {
         /// `sacrifice_eot`; both may be set, but the bounce wins.
         #[serde(default)]
         return_eot: bool,
+        /// "If you do, …" — runs only when at least one card was actually put
+        /// onto the battlefield (Dermoplasm's bounce-itself rider).
+        #[serde(default)]
+        then: Option<Box<Effect>>,
     },
 
     /// "Players can't cast creature or planeswalker spells until the end of

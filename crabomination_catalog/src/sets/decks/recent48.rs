@@ -134,6 +134,7 @@ pub fn walking_atlas() -> CardDefinition {
                 haste: false,
                 sacrifice_eot: false,
                 return_eot: false,
+                then: None,
             },
             ..Default::default()
         }],

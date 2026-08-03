@@ -1631,6 +1631,7 @@ pub fn zimone_quandrix_prodigy() -> CardDefinition {
                     haste: false,
                     sacrifice_eot: false,
                 return_eot: false,
+                then: None,
                 },
                 ..Default::default()
             },

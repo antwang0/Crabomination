@@ -343,7 +343,8 @@ impl Effect {
             Effect::DamageTargetPlayerMayRedirect { .. } => true,
             Effect::CopySpellForEachOtherTarget { what } => sel_has_target(what),
             Effect::ExchangeGraveyardAndLibrary { who } => matches!(who, PlayerRef::Target(_)),
-            Effect::FlipCoinBy { on_heads, on_tails, .. } => {
+            Effect::FlipCoinBy { on_heads, on_tails, .. }
+            | Effect::EachPlayerFlipsCoin { on_heads, on_tails, .. } => {
                 on_heads.requires_target() || on_tails.requires_target()
             }
             Effect::EachPlayerMayExileAnyNumberFromGraveyard { then } => then.requires_target(),
@@ -807,8 +808,7 @@ impl Effect {
             | Effect::MoveWithinTotalManaValue { from, to, .. } => {
                 sel_has_target(from) || zonedest_has_target(to)
             }
-            Effect::Search { who, to, .. }
-            | Effect::SearchLibraryOrGraveyard { who, to, .. } => {
+            Effect::Search { who, to, .. } | Effect::SearchZones { who, to, .. } => {
                 player_has_target(who) || zonedest_has_target(to)
             }
             Effect::SearchUpToN { who, to, .. } => {
@@ -1525,7 +1525,12 @@ impl Effect {
             | Effect::BecomeCreatureLosingTypes { what, .. }
             | Effect::SetCardTypesTo { what, .. } => sel_filter(what),
             Effect::AnimateAsCreature { what, .. } => sel_filter(what),
-            Effect::SetBasePower { what, .. } => sel_filter(what),
+            // Riptide Mangler: the target hides in the power value ("base
+            // power becomes target creature's power"), not in `what`.
+            Effect::SetBasePower { what, power, .. } => sel_filter(what).or_else(|| match power {
+                Value::CountOf(s) | Value::PowerOf(s) | Value::ToughnessOf(s) => sel_filter(s),
+                _ => None,
+            }),
             Effect::GrantKeyword { what, .. }
             | Effect::GrantKeywords { what, .. }
             | Effect::ReplaceColorWord { what, .. }
@@ -2228,8 +2233,17 @@ impl Effect {
                     _ => "search your library for a card".into(),
                 }
             }
-            Effect::SearchLibraryOrGraveyard { .. } => {
-                "search your library and/or graveyard for a card".into()
+            Effect::SearchZones { zones, .. } => {
+                let names: Vec<&str> = zones
+                    .iter()
+                    .map(|z| match z {
+                        crate::card::Zone::Library => "library",
+                        crate::card::Zone::Graveyard => "graveyard",
+                        crate::card::Zone::Hand => "hand",
+                        _ => "zone",
+                    })
+                    .collect();
+                format!("search your {} for a card", names.join(" and/or "))
             }
             Effect::AddManaEqualToPermanentCost { .. } => {
                 "add mana equal to the enchanted permanent's mana cost".into()
@@ -2990,7 +3004,14 @@ impl Effect {
                 }
                 Effect::BecomeCreature { what, .. } => sel_find(what, slot),
                 Effect::AnimateAsCreature { what, .. } => sel_find(what, slot),
-                Effect::SetBasePower { what, .. } => sel_find(what, slot),
+                Effect::SetBasePower { what, power, .. } => {
+                    sel_find(what, slot).or_else(|| match power {
+                        Value::CountOf(s) | Value::PowerOf(s) | Value::ToughnessOf(s) => {
+                            sel_find(s, slot)
+                        }
+                        _ => None,
+                    })
+                }
                 Effect::GrantKeyword { what, .. }
                 | Effect::GrantKeywords { what, .. }
                 | Effect::GrantProtectionFromChosenColor { what, .. } => sel_find(what, slot),
