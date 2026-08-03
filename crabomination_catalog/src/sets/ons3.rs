@@ -1064,3 +1064,134 @@ pub fn aurification() -> CardDefinition {
         ..enchantment("Aurification", cost(&[generic(2), w(), w()]))
     }
 }
+
+// ── Wave D — the last of the set ────────────────────────────────────────────
+
+/// Elvish Guidance — an enchanted land taps for a whole Elf army's worth.
+pub fn elvish_guidance() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Whenever enchanted land is tapped for mana, its controller adds an additional {G} for each Elf on the battlefield.",
+            effect: StaticEffect::ExtraManaOnLandTap {
+                enchanted_only: true,
+                filter: R::Land,
+                extra: crate::effect::ExtraManaKind::FixedPerCreatureType(
+                    crate::mana::Color::Green,
+                    CreatureType::Elf,
+                ),
+                while_monarch: false,
+            },
+        }],
+        ..aura("Elvish Guidance", cost(&[generic(2), g()]), R::Land)
+    }
+}
+
+/// Graxiplon — unblockable unless the defender has a real tribe.
+pub fn graxiplon() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBeBlockedUnlessDefenderSharedType(3)],
+        ..creature("Graxiplon", cost(&[generic(5), u()]), vec![CreatureType::Beast], 3, 4)
+    }
+}
+
+/// Mana Echoes — every creature that enters mints colorless per tribemate.
+pub fn mana_echoes() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Creature,
+                }),
+            effect: Effect::MayDo {
+                description: "Add {C} for each creature sharing a type with it?".into(),
+                body: Box::new(Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colorless(Value::CreaturesSharingTypeWith(
+                        Box::new(Selector::TriggerSource),
+                    )),
+                }),
+            },
+        }],
+        ..enchantment("Mana Echoes", cost(&[generic(2), r(), r()]))
+    }
+}
+
+/// Thoughtbound Primoc — it defects to whoever has the most Wizards.
+pub fn thoughtbound_primoc() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_upkeep(Effect::GainControl {
+            what: Selector::This,
+            to: Some(PlayerRef::MostControlledMatching(Box::new(
+                R::Creature.and(R::HasCreatureType(CreatureType::Wizard)),
+            ))),
+            duration: Duration::Permanent,
+        })],
+        ..creature(
+            "Thoughtbound Primoc",
+            cost(&[generic(2), r()]),
+            vec![CreatureType::Bird, CreatureType::Beast],
+            2,
+            3,
+        )
+    }
+}
+
+/// False Cure — life gain becomes a liability for the rest of the turn.
+pub fn false_cure() -> CardDefinition {
+    instant(
+        "False Cure",
+        cost(&[b(), b()]),
+        Effect::AnyLifeGainPunishedThisTurn { per: 2 },
+    )
+}
+
+/// Head Games — rebuild an opponent's hand out of their own library.
+pub fn head_games() -> CardDefinition {
+    sorcery(
+        "Head Games",
+        cost(&[generic(3), b(), b()]),
+        Effect::HeadGames { who: PlayerRef::Target(0) },
+    )
+}
+
+/// Trade Secrets — a symmetric draw the opponent chooses to keep running.
+pub fn trade_secrets() -> CardDefinition {
+    sorcery(
+        "Trade Secrets",
+        cost(&[generic(1), u(), u()]),
+        Effect::TradeSecrets { who: PlayerRef::Target(0) },
+    )
+}
+
+/// Strongarm Tactics — pitch a creature or pay 4 life.
+pub fn strongarm_tactics() -> CardDefinition {
+    sorcery(
+        "Strongarm Tactics",
+        cost(&[generic(1), b()]),
+        Effect::EachPlayerDiscardsElseLosesLife { life: 4 },
+    )
+}
+
+/// Kamahl's Summons — every creature card in hand becomes a Bear.
+pub fn kamahls_summons() -> CardDefinition {
+    sorcery(
+        "Kamahl's Summons",
+        cost(&[generic(3), g()]),
+        Effect::EachPlayerRevealsCreaturesForTokens {
+            token: Box::new(crate::card::TokenDefinition {
+                name: "Bear".into(),
+                power: 2,
+                toughness: 2,
+                card_types: vec![CardType::Creature],
+                colors: vec![crate::mana::Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Bear],
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+        },
+    )
+}

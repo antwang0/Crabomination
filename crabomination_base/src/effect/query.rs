@@ -230,6 +230,10 @@ impl Effect {
         }
         match self {
             Effect::FlipUntilLoss { per_win } => per_win.requires_target(),
+            Effect::HeadGames { who } | Effect::TradeSecrets { who } => player_has_target(who),
+            Effect::EachPlayerDiscardsElseLosesLife { .. }
+            | Effect::EachPlayerRevealsCreaturesForTokens { .. }
+            | Effect::AnyLifeGainPunishedThisTurn { .. } => false,
             Effect::RevealUntilNonlandThen { then }
             | Effect::ChooseCreatureTypeThen { then, .. }
             | Effect::EachPlayerChoosesCreatureTypeThen { then } => then.requires_target(),

@@ -545,6 +545,10 @@ pub struct GameState {
     /// `SelectionRequirement::SharesCreatureTypeWithTapped` (Cryptic Gateway).
     #[serde(default)]
     pub(crate) tapped_for_cost: Vec<CardId>,
+    /// False Cure — life lost per 1 life gained, by any player, for the rest
+    /// of the turn (`Effect::AnyLifeGainPunishedThisTurn`). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) life_gain_punish_this_turn: u32,
     /// Transient: the firing event's amount for the trigger currently being
     /// targeted or resolved (stamped in `drain_trigger_queue` and
     /// `continue_trigger_resolution_with_source`). For died events this is
@@ -1680,6 +1684,7 @@ impl Clone for GameState {
             block_poison_this_turn: self.block_poison_this_turn,
             tapped_for_cost_power: self.tapped_for_cost_power,
             tapped_for_cost: self.tapped_for_cost.clone(),
+            life_gain_punish_this_turn: self.life_gain_punish_this_turn,
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
             trigger_event_player_scratch: self.trigger_event_player_scratch,
             activation_mana_colors_scratch: self.activation_mana_colors_scratch.clone(),
@@ -1953,6 +1958,7 @@ impl GameState {
             block_poison_this_turn: 0,
             tapped_for_cost_power: None,
             tapped_for_cost: Vec::new(),
+            life_gain_punish_this_turn: 0,
             trigger_event_amount_scratch: 0,
             trigger_event_player_scratch: None,
             activation_mana_colors_scratch: Vec::new(),
@@ -2407,6 +2413,33 @@ impl GameState {
         out
     }
 
+    /// The largest number of `seat`'s creatures sharing one creature type
+    /// (CR 702.73a — changelings count toward every type). Powers
+    /// `Value::GreatestSharedCreatureTypeCount` and Graxiplon's block
+    /// restriction.
+    pub(crate) fn greatest_shared_type_count(&self, seat: usize) -> usize {
+        use crate::card::{CardType, CreatureType, Keyword};
+        let mut tally: std::collections::HashMap<CreatureType, usize> =
+            std::collections::HashMap::new();
+        let mut changelings = 0usize;
+        for cp in self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .filter_map(|c| self.computed_permanent(c.id))
+            .filter(|cp| cp.card_types.contains(&CardType::Creature))
+        {
+            if cp.keywords.contains(&Keyword::Changeling) {
+                changelings += 1;
+                continue;
+            }
+            for t in &cp.subtypes.creature_types {
+                *tally.entry(*t).or_insert(0) += 1;
+            }
+        }
+        tally.values().copied().max().unwrap_or(0) + changelings
+    }
+
     /// Apply format-specific setup: starting life total, turn-1 draw
     /// rule, and (for Two-Headed Giant) the team partition + shared
     /// life pool.
@@ -2697,6 +2730,13 @@ impl GameState {
         if delta > 0 {
             self.players[seat].life_gained_this_turn =
                 self.players[seat].life_gained_this_turn.saturating_add(delta as u32);
+            // False Cure — "whenever a player gains life, that player loses N
+            // life for each 1 life they gained." Re-entrant on the loss half,
+            // which the `delta < 0` branch below never re-punishes.
+            if self.life_gain_punish_this_turn > 0 {
+                let punish = delta.saturating_mul(self.life_gain_punish_this_turn as i32);
+                self.adjust_life(seat, -punish);
+            }
         } else {
             // delta < 0 — this player lost life (CR 119.3). Powers Spectacle.
             self.players[seat].lost_life_this_turn = true;

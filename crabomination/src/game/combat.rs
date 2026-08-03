@@ -1350,6 +1350,18 @@ impl GameState {
                             return Err(GameError::CannotBlock(blocker_id));
                         }
                     }
+                    // CR 509.1b — "can't be blocked unless defending player
+                    // controls N+ creatures that share a creature type"
+                    // (Graxiplon).
+                    if let Keyword::CantBeBlockedUnlessDefenderSharedType(n) = kw {
+                        let def = self
+                            .battlefield_find(blocker_id)
+                            .map(|c| c.controller)
+                            .unwrap_or(atk_ctl);
+                        if self.greatest_shared_type_count(def) < *n as usize {
+                            return Err(GameError::CannotBlock(blocker_id));
+                        }
+                    }
                     // CR 509.1b — "creatures with power less than the number of
                     // [filter] you control can't block" (Kraken of the Straits).
                     if let Keyword::CantBeBlockedByPowerLessThanCount(f) = kw {

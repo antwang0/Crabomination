@@ -107,6 +107,10 @@ pub enum PlayerRef {
     /// The player controlling the most creatures; ties go to the earliest seat
     /// (Wild Mammoth's upkeep defection).
     MostCreatures,
+    /// The single player controlling strictly more permanents matching the
+    /// filter than every other player (Thoughtbound Primoc). Unresolved on a
+    /// tie, so the effect does nothing.
+    MostControlledMatching(Box<SelectionRequirement>),
     /// The player the source remembered (`CardInstance.chosen_player`, stamped
     /// by [`Effect::RememberPlayerOnSource`]) — "that player" on a later
     /// trigger. Soul Scourge, Laquatus's Champion.
@@ -1003,6 +1007,9 @@ pub enum Value {
     /// every type. 0 if you control no creatures. White Lotus Tile's mana
     /// ability.
     GreatestSharedCreatureTypeCount,
+    /// Creatures the evaluating player controls that share a creature type
+    /// with `.0` (Mana Echoes). Changelings share with everything.
+    CreaturesSharingTypeWith(Box<Selector>),
     /// Number of nonbasic lands controlled by the resolved player. Read
     /// per-recipient inside a `ForEach` over each player so a single effect
     /// scales independently for each player — Sunspine Lynx's "deals damage
@@ -6418,6 +6425,30 @@ pub enum Effect {
     /// damage equal to that card's mana value to `to`, and bottom the
     /// reveals in a random order.
     RevealUntilNonlandDamage { to: Selector },
+
+    /// Head Games — `who` puts their hand on top of their library, then this
+    /// effect's controller searches that library for that many cards and puts
+    /// them into `who`'s hand. The library is shuffled afterwards.
+    HeadGames { who: PlayerRef },
+
+    /// Trade Secrets — `who` draws two, then you draw up to four; `who` may
+    /// repeat the loop as many times as they choose (capped so a bot loop
+    /// terminates on an empty library).
+    TradeSecrets { who: PlayerRef },
+
+    /// Strongarm Tactics — each player discards a card, then each player who
+    /// did not discard a creature card loses `life` life.
+    EachPlayerDiscardsElseLosesLife { life: u32 },
+
+    /// Kamahl's Summons — each player may reveal any number of creature cards
+    /// from their hand, then creates `token` once per card revealed this way.
+    EachPlayerRevealsCreaturesForTokens { token: Box<crate::card::TokenDefinition> },
+
+    /// False Cure — "until end of turn, whenever a player gains life, that
+    /// player loses `per` life for each 1 life gained." A turn-scoped watcher
+    /// over *every* seat, unlike the controller-scoped
+    /// [`Effect::WheneverYouGainLifeThisTurn`].
+    AnyLifeGainPunishedThisTurn { per: u32 },
 
     /// The general shape of [`Effect::RevealUntilNonlandDamage`]: reveal from
     /// the top until a nonland card, bottom the reveals in a random order,

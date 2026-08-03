@@ -21817,6 +21817,155 @@ impl GameState {
                 Ok(())
             }
 
+            // Head Games — the victim's hand goes on top, then you rebuild it
+            // out of their library.
+            Effect::HeadGames { who } => {
+                let Some(v) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.players[v].hand.len();
+                if n == 0 {
+                    return Ok(());
+                }
+                let hand: Vec<CardInstance> = self.players[v].hand.drain(..).collect();
+                for c in hand.into_iter().rev() {
+                    self.players[v].library.insert(0, c);
+                }
+                // CR 701.19a — the *caster* searches; the cards land in the
+                // victim's hand.
+                use crate::decision::{Decision, DecisionAnswer};
+                let candidates: Vec<(CardId, String)> = self.players[v]
+                    .library
+                    .iter()
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    prompt: format!("Choose {n} cards for their new hand"),
+                    candidates: candidates.clone(),
+                    min: n as u32,
+                    max: n as u32,
+                });
+                let mut picks: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => {
+                        ids.into_iter().filter(|id| candidates.iter().any(|(c, _)| c == id)).collect()
+                    }
+                    _ => Vec::new(),
+                };
+                for (id, _) in &candidates {
+                    if picks.len() >= n {
+                        break;
+                    }
+                    if !picks.contains(id) {
+                        picks.push(*id);
+                    }
+                }
+                picks.truncate(n);
+                for id in picks {
+                    if let Some(card) = Self::take_card(&mut self.players[v].library, id) {
+                        self.place_card_in_dest(
+                            card,
+                            v,
+                            &ZoneDest::Hand(PlayerRef::Seat(v)),
+                            events,
+                        );
+                    }
+                }
+                self.shuffle_library(v, events);
+                Ok(())
+            }
+
+            // Trade Secrets — the opponent decides how many times to run the
+            // "they draw 2, you draw up to 4" loop.
+            Effect::TradeSecrets { who } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(v) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // The printed loop is unbounded; stop once a library is empty
+                // so a decider that always accepts still terminates.
+                for round in 0..32 {
+                    if round > 0 {
+                        let accepted = matches!(
+                            self.decider.decide(&Decision::OptionalTrigger {
+                                source: ctx.source.unwrap_or(CardId(0)),
+                                description: "Repeat Trade Secrets?".to_string(),
+                            }),
+                            DecisionAnswer::Bool(true)
+                        );
+                        if !accepted {
+                            break;
+                        }
+                    }
+                    if self.players[v].library.is_empty()
+                        || self.players[ctx.controller].library.is_empty()
+                    {
+                        break;
+                    }
+                    for _ in 0..2 {
+                        self.draw_one(v, events);
+                    }
+                    for _ in 0..4 {
+                        self.draw_one(ctx.controller, events);
+                    }
+                }
+                Ok(())
+            }
+
+            // Strongarm Tactics — the discard is symmetric; the punishment
+            // only skips a player who pitched a creature.
+            Effect::EachPlayerDiscardsElseLosesLife { life } => {
+                for p in self.apnap_sort((0..self.players.len()).collect()) {
+                    let before = self.players[p].graveyard.len();
+                    self.run_effect(
+                        &Effect::Discard {
+                            who: Selector::Player(PlayerRef::Seat(p)),
+                            amount: crate::effect::Value::ONE,
+                            random: false,
+                        },
+                        &EffectContext { controller: p, ..ctx.clone() },
+                        events,
+                    )?;
+                    let pitched_creature = self.players[p]
+                        .graveyard
+                        .iter()
+                        .skip(before)
+                        .any(|c| c.definition.is_creature());
+                    if !pitched_creature {
+                        self.adjust_life(p, -(*life as i32));
+                    }
+                }
+                Ok(())
+            }
+
+            // Kamahl's Summons — every seat cashes creature cards in hand for
+            // tokens, one each.
+            Effect::EachPlayerRevealsCreaturesForTokens { token } => {
+                for p in self.apnap_sort((0..self.players.len()).collect()) {
+                    let n = self.players[p]
+                        .hand
+                        .iter()
+                        .filter(|c| c.definition.is_creature())
+                        .count();
+                    if n == 0 {
+                        continue;
+                    }
+                    self.run_effect(
+                        &Effect::CreateToken {
+                            who: PlayerRef::Seat(p),
+                            count: crate::effect::Value::Const(n as i32),
+                            definition: (**token).clone(),
+                        },
+                        &EffectContext { controller: p, ..ctx.clone() },
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
+            // False Cure — a turn-scoped punish on every seat's life gain.
+            Effect::AnyLifeGainPunishedThisTurn { per } => {
+                self.life_gain_punish_this_turn =
+                    self.life_gain_punish_this_turn.saturating_add(*per);
+                Ok(())
+            }
+
             // The general shape of `RevealUntilNonlandDamage`: the revealed
             // nonland's mana value is published for `then` to read.
             Effect::RevealUntilNonlandThen { then } => {
@@ -28647,6 +28796,27 @@ impl GameState {
                     Some(b) if count(b) >= count(p) => Some(b),
                     _ => Some(p),
                 })
+            }
+            // Thoughtbound Primoc — "the player who controls the most Wizards",
+            // only when one player *uniquely* does.
+            PlayerRef::MostControlledMatching(filter) => {
+                let counts: Vec<usize> = (0..self.players.len())
+                    .map(|p| {
+                        self.battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == p
+                                    && self.evaluate_requirement_on_card(filter, c, p)
+                            })
+                            .count()
+                    })
+                    .collect();
+                let best = counts.iter().copied().max().unwrap_or(0);
+                let mut winners = counts.iter().enumerate().filter(|(_, n)| **n == best);
+                match (winners.next(), winners.next()) {
+                    (Some((p, n)), None) if *n > 0 => Some(p),
+                    _ => None,
+                }
             }
             PlayerRef::ChosenPlayerOfSource => ctx.source.and_then(|s| {
                 self.battlefield_find(s)

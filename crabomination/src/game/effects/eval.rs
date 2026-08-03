@@ -752,6 +752,32 @@ impl GameState {
                     best as i32
                 })
                 .unwrap_or(0),
+            // Mana Echoes — "creatures you control that share a creature type
+            // with it". Changelings share with everything (CR 702.73a).
+            Value::CreaturesSharingTypeWith(subject) => {
+                let Some(sid) = self
+                    .resolve_selector(subject, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_card_id())
+                else {
+                    return 0;
+                };
+                let Some(subj) = self.find_card_anywhere(sid) else { return 0 };
+                let types = subj.definition.subtypes.creature_types.clone();
+                let wild = subj.definition.keywords.contains(&crate::card::Keyword::Changeling);
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .filter(|c| {
+                        wild || c.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                            || c.definition
+                                .subtypes
+                                .creature_types
+                                .iter()
+                                .any(|t| types.contains(t))
+                    })
+                    .count() as i32
+            }
             Value::LastRevealedManaValue => {
                 self.last_revealed_from_hand.map(|(_, mv)| mv).unwrap_or(0) as i32
             }
@@ -1155,28 +1181,7 @@ impl GameState {
                 })
                 .unwrap_or(0),
             Value::GreatestSharedCreatureTypeCount => {
-                // Tally each creature type across the controller's creatures
-                // (changelings count for every type) and take the largest.
-                use crate::card::CreatureType;
-                let mut tally: std::collections::HashMap<CreatureType, i32> =
-                    std::collections::HashMap::new();
-                let mut changelings = 0i32;
-                for cp in self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.controller == ctx.controller)
-                    .filter_map(|c| self.computed_permanent(c.id))
-                    .filter(|cp| cp.card_types.contains(&crate::card::CardType::Creature))
-                {
-                    if cp.keywords.contains(&crate::card::Keyword::Changeling) {
-                        changelings += 1;
-                        continue;
-                    }
-                    for t in &cp.subtypes.creature_types {
-                        *tally.entry(*t).or_insert(0) += 1;
-                    }
-                }
-                tally.values().copied().max().unwrap_or(0) + changelings
+                self.greatest_shared_type_count(ctx.controller) as i32
             }
             Value::TimesDescendedThisTurn => self
                 .players

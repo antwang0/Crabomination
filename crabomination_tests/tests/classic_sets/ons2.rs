@@ -60,6 +60,22 @@ fn bear() -> crabomination::card::CardDefinition {
     catalog::grizzly_bears()
 }
 
+fn attack_with(g: &mut GameState, attacker: CardId) {
+    use crabomination::game::types::{Attack, AttackTarget};
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+}
+
 // ── "Choose a creature type" ────────────────────────────────────────────────
 
 /// Harsh Mercy spares one type per player and sweeps the rest (CR 701.7 —
@@ -426,3 +442,160 @@ fn backslide_needs_a_morph_ability() {
 }
 
 
+
+/// Elvish Guidance adds a {G} per Elf when the enchanted land taps.
+#[test]
+fn elvish_guidance_scales_with_elves() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let guidance = g.add_card_to_hand(0, catalog::elvish_guidance());
+    cast(&mut g, 0, guidance, Some(Target::Permanent(land)));
+    g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    g.players[0].mana_pool = Default::default();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 3, "one green plus one per Elf");
+}
+
+/// CR 509.1b — Graxiplon needs three defenders sharing a creature type.
+#[test]
+fn graxiplon_needs_a_defending_tribe() {
+    let mut g = main_phase();
+    let grax = g.add_card_to_battlefield(0, catalog::graxiplon());
+    g.clear_sickness(grax);
+    let blockers: Vec<CardId> = (0..2).map(|_| g.add_card_to_battlefield(1, bear())).collect();
+    attack_with(&mut g, grax);
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(blockers[0], grax)])).is_err(),
+        "only two Bears"
+    );
+    let third = g.add_card_to_battlefield(1, bear());
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(third, grax)])).is_ok());
+}
+
+/// Mana Echoes pays out per tribemate of the entering creature.
+#[test]
+fn mana_echoes_counts_the_shared_tribe() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::mana_echoes());
+    g.add_card_to_battlefield(0, bear());
+    g.players[0].mana_pool = Default::default();
+    let newcomer = g.add_card_to_hand(0, bear());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: newcomer,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "itself plus the other Bear");
+}
+
+/// Thoughtbound Primoc defects to the player with the most Wizards.
+#[test]
+fn thoughtbound_primoc_follows_the_wizards() {
+    let mut g = main_phase();
+    let primoc = g.add_card_to_battlefield(0, catalog::thoughtbound_primoc());
+    g.add_card_to_battlefield(1, catalog::riptide_chronologist());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(primoc).unwrap().controller, 1);
+
+    // Tied on Wizards (zero each) — nobody takes it.
+    let mut g = main_phase();
+    let primoc = g.add_card_to_battlefield(0, catalog::thoughtbound_primoc());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(primoc).unwrap().controller, 0);
+}
+
+/// False Cure turns every player's life gain into a bigger loss.
+#[test]
+fn false_cure_punishes_any_life_gain() {
+    let mut g = main_phase();
+    let cure = g.add_card_to_hand(0, catalog::false_cure());
+    cast(&mut g, 0, cure, None);
+    let before = g.players[1].life;
+    g.adjust_life(1, 3);
+    assert_eq!(g.players[1].life, before + 3 - 6, "gained 3, lost 6");
+}
+
+/// Head Games swaps a hand for a hand-sized tutor out of the same library.
+#[test]
+fn head_games_rebuilds_the_hand_from_the_library() {
+    let mut g = main_phase();
+    for _ in 0..2 {
+        g.add_card_to_hand(1, bear());
+    }
+    let wanted = g.add_card_to_library(1, catalog::forest());
+    g.add_card_to_library(1, catalog::forest());
+    let games = g.add_card_to_hand(0, catalog::head_games());
+    let other = g.players[1].library.last().unwrap().id;
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Cards(vec![wanted, other])]));
+    cast(&mut g, 0, games, Some(Target::Player(1)));
+    assert_eq!(g.players[1].hand.len(), 2, "same size");
+    assert!(
+        g.players[1].hand.iter().all(|c| c.id == wanted || c.id == other),
+        "the caster picked the replacements"
+    );
+}
+
+/// Strongarm Tactics only spares the players who pitched a creature.
+#[test]
+fn strongarm_tactics_punishes_a_noncreature_discard() {
+    let mut g = main_phase();
+    g.add_card_to_hand(0, bear());
+    g.add_card_to_hand(1, catalog::forest());
+    let tactics = g.add_card_to_hand(0, catalog::strongarm_tactics());
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    cast(&mut g, 0, tactics, None);
+    assert_eq!(g.players[0].life, l0, "pitched a creature");
+    assert_eq!(g.players[1].life, l1 - 4, "pitched a land");
+}
+
+/// Kamahl's Summons mints a Bear per creature card in each hand.
+#[test]
+fn kamahls_summons_mints_a_bear_per_creature() {
+    let mut g = main_phase();
+    for _ in 0..2 {
+        g.add_card_to_hand(0, bear());
+    }
+    g.add_card_to_hand(1, bear());
+    g.add_card_to_hand(1, catalog::forest());
+    let summons = g.add_card_to_hand(0, catalog::kamahls_summons());
+    cast(&mut g, 0, summons, None);
+    let tokens = |g: &GameState, seat: usize| {
+        g.battlefield.iter().filter(|c| c.controller == seat && c.is_token).count()
+    };
+    assert_eq!(tokens(&g, 0), 2);
+    assert_eq!(tokens(&g, 1), 1);
+}
+
+/// Trade Secrets runs one round when the opponent declines to repeat.
+#[test]
+fn trade_secrets_runs_once_when_declined() {
+    let mut g = main_phase();
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::forest());
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let secrets = g.add_card_to_hand(0, catalog::trade_secrets());
+    cast(&mut g, 0, secrets, Some(Target::Player(1)));
+    assert_eq!(g.players[1].hand.len(), 2);
+    assert_eq!(g.players[0].hand.len(), 4);
+}

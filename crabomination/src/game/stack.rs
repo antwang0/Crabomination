@@ -2998,6 +2998,7 @@ impl GameState {
         self.combat_damage_prevented_to_this_turn.clear();
         self.combat_damage_prevented_by_this_turn.clear();
         self.all_damage_prevented_by_this_turn.clear();
+        self.life_gain_punish_this_turn = 0;
         self.draws_redirected_this_turn.clear();
         self.damage_becomes_this_turn = None;
         self.combat_damage_prevented_to_players_this_turn.clear();

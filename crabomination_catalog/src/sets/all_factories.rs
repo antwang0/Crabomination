@@ -12522,6 +12522,15 @@ static ONS3: &[Factory] = &[
     super::ons3::death_match,
     super::ons3::spy_network,
     super::ons3::aurification,
+    super::ons3::elvish_guidance,
+    super::ons3::graxiplon,
+    super::ons3::mana_echoes,
+    super::ons3::thoughtbound_primoc,
+    super::ons3::false_cure,
+    super::ons3::head_games,
+    super::ons3::trade_secrets,
+    super::ons3::strongarm_tactics,
+    super::ons3::kamahls_summons,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,

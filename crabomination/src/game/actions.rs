@@ -2163,6 +2163,25 @@ impl crate::game::GameState {
                     GameEvent::ManaAdded { player, color, .. } if *player == p => Some(*color),
                     _ => None,
                 }),
+                ExtraManaKind::FixedPerCreatureType(c, ct) => {
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|x| {
+                            x.definition.is_creature()
+                                && x.definition.subtypes.creature_types.contains(&ct)
+                        })
+                        .count();
+                    for _ in 0..n {
+                        self.players[p].mana_pool.add(c, 1);
+                        events.push(GameEvent::ManaAdded {
+                            player: p,
+                            color: c,
+                            source: Some(src_id),
+                        });
+                    }
+                    continue;
+                }
                 ExtraManaKind::AnyColors(n) => {
                     for _ in 0..n {
                         let c = self.best_color_for_hand(p);

@@ -222,6 +222,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBeBlockedByPowerAtLeast(_)
         | Keyword::CantBeBlockedIfControllerCastSpells(_)
         | Keyword::CantBeBlockedIfDefenderControls(_)
+        | Keyword::CantBeBlockedUnlessDefenderSharedType(_)
         | Keyword::CantBeEquipped
         | Keyword::AttackCostBounce(_)
         | Keyword::CantBeBlockedByPowerLessThanCount(_)

@@ -42,6 +42,10 @@ pub enum ExtraManaKind {
     /// One mana of any color, chosen by the controller at tap time (Buried in
     /// the Garden — "adds an additional one mana of any color").
     AnyColor,
+    /// One fixed-colour mana per creature of the given type anywhere on the
+    /// battlefield (Elvish Guidance — "an additional {G} for each Elf on the
+    /// battlefield").
+    FixedPerCreatureType(crate::mana::Color, crate::card::CreatureType),
     /// N mana "in any combination of colors" (Market Festival's two). Each
     /// pip is picked independently by the same needs-aware heuristic as
     /// [`ExtraManaKind::AnyColor`].

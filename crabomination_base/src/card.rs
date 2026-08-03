@@ -1480,6 +1480,9 @@ pub enum Keyword {
     /// [filter]" (Neurok Spy). Enforced in `declare_blockers` against the
     /// defender's board.
     CantBeBlockedIfDefenderControls(Box<SelectionRequirement>),
+    /// CR 509.1b — "can't be blocked unless defending player controls N or
+    /// more creatures that share a creature type" (Graxiplon).
+    CantBeBlockedUnlessDefenderSharedType(u32),
     /// CR 702.6c — "This creature can't be equipped" (Goblin Brawler). The
     /// equip ability may not target it.
     CantBeEquipped,
