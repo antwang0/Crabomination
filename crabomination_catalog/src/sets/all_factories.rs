@@ -12677,6 +12677,13 @@ static LGN: &[Factory] = &[
     super::scg::eternal_dragon,
     super::scg::frontline_strategist,
     super::scg::guilty_conscience,
+    super::scg::putrid_raptor,
+    super::scg::zombie_cutthroat,
+    super::scg::raven_guild_initiate,
+    super::scg::skirk_volcanist,
+    super::scg::frozen_solid,
+    super::scg::one_with_nature,
+    super::scg::soul_collector,
 ];
 static ONS3: &[Factory] = &[
     super::ons3::astral_slide,

@@ -147,7 +147,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Madness(_) => "Madness",
         Keyword::Mayhem(_) => "Mayhem",
         Keyword::Harmonize(_) => "Harmonize",
-        Keyword::Morph(_) => "Morph",
+        Keyword::Morph(_) | Keyword::MorphCost(_) => "Morph",
         Keyword::Megamorph(_) => "Megamorph",
         Keyword::Disguise(_) => "Disguise",
         Keyword::Disturb(_) => "Disturb",

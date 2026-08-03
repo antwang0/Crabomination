@@ -3492,6 +3492,7 @@ fn main_phase_action_with(
             matches!(
                 k,
                 crate::card::Keyword::Morph(_)
+                    | crate::card::Keyword::MorphCost(_)
                     | crate::card::Keyword::Megamorph(_)
                     | crate::card::Keyword::Disguise(_)
             )

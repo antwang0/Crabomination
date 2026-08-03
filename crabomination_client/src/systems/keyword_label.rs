@@ -261,7 +261,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Disguise(_) => "Dsg",
         // Morph / Megamorph (CR 702.37) — the face-down 2/2 sibling of Disguise
         // (no ward), turnable face up for its unmorph cost; flag the hidden card.
-        Morph(_) | Megamorph(_) => "Mph",
+        Morph(_) | MorphCost(_) | Megamorph(_) => "Mph",
         // (Rampage/Bushido/Annihilator/Absorb/Frenzy are labelled above.)
         // Unleash (CR 702.98, Rakdos/GTC) — the marker flags an unleashed
         // creature; once it carries a +1/+1 counter the injected `CantBlock`
@@ -289,7 +289,8 @@ fn ward_suffix(cost: &WardCost) -> String {
         BottomFromGraveyard(n) => format!("{n}gy↓"),
         DamageFromSource(n) => format!("{n}🗲"),
         SacrificeCreature | SacrificeMatching(_) => "sac".into(),
-        SacrificePermanents(n) => format!("sac{n}"),
+        SacrificePermanents(n) | SacrificeMatchingN(_, n) => format!("sac{n}"),
+        ReturnMatchingToHand(_) => "rtn".into(),
         RemoveCounterFromPermanent => "ctr-".into(),
         ManaCostOfAttached => "MC".into(),
         GenericSourcePower => "P".into(),

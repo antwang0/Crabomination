@@ -30212,6 +30212,50 @@ impl GameState {
                             false
                         }
                     }
+                    WardCost::SacrificeMatchingN(filter, n) => {
+                        let picks: Vec<CardId> = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == payer
+                                    && self.evaluate_requirement_on_card(filter, c, payer)
+                            })
+                            .map(|c| c.id)
+                            .take(*n as usize)
+                            .collect();
+                        if picks.len() < *n as usize {
+                            return false;
+                        }
+                        for id in picks {
+                            self.sacrifice_one(id, payer, events);
+                        }
+                        true
+                    }
+                    WardCost::ReturnMatchingToHand(filter) => {
+                        let pick = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == payer
+                                    && self.evaluate_requirement_on_card(filter, c, payer)
+                            })
+                            .min_by_key(|c| c.definition.cost.cmc())
+                            .map(|c| c.id);
+                        match pick {
+                            Some(id) => {
+                                self.move_card_to(
+                                    id,
+                                    &crate::effect::ZoneDest::Hand(
+                                        crate::effect::PlayerRef::OwnerOfMoved,
+                                    ),
+                                    ctx,
+                                    events,
+                                );
+                                true
+                            }
+                            None => false,
+                        }
+                    }
                     WardCost::SacrificePermanents(n) => {
                         let picks: Vec<CardId> = self
                             .battlefield

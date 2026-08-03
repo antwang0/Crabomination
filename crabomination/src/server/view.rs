@@ -1479,6 +1479,8 @@ fn project_permanent(
                 W::SacrificeCreature => "Ward—sacrifice a creature".to_string(),
                 W::SacrificeMatching(_) => "Ward—sacrifice a matching permanent".to_string(),
                 W::SacrificePermanents(n) => format!("Ward—sacrifice {n} permanents"),
+                W::SacrificeMatchingN(_, n) => format!("Ward—sacrifice {n} matching permanents"),
+                W::ReturnMatchingToHand(_) => "Ward—return a matching permanent".to_string(),
                 W::GenericSourcePower => "Ward—{X} (this creature's power)".to_string(),
                 W::GenericXFromCost => "Ward—{X}".to_string(),
                 W::LifeSourcePower => "Ward—pay life equal to this creature's power".to_string(),

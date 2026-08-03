@@ -30,7 +30,10 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::ExileFromGraveyard(n)
         | WardCost::BottomFromGraveyard(n)
         | WardCost::DamageFromSource(n) => *n == 0,
-        WardCost::SacrificeCreature | WardCost::SacrificeMatching(_) => false,
+        WardCost::SacrificeCreature
+        | WardCost::SacrificeMatching(_)
+        | WardCost::ReturnMatchingToHand(_) => false,
+        WardCost::SacrificeMatchingN(_, n) => *n == 0,
         // "{X}" is only free when the declared X was 0, which the caller
         // can't see here.
         WardCost::GenericXFromCost => false,
@@ -4523,7 +4526,17 @@ impl GameState {
             .hand
             .iter()
             .find(|c| c.id == card_id)
-            .map(|c| c.definition.keywords.iter().any(|k| matches!(k, Keyword::Morph(_) | Keyword::Megamorph(_) | Keyword::Disguise(_))))
+            .map(|c| {
+                c.definition.keywords.iter().any(|k| {
+                    matches!(
+                        k,
+                        Keyword::Morph(_)
+                            | Keyword::MorphCost(_)
+                            | Keyword::Megamorph(_)
+                            | Keyword::Disguise(_)
+                    )
+                })
+            })
             .ok_or(GameError::CardNotInHand(card_id))?;
         if !has_morph {
             return Err(GameError::CardNotInHand(card_id));
@@ -4574,6 +4587,33 @@ impl GameState {
         x_value: u32,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        // CR 702.36b — "Morph—[non-mana cost]": pay it through the shared
+        // ward-cost payer instead of the mana path. The Exiled Doomsayer tax
+        // is a mana surcharge and doesn't apply to these.
+        let alt_morph = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == card_id && c.controller == p && c.face_down)
+            .and_then(|c| c.face_up_def.as_ref())
+            .and_then(|d| {
+                d.keywords.iter().find_map(|kw| match kw {
+                    Keyword::MorphCost(wc) => Some((**wc).clone()),
+                    _ => None,
+                })
+            });
+        if let Some(wc) = alt_morph {
+            let ctx = crate::game::effects::EffectContext::for_ability(card_id, p, None);
+            let mut events = vec![];
+            if !self.try_pay_ward_cost(p, &wc, &ctx, &mut events) {
+                return Err(GameError::InvalidTarget);
+            }
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+                c.turn_face_up();
+                c.cast_x_value = x_value;
+            }
+            events.push(GameEvent::TurnedFaceUp { card_id });
+            return Ok(events);
+        }
         // Locate the face-down permanent and derive its turn-up cost from the
         // stashed real definition.
         let cost = {

@@ -481,3 +481,73 @@ fn unspeakable_symbol_pays_life_for_counters() {
     assert_eq!(g.players[0].life, life - 3);
     assert_eq!(g.battlefield_find(knight).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+// ── CR 702.36b — Morph with a non-mana turn-up cost ─────────────────────────
+
+/// Zombie Cutthroat's flip is five life, not mana.
+#[test]
+fn zombie_cutthroat_turns_up_for_five_life() {
+    let mut g = main_phase();
+    let cutthroat = g.add_card_to_battlefield(0, catalog::zombie_cutthroat());
+    g.battlefield.iter_mut().find(|c| c.id == cutthroat).unwrap().turn_face_down();
+    let life = g.players[0].life;
+    g.perform_action(GameAction::TurnFaceUp { card_id: cutthroat }).expect("pay 5 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 5);
+    assert!(!g.battlefield_find(cutthroat).unwrap().face_down);
+}
+
+/// Putrid Raptor needs a Zombie in hand to discard — no Zombie, no flip.
+#[test]
+fn putrid_raptor_needs_a_zombie_to_discard() {
+    let mut g = main_phase();
+    let raptor = g.add_card_to_battlefield(0, catalog::putrid_raptor());
+    g.battlefield.iter_mut().find(|c| c.id == raptor).unwrap().turn_face_down();
+    g.add_card_to_hand(0, catalog::silver_knight()); // not a Zombie
+    mana(&mut g, 0);
+    assert!(g.perform_action(GameAction::TurnFaceUp { card_id: raptor }).is_err());
+    let zombie = g.add_card_to_hand(0, catalog::zombie_cutthroat());
+    g.perform_action(GameAction::TurnFaceUp { card_id: raptor }).expect("discard the Zombie");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == zombie));
+}
+
+/// Skirk Volcanist eats two Mountains and splits 3 damage on the flip.
+#[test]
+fn skirk_volcanist_sacrifices_two_mountains() {
+    let mut g = main_phase();
+    let volcanist = g.add_card_to_battlefield(0, catalog::skirk_volcanist());
+    g.battlefield.iter_mut().find(|c| c.id == volcanist).unwrap().turn_face_down();
+    let m1 = g.add_card_to_battlefield(0, catalog::mountain());
+    assert!(g.perform_action(GameAction::TurnFaceUp { card_id: volcanist }).is_err(), "needs two");
+    let m2 = g.add_card_to_battlefield(0, catalog::mountain());
+    let victim = g.add_card_to_battlefield(1, catalog::silver_knight());
+    g.decider =
+        Box::new(ScriptedDecider::new(vec![DecisionAnswer::Target(Target::Permanent(victim))]));
+    g.perform_action(GameAction::TurnFaceUp { card_id: volcanist }).expect("two Mountains");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(m1).is_none() && g.battlefield_find(m2).is_none());
+    assert!(!g.battlefield_find(volcanist).unwrap().face_down, "the flip went through");
+    let _ = victim;
+}
+
+/// Frozen Solid keeps its host tapped and kills it on any damage.
+#[test]
+fn frozen_solid_locks_and_kills() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::dragonstalker());
+    let frost = g.add_card_to_hand(0, catalog::frozen_solid());
+    cast(&mut g, 0, frost, Some(Target::Permanent(bear)));
+    let mut events = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(bear),
+        1,
+        None,
+        &mut events,
+    );
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let _ = g.check_state_based_actions();
+    let _ = frost;
+    assert!(g.battlefield_find(bear).is_none(), "one damage destroys it");
+}

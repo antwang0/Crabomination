@@ -5,7 +5,7 @@
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
     EnchantmentSubtype, Keyword, LandType, Predicate, SelectionRequirement as R, StaticAbility,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, WardCost,
 };
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, StaticEffect, Value,
@@ -1533,18 +1533,153 @@ pub fn frontline_strategist() -> CardDefinition {
 /// Guilty Conscience — the enchanted creature hits itself just as hard.
 pub fn guilty_conscience() -> CardDefinition {
     CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamage, EventScope::EnchantedBySource),
+            effect: Effect::DealDamage {
+                to: Selector::AttachedTo(Box::new(Selector::This)),
+                amount: Value::TriggerEventAmount,
+            },
+        }],
+        ..aura("Guilty Conscience", cost(&[w()]))
+    }
+}
+
+
+
+// ── Wave 2: the non-mana morphs (CR 702.36b) and friends ────────────────────
+
+/// Putrid Raptor — Morph—Discard a Zombie card.
+pub fn putrid_raptor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::MorphCost(Box::new(WardCost::DiscardMatching(
+            Box::new(R::HasCreatureType(CreatureType::Zombie)),
+            1,
+        )))],
+        ..creature(
+            "Putrid Raptor",
+            cost(&[generic(4), b(), b()]),
+            vec![CreatureType::Zombie, CreatureType::Dinosaur, CreatureType::Beast],
+            4,
+            4,
+        )
+    }
+}
+
+/// Zombie Cutthroat — Morph—Pay 5 life.
+pub fn zombie_cutthroat() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::MorphCost(Box::new(WardCost::Life(5)))],
+        ..creature(
+            "Zombie Cutthroat",
+            cost(&[generic(3), b(), b()]),
+            vec![CreatureType::Zombie],
+            3,
+            4,
+        )
+    }
+}
+
+/// Raven Guild Initiate — Morph—Return a Bird you control to its owner's hand.
+pub fn raven_guild_initiate() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::MorphCost(Box::new(WardCost::ReturnMatchingToHand(
+            Box::new(R::HasCreatureType(CreatureType::Bird)),
+        )))],
+        ..creature(
+            "Raven Guild Initiate",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            4,
+        )
+    }
+}
+
+/// Skirk Volcanist — Morph—Sacrifice two Mountains; the flip is 3 damage split.
+pub fn skirk_volcanist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::MorphCost(Box::new(WardCost::SacrificeMatchingN(
+            Box::new(R::HasLandType(LandType::Mountain)),
+            2,
+        )))],
+        triggered_abilities: vec![on_turn_up(Effect::DealDamageDivided {
+            total: Value::Const(3),
+            filter: R::Creature,
+            max_targets: 3,
+            retaliate_to_source: false,
+        })],
+        ..creature("Skirk Volcanist", cost(&[generic(3), r()]), vec![CreatureType::Goblin], 3, 1)
+    }
+}
+
+// ── Wave 2: the rest ────────────────────────────────────────────────────────
+
+/// Frozen Solid — the enchanted creature stays tapped and dies to any damage.
+pub fn frozen_solid() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::EnchantedBySource),
+            effect: Effect::Destroy {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..aura("Frozen Solid", cost(&[generic(1), u(), u()]))
+    }
+}
+
+/// One with Nature — the enchanted creature's hits fetch a basic.
+pub fn one_with_nature() -> CardDefinition {
+    CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
-                effect: Effect::DealDamage {
-                    to: Selector::This,
-                    amount: Value::TriggerEventAmount,
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Search for a basic land?".into(),
+                    body: Box::new(Effect::Search {
+                        who: PlayerRef::You,
+                        filter: R::IsBasicLand,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                    }),
                 },
             }],
             ..Default::default()
         }),
-        ..aura("Guilty Conscience", cost(&[w()]))
+        ..aura("One with Nature", cost(&[g()]))
     }
 }
+
+/// Consumptive Goo's sibling in blue-black removal shells: Soul Collector
+/// reanimates whatever it kills.
+pub fn soul_collector() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Morph(cost(&[b(), b(), b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::DamagedBySourceThisTurn,
+                },
+            ),
+            effect: Effect::Move {
+                what: Selector::TriggerSource,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        }],
+        ..creature(
+            "Soul Collector",
+            cost(&[generic(3), b(), b()]),
+            vec![CreatureType::Vampire],
+            3,
+            4,
+        )
+    }
+}
+
 
 

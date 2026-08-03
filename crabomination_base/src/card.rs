@@ -666,6 +666,14 @@ pub enum WardCost {
     SacrificeMatching(Box<SelectionRequirement>),
     /// "Ward—Sacrifice N permanents." (Ulamog, the Defiler.)
     SacrificePermanents(u32),
+    /// "…unless you sacrifice N [filter]" — the counted sibling of
+    /// `SacrificeMatching` ("Morph—Sacrifice two Mountains", Skirk Volcanist).
+    /// Unpayable when fewer than N match.
+    SacrificeMatchingN(Box<SelectionRequirement>, u32),
+    /// "…unless you return a [filter] you control to its owner's hand"
+    /// ("Morph—Return a Bird you control to its owner's hand", Raven Guild
+    /// Initiate). Unpayable when nothing matches.
+    ReturnMatchingToHand(Box<SelectionRequirement>),
     /// "{X}, where X is this creature's power" — a dynamic generic cost read
     /// off the source's computed power at payment time (Esper Sentinel's
     /// rhystic tax).
@@ -1072,6 +1080,11 @@ pub enum Keyword {
     Reconfigure(crate::mana::ManaCost),
     Fortify(crate::mana::ManaCost),
     Morph(crate::mana::ManaCost),
+    /// CR 702.36b — "Morph—[non-mana cost]": the turn-face-up cost is one of
+    /// the [`WardCost`] menu entries rather than mana (Putrid Raptor's "discard
+    /// a Zombie card", Zombie Cutthroat's "pay 5 life"). Casting the card face
+    /// down is unaffected — that's always {3}.
+    MorphCost(Box<WardCost>),
     Megamorph(crate::mana::ManaCost),
     /// CR 702.77 — Reinforce N—[cost]. "[cost], Discard this card: Put N +1/+1
     /// counters on target creature." An activated ability usable from the hand.
