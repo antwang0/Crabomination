@@ -3,6 +3,24 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Missing: SOS Special Guests (SPG)
+
+The Secrets of Strixhaven **Special Guests (SPG) sheet is not implemented
+at all**: no catalog module, and no SPG slot in `generate_sos_pack`, so
+SOS sealed pools and drafts never contain them. Work items:
+
+- Catalog the SPG card list (audit against Scryfall, same as the SOS base
+  set) in a `catalog::sets::sos` submodule or sibling.
+- Booster collation: add the SPG slot to `generate_sos_pack` at the
+  printed rarity/rate so sealed pools are honest.
+- Downstream: `sos_draft_pool()` feeds the ML vocabulary
+  (`Vocab::sos_sealed`, `server/encode.rs`) — adding SPG cards grows the
+  vocab, which **invalidates previously trained value nets** (embedding
+  rows are index-pinned; the loader's vocab-size check will refuse old
+  weights, which is the correct failure). Retrain after the sheet lands.
+- `recommend_pool` and the sealed ladder mirrors pick the change up for
+  free once the pack generator is right.
+
 ## Client / UI follow-ups (M15 run)
 
 - ✅ ~~**Convoke/Improvise cast UI**~~ — shipped. Right-clicking a convokable

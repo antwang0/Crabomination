@@ -1,5 +1,11 @@
 # Strixhaven implementation tracker
 
+> **Known gap: the SOS Special Guests (SPG) sheet is entirely missing** —
+> no catalog entries and no SPG slot in the SOS booster collation, so
+> sealed/draft pools omit those cards. See TODO.md → "Missing: SOS
+> Special Guests (SPG)" for the work items (including the ML-vocab
+> retrain consequence).
+
 Two catalogs: **Secrets of Strixhaven (SOS)** (`catalog::sets::sos`) and
 **Strixhaven: School of Mages (STX)** (`catalog::sets::stx`). The STX base set
 is 100% implemented; the **Mystical Archive (STA)** companion lives in
