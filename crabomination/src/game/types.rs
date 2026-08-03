@@ -142,6 +142,10 @@ pub enum GameAction {
     /// you have priority): pay its Morph cost, or — for a manifested creature
     /// card — its mana cost. Fires `EventKind::TurnedFaceUp`.
     TurnFaceUp { card_id: CardId },
+    /// CR 702.36b — turn a face-down permanent up paying an `{X}` in its morph
+    /// cost (Warbreak Trumpeter's Morph {X}{X}{R}). `TurnFaceUp` is this with
+    /// X = 0; the turn-up trigger reads the paid X via `Value::XFromCost`.
+    TurnFaceUpForX { card_id: CardId, x_value: u32 },
     /// CR 702.143c — cast a previously foretold card from exile for its
     /// foretell cost.
     CastForetold {

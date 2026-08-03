@@ -10622,6 +10622,9 @@ impl GameState {
             GameAction::Foretell { card_id } => self.foretell_card(card_id),
             GameAction::CastFaceDown { card_id } => self.cast_face_down(card_id),
             GameAction::TurnFaceUp { card_id } => self.turn_face_up_action(card_id),
+            GameAction::TurnFaceUpForX { card_id, x_value } => {
+                self.turn_face_up_for_x(card_id, x_value)
+            }
             GameAction::CastForetold {
                 card_id,
                 target,
@@ -14256,11 +14259,16 @@ impl GameState {
         } else {
             Vec::new()
         };
+        // CR 601.2b — a trigger on a permanent reads the X stamped on it (the
+        // cast's X, or a morph turn-up's — Warbreak Trumpeter), so
+        // `Value::XFromCost` in the body sees the real amount.
+        let x_value = self.battlefield_find(source).map(|c| c.cast_x_value).unwrap_or(0);
         self.stack.push(
             TriggerPush::new(source, controller, effect)
                 .target(target)
                 .additional_targets(additional)
                 .mode(mode)
+                .x_value(x_value)
                 .trigger_source(subject)
                 .event_amount(event_amount)
                 .trigger_player(actor)
@@ -18085,6 +18093,7 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsWhoAttackedCantCast
             // CreatureSpellsCantBeCountered — consulted at cast time; no layer.
             | StaticEffect::CreatureSpellsCantBeCountered
+            | StaticEffect::SpellsCantBeCounteredMatching { .. }
             // BlockTaxToController — consulted in declare_blockers; no layer.
             | StaticEffect::BlockTaxToController { .. }
             // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no

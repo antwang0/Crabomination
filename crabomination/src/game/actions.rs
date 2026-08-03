@@ -1658,6 +1658,24 @@ impl crate::game::GameState {
         {
             return true;
         }
+        // The filtered sibling, also symmetric (Root Sliver).
+        let matching: Vec<crate::card::SelectionRequirement> = self
+            .battlefield
+            .iter()
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match &sa.effect {
+                crate::effect::StaticEffect::SpellsCantBeCounteredMatching { filter } => {
+                    Some(filter.clone())
+                }
+                _ => None,
+            })
+            .collect();
+        // The spell is on the stack, so match against the card itself.
+        if matching.iter().any(|f| {
+            crate::game::layers::requirement_matches_card(f, card, card.controller)
+        }) {
+            return true;
+        }
         // Cavern of Souls' "can't be countered" rider is provenance-based:
         // it rides the spent mana (`SpendRestriction::
         // CreatureOfTypeUncounterable` → `cast_paid_uncounterable`), not a
@@ -4542,6 +4560,19 @@ impl GameState {
         &mut self,
         card_id: CardId,
     ) -> Result<Vec<GameEvent>, GameError> {
+        self.turn_face_up_for_x(card_id, 0)
+    }
+
+    /// [`turn_face_up_action`] paying `x_value` into an `{X}` in the morph cost
+    /// (CR 702.36b — Warbreak Trumpeter). The paid X is stamped on the
+    /// permanent so the turn-up trigger can read it via `Value::XFromCost`.
+    ///
+    /// [`turn_face_up_action`]: Self::turn_face_up_action
+    pub(crate) fn turn_face_up_for_x(
+        &mut self,
+        card_id: CardId,
+        x_value: u32,
+    ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         // Locate the face-down permanent and derive its turn-up cost from the
         // stashed real definition.
@@ -4559,7 +4590,7 @@ impl GameState {
                 _ => None,
             });
             match morph_cost {
-                Some(mc) => mc,
+                Some(mc) => mc.with_x_value(x_value),
                 None if real.is_creature() => real.cost.clone(),
                 // A face-down noncreature (manifested land/spell) can't be
                 // turned face up.
@@ -4580,6 +4611,7 @@ impl GameState {
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
             c.turn_face_up();
+            c.cast_x_value = x_value;
             if megamorph {
                 c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
             }

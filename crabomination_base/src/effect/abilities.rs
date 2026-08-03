@@ -2021,6 +2021,10 @@ pub enum StaticEffect {
     /// unlike `SpellsUncounterable` which is scoped to the caster's own
     /// permanents). Leyline of Lifeforce.
     CreatureSpellsCantBeCountered,
+    /// The filtered sibling of `CreatureSpellsCantBeCountered`: any player's
+    /// copy protects every player's matching spells (Root Sliver's "Sliver
+    /// spells can't be countered").
+    SpellsCantBeCounteredMatching { filter: SelectionRequirement },
     /// CR 614.x — "If a nontoken creature would enter the battlefield and it
     /// wasn't cast, exile it instead." Containment Priest. A global ETB
     /// replacement read off the battlefield in `place_card_in_dest`'s
