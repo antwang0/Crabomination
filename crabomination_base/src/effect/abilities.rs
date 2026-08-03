@@ -52,6 +52,12 @@ pub enum ExtraManaKind {
     AnyColors(u32),
 }
 
+/// serde default for `ReplaceDamageToSelfWithCounters.kind` — Phytohydra's
+/// original behaviour, so old snapshots keep deserializing.
+fn plus_one_plus_one() -> CounterType {
+    CounterType::PlusOnePlusOne
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StaticEffect {
     /// Grant +p/+t to everything the selector picks.
@@ -1928,7 +1934,12 @@ pub enum StaticEffect {
     /// prevention, so it fires even when damage can't be prevented), consulted
     /// at both the combat and noncombat self-damage sites; grows by the full
     /// amount rather than a single counter.
-    ReplaceDamageToSelfWithCounters,
+    ReplaceDamageToSelfWithCounters {
+        /// Which counter the damage becomes — `PlusOnePlusOne` for Phytohydra,
+        /// `MinusOneMinusOne` for Phyrexian Hydra.
+        #[serde(default = "plus_one_plus_one")]
+        kind: CounterType,
+    },
     /// CR 614 — "If damage would be dealt to you, put that many `kind`
     /// counters on this permanent instead" (Delaying Shield).
     ReplaceDamageToYouWithCountersOnSource { kind: CounterType },

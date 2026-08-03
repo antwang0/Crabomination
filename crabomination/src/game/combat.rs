@@ -3208,19 +3208,19 @@ impl GameState {
         // Ironscale Hydra grows by exactly one; Phytohydra grows by the full
         // amount. Both are replacements (CR 614), so they apply even when
         // damage can't be prevented.
-        let grow = if self.creature_prevents_combat_damage_grows(recipient) {
-            1
-        } else if self.creature_replaces_damage_with_counters(recipient) {
-            dealt as u32
+        let (kind, grow) = if self.creature_prevents_combat_damage_grows(recipient) {
+            (crate::card::CounterType::PlusOnePlusOne, 1)
+        } else if let Some(kind) = self.creature_replaces_damage_with_counters(recipient) {
+            (kind, dealt as u32)
         } else {
             return dealt;
         };
         if let Some(c) = self.battlefield_find_mut(recipient) {
-            c.add_counters(crate::card::CounterType::PlusOnePlusOne, grow);
+            c.add_counters(kind, grow);
         }
         events.push(GameEvent::CounterAdded {
             card_id: recipient,
-            counter_type: crate::card::CounterType::PlusOnePlusOne,
+            counter_type: kind,
             count: grow,
         });
         0
@@ -3292,10 +3292,14 @@ impl GameState {
 
     /// Phytohydra (CR 614) — does `id` replace incoming damage with that many
     /// +1/+1 counters? Reads `StaticEffect::ReplaceDamageToSelfWithCounters`.
-    pub(crate) fn creature_replaces_damage_with_counters(&self, id: CardId) -> bool {
-        self.battlefield_find(id).is_some_and(|c| {
-            c.definition.static_abilities.iter().any(|s| {
-                matches!(s.effect, crate::effect::StaticEffect::ReplaceDamageToSelfWithCounters)
+    pub(crate) fn creature_replaces_damage_with_counters(
+        &self,
+        id: CardId,
+    ) -> Option<crate::card::CounterType> {
+        self.battlefield_find(id).and_then(|c| {
+            c.definition.static_abilities.iter().find_map(|s| match s.effect {
+                crate::effect::StaticEffect::ReplaceDamageToSelfWithCounters { kind } => Some(kind),
+                _ => None,
             })
         })
     }

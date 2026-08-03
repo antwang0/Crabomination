@@ -2410,7 +2410,7 @@ Each a small targeted feature; sweep batch by batch.
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**) and the
    Kamigawa block are all at zero. **Mirrodin Besieged** (`sets::mbs`) is open
-   at 7 gaps after one wave (91 cards) — see TODO.md for the per-card
+   at 5 gaps after one wave (93 cards) — see TODO.md for the per-card
    primitive each needs. Then New Phyrexia to close the Scars block.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
@@ -2426,12 +2426,14 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Mirrodin Besieged (MBS) opened** — `set_gaps.py mbs` 98 → 7 (`sets::mbs`,
-  91 cards). New: `Effect::MatchingCantBlockThisTurn` (CR 509.1b — a blanket
+- **Mirrodin Besieged (MBS) opened** — `set_gaps.py mbs` 98 → 5 (`sets::mbs`,
+  93 cards). New: `Effect::MatchingCantBlockThisTurn` (CR 509.1b — a blanket
   "these creatures can't block this turn", checked in `declare_blockers`
-  alongside the per-pair lock) and `CardDefinition.equip_sacrifice_filter`
+  alongside the per-pair lock), `CardDefinition.equip_sacrifice_filter`
   ("Equip—Sacrifice an artifact", paid before the mana so a failed equip stays
-  atomic).
+  atomic), and a `kind` on `StaticEffect::ReplaceDamageToSelfWithCounters` so
+  the CR 614 damage-to-counters replacement can shrink as well as grow
+  (Phyrexian Hydra next to Phytohydra).
 
 - **Scourge (SCG) closed** — `set_gaps.py scg` 32 → 0 (`sets::scg2`, the last
   32 cards). New primitives: `Effect::{DimensionalBreach, DimensionalBreachReturn}`

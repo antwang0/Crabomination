@@ -839,16 +839,12 @@ impl GameState {
         // by the full scaled amount. Combat damage is replaced on the combat
         // path (`ironscale_replace`).
         if let EntityRef::Permanent(tgt) = ent
-            && self.creature_replaces_damage_with_counters(tgt)
+            && let Some(kind) = self.creature_replaces_damage_with_counters(tgt)
         {
             if let Some(c) = self.battlefield_find_mut(tgt) {
-                c.add_counters(crate::card::CounterType::PlusOnePlusOne, amount);
+                c.add_counters(kind, amount);
             }
-            events.push(GameEvent::CounterAdded {
-                card_id: tgt,
-                counter_type: crate::card::CounterType::PlusOnePlusOne,
-                count: amount,
-            });
+            events.push(GameEvent::CounterAdded { card_id: tgt, counter_type: kind, count: amount });
             return;
         }
         // CR 614.9 — Treacherous Link: damage bound for the host lands on its

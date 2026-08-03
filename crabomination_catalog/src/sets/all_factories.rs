@@ -12632,6 +12632,8 @@ static LGN: &[Factory] = &[
     super::scg2::karona_false_god,
     super::scg2::sliver_overlord,
     super::scg2::uncontrolled_infestation,
+    super::mbs::phyrexian_hydra,
+    super::mbs::mirrorworks,
     super::mbs::banishment_decree,
     super::mbs::choking_fumes,
     super::mbs::frantic_salvage,

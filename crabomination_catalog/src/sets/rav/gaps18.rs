@@ -24,7 +24,9 @@ pub fn phytohydra() -> CardDefinition {
         toughness: 1,
         static_abilities: vec![StaticAbility {
             description: "If damage would be dealt to this creature, put that many +1/+1 counters on it instead.",
-            effect: StaticEffect::ReplaceDamageToSelfWithCounters,
+            effect: StaticEffect::ReplaceDamageToSelfWithCounters {
+                kind: crate::card::CounterType::PlusOnePlusOne,
+            },
         }],
         ..Default::default()
     }

@@ -1904,3 +1904,56 @@ pub fn training_drone() -> CardDefinition {
         )
     }
 }
+
+/// Phyrexian Hydra — damage never sticks; it just shrinks instead.
+pub fn phyrexian_hydra() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Infect],
+        static_abilities: vec![StaticAbility {
+            description: "If damage would be dealt to this creature, prevent it and put that \
+                          many -1/-1 counters on it instead.",
+            effect: StaticEffect::ReplaceDamageToSelfWithCounters {
+                kind: CounterType::MinusOneMinusOne,
+            },
+        }],
+        ..creature(
+            "Phyrexian Hydra",
+            cost(&[generic(3), g(), g()]),
+            vec![CreatureType::Phyrexian, CreatureType::Hydra],
+            7,
+            7,
+        )
+    }
+}
+
+/// Mirrorworks — {2} copies every artifact you play.
+pub fn mirrorworks() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::Artifact.and(R::NotToken),
+                }),
+            effect: Effect::MayPay {
+                description: "Pay {2} to copy that artifact?".into(),
+                mana_cost: cost(&[generic(2)]),
+                body: Box::new(Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::TriggerSource,
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    extra_keywords: vec![],
+                    legendary: false,
+                    non_legendary: false,
+                }),
+                else_: None,
+            },
+        }],
+        ..artifact("Mirrorworks", cost(&[generic(5)]))
+    }
+}

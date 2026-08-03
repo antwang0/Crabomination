@@ -738,3 +738,36 @@ fn phyrexian_rebirth_leaves_an_xx_horror() {
         .expect("the Horror");
     assert_eq!(g.computed_permanent(horror).unwrap().power, 3);
 }
+
+/// Phyrexian Hydra turns incoming damage into -1/-1 counters.
+#[test]
+fn phyrexian_hydra_shrinks_instead_of_taking_damage() {
+    let mut g = main_phase();
+    let hydra = g.add_card_to_battlefield(0, catalog::phyrexian_hydra());
+    let mut events = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(hydra),
+        3,
+        None,
+        &mut events,
+    );
+    let c = g.battlefield_find(hydra).expect("still around");
+    assert_eq!(c.damage, 0, "the damage was replaced");
+    assert_eq!(c.counter_count(CounterType::MinusOneMinusOne), 3);
+    assert_eq!(g.computed_permanent(hydra).unwrap().power, 4, "7 - 3");
+}
+
+/// Mirrorworks copies the next artifact for {2}.
+#[test]
+fn mirrorworks_copies_an_entering_artifact() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::mirrorworks());
+    let golem = g.add_card_to_hand(0, catalog::hexplate_golem());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    cast(&mut g, 0, golem, None);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Hexplate Golem").count(),
+        2,
+        "the original plus its token copy"
+    );
+}

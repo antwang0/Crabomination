@@ -178,12 +178,14 @@ Residual, not blocking the count:
 
 ## Mirrodin Besieged — opened
 
-`set_gaps.py mbs` is at **7** (98 → 7; `sets::mbs`, 91 cards, tests in
+`set_gaps.py mbs` is at **5** (98 → 5; `sets::mbs`, 93 cards, tests in
 `recent_b/mbs`). Infect, Metalcraft, Battle cry, Living weapon and the
 proliferate shells all rode existing primitives. New this wave:
 `Effect::MatchingCantBlockThisTurn` (CR 509.1b — Concussive Bolt's metalcraft
-rider) and `CardDefinition.equip_sacrifice_filter` ("Equip—Sacrifice an
-artifact", Piston Sledge).
+rider), `CardDefinition.equip_sacrifice_filter` ("Equip—Sacrifice an
+artifact", Piston Sledge), and a `kind` on
+`StaticEffect::ReplaceDamageToSelfWithCounters` so the CR 614 replacement can
+shrink as well as grow (Phyrexian Hydra alongside Phytohydra).
 
 Still open, and why — each wants one primitive:
 - **Knowledge Pool** — imprint plus a cast replacement that exiles the spell
@@ -195,14 +197,9 @@ Still open, and why — each wants one primitive:
   static over the linked exile set).
 - **Galvanoth** — "look at the top card; you may cast it free if it's an
   instant or sorcery": a top-of-library free cast gated on card type.
-- **Mirrorworks** — "whenever another nontoken artifact you control enters,
-  you may pay {2} to copy it": an ETB-scoped `MayPay` + `CreateTokenCopyOf`
-  on the *entering* permanent.
 - **Distant Memories** — "any opponent may have you put that card into your
   hand; if none does, draw three" (`Effect::PlayersMayAccept` shape, but the
   accept and the fallback both act on the caster).
-- **Phyrexian Hydra** — "prevent that damage; put a -1/-1 counter on this for
-  each 1 prevented": `ReplaceDamageToSelfWithCounters` is +1/+1-only.
 
 ## Judgment — opened
 
