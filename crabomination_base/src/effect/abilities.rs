@@ -2447,6 +2447,12 @@ pub struct ActivatedAbility {
     /// on the stack; activation is rejected when nothing matches.
     #[serde(default)]
     pub return_permanent_cost: Option<SelectionRequirement>,
+    /// "Tap N untapped [filter] you control" as an activation cost (Crookclaw
+    /// Elder, Keeper of the Nine Gales). Paid before the ability goes on the
+    /// stack; activation is rejected when fewer than N untapped matches are
+    /// available. The source itself is eligible only if it matches.
+    #[serde(default)]
+    pub tap_others_cost: Option<(SelectionRequirement, u32)>,
     /// CR 702.6 — "Unattach this Equipment" as an activation cost: the source
     /// must currently be attached, and detaching it is part of the cost
     /// (Sunforger). Paid alongside `sac_cost` in `activate_ability`.

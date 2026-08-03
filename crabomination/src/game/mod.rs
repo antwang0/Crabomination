@@ -14323,6 +14323,16 @@ impl GameState {
                     cap = cap.min(self.evaluate_value(amount, &ctx).max(0) as usize);
                     body
                 }
+                // A sequence whose *only* targeting member is the multi-target
+                // body still fans out (Celestial Gatekeeper's "return up to two
+                // …, then exile it"). Ambiguous sequences are left alone.
+                Effect::Seq(parts) => {
+                    let mut targeting = parts.iter().filter(|e| e.requires_target());
+                    match (targeting.next(), targeting.next()) {
+                        (Some(only), None) => only,
+                        _ => break,
+                    }
+                }
                 _ => break,
             };
         }

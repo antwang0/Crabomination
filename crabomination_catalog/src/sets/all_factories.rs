@@ -12582,6 +12582,15 @@ static LGN: &[Factory] = &[
     super::lgn::warped_researcher,
     super::lgn::weaver_of_lies,
     super::lgn::willbender,
+    super::lgn::caller_of_the_claw,
+    super::lgn::celestial_gatekeeper,
+    super::lgn::chromeshell_crab,
+    super::lgn::corpse_harvester,
+    super::lgn::crookclaw_elder,
+    super::lgn::ghastly_remains,
+    super::lgn::keeper_of_the_nine_gales,
+    super::lgn::magma_sliver,
+    super::lgn::skirk_drill_sergeant,
 ];
 static ONS3: &[Factory] = &[
     super::ons3::astral_slide,

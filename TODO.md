@@ -5463,24 +5463,16 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   is at zero. Each landed its primitive: `Effect::ReplaceCreatureTypeText`,
   `Keyword::DividesCombatDamageAmongDefenders`, `Effect::EachPlayerChoosesNumberHighestLoses`,
   and `GameEvent::ControlChanged` + `EventKind::GainedControlOfThis`.
-- ⏳ **Legions is at 18 gaps** (`set_gaps.py lgn`). Two waves shipped 103 cards
-  (`sets::lgn`). Each remaining card wants one primitive: Chromeshell Crab
-  (exchange control of two creatures), Dermoplasm (put a morph card from hand
-  onto the battlefield, bouncing itself), Planar Guide (exile all creatures,
-  return at the next end step), Caller of the Claw (nontoken creatures put
-  into your graveyard from the battlefield *this turn*), Crookclaw Elder /
-  Keeper of the Nine Gales (tap two untapped [type] you control as a cost),
-  Dark Supplicant (three-zone search for a specific card name), Goblin
-  Assassin (each player flips; each tails sacrifices), Skirk Drill Sergeant
-  (may-pay then reveal-top-and-route), Hollow Specter (pay {X}, they reveal X,
-  you choose one to discard), Magma Sliver (granted activated pump scaled by
-  the Sliver count), Riptide Mangler (indefinite base-power copy), Corpse
-  Harvester (one search, two differently-filtered picks), Celestial Gatekeeper
-  (exile-self then a two-target graveyard reanimation), Ghastly Remains
-  (graveyard-scoped upkeep may-pay return), Beacon of Destiny (redirect the
-  next damage to you onto this creature), Goblin Goon (attack/block gated on
-  out-creaturing the other side), Whipgrass Entangler (a Cleric-scaled
-  per-creature attack/block tax).
+- ⏳ **Legions is at 9 gaps** (`set_gaps.py lgn`). Three waves shipped 112
+  cards (`sets::lgn`). Each remaining card wants one primitive: Dermoplasm
+  (put a morph card from hand onto the battlefield, bouncing itself), Planar
+  Guide (exile all creatures, return at the next end step), Dark Supplicant
+  (three-zone search for a specific card name), Goblin Assassin (each player
+  flips; each tails sacrifices), Hollow Specter (pay {X}, they reveal X, you
+  choose one to discard), Riptide Mangler (indefinite base-power copy), Beacon
+  of Destiny (redirect the next damage to you onto this creature), Goblin Goon
+  (attack/block gated on out-creaturing the other side), Whipgrass Entangler
+  (a Cleric-scaled per-creature attack/block tax).
 - ⏳ **"Bands with other" (CR 702.22b)** is unimplemented. Plain attacking
   bands ship (`DeclareAttackersBanded`); the quality-scoped variant needs a
   second keyword and a widened legality check in `declare_attackers_banded`.
@@ -5494,6 +5486,12 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   name, skipping the `name` key. That reaches every filter and effect body
   without a per-variant visitor, but a future enum with a unit variant named
   after a creature type would be caught in the same net.
+- ⏳ **The auto-targeter fills only one graveyard slot of an "up to N target"
+  trigger.** `auto_extra_targets_for` now peels a `Seq` whose only targeting
+  member is the multi-target body (Celestial Gatekeeper), and the max is read
+  correctly, but `auto_target_for_effect_avoiding_set` re-picks the already
+  claimed graveyard card, so the loop breaks after one. A `wants_ui` seat is
+  unaffected — it picks both.
 - ⏳ **Spy Network's "top card of that player's library" clause is dropped.**
   The hand and face-down halves ship (`LookAtHand` + `LookAtFaceDown`); a
   one-card library peek needs a `library_top_revealed_to` twin of

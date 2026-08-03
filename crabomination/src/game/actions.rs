@@ -13467,6 +13467,41 @@ impl GameState {
                 &mut events,
             );
         }
+        // "Tap N untapped [filter] you control" as a cost (Crookclaw Elder).
+        // Taps the least useful matches first (lowest power) so a bot doesn't
+        // tap out its best attackers to draw a card.
+        if let Some((filter, n)) = &ability.tap_others_cost {
+            let mut pool: Vec<(CardId, i32)> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == p
+                        && !c.tapped
+                        && c.id != card_id
+                        && self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            Some(card_id),
+                        )
+                })
+                .map(|c| (c.id, c.definition.power))
+                .collect();
+            if (pool.len() as u32) < *n {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            pool.sort_by_key(|(_, pow)| *pow);
+            for (id, _) in pool.into_iter().take(*n as usize) {
+                if let Some(c) = self.battlefield_find_mut(id) {
+                    c.tapped = true;
+                }
+                events.push(GameEvent::PermanentTapped {
+                    card_id: id,
+                    actor: Some(p),
+                    as_attacker: false,
+                });
+            }
+        }
         if ability.sac_cost {
             let is_creature = self.permanent_is_creature(card_id);
             // The activator is the player paying the cost; the

@@ -117,6 +117,18 @@ fn your_creatures_of(kind: CreatureType) -> Selector {
     Selector::EachPermanent(R::HasCreatureType(kind).and(R::ControlledByYou))
 }
 
+fn bear_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Bear".to_string(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        ..Default::default()
+    }
+}
+
 fn sliver_token() -> TokenDefinition {
     TokenDefinition {
         name: "Sliver".to_string(),
@@ -2140,6 +2152,252 @@ pub fn willbender() -> CardDefinition {
             vec![CreatureType::Human, CreatureType::Wizard],
             1,
             2,
+        )
+    }
+}
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────────
+
+/// Caller of the Claw — a flash Elf that pays out for the turn's carnage.
+/// (The count is the turn's creature deaths under your control; the printed
+/// nontoken rider isn't tracked separately.)
+pub fn caller_of_the_claw() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::CreaturesDiedThisTurn(PlayerRef::You),
+            definition: bear_token(),
+        })],
+        ..creature("Caller of the Claw", cost(&[generic(2), g()]), vec![CreatureType::Elf], 2, 2)
+    }
+}
+
+/// Celestial Gatekeeper — its death buys back two Birds and/or Clerics.
+pub fn celestial_gatekeeper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            // The exile is applied after the recursion; the printed order has
+            // no rules-visible difference (the Gatekeeper isn't a legal pick).
+            effect: Effect::Seq(vec![
+                Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 0,
+                    filter: R::PermanentCard
+                        .and(R::InYourGraveyard)
+                        .and(
+                            R::HasCreatureType(CreatureType::Bird)
+                                .or(R::HasCreatureType(CreatureType::Cleric)),
+                        ),
+                    effect: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    }),
+                },
+                Effect::Move { what: Selector::This, to: ZoneDest::Exile },
+            ]),
+        }],
+        ..creature(
+            "Celestial Gatekeeper",
+            cost(&[generic(3), w(), w()]),
+            vec![CreatureType::Bird, CreatureType::Cleric],
+            2,
+            2,
+        )
+    }
+}
+
+/// Chromeshell Crab — Morph {4}{U} to trade a creature straight up.
+pub fn chromeshell_crab() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(4), u()]))],
+        triggered_abilities: vec![on_turn_up(Effect::MayDo {
+            description: "Exchange control of two creatures?".into(),
+            body: Box::new(Effect::ExchangeControl {
+                a: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Creature.and(R::ControlledByYou),
+                },
+                b: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: R::Creature.and(R::ControlledByOpponent),
+                },
+            }),
+        })],
+        ..creature(
+            "Chromeshell Crab",
+            cost(&[generic(4), u()]),
+            vec![CreatureType::Crab, CreatureType::Beast],
+            3,
+            3,
+        )
+    }
+}
+
+/// Corpse Harvester — a creature buys a Zombie and a Swamp.
+pub fn corpse_harvester() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            tap_cost: true,
+            sac_other_filter: Some((R::Creature, 1)),
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::HasCreatureType(CreatureType::Zombie),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::Land.and(R::HasLandType(crate::card::LandType::Swamp)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Corpse Harvester",
+            cost(&[generic(3), b(), b()]),
+            vec![CreatureType::Zombie, CreatureType::Wizard],
+            3,
+            3,
+        )
+    }
+}
+
+/// Crookclaw Elder — Birds draw, Wizards grant flight.
+pub fn crookclaw_elder() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_others_cost: Some((R::HasCreatureType(CreatureType::Bird), 2)),
+                effect: draw(1),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_others_cost: Some((R::HasCreatureType(CreatureType::Wizard), 2)),
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(R::Creature),
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature(
+            "Crookclaw Elder",
+            cost(&[generic(5), u()]),
+            vec![CreatureType::Bird, CreatureType::Wizard],
+            3,
+            2,
+        )
+    }
+}
+
+/// Ghastly Remains — Amplify 1, and it buys itself back out of the yard.
+pub fn ghastly_remains() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: amplify(1, &[CreatureType::Zombie]),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::FromYourGraveyard,
+            ),
+            effect: Effect::MayPay {
+                description: "Pay {B}{B}{B} to return Ghastly Remains to your hand?".into(),
+                mana_cost: cost(&[b(), b(), b()]),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+                else_: None,
+            },
+        }],
+        ..creature("Ghastly Remains", cost(&[b(), b(), b()]), vec![CreatureType::Zombie], 0, 0)
+    }
+}
+
+/// Keeper of the Nine Gales — two Birds bounce anything.
+pub fn keeper_of_the_nine_gales() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            tap_others_cost: Some((R::HasCreatureType(CreatureType::Bird), 2)),
+            effect: Effect::Move {
+                what: target_filtered(R::Permanent),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Keeper of the Nine Gales",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Bird, CreatureType::Wizard],
+            1,
+            2,
+        )
+    }
+}
+
+/// Magma Sliver — every Sliver can channel the swarm into one attacker.
+pub fn magma_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have \"{T}: Target Sliver gets +X/+0, where X is the number of Slivers.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: all_of(CreatureType::Sliver),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::PumpPT {
+                        what: target_filtered(R::HasCreatureType(CreatureType::Sliver)),
+                        power: count_on_battlefield(R::HasCreatureType(CreatureType::Sliver)),
+                        toughness: Value::ZERO,
+                        duration: Duration::EndOfTurn,
+                    },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
+        ..sliver("Magma Sliver", cost(&[generic(3), r()]), 3, 3)
+    }
+}
+
+/// Skirk Drill Sergeant — every dead Goblin is a dig for another.
+pub fn skirk_drill_sergeant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Goblin),
+                },
+            ),
+            effect: Effect::MayPay {
+                description: "Pay {2}{R} to dig for a Goblin?".into(),
+                mana_cost: cost(&[generic(2), r()]),
+                body: Box::new(Effect::RevealTopMayPutOntoBattlefield {
+                    who: PlayerRef::You,
+                    filter: R::PermanentCard.and(R::HasCreatureType(CreatureType::Goblin)),
+                    counter: None,
+                    extra_types: vec![],
+                }),
+                else_: None,
+            },
+        }],
+        ..creature(
+            "Skirk Drill Sergeant",
+            cost(&[generic(1), r()]),
+            vec![CreatureType::Goblin],
+            2,
+            1,
         )
     }
 }

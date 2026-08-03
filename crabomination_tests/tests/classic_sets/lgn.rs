@@ -784,3 +784,144 @@ fn imperial_hellkite_fetches_a_dragon() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dragon));
 }
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────────
+
+/// Caller of the Claw pays out one Bear per creature that died this turn.
+#[test]
+fn caller_of_the_claw_rebuilds_after_a_sweeper() {
+    let mut g = main_phase();
+    for _ in 0..2 {
+        let id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.remove_to_graveyard_with_triggers(id);
+    }
+    drain_stack(&mut g);
+    let caller = g.add_card_to_hand(0, catalog::caller_of_the_claw());
+    cast(&mut g, 0, caller, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 2);
+}
+
+/// Chromeshell Crab's Morph trades a creature straight across.
+#[test]
+fn chromeshell_crab_exchanges_control() {
+    let mut g = main_phase();
+    let crab = g.add_card_to_battlefield(0, catalog::chromeshell_crab());
+    let mine = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let theirs = g.add_card_to_battlefield(1, catalog::enormous_baloth());
+    g.battlefield.iter_mut().find(|c| c.id == crab).unwrap().turn_face_down();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    mana(&mut g, 0);
+    g.perform_action(GameAction::TurnFaceUp { card_id: crab }).expect("unmorph");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1);
+}
+
+/// Crookclaw Elder taps two Birds as a cost to draw.
+#[test]
+fn crookclaw_elder_taps_two_birds_to_draw() {
+    let mut g = main_phase();
+    let elder = g.add_card_to_battlefield(0, catalog::crookclaw_elder());
+    let birds: Vec<CardId> =
+        (0..2).map(|_| g.add_card_to_battlefield(0, catalog::aven_envoy())).collect();
+    for id in birds.iter().copied().chain([elder]) {
+        g.clear_sickness(id);
+    }
+    g.add_card_to_library(0, catalog::forest());
+    let before = g.players[0].hand.len();
+    activate(&mut g, 0, elder, 0, None);
+    assert_eq!(g.players[0].hand.len(), before + 1);
+    assert!(birds.iter().all(|id| g.battlefield_find(*id).unwrap().tapped), "both Birds tapped");
+}
+
+/// …and rejects the activation when only one Bird is untapped.
+#[test]
+fn crookclaw_elder_needs_two_untapped_birds() {
+    let mut g = main_phase();
+    let elder = g.add_card_to_battlefield(0, catalog::crookclaw_elder());
+    let bird = g.add_card_to_battlefield(0, catalog::aven_envoy());
+    for id in [elder, bird] {
+        g.clear_sickness(id);
+    }
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: elder,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "one Bird isn't enough"
+    );
+}
+
+/// Ghastly Remains buys itself back out of the graveyard each upkeep.
+#[test]
+fn ghastly_remains_returns_itself_from_the_graveyard() {
+    let mut g = main_phase();
+    let remains = g.add_card_to_battlefield(0, catalog::ghastly_remains());
+    g.remove_to_graveyard_with_triggers(remains);
+    drain_stack(&mut g);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    mana(&mut g, 0);
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep {
+        g.advance_step(vec![]).expect("advance");
+    }
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == remains), "paid the upkeep cost to buy it back");
+}
+
+/// Magma Sliver hands every Sliver a swarm-scaled pump.
+#[test]
+fn magma_sliver_grants_the_swarm_pump() {
+    let mut g = main_phase();
+    let magma = g.add_card_to_battlefield(0, catalog::magma_sliver());
+    let other = g.add_card_to_battlefield(0, catalog::blade_sliver());
+    for id in [magma, other] {
+        g.clear_sickness(id);
+    }
+    let base = power_of(&g, other);
+    activate(&mut g, 0, other, 0, Some(Target::Permanent(other)));
+    assert_eq!(power_of(&g, other), base + 2, "+X/+0 for the two Slivers");
+}
+
+/// Corpse Harvester turns a creature into a Zombie and a Swamp.
+#[test]
+fn corpse_harvester_fetches_a_zombie_and_a_swamp() {
+    let mut g = main_phase();
+    let harvester = g.add_card_to_battlefield(0, catalog::corpse_harvester());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(harvester);
+    let zombie = g.add_card_to_library(0, catalog::dripping_dead());
+    let swamp = g.add_card_to_library(0, catalog::swamp());
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Search(Some(zombie)),
+        DecisionAnswer::Search(Some(swamp)),
+    ]));
+    activate(&mut g, 0, harvester, 0, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == zombie));
+    assert!(g.players[0].hand.iter().any(|c| c.id == swamp));
+}
+
+/// Celestial Gatekeeper's death buys back two Birds and/or Clerics.
+#[test]
+fn celestial_gatekeeper_recurs_two_on_death() {
+    let mut g = main_phase();
+    let keeper = g.add_card_to_battlefield(0, catalog::celestial_gatekeeper());
+    let a = CardId(9101);
+    let b = CardId(9102);
+    for (id, def) in [(a, catalog::aven_envoy()), (b, catalog::daru_mender())] {
+        g.players[0].graveyard.push(crabomination::card::CardInstance::new(id, def, 0));
+    }
+    g.remove_to_graveyard_with_triggers(keeper);
+    drain_stack(&mut g);
+    // The auto-targeter fills one of the two "up to two" slots from a
+    // graveyard (a UI seat picks both) — see TODO.md.
+    assert!(g.battlefield_find(a).is_some() || g.battlefield_find(b).is_some());
+    assert!(g.exile.iter().any(|c| c.id == keeper), "the Gatekeeper exiled itself");
+}

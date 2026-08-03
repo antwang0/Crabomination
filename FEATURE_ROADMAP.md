@@ -2409,12 +2409,12 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** The Odyssey block and **Onslaught** are all at zero
    (`set_gaps.py ody` / `tor` / `jud` / `ons`). **Legions** (`sets::lgn`) is
-   open at 18 gaps after two waves (103 cards); the remainder each want one
-   primitive (Chromeshell Crab's control exchange, Dermoplasm's put-a-morph,
-   Caller of the Claw's died-this-turn count, Crookclaw Elder's tap-two-Birds
-   cost, Goblin Assassin's per-player flips, Hollow Specter's pay-{X} reveal,
-   Riptide Mangler's indefinite base-power copy, Planar Guide's mass blink).
-   Then Scourge.
+   open at 9 gaps after three waves (112 cards); the remainder each want one
+   primitive (Dermoplasm's put-a-morph, Goblin Assassin's per-player flips,
+   Hollow Specter's pay-{X} reveal, Riptide Mangler's indefinite base-power
+   copy, Planar Guide's mass blink, Dark Supplicant's three-zone named search,
+   Beacon of Destiny's damage redirect, Goblin Goon's creature-count gate,
+   Whipgrass Entangler's scaled tax). Then Scourge.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2440,8 +2440,8 @@ Each a small targeted feature; sweep batch by batch.
   `EventKind::GainedControlOfThis` (Risky Move) recorded at the `change_control`
   chokepoint.
 
-- **Legions (LGN) opened** — `set_gaps.py lgn` 122 → 18 (`sets::lgn`, two waves,
-  103 cards).
+- **Legions (LGN) opened** — `set_gaps.py lgn` 122 → 9 (`sets::lgn`, three
+  waves, 112 cards).
   Amplify (CR 702.38) rides `enters_with_counters` over `CardsInHandMatching`;
   Provoke (CR 702.39) is an attack trigger over `Effect::Provoke`. New:
   `GameAction::TurnFaceUpForX` (CR 702.36b — an `{X}` in a morph cost, Warbreak
@@ -2449,7 +2449,10 @@ Each a small targeted feature; sweep batch by batch.
   just ETB triggers), and `StaticEffect::SpellsCantBeCounteredMatching` (Root
   Sliver — symmetric, matched against the stack card), and
   `Predicate::SourceCastFromOwnersHand` (Phage the Untouchable — the narrow
-  sibling of `SourceWasCast`).
+  sibling of `SourceWasCast`), and `ActivatedAbility.tap_others_cost`
+  ("tap N untapped [filter] you control" as a cost — Crookclaw Elder, Keeper
+  of the Nine Gales). `auto_extra_targets_for` now peels a `Seq` whose only
+  targeting member is the multi-target body (Celestial Gatekeeper).
 
 - **Onslaught (ONS) waves 8-10** — `set_gaps.py ons` 61 → 5 (`sets::ons3`,
   56 cards: the "choose a creature type" rares, the Morph one-offs, the
