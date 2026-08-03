@@ -611,3 +611,64 @@ fn remove_enchantments_returns_yours_and_destroys_the_rest() {
 }
 
 
+
+// ── Wave 7c ────────────────────────────────────────────────────────────────
+
+/// Nebuchadnezzar strips the copies of the name he calls.
+#[test]
+fn nebuchadnezzar_discards_the_named_copies() {
+    let mut g = main_phase();
+    let neb = g.add_card_to_battlefield(0, catalog::nebuchadnezzar());
+    g.clear_sickness(neb);
+    g.players[1].hand.clear();
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: neb,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: Some(3),
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.is_empty(), "all three shared the named card");
+}
+
+/// Quarum Trench Gnomes make a Plains produce colorless, indefinitely.
+#[test]
+fn quarum_trench_gnomes_turn_a_plains_colorless() {
+    let mut g = main_phase();
+    let gnomes = g.add_card_to_battlefield(0, catalog::quarum_trench_gnomes());
+    g.clear_sickness(gnomes);
+    let plains = g.add_card_to_battlefield(1, catalog::plains());
+    activate(&mut g, 0, gnomes, Some(Target::Permanent(plains)));
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: plains,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("tap for mana");
+    assert_eq!(g.players[1].mana_pool.amount(Color::White), 0, "no white");
+    assert_eq!(g.players[1].mana_pool.total(), 1, "one colorless instead");
+}
+
+/// Juxtapose trades the biggest creature on each side.
+#[test]
+fn juxtapose_swaps_the_biggest_creatures() {
+    let mut g = main_phase();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::juxtapose());
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0);
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1);
+}

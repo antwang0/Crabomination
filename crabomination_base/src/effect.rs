@@ -308,6 +308,10 @@ pub enum Selector {
     /// no creatures. Powers Triumph of Gerrard's "target creature you control
     /// with the greatest power" chapters (modeled non-targeted).
     GreatestPowerYouControl,
+    /// The single permanent `who` controls with the greatest mana value among
+    /// those matching `filter` (Juxtapose). Ties go to the first in
+    /// battlefield order, standing in for the printed controller's choice.
+    GreatestManaValueControlledMatching { who: PlayerRef, filter: SelectionRequirement },
     /// The single creature `ctx.controller` controls with the greatest power
     /// among those matching `filter`. Empty when none match — read through
     /// `Value::PowerOf` this yields 0, so `Max(Const(n), PowerOf(..))` floors at
@@ -4584,6 +4588,13 @@ pub enum Effect {
     /// Revel in Silence: each resolved player can't cast spells or activate
     /// loyalty abilities for the rest of the turn
     /// (`Player.silenced_this_turn`).
+    /// CR 614 — "if target land is tapped for mana, it produces colorless
+    /// mana instead of its usual type", indefinitely (Quarum Trench Gnomes).
+    ReplaceTargetLandManaWithColorless { what: Selector },
+    /// "Choose a card name. Target opponent reveals `count` cards at random
+    /// from their hand, then discards all cards with that name revealed this
+    /// way." Nebuchadnezzar.
+    NameCardRevealRandomDiscardNamed { who: PlayerRef, count: Value },
     SilencePlayersThisTurn { who: PlayerRef },
     /// "Exile [this spell]" as part of its own resolution (Revel in
     /// Silence). Same flag pattern as `ShuffleSelfIntoLibrary`.

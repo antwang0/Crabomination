@@ -794,3 +794,69 @@ pub fn remove_enchantments() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Wave 7c ────────────────────────────────────────────────────────────────
+
+/// Nebuchadnezzar — name a card and rummage X of their hand for copies.
+pub fn nebuchadnezzar() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[x()]),
+            sorcery_speed: true,
+            effect: Effect::NameCardRevealRandomDiscardNamed {
+                who: PlayerRef::Target(0),
+                count: Value::XFromCost,
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Nebuchadnezzar",
+            cost(&[generic(3), u(), b()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            3,
+            3,
+        )
+    }
+}
+
+/// Quarum Trench Gnomes — turns a Plains into a colorless source for good.
+pub fn quarum_trench_gnomes() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::ReplaceTargetLandManaWithColorless {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::HasLandType(crate::card::LandType::Plains),
+                },
+            },
+            ..Default::default()
+        }],
+        ..creature("Quarum Trench Gnomes", cost(&[generic(3), r()]), vec![CreatureType::Gnome], 1, 1)
+    }
+}
+
+/// Juxtapose — swap the biggest creature, then the biggest artifact.
+pub fn juxtapose() -> CardDefinition {
+    let biggest = |who: PlayerRef, filter: R| Selector::GreatestManaValueControlledMatching {
+        who,
+        filter,
+    };
+    let swap = |filter: R| Effect::ExchangeControl {
+        a: biggest(PlayerRef::You, filter.clone()),
+        b: biggest(PlayerRef::Target(0), filter),
+    };
+    CardDefinition {
+        name: "Juxtapose",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            swap(R::Creature),
+            swap(R::Artifact),
+            // The target slot is a player; the swaps read it via `Target(0)`.
+            Effect::Noop,
+        ]),
+        ..Default::default()
+    }
+}

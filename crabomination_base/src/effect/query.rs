@@ -241,7 +241,10 @@ impl Effect {
                     || then.as_ref().is_some_and(|e| e.requires_target())
                     || else_.as_ref().is_some_and(|e| e.requires_target())
             }
-            Effect::Ante { what } | Effect::CantAttackNextTurn { what } => sel_has_target(what),
+            Effect::Ante { what }
+            | Effect::CantAttackNextTurn { what }
+            | Effect::ReplaceTargetLandManaWithColorless { what } => sel_has_target(what),
+            Effect::NameCardRevealRandomDiscardNamed { who, .. } => player_has_target(who),
             Effect::AtYourNextUpkeep { body } => body.requires_target(),
             Effect::ReattachTargetAura { aura, to } => sel_has_target(aura) || sel_has_target(to),
             Effect::AnteToGraveyard { who }
@@ -2595,6 +2598,10 @@ impl Effect {
             const PLAYER: SelectionRequirement = SelectionRequirement::Player;
             match s {
                 Selector::TargetFiltered { slot: s2, filter } if *s2 == slot => Some(filter),
+                Selector::GreatestManaValueControlledMatching {
+                    who: PlayerRef::Target(s2),
+                    ..
+                } if *s2 == slot => Some(&PLAYER),
                 Selector::ControlledBy {
                     who: PlayerRef::Target(s2),
                     ..

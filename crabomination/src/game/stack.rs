@@ -3121,7 +3121,7 @@ impl GameState {
         self.creature_etb_steal_this_turn.clear();
         self.search_tax_paid_this_turn.clear();
         self.damage_prevented_sources.clear();
-        self.land_mana_replacements_this_turn.clear();
+        self.land_mana_replacements_this_turn.retain(|r| r.indefinite);
         self.colored_mana_becomes_this_turn.clear();
         self.blocks_declared_this_turn.clear();
         self.turn_granted_triggers.clear();

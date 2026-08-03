@@ -8478,7 +8478,11 @@ impl GameState {
                     let out = self
                         .land_mana_replacements_this_turn
                         .iter()
-                        .find(|r| r.who.is_none_or(|w| w == p) && !(r.nonbasic_only && basic))
+                        .find(|r| {
+                            r.who.is_none_or(|w| w == p)
+                                && !(r.nonbasic_only && basic)
+                                && r.land.is_none_or(|id| Some(id) == ctx.source)
+                        })
                         .map(|r| r.output);
                     if let Some(out) = out {
                         match out {
@@ -10835,6 +10839,35 @@ impl GameState {
                             .find(|c| c.id == cid)
                             .is_some_and(|c| c.definition.is_land());
                         if !is_land {
+                            self.discard_card(p, cid, events);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::NameCardRevealRandomDiscardNamed { who, count } => {
+                use rand::seq::SliceRandom;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                for p in self.resolve_players(who, ctx) {
+                    // The namer picks the densest name in the victim's hand —
+                    // the best guess an auto seat can make.
+                    let named = rank_names_by_frequency(
+                        self.players[p].hand.iter().map(|c| c.definition.name),
+                    )
+                    .into_iter()
+                    .next();
+                    let Some(named) = named else { continue };
+                    let mut ids: Vec<CardId> =
+                        self.players[p].hand.iter().map(|c| c.id).collect();
+                    ids.shuffle(&mut rand::rng());
+                    for cid in ids.into_iter().take(n) {
+                        let hit = self.players[p]
+                            .hand
+                            .iter()
+                            .find(|c| c.id == cid)
+                            .is_some_and(|c| c.definition.name == named);
+                        if hit {
                             self.discard_card(p, cid, events);
                         }
                     }
@@ -20460,12 +20493,32 @@ impl GameState {
                 self.land_mana_replacements_this_turn.push(LandManaReplacement {
                     who: mine_only.then_some(ctx.controller),
                     nonbasic_only: *nonbasic_only,
+                    land: None,
+                    indefinite: false,
                     output: if *color_of_choice {
                         LandManaOutput::ColorOfChoice
                     } else {
                         LandManaOutput::Colorless
                     },
                 });
+                Ok(())
+            }
+
+            Effect::ReplaceTargetLandManaWithColorless { what } => {
+                // CR 614 — "if target land is tapped for mana, it produces
+                // colorless instead" (Quarum Trench Gnomes). Indefinite, so it
+                // sits out the cleanup sweep.
+                use crate::game::types::{LandManaOutput, LandManaReplacement};
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(id) = ent.as_permanent_id() else { continue };
+                    self.land_mana_replacements_this_turn.push(LandManaReplacement {
+                        who: None,
+                        nonbasic_only: false,
+                        land: Some(id),
+                        indefinite: true,
+                        output: LandManaOutput::Colorless,
+                    });
+                }
                 Ok(())
             }
 
@@ -29195,6 +29248,28 @@ impl GameState {
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
                 .collect(),
+
+            Selector::GreatestManaValueControlledMatching { who, filter } => {
+                let seats = self.resolve_players(who, ctx);
+                seats
+                    .into_iter()
+                    .filter_map(|seat| {
+                        self.battlefield
+                            .iter()
+                            .filter(|c| c.controller == seat)
+                            .filter(|c| {
+                                self.evaluate_requirement_static(
+                                    filter,
+                                    &Target::Permanent(c.id),
+                                    ctx.controller,
+                                    ctx.source,
+                                )
+                            })
+                            .max_by_key(|c| c.definition.cost.cmc())
+                            .map(|c| EntityRef::Permanent(c.id))
+                    })
+                    .collect()
+            }
 
             Selector::GreatestPowerControlledMatching(filter) => self
                 .battlefield

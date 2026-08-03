@@ -184,8 +184,8 @@ general "any player may …, if no one does …" shape, with
 
 ## Legends — opened
 
-`set_gaps.py leg` is at **14** (277 → … → 64 → 43 → 14; `sets::leg`–`leg6`,
-259 cards, tests in `classic_sets/leg`–`leg6`). Wave 7 shipped the last
+`set_gaps.py leg` is at **11** (277 → … → 64 → 43 → 11; `sets::leg`–`leg6`,
+262 cards, tests in `classic_sets/leg`–`leg6`). Wave 7 shipped the last
 creatures, artifacts, Auras and spells; its primitives are listed in
 FEATURE_ROADMAP.md → "Recently closed".
 
@@ -206,17 +206,10 @@ Still open (each blocked on one primitive):
   draw in each of their draw steps", with a discard-then-draw / mill branch.
 - **Equinox** — grant a land "{T}: counter target spell **if it would destroy a
   land you control**"; no predicate reads a spell's effect tree.
-- **Juxtapose** — exchange the greatest-mana-value creature (then artifact);
-  `Value::GreatestManaValueAmongPermanents` exists but there is no *selector*
-  for the permanent holding it.
 - **Knowledge Vault** — exile-face-down linked to the source, with a
   return-to-hand cash-in and a leaves-the-battlefield bin.
 - **Land Equilibrium** — a land-ETB replacement scoped to opponents with at
   least as many lands as you.
-- **Nebuchadnezzar** — name a card, reveal X at random from a hand, discard the
-  matches; `RevealRandomDiscardNonland` has no name-matching sibling.
-- **Quarum Trench Gnomes** — an indefinite per-land mana replacement
-  ("produces {C} instead of {W}").
 - **Reverberation** — redirect *all damage a specific sorcery spell would deal
   this turn* to its controller.
 - **Wall of Caltrops** — "if at least one other Wall is blocking that creature
@@ -237,6 +230,9 @@ Still open (each blocked on one primitive):
   untap lock can read them; proliferate sees them on the wrong object.
 - **Nova Pentacle's redirect target is chosen by the activator**, not "of an
   opponent's choice".
+- **Juxtapose breaks ties in battlefield order**, not by the printed
+  "their controller chooses one of them"; `Nebuchadnezzar` and Petra Sphinx
+  name the densest card rather than prompting a seat.
 - **Falling Star** settles for one random creature; the printed dexterity
   clause has no analog.
 - **Chained `AbilityCostChoice` suspends lose earlier picks** — each replay
@@ -5605,7 +5601,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   is at zero. Each landed its primitive: `Effect::ReplaceCreatureTypeText`,
   `Keyword::DividesCombatDamageAmongDefenders`, `Effect::EachPlayerChoosesNumberHighestLoses`,
   and `GameEvent::ControlChanged` + `EventKind::GainedControlOfThis`.
-- ⏳ **Legends is at 14 gaps** (`set_gaps.py leg`). Seven waves shipped 259
+- ⏳ **Legends is at 11 gaps** (`set_gaps.py leg`). Seven waves shipped 262
   cards; see "Legends — opened" above for what's left and why — each remaining
   card is blocked on one primitive.
 - ⏳ **The client can't declare attacking bands.** The engine action

@@ -1779,6 +1779,14 @@ pub struct LandManaReplacement {
     pub who: Option<usize>,
     /// Only nonbasic lands (Pale Moon).
     pub nonbasic_only: bool,
+    /// Only this one land (Quarum Trench Gnomes). `None` = every land in
+    /// scope. Set together with `indefinite`, since the printed per-land
+    /// wordings say "this effect lasts indefinitely".
+    #[serde(default)]
+    pub land: Option<crate::card::CardId>,
+    /// Survives the cleanup sweep that clears the turn-scoped entries.
+    #[serde(default)]
+    pub indefinite: bool,
     /// What the land produces instead.
     pub output: LandManaOutput,
 }

@@ -2474,8 +2474,8 @@ Each a small targeted feature; sweep batch by batch.
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged** and **New Phyrexia** (the Scars block
-   is closed) are all at zero. **Legends** is open at 14 after seven waves
-   (259 cards, `sets::leg`–`leg6`).
+   is closed) are all at zero. **Legends** is open at 11 after seven waves
+   (262 cards, `sets::leg`–`leg6`).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2509,7 +2509,7 @@ Each a small targeted feature; sweep batch by batch.
   `EventScope::EnchantedBySource` triggers fire off a sac outlet and not only
   off the lethal-damage SBA (Puppet Master).
 
-- **Legends wave 7** — `set_gaps.py leg` 43 → 14 (`sets::leg6`, 29 cards).
+- **Legends wave 7** — `set_gaps.py leg` 43 → 11 (`sets::leg6`, 32 cards).
   New primitives: `Keyword::CantAttackIfAttackedLastTurn` with the
   `attacked_own_turn` / `attacked_last_turn` untap roll-over,
   `Effect::CantAttackNextTurn` + `AttackBan` (Wall of Dust),
@@ -2517,8 +2517,11 @@ Each a small targeted feature; sweep batch by batch.
   enchant filter), `Effect::{NameCardThenRevealTopBin, AtYourNextUpkeep}`,
   `EachPlayerMayPutPermanentFromHand.repeat` (Eureka),
   `Value::DamageToSourceThisTurnFromOthersNamedSame` (Blazing Effigy),
-  `R::{DealtDamageToSourceThisTurn, BlockingOrBlockedBySource}`, and
-  `CounterType::{Pupa, Dream, Pin}`.
+  `R::{DealtDamageToSourceThisTurn, BlockingOrBlockedBySource}`,
+  `CounterType::{Pupa, Dream, Pin}`, an indefinite per-land mana replacement
+  (`Effect::ReplaceTargetLandManaWithColorless` — `LandManaReplacement` gains
+  `land` + `indefinite`), `Effect::NameCardRevealRandomDiscardNamed`, and
+  `Selector::GreatestManaValueControlledMatching` (Juxtapose).
 
 - **Client / server** — `PermanentView.cant_attack_this_turn` surfaces a live
   CR 508.1a turn ban and the counter tooltip explains it.

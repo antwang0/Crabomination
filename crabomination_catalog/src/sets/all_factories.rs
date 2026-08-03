@@ -10383,6 +10383,9 @@ static LEG6: &[Factory] = &[
     super::leg6::floral_spuzzem,
     super::leg6::falling_star,
     super::leg6::remove_enchantments,
+    super::leg6::nebuchadnezzar,
+    super::leg6::quarum_trench_gnomes,
+    super::leg6::juxtapose,
 ];
 
 static LEG5: &[Factory] = &[
