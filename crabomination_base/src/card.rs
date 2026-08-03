@@ -47,7 +47,7 @@ pub enum CreatureType {
     Knight, Soldier, Wizard, Cleric, Rogue, Warrior, Beast, Bird, Soltari, Dauthi,
     Elemental, Djinn, Efreet, Horror, Specter, Cat, Insect, Spider, Wurm, Worm, Alien,
     Armadillo, Nautilus,
-    Bear, Ape, Rat, Fungus, Snail, Treefolk, Giant, Ogre, Shaman, Druid,
+    Bear, Ape, Rat, Fungus, Snail, Treefolk, Giant, Ogre, Orgg, Shaman, Druid,
     Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose, Clown, Dalek, Nomad,
     Mystic,
     Doctor,
@@ -1274,6 +1274,12 @@ pub enum Keyword {
     /// *computed* keyword set to zero out the bearer's combat damage in
     /// both the first-strike and regular damage steps.
     DealsNoCombatDamage,
+    /// "You may assign this creature's combat damage divided as you choose
+    /// among defending player and/or any number of creatures they control"
+    /// (Butcher Orgg). Read off the *computed* keyword set in `combat.rs`:
+    /// the bearer's damage bypasses the CR 510.1c blocker order entirely and
+    /// is divided freely over the defending player and their creatures.
+    DividesCombatDamageAmongDefenders,
     /// "Assigns combat damage equal to its toughness rather than its power"
     /// (Doran, the Siege Tower; Bill the Pony's temporary grant). A marker
     /// keyword read off the *computed* keyword set in `combat.rs`: the bearer

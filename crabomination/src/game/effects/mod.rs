@@ -11770,6 +11770,48 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReplaceCreatureTypeText { what } => {
+                // CR 612.1 — the rewrite is indefinite and reaches the card's
+                // ability text, so it edits the object's definition rather
+                // than stacking a layer-3 effect. The `from` suggestions lead
+                // with the types the target actually prints.
+                use crate::decision::Decision;
+                let Some(target_id) = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                        _ => None,
+                    })
+                else {
+                    return Ok(());
+                };
+                let mut suggestions: Vec<crate::card::CreatureType> = self
+                    .find_card_anywhere(target_id)
+                    .map(|c| c.definition.subtypes.creature_types.clone())
+                    .unwrap_or_default();
+                for ct in self.creature_type_suggestions(ctx.controller) {
+                    if !suggestions.contains(&ct) {
+                        suggestions.push(ct);
+                    }
+                }
+                let decision = Decision::ChooseCreatureTypePair {
+                    source: target_id,
+                    suggestions,
+                    // CR 205.3m — "the new creature type can't be Wall."
+                    excluded: vec![crate::card::CreatureType::Wall],
+                };
+                let pending = PendingEffectState::ReplaceCreatureTypeTextPending { target_id };
+                if self.players[ctx.controller].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
             Effect::ReplaceColorWord { what, duration } => {
                 // CR 612 — two ChooseColor prompts pick the word to replace
                 // and its replacement; applied as a layer-3 text change. The

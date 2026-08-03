@@ -1513,6 +1513,10 @@ pub enum PendingEffectState {
     /// (Cavern of Souls). The chooser picks a creature type and the engine
     /// stamps it onto `target_id.chosen_creature_type`.
     ChooseCreatureTypePending { target_id: CardId },
+    /// CR 612.1 — suspended on a `ChooseCreatureTypePair` for
+    /// `Effect::ReplaceCreatureTypeText`; the answer rewrites `target_id`'s
+    /// definition in place (Artificial Evolution).
+    ReplaceCreatureTypeTextPending { target_id: CardId },
     /// Suspended on a `NameCard` decision for `Effect::NameCard` (Pithing
     /// Needle, Phyrexian Revoker). The chooser names a card and the engine
     /// stamps it onto `target_id.named_card`.
@@ -1940,6 +1944,10 @@ pub enum GameEvent {
     /// CR 702.26 — a permanent phased in (returned from `phased_out` during its
     /// controller's untap step). Fires "when this phases in" triggers.
     PermanentPhasedIn { card_id: CardId },
+    /// CR 800.4 / 613.1b — a permanent's controller changed. Fires "when you
+    /// gain control of this permanent" triggers (Risky Move); `from` is the
+    /// previous controller.
+    ControlChanged { card_id: CardId, from: usize, to: usize },
     /// CR 701.40 — a permanent explored. `card_id` is the exploring
     /// permanent; `controller` is its controller (whose library was
     /// revealed). `explored_land` is true when the revealed top card was a

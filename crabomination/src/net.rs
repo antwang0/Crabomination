@@ -2080,6 +2080,17 @@ pub enum DecisionWire {
         #[serde(default)]
         excluded: Vec<crate::card::CreatureType>,
     },
+    /// CR 612.1 — "replace all instances of one creature type with another"
+    /// (Artificial Evolution). The client picks two types and answers
+    /// `DecisionAnswer::CreatureTypePair(from, to)`; `excluded` applies to
+    /// the replacement type only.
+    ChooseCreatureTypePair {
+        source: CardId,
+        #[serde(default)]
+        suggestions: Vec<crate::card::CreatureType>,
+        #[serde(default)]
+        excluded: Vec<crate::card::CreatureType>,
+    },
     /// CR 201.3 — "As [card] enters, choose a card name." Pithing Needle.
     NameCard {
         source: CardId,
@@ -2244,6 +2255,13 @@ impl From<&Decision> for DecisionWire {
             }
             Decision::ChooseCreatureType { source, suggestions, excluded } => {
                 DecisionWire::ChooseCreatureType {
+                    source: *source,
+                    suggestions: suggestions.clone(),
+                    excluded: excluded.clone(),
+                }
+            }
+            Decision::ChooseCreatureTypePair { source, suggestions, excluded } => {
+                DecisionWire::ChooseCreatureTypePair {
                     source: *source,
                     suggestions: suggestions.clone(),
                     excluded: excluded.clone(),
@@ -2434,6 +2452,7 @@ pub enum GameEventWire {
     PermanentUntapped { card_id: CardId },
     PermanentPhasedOut { card_id: CardId },
     PermanentPhasedIn { card_id: CardId },
+    ControlChanged { card_id: CardId, from: usize, to: usize },
     Explored { card_id: CardId, controller: usize },
     Discovered { player: usize, value: u32 },
     BecameMonstrous { card_id: CardId },
@@ -2672,6 +2691,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::PermanentPhasedIn { card_id } => {
                 GameEventWire::PermanentPhasedIn { card_id: *card_id }
+            }
+            GameEvent::ControlChanged { card_id, from, to } => {
+                GameEventWire::ControlChanged { card_id: *card_id, from: *from, to: *to }
             }
             GameEvent::Explored { card_id, controller, .. } => {
                 GameEventWire::Explored { card_id: *card_id, controller: *controller }
@@ -2984,6 +3006,9 @@ impl GameEventWire {
             E::PermanentUntapped { card_id } => format!("{} untapped", name(*card_id)),
             E::PermanentPhasedOut { card_id } => format!("{} phased out", name(*card_id)),
             E::PermanentPhasedIn { card_id } => format!("{} phased in", name(*card_id)),
+            E::ControlChanged { card_id, to, .. } => {
+                format!("{} changed control to {}", name(*card_id), pn(*to))
+            }
             E::Explored { card_id, .. } => format!("{} explored", name(*card_id)),
             E::Discovered { player, value } => format!("{} discovered {value}", pn(*player)),
             E::BecameMonstrous { card_id } => format!("{} became monstrous", name(*card_id)),

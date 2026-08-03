@@ -12537,6 +12537,11 @@ static ONS3: &[Factory] = &[
     super::ons3::aven_soulgazer,
     super::ons3::menacing_ogre,
 ];
+static ONS4: &[Factory] = &[
+    super::ons4::artificial_evolution,
+    super::ons4::butcher_orgg,
+    super::ons4::risky_move,
+];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,
 ];
@@ -19629,6 +19634,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("ons", ONS),
     ("ons2", ONS2),
     ("ons3", ONS3),
+    ("ons4", ONS4),
     ("pc2", PC2),
     ("pcy", PCY),
     ("pcy2", PCY2),

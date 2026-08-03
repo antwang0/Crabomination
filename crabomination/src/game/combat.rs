@@ -2188,7 +2188,11 @@ impl GameState {
         let active = self.active_player_idx;
         for atk in attacker_infos.iter().filter(|a| a.should_deal) {
             let blocker_ids = self.blockers_of(atk.id);
-            if blocker_ids.len() <= 1 {
+            // A free divider (Butcher Orgg) always gets an assignment choice —
+            // it divides over the defending player's creatures, not its
+            // blockers, so the multi-blocker gate doesn't apply.
+            let free_divider = !self.free_division_targets(atk.id, computed).is_empty();
+            if blocker_ids.len() <= 1 && !free_divider {
                 continue;
             }
 
@@ -2228,8 +2232,9 @@ impl GameState {
             let assigner = banding_assigner.or(defender_assigner).unwrap_or(active);
             let assigner_ui = self.players[assigner].wants_ui;
 
-            // 1) Blocker order (CR 510.1c).
-            if !self.combat_damage_order.contains_key(&atk.id) {
+            // 1) Blocker order (CR 510.1c) — a free divider has no order to
+            // announce, so it goes straight to the assignment.
+            if !self.combat_damage_order.contains_key(&atk.id) && !free_divider {
                 let decision = self.combat_damage_order_decision(atk.id, &blocker_ids);
                 if assigner_ui {
                     self.pending_decision = Some(PendingDecision {
@@ -2246,7 +2251,7 @@ impl GameState {
                 let order = self.resolve_damage_order(&blocker_ids, &answer);
                 self.combat_damage_order.insert(atk.id, order);
             }
-            let order = self.combat_damage_order[&atk.id].clone();
+            let order = self.combat_damage_order.get(&atk.id).cloned().unwrap_or_default();
 
             // 2) Damage assignment across the ordered blockers (CR 510.1d).
             if !self.combat_damage_assignment.contains_key(&atk.id) {
@@ -2255,10 +2260,16 @@ impl GameState {
                 } else {
                     atk.power.max(0) as u32
                 };
-                let lethals = self.combat_lethals(atk.has_deathtouch, &order, computed);
+                let (lethals, trample) = self.combat_assignment_plan(
+                    atk.id,
+                    atk.has_deathtouch,
+                    atk.has_trample,
+                    &order,
+                    computed,
+                );
                 // No meaningful choice with zero power — store the default.
                 if total_power == 0 {
-                    let split = self.default_damage_split(total_power, &lethals, atk.has_trample);
+                    let split = self.default_damage_split(total_power, &lethals, trample);
                     self.combat_damage_assignment.insert(atk.id, split);
                     continue;
                 }
@@ -2277,7 +2288,7 @@ impl GameState {
                 }
                 let answer = self.decider.decide(&decision);
                 let split =
-                    self.resolve_damage_assignment(total_power, &lethals, atk.has_trample, &answer);
+                    self.resolve_damage_assignment(total_power, &lethals, trample, &answer);
                 self.combat_damage_assignment.insert(atk.id, split);
             }
         }
@@ -2378,6 +2389,63 @@ impl GameState {
     /// Lethal damage required for each blocker in `order` (its toughness, or 1
     /// under deathtouch per CR 702.2e). Blockers no longer on the battlefield
     /// resolve to 0.
+    /// Butcher Orgg — "you may assign this creature's combat damage divided as
+    /// you choose among defending player and/or any number of creatures they
+    /// control". Returns the divisible creature set (every creature the
+    /// defending player controls, id-ordered) or empty when the attacker has
+    /// no such ability.
+    fn free_division_targets(
+        &self,
+        attacker: CardId,
+        computed: &[ComputedPermanent],
+    ) -> Vec<CardId> {
+        let free = computed.iter().any(|c| {
+            c.id == attacker
+                && c.keywords.contains(&Keyword::DividesCombatDamageAmongDefenders)
+        });
+        if !free {
+            return vec![];
+        }
+        let Some(defender) = self
+            .attacking
+            .iter()
+            .find(|a| a.attacker == attacker)
+            .and_then(|a| self.defender_for(a.target))
+        else {
+            return vec![];
+        };
+        let mut ids: Vec<CardId> = computed
+            .iter()
+            .filter(|c| {
+                c.controller == defender && c.card_types.contains(&crate::card::CardType::Creature)
+            })
+            .map(|c| c.id)
+            .collect();
+        ids.sort_by_key(|id| id.0);
+        ids
+    }
+
+    /// The `(id, lethal)` set an attacker divides its combat damage among, and
+    /// whether unassigned damage flows to the defending player. Normally the
+    /// ordered blockers with trample as the outlet (CR 510.1c-d); a free
+    /// divider (Butcher Orgg) uses the defending player's creatures with no
+    /// lethal requirement and the player always as the outlet.
+    fn combat_assignment_plan(
+        &self,
+        attacker: CardId,
+        attacker_deathtouch: bool,
+        has_trample: bool,
+        order: &[CardId],
+        computed: &[ComputedPermanent],
+    ) -> (Vec<(CardId, u32)>, bool) {
+        let free = self.free_division_targets(attacker, computed);
+        if free.is_empty() {
+            (self.combat_lethals(attacker_deathtouch, order, computed), has_trample)
+        } else {
+            (free.into_iter().map(|id| (id, 0)).collect(), true)
+        }
+    }
+
     fn combat_lethals(
         &self,
         attacker_deathtouch: bool,
@@ -2441,10 +2509,11 @@ impl GameState {
                 } else {
                     power.max(0) as u32
                 };
-                let lethals = self.combat_lethals(deathtouch, &order, &computed);
                 // A multi-block blocker (CR 510.1e) has no trample outlet.
                 let trample = self.attackers_blocked_by(attacker).len() <= 1
                     && atk_cp.is_some_and(|c| c.keywords.contains(&Keyword::Trample));
+                let (lethals, trample) =
+                    self.combat_assignment_plan(attacker, deathtouch, trample, &order, &computed);
                 let split = self.resolve_damage_assignment(total_power, &lethals, trample, answer);
                 self.combat_damage_assignment.insert(attacker, split);
             }
@@ -2582,8 +2651,11 @@ impl GameState {
             {
                 blocker_ids = order.clone();
             }
+            // Butcher Orgg divides over the defending player's creatures
+            // instead of its blockers, blocked or not.
+            let free_targets = self.free_division_targets(atk.id, computed);
 
-            if blocker_ids.is_empty() {
+            if blocker_ids.is_empty() && free_targets.is_empty() {
                 // CR 510.1c — an attacker that became blocked stays blocked
                 // even if all its blockers left combat (died to first-strike
                 // damage or removal). Without trample it assigns no combat
@@ -2630,26 +2702,32 @@ impl GameState {
                 // default). The lethal for each is 1 under deathtouch (CR
                 // 702.2e).
                 // CR 510.1c — lethal accounts for marked damage; deathtouch
-                // needs only 1 (CR 702.2e). Shared with `combat_lethals`.
-                let lethals: Vec<(CardId, u32)> = blocker_ids
-                    .iter()
-                    .map(|&bid| {
-                        let tough = computed_of(bid)
-                            .map(|c| c.toughness.max(0) as u32)
-                            .unwrap_or(0);
-                        let marked = self
-                            .battlefield_find(bid)
-                            .map(|c| c.damage)
-                            .unwrap_or(0);
-                        (bid, if atk.has_deathtouch { 1 } else { tough.saturating_sub(marked) })
-                    })
-                    .collect();
+                // needs only 1 (CR 702.2e). A free divider has no lethal
+                // requirement and always spills the remainder to the player.
+                let (lethals, leftover_to_player) = if free_targets.is_empty() {
+                    let lethals = blocker_ids
+                        .iter()
+                        .map(|&bid| {
+                            let tough = computed_of(bid)
+                                .map(|c| c.toughness.max(0) as u32)
+                                .unwrap_or(0);
+                            let marked = self
+                                .battlefield_find(bid)
+                                .map(|c| c.damage)
+                                .unwrap_or(0);
+                            (bid, if atk.has_deathtouch { 1 } else { tough.saturating_sub(marked) })
+                        })
+                        .collect::<Vec<_>>();
+                    (lethals, atk.has_trample)
+                } else {
+                    (free_targets.iter().map(|&id| (id, 0)).collect(), true)
+                };
                 let assignment = self
                     .combat_damage_assignment
                     .get(&atk.id)
                     .cloned()
                     .unwrap_or_else(|| {
-                        self.default_damage_split(total_power, &lethals, atk.has_trample)
+                        self.default_damage_split(total_power, &lethals, leftover_to_player)
                     });
                 let mut lifelink_dealt = 0i32;
                 let mut assigned_to_blockers = 0u32;
@@ -2742,7 +2820,7 @@ impl GameState {
                 }
 
                 let trample_leftover = total_power.saturating_sub(assigned_to_blockers);
-                if atk.has_trample && trample_leftover > 0 {
+                if leftover_to_player && trample_leftover > 0 {
                     // Trample-over damage to the defending player/PW is also
                     // subject to prevention shields; lifelink follows the
                     // post-prevention amount.

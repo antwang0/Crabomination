@@ -40,6 +40,11 @@ static FINALE_SORCERY_SLOT: std::sync::LazyLock<SelectionRequirement> =
 /// a player and then acts on the permanents that player controls (Sleep).
 static IMPLICIT_PLAYER_TARGET: SelectionRequirement = SelectionRequirement::Player;
 
+/// Player restriction synthesized for an `Effect::GainControl { to: Target(n) }`
+/// recipient. Handing control to a *target* player is always handing it to an
+/// opponent (Wishclaw Talisman, Risky Move); "you" is spelled `to: None`.
+static IMPLICIT_OPPONENT_TARGET: SelectionRequirement = SelectionRequirement::OpponentPlayer;
+
 /// `Some(&Player)` when `what` is `ControlledBy { who: Target(n) }` for `slot`.
 fn implicit_player_for_slot(what: &Selector, slot: u8) -> Option<&'static SelectionRequirement> {
     matches!(what, Selector::ControlledBy { who: PlayerRef::Target(n), .. } if *n == slot)
@@ -787,6 +792,7 @@ impl Effect {
             Effect::Explore { who } => sel_has_target(who),
             Effect::Goad { what } => sel_has_target(what),
             Effect::Suspect { what } | Effect::ClearSuspected { what } => sel_has_target(what),
+            Effect::ReplaceCreatureTypeText { what } => sel_has_target(what),
             Effect::Detain { what } => sel_has_target(what),
             Effect::Fateseal { who, amount } => {
                 player_has_target(who) || value_has_target(amount)
@@ -1426,6 +1432,7 @@ impl Effect {
             | Effect::DestroyThenVictimControllersMakeToken { what, .. }
             | Effect::Suspect { what }
             | Effect::ClearSuspected { what }
+            | Effect::ReplaceCreatureTypeText { what }
             | Effect::Detain { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellIfNameExiledWithSource { what }
@@ -2113,6 +2120,9 @@ impl Effect {
             Effect::Explore { .. } => "explore".into(),
             Effect::Goad { .. } => "goad target creature".into(),
             Effect::Suspect { .. } => "suspect target creature".into(),
+            Effect::ReplaceCreatureTypeText { .. } => {
+                "change all instances of one creature type to another".into()
+            }
             Effect::Discover { .. } => "discover".into(),
             Effect::ExileTopUntilNonlandMayPlay { free, .. } => {
                 if *free {
@@ -2911,8 +2921,16 @@ impl Effect {
                 | Effect::MakeSpellUncounterable { what }
                 | Effect::Suspect { what }
                 | Effect::ClearSuspected { what }
-                | Effect::GainControl { what, .. }
-                | Effect::GainControlWhileSourceRemains { what }
+                | Effect::ReplaceCreatureTypeText { what } => sel_find(what, slot),
+                // `to: Target(n)` declares slot `n` as a player target — the
+                // recipient's only mention (Risky Move's "that opponent gains
+                // control of that creature").
+                Effect::GainControl { what, to, .. } => sel_find(what, slot).or_else(|| {
+                    to.as_ref()
+                        .is_some_and(|p| matches!(p, PlayerRef::Target(n) if *n == slot))
+                        .then_some(&IMPLICIT_OPPONENT_TARGET)
+                }),
+                Effect::GainControlWhileSourceRemains { what }
                 | Effect::GainControlWhileSourceTapped { what }
                 | Effect::GrantKeywordWhileSourceTapped { what, .. }
                 | Effect::SacrificeThenRevealUntilSharedType { what }

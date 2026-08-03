@@ -114,6 +114,11 @@ pub(crate) fn event_matches_spec(
         (EventKind::RoomFullyUnlocked, GameEvent::RoomFullyUnlocked { .. }) => true,
         (EventKind::CaseSolved, GameEvent::CaseSolved { .. }) => true,
         (EventKind::PhasesIn, GameEvent::PermanentPhasedIn { .. }) => true,
+        // CR 800.4 — the trigger's controller must be the seat that just
+        // gained control (Risky Move fires for the new controller only).
+        (EventKind::GainedControlOfThis, GameEvent::ControlChanged { card_id, to, .. }) => {
+            *card_id == source.id && *to == source.controller
+        }
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
         (EventKind::Discovered, GameEvent::Discovered { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
@@ -372,6 +377,11 @@ pub(crate) fn event_matches_spec(
         ) || matches!(
             event,
             GameEvent::MountSaddled { riders, .. } if riders.contains(&source.id)
+        ) || matches!(
+            // CR 800.4 — "when you gain control of this permanent" (Risky
+            // Move). The kind arm above already pinned the new controller.
+            event,
+            GameEvent::ControlChanged { card_id, .. } if *card_id == source.id
         ),
         // CR 810.8 — in Two-Headed Giant, "you" effects fan out to
         // teammates: a "whenever you gain life" trigger on team A
@@ -918,6 +928,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::CounterAdded { card_id, .. }
         | GameEvent::CounterRemoved { card_id, .. }
         | GameEvent::TurnedFaceUp { card_id }
+        | GameEvent::ControlChanged { card_id, .. }
         | GameEvent::AttackerDeclared(card_id) => Some(*card_id),
         GameEvent::BlockerDeclared { blocker, .. } => Some(*blocker),
         GameEvent::AttackerWentUnblocked { attacker } => Some(*attacker),

@@ -148,6 +148,19 @@ pub enum Decision {
         excluded: Vec<crate::card::CreatureType>,
     },
 
+    /// CR 612.1 — "replace all instances of one creature type with another"
+    /// (Artificial Evolution). Answered with `CreatureTypePair(from, to)`;
+    /// `excluded` applies to the *replacement* type only (CR 205.3m — the new
+    /// type can't be Wall). `AutoDecider` swaps the target's first printed
+    /// type for the first legal suggestion.
+    ChooseCreatureTypePair {
+        source: CardId,
+        #[serde(default)]
+        suggestions: Vec<crate::card::CreatureType>,
+        #[serde(default)]
+        excluded: Vec<crate::card::CreatureType>,
+    },
+
     /// CR 201.3 — "As this enters, choose a card name." Pithing Needle,
     /// Phyrexian Revoker. Answered with `DecisionAnswer::NamedCard(name)`
     /// (free text over the catalog; an empty string names nothing).
@@ -371,6 +384,8 @@ pub enum DecisionAnswer {
     SerumPowder(CardId),
     /// A named creature type (Cavern of Souls).
     CreatureType(crate::card::CreatureType),
+    /// CR 612.1 — `(from, to)` answering `Decision::ChooseCreatureTypePair`.
+    CreatureTypePair(crate::card::CreatureType, crate::card::CreatureType),
     /// CR 201.3 — a named card (Pithing Needle / Phyrexian Revoker). An
     /// empty string names nothing.
     NamedCard(String),
@@ -518,6 +533,17 @@ impl Decider for AutoDecider {
                     demon
                 };
                 DecisionAnswer::CreatureType(pick)
+            }
+            // CR 612.1 — replace the target's first printed type with the
+            // first legal suggestion that isn't already it.
+            Decision::ChooseCreatureTypePair { suggestions, excluded, .. } => {
+                let from = suggestions.first().copied().unwrap_or(crate::card::CreatureType::Human);
+                let to = suggestions
+                    .iter()
+                    .find(|t| **t != from && !excluded.contains(t))
+                    .copied()
+                    .unwrap_or(crate::card::CreatureType::Human);
+                DecisionAnswer::CreatureTypePair(from, to)
             }
             // CR 201.3 — AutoDecider takes the engine's best suggestion
             // (most-common name in the relevant zone); names nothing when

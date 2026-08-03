@@ -2454,6 +2454,10 @@ pub enum EventKind {
     /// CR 702.26 — a permanent phased in. The phasing-in permanent is the
     /// event subject; matched to `GameEvent::PermanentPhasedIn`.
     PhasesIn,
+    /// CR 800.4 — "when you gain control of this permanent from another
+    /// player" (Risky Move). `SelfSource`; the trigger's controller must be
+    /// the *new* controller, so it fires once for whoever just took it.
+    GainedControlOfThis,
     /// CR 701.40 — a permanent explored (Wildgrowth Walker, Tishana's
     /// Wayfinder payoffs). The exploring permanent is the event subject;
     /// matched to `GameEvent::Explored`.
@@ -5208,6 +5212,13 @@ pub enum Effect {
     /// (layer 3; rewrites the type line + landwalk, so a swapped basic taps
     /// for the new color). Trait Doctoring, Mind Bend.
     ReplaceBasicLandType { what: Selector, duration: Duration },
+    /// CR 612.1 — change target spell or permanent's text by replacing all
+    /// instances of one creature type with another, indefinitely; the new
+    /// type can't be Wall (CR 205.3m). Unlike its color/land-type siblings
+    /// this rewrites the object's *definition* rather than emitting a layer-3
+    /// effect, so it survives a zone change into the battlefield and reaches
+    /// creature-type words inside ability text. Artificial Evolution.
+    ReplaceCreatureTypeText { what: Selector },
     /// The controller chooses a color as the source enters; stamp it onto the
     /// source's `chosen_color` (CR 614 — Coldsteel Heart, choose-a-color mana
     /// rocks). Read later by `ManaPayload::ChosenColorOfSource`.

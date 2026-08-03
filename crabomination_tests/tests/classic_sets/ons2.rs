@@ -708,3 +708,74 @@ fn menacing_ogre_charges_the_high_bidders() {
         2
     );
 }
+
+// ── Wave 11: the set's last four cards (`catalog::sets::ons4`) ──────────────
+
+/// CR 612.1 — Artificial Evolution rewrites a creature type everywhere in the
+/// target's text: the type line *and* the filters its abilities read.
+#[test]
+fn artificial_evolution_rewrites_the_targets_text() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::CreatureTypePair(
+        CreatureType::Goblin,
+        CreatureType::Bear,
+    )]));
+    let lord = g.add_card_to_battlefield(0, catalog::goblin_king());
+    let goblin = g.add_card_to_battlefield(0, catalog::goblin_sledder());
+    let bear = g.add_card_to_battlefield(0, bear());
+    let evo = g.add_card_to_hand(0, catalog::artificial_evolution());
+    cast(&mut g, 0, evo, Some(Target::Permanent(lord)));
+    let types = &g.battlefield_find(lord).unwrap().definition.subtypes.creature_types;
+    assert!(types.contains(&CreatureType::Bear) && !types.contains(&CreatureType::Goblin));
+    assert_eq!(
+        g.battlefield_find(lord).unwrap().definition.name,
+        "Goblin King",
+        "CR 612.2 — the rewrite never touches the card's name"
+    );
+    let power = |g: &GameState, id: CardId| g.computed_permanent(id).unwrap().power;
+    assert_eq!(power(&g, bear), 3, "the lord now pumps Bears");
+    assert_eq!(power(&g, goblin), 1, "and no longer pumps Goblins");
+}
+
+/// Butcher Orgg divides its damage over the defending player's creatures —
+/// blockers or not — with no lethal-assignment requirement.
+#[test]
+fn butcher_orgg_divides_damage_among_defenders() {
+    let mut g = main_phase();
+    let orgg = g.add_card_to_battlefield(0, catalog::butcher_orgg());
+    g.clear_sickness(orgg);
+    let bystander = g.add_card_to_battlefield(1, bear());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::CombatDamageAssignment(
+        vec![(bystander, 2)],
+    )]));
+    attack_with(&mut g, orgg);
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.battlefield_find(bystander).is_none(), "the unblocking Bear took lethal");
+    assert_eq!(g.players[1].life, 16, "and the other 4 hit the player");
+}
+
+/// CR 800.4 — Risky Move hands itself to each upkeep's player, and the new
+/// controller's gain-control trigger gambles one of their creatures.
+#[test]
+fn risky_move_changes_hands_and_gambles_a_creature() {
+    let mut g = main_phase();
+    let move_ = g.add_card_to_battlefield(0, catalog::risky_move());
+    let victim = g.add_card_to_battlefield(1, bear());
+    // Losing the flip hands the chosen creature to the chosen opponent.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(false)]));
+    g.active_player_idx = 1;
+    g.step = TurnStep::Untap;
+    g.priority.player_with_priority = 1;
+    while g.step != TurnStep::Upkeep {
+        g.advance_step(vec![]).expect("advance");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(move_).unwrap().controller, 1, "it hops to the upkeep player");
+    assert_eq!(
+        g.battlefield_find(victim).unwrap().controller,
+        0,
+        "the lost flip gives the chosen creature to the opponent"
+    );
+}

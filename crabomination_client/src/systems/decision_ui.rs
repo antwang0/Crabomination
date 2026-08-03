@@ -130,6 +130,9 @@ pub struct DecisionUiState {
     /// For DivideDamage (CR 601.2d): working per-target amounts, parallel
     /// to the wire's target list.
     pub divide: Vec<u32>,
+    /// For ChooseCreatureTypePair (CR 612.1): the type picked first (the one
+    /// being replaced). `None` until the player picks it.
+    pub type_pair_from: Option<crabomination::card::CreatureType>,
     /// CardId the modal was last spawned for — avoids respawning each frame.
     pub spawned_for: Option<DecisionKey>,
 }
@@ -176,6 +179,9 @@ pub enum DecisionKey {
     DivideDamage(CardId, u32, Vec<Target>),
     /// `Decision::ChooseCreatureType` — keyed by the asking source.
     ChooseCreatureType(CardId),
+    /// `Decision::ChooseCreatureTypePair` (CR 612.1) — keyed by the target,
+    /// plus the staged first pick so the second prompt respawns.
+    ChooseCreatureTypePair(CardId, Option<crabomination::card::CreatureType>),
     /// `Decision::CoinFlip` (CR 705) — keyed by the flipping player.
     CoinFlip(usize),
     /// `Decision::DieRoll` (CR 706) — keyed by player + die size.
@@ -250,6 +256,9 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
         }
         DecisionWire::ChooseCreatureType { source, .. } => {
             Some(DecisionKey::ChooseCreatureType(*source))
+        }
+        DecisionWire::ChooseCreatureTypePair { source, .. } => {
+            Some(DecisionKey::ChooseCreatureTypePair(*source, None))
         }
         DecisionWire::CoinFlip { player } => Some(DecisionKey::CoinFlip(*player)),
         DecisionWire::DieRoll { player, sides } => {
@@ -334,6 +343,7 @@ pub fn spawn_decision_ui(
                 state.modes_selected = None;
                 state.amount = 0;
                 state.divide.clear();
+                state.type_pair_from = None;
                 state.spawned_for = None;
             }
             if targeting.pending_decision_target {
@@ -594,7 +604,34 @@ pub fn spawn_decision_ui(
         }
         DecisionWire::ChooseCreatureType { suggestions, excluded, .. } => {
             state.spawned_for = Some(key);
-            spawn_creature_type_modal(&mut commands, &ui_fonts, suggestions, excluded);
+            spawn_creature_type_modal(
+                &mut commands,
+                &ui_fonts,
+                "Choose a creature type",
+                suggestions,
+                excluded,
+            );
+        }
+        // CR 612.1 — two picks in sequence: the type being replaced (no
+        // exclusion), then its replacement (Wall barred).
+        DecisionWire::ChooseCreatureTypePair { suggestions, excluded, .. } => {
+            state.spawned_for = Some(key);
+            match state.type_pair_from {
+                None => spawn_creature_type_modal(
+                    &mut commands,
+                    &ui_fonts,
+                    "Choose the creature type to replace",
+                    suggestions,
+                    &[],
+                ),
+                Some(from) => spawn_creature_type_modal(
+                    &mut commands,
+                    &ui_fonts,
+                    &format!("Replace {from:?} with"),
+                    suggestions,
+                    excluded,
+                ),
+            }
         }
         DecisionWire::CoinFlip { .. } => {
             state.spawned_for = Some(key);
@@ -3694,6 +3731,7 @@ fn spawn_divide_damage_modal(
 fn spawn_creature_type_modal(
     commands: &mut Commands,
     ui_fonts: &UiFonts,
+    title: &str,
     suggestions: &[crabomination::card::CreatureType],
     excluded: &[crabomination::card::CreatureType],
 ) {
@@ -3705,10 +3743,10 @@ fn spawn_creature_type_modal(
     let types: Vec<crabomination::card::CreatureType> =
         suggestions.iter().copied().filter(|t| !excluded.contains(t)).collect();
     let title = if excluded.is_empty() {
-        "Choose a creature type".to_string()
+        title.to_string()
     } else {
         let names: Vec<String> = excluded.iter().map(|t| format!("{t:?}")).collect();
-        format!("Choose a creature type other than {}", names.join(" or "))
+        format!("{title} (not {})", names.join(" or "))
     };
     commands.entity(panel).with_children(|p| {
         p.spawn((Text::new(title), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
@@ -3910,18 +3948,30 @@ pub fn handle_creature_type_buttons(
     buttons: Query<(&Interaction, &CreatureTypePickButton), Changed<Interaction>>,
 ) {
     let Some(cv) = &view.0 else { return };
-    if !matches!(
-        cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
-        Some(DecisionWire::ChooseCreatureType { .. })
-    ) {
-        return;
-    }
+    let wire = cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref());
+    let pair = match wire {
+        Some(DecisionWire::ChooseCreatureType { .. }) => false,
+        Some(DecisionWire::ChooseCreatureTypePair { .. }) => true,
+        _ => return,
+    };
     let Some(outbox) = outbox else { return };
     for (interaction, btn) in &buttons {
-        if *interaction == Interaction::Pressed {
-            outbox.submit(GameAction::SubmitDecision(DecisionAnswer::CreatureType(btn.0)));
-            state.spawned_for = None;
-            return;
+        if *interaction != Interaction::Pressed {
+            continue;
         }
+        match (pair, state.type_pair_from) {
+            // CR 612.1 first pick — stage it and respawn for the replacement.
+            (true, None) => state.type_pair_from = Some(btn.0),
+            (true, Some(from)) => {
+                outbox.submit(GameAction::SubmitDecision(DecisionAnswer::CreatureTypePair(
+                    from, btn.0,
+                )));
+                state.type_pair_from = None;
+            }
+            _ => outbox
+                .submit(GameAction::SubmitDecision(DecisionAnswer::CreatureType(btn.0))),
+        }
+        state.spawned_for = None;
+        return;
     }
 }

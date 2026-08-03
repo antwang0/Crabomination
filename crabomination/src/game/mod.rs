@@ -1025,6 +1025,13 @@ pub struct GameState {
     /// no `CreatureDied` event covers.
     #[serde(skip, default)]
     pub(crate) pending_permanent_deaths: Vec<(CardId, usize, bool, bool)>,
+    /// Control changes since the last trigger dispatch: `(card_id, from, to)`.
+    /// Recorded at the single `change_control` chokepoint and drained by
+    /// `dispatch_triggers_for_events` into `GameEvent::ControlChanged`, so
+    /// "when you gain control of this permanent" triggers (Risky Move) fire
+    /// however control moved.
+    #[serde(skip, default)]
+    pub(crate) pending_control_changes: Vec<(CardId, usize, usize)>,
     /// True when an effect has flagged "prevent all combat damage this turn"
     /// (CR 615 — damage prevention as a replacement effect). Wired by
     /// Owlin Shieldmage's ETB trigger, Holy Day, Hallowed Burial-adjacent
@@ -1763,6 +1770,7 @@ impl Clone for GameState {
             resolution_answer_log: self.resolution_answer_log.clone(),
             pending_cost_events: self.pending_cost_events.clone(),
             pending_permanent_deaths: self.pending_permanent_deaths.clone(),
+            pending_control_changes: self.pending_control_changes.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
             nonland_permanent_left_bf_this_turn: self.nonland_permanent_left_bf_this_turn,
             prevent_combat_damage_except: self.prevent_combat_damage_except.clone(),
@@ -2038,6 +2046,7 @@ impl GameState {
             resolution_answer_log: Vec::new(),
             pending_cost_events: Vec::new(),
             pending_permanent_deaths: Vec::new(),
+            pending_control_changes: Vec::new(),
             prevent_combat_damage_this_turn: false,
             nonland_permanent_left_bf_this_turn: false,
             prevent_combat_damage_except: None,
@@ -12589,6 +12598,9 @@ impl GameState {
         // non-creature deaths (which emit no `CreatureDied`) still reach
         // "creature or artifact you control dies" triggers.
         let deaths = std::mem::take(&mut self.pending_permanent_deaths);
+        // CR 800.4 — control changes recorded at the `change_control`
+        // chokepoint since the last dispatch (Risky Move's hand-off).
+        let control_changes = std::mem::take(&mut self.pending_control_changes);
         let synthesized: Vec<GameEvent> = deaths
             .into_iter()
             // CR 700.4 — a death redirected away from the graveyard (Rest in
@@ -12601,6 +12613,11 @@ impl GameState {
                 is_creature,
                 is_artifact,
             })
+            .chain(
+                control_changes
+                    .into_iter()
+                    .map(|(card_id, from, to)| GameEvent::ControlChanged { card_id, from, to }),
+            )
             .collect();
         let folded: Vec<GameEvent>;
         let events: &[GameEvent] = if synthesized.is_empty() {
@@ -15926,6 +15943,17 @@ impl GameState {
                 self.chosen_creature_type_scratch = Some(*ct);
                 Ok(Vec::new())
             }
+            PendingEffectState::ReplaceCreatureTypeTextPending { target_id } => {
+                let DecisionAnswer::CreatureTypePair(from, to) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // CR 205.3m — Wall is never a legal replacement, however the
+                // answer arrived.
+                if *to != crate::card::CreatureType::Wall && from != to {
+                    self.replace_creature_type_text(target_id, *from, *to);
+                }
+                Ok(Vec::new())
+            }
             PendingEffectState::PutFromZonesPending { player } => {
                 let DecisionAnswer::Search(chosen_id) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
@@ -16287,6 +16315,27 @@ impl GameState {
         }
         out.truncate(24);
         out
+    }
+
+    /// CR 612.1 — rewrite every printed instance of `from` as `to` in
+    /// `target_id`'s definition (type line, filters and ability bodies alike).
+    /// The walk runs over the serialized definition so the whole `Effect` /
+    /// `SelectionRequirement` tree is covered without a per-variant visitor;
+    /// `name` is skipped so a card called "Goblin …" keeps its name (CR 612.2).
+    pub(crate) fn replace_creature_type_text(
+        &mut self,
+        target_id: CardId,
+        from: crate::card::CreatureType,
+        to: crate::card::CreatureType,
+    ) {
+        let Some(card) = self.find_card_anywhere_mut(target_id) else { return };
+        let Ok(json) = serde_json::to_value(card.definition.as_ref()) else { return };
+        let (from_word, to_word) = (format!("{from:?}"), format!("{to:?}"));
+        let rewritten = rewrite_json_words(json, &from_word, &to_word);
+        let Ok(def) = serde_json::from_value::<crate::card::CardDefinition>(rewritten) else {
+            return;
+        };
+        *std::sync::Arc::make_mut(&mut card.definition) = def;
     }
 
     /// Resolve a spell's effect tree. On suspension, installs a
@@ -16947,6 +16996,7 @@ impl GameState {
         c.controller = new_ctrl;
         c.summoning_sick = true;
         c.echo_paid = false;
+        self.pending_control_changes.push((id, prev, new_ctrl));
         // CR 506.4 — a permanent is removed from combat when its controller
         // changes, so a mid-combat steal stops it attacking or blocking.
         self.remove_from_combat(id);
@@ -18643,6 +18693,28 @@ fn extract_power_gate(
     let mut gate = None;
     let residual = walk(req, &mut gate)?;
     gate.map(|g| (g, residual.unwrap_or(R::Any)))
+}
+
+/// Rewrite every string *value* equal to `from` as `to`, skipping the `name`
+/// key. Serde renders a unit enum variant (a `CreatureType`) as exactly that
+/// string, so this substitutes the type wherever a definition mentions it.
+fn rewrite_json_words(v: serde_json::Value, from: &str, to: &str) -> serde_json::Value {
+    use serde_json::Value;
+    match v {
+        Value::String(s) if s == from => Value::String(to.to_string()),
+        Value::Array(a) => {
+            Value::Array(a.into_iter().map(|x| rewrite_json_words(x, from, to)).collect())
+        }
+        Value::Object(o) => Value::Object(
+            o.into_iter()
+                .map(|(k, x)| {
+                    let x = if k == "name" { x } else { rewrite_json_words(x, from, to) };
+                    (k, x)
+                })
+                .collect(),
+        ),
+        other => other,
+    }
 }
 
 fn requirement_mentions_power(req: &SelectionRequirement) -> bool {

@@ -149,6 +149,7 @@ pub use sets::jud2::*;
 pub use sets::ons::*;
 pub use sets::ons2::*;
 pub use sets::ons3::*;
+pub use sets::ons4::*;
 pub use sets::vanguard::*;
 pub use sets::jud::*;
 pub use sets::tor::*;
