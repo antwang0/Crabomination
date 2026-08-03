@@ -11391,6 +11391,21 @@ impl GameState {
         if let Some(c) = self.battlefield_find(card_id) {
             out.extend(c.granted_activated_abilities.iter().cloned());
             out.extend(c.granted_activated_eot.iter().cloned());
+            // CR 804.2 — the deploy creatures option gives every creature
+            // "{T}: Target teammate gains control of this creature. Activate
+            // only as a sorcery."
+            if self.deploy_creatures && c.definition.is_creature() {
+                out.push(crate::effect::ActivatedAbility {
+                    tap_cost: true,
+                    sorcery_speed: true,
+                    effect: Effect::GainControl {
+                        what: Selector::This,
+                        to: Some(crate::effect::PlayerRef::EachTeammate),
+                        duration: crate::effect::Duration::Permanent,
+                    },
+                    ..Default::default()
+                });
+            }
         }
         for src in &self.battlefield {
             for sa in &src.definition.static_abilities {

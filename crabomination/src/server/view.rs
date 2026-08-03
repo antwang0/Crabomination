@@ -1369,7 +1369,7 @@ fn project_permanent(
             .iter()
             .filter_map(|(b, a)| (*b == card.id).then_some(*a))
             .collect(),
-        abilities: project_abilities(card),
+        abilities: project_abilities_with_granted(card, &state.granted_abilities_for(card.id)),
         loyalty_abilities: project_loyalty_abilities(card, battlefield),
         loyalty_uses_remaining: card.definition.is_planeswalker().then(|| {
             let allowed: u8 = if card.definition.loyalty_twice_each_turn
@@ -1944,14 +1944,25 @@ fn project_loyalty_abilities(
         .collect()
 }
 
+/// Printed abilities only — for zones where no battlefield context applies
+/// (a Vanguard's command-zone abilities).
 fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
+    project_abilities_with_granted(card, &[])
+}
+
+/// The full clickable list: printed abilities, then everything
+/// `GameState::granted_abilities_for` reports (instance grants like Urza's
+/// Saga chapters, and battlefield statics like Cryptolith Rite / Magma
+/// Sliver). `activate_ability` resolves index `printed_count + n` to
+/// `granted[n]`, so the two lists must be concatenated in exactly this order.
+fn project_abilities_with_granted(
+    card: &CardInstance,
+    granted: &[crate::effect::ActivatedAbility],
+) -> Vec<AbilityView> {
     card.definition
         .activated_abilities
         .iter()
-        // Instance-granted abilities (Urza's Saga chapters) surface after
-        // the printed ones — same index order `activate_ability` resolves.
-        .chain(card.granted_activated_abilities.iter())
-        .chain(card.granted_activated_eot.iter())
+        .chain(granted.iter())
         .enumerate()
         .map(|(i, a)| {
             let (gate_label, gate_blocked) = match &a.condition {

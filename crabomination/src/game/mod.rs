@@ -307,6 +307,11 @@ pub struct GameState {
     /// seat is its own singleton team".
     #[serde(default)]
     pub teams: Vec<crate::team::Team>,
+    /// CR 804 — the deploy creatures option (always on in Emperor, optional
+    /// in other team variants): every creature gains "{T}: Target teammate
+    /// gains control of this creature. Activate only as a sorcery."
+    #[serde(default)]
+    pub deploy_creatures: bool,
     /// All permanents currently in play.
     ///
     /// The heavy zones (battlefield, phased_out, exile, stack,
@@ -1645,6 +1650,7 @@ impl Clone for GameState {
             players: self.players.clone(),
             attack_option: self.attack_option,
             teams: self.teams.clone(),
+            deploy_creatures: self.deploy_creatures,
             battlefield: self.battlefield.clone(),
             phased_out: self.phased_out.clone(),
             exile: self.exile.clone(),
@@ -1922,6 +1928,7 @@ impl GameState {
             players,
             attack_option: AttackOption::default(),
             teams,
+            deploy_creatures: false,
             battlefield: CowBox::default(),
             phased_out: CowBox::default(),
             exile: CowBox::default(),

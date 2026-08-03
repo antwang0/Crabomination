@@ -1040,9 +1040,12 @@ impl GameState {
     }
 
     /// CR 707 — apply a permanent's `enters_as_copy` replacement as it
-    /// enters the battlefield. Auto-picks the highest-power matching
-    /// permanent (excluding the copier itself); no-op when nothing
-    /// matches. Called from the spell-resolution ETB path before SBA.
+    /// enters the battlefield. The controller picks which matching permanent
+    /// to copy (`Decision::ChooseCards`); an unanswered prompt takes the
+    /// highest-power match, which is also what a bot seat wants (the copier
+    /// is typically a printed 0/0 that would otherwise die to SBA). No-op
+    /// when nothing matches. Declining the printed "you may" isn't offered.
+    /// Called from the spell-resolution ETB path before SBA.
     pub(crate) fn apply_enters_as_copy(
         &mut self,
         card_id: CardId,
@@ -1063,9 +1066,8 @@ impl GameState {
             .find(|c| c.id == card_id)
             .map(|c| c.definition.name)
             .unwrap_or("");
-        // Best legal copy source: highest power among matching permanents,
-        // never the copier itself.
-        let source = self
+        // Every legal copy source, never the copier itself.
+        let mut candidates: Vec<(CardId, String, i32)> = self
             .battlefield
             .iter()
             .filter(|c| c.id != card_id)
@@ -1077,9 +1079,30 @@ impl GameState {
                     None,
                 )
             })
-            .max_by_key(|c| c.definition.power)
-            .map(|c| c.id);
-        let Some(source) = source else { return false };
+            .map(|c| (c.id, c.definition.name.to_string(), c.definition.power))
+            .collect();
+        if candidates.is_empty() {
+            return false;
+        }
+        // Best default: highest power (the copier is typically a 0/0 that
+        // would otherwise die to SBA).
+        candidates.sort_by_key(|(_, _, p)| std::cmp::Reverse(*p));
+        let fallback = candidates[0].0;
+        let answer = self.decider.decide(&crate::decision::Decision::ChooseCards {
+            source: card_id,
+            prompt: "Enter as a copy of which permanent?".to_string(),
+            candidates: candidates.iter().map(|(id, n, _)| (*id, n.clone())).collect(),
+            min: 1,
+            max: 1,
+        });
+        let source = match &answer {
+            crate::decision::DecisionAnswer::Cards(picked) => picked
+                .first()
+                .filter(|id| candidates.iter().any(|(c, _, _)| c == *id))
+                .copied()
+                .unwrap_or(fallback),
+            _ => fallback,
+        };
         let ctx = EffectContext::for_trigger(
             card_id,
             controller,
@@ -28900,6 +28923,12 @@ impl GameState {
                     .filter(|i| self.players[*i].is_alive() && self.players[*i].speed < 4)
                     .collect(),
             ),
+            PlayerRef::EachTeammate => self.apnap_sort(
+                self.teammates(ctx.controller)
+                    .into_iter()
+                    .filter(|i| self.players[*i].is_alive())
+                    .collect(),
+            ),
             PlayerRef::EachPlayerExceptControllerOf(sel) => {
                 let excl = self.resolve_selector(sel, ctx).into_iter().find_map(|e| match e {
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
@@ -29068,6 +29097,9 @@ impl GameState {
             PlayerRef::EachPlayer => (0..self.players.len()).find(|i| self.players[*i].is_alive()),
             PlayerRef::EachPlayerWithoutMaxSpeed => (0..self.players.len())
                 .find(|i| self.players[*i].is_alive() && self.players[*i].speed < 4),
+            PlayerRef::EachTeammate => {
+                self.teammates(ctx.controller).into_iter().find(|i| self.players[*i].is_alive())
+            }
             PlayerRef::EachPlayerExceptControllerOf(_) => {
                 self.resolve_players(pref, ctx).into_iter().next()
             }

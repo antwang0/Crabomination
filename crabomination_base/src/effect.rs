@@ -37,6 +37,9 @@ pub enum PlayerRef {
     EachOpponent,
     /// Every player in turn order.
     EachPlayer,
+    /// CR 804.2 — every *other* seat on the controller's team ("target
+    /// teammate"). Empty in a free-for-all, where every team is a singleton.
+    EachTeammate,
     /// Every player whose CR 702.179 speed is below max (< 4) — "each player
     /// who doesn't have max speed" (Outpace Oblivion). A player with no speed
     /// (never started their engines) counts as below max.
