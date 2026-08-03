@@ -2326,8 +2326,28 @@ Each a small targeted feature; sweep batch by batch.
   and the defender's tricks are visible at declaration time — adopted at
   54.4 % [53.0, 55.8] over 4 794 fixed+cube games with dimir control (the
   blind search's documented −5.2 archetype) the biggest winner at 61.3 %.
-  Remaining: race math, multi-blocker math.
-- ⏳ **Better sequencing** (land drops, hold-up, when to cast).
+  Race math is coded (`atk-race`: an attack sim that ends inside burn
+  range, any life ≤ 10, extends one turn cycle) but not adopted — the
+  first decider read 51.2 % [49.8 %, 52.6 %] over 4 796 fixed+cube games,
+  interval astride 50 %; a pre-registered 4× run (1 600 games/archetype)
+  decides. Remaining: multi-blocker math.
+- 🟡 **Planeswalker piloting** — emblem values are priced by what the
+  emblem actually does (draw/damage/drain/token/lifegain shapes, static
+  buffs, clamped 20–60) instead of a near-flat constant, and a doomed
+  walker cashes out: when enemy board power covers its loyalty, the
+  ability pick keeps only loyalty-spending finalists, so the bot takes
+  the removal/ultimate now rather than plussing into a free kill.
+- 🟡 **Better sequencing** (land drops, hold-up, when to cast) — reactive
+  deployment landed: the stack-response value bar drops 10 → 5 with 6+
+  cards in hand so answers get spent instead of rotting in a clogged
+  hand; instant-speed removal fires at a declared attacker during
+  DeclareBlockers when the attacker is worth it
+  (`pick_defensive_removal`, ward- and outcome-gated); and
+  sacrifice-for-value abilities are cracked when the settled outcome
+  beats staying pat (`pick_sacrifice_value`). Self-cost optional
+  triggers are likewise judged by settled outcome
+  (`decide_optional_by_outcome`). Remaining: land-drop choice, deliberate
+  hold-up planning.
 - 🟡 **Mulligan decisions** — `RandomBot` ships flood/screw mulligans with
   color-screw awareness. Remaining: transitive fetch/dual sources.
 - 🟡 **Targeting / mode / X-value choices** — mid-resolution modals are picked

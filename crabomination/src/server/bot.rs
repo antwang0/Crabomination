@@ -118,6 +118,13 @@ pub struct EvalWeights {
     /// invisible" — the documented blindness behind the over-attack the
     /// SOS college probes measured.
     pub attack_sim_spells: bool,
+    /// Extend the attack simulation one extra turn cycle when it ends
+    /// with either life total at 10 or below. The one-cycle horizon can
+    /// see "this creature survives to block" but not "this is the race I
+    /// need to win" — the roadmap's race-math gap. An extension only
+    /// when the sim ends inside burn range keeps the cost bounded to the
+    /// positions where the extra cycle can actually reach a result.
+    pub attack_race_horizon: bool,
 }
 
 impl EvalWeights {
@@ -143,6 +150,7 @@ impl EvalWeights {
             block_search: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
+            attack_race_horizon: false,
         }
     }
 
@@ -194,6 +202,7 @@ impl EvalWeights {
             block_search: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
+            attack_race_horizon: false,
         }
     }
 
@@ -228,6 +237,7 @@ impl EvalWeights {
             block_search: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
+            attack_race_horizon: false,
         }
     }
 
@@ -388,6 +398,27 @@ impl EvalWeights {
     /// wall clock of `atk`, all of it on DeclareAttackers/blocks ticks.
     pub const fn attack_search_sim() -> Self {
         Self { attack_sim_spells: true, ..Self::attack_search() }
+    }
+
+    /// The adopted default plus the race horizon
+    /// ([`attack_race_horizon`](Self::attack_race_horizon)) — the
+    /// roadmap's "race math" hypothesis: an attack sim that ends inside
+    /// burn range keeps going one cycle so a winning (or losing) race is
+    /// scored as such instead of mid-sprint.
+    ///
+    /// **Measured, inconclusive at the first decider**: 51.2 %
+    /// [49.8 %, 52.6 %] over 4 796 fixed+cube games vs `atk-sim`
+    /// (seed 11) — the interval straddles 50 %, so per the harness rule
+    /// this is not an adoption. The point edge (+1.2) sits right at the
+    /// MARGINAL bar and mono-red — the archetype the horizon exists
+    /// for — read 54.8 % [49.9 %, 59.6 %], but a 400-game archetype row
+    /// is a hint, not a result (see [`block_search`](Self::block_search)'s
+    /// methodological note). The pre-registered decision is a 4× run
+    /// (1 600 games/archetype, seed 12): adopt only if it clears 50 %
+    /// with at least a one-point edge, otherwise this stays a documented
+    /// experiment.
+    pub const fn attack_search_race() -> Self {
+        Self { attack_race_horizon: true, ..Self::attack_search_sim() }
     }
 
     /// The adopted default plus the searched block assignment.
@@ -713,6 +744,15 @@ impl Bot for RandomBot {
         match state.step {
             TurnStep::DeclareBlockers if state.may_declare_blocks(seat) => {
                 if !self.blocks_declared && !state.attacking().is_empty() {
+                    // Kill the biggest attacker BEFORE committing blocks —
+                    // removal cast here shrinks the combat the blocks then
+                    // answer. Validated actions only, so a resolved kill
+                    // falls through to the block declaration next tick.
+                    if !is_active
+                        && let Some(a) = pick_defensive_removal(state, seat, &self.weights)
+                    {
+                        return Some(a);
+                    }
                     self.blocks_declared = true;
                     // Master Warcraft on our own turn: we're choosing the
                     // *defender's* blocks, so decline them all.
@@ -790,6 +830,15 @@ impl Bot for RandomBot {
                 pick_stack_response(state, seat, &self.weights)
                     .or_else(|| pick_ability_counter_response(state, seat))
                     .or_else(|| pick_prepare_response(state, seat, &self.weights))
+                    // Defender windows in the attack steps (the picker
+                    // no-ops unless declared attackers are coming at us).
+                    .or_else(|| {
+                        if state.stack.is_empty() {
+                            pick_defensive_removal(state, seat, &self.weights)
+                        } else {
+                            None
+                        }
+                    })
                     .unwrap_or(GameAction::PassPriority),
             ),
         }
@@ -804,12 +853,14 @@ impl Bot for RandomBot {
 /// take mode 0 — and the opponent would as well. Now both seats inside a
 /// sim play by this table (`pending.acting_player()` picks whose view).
 ///
-/// `eval_modes: false` answers `ChooseMode` with mode 0 instead of the
-/// clone-and-resolve outcome pick — inside a sim that recursion would
-/// multiply whole-state clones for marginal fidelity, and mode 0 is the
-/// pre-policy floor. The stateful Ad Nauseam reveal family (a running
-/// life commitment on the bot struct) is handled by `next_action` before
-/// this table; a sim reaching it here declines, the conservative read.
+/// `eval_modes: false` disables the clone-and-resolve answers — mode
+/// picks fall back to mode 0 and self-costly optional triggers to the
+/// introspection screen's decline — because inside a sim that recursion
+/// would multiply whole-state clones for marginal fidelity, and both
+/// fallbacks are the pre-policy floor. The stateful Ad Nauseam reveal
+/// family (a running life commitment on the bot struct) is handled by
+/// `next_action` before this table; a sim reaching it here declines, the
+/// conservative read.
 fn decide_pending_policy(
     state: &GameState,
     seat: usize,
@@ -887,7 +938,18 @@ fn decide_pending_policy(
                 // Stateful family (see `next_action`); in a sim, decline.
                 false
             } else {
-                optional_trigger_beneficial(state, *source, description)
+                // Introspection screen first (pure upside → yes, self-cost
+                // → no). A "no" from the self-cost rule gets a second
+                // opinion by OUTCOME at the real decision (`eval_modes`
+                // gates it off inside sims): sacrifice-for-value and
+                // pay-for-payoff bodies are exactly the trades a blanket
+                // decline can't judge. Strictly-better-or-keep-declining.
+                let take = optional_trigger_beneficial(state, *source, description);
+                if !take && eval_modes {
+                    decide_optional_by_outcome(state, seat, w).unwrap_or(false)
+                } else {
+                    take
+                }
             };
             crate::decision::DecisionAnswer::Bool(take)
         }
@@ -1109,8 +1171,13 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
         Some((card.id, threat))
     })?;
     // Hold the counter below this bar — a vanilla two-drop or an early
-    // cantrip isn't worth the bot's only interaction.
-    if threat < 10 * w.unit {
+    // cantrip isn't worth the bot's only interaction. The bar drops as
+    // the hand clogs: the Prismari probe measured reactive spells
+    // rotting to cleanup (42 discards in 60 games) while a full-height
+    // bar held them for a threat that never came — a counter pitched at
+    // end of turn answered nothing at all.
+    let bar = if state.players[seat].hand.len() >= 6 { 5 } else { 10 };
+    if threat < bar * w.unit {
         return None;
     }
     let mut counters: Vec<&crate::card::CardInstance> = state.players[seat]
@@ -1168,6 +1235,90 @@ fn pick_ability_counter_response(state: &GameState, seat: usize) -> Option<GameA
         };
         if state.would_accept(action.clone()) {
             return Some(action);
+        }
+    }
+    None
+}
+
+/// Instant removal at a declared attacker, from the DEFENDER's side of
+/// combat. The response chain only ever countered spells, so a hand full
+/// of kill spells watched every alpha strike connect — the SOS college
+/// probes measured 68-78 % of attackers unblocked while removal rotted
+/// to cleanup discards. Aim at the most valuable attacker the spell
+/// actually answers, before blocks commit; `would_accept` gates instant
+/// timing and the ward gate keeps taxes payable.
+fn pick_defensive_removal(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    use crate::card::CardType;
+    use crate::effect::{Selector, Value};
+    let mut attackers: Vec<CardId> = state
+        .attacking()
+        .iter()
+        .filter(|a| state.defender_for(a.target) == Some(seat))
+        .map(|a| a.attacker)
+        .collect();
+    if attackers.is_empty() {
+        return None;
+    }
+    attackers.sort_by_key(|id| std::cmp::Reverse(permanent_value(state, *id, w)));
+    // First-leaf removal shapes, the same convention the counter scan
+    // uses: a dedicated kill spell, not a buried rider.
+    fn removal_leaf(e: &Effect) -> Option<&Effect> {
+        match e {
+            Effect::Destroy { .. } | Effect::DestroyNoRegen { .. } | Effect::DealDamage { .. } => {
+                Some(e)
+            }
+            Effect::Seq(v) => v.first().and_then(removal_leaf),
+            _ => None,
+        }
+    }
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.card_types.contains(&CardType::Instant))
+    {
+        let Some(leaf) = removal_leaf(&c.definition.effect) else { continue };
+        for &atk in &attackers {
+            // Worth a card: skip chaff attackers.
+            if permanent_value(state, atk, w) < 6 * w.unit {
+                continue;
+            }
+            let answers = match leaf {
+                Effect::Destroy { what } | Effect::DestroyNoRegen { what } => {
+                    matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. })
+                }
+                Effect::DealDamage { to, amount } => {
+                    matches!(to, Selector::Target(_) | Selector::TargetFiltered { .. })
+                        && match amount {
+                            Value::Const(n) => state
+                                .computed_permanent(atk)
+                                .is_some_and(|cp| {
+                                    let marked = state
+                                        .battlefield_find(atk)
+                                        .map(|c| c.damage as i32)
+                                        .unwrap_or(0);
+                                    *n >= cp.toughness - marked
+                                }),
+                            _ => false,
+                        }
+                }
+                _ => false,
+            };
+            if !answers {
+                continue;
+            }
+            let action = GameAction::CastSpell {
+                card_id: c.id,
+                target: Some(Target::Permanent(atk)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            };
+            if !ward_gate_ok(state, seat, &action) {
+                continue;
+            }
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
         }
     }
     None
@@ -2177,44 +2328,63 @@ fn decide_mode_by_outcome(
 ) -> usize {
     let mut best: Option<(i32, usize)> = None;
     for m in 0..num_modes {
-        let mut g = state.clone();
-        if g.perform_action(GameAction::SubmitDecision(crate::decision::DecisionAnswer::Mode(m)))
-            .is_err()
-        {
+        let Some(score) =
+            settle_answer(state, seat, w, crate::decision::DecisionAnswer::Mode(m))
+        else {
             continue;
-        }
-        let mut fuel = 64u32;
-        let settled = loop {
-            if g.is_game_over() {
-                break true;
-            }
-            if g.pending_decision.is_some() {
-                let answer = {
-                    let pending = g.pending_decision.as_ref().unwrap();
-                    decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
-                };
-                if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
-                    break false;
-                }
-            } else if g.stack.is_empty() {
-                break true;
-            } else if g.perform_action(GameAction::PassPriority).is_err() {
-                break false;
-            }
-            match fuel.checked_sub(1) {
-                Some(f) => fuel = f,
-                None => break false,
-            }
         };
-        if !settled {
-            continue;
-        }
-        let score = eval_material(&g, seat, w);
         if best.is_none_or(|(b, _)| score > b) {
             best = Some((score, m));
         }
     }
     best.map(|(_, m)| m).unwrap_or(0)
+}
+
+/// Submit `answer` to the state's pending decision on a clone, resolve to
+/// quiescence (nested decisions answered by the policy table, no
+/// expensive re-evaluation), and return the settled material eval for
+/// `seat`. `None` when the answer is rejected or resolution won't settle.
+/// The shared engine behind every answer-by-outcome policy.
+fn settle_answer(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    answer: crate::decision::DecisionAnswer,
+) -> Option<i32> {
+    let mut g = state.clone();
+    g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
+    let mut fuel = 64u32;
+    loop {
+        if g.is_game_over() {
+            break;
+        }
+        if g.pending_decision.is_some() {
+            let answer = {
+                let pending = g.pending_decision.as_ref().unwrap();
+                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
+            };
+            g.perform_action(GameAction::SubmitDecision(answer)).ok()?;
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            g.perform_action(GameAction::PassPriority).ok()?;
+        }
+        fuel = fuel.checked_sub(1)?;
+    }
+    Some(eval_material(&g, seat, w))
+}
+
+/// Judge a self-costly optional trigger by outcome: settle "yes" and "no"
+/// on clones and take the trigger only when accepting evals strictly
+/// better. This turns "you may sacrifice a Pest: [payoff]" from a blanket
+/// decline (the introspection screen's rule for any self-cost) into a
+/// judged trade. `None` when either branch won't settle — the caller
+/// keeps the conservative decline.
+fn decide_optional_by_outcome(state: &GameState, seat: usize, w: &EvalWeights) -> Option<bool> {
+    use crate::decision::DecisionAnswer;
+    let yes = settle_answer(state, seat, w, DecisionAnswer::Bool(true))?;
+    let no = settle_answer(state, seat, w, DecisionAnswer::Bool(false))?;
+    Some(yes > no)
 }
 
 fn accumulate_mana_colors(eff: &Effect, set: &mut crate::mana::ColorSet) {
@@ -3650,6 +3820,12 @@ fn main_phase_action_with(
         return action;
     }
 
+    // Sacrifice-for-value engines (sac a Pest: payoff), judged by the
+    // resolved outcome rather than skipped for carrying a sac cost.
+    if let Some(action) = pick_sacrifice_value(state, seat, w) {
+        return action;
+    }
+
     // Crew an uncrewed Vehicle so it can attack this turn (Vehicles are dead
     // cards to the bot otherwise). Dry-run-gated.
     if let Some(action) = pick_crew_vehicle(state, seat) {
@@ -3671,6 +3847,57 @@ fn main_phase_action_with(
     }
 
     GameAction::PassPriority
+}
+
+/// Activate a sacrifice-cost ability when the RESOLVED outcome beats
+/// doing nothing. The generic ability pickers skip sac costs outright and
+/// `pick_removal_sacrifice` only knows the destroy-for-trade shape — the
+/// value shapes (sacrifice a token: draw / drain / counters) had no
+/// judge at all. The clone-and-resolve eval prices both sides of the
+/// exchange: the permanent given up AND what its death buys, triggers
+/// included. Strictly-better-than-passing or nothing.
+fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    let baseline = eval_material(state, seat, w);
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in usable_abilities(state, card) {
+            if !ab.sac_cost && ab.sac_other_filter.is_none() {
+                continue;
+            }
+            // Destroy-shaped sac removal keeps its dedicated trade math
+            // (`pick_removal_sacrifice`, earlier in the chain).
+            if matches!(&ab.effect, Effect::Destroy { .. } | Effect::DestroyNoRegen { .. }) {
+                continue;
+            }
+            let target = if ab.effect.requires_target() {
+                match state.auto_target_for_effect(&ab.effect, seat) {
+                    Some(t) => Some(t),
+                    None => continue,
+                }
+            } else {
+                None
+            };
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            if !ward_gate_ok(state, seat, &action) {
+                continue;
+            }
+            if !state.would_accept(action.clone()) {
+                continue;
+            }
+            if let Some(ev) = evaluate_action_outcome(state, seat, &action, w)
+                && ev > baseline
+            {
+                return Some(action);
+            }
+        }
+    }
+    None
 }
 
 /// SOS Prepare mana sink: aim an off-card "target creature becomes
@@ -4757,6 +4984,33 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
                 finalists.push((score_candidate(state, seat, &action, w), action));
             }
         }
+        // A walker the board kills before its next activation banks
+        // nothing by plussing — the loyalty it gains is removed by
+        // attackers at zero cost to the opponent, a future the outcome
+        // eval's one-combat horizon cannot see. When the enemy board's
+        // creature power already covers current loyalty (a crude read
+        // on next combat), cash out: restrict to loyalty-SPENDING
+        // abilities whenever any is affordable, and let the outcome
+        // eval pick among those.
+        let threat: i32 = state
+            .battlefield
+            .iter()
+            .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+            .filter_map(|c| state.computed_permanent(c.id).map(|cp| cp.power.max(0)))
+            .sum();
+        if threat >= current_loyalty {
+            let spending: Vec<(i32, GameAction)> = finalists
+                .iter()
+                .filter(|(_, a)| {
+                    matches!(a, GameAction::ActivateLoyaltyAbility { ability_index, .. }
+                        if effective.get(*ability_index).is_some_and(|ab| ab.loyalty_cost < 0))
+                })
+                .cloned()
+                .collect();
+            if !spending.is_empty() {
+                finalists = spending;
+            }
+        }
         if let Some(best) = pick_by_outcome(state, seat, finalists, w) {
             return Some(best);
         }
@@ -5302,6 +5556,10 @@ fn simulate_attack_outcome(
     // One turn cycle of pure priority passes is on the order of fifty
     // actions; the rest is headroom for triggers and decisions.
     let mut fuel = 400u32;
+    // Break when this turn's opponent combat has resolved; the race
+    // horizon can push the stop out one more cycle (see below).
+    let mut stop_turn = start_turn;
+    let mut extended = false;
     let mut declared: std::collections::HashSet<(u32, TurnStep)> = Default::default();
     // *This* turn's attack declaration is the candidate, already submitted.
     // Without this the loop's own DeclareAttackers arm fires on the same
@@ -5311,9 +5569,21 @@ fn simulate_attack_outcome(
     declared.insert((g.turn_number, TurnStep::DeclareAttackers));
     while !g.is_game_over() {
         // Stop once the opponent's combat is resolved — the first board on
-        // which a creature held back has actually done anything.
-        if g.turn_number > start_turn && g.step >= TurnStep::EndCombat {
-            break;
+        // which a creature held back has actually done anything. Under
+        // `attack_race_horizon`, a sim ending with either life total in
+        // burn range runs one more full cycle instead, so the race this
+        // attack started is scored at its result, not mid-sprint.
+        if g.turn_number > stop_turn && g.step >= TurnStep::EndCombat {
+            if w.attack_race_horizon
+                && !extended
+                && g.players.iter().any(|p| p.is_alive() && p.life <= 10)
+            {
+                extended = true;
+                stop_turn = g.turn_number;
+                fuel = fuel.saturating_add(400);
+            } else {
+                break;
+            }
         }
         fuel = fuel.checked_sub(1)?;
         if g.pending_decision.is_some() {
@@ -7237,13 +7507,49 @@ fn eval_material_inner(
 /// attribution DROPPED — the build-around emblem needs the build.
 /// Unconditional emblems keep the flat 25.
 fn emblem_value(state: &GameState, seat: usize, emblem: &crate::player::Emblem) -> i32 {
-    use crate::effect::EventKind;
+    use crate::effect::{EventKind, Value};
+    // Ajani-style "whenever you gain life" emblems are worth what the
+    // board can feed them — the original special case, kept as-is.
     let lifegain_triggered =
         emblem.triggered.iter().any(|t| matches!(t.event.kind, EventKind::LifeGained));
-    if !lifegain_triggered {
-        return 25;
+    if lifegain_triggered {
+        return 2 + 6 * lifegain_sources(state, seat).min(5);
     }
-    2 + 6 * lifegain_sources(state, seat).min(5)
+    // Everything else used to be a flat 25, which made a game-winning
+    // draw engine and a minor rider read the same — the "ultimates the
+    // eval can't see" limitation was really "ultimates the eval can't
+    // tell apart". Price the recurring payoff by shape instead: card
+    // advantage highest (an emblem draw repeats every turn, unanswerable
+    // by design), damage and tokens next, anthem statics per body they
+    // could pump. Floor near the old constant so unrecognized shapes
+    // aren't suddenly worthless; cap so no emblem reads as strictly
+    // game-over while the game is still being played.
+    let amount = |v: &Value| match v {
+        Value::Const(n) => (*n).max(1),
+        _ => 2,
+    };
+    fn shape_value(e: &Effect, amount: &dyn Fn(&Value) -> i32) -> i32 {
+        match e {
+            Effect::Draw { amount: a, .. } => 12 * amount(a),
+            Effect::DealDamage { amount: a, .. } | Effect::Drain { amount: a, .. } => {
+                6 * amount(a)
+            }
+            Effect::CreateToken { count, .. } => 10 * amount(count),
+            Effect::GainLife { amount: a, .. } => 2 * amount(a),
+            Effect::Seq(v) => v.iter().map(|e| shape_value(e, amount)).sum(),
+            Effect::If { then, else_, .. } => {
+                shape_value(then, amount).max(shape_value(else_, amount))
+            }
+            Effect::MayDo { body, .. } | Effect::ForEach { body, .. } => {
+                shape_value(body, amount)
+            }
+            _ => 8,
+        }
+    }
+    let triggered: i32 =
+        emblem.triggered.iter().map(|t| shape_value(&t.effect, &amount)).sum();
+    let statics = 12 * emblem.statics.len() as i32;
+    (triggered + statics).clamp(20, 60)
 }
 
 /// Visible lifegain sources for `seat`: battlefield lifelink bodies, and
@@ -12089,6 +12395,292 @@ mod stack_response_tests {
             seeing < blind,
             "the sim that lets the opponent Doom Blade must score lower \
              ({seeing} !< {blind})"
+        );
+    }
+
+    /// Emblems price by shape now: a recurring draw engine out-values a
+    /// recurring trickle of life, where the old flat constant read them
+    /// the same.
+    #[test]
+    fn emblem_value_prices_shapes() {
+        use crate::card::TriggeredAbility;
+        use crate::effect::{EventKind, EventScope, EventSpec, Selector, Value};
+        let g = two_player_game();
+        // The event kind is irrelevant to the shape pricing (any
+        // non-LifeGained trigger walks the body); Attacks is just a
+        // parameterless stand-in.
+        let emblem = |body: Effect| crate::player::Emblem {
+            name: "Test".into(),
+            triggered: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+                effect: body,
+            }],
+            statics: vec![],
+        };
+        let draw = emblem(Effect::Draw { who: Selector::You, amount: Value::Const(2) });
+        let life = emblem(Effect::GainLife { who: Selector::You, amount: Value::Const(1) });
+        assert!(
+            emblem_value(&g, 0, &draw) > emblem_value(&g, 0, &life),
+            "a draw-two-per-turn emblem must out-value gain-one-per-turn"
+        );
+    }
+
+    /// A walker the enemy board kills before its next activation cashes
+    /// out: with lethal power across the table it spends loyalty on the
+    /// minus; with an empty board it banks the plus.
+    #[test]
+    fn doomed_walker_cashes_out() {
+        use crate::card::{CardType, CounterType, LoyaltyAbility};
+        use crate::effect::shortcut::target_any;
+        use crate::effect::{Selector, Value};
+        let walker = || CardDefinition {
+            name: "Test Walker",
+            card_types: vec![CardType::Planeswalker],
+            base_loyalty: 2,
+            loyalty_abilities: vec![
+                LoyaltyAbility {
+                    x_cost: false,
+                    loyalty_cost: 1,
+                    effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                },
+                LoyaltyAbility {
+                    x_cost: false,
+                    loyalty_cost: -2,
+                    effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
+                },
+            ],
+            ..Default::default()
+        };
+        let w = EvalWeights::default();
+        let mut safe = two_player_game();
+        let id = safe.add_card_to_battlefield(0, walker());
+        safe.battlefield.iter_mut().find(|c| c.id == id).unwrap()
+            .add_counters(CounterType::Loyalty, 2);
+        let action = pick_loyalty_ability(&safe, 0, &w).expect("walker activates");
+        assert!(
+            matches!(action, GameAction::ActivateLoyaltyAbility { ability_index: 0, .. }),
+            "empty enemy board: bank the plus, got {action:?}"
+        );
+        // Two 3/3s: power 6 covers the loyalty however the engine seeded
+        // it (base loyalty plus the counters added above).
+        let mut doomed = safe.clone();
+        doomed.add_card_to_battlefield(1, test_bear(None));
+        doomed.add_card_to_battlefield(1, test_bear(None));
+        let action = pick_loyalty_ability(&doomed, 0, &w).expect("walker activates");
+        assert!(
+            matches!(action, GameAction::ActivateLoyaltyAbility { ability_index: 1, .. }),
+            "enemy power covers the loyalty: spend it down, got {action:?}"
+        );
+    }
+
+    /// The counter bar drops when the hand clogs: a mid-size threat that a
+    /// comfortable hand lets resolve gets countered once the counter would
+    /// otherwise rot toward a cleanup discard.
+    #[test]
+    fn clogged_hand_lowers_counter_bar() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.active_player_idx = 1; // the ogre is a sorcery-speed cast
+        let counter = g.add_card_to_hand(0, catalog::counterspell());
+        g.players[0].mana_pool.add(Color::Blue, 2);
+        // Opponent casts a 7-unit threat (Gray Ogre: 3 cmc + 2 + 2).
+        let ogre = g.add_card_to_hand(1, catalog::gray_ogre());
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.players[1].mana_pool.add_colorless(2);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: ogre,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("opponent casts");
+        while g.player_with_priority() != 0 {
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        let w = EvalWeights::default();
+        assert!(
+            pick_stack_response(&g, 0, &w).is_none(),
+            "a two-card hand holds the counter for something bigger"
+        );
+        for _ in 0..5 {
+            g.add_card_to_hand(0, catalog::forest());
+        }
+        let action = pick_stack_response(&g, 0, &w).expect("clogged hand counters");
+        assert!(
+            matches!(action, GameAction::CastSpell { card_id, .. } if card_id == counter),
+            "got {action:?}"
+        );
+    }
+
+    /// The defender kills the biggest declared attacker before committing
+    /// blocks: instant removal is a combat response now, not just an
+    /// end-step afterthought.
+    #[test]
+    fn defensive_removal_kills_declared_attacker() {
+        use crate::mana::Color;
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        let serra = g.add_card_to_battlefield(1, catalog::serra_angel());
+        g.clear_sickness(serra);
+        let blade = g.add_card_to_hand(0, catalog::doom_blade());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: serra,
+            target: AttackTarget::Player(0),
+        }]))
+        .expect("opponent attacks");
+        let mut fuel = 8;
+        while g.player_with_priority() != 0 && fuel > 0 {
+            g.perform_action(GameAction::PassPriority).unwrap();
+            fuel -= 1;
+        }
+        let action = RandomBot::new().next_action(&g, 0).expect("defender acts");
+        assert!(
+            matches!(
+                action,
+                GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                    if card_id == blade && t == serra
+            ),
+            "Doom Blade answers the attacker before blocks, got {action:?}"
+        );
+    }
+
+    /// Sacrifice-for-value is judged by the resolved exchange: a
+    /// sac-for-four-cards engine fires, a sac-for-one does not.
+    #[test]
+    fn sacrifice_value_judged_by_outcome() {
+        use crate::card::CardType;
+        use crate::effect::{ActivatedAbility, Selector, Value};
+        let sac_drawer = |n: i32| CardDefinition {
+            name: "Sac Engine",
+            card_types: vec![CardType::Creature],
+            power: 1,
+            toughness: 1,
+            activated_abilities: vec![ActivatedAbility {
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(n) },
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let w = EvalWeights::default();
+        let mut g = two_player_game();
+        g.step = TurnStep::PostCombatMain;
+        for _ in 0..6 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        g.add_card_to_battlefield(0, sac_drawer(4));
+        g.priority.player_with_priority = 0;
+        assert!(
+            pick_sacrifice_value(&g, 0, &w).is_some(),
+            "a 1/1 into four cards is a trade worth making"
+        );
+        let mut weak = two_player_game();
+        weak.step = TurnStep::PostCombatMain;
+        for _ in 0..6 {
+            weak.add_card_to_library(0, catalog::forest());
+        }
+        weak.add_card_to_battlefield(0, sac_drawer(1));
+        assert!(
+            pick_sacrifice_value(&weak, 0, &w).is_none(),
+            "a 1/1 into one card is not"
+        );
+    }
+
+    /// A self-costly optional trigger is judged by outcome at the real
+    /// decision: pay 2 life for three cards, decline 8 life for one.
+    #[test]
+    fn optional_self_cost_taken_when_outcome_wins() {
+        use crate::decision::{Decision, DecisionAnswer};
+        use crate::effect::{Selector, Value};
+        use crate::game::TriggerPush;
+        let run = |loss: i32, draw: i32| -> GameAction {
+            use crate::card::{CardType, TriggeredAbility};
+            use crate::effect::{EventKind, EventScope, EventSpec};
+            let mut g = two_player_game();
+            g.players[0].wants_ui = true;
+            let body = Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(loss) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(draw) },
+            ]);
+            let maydo =
+                Effect::MayDo { description: "you may".to_string(), body: Box::new(body) };
+            // The prompt introspection reads the SOURCE's printed
+            // definition, so the trigger must live on the card, exactly
+            // as a real fired trigger does.
+            let src_def = CardDefinition {
+                name: "Optional Source",
+                card_types: vec![CardType::Creature],
+                power: 2,
+                toughness: 2,
+                triggered_abilities: vec![TriggeredAbility {
+                    event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                    effect: maydo.clone(),
+                }],
+                ..Default::default()
+            };
+            let src = g.add_card_to_battlefield(0, src_def);
+            for _ in 0..5 {
+                g.add_card_to_library(0, catalog::forest());
+            }
+            g.stack.push(TriggerPush::new(src, 0, maydo).build());
+            let mut fuel = 20;
+            while g.pending_decision.is_none() && fuel > 0 {
+                g.perform_action(GameAction::PassPriority).unwrap();
+                fuel -= 1;
+            }
+            assert!(matches!(
+                g.pending_decision.as_ref().map(|p| &p.decision),
+                Some(Decision::OptionalTrigger { .. })
+            ));
+            RandomBot::new().next_action(&g, 0).expect("bot answers")
+        };
+        assert!(
+            matches!(run(2, 3), GameAction::SubmitDecision(DecisionAnswer::Bool(true))),
+            "two life for three cards is taken"
+        );
+        assert!(
+            matches!(run(8, 1), GameAction::SubmitDecision(DecisionAnswer::Bool(false))),
+            "eight life for one card is declined"
+        );
+    }
+
+    /// The race horizon scores the win: an attack that puts the opponent
+    /// in range reads as the kill it sets up, not as a mid-race board
+    /// snapshot.
+    #[test]
+    fn race_horizon_scores_the_win() {
+        use crate::card::CardType;
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let brute = CardDefinition {
+            name: "Race Brute",
+            card_types: vec![CardType::Creature],
+            power: 4,
+            toughness: 4,
+            ..Default::default()
+        };
+        let atk_id = g.add_card_to_battlefield(0, brute);
+        g.clear_sickness(atk_id);
+        g.players[1].life = 8;
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::forest());
+            g.add_card_to_library(1, catalog::swamp());
+        }
+        let atk = vec![Attack { attacker: atk_id, target: AttackTarget::Player(1) }];
+        let blind = simulate_attack_outcome(&g, 0, &atk, &EvalWeights::attack_search_sim())
+            .expect("one-cycle sim completes");
+        let race = simulate_attack_outcome(&g, 0, &atk, &EvalWeights::attack_search_race())
+            .expect("race sim completes");
+        assert!(
+            race > blind && race >= 90_000,
+            "the extended horizon reaches the win ({race} !> {blind} or short of decided)"
         );
     }
 

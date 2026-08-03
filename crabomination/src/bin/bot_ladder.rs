@@ -199,6 +199,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "atk-cheap" => Some(Pilot::Scored(EvalWeights::attack_search_cheap())),
         "atk-hold" => Some(Pilot::Scored(EvalWeights::attack_search_hold())),
         "atk-sim" => Some(Pilot::Scored(EvalWeights::attack_search_sim())),
+        "atk-race" => Some(Pilot::Scored(EvalWeights::attack_search_race())),
         "atk-life" => Some(Pilot::Scored(EvalWeights::attack_search_life())),
         "blk" => Some(Pilot::Scored(EvalWeights::block_search())),
         "dflt-life" => Some(Pilot::Scored(EvalWeights::hold_sick_combat_life())),
@@ -228,7 +229,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform";
 
 /// Wilson score interval for `wins` out of `n` at `z`. Chosen over the
 /// normal approximation because it stays sane at small n and at p̂ = 0 or 1,
