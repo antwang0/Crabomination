@@ -8,8 +8,8 @@ use crate::card::{
     Supertype, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::{
-    Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition, ManaPayload, PlayerRef,
-    Selector, StaticEffect, Value, ZoneDest,
+    ChainCopyCost, Duration, Effect, EventKind, EventScope, EventSpec, LibraryPosition,
+    ManaPayload, PlayerRef, Selector, StaticEffect, Value, ZoneDest,
     shortcut::{draw, etb, target_filtered},
 };
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
@@ -3209,4 +3209,102 @@ pub fn words_of_worship() -> CardDefinition {
         cost(&[generic(2), w()]),
         Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
     )
+}
+
+// ── The Chain cycle (CR 706 — the copy bounces to the affected player) ──────
+
+/// Chain of Acid — blow up a noncreature permanent, then hand the chain on.
+pub fn chain_of_acid() -> CardDefinition {
+    CardDefinition {
+        name: "Chain of Acid",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Noncreature) },
+            Effect::MayCopyThisSpell {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                cost: ChainCopyCost::Free,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Chain of Smog — two cards off the top of their hand, then hand the chain on.
+pub fn chain_of_smog() -> CardDefinition {
+    CardDefinition {
+        name: "Chain of Smog",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+                random: false,
+            },
+            Effect::MayCopyThisSpell {
+                who: PlayerRef::Target(0),
+                cost: ChainCopyCost::Free,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Chain of Vapor — bounce a nonland permanent; its controller may pay a land
+/// to keep the chain going.
+pub fn chain_of_vapor() -> CardDefinition {
+    CardDefinition {
+        name: "Chain of Vapor",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(R::Nonland),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::MayCopyThisSpell {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                cost: ChainCopyCost::SacrificeLand,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Chain of Silence — blank a creature's damage; its controller may pay a land
+/// to keep the chain going.
+pub fn chain_of_silence() -> CardDefinition {
+    CardDefinition {
+        name: "Chain of Silence",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PreventAllDamageByTargetThisTurn {
+                target: target_filtered(R::Creature),
+            },
+            Effect::MayCopyThisSpell {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                cost: ChainCopyCost::DiscardCard,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Chain of Plasma — 3 damage, then a discard buys the next link.
+pub fn chain_of_plasma() -> CardDefinition {
+    CardDefinition {
+        name: "Chain of Plasma",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(R::Any), amount: Value::Const(3) },
+            Effect::MayCopyThisSpell {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                cost: ChainCopyCost::DiscardCard,
+            },
+        ]),
+        ..Default::default()
+    }
 }

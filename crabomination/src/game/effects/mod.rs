@@ -892,6 +892,41 @@ impl GameState {
         events.push(GameEvent::SpellsCopied { original: cid, count: n as u32, controller: caster });
     }
 
+    /// CR 706 — put a copy of the *resolving* spell on the stack under
+    /// `seat`'s control, letting them repoint its primary target. Used by
+    /// `Effect::MayCopyThisSpell`, whose stack entry is already popped.
+    pub(crate) fn copy_resolving_spell_for(
+        &mut self,
+        snap: &crate::game::ResolvingSpell,
+        seat: usize,
+    ) {
+        use crate::game::types::StackItem;
+        if snap.definition.keywords.contains(&crate::card::Keyword::CantBeCopied) {
+            return;
+        }
+        let copy_target = if snap.target.is_some() {
+            self.repoint_copy_target(&snap.definition, seat, &snap.target)
+        } else {
+            None
+        };
+        let new_id = self.next_id();
+        let mut copy_inst =
+            crate::card::CardInstance::new(new_id, (*snap.definition).clone(), seat);
+        // CR 707.10a — a copy of a spell ceases to exist off the stack.
+        copy_inst.is_token = true;
+        self.stack.push(StackItem::Spell {
+            card: Box::new(copy_inst),
+            caster: seat,
+            target: copy_target,
+            additional_targets: snap.additional_targets.clone(),
+            mode: snap.mode,
+            x_value: snap.x_value,
+            converged_value: snap.converged_value,
+            mana_spent: 0,
+            uncounterable: true,
+        });
+    }
+
     /// Helper for `copy_stack_spell`: enumerate legal targets for the
     /// copied spell's primary effect and ask `caster`'s decider to pick
     /// one (original offered first). Returns the chosen target, or the
@@ -23287,6 +23322,56 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MayCopyThisSpell { who, cost } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ChainCopyCost;
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let source = ctx.source.unwrap_or(CardId(0));
+                // The stack entry is already popped by the time a spell's own
+                // effect runs, so copy from the resolution snapshot.
+                let Some(snap) = self.resolving_spell_snapshot.clone() else { return Ok(()) };
+                let payable = match cost {
+                    ChainCopyCost::Free => true,
+                    ChainCopyCost::SacrificeLand => {
+                        self.battlefield.iter().any(|c| {
+                            c.controller == seat && c.definition.is_land()
+                        })
+                    }
+                    ChainCopyCost::DiscardCard => !self.players[seat].hand.is_empty(),
+                };
+                if !payable {
+                    return Ok(());
+                }
+                let yes = matches!(
+                    self.decider.decide(&Decision::OptionalTrigger {
+                        source,
+                        description: "Copy this spell and choose a new target?".to_string(),
+                    }),
+                    DecisionAnswer::Bool(true)
+                );
+                if !yes {
+                    return Ok(());
+                }
+                let toll = match cost {
+                    ChainCopyCost::Free => None,
+                    ChainCopyCost::SacrificeLand => Some(Effect::Sacrifice {
+                        who: Selector::Player(PlayerRef::Seat(seat)),
+                        count: crate::effect::Value::ONE,
+                        filter: crate::card::SelectionRequirement::Land,
+                    }),
+                    ChainCopyCost::DiscardCard => Some(Effect::Discard {
+                        who: Selector::Player(PlayerRef::Seat(seat)),
+                        amount: crate::effect::Value::ONE,
+                        random: false,
+                    }),
+                };
+                if let Some(toll) = toll {
+                    self.run_effect(&toll, ctx, events)?;
+                }
+                self.copy_resolving_spell_for(&snap, seat);
+                Ok(())
+            }
+
             Effect::CopyForEachOtherTargetableCreature => {
                 use crate::game::types::StackItem;
                 // The spell that triggered this (Zada's cast trigger binds it
@@ -24152,6 +24237,19 @@ impl GameState {
                         && !self.combat_damage_prevented_by_this_turn.contains(&id)
                     {
                         self.combat_damage_prevented_by_this_turn.push(id);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::PreventAllDamageByTargetThisTurn { target } => {
+                // CR 615.1 — the all-damage superset: the target deals no
+                // damage at all this turn (Chain of Silence).
+                for ent in self.resolve_selector(target, ctx) {
+                    if let EntityRef::Permanent(id) | EntityRef::Card(id) = ent
+                        && !self.all_damage_prevented_by_this_turn.contains(&id)
+                    {
+                        self.all_damage_prevented_by_this_turn.push(id);
                     }
                 }
                 Ok(())

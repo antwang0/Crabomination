@@ -1185,6 +1185,8 @@ impl Effect {
             }
             Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
             Effect::PreventAllCombatDamageThisTurn => false,
+            // The copy retargets itself; the chain rider declares no slot.
+            Effect::MayCopyThisSpell { who, .. } => player_has_target(who),
             // The queued body picks its own targets when the draw is replaced.
             Effect::ReplaceYourNextDrawThisTurn { .. } => false,
             Effect::PreventCombatDamageExceptDealtBy { .. } => false,
@@ -1192,7 +1194,8 @@ impl Effect {
             Effect::SacrificeSourceUnlessPayManaValue | Effect::SacrificeSourceUnlessPay { .. } => false,
             Effect::PreventAllCombatDamageInvolving { target } => sel_has_target(target),
             Effect::PreventCombatDamageToTargetThisTurn { target } => sel_has_target(target),
-            Effect::PreventCombatDamageByTargetThisTurn { target } => sel_has_target(target),
+            Effect::PreventCombatDamageByTargetThisTurn { target }
+            | Effect::PreventAllDamageByTargetThisTurn { target } => sel_has_target(target),
             Effect::CantBlockSourceThisTurn { target } => sel_has_target(target),
             Effect::PreventNextDamage { target, amount }
             | Effect::PreventNextDamageWithCounters { target, amount }
@@ -2782,7 +2785,8 @@ impl Effect {
                 | Effect::ReplaceNextDamageWithDestroy { target }
                 | Effect::PreventAllCombatDamageInvolving { target }
                 | Effect::PreventCombatDamageToTargetThisTurn { target }
-                | Effect::PreventCombatDamageByTargetThisTurn { target } => sel_find(target, slot),
+                | Effect::PreventCombatDamageByTargetThisTurn { target }
+            | Effect::PreventAllDamageByTargetThisTurn { target } => sel_find(target, slot),
                 Effect::PreventAllDamageBetweenThisTurn { from, to } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }

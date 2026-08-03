@@ -2662,3 +2662,86 @@ fn words_of_wilding_and_waste() {
     g.draw_one(0, &mut ev);
     assert!(g.players[1].hand.is_empty(), "the opponent discarded instead");
 }
+
+/// CR 706 — a Chain spell hands the copy to the affected player, who may
+/// retarget it; declining (the default) ends the chain.
+#[test]
+fn chain_of_acid_offers_the_copy_onward() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::dragon_roost());
+    let spell = g.add_card_to_hand(0, catalog::chain_of_acid());
+    cast(&mut g, 0, spell, Some(Target::Permanent(theirs)));
+    assert!(g.battlefield_find(theirs).is_none(), "the enchantment died");
+    assert!(g.stack.is_empty(), "the opponent declined the chain");
+
+    // Accepting hands the affected player a copy they control, which
+    // retargets onto the other side of the table.
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::dragon_roost());
+    let mine = g.add_card_to_battlefield(0, catalog::dream_chisel());
+    let spell = g.add_card_to_hand(0, catalog::chain_of_acid());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(mine)),
+    ]));
+    cast(&mut g, 0, spell, Some(Target::Permanent(theirs)));
+    assert!(g.battlefield_find(theirs).is_none(), "the first link killed their Roost");
+    assert!(g.battlefield_find(mine).is_none(), "and their retargeted copy came back at mine");
+}
+
+/// Chain of Vapor's toll is a land sacrifice; with no land the chain can't
+/// continue.
+#[test]
+fn chain_of_vapor_bounces_and_tolls() {
+    let mut g = main_phase();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::chain_of_vapor());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, 0, spell, Some(Target::Permanent(theirs)));
+    assert!(g.players[1].hand.iter().any(|c| c.id == theirs), "bounced home");
+    assert!(g.stack.is_empty(), "no land to pay the toll, so no copy");
+}
+
+/// Chain of Silence blanks all the damage its target would deal.
+#[test]
+fn chain_of_silence_blanks_a_creature() {
+    let mut g = main_phase();
+    let attacker = g.add_card_to_battlefield(1, catalog::krosan_colossus());
+    let blocker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let spell = g.add_card_to_hand(0, catalog::chain_of_silence());
+    cast(&mut g, 0, spell, Some(Target::Permanent(attacker)));
+    g.active_player_idx = 1;
+    advance_to_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).expect("block");
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    assert!(g.battlefield_find(blocker).is_some(), "the 9/9 dealt no damage");
+}
+
+/// Chain of Smog strips two cards; Chain of Plasma burns for 3.
+#[test]
+fn ons_chain_smog_and_plasma() {
+    let mut g = main_phase();
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::forest());
+    }
+    let spell = g.add_card_to_hand(0, catalog::chain_of_smog());
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].hand.len(), 1);
+
+    let mut g = main_phase();
+    let spell = g.add_card_to_hand(0, catalog::chain_of_plasma());
+    let life = g.players[1].life;
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, life - 3);
+}

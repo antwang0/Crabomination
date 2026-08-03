@@ -2405,10 +2405,10 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** The whole Odyssey block is done — Odyssey, Torment
    and **Judgment** are all at zero (`set_gaps.py ody` / `tor` / `jud`).
-   **Onslaught** (`sets::ons` + `sets::ons2`) is open at ~67 gaps after six
-   waves (199 cards); the remaining bulk is the Chain spells and the "each
-   player chooses a creature type" rares (Harsh Mercy, Patriarch's Bidding,
-   Peer Pressure). Then Legions / Scourge.
+   **Onslaught** (`sets::ons` + `sets::ons2`) is open at ~62 gaps after seven
+   waves (204 cards); the remaining bulk is the "each player chooses a creature
+   type" rares (Harsh Mercy, Patriarch's Bidding, Peer Pressure) and the
+   face-down/tribal one-offs. Then Legions / Scourge.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2423,34 +2423,33 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Onslaught (ONS) waves 2-6** — `set_gaps.py ons` 219 → ~67 (`sets::ons2`,
-  152 cards: the Morph commons, the tap-a-tribe activations, the Avatar cycle,
+- **Onslaught (ONS) waves 2-7** — `set_gaps.py ons` 219 → ~62 (`sets::ons2`,
+  157 cards: the Morph commons, the tap-a-tribe activations, the Avatar cycle,
   the tribal-count spells, the utility lands, the Crown / Courier / Mistform
   cycles, the cycling spells with "when you cycle this card" riders, the
-  Gustcloak cycle, the face-down-matters shell, the charms and the utility
-  shell, the Words draw-replacement cycle). New:
-  `Effect::ReplaceYourNextDrawThisTurn` (CR 614 — a queued one-shot "the next
-  time you would draw a card this turn, [X] instead" charge on
+  Gustcloak cycle, the face-down-matters shell, the charms, the Words
+  draw-replacement cycle and the Chain cycle). New primitives:
+  `Effect::MayCopyThisSpell` (CR 706 — the affected player pays a toll, then
+  controls and retargets a copy of the resolving spell, so a chain bounces
+  around the table), `Effect::PreventAllDamageByTargetThisTurn` (CR 615 — the
+  all-damage superset of the combat-only by-source fog, honored on both damage
+  funnels), `Effect::ReplaceYourNextDrawThisTurn` (CR 614 — a queued one-shot
+  "the next time you would draw a card this turn, [X] instead" charge on
   `Player.next_draw_replacements`, spent in `draw_one` and cleared at the turn
-  boundary; the Words cycle),
-  `Keyword::CantBlockGreaterPowerThanSelf` (Spitfire Handler),
-  `StaticEffect::ReduceDamageToYourMatchingCreaturesBy` (Daunting Defender's
-  Clerics) and `StaticEffect::PreventAllCombatDamageToAndFromEnchanted`
-  (Sandskin). New:
-  `Effect::TurnFaceUpFree` (CR 707.9 — turn a morph up without paying its cost;
-  Break Open, Ixidor) and `StaticEffect::FaceDownSpellsCostLess` (Dream Chisel).
-  CR conformance: 506.4 (removed from combat), 205.3m (restricted creature-type
-  choice), 613.8 (type-gated grants see a retype). New:
+  boundary), `Effect::TurnFaceUpFree` (CR 707.9),
   `DynamicPt::CreaturesOfTypeOnBattlefield { creature_type, also_graveyards }`
-  ("*/* equal to the number of [tribe] on the battlefield", with Soulless One's
-  all-graveyards rider). Correctness: `Effect::BecomeChosenCreatureType` now
-  makes **one** type choice for the whole effect instead of prompting per
-  affected permanent (Standardize); the `SharesCreatureType/ColorWithAttachedHost`
-  filters fall back to the source's leave snapshot so an Aura sacrificed as its
-  own cost still knows its host (the Crown cycle); and
-  `GameState::shallow_creature_types` lets a requirement walk running inside
-  the layer gather see stored layer-4 retypes (CR 613.8 — Mistform Wall's
-  "defender as long as it's a Wall").
+  (the Avatar cycle, with Soulless One's all-graveyards rider),
+  `Keyword::CantBlockGreaterPowerThanSelf`, and
+  `StaticEffect::{FaceDownSpellsCostLess, ReduceDamageToYourMatchingCreaturesBy,
+  PreventAllCombatDamageToAndFromEnchanted}`.
+  CR conformance: 506.4 (removed from combat), 205.3m (restricted creature-type
+  choice — `Effect::BecomeChosenCreatureType.excluded`, one choice for the whole
+  effect instead of one prompt per permanent), 613.8 (a type-gated grant run
+  inside the layer gather sees stored layer-4 retypes via
+  `GameState::shallow_creature_types`; `SelectionRequirement::FaceDown` joined
+  the card-only set). The `SharesCreatureType/ColorWithAttachedHost` filters now
+  fall back to the source's leave snapshot, so an Aura sacrificed as its own
+  ability's cost still knows its host (the Crown cycle).
 
 - **Onslaught (ONS) opened** — `set_gaps.py ons` 266 → 219 (`sets::ons`, 47
   cards; tests in `classic_sets/ons`). New: `EventSpec.dealer_filter`

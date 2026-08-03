@@ -995,6 +995,18 @@ impl GameState {
             } => {
                 let card = *card;
                 let card_id = card.id;
+                // CR 706 — stash the copy-relevant fields before anything else
+                // runs; a "copy this spell" rider resolves after the stack
+                // entry is already popped (the Chain cycle).
+                self.resolving_spell_snapshot =
+                    Some(Box::new(crate::game::ResolvingSpell {
+                        definition: card.definition.clone(),
+                        target: target.clone(),
+                        additional_targets: additional_targets.clone(),
+                        mode,
+                        x_value,
+                        converged_value,
+                    }));
 
                 // CR 702.140 — a creature with mutate merges onto its host
                 // permanent instead of entering on its own. If the host is no
@@ -2985,6 +2997,7 @@ impl GameState {
         self.combat_damage_prevented_creatures.clear();
         self.combat_damage_prevented_to_this_turn.clear();
         self.combat_damage_prevented_by_this_turn.clear();
+        self.all_damage_prevented_by_this_turn.clear();
         self.draws_redirected_this_turn.clear();
         self.damage_becomes_this_turn = None;
         self.combat_damage_prevented_to_players_this_turn.clear();

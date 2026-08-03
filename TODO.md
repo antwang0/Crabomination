@@ -8060,6 +8060,10 @@ in the topical sections above, are:
   mana+life costs; MDFC back-face cost in the cast-button tooltip when flipped.
 
 ### Server
+- `Effect::MayCopyThisSpell` (the Chain cycle) asks the *affected* player
+  through the installed decider rather than suspending for that seat's UI —
+  the same known class as the decision-plumbing audit below. Wire the
+  cross-seat suspend when the pending machinery grows a per-seat prompt.
 - `PlayerView.face_down_cast_cost` reports the real morph price (the flat {3}
   less any `FaceDownSpellsCostLess` static — Dream Chisel), so the client can
   label the "cast face down" affordance instead of assuming {3}. Client-side

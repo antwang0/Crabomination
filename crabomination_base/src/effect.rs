@@ -2755,6 +2755,19 @@ impl EventSpec {
 // TODO.md ("Box `TokenDefinition` in `Effect::CreateToken`") as a future
 // cleanup; the stack footprint of `Effect` is fine in practice (most
 // effects are deep behind `Box<Effect>` already via `Seq` / `ForEach`).
+/// The toll a player pays before copying a Chain spell (CR 706 —
+/// [`Effect::MayCopyThisSpell`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ChainCopyCost {
+    /// Free — Chain of Acid, Chain of Smog.
+    #[default]
+    Free,
+    /// "may sacrifice a land of their choice" — Chain of Vapor, Chain of Silence.
+    SacrificeLand,
+    /// "may discard a card" — Chain of Plasma.
+    DiscardCard,
+}
+
 /// What happens to tokens minted by [`Effect::CreateTokenAttacking`] when
 /// the combat phase ends (CR 511.3 / the Mobilize end-of-combat sacrifice).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -6050,6 +6063,14 @@ pub enum Effect {
     /// Reverberate / Fork / Twincast. AutoDecider keeps the original
     /// target (first legal); a scripted/UI decider can repoint it.
     CopySpellMayChooseTargets { what: Selector, count: Value },
+    /// CR 706 — the Onslaught Chain cycle's rider: "Then `who` may copy this
+    /// spell and may choose a new target for that copy." The copy is controlled
+    /// by `who`, who retargets it, so a chain can bounce around the table.
+    /// `cost` is the printed toll paid first ("may sacrifice a land",
+    /// "may discard a card"); a declined or unpayable toll ends the chain.
+    /// Asked through the installed decider — the target seat's own UI prompt is
+    /// a follow-up (see TODO.md's decision-plumbing audit).
+    MayCopyThisSpell { who: PlayerRef, cost: ChainCopyCost },
     /// Zada, Hedron Grinder — the triggering spell targets only this source, so
     /// copy it once per *other* creature its controller controls that the spell
     /// could legally target, each copy aimed at a different one. No-op when the
@@ -7627,6 +7648,10 @@ pub enum Effect {
     /// Adds the target to `GameState.combat_damage_prevented_by_this_turn`.
     /// Azorius Ploy.
     PreventCombatDamageByTargetThisTurn { target: Selector },
+    /// CR 615 — "Prevent all damage `target` would deal this turn", combat and
+    /// noncombat alike (Chain of Silence). The all-damage superset of
+    /// `PreventCombatDamageByTargetThisTurn`.
+    PreventAllDamageByTargetThisTurn { target: Selector },
 
     /// "You may have `dealer` deal damage equal to its power to `to`. If you
     /// do, `dealer` assigns no combat damage this turn." The Laccolith cycle's

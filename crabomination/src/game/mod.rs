@@ -1124,6 +1124,12 @@ pub struct GameState {
     /// The mirror of `combat_damage_prevented_to_this_turn`. Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_by_this_turn: Vec<CardId>,
+    /// CR 615 — sources whose damage is prevented outright for the rest of the
+    /// turn, combat and noncombat alike ("prevent all damage target creature
+    /// would deal this turn" — Chain of Silence). Cleared at the turn boundary
+    /// alongside the combat-only list.
+    #[serde(default)]
+    pub(crate) all_damage_prevented_by_this_turn: Vec<CardId>,
     /// CR 614 — "if `from` would draw a card, that player skips that draw and
     /// `to` draws instead", as `(from, to)` pairs (Plagiarize). Cleared at
     /// cleanup.
@@ -1424,6 +1430,12 @@ pub struct GameState {
     /// `EventKind::YourInstantOrSorceryDealtDamage` (Blaze Commando). Transient.
     #[serde(skip)]
     pub(crate) resolving_spell_caster: Option<usize>,
+    /// CR 706 — the spell currently resolving, kept so a mid-resolution copy
+    /// rider (`Effect::MayCopyThisSpell` — the Onslaught Chain cycle) can still
+    /// mint a copy after `resolve_stack_item` popped the stack entry. Set at
+    /// the top of each spell resolution, cleared at the top of the next one.
+    #[serde(skip)]
+    pub(crate) resolving_spell_snapshot: Option<Box<ResolvingSpell>>,
     /// Seat whose resolving instant/sorcery has deathtouch (Pestilent Spirit —
     /// `YourISSpellsHaveDeathtouch`). Stamped around the spell's resolution and
     /// cleared after; read in `deal_damage_to_from`. Transient.
@@ -1747,6 +1759,7 @@ impl Clone for GameState {
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
             combat_damage_prevented_to_this_turn: self.combat_damage_prevented_to_this_turn.clone(),
             combat_damage_prevented_by_this_turn: self.combat_damage_prevented_by_this_turn.clone(),
+            all_damage_prevented_by_this_turn: self.all_damage_prevented_by_this_turn.clone(),
             draws_redirected_this_turn: self.draws_redirected_this_turn.clone(),
             damage_becomes_this_turn: self.damage_becomes_this_turn,
             combat_damage_prevented_to_players_this_turn: self
@@ -1799,6 +1812,7 @@ impl Clone for GameState {
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
             resolving_spell_lifelink_seat: self.resolving_spell_lifelink_seat,
             resolving_spell_caster: self.resolving_spell_caster,
+            resolving_spell_snapshot: self.resolving_spell_snapshot.clone(),
             resolving_spell_deathtouch_seat: self.resolving_spell_deathtouch_seat,
             spell_damage_trigger_fired: self.spell_damage_trigger_fired,
             in_draw_double: self.in_draw_double,
@@ -1824,6 +1838,20 @@ impl Clone for GameState {
             chosen_sector: self.chosen_sector,
         }
     }
+}
+
+
+/// CR 706 — the copy-relevant snapshot of a spell taken as it starts resolving,
+/// so a mid-resolution "copy this spell" rider still works after the stack
+/// entry has been popped (`Effect::MayCopyThisSpell`).
+#[derive(Debug, Clone)]
+pub(crate) struct ResolvingSpell {
+    pub definition: std::sync::Arc<crate::card::CardDefinition>,
+    pub target: Option<crate::game::types::Target>,
+    pub additional_targets: Vec<crate::game::types::Target>,
+    pub mode: Option<usize>,
+    pub x_value: u32,
+    pub converged_value: u32,
 }
 
 impl GameState {
@@ -2002,6 +2030,7 @@ impl GameState {
             combat_damage_prevented_creatures: Vec::new(),
             combat_damage_prevented_to_this_turn: Vec::new(),
             combat_damage_prevented_by_this_turn: Vec::new(),
+            all_damage_prevented_by_this_turn: Vec::new(),
             draws_redirected_this_turn: Vec::new(),
             damage_becomes_this_turn: None,
             combat_damage_prevented_to_players_this_turn: Vec::new(),
@@ -2052,6 +2081,7 @@ impl GameState {
             dies_to_exile_eot: std::collections::HashSet::new(),
             resolving_spell_lifelink_seat: None,
             resolving_spell_caster: None,
+            resolving_spell_snapshot: None,
             resolving_spell_deathtouch_seat: None,
             spell_damage_trigger_fired: false,
             in_draw_double: false,
@@ -4266,6 +4296,7 @@ impl GameState {
     pub fn combat_damage_prevented_from(&self, dealer: crate::card::CardId) -> bool {
         !self.damage_cant_be_prevented_this_turn
             && (self.combat_damage_prevented_by_this_turn.contains(&dealer)
+                || self.all_damage_prevented_by_this_turn.contains(&dealer)
                 || self.damage_sealed_by_aura(dealer, false)
                 || self.combat_damage_sealed_by_aura(dealer)
                 || self.combat_damage_sealed_for_your_creatures(dealer))
