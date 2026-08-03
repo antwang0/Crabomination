@@ -5459,11 +5459,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
-- ⏳ **Onslaught's last 4 gaps** (`set_gaps.py ons`). One dedicated primitive
+- ⏳ **Onslaught's last 3 gaps** (`set_gaps.py ons`). One dedicated primitive
   each: CR 612 text-changing (Artificial Evolution), combat-damage division
-  among the defender and its creatures (Butcher Orgg), a simultaneous
-  secret-number auction (Menacing Ogre), and a "when you gain control of this
-  permanent" trigger (Risky Move).
+  among the defender and its creatures (Butcher Orgg), and a "when you gain
+  control of this permanent" trigger (Risky Move).
 - ⏳ **Spy Network's "top card of that player's library" clause is dropped.**
   The hand and face-down halves ship (`LookAtHand` + `LookAtFaceDown`); a
   one-card library peek needs a `library_top_revealed_to` twin of

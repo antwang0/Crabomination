@@ -2405,12 +2405,11 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** The whole Odyssey block is done — Odyssey, Torment
    and **Judgment** are all at zero (`set_gaps.py ody` / `tor` / `jud`).
-   **Onslaught** (`sets::ons` / `ons2` / `ons3`) is open at 4 gaps after ten
-   waves (252 cards); what's left needs one dedicated primitive each — CR 612
+   **Onslaught** (`sets::ons` / `ons2` / `ons3`) is open at 3 gaps after ten
+   waves (253 cards); what's left needs one dedicated primitive each — CR 612
    text-changing (Artificial Evolution), combat-damage division among the
-   defender and its creatures (Butcher Orgg), a simultaneous secret-number
-   auction (Menacing Ogre) and a "when you gain control of this permanent"
-   trigger (Risky Move). Then Legions / Scourge.
+   defender and its creatures (Butcher Orgg) and a "when you gain control of
+   this permanent" trigger (Risky Move). Then Legions / Scourge.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2444,6 +2443,8 @@ Each a small targeted feature; sweep batch by batch.
   (Circle of Solace). Also `Effect::{CreateTokenOfChosenColorAndType}` and a
   `pick_filter` / `pick_to_battlefield` rider on
   `RevealTopOpponentChoosesToHand` (Riptide Replicator, Animal Magnetism).
+  Plus `Effect::EachPlayerChoosesNumberHighestLoses` (Menacing Ogre's sealed
+  bid, routed through `ask_seat_amount` so a UI seat is really prompted).
   CR 708.2: `Effect::LookAtFaceDown` + `GameState.face_down_revealed_to`, so
   a peek at a face-down permanent survives in the server view for exactly the
   seat that looked (Aven Soulgazer, Spy Network's rider).

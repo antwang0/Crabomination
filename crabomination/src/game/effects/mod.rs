@@ -19889,6 +19889,40 @@ impl GameState {
                 Ok(())
             }
 
+            // Menacing Ogre — a simultaneous sealed-bid auction: everyone
+            // names a number, then every player who named the highest pays it
+            // in life.
+            Effect::EachPlayerChoosesNumberHighestLoses { max, on_you_win } => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut cursor = 0usize;
+                let mut picks: Vec<(usize, u32)> = Vec::new();
+                for seat in self.apnap_sort((0..self.players.len()).collect()) {
+                    let Some(n) = self.ask_seat_amount(
+                        &mut cursor,
+                        seat,
+                        "Secretly choose a number".to_string(),
+                        source,
+                        *max,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    picks.push((seat, n));
+                }
+                let Some(high) = picks.iter().map(|(_, n)| *n).max().filter(|n| *n > 0) else {
+                    return Ok(());
+                };
+                let mut controller_won = false;
+                for (seat, _) in picks.iter().filter(|(_, n)| *n == high) {
+                    self.adjust_life(*seat, -(high as i32));
+                    controller_won |= *seat == ctx.controller;
+                }
+                if controller_won {
+                    self.run_effect(on_you_win, ctx, events)?;
+                }
+                Ok(())
+            }
+
             // CR 708.2 — peek at a face-down permanent; the peek sticks for
             // as long as it stays face down.
             Effect::LookAtFaceDown { what } => {

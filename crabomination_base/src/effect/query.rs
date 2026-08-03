@@ -232,6 +232,9 @@ impl Effect {
             Effect::FlipUntilLoss { per_win } => per_win.requires_target(),
             Effect::HeadGames { who } | Effect::TradeSecrets { who } => player_has_target(who),
             Effect::LookAtFaceDown { what } => sel_has_target(what),
+            Effect::EachPlayerChoosesNumberHighestLoses { on_you_win, .. } => {
+                on_you_win.requires_target()
+            }
             Effect::CreateTokenOfChosenColorAndType { .. }
             | Effect::EachPlayerDiscardsElseLosesLife { .. }
             | Effect::EachPlayerRevealsCreaturesForTokens { .. }

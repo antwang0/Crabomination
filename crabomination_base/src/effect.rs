@@ -6761,6 +6761,13 @@ pub enum Effect {
         pick_to_battlefield: bool,
     },
 
+    /// Menacing Ogre — every player secretly picks a number up to `max`, the
+    /// picks are revealed at once, and each player who named the highest loses
+    /// that much life. `on_you_win` runs when the source's controller is among
+    /// them. The picks go through `ask_seat_amount`, so a UI seat is prompted
+    /// on its own turn through the suspend machinery.
+    EachPlayerChoosesNumberHighestLoses { max: u32, on_you_win: Box<Effect> },
+
     /// CR 708.2 — "Look at target face-down creature." The resolving
     /// controller sees the real card for as long as it stays face down
     /// (`GameState.face_down_revealed_to`). Aven Soulgazer, Spy Network.

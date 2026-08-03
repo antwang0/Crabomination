@@ -1280,3 +1280,19 @@ pub fn aven_soulgazer() -> CardDefinition {
         )
     }
 }
+
+/// Menacing Ogre — a sealed-bid auction that pays out in +1/+1 counters.
+pub fn menacing_ogre() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![etb(Effect::EachPlayerChoosesNumberHighestLoses {
+            max: 20,
+            on_you_win: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            }),
+        })],
+        ..creature("Menacing Ogre", cost(&[generic(3), r(), r()]), vec![CreatureType::Ogre], 3, 3)
+    }
+}

@@ -689,3 +689,22 @@ fn aven_soulgazer_peeks_under_a_morph() {
     assert_eq!(name_for(&g, 0), Some("Skittish Valesk".to_string()));
     assert_eq!(name_for(&g, 1), Some("Skittish Valesk".to_string()), "its controller always knows");
 }
+
+/// Menacing Ogre's auction charges every top bidder and pays its controller.
+#[test]
+fn menacing_ogre_charges_the_high_bidders() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Amount(5),
+        DecisionAnswer::Amount(2),
+    ]));
+    let ogre = g.add_card_to_hand(0, catalog::menacing_ogre());
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    cast(&mut g, 0, ogre, None);
+    assert_eq!(g.players[0].life, l0 - 5, "the high bidder pays");
+    assert_eq!(g.players[1].life, l1, "the low bidder doesn't");
+    assert_eq!(
+        g.battlefield_find(ogre).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2
+    );
+}
