@@ -277,9 +277,6 @@ mod tests {
             castable_hand: vec![],
             back_castable_hand: vec![],
             prepare_castable: vec![],
-            // The printed {3} morph price — the neutral value a stub view
-            // with no cost-reduction statics projects.
-            face_down_cast_cost: 3,
             spliceable_hand: vec![],
             pitchable_hand: vec![],
             kickable_hand: vec![],
