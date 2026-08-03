@@ -2474,8 +2474,8 @@ Each a small targeted feature; sweep batch by batch.
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged** and **New Phyrexia** (the Scars block
-   is closed) are all at zero. **Legends** is open at 43 after six waves
-   (230 cards, `sets::leg`–`leg5`).
+   is closed) are all at zero. **Legends** is open at 14 after seven waves
+   (259 cards, `sets::leg`–`leg6`).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2491,36 +2491,37 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **CR 407 ante zone** — `Zone::Ante`, `Player.ante`, `ZoneDest::Ante`,
-  `GameState.playing_for_ante`, `begin_ante_game` (407.2 opening ante) and
-  `award_ante_to` (the winner takes the zone, fired from the game-over SBA).
-  `CardDefinition.ante_only` + `DeckError::AnteCardOutsideAnteGame` enforce
-  407.3. New effects: `AnteTopOfLibrary` (optional, per-player then/else),
-  `Ante`, `AnteToGraveyard`, `TakeAnteCardForLibraryTop`, `ExchangeOwnership`
-  (407.3 — the only rules-legal ownership change) and `PlayerMayPayLifeElse`.
-  `sets::ante` ships all nine printed ante cards. Tests in
-  `core_rules/cr_recent72`.
+- **Cost-sacrifice batches (CR 602.5b)** — the whole batch (`sac_cost` +
+  `sac_other_picks` + `sac_all_matching_cost`) is threaded into
+  `Effect::WithSacrificedPt`, so `Value::Sacrificed{Count,TotalPower}` read
+  the batch and not the last permanent. `ActivatedAbility.sac_any_number_filter`
+  adds a real "…and any number of [filter] you control" cost (a `ChooseCards`
+  modal for hand-paying seats, zero legal), and
+  `Effect::ExileCostSacrificedBatch` exiles what it ate — Sword of the Ages.
 
-- **CR 615 blocked-creature prevention** — `StaticEffect::
-  PreventAllDamageToThisFromBlocked` sits in `apply_prevention_shields`, not
-  the combat resolver, so a blocked attacker's noncombat damage is prevented
-  too (Wall of Vapor, Wall of Shadows).
+- **Resolution-scoped scratch survives nesting** — `GameState.resolution_depth`
+  guards `creatures_died_this_resolution` so a sweeper's own death triggers
+  can't zero the running count mid-sweep (`Value::CreaturesDiedThisResolution`,
+  Hellfire).
 
-- **Legends opened wide** — `set_gaps.py leg` 179 → 43 across `sets::leg3`
-  (Walls, the mana batteries, the plain legends, the one-line spells) and
-  `sets::leg4` (the Elder Dragon cycle, the Glyph cycle, the utility
-  artifacts). New primitives:
-  `Selector::CreaturesBlockedByThisTurn` (the target-scoped twin of
-  `CreaturesBlockedBySourceThisTurn` — the whole Glyph cycle),
-  `Keyword::{CantBeTargetedByAuras, LegendaryLandwalk}`,
-  `Effect::MaySpendManaAsAnyColorThisTurn` with the seat-aware
-  `relax_cost_colors_for` (North Star), and
-  `CounterType::{MinusZeroMinusTwo, Glyph, Sleep, Matrix, Hatchling}`.
+- **Aura death LKI on every path (CR 603.10)** — the destroy/sacrifice funnel
+  records `auras_at_death` before the host leaves, so
+  `EventScope::EnchantedBySource` triggers fire off a sac outlet and not only
+  off the lethal-damage SBA (Puppet Master).
 
-- **Client / server** — a `StatChipKind::Ante` chip surfaces the new zone,
-  the CR 609.4b any-colour chip is now seat-aware, and `CRAB_DECK_FORMAT`
-  picks the construction format decklists are validated against (was
-  hard-coded Modern).
+- **Legends wave 7** — `set_gaps.py leg` 43 → 14 (`sets::leg6`, 29 cards).
+  New primitives: `Keyword::CantAttackIfAttackedLastTurn` with the
+  `attacked_own_turn` / `attacked_last_turn` untap roll-over,
+  `Effect::CantAttackNextTurn` + `AttackBan` (Wall of Dust),
+  `Effect::ReattachTargetAura` (Enchantment Alteration, re-checking the Aura's
+  enchant filter), `Effect::{NameCardThenRevealTopBin, AtYourNextUpkeep}`,
+  `EachPlayerMayPutPermanentFromHand.repeat` (Eureka),
+  `Value::DamageToSourceThisTurnFromOthersNamedSame` (Blazing Effigy),
+  `R::{DealtDamageToSourceThisTurn, BlockingOrBlockedBySource}`, and
+  `CounterType::{Pupa, Dream, Pin}`.
+
+- **Client / server** — `PermanentView.cant_attack_this_turn` surfaces a live
+  CR 508.1a turn ban and the counter tooltip explains it.
 
 Only this push's entries are listed; earlier pushes are in `git log -p --
 FEATURE_ROADMAP.md`.

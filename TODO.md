@@ -184,27 +184,65 @@ general "any player may …, if no one does …" shape, with
 
 ## Legends — opened
 
-`set_gaps.py leg` is at **43** (277 → 268 → 238 → 232 → 179 → 120 → 64 → 43;
-`sets::leg`–`leg5`, 230 cards, tests in `classic_sets/leg`–`leg5`). Waves 1–3
-covered CR 702.22 "bands with other", the plain bodies, the colour-shift cycle,
-the landwalk hosers and the vanillas. Wave 4 added the Walls, the mana-battery
-cycle, the plain legends and the one-line spells; wave 5 added the Elder Dragon
-cycle, the Glyph cycle and the utility artifacts; wave 6 added the
-block-and-kill creatures, the prevention bodies and the last legends.
-New primitives across 4/5/6:
-`StaticEffect::PreventAllDamageToThisFromBlocked`,
-`Selector::CreaturesBlockedByThisTurn`,
-`Keyword::{CantBeTargetedByAuras, LegendaryLandwalk}`,
-`Effect::MaySpendManaAsAnyColorThisTurn` (+ `relax_cost_colors_for`) and
-`CounterType::{MinusZeroMinusTwo, Glyph, Sleep, Matrix, Hatchling,
-Intervention}`, `StaticEffect::PreventCombatDamageToThisFromMatching`,
-`Effect::GameIsADraw` (CR 104.4) and
-`WardCost::GenericCountersOnSource`.
+`set_gaps.py leg` is at **14** (277 → … → 64 → 43 → 14; `sets::leg`–`leg6`,
+259 cards, tests in `classic_sets/leg`–`leg6`). Wave 7 shipped the last
+creatures, artifacts, Auras and spells; its primitives are listed in
+FEATURE_ROADMAP.md → "Recently closed".
 
-Recurring blockers in what's left: "attach target Aura to another permanent"
-(Enchantment Alteration), damage-tally reads for Blazing Effigy / Backdraft,
-"change base P/T to that of another creature" (Halfdane, Brine Hag, Sentinel),
-and the ante-adjacent oddities (Falling Star's dexterity clause).
+Still open (each blocked on one primitive):
+
+- **All Hallow's Eve** — exile-self-with-counters plus an upkeep trigger that
+  fires *from exile*; suspend's shape, but a mass reanimation for every player.
+- **Arboria** — "creatures can't attack a player unless that player cast a
+  spell or put a nontoken permanent onto the battlefield during their last
+  turn": needs a per-player "was active last turn" flag plus a defender-scoped
+  attack restriction static.
+- **Backdraft** — half the damage dealt by *one specific sorcery spell* this
+  turn; nothing tallies damage per spell object.
+- **Bronze Horse / Silhouette** — "prevent damage from spells (and abilities)
+  that target this": needs a per-permanent record of which sources targeted it
+  this turn, keyed at the `BecameTarget` emission.
+- **Chains of Mephistopheles** — a draw replacement scoped to "except the first
+  draw in each of their draw steps", with a discard-then-draw / mill branch.
+- **Equinox** — grant a land "{T}: counter target spell **if it would destroy a
+  land you control**"; no predicate reads a spell's effect tree.
+- **Juxtapose** — exchange the greatest-mana-value creature (then artifact);
+  `Value::GreatestManaValueAmongPermanents` exists but there is no *selector*
+  for the permanent holding it.
+- **Knowledge Vault** — exile-face-down linked to the source, with a
+  return-to-hand cash-in and a leaves-the-battlefield bin.
+- **Land Equilibrium** — a land-ETB replacement scoped to opponents with at
+  least as many lands as you.
+- **Nebuchadnezzar** — name a card, reveal X at random from a hand, discard the
+  matches; `RevealRandomDiscardNonland` has no name-matching sibling.
+- **Quarum Trench Gnomes** — an indefinite per-land mana replacement
+  ("produces {C} instead of {W}").
+- **Reverberation** — redirect *all damage a specific sorcery spell would deal
+  this turn* to its controller.
+- **Wall of Caltrops** — "if at least one other Wall is blocking that creature
+  and no non-Wall is": needs a predicate over the blockers of the trigger's
+  subject.
+
+### Noticed but not tackled (wave 7)
+
+- **`kill()`-style direct `resolve_effect` calls don't dispatch other
+  permanents' triggers** — only the dying object's own. Tests that need an
+  Aura/watcher to see a sacrifice must call
+  `dispatch_triggers_for_events` (or go through `perform_action`). Worth a
+  shared test helper.
+- **Halfdane's "until the end of your next upkeep" is modelled as indefinite** —
+  correct while he keeps re-triggering, wrong once he leaves. Wants a
+  `Duration::UntilYourNextUpkeep`.
+- **Cocoon's pupa counters ride the enchanted creature, not the Aura**, so the
+  untap lock can read them; proliferate sees them on the wrong object.
+- **Nova Pentacle's redirect target is chosen by the activator**, not "of an
+  opponent's choice".
+- **Falling Star** settles for one random creature; the printed dexterity
+  clause has no analog.
+- **Chained `AbilityCostChoice` suspends lose earlier picks** — each replay
+  `take()`s every pending cost choice up front, so an ability with two
+  interactive cost choices auto-picks the first on the second replay. Only
+  matters for a card with two such costs; none ships yet.
 
 ### Noticed but not tackled (wave 4/5)
 
@@ -217,12 +255,6 @@ and the ante-adjacent oddities (Falling Star's dexterity clause).
 - **Imprison** ships only its can't-attack / can't-block halves; the printed
   "pay {1} or destroy this Aura" clauses need a repeated pay-or-else rider on
   someone else's activation.
-- **Hellfire's self-damage reads the turn's death tally**, not the sweep's own
-  count — there is no `Value::CreaturesDiedThisResolution`.
-- **Aisling Leprechaun / The Wretched read `CreaturesInCombatWith`**, not the
-  trigger's own subject: a `Blocks` / `BecomesBlocked` trigger's
-  `Selector::TriggerSource` didn't resolve to the other creature. Worth
-  running down — it affects every "that creature" combat trigger.
 - **Bronze Tablet folds its self-exile into a sacrifice**; the printed
   exile-both-then-swap needs a two-object exile with a linked return.
 
@@ -5273,7 +5305,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   attacking-band formation, "bands with other", and the band-blocks-multiple
   damage-distribution corner.
 - 🟡 **CR 303 — Auras** — characteristic-overriding Auras ✅ (`EquipBonus.{set_base_pt,set_card_types,set_creature_types,set_colors,remove_abilities}` install layer 4/5/6/7b continuous effects on the host — Ichthyomorphosis "0/1 blue Fish, no abilities", One with the Stars "becomes an enchantment", Heliod's Punishment "loses abilities + can't attack/block"; removal is ordered before the aura's own keyword grants so they survive — test `cr_613_aura_set_base_pt_then_counter`). **Aura/Equipment-granted step triggers ✅** (CR 702.6e — `fire_step_triggers` now dispatches `EquipBonus.triggered_abilities` whose kind is a step, sourced on the host and scoped to the host's controller; Pillory of the Sleepless's "enchanted creature has: at your upkeep, you lose 1 life" — `cr_702_6e_aura_granted_upkeep_trigger_keys_on_host_controller`). **CR 303.4a "enchant player" ✅** — `CardInstance.attached_to_player` anchors an Aura to a seat, `PlayerRef::EnchantedPlayer` and `EventScope::EnchantedBySource` read it, `StaticEffect::PumpPT` takes a `Selector::ControlledBy` anthem scope, and the orphan-Aura SBA leaves player-Auras alone (`catalog::sets::curses`; tests `core_rules/cr_recent37`). **CR 702.103f ✅** — a bestowed Aura that is unattached *or* attached to an illegal object reverts to a creature instead of dying. Remaining: replacement-style Aura ETB (enters attached under another rule).
-- 🟡 **CR 603.10 — Last-Known Information** — full LKI for mid-resolution stack sources (e.g. lifelink 702.15c). (CR 603.6d "leaves the battlefield" self-source triggers now also fire on the lethal-damage SBA path, not just the destroy/sacrifice path — Thought-Knot Seer's LTB draw.) Sac-as-cost activated abilities that read the sacrificed source's own counters at resolution now stash `leaves_bf_lki` during cost payment (it outlives the per-dispatch `died_card_snapshots` clear) so `Value::TotalCountersOn { This }` reads the last-known total — Twitching Doll's "Spider per counter on it" (`twitching_doll_nests_then_sacs_for_spiders`). `SelectionRequirement::ControlledByYou` now falls back to `died_card_snapshots` for the LKI controller, so a graveyard-scoped "a creature you control dies" trigger fires only for your creatures — Furious Forebear (`cr_603_10_died_creature_controller_read_from_lki`). CR 603.10a self-death: both self-death funnels (SBA lethal-damage + destroy/sacrifice) now evaluate a filtered `YourControl`/`AnyPlayer` death trigger's `.with_filter` against the dying creature via the death snapshot, and the destroy/sacrifice path fires self-inclusive scopes (was SelfSource-only) so an aristocrat drains for its own sacrifice (`cruel_celebrant_drains_on_its_own_sacrifice`).
+- 🟡 **CR 603.10 — Last-Known Information** — full LKI for mid-resolution stack sources (e.g. lifelink 702.15c). Aura death LKI is now path-independent: `remove_to_graveyard_with_triggers` records `auras_at_death` before the host leaves, so `EventScope::EnchantedBySource` triggers fire on the destroy/sacrifice funnel as well as the lethal-damage SBA (`cr_603_10_enchanted_dies_trigger_fires_on_a_sacrifice`). (CR 603.6d "leaves the battlefield" self-source triggers now also fire on the lethal-damage SBA path, not just the destroy/sacrifice path — Thought-Knot Seer's LTB draw.) Sac-as-cost activated abilities that read the sacrificed source's own counters at resolution now stash `leaves_bf_lki` during cost payment (it outlives the per-dispatch `died_card_snapshots` clear) so `Value::TotalCountersOn { This }` reads the last-known total — Twitching Doll's "Spider per counter on it" (`twitching_doll_nests_then_sacs_for_spiders`). `SelectionRequirement::ControlledByYou` now falls back to `died_card_snapshots` for the LKI controller, so a graveyard-scoped "a creature you control dies" trigger fires only for your creatures — Furious Forebear (`cr_603_10_died_creature_controller_read_from_lki`). CR 603.10a self-death: both self-death funnels (SBA lethal-damage + destroy/sacrifice) now evaluate a filtered `YourControl`/`AnyPlayer` death trigger's `.with_filter` against the dying creature via the death snapshot, and the destroy/sacrifice path fires self-inclusive scopes (was SelfSource-only) so an aristocrat drains for its own sacrifice (`cruel_celebrant_drains_on_its_own_sacrifice`).
 - 🟡 **CR 704 — State-Based Actions** — Saga SBA ✅ (`saga_chapters` reach
   final chapter → sacrifice, unless a chapter ability is still on the stack);
   spell-copy-off-stack identity ✅ (704.5d/e — the token-purge SBA sweeps
@@ -5426,6 +5458,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   `declare_attackers`; `shortcut::on_you_attack`. Replaced the
   `Attacks/YourControl + once_per_turn` approximation on Razorkin, Inti, Gut,
   Raffine, Most Valuable Slayer, Lionheart Glimmer.
+- 🟡 **CR 508.1a — Attack restrictions** — the keyword gate list now covers "can't attack if it attacked during your last turn" (`Keyword::CantAttackIfAttackedLastTurn`, off the `attacked_own_turn` → `attacked_last_turn` untap roll-over) and a one-turn ban armed by an effect (`Effect::CantAttackNextTurn` + `CardInstance.attack_ban`, promoted at the bearer's untap and cleared the turn after). Both surface as `PermanentView.cant_attack_this_turn`. Tests `cr_508_1a_attacked_last_turn_restriction_lifts_after_one_turn`, `wall_of_dust_benches_what_it_blocks`. Remaining: the restriction list is a hand-written match rather than a general predicate.
 - 🟡 **CR 508.3a — Put onto the battlefield attacking** — `Effect::CreateTokenAttacking`
   (tokens) and `Effect::JoinCombatAttacking { what }` (existing permanents — a
   reanimated/blinked creature joins combat tapped + attacking; Alesha, Who
@@ -5468,7 +5501,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - ✅ **CR 701.29 — Fateseal** — `Effect::Fateseal { who, amount }`: look at the top N of a targeted opponent's library, the controller may bottom any (Scry's library-side mirror). Decided inline (the `wants_ui` suspend prompt is a follow-up).
 - ✅ **CR 701.57 — Discover N** — `Effect::Discover { n }`: exile from top until a nonland MV≤N, cast it free or put in hand (controller's choice), bottom the rest. Ships Geological Appraiser, Trumpeting Carnosaur. (Cascade-adjacent; shares the bottom-the-rest tail.)
 - ✅ **CR 701.59 — Collect Evidence N** — `Effect::CollectEvidence { amount, then }`: optionally exile graveyard cards totaling MV≥N, then run the reflexive payoff. A `wants_ui` controller picks via `ChooseCards` (sum-validated); bots/tests keep the auto cheapest-pick. Ships Sample Collector, Izoni.
-- ✅ **CR 602.5b — Additional activation costs (cont.)** — two new cost forms on `ActivatedAbility`: `bounce_other_filter` ("Return a [filter] you control to its owner's hand:" — Quirion Ranger, Wirewood Symbiote) and `tap_n_filter` ("Tap N untapped [filter] you control:", source eligible — Heritage Druid). Both gate pre-payment + auto-pick lowest-power, surface in `ability_cost_label`, and are excluded from the bot's `is_free_mana_ability`.
+- ✅ **CR 602.5b — Additional activation costs (cont.)** — two new cost forms on `ActivatedAbility`: `bounce_other_filter` ("Return a [filter] you control to its owner's hand:" — Quirion Ranger, Wirewood Symbiote) and `tap_n_filter` ("Tap N untapped [filter] you control:", source eligible — Heritage Druid). Both gate pre-payment + auto-pick lowest-power, surface in `ability_cost_label`, and are excluded from the bot's `is_free_mana_ability`. The whole cost-sacrifice batch now reaches resolution as one unit (`Effect::WithSacrificedPt` carries the batch count + total power), and `sac_any_number_filter` adds the "…and any number of [filter] you control" form — a `ChooseCards` modal for hand-paying seats, everything else takes all candidates; zero is a legal payment (`cr_602_5b_*`).
 - ✅ **CR 701.16 / 614 — "Opponents can't make you sacrifice"** — `StaticEffect::OpponentsCantMakeYouSacrifice`, consulted in the `Effect::Sacrifice` resolver (skips a player whose opponent's effect would force a sacrifice; own-sacrifice unaffected). Ships Sigarda, Host of Herons + the sacrifice half of Tamiyo, Collector of Tales.
 - 🟡 **CR 614 — Replacement Effects** — general "instead" framework. Damage *halving* ✅ (614.5 — `StaticEffect::HalveDamageDealt`, Ghosts of the Innocent; composed with doublers via `scale_damage` at both damage funnels). Skip-step (614.10) ✅ via `StaticEffect::SkipStep` consulted in `advance_step` — a skipped upkeep/draw never occurs (no turn-based actions, triggers, or priority); a skipped untap skips untapping/phasing/day-night but the turn still starts (Eon Hub, Stasis). Skip-*turn* ✅ (`Player.skip_turns`, Chronatog / Ral Zarek -7). Damage *redirection* (614.9) ✅ via `StaticEffect::RedirectDamageToSelf` at both damage funnels (Palisade Giant; one redirect per event per 614.5). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.) Enters-*untapped* replacement ✅ — `StaticEffect::LandsEnterUntapped` overrides any enters-tapped effect for the controller's lands in `apply_enters_tapped_replacement` (Spelunking).
 - 🟡 **CR 615 / 614.9 — Prevention & redirection** — source+target-scoped prevention ✅ (`PreventDamageToYourCreaturesFromYourSources` — Light of Sanction; `PreventThisDamageToColor` — Indentured Oaf's own damage to red creatures; both wired into the combat + noncombat funnels — `cr_recent14`). Damage **redirection** (614.9) ✅ — `Effect::RedirectNextDamage` + `PreventionShield.redirect_to` deals the soaked N to a chosen permanent (Carom, Razia); `RedirectControllerDamageToEquippedCreature` sends a player's damage to the equipped creature (Pariah's Shield). Global "combat damage can't be prevented" ✅ (`StaticEffect::CombatDamageCantBePrevented` — Frenzied Baloth; bypasses shields for any creature-sourced damage, sharing the Questing-Beast combat approximation). Source-scoped "damage dealt by this can't be prevented" ✅ (`StaticEffect::SourceDamageCantBePrevented` — Excruciator; keyed on the damage source in `apply_prevention_shields`, so only its own damage bypasses shields — `cr_615_12_excruciator_source_scoped_unpreventable`). Per-source / per-N shields ✅ (`PreventionShield.source` + `Effect::PreventNextDamageFromChosenSource` — Wojek Apothecary, Stave Off). Prevented damage can now be **redirected to a player**, not just a permanent (`PreventionShield.redirect_to_player` — Acolyte's Reward at face). Non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage, Candles' Glow — `candles_glow_prevents_and_gains`). Attachment-scoped combat fog ✅ (`StaticEffect::PreventAllCombatDamageToAttached` — General's Kabuto carries the prevention for its host). Player-scoped combat fog ✅ (`Effect::PreventAllCombatDamageToPlayerThisTurn` — "prevent all combat damage that would be dealt to you this turn", Druid's Deliverance; `GameState.combat_damage_prevented_to_players_this_turn`, honored in `prevent_combat_to_target` — `druids_deliverance_prevents_combat_damage_to_you`). Player+permanents noncombat prevention ✅ (`StaticEffect::PreventNoncombatDamageToYouAndYourPermanents` — The Wanderer; gates the noncombat funnel for both the controller and any permanent they control — `the_wanderer_prevents_noncombat_damage_to_you`). Source-of-your-choice prevention (615.7) ✅ via
@@ -5558,33 +5591,23 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
-- ⏳ **A cost-sacrifice batch doesn't reach `Value::SacrificedTotalPower`.**
-  The activated-ability path now resets and accumulates
-  `sacrificed_{count,total_power}` over the whole `sac_other_picks` batch
-  (including `sac_all_matching_cost`), but the ability body still reads only
-  the *last* sacrificed permanent's power — the totals aren't threaded into
-  resolution the way the spell path's `Effect::WithSacrificedPt` wrapper does.
-  Sword of the Ages is held back on this.
-- ⏳ **`Value::CreaturesDiedThisResolution`** — a resolution-scoped death tally
-  so a sweeper can bill its caster for its own kills (Hellfire). The turn-wide
-  `CreaturesDiedThisTurn` over-counts on a busy turn.
-- ⏳ **"Change base P/T to that of another creature"** — Halfdane, Brine Hag
-  and Sentinel each want an indefinite layer-7b set that *reads* another
-  permanent's live P/T at resolution. `Effect::SetBasePT` takes `Value`s, so
-  this is a `Value::PowerOf`/`ToughnessOf` snapshot problem, not a new layer.
-- ⏳ **"Attach target Aura to another permanent"** (Enchantment Alteration).
-  `Effect::Attach` moves the *source*; there is no re-attach of an arbitrary
-  targeted Aura.
 - ⏳ **A "next spell only" spend permission.** North Star grants CR 609.4b for
   the whole turn (`Player.may_spend_any_color_this_turn`); the printed card
   scopes it to one spell.
+- ⏳ **A per-permanent "which sources targeted me this turn" record**, keyed at
+  the `BecameTarget` emission. Unblocks the "prevent damage from spells that
+  target this" family (Bronze Horse, Silhouette) in one go.
+- ⏳ **`Duration::UntilYourNextUpkeep`** — Halfdane, Gabriel Angelfire and the
+  rest of the "until your next upkeep" wordings currently round to
+  `Permanent` / `UntilYourNextUntap`.
 
 - ✅ ~~**Onslaught's last 4 gaps**~~ — shipped (`sets::ons4`); `set_gaps.py ons`
   is at zero. Each landed its primitive: `Effect::ReplaceCreatureTypeText`,
   `Keyword::DividesCombatDamageAmongDefenders`, `Effect::EachPlayerChoosesNumberHighestLoses`,
   and `GameEvent::ControlChanged` + `EventKind::GainedControlOfThis`.
-- ⏳ **Legends is at 43 gaps** (`set_gaps.py leg`). Six waves shipped 230
-  cards; see "Legends — opened" above for what's left and why.
+- ⏳ **Legends is at 14 gaps** (`set_gaps.py leg`). Seven waves shipped 259
+  cards; see "Legends — opened" above for what's left and why — each remaining
+  card is blocked on one primitive.
 - ⏳ **The client can't declare attacking bands.** The engine action
   (`GameAction::DeclareAttackersBanded`) and the `ClientView.attack_bands`
   read-back ship, and the tooltip names a creature's bandmates, but the
