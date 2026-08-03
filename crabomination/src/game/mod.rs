@@ -7025,6 +7025,33 @@ impl GameState {
                 }
             }
         }
+        // Phyrexian Ingester — the imprinted creature card's printed P/T is
+        // added as a layer-7c pump.
+        for card in &self.battlefield {
+            if !card.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::PumpSelfByExiledWithStats)
+            }) {
+                continue;
+            }
+            for exiled in self
+                .exile
+                .iter()
+                .filter(|c| c.exiled_with == Some(card.id) && c.definition.is_creature())
+            {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L7PowerTough,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(
+                        exiled.definition.power,
+                        exiled.definition.toughness,
+                    ),
+                });
+            }
+        }
         // Mirror Golem — "protection from each of the exiled card's card types"
         // (CR 702.16), live-resolved off the imprint.
         for card in &self.battlefield {
@@ -18374,6 +18401,7 @@ fn static_effect_to_effects(
             // GainKeywordsFromExiledWith — live-resolved in
             // `gather_continuous_effects_inner` (reads the exile zone).
             | StaticEffect::GainKeywordsFromExiledWith { .. }
+            | StaticEffect::PumpSelfByExiledWithStats
             | StaticEffect::ProtectionFromExiledWithCardTypes
             // TokenCreationAddsToken — consulted in the resolve_effect
             // epilogue (Quina's extra-Frog rider); not a layer effect.

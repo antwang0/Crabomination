@@ -582,6 +582,7 @@ impl GameState {
                 }
             }
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
+            Value::Negate(inner) => -self.evaluate_value(inner, ctx),
             Value::ExiledForCostManaValue => self.exiled_for_cost_mana_value.unwrap_or(0),
             Value::CardsNamedLikeSourceInAllGraveyards => {
                 let Some(name) = ctx

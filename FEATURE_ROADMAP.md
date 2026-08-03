@@ -2417,7 +2417,7 @@ Each a small targeted feature; sweep batch by batch.
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block and **Mirrodin Besieged** are all at zero. **New Phyrexia**
-   is open at 30 after one wave (81 cards, `sets::nph`) and closes the Scars
+   is open at 10 after two waves (101 cards, `sets::nph`) and closes the Scars
    block; **Legends** is open at 268 after the banding wave (`sets::leg`).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.

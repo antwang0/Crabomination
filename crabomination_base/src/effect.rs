@@ -740,6 +740,9 @@ pub enum Value {
     /// `AdditionalCastCost::RevealFromHand` (Titan's Presence). 0 with no reveal.
     RevealedForCostPower,
     SacrificedPower,
+    /// The arithmetic negation of `inner` — "all creatures get -X/-X, where X
+    /// is …" (Ichor Explosion) without a bespoke variant per source value.
+    Negate(Box<Value>),
     /// Summed power of every permanent sacrificed this resolution — the
     /// "total power of the sacrificed creatures" wording (Soulblast).
     SacrificedTotalPower,

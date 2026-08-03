@@ -417,3 +417,241 @@ fn mycosynth_wellspring_fetches_twice() {
     cast(&mut g, 0, well, None);
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"));
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Mycosynth Fiend grows with every poison counter you have handed out.
+#[test]
+fn mycosynth_fiend_grows_with_opposing_poison() {
+    let mut g = main_phase();
+    let fiend = g.add_card_to_battlefield(0, catalog::mycosynth_fiend());
+    assert_eq!(g.computed_permanent(fiend).unwrap().power, 2);
+    g.players[1].poison_counters = 4;
+    assert_eq!(g.computed_permanent(fiend).unwrap().power, 6);
+    assert_eq!(g.computed_permanent(fiend).unwrap().toughness, 6);
+}
+
+/// Viridian Betrayers only has infect while an opponent is poisoned.
+#[test]
+fn viridian_betrayers_needs_a_poisoned_opponent() {
+    let mut g = main_phase();
+    let elf = g.add_card_to_battlefield(0, catalog::viridian_betrayers());
+    assert!(!g.computed_permanent(elf).unwrap().keywords.contains(&Keyword::Infect));
+    g.players[1].poison_counters = 1;
+    assert!(g.computed_permanent(elf).unwrap().keywords.contains(&Keyword::Infect));
+}
+
+/// Phyrexian Swarmlord mints an infect Insect per opposing poison counter.
+#[test]
+fn phyrexian_swarmlord_mints_one_insect_per_poison() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::phyrexian_swarmlord());
+    g.players[1].poison_counters = 3;
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Insect").count(),
+        3
+    );
+}
+
+/// Greenhilt Trainee's pump is gated on its own power.
+#[test]
+fn greenhilt_trainee_needs_four_power() {
+    let mut g = main_phase();
+    let elf = g.add_card_to_battlefield(0, catalog::greenhilt_trainee());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(elf);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: elf,
+            ability_index: 0,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "a 2/3 can't activate"
+    );
+    g.battlefield_find_mut(elf).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    activate(&mut g, 0, elf, 0, Some(Target::Permanent(bear)));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 6);
+}
+
+/// Ichor Explosion shrinks the board by the sacrificed creature's power.
+#[test]
+fn ichor_explosion_scales_off_the_sacrifice() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::flameborn_viron()); // 6/4 fodder
+    let victim = g.add_card_to_battlefield(1, catalog::rotted_hystrix()); // 3/6
+    let spell = g.add_card_to_hand(0, catalog::ichor_explosion());
+    cast(&mut g, 0, spell, None);
+    assert!(g.battlefield_find(victim).is_none(), "-6/-6 killed the 3/6");
+}
+
+/// Act of Aggression steals, untaps and hastes for the turn.
+#[test]
+fn act_of_aggression_steals_a_tapped_creature() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::act_of_aggression());
+    cast(&mut g, 0, spell, Some(Target::Permanent(bear)));
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.controller, 0);
+    assert!(!c.tapped);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Phyrexian Ingester wears the imprinted creature's stats.
+#[test]
+fn phyrexian_ingester_wears_what_it_swallowed() {
+    let mut g = main_phase();
+    let prey = g.add_card_to_battlefield(1, catalog::flameborn_viron()); // 6/4
+    let ingester = g.add_card_to_hand(0, catalog::phyrexian_ingester());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    cast(&mut g, 0, ingester, Some(Target::Permanent(prey)));
+    assert!(g.battlefield_find(prey).is_none(), "exiled");
+    assert_eq!(g.computed_permanent(ingester).unwrap().power, 9, "3 + 6");
+    assert_eq!(g.computed_permanent(ingester).unwrap().toughness, 7, "3 + 4");
+}
+
+/// Lashwrithe scales with your Swamps.
+#[test]
+fn lashwrithe_scales_with_swamps() {
+    let mut g = main_phase();
+    let lash = g.add_card_to_hand(0, catalog::lashwrithe());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::swamp());
+    }
+    cast(&mut g, 0, lash, None);
+    let germ = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Phyrexian Germ")
+        .map(|c| c.id)
+        .expect("a Germ");
+    assert_eq!(g.computed_permanent(germ).unwrap().power, 3);
+}
+
+/// Cathedral Membrane takes its blockers with it.
+#[test]
+fn cathedral_membrane_kills_what_it_blocked() {
+    let mut g = main_phase();
+    g.active_player_idx = 1;
+    let attacker = g.add_card_to_battlefield(1, catalog::flameborn_viron()); // 6/4
+    let wall = g.add_card_to_battlefield(0, catalog::cathedral_membrane());
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, attacker)])).expect("block");
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.battlefield_find(attacker).is_none(), "6 damage back");
+}
+
+/// Conversion Chamber banks artifact cards and spends them on Golems.
+#[test]
+fn conversion_chamber_banks_then_builds() {
+    let mut g = main_phase();
+    let chamber = g.add_card_to_battlefield(0, catalog::conversion_chamber());
+    let relic = g.add_card_to_graveyard(0, catalog::darksteel_relic());
+    g.clear_sickness(chamber);
+    activate(&mut g, 0, chamber, 0, Some(Target::Permanent(relic)));
+    assert_eq!(g.battlefield_find(chamber).unwrap().counter_count(CounterType::Charge), 1);
+    g.battlefield_find_mut(chamber).unwrap().tapped = false;
+    activate(&mut g, 0, chamber, 1, None);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Phyrexian Golem"));
+}
+
+/// Etched Monstrosity arrives crushed and pays out when freed.
+#[test]
+fn etched_monstrosity_starts_at_five_five() {
+    let mut g = main_phase();
+    let golem = g.add_card_to_hand(0, catalog::etched_monstrosity());
+    cast(&mut g, 0, golem, None);
+    assert_eq!(g.computed_permanent(golem).unwrap().power, 5, "10 minus five counters");
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let hand_before = g.players[0].hand.len();
+    activate(&mut g, 0, golem, 0, Some(Target::Player(0)));
+    assert_eq!(g.players[0].hand.len(), hand_before + 3);
+    assert_eq!(g.computed_permanent(golem).unwrap().power, 10);
+}
+
+/// Praetor's Grasp exiles from their deck and leaves it playable for you.
+#[test]
+fn praetors_grasp_steals_a_card_out_of_the_deck() {
+    let mut g = main_phase();
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    let pick = g.players[1].library[0].id;
+    let spell = g.add_card_to_hand(0, catalog::praetors_grasp());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(pick))]));
+    cast(&mut g, 0, spell, Some(Target::Player(1)));
+    assert!(g.exile.iter().any(|c| c.id == pick), "exiled out of their library");
+}
+
+/// Parasitic Implant eats its host and pays you a Myr.
+#[test]
+fn parasitic_implant_eats_its_host() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let implant = g.add_card_to_hand(0, catalog::parasitic_implant());
+    cast(&mut g, 0, implant, Some(Target::Permanent(bear)));
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Phyrexian Myr"));
+}
+
+/// Exclusion Ritual locks the exiled card's name out.
+#[test]
+fn exclusion_ritual_locks_the_name() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ritual = g.add_card_to_hand(0, catalog::exclusion_ritual());
+    cast(&mut g, 0, ritual, Some(Target::Permanent(bear)));
+    assert!(g.exile.iter().any(|c| c.id == bear));
+    let copy = g.add_card_to_hand(1, catalog::grizzly_bears());
+    mana(&mut g, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: copy,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .is_err(),
+        "the name is locked out"
+    );
+}
+
+/// Tormentor Exarch pumps or shrinks on arrival.
+#[test]
+fn tormentor_exarch_shrinks_on_the_second_mode() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let exarch = g.add_card_to_hand(0, catalog::tormentor_exarch());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(1)]));
+    cast(&mut g, 0, exarch, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none(), "a 2/2 at -0/-2 dies to SBA");
+}

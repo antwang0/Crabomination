@@ -997,6 +997,10 @@ pub enum StaticEffect {
     /// protection-from-a-colour. Live-resolved in
     /// `gather_continuous_effects_inner` (it reads the exile zone).
     GainKeywordsFromExiledWith { keywords: Vec<Keyword> },
+    /// "This creature gets +X/+Y, where X is the exiled creature card's power
+    /// and Y is its toughness" (Phyrexian Ingester). Live-resolved off the
+    /// card stamped `exiled_with = this`.
+    PumpSelfByExiledWithStats,
     /// Mirror Golem — "this creature has protection from each of the exiled
     /// card's card types" (CR 702.16). Live-resolved off the exile zone.
     ProtectionFromExiledWithCardTypes,

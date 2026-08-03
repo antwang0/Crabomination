@@ -187,24 +187,30 @@ general "any player may …, if no one does …" shape, with
 
 ## New Phyrexia — opened
 
-`set_gaps.py nph` is at **30** (111 → 30; `sets::nph`, 81 cards, tests in
-`recent_b/nph`). Phyrexian mana, Infect, Living weapon, Metalcraft and the
-five Shrines all rode existing primitives. New this wave:
+`set_gaps.py nph` is at **10** (111 → 30 → 10; `sets::nph`, 101 cards, tests
+in `recent_b/nph`). Phyrexian mana, Infect, Living weapon, Metalcraft and the
+five Shrines all rode existing primitives. New across the two waves:
 `Effect::PermanentsEnterTappedThisTurn` (CR 614 — Due Respect's turn-scoped
-blanket enters-tapped replacement, cleared at cleanup).
+blanket enters-tapped replacement, cleared at cleanup), `Value::Negate` and
+`StaticEffect::PumpSelfByExiledWithStats` (Phyrexian Ingester).
 
 Still open, and why — each wants one primitive:
-- **Act of Aggression / Arm with Aether / Bludgeon Brawl / Caged Sun /
-  Cathedral Membrane / Chancellor cycle / Conversion Chamber / Entomber Exarch
-  / Etched Monstrosity / Exclusion Ritual / Geosurge's spend-restriction /
-  Greenhilt Trainee / Gremlin Mine / Hex Parasite / Ichor Explosion /
-  Invader Parasite / Lashwrithe / Mycosynth Fiend / Myr Superion / Omen Machine
-  / Parasitic Implant / Phyrexian Ingester / Phyrexian Swarmlord /
-  Praetor's Grasp / Psychic Surgery / Rage Extractor / Tormentor Exarch /
-  Viridian Betrayers / Whispering Specter** — see `set_gaps.py nph` for the
-  live list. The recurring blockers are opening-hand reveals (the Chancellor
-  cycle), spend-restricted mana pools, and a "for each poison counter your
-  opponents have" `DynamicPt`.
+- **The Chancellor cycle** (Dross / Forge / Spires) — an opening-hand reveal
+  that schedules "at the beginning of the first upkeep, …". No opening-hand
+  reveal machinery exists.
+- **Myr Superion** — "spend only mana produced by creatures": needs mana
+  provenance (which permanent produced each floating mana), a roadmap Tier-5
+  item.
+- **Rage Extractor** — "whenever you cast a spell with {H} in its mana cost":
+  needs a cast-time predicate over Phyrexian symbols in the cost.
+- **Hex Parasite** — "{X}{B/P}: Remove up to X counters from target permanent;
+  +1/+0 per counter removed": needs the removed-count published as a `Value`.
+- **Invader Parasite** — imprint a land, then punish same-named lands entering
+  under an opponent; needs a `NamedBySource`-style land-entry trigger filter.
+- **Omen Machine** — "players can't draw" plus a per-draw-step exile-and-cast.
+- **Arm with Aether** / **Bludgeon Brawl** — a turn-scoped granted trigger with
+  its own target, and "every noncreature artifact is an Equipment with equip
+  {X}".
 
 ## Judgment — closed
 

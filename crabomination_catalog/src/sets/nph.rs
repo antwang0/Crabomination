@@ -1671,3 +1671,493 @@ pub fn jor_kadeen_the_prevailer() -> CardDefinition {
         )
     }
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Tormentor Exarch — a pump or a shrink on arrival.
+pub fn tormentor_exarch() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(2),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::ZERO,
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..creature(
+            "Tormentor Exarch",
+            cost(&[generic(3), r()]),
+            vec![CreatureType::Phyrexian, CreatureType::Cleric],
+            2,
+            2,
+        )
+    }
+}
+
+/// Entomber Exarch — raise a creature, or strip a noncreature card.
+pub fn entomber_exarch() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::InGraveyard)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::Target(0)),
+                count: Value::ONE,
+                filter: R::Noncreature,
+            },
+        ]))],
+        ..creature(
+            "Entomber Exarch",
+            cost(&[generic(2), b(), b()]),
+            vec![CreatureType::Phyrexian, CreatureType::Cleric],
+            2,
+            2,
+        )
+    }
+}
+
+/// Act of Aggression — a threaten for {R}{R} or four life.
+pub fn act_of_aggression() -> CardDefinition {
+    instant(
+        "Act of Aggression",
+        cost(&[generic(3), phyrexian(Color::Red), phyrexian(Color::Red)]),
+        Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                to: Some(PlayerRef::You),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+    )
+}
+
+/// Ichor Explosion — a wrath the size of whatever you fed it.
+pub fn ichor_explosion() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Creature,
+            count: 1,
+        }],
+        ..sorcery(
+            "Ichor Explosion",
+            cost(&[generic(5), b(), b()]),
+            Effect::PumpPT {
+                what: Selector::EachPermanent(R::Creature),
+                power: Value::Negate(Box::new(Value::SacrificedPower)),
+                toughness: Value::Negate(Box::new(Value::SacrificedPower)),
+                duration: Duration::EndOfTurn,
+            },
+        )
+    }
+}
+
+/// Greenhilt Trainee — a pump engine that only turns on once it's big.
+pub fn greenhilt_trainee() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(4),
+                toughness: Value::Const(4),
+                duration: Duration::EndOfTurn,
+            },
+            condition: Some(Predicate::EntityMatches {
+                what: Selector::This,
+                filter: R::PowerAtLeast(4),
+            }),
+            ..Default::default()
+        }],
+        ..creature(
+            "Greenhilt Trainee",
+            cost(&[generic(3), g()]),
+            vec![CreatureType::Elf, CreatureType::Warrior],
+            2,
+            3,
+        )
+    }
+}
+
+/// "An opponent is poisoned."
+fn an_opponent_is_poisoned() -> Predicate {
+    Predicate::ValueAtLeast(Value::PoisonCountersOf(PlayerRef::EachOpponent), Value::ONE)
+}
+
+/// Viridian Betrayers — infect once the poison starts flowing.
+pub fn viridian_betrayers() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature has infect as long as an opponent is poisoned.",
+            effect: StaticEffect::SelfHasKeywordWhilePredicate {
+                keyword: Keyword::Infect,
+                condition: an_opponent_is_poisoned(),
+            },
+        }],
+        ..creature(
+            "Viridian Betrayers",
+            cost(&[generic(1), g(), g()]),
+            vec![CreatureType::Phyrexian, CreatureType::Elf, CreatureType::Warrior],
+            3,
+            1,
+        )
+    }
+}
+
+/// Mycosynth Fiend — as big as the poison you have dealt.
+pub fn mycosynth_fiend() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +1/+1 for each poison counter your opponents have.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::PoisonCountersOf(PlayerRef::EachOpponent),
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        ..creature(
+            "Mycosynth Fiend",
+            cost(&[generic(2), g()]),
+            vec![CreatureType::Phyrexian, CreatureType::Horror],
+            2,
+            2,
+        )
+    }
+}
+
+/// Phyrexian Swarmlord — an infect Insect per poison counter, every upkeep.
+pub fn phyrexian_swarmlord() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Infect],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::PoisonCountersOf(PlayerRef::EachOpponent),
+                definition: TokenDefinition {
+                    name: "Phyrexian Insect".into(),
+                    power: 1,
+                    toughness: 1,
+                    colors: vec![Color::Green],
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Phyrexian, CreatureType::Insect],
+                        ..Default::default()
+                    },
+                    keywords: vec![Keyword::Infect],
+                    ..Default::default()
+                },
+            },
+        }],
+        ..creature(
+            "Phyrexian Swarmlord",
+            cost(&[generic(4), g(), g()]),
+            vec![CreatureType::Phyrexian, CreatureType::Insect, CreatureType::Horror],
+            4,
+            4,
+        )
+    }
+}
+
+/// Whispering Specter — cash it in to strip a card per poison counter.
+pub fn whispering_specter() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Infect],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::MaySacrificeSource {
+                description: "Sacrifice this to strip their hand?".into(),
+                then: Box::new(Effect::Discard {
+                    who: Selector::Player(PlayerRef::TriggerEventPlayer),
+                    amount: Value::PoisonCountersOf(PlayerRef::TriggerEventPlayer),
+                    random: false,
+                }),
+                else_: None,
+            },
+        }],
+        ..creature(
+            "Whispering Specter",
+            cost(&[generic(1), b(), b()]),
+            vec![CreatureType::Phyrexian, CreatureType::Specter],
+            1,
+            1,
+        )
+    }
+}
+
+/// Caged Sun — an anthem and a mana doubler for the chosen colour.
+pub fn caged_sun() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::ChooseColorForSelf)],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control of the chosen color get +1/+1.",
+                effect: StaticEffect::AnthemForChosenColor { power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Whenever a land's ability causes you to add one or more mana of \
+                              the chosen color, add an additional one mana of that color.",
+                effect: StaticEffect::ExtraManaOnLandTap {
+                    enchanted_only: false,
+                    filter: R::Land,
+                    extra: crate::effect::ExtraManaKind::ChosenColor,
+                    while_monarch: false,
+                },
+            },
+        ],
+        ..artifact("Caged Sun", cost(&[generic(6)]))
+    }
+}
+
+/// Cathedral Membrane — a wall that takes its blockers with it.
+pub fn cathedral_membrane() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::CreaturesBlockedBySourceThisTurn,
+                amount: Value::Const(6),
+            },
+        }],
+        ..artifact_creature(
+            "Cathedral Membrane",
+            cost(&[generic(1), phyrexian(Color::White)]),
+            vec![CreatureType::Phyrexian, CreatureType::Wall],
+            0,
+            3,
+        )
+    }
+}
+
+/// Conversion Chamber — eat artifact cards, spit out Golems.
+pub fn conversion_chamber() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::Seq(vec![
+                    Effect::ExileWithSource {
+                        what: target_filtered(R::Artifact.and(R::InGraveyard)),
+                    },
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::Charge,
+                        amount: Value::ONE,
+                    },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                remove_counter_cost: Some((CounterType::Charge, 1)),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: phyrexian_golem(),
+                },
+                ..Default::default()
+            },
+        ],
+        ..artifact("Conversion Chamber", cost(&[generic(3)]))
+    }
+}
+
+/// Gremlin Mine — four damage to an artifact creature, or four counters off.
+pub fn gremlin_mine() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::DealDamage {
+                    to: target_filtered(R::Creature.and(R::Artifact)),
+                    amount: Value::Const(4),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::RemoveCounter {
+                    what: target_filtered(R::Artifact.and(R::Creature.negate())),
+                    kind: CounterType::Charge,
+                    amount: Value::Const(4),
+                },
+                ..Default::default()
+            },
+        ],
+        ..artifact("Gremlin Mine", cost(&[generic(1)]))
+    }
+}
+
+/// Etched Monstrosity — a 10/10 that starts crushed, and draws when freed.
+pub fn etched_monstrosity() -> CardDefinition {
+    CardDefinition {
+        enters_with_counters: Some((CounterType::MinusOneMinusOne, Value::Const(5))),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w(), u(), b(), r(), g()]),
+            remove_counter_cost: Some((CounterType::MinusOneMinusOne, 5)),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(3),
+            },
+            ..Default::default()
+        }],
+        ..artifact_creature(
+            "Etched Monstrosity",
+            cost(&[generic(5)]),
+            vec![CreatureType::Phyrexian, CreatureType::Golem],
+            10,
+            10,
+        )
+    }
+}
+
+/// Lashwrithe — a living weapon that scales with your Swamps.
+pub fn lashwrithe() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![living_weapon()],
+        ..equipment(
+            "Lashwrithe",
+            cost(&[generic(4)]),
+            cost(&[phyrexian(Color::Black), phyrexian(Color::Black)]),
+            EquipBonus {
+                scale: Some(crate::card::EquipScale {
+                    filter: R::HasLandType(crate::card::LandType::Swamp),
+                    per_power: 1,
+                    per_toughness: 1,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+        )
+    }
+}
+
+/// Exclusion Ritual — exile it and lock its name out of the game.
+pub fn exclusion_ritual() -> CardDefinition {
+    CardDefinition {
+        name: "Exclusion Ritual",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::ExileWithSource {
+            what: target_filtered(R::Permanent.and(R::Land.negate())),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Players can't cast spells with the same name as the exiled card.",
+            effect: StaticEffect::OpponentsCantCastNamesExiledWithSource,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Psychic Surgery — mine every shuffle for a card to exile.
+pub fn psychic_surgery() -> CardDefinition {
+    CardDefinition {
+        name: "Psychic Surgery",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LibraryShuffled, EventScope::OpponentControl),
+            effect: Effect::MayDo {
+                description: "Look at the top two cards and exile one?".into(),
+                body: Box::new(Effect::LookTopKeepOneRestToGraveyard {
+                    count: Value::Const(2),
+                    who: Some(PlayerRef::TriggerEventPlayer),
+                    exile_rest: true,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Praetor's Grasp — steal a card out of their deck and cast it later.
+pub fn praetors_grasp() -> CardDefinition {
+    sorcery(
+        "Praetor's Grasp",
+        cost(&[generic(1), b(), b()]),
+        Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::Target(0),
+                filter: R::Any,
+                to: ZoneDest::ExileWithSourceStamp,
+            },
+            Effect::GrantMayPlay {
+                what: Selector::CardExiledWithSource,
+                duration: crate::card::MayPlayDuration::WhileExiled,
+                to_owner: false,
+                exile_after: false,
+                pay_own_cost: true,
+                any_color: false,
+            },
+        ]),
+    )
+}
+
+/// Parasitic Implant — the host rots away into a Myr for you.
+pub fn parasitic_implant() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::SacrificeSelected { what: host() },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: phyrexian_myr(),
+                },
+            ]),
+        }],
+        ..aura("Parasitic Implant", cost(&[generic(3), b()]), R::Creature, EquipBonus::default())
+    }
+}
+
+/// Phyrexian Ingester — swallows a creature and wears its stats.
+pub fn phyrexian_ingester() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Exile a nontoken creature?".into(),
+            body: Box::new(Effect::ExileWithSource {
+                what: target_filtered(R::Creature.and(R::NotToken)),
+            }),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets +X/+Y, where X is the exiled creature card's power \
+                          and Y is its toughness.",
+            effect: StaticEffect::PumpSelfByExiledWithStats,
+        }],
+        ..creature(
+            "Phyrexian Ingester",
+            cost(&[generic(6), u()]),
+            vec![CreatureType::Phyrexian, CreatureType::Beast],
+            3,
+            3,
+        )
+    }
+}
