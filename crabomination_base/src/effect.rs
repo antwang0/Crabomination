@@ -1471,6 +1471,11 @@ pub enum Predicate {
     /// payoffs — Living History's combat trigger, Primary Research's
     /// end-step draw rider, Wilt in the Heat's cost reduction rider.
     CardsLeftGraveyardThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// True if an opponent of `who` has cast a spell since `who`'s last turn
+    /// ended (I Bask in Your Silent Awe's abandon check). Reads
+    /// `Player.opponent_cast_spell_since_your_turn`, cleared at `who`'s
+    /// cleanup.
+    OpponentCastSpellSinceYourTurn { who: PlayerRef },
     /// CR 701.19 — true if `who` (any matching player) searched their own
     /// library this turn. `PlayerRef::EachOpponent` is satisfied by any one
     /// opponent. Archive Trap's "rather than pay" gate.
@@ -2388,6 +2393,9 @@ pub enum EventKind {
     LifeLost,
     /// The game entered a particular step.
     StepBegins(crate::turn_step::TurnStep),
+    /// CR 904.9 — a scheme was set in motion off the top of the archenemy's
+    /// scheme deck ("When you set this scheme in motion, …").
+    SetInMotion,
     /// The active player's turn just began.
     TurnBegins,
     /// A counter was added to a permanent/player.
@@ -5165,6 +5173,10 @@ pub enum Effect {
     /// Shadowspear's "lose hexproof and indestructible until end of turn";
     /// `Duration::Permanent` is the indefinite loss (Ageless Sentinels).
     LoseKeyword { what: Selector, keyword: Keyword, duration: Duration },
+    /// CR 701.33 — abandon `this` scheme: turn it face down and put it on the
+    /// bottom of its owner's scheme deck. The ongoing-scheme escape hatch
+    /// ("abandon this scheme" — Perhaps You've Met My Cohort).
+    AbandonThisScheme,
     /// CR 702.15 — "Target creature loses all landwalk abilities" (Hammerheim).
     /// Layer-6 removal of every landwalk variant at once, which
     /// `LoseKeyword`'s exact match can't express.

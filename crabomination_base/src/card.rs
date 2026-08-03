@@ -26,6 +26,10 @@ pub enum CardType {
     Instant,
     Sorcery,
     Kindred,
+    /// CR 314 — a Scheme. Never a permanent and never castable: it lives in
+    /// the command zone, face down in the scheme deck or face up after being
+    /// set in motion (CR 904.9).
+    Scheme,
     /// CR 313 — a Vanguard avatar. Never a permanent: it starts in the command
     /// zone and its abilities function from there (CR 902.5).
     Vanguard,
@@ -38,6 +42,9 @@ pub enum Supertype {
     Legendary,
     Snow,
     World,
+    /// CR 904.11 — an Ongoing scheme stays face up in the command zone until
+    /// something abandons it, rather than being swept by the CR 904.10 SBA.
+    Ongoing,
 }
 
 /// Creature subtypes (race/class).
@@ -4281,6 +4288,12 @@ impl CardDefinition {
     pub fn is_planeswalker(&self) -> bool { self.card_types.contains(&CardType::Planeswalker) }
     pub fn is_battle(&self) -> bool { self.card_types.contains(&CardType::Battle) }
     pub fn is_vanguard(&self) -> bool { self.card_types.contains(&CardType::Vanguard) }
+    /// CR 314.1 — a scheme card.
+    pub fn is_scheme(&self) -> bool { self.card_types.contains(&CardType::Scheme) }
+    /// CR 904.11 — an "Ongoing Scheme", exempt from the 904.10 sweep.
+    pub fn is_ongoing_scheme(&self) -> bool {
+        self.is_scheme() && self.supertypes.contains(&Supertype::Ongoing)
+    }
     pub fn is_permanent(&self) -> bool {
         self.card_types.iter().any(|t| {
             matches!(

@@ -434,6 +434,12 @@ impl GameState {
                 for id in sagas {
                     self.saga_advance(id);
                 }
+                // CR 904.9 — immediately after the archenemy's precombat main
+                // phase begins, they set the top scheme in motion. A turn-based
+                // action, so it precedes the step triggers.
+                if self.archenemy == Some(self.active_player_idx) {
+                    self.set_scheme_in_motion(self.active_player_idx);
+                }
                 self.fire_step_triggers(TurnStep::PreCombatMain);
                 self.give_priority_to_active();
             }
@@ -498,6 +504,7 @@ impl GameState {
                 self.spells_cast_this_turn = 0;
                 self.last_cast_spell_colors.clear();
                 self.noncreature_spells_cast_this_turn = 0;
+                self.players[self.active_player_idx].opponent_cast_spell_since_your_turn = false;
                 for pl in &mut self.players {
                     pl.spells_cast_this_game_turn = 0;
                     pl.noncreature_spells_cast_this_game_turn = 0;
@@ -676,7 +683,11 @@ impl GameState {
         // CR 902.5 — a Vanguard avatar's step triggers fire from the command
         // zone ("at the beginning of your upkeep" — Arcbound Overseer Avatar).
         for (seat, player) in self.players.iter().enumerate() {
-            for c in player.command.iter().filter(|c| c.definition.is_vanguard()) {
+            for c in player
+                .command
+                .iter()
+                .filter(|c| c.definition.is_vanguard() || c.definition.is_scheme())
+            {
                 for t in &c.definition.triggered_abilities {
                     let scoped_to_owner = matches!(
                         t.event.scope,
@@ -934,6 +945,86 @@ impl GameState {
         let before = card.counter_count(crate::card::CounterType::Lore);
         card.add_counters(crate::card::CounterType::Lore, 1);
         self.saga_chapters_crossed(card_id, before, before + 1);
+    }
+
+    /// CR 904.9 — "set a scheme in motion": move the top card of `seat`'s
+    /// scheme deck face up into the command zone and fire its
+    /// `EventKind::SetInMotion` triggers. A turn-based action; it doesn't use
+    /// the stack itself. No-ops on an empty scheme deck.
+    pub fn set_scheme_in_motion(&mut self, seat: usize) -> Option<CardId> {
+        if self.players[seat].scheme_deck.is_empty() {
+            return None;
+        }
+        let scheme = self.players[seat].scheme_deck.remove(0);
+        let id = scheme.id;
+        let triggers: Vec<Effect> = scheme
+            .definition
+            .triggered_abilities
+            .iter()
+            .filter(|t| t.event.kind == EventKind::SetInMotion)
+            .map(|t| t.effect.clone())
+            .collect();
+        self.players[seat].command.push(scheme);
+        let queue: Vec<PendingTriggerPush> = triggers
+            .into_iter()
+            .map(|effect| {
+                let mode = self.pick_trigger_mode(&effect, id, seat);
+                PendingTriggerPush {
+                    from_mana_ability: false,
+                    actor: None,
+                    source: id,
+                    controller: seat,
+                    effect,
+                    subject: None,
+                    event_amount: 0,
+                    mode,
+                    intervening_if: None,
+                }
+            })
+            .collect();
+        if !queue.is_empty() {
+            self.drain_trigger_queue(queue);
+        }
+        Some(id)
+    }
+
+    /// CR 701.33 / 904.10 — abandon a face-up scheme: off the command zone and
+    /// onto the bottom of its owner's scheme deck.
+    pub(crate) fn abandon_scheme(&mut self, scheme: CardId) {
+        for seat in 0..self.players.len() {
+            if let Some(pos) = self.players[seat].command.iter().position(|c| c.id == scheme) {
+                let card = self.players[seat].command.remove(pos);
+                self.players[seat].scheme_deck.push(card);
+                return;
+            }
+        }
+    }
+
+    /// CR 904.10 — a face-up non-ongoing scheme is abandoned the next time a
+    /// player would receive priority, once no scheme trigger is on the stack.
+    pub(crate) fn sweep_finished_schemes(&mut self) {
+        if self.stack.iter().any(|item| self.stack_item_is_scheme_trigger(item)) {
+            return;
+        }
+        let done: Vec<CardId> = self
+            .players
+            .iter()
+            .flat_map(|p| p.command.iter())
+            .filter(|c| c.definition.is_scheme() && !c.definition.is_ongoing_scheme())
+            .map(|c| c.id)
+            .collect();
+        for id in done {
+            self.abandon_scheme(id);
+        }
+    }
+
+    /// Is this stack item a triggered ability whose source is a face-up scheme?
+    fn stack_item_is_scheme_trigger(&self, item: &StackItem) -> bool {
+        let StackItem::Trigger { source, .. } = item else { return false };
+        self.players
+            .iter()
+            .flat_map(|p| p.command.iter())
+            .any(|c| c.id == *source && c.definition.is_scheme())
     }
 
     /// CR 714.2b — "when one or more lore counters are put onto this Saga, if
@@ -3254,6 +3345,10 @@ impl GameState {
         let mut events = vec![];
 
         self.assign_sectors();
+
+        // CR 904.10 — a face-up non-ongoing scheme is abandoned once no scheme
+        // trigger is left on the stack.
+        self.sweep_finished_schemes();
 
         // CR 603.8 — state-triggered flip (Student of Elements: "When this
         // creature has flying, flip it"). Cheap guard so the common board pays

@@ -1740,6 +1740,10 @@ impl GameState {
                     .map(|p| self.players[p].cards_left_graveyard_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::OpponentCastSpellSinceYourTurn { who } => self
+                .resolve_players(who, ctx)
+                .iter()
+                .any(|&p| self.players[p].opponent_cast_spell_since_your_turn),
             Predicate::SearchedLibraryThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .iter()

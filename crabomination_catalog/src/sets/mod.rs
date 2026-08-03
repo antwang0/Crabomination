@@ -396,6 +396,7 @@ pub mod pcy3;
 pub mod pcy4;
 pub mod mod_set;
 pub mod ogw;
+pub mod arc;
 pub mod leg;
 pub mod leg2;
 pub mod lgn;

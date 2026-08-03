@@ -36,6 +36,8 @@ pub enum Format {
     Brawl,
     /// Two-Headed Giant (team format; not enforced here, just tracked).
     TwoHeadedGiant,
+    /// CR 904 — Archenemy: one player with a scheme deck faces a team.
+    Archenemy,
 
     // ── Limited ───────────────────────────────────────────────────────────────
     /// Booster draft (40-card minimum deck).
@@ -197,6 +199,18 @@ impl Format {
                 max_copies: 4,
                 // Teams share 30 life in 2HG (sometimes house-ruled to 40).
                 starting_life: 30,
+                opening_hand_size: 7,
+                sideboard_size: Some(15),
+                singleton: false,
+                requires_commander: false,
+                multiplayer_starting_life: None,
+            },
+            // CR 904.5 — the archenemy starts at 40, everyone else at 20.
+            Format::Archenemy => FormatRules {
+                min_deck_size: 60,
+                max_deck_size: None,
+                max_copies: 4,
+                starting_life: 20,
                 opening_hand_size: 7,
                 sideboard_size: Some(15),
                 singleton: false,

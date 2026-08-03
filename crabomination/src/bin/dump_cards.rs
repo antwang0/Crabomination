@@ -255,6 +255,7 @@ fn card_type_str(ct: &CardType) -> &'static str {
         CardType::Sorcery => "Sorcery",
         CardType::Kindred => "Kindred",
         CardType::Vanguard => "Vanguard",
+        CardType::Scheme => "Scheme",
     }
 }
 
@@ -264,6 +265,7 @@ fn supertype_str(st: &Supertype) -> &'static str {
         Supertype::Legendary => "Legendary",
         Supertype::Snow => "Snow",
         Supertype::World => "World",
+        Supertype::Ongoing => "Ongoing",
     }
 }
 

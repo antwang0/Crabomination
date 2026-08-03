@@ -685,6 +685,10 @@ pub enum StaticEffect {
     /// CR 303.4a — "Enchanted player can't cast more than one spell each turn"
     /// (Curse of Exhaustion). Scoped to the source Aura's enchanted seat.
     EnchantedPlayerOneSpellPerTurn,
+    /// "Each opponent can't cast more than one spell each turn" — the
+    /// one-sided sibling of `OneSpellPerTurn`, scoped to the source's
+    /// opponents (I Bask in Your Silent Awe).
+    OpponentsOneSpellPerTurn,
     /// "Each player can't cast more than one noncreature spell each turn"
     /// (Deafening Silence). Enforced at the central `perform_action` cast gate
     /// against `Player.noncreature_spells_cast_this_turn`.

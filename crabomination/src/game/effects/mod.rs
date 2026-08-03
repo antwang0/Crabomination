@@ -11704,6 +11704,14 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 701.33 — abandon this scheme.
+            Effect::AbandonThisScheme => {
+                if let Some(src) = ctx.source {
+                    self.abandon_scheme(src);
+                }
+                Ok(())
+            }
+
             Effect::SkipNextUntap { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()

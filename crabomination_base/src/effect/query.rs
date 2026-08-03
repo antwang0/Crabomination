@@ -234,6 +234,7 @@ impl Effect {
             }
         }
         match self {
+            Effect::AbandonThisScheme => false,
             Effect::FlipUntilLoss { per_win } => per_win.requires_target(),
             Effect::HeadGames { who } | Effect::TradeSecrets { who } => player_has_target(who),
             Effect::LookAtFaceDown { what } => sel_has_target(what),

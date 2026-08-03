@@ -92,6 +92,7 @@ fn main() {
                     CardType::Sorcery => "Sorcery",
                     CardType::Kindred => "Kindred",
                     CardType::Vanguard => "Vanguard",
+                    CardType::Scheme => "Scheme",
                 })
                 .collect();
             flagged.push((def.name.to_string(), reason, types.join(" ")));

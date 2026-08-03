@@ -5498,6 +5498,18 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   903.9 optional rider.
 
 ### Todo (⏳)
+- ✅ **CR 314 / 900 / 904 — Archenemy.** `CardType::Scheme` +
+  `Supertype::Ongoing`; `Player.scheme_deck`, `GameState.archenemy` and
+  `seat_archenemy` (40 life, first turn, CR 904.5/904.6). CR 904.9's
+  set-in-motion is a turn-based action at the archenemy's precombat main
+  (`set_scheme_in_motion` + `EventKind::SetInMotion`); CR 904.10's sweep is an
+  SBA (`sweep_finished_schemes`); CR 701.33 abandon ships as
+  `Effect::AbandonThisScheme`. A face-up scheme's statics and step triggers
+  function from the command zone (CR 904.8) — anthem gather and
+  `fire_step_triggers` both walk it. `sets::arc` (8 schemes),
+  `classic_sets/arc`. Residual ⏳: the CR 904.2 team/attack-multiple-players
+  seating is left to the caller, and All in Good Time's "schemes can't be set
+  in motion that turn" rider isn't modeled.
 - ✅ **CR 612 — Text-Changing Effects** — layer-3 `Modification::ReplaceColorWord`
   / `ReplaceBasicLandType` + `Effect::ReplaceColorWord`/`ReplaceBasicLandType`
   (two ChooseColor prompts pick from/to; basics map 1:1 onto colors). Rewrites

@@ -100,6 +100,12 @@ pub struct Player {
     /// existed deserialize cleanly as empty.
     #[serde(default)]
     pub command: CowBox<Vec<CardInstance>>,
+    /// CR 904.3 — the archenemy's face-down scheme deck. Like the command
+    /// zone it never empties into another zone: a scheme is set in motion off
+    /// the top (CR 904.9) into `command`, and abandoned back to the bottom
+    /// here (CR 904.10). `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub scheme_deck: CowBox<Vec<CardInstance>>,
     /// CR 406 / 701.45 — the Lessons "sideboard" (cards owned from outside
     /// the game). A Learn ability may reveal a Lesson card here and put it
     /// into hand. Populated by deck construction; empty by default (in
@@ -147,6 +153,12 @@ pub struct Player {
     /// each turn" (CR 611.2). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub spells_cast_this_game_turn: u32,
+    /// Has an opponent of this seat cast a spell since this seat's last turn
+    /// ended? Set on every other seat when a spell is cast; cleared for the
+    /// active player at cleanup. Backs
+    /// `Predicate::OpponentCastSpellSinceYourTurn`.
+    #[serde(default)]
+    pub opponent_cast_spell_since_your_turn: bool,
     /// Like `spells_cast_this_game_turn` but counting only noncreature spells
     /// (Deafening Silence's "each player can't cast more than one noncreature
     /// spell each turn"). Reset for every player at Cleanup. `#[serde(default)]`.
@@ -853,6 +865,8 @@ impl Player {
             hand: CowBox::default(),
             graveyard: CowBox::default(),
             command: CowBox::default(),
+            scheme_deck: CowBox::default(),
+            opponent_cast_spell_since_your_turn: false,
             sideboard: CowBox::default(),
             commanders: Vec::new(),
             lands_played_this_turn: 0,

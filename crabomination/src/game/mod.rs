@@ -866,6 +866,11 @@ pub struct GameState {
     /// players. Set by `apply_format` for Two-Headed Giant.
     #[serde(default)]
     pub shared_team_turns: bool,
+    /// CR 904.2a — the seat designated as the archenemy, who sets a scheme in
+    /// motion at the start of each of their precombat main phases (CR 904.9).
+    /// `None` outside the Archenemy variant.
+    #[serde(default)]
+    pub archenemy: Option<usize>,
     /// CR 614 — "permanents enter tapped this turn" (Due Respect). Cleared at
     /// cleanup alongside the other turn-scoped flags.
     #[serde(default)]
@@ -1789,6 +1794,7 @@ impl Clone for GameState {
             countered_spell_controller: self.countered_spell_controller,
             accepting_player: self.accepting_player,
             shared_team_turns: self.shared_team_turns,
+            archenemy: self.archenemy,
             permanents_enter_tapped_this_turn: self.permanents_enter_tapped_this_turn,
             counters_removed_this_effect: self.counters_removed_this_effect,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
@@ -2074,6 +2080,7 @@ impl GameState {
             countered_spell_controller: None,
             accepting_player: None,
             shared_team_turns: false,
+            archenemy: None,
             permanents_enter_tapped_this_turn: false,
             counters_removed_this_effect: 0,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
@@ -2980,6 +2987,37 @@ impl GameState {
     /// hand size and starting life, and its abilities function from there.
     /// (Static abilities from the command zone are not modelled — the shipped
     /// avatars use activated and triggered abilities.)
+    /// CR 904 — seat `seat` as the archenemy: 40 starting life (904.5), the
+    /// first turn (904.6), attack-multiple-players and shared team turns
+    /// (904.2), and `schemes` face down in their scheme deck (904.3).
+    pub fn seat_archenemy(
+        &mut self,
+        seat: usize,
+        schemes: Vec<crate::card::CardDefinition>,
+    ) -> Vec<crate::card::CardId> {
+        self.archenemy = Some(seat);
+        self.players[seat].starting_life = 40;
+        self.players[seat].life = 40;
+        self.active_player_idx = seat;
+        self.priority.player_with_priority = seat;
+        schemes
+            .into_iter()
+            .map(|def| {
+                let id = crate::card::CardId(self.next_id);
+                self.next_id = self.next_id.saturating_add(1);
+                self.players[seat]
+                    .scheme_deck
+                    .push(crate::card::CardInstance::new(id, def, seat));
+                id
+            })
+            .collect()
+    }
+
+    /// The face-up scheme cards in `seat`'s command zone (CR 904.4).
+    pub fn face_up_schemes(&self, seat: usize) -> Vec<&CardInstance> {
+        self.players[seat].command.iter().filter(|c| c.definition.is_scheme()).collect()
+    }
+
     pub fn seat_vanguard(
         &mut self,
         seat: usize,
@@ -7832,11 +7870,24 @@ impl GameState {
                 })
             })
             .collect();
-        for card in self.battlefield.iter().chain(emblem_anthems.iter()) {
-            let source_duration = if emblem_anthems.iter().any(|e| e.id == card.id) {
-                EffectDuration::Indefinite
-            } else {
+        // CR 904.8 — a face-up scheme's statics function from the command zone,
+        // so it joins the anthem walk exactly like an emblem does.
+        let face_up_schemes: Vec<&CardInstance> = self
+            .players
+            .iter()
+            .flat_map(|p| p.command.iter())
+            .filter(|c| c.definition.is_scheme())
+            .collect();
+        for card in self
+            .battlefield
+            .iter()
+            .chain(emblem_anthems.iter())
+            .chain(face_up_schemes.iter().copied())
+        {
+            let source_duration = if self.battlefield.iter().any(|c| c.id == card.id) {
                 EffectDuration::WhileSourceOnBattlefield
+            } else {
+                EffectDuration::Indefinite
             };
             for sa in &card.definition.static_abilities {
                 // `AnthemForFilterIf` shares this gather; its predicate gate is
@@ -10540,7 +10591,23 @@ impl GameState {
                     _ => false,
                 })
             });
-            if blocked {
+            // CR 904.8 — a face-up scheme's statics function from the command
+            // zone, so the opponents-only spell lock is scanned there.
+            let caster = self.priority.player_with_priority;
+            let scheme_locked = pl.spells_cast_this_game_turn >= 1
+                && self.players.iter().enumerate().any(|(seat, owner)| {
+                    seat != caster
+                        && owner.command.iter().any(|c| {
+                            c.definition.is_scheme()
+                                && c.definition.static_abilities.iter().any(|sa| {
+                                    matches!(
+                                        sa.effect,
+                                        StaticEffect::OpponentsOneSpellPerTurn
+                                    )
+                                })
+                        })
+                });
+            if blocked || scheme_locked {
                 return Err(GameError::SpellLimitReached);
             }
             // Mana Maze — no spell may share a colour with the turn's last
@@ -18289,6 +18356,8 @@ fn static_effect_to_effects(
             | StaticEffect::PermanentsDontUntap
             // Consulted directly in the block-legality walk, not a layer effect.
             | StaticEffect::LandwalkIgnored(_)
+            // Consulted directly by the cast gate, not a layer effect.
+            | StaticEffect::OpponentsOneSpellPerTurn
             | StaticEffect::GrantActivatedAbilityFromGraveyard { .. }
             // Gated at their action dispatch (`can_player_play_land`,
             // the convoke cast path); no layer effect.

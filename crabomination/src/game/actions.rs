@@ -7386,6 +7386,11 @@ impl GameState {
         self.last_cast_spell_colors = card.definition.printed_colors();
         self.players[p].spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_game_turn += 1;
+        for (seat, pl) in self.players.iter_mut().enumerate() {
+            if seat != p {
+                pl.opponent_cast_spell_since_your_turn = true;
+            }
+        }
         // Per-turn cast-name log (Grim Reminder's "cast a spell this turn with
         // the same name").
         self.players[p]
