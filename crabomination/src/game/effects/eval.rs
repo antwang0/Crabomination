@@ -1602,6 +1602,10 @@ impl GameState {
                             || c.cast_from_escape)
                 })
                 .unwrap_or(false),
+            Predicate::SourceCastFromOwnersHand => ctx
+                .source
+                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .is_some_and(|c| !c.is_token && c.cast_from_hand),
             Predicate::SourceChampionedSomething => ctx.source.is_some_and(|cid| {
                 self.exile.iter().any(|c| c.exiled_by.as_ref().is_some_and(|l| l.source == cid))
             }),

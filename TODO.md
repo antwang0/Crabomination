@@ -5463,19 +5463,24 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   is at zero. Each landed its primitive: `Effect::ReplaceCreatureTypeText`,
   `Keyword::DividesCombatDamageAmongDefenders`, `Effect::EachPlayerChoosesNumberHighestLoses`,
   and `GameEvent::ControlChanged` + `EventKind::GainedControlOfThis`.
-- ⏳ **Legions is at 45 gaps** (`set_gaps.py lgn`). Wave 1 shipped 76 cards
-  (`sets::lgn`). The remainder wants one primitive each for the Morph
-  one-offs — Chromeshell Crab (exchange control of two creatures), Dermoplasm
-  (put a morph card from hand onto the battlefield, bouncing itself),
-  Willbender (retarget a spell/ability with a single target), Master of the
-  Veil / Weaver of Lies (turn a face-up morph creature back down), Planar
-  Guide (exile all creatures, return at the next end step) — plus the tribal
-  utility (Dark Supplicant's three-zone named search, Elvish Soultiller's
-  graveyard type-shuffle, Goblin Assassin's per-player coin flips, Hollow
-  Specter's pay-{X} reveal-and-choose, Magma Sliver's granted activated
-  pump, Mistform's "becomes the creature type of your choice", Riptide
-  Mangler's indefinite base-power copy, Sunstrike Legionnaire, Whipgrass
-  Entangler's Cleric-scaled per-creature attack/block tax).
+- ⏳ **Legions is at 18 gaps** (`set_gaps.py lgn`). Two waves shipped 103 cards
+  (`sets::lgn`). Each remaining card wants one primitive: Chromeshell Crab
+  (exchange control of two creatures), Dermoplasm (put a morph card from hand
+  onto the battlefield, bouncing itself), Planar Guide (exile all creatures,
+  return at the next end step), Caller of the Claw (nontoken creatures put
+  into your graveyard from the battlefield *this turn*), Crookclaw Elder /
+  Keeper of the Nine Gales (tap two untapped [type] you control as a cost),
+  Dark Supplicant (three-zone search for a specific card name), Goblin
+  Assassin (each player flips; each tails sacrifices), Skirk Drill Sergeant
+  (may-pay then reveal-top-and-route), Hollow Specter (pay {X}, they reveal X,
+  you choose one to discard), Magma Sliver (granted activated pump scaled by
+  the Sliver count), Riptide Mangler (indefinite base-power copy), Corpse
+  Harvester (one search, two differently-filtered picks), Celestial Gatekeeper
+  (exile-self then a two-target graveyard reanimation), Ghastly Remains
+  (graveyard-scoped upkeep may-pay return), Beacon of Destiny (redirect the
+  next damage to you onto this creature), Goblin Goon (attack/block gated on
+  out-creaturing the other side), Whipgrass Entangler (a Cleric-scaled
+  per-creature attack/block tax).
 - ⏳ **"Bands with other" (CR 702.22b)** is unimplemented. Plain attacking
   bands ship (`DeclareAttackersBanded`); the quality-scoped variant needs a
   second keyword and a widened legality check in `declare_attackers_banded`.

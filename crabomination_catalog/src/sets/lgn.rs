@@ -99,6 +99,35 @@ fn sliver(name: &'static str, c: ManaCost, p: i32, t: i32) -> CardDefinition {
     creature(name, c, vec![CreatureType::Sliver], p, t)
 }
 
+/// "{1}: This creature becomes the creature type of your choice until end of
+/// turn." — the Mistform activation.
+fn become_chosen_type() -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost(&[generic(1)]),
+        effect: Effect::BecomeChosenCreatureType {
+            what: Selector::This,
+            duration: Duration::EndOfTurn,
+            excluded: vec![],
+        },
+        ..Default::default()
+    }
+}
+
+fn your_creatures_of(kind: CreatureType) -> Selector {
+    Selector::EachPermanent(R::HasCreatureType(kind).and(R::ControlledByYou))
+}
+
+fn sliver_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Sliver".to_string(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sliver], ..Default::default() },
+        ..Default::default()
+    }
+}
+
 fn goblin_token() -> TokenDefinition {
     TokenDefinition {
         name: "Goblin".to_string(),
@@ -1521,3 +1550,596 @@ pub fn quick_sliver() -> CardDefinition {
     }
 }
 
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Bane of the Living — Morph {X}{B}{B} for an X-sized sweeper.
+pub fn bane_of_the_living() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[x(), b(), b()]))],
+        triggered_abilities: vec![on_turn_up(Effect::PumpPT {
+            what: Selector::EachPermanent(R::Creature),
+            power: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
+            toughness: Value::Times(Box::new(Value::XFromCost), Box::new(Value::Const(-1))),
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Bane of the Living", cost(&[generic(2), b(), b()]), vec![CreatureType::Insect], 4, 3)
+    }
+}
+
+/// Berserk Murlodont — every Beast grows with the gang that blocks it.
+pub fn berserk_murlodont() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasCreatureType(CreatureType::Beast),
+                },
+            ),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::BlockersOf(Box::new(Selector::TriggerSource)),
+                toughness: Value::BlockersOf(Box::new(Selector::TriggerSource)),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..creature("Berserk Murlodont", cost(&[generic(4), g()]), vec![CreatureType::Beast], 3, 3)
+    }
+}
+
+/// Bloodstoke Howler — Morph {6}{R} into a Beast war cry.
+pub fn bloodstoke_howler() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(6), r()]))],
+        triggered_abilities: vec![on_turn_up(Effect::PumpPT {
+            what: your_creatures_of(CreatureType::Beast),
+            power: Value::Const(3),
+            toughness: Value::ZERO,
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Bloodstoke Howler", cost(&[generic(5), r()]), vec![CreatureType::Beast], 3, 4)
+    }
+}
+
+/// Brood Sliver — every connecting Sliver breeds another.
+pub fn brood_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Whenever a Sliver deals combat damage to a player, its controller may create a 1/1 Sliver token.",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::HasCreatureType(CreatureType::Sliver),
+                ability: Box::new(TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::DealsCombatDamageToPlayer,
+                        EventScope::SelfSource,
+                    ),
+                    effect: Effect::MayDo {
+                        description: "Create a 1/1 Sliver token?".into(),
+                        body: Box::new(Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            definition: sliver_token(),
+                        }),
+                    },
+                }),
+            },
+        }],
+        ..sliver("Brood Sliver", cost(&[generic(4), g()]), 3, 3)
+    }
+}
+
+/// Deathmark Prelate — a Zombie a turn buys unconditional removal.
+pub fn deathmark_prelate() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            tap_cost: true,
+            sorcery_speed: true,
+            sac_other_filter: Some((R::HasCreatureType(CreatureType::Zombie), 1)),
+            effect: Effect::DestroyNoRegen {
+                what: target_filtered(
+                    R::Creature.and(R::HasCreatureType(CreatureType::Zombie).negate()),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Deathmark Prelate",
+            cost(&[generic(3), b()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            2,
+            3,
+        )
+    }
+}
+
+/// Drinker of Sorrow — it hits like a truck and costs you a permanent.
+pub fn drinker_of_sorrow() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::CantBlock],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamage, EventScope::SelfSource),
+            effect: Effect::Sacrifice {
+                who: Selector::You,
+                count: Value::ONE,
+                filter: R::Permanent,
+            },
+        }],
+        ..creature("Drinker of Sorrow", cost(&[generic(2), b()]), vec![CreatureType::Horror], 5, 3)
+    }
+}
+
+/// Earthblighter — feed it a Goblin, lose them a land.
+pub fn earthblighter() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            tap_cost: true,
+            sac_other_filter: Some((R::HasCreatureType(CreatureType::Goblin), 1)),
+            effect: Effect::Destroy { what: target_filtered(R::Land) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Earthblighter",
+            cost(&[generic(1), b()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            1,
+            1,
+        )
+    }
+}
+
+/// Elvish Soultiller — its death reloads a whole tribe into your library.
+pub fn elvish_soultiller() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::ChooseCreatureTypeThen {
+                who: PlayerRef::You,
+                then: Box::new(Effect::Move {
+                    what: Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: R::Creature.and(R::IsSourceChosenCreatureType),
+                    },
+                    to: ZoneDest::Library {
+                        who: PlayerRef::You,
+                        pos: crate::effect::LibraryPosition::Shuffled,
+                    },
+                }),
+            },
+        }],
+        ..creature(
+            "Elvish Soultiller",
+            cost(&[generic(3), g(), g()]),
+            vec![CreatureType::Elf, CreatureType::Mutant],
+            5,
+            4,
+        )
+    }
+}
+
+/// Goblin Clearcutter — a Forest for three red-green mana.
+pub fn goblin_clearcutter() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::Land.and(R::HasLandType(crate::card::LandType::Forest)), 1)),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(vec![Color::Red, Color::Green], Value::Const(3)),
+            },
+            ..Default::default()
+        }],
+        ..creature("Goblin Clearcutter", cost(&[generic(3), r()]), vec![CreatureType::Goblin], 3, 3)
+    }
+}
+
+/// Imperial Hellkite — Morph {6}{R}{R} into another Dragon.
+pub fn imperial_hellkite() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Morph(cost(&[generic(6), r(), r()]))],
+        triggered_abilities: vec![on_turn_up(Effect::MayDo {
+            description: "Search your library for a Dragon?".into(),
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasCreatureType(CreatureType::Dragon),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+        })],
+        ..creature(
+            "Imperial Hellkite",
+            cost(&[generic(5), r(), r()]),
+            vec![CreatureType::Dragon],
+            6,
+            6,
+        )
+    }
+}
+
+/// Infernal Caretaker — Morph {3}{B} to reload every Zombie graveyard.
+pub fn infernal_caretaker() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(3), b()]))],
+        triggered_abilities: vec![on_turn_up(Effect::Move {
+            what: Selector::CardsInZone {
+                who: PlayerRef::EachPlayer,
+                zone: crate::card::Zone::Graveyard,
+                filter: R::HasCreatureType(CreatureType::Zombie),
+            },
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
+        })],
+        ..creature(
+            "Infernal Caretaker",
+            cost(&[generic(3), b()]),
+            vec![CreatureType::Human, CreatureType::Cleric],
+            2,
+            2,
+        )
+    }
+}
+
+/// Krosan Cloudscraper — a 13/13 with an upkeep tax.
+pub fn krosan_cloudscraper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(7), g(), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::UnlessPlayerPays {
+                who: PlayerRef::You,
+                cost: crate::card::WardCost::Mana(cost(&[g(), g()])),
+                then: Box::new(Effect::SacrificeSource),
+                if_paid: None,
+            },
+        }],
+        ..creature(
+            "Krosan Cloudscraper",
+            cost(&[generic(7), g(), g(), g()]),
+            vec![CreatureType::Beast, CreatureType::Mutant],
+            13,
+            13,
+        )
+    }
+}
+
+/// Lavaborn Muse — an empty hand across the table is 3 damage a turn.
+pub fn lavaborn_muse() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::OpponentControl,
+            )
+            .with_filter(Predicate::ValueAtMost(
+                Value::HandSizeOf(PlayerRef::ActivePlayer),
+                Value::Const(2),
+            )),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::Const(3),
+            },
+        }],
+        ..creature("Lavaborn Muse", cost(&[generic(3), r()]), vec![CreatureType::Spirit], 3, 3)
+    }
+}
+
+/// Master of the Veil — Morph {2}{U} to hide someone else's morph again.
+pub fn master_of_the_veil() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(2), u()]))],
+        triggered_abilities: vec![on_turn_up(Effect::MayDo {
+            description: "Turn a morph creature face down?".into(),
+            body: Box::new(Effect::TurnFaceDown {
+                what: target_filtered(R::Creature.and(R::HasMorphAbility)),
+            }),
+        })],
+        ..creature(
+            "Master of the Veil",
+            cost(&[generic(2), u(), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            2,
+            3,
+        )
+    }
+}
+
+/// Mistform Seaswift — a shifty Morph {1}{U} flier.
+pub fn mistform_seaswift() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Morph(cost(&[generic(1), u()]))],
+        activated_abilities: vec![become_chosen_type()],
+        ..creature("Mistform Seaswift", cost(&[generic(3), u()]), vec![CreatureType::Illusion], 3, 1)
+    }
+}
+
+/// Mistform Sliver — every Sliver can pass for anything.
+pub fn mistform_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have \"{1}: This becomes the creature type of your choice.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: all_of(CreatureType::Sliver),
+                ability: become_chosen_type(),
+                condition: None,
+            },
+        }],
+        ..CardDefinition {
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Illusion, CreatureType::Sliver],
+                ..Default::default()
+            },
+            ..sliver("Mistform Sliver", cost(&[generic(1), u()]), 1, 1)
+        }
+    }
+}
+
+/// Mistform Wakecaster — retypes itself, or the whole team.
+pub fn mistform_wakecaster() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![
+            become_chosen_type(),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), u(), u()]),
+                tap_cost: true,
+                effect: Effect::BecomeChosenCreatureType {
+                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                    duration: Duration::EndOfTurn,
+                    excluded: vec![],
+                },
+                ..Default::default()
+            },
+        ],
+        ..creature(
+            "Mistform Wakecaster",
+            cost(&[generic(4), u()]),
+            vec![CreatureType::Illusion],
+            2,
+            3,
+        )
+    }
+}
+
+/// Phage the Untouchable — a win condition that kills you if it cheats in.
+pub fn phage_the_untouchable() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                    .with_filter(Predicate::Not(Box::new(Predicate::SourceCastFromOwnersHand))),
+                effect: Effect::LoseGame { who: PlayerRef::You },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToCreature,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::DestroyNoRegen { what: Selector::Target(0) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::LoseGame { who: PlayerRef::Triggerer },
+            },
+        ],
+        ..creature(
+            "Phage the Untouchable",
+            cost(&[generic(3), b(), b(), b(), b()]),
+            vec![CreatureType::Avatar, CreatureType::Minion],
+            4,
+            4,
+        )
+    }
+}
+
+/// Scion of Darkness — connecting steals a body out of their graveyard.
+pub fn scion_of_darkness() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample, Keyword::Cycling(cost(&[generic(3)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Reanimate a creature from their graveyard?".into(),
+                body: Box::new(Effect::Move {
+                    what: target_filtered(R::Creature.and(R::InOpponentGraveyard)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+        }],
+        ..creature(
+            "Scion of Darkness",
+            cost(&[generic(5), b(), b(), b()]),
+            vec![CreatureType::Avatar],
+            6,
+            6,
+        )
+    }
+}
+
+/// Shaleskin Plower — Morph {4}{R} into land destruction.
+pub fn shaleskin_plower() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(4), r()]))],
+        triggered_abilities: vec![on_turn_up(Effect::Destroy { what: target_filtered(R::Land) })],
+        ..creature("Shaleskin Plower", cost(&[generic(3), r()]), vec![CreatureType::Beast], 3, 2)
+    }
+}
+
+/// Skirk Alarmist — flip someone's morph up early, then take it away.
+pub fn skirk_alarmist() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::TurnFaceUpFree {
+                    what: target_filtered(R::Creature.and(R::FaceDown).and(R::ControlledByYou)),
+                },
+                Effect::AtNextEndStep {
+                    body: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..creature(
+            "Skirk Alarmist",
+            cost(&[generic(1), r()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            2,
+        )
+    }
+}
+
+/// Sunstrike Legionnaire — a tapper that untaps off every arrival.
+pub fn sunstrike_legionnaire() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "This creature doesn't untap during your untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Creature },
+            ),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Tap {
+                what: target_filtered(R::Creature.and(R::ManaValueAtMost(3))),
+            },
+            ..Default::default()
+        }],
+        ..creature(
+            "Sunstrike Legionnaire",
+            cost(&[generic(1), w()]),
+            vec![CreatureType::Human, CreatureType::Soldier],
+            1,
+            2,
+        )
+    }
+}
+
+/// Tribal Forcemage — Morph {1}{G} into a tribe-wide alpha strike.
+pub fn tribal_forcemage() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(1), g()]))],
+        triggered_abilities: vec![on_turn_up(Effect::ChooseCreatureTypeThen {
+            who: PlayerRef::You,
+            then: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(R::IsSourceChosenCreatureType),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::EachPermanent(R::IsSourceChosenCreatureType),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+        })],
+        ..creature(
+            "Tribal Forcemage",
+            cost(&[generic(1), g()]),
+            vec![CreatureType::Elf, CreatureType::Wizard],
+            1,
+            1,
+        )
+    }
+}
+
+/// Unstable Hulk — Morph {3}{R}{R} for one enormous swing, at a cost.
+pub fn unstable_hulk() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(3), r(), r()]))],
+        triggered_abilities: vec![on_turn_up(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(6),
+                toughness: Value::Const(6),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::SkipTurns { who: PlayerRef::You, count: Value::ONE },
+        ]))],
+        ..creature(
+            "Unstable Hulk",
+            cost(&[generic(1), r(), r()]),
+            vec![CreatureType::Goblin, CreatureType::Mutant],
+            2,
+            2,
+        )
+    }
+}
+
+/// Warped Researcher — every cycle in the game makes it untouchable.
+pub fn warped_researcher() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardCycled, EventScope::AnyPlayer),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Shroud,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..creature(
+            "Warped Researcher",
+            cost(&[generic(4), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard, CreatureType::Mutant],
+            3,
+            4,
+        )
+    }
+}
+
+/// Weaver of Lies — Morph {4}{U} to hide every other morph on the table.
+pub fn weaver_of_lies() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(4), u()]))],
+        triggered_abilities: vec![on_turn_up(Effect::TurnFaceDown {
+            what: Selector::EachPermanent(
+                R::Creature.and(R::HasMorphAbility).and(R::IsSource.negate()),
+            ),
+        })],
+        ..creature("Weaver of Lies", cost(&[generic(5), u(), u()]), vec![CreatureType::Beast], 4, 4)
+    }
+}
+
+/// Willbender — Morph {1}{U} to bend a spell somewhere else.
+pub fn willbender() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(1), u()]))],
+        triggered_abilities: vec![on_turn_up(Effect::ChangeTargetOfAbility {
+            what: target_filtered(R::IsSpellOnStack),
+        })],
+        ..creature(
+            "Willbender",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Human, CreatureType::Wizard],
+            1,
+            2,
+        )
+    }
+}

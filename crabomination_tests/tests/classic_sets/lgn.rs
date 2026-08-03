@@ -544,3 +544,243 @@ fn invokers_pay_off_at_seven() {
     activate(&mut g, 0, starlight, 0, None);
     assert_eq!(g.players[0].life, 25);
 }
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// Bane of the Living's Morph {X}{B}{B} sweeps for the X actually paid.
+#[test]
+fn bane_of_the_living_sweeps_for_the_paid_x() {
+    let mut g = main_phase();
+    let bane = g.add_card_to_battlefield(0, catalog::bane_of_the_living());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let big = g.add_card_to_battlefield(1, catalog::enormous_baloth());
+    g.battlefield.iter_mut().find(|c| c.id == bane).unwrap().turn_face_down();
+    mana(&mut g, 0);
+    g.perform_action(GameAction::TurnFaceUpForX { card_id: bane, x_value: 2 })
+        .expect("unmorph for X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "-2/-2 killed the 2/2");
+    assert_eq!(power_of(&g, big), 5, "and shrank the 7/7");
+}
+
+/// Berserk Murlodont pumps every blocked Beast by its blocker count.
+#[test]
+fn berserk_murlodont_pumps_blocked_beasts() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::berserk_murlodont());
+    let baloth = g.add_card_to_battlefield(0, catalog::enormous_baloth());
+    g.clear_sickness(baloth);
+    let a = g.add_card_to_battlefield(1, catalog::wall_of_stone());
+    let b = g.add_card_to_battlefield(1, catalog::wall_of_stone());
+    attack_with(&mut g, baloth);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(a, baloth), (b, baloth)]))
+        .expect("gang block");
+    drain_stack(&mut g);
+    assert_eq!(power_of(&g, baloth), 9, "+2/+2 for the two blockers");
+}
+
+/// Deathmark Prelate eats a Zombie for unconditional removal.
+#[test]
+fn deathmark_prelate_trades_a_zombie_for_removal() {
+    let mut g = main_phase();
+    let prelate = g.add_card_to_battlefield(0, catalog::deathmark_prelate());
+    let zombie = g.add_card_to_battlefield(0, catalog::dripping_dead());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(prelate);
+    activate(&mut g, 0, prelate, 0, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(zombie).is_none(), "the Zombie was the cost");
+}
+
+/// Krosan Cloudscraper eats itself when the upkeep tax goes unpaid.
+#[test]
+fn krosan_cloudscraper_sacrifices_itself_unpaid() {
+    let mut g = main_phase();
+    let scraper = g.add_card_to_battlefield(0, catalog::krosan_cloudscraper());
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep {
+        g.advance_step(vec![]).expect("advance");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(scraper).is_none(), "the upkeep tax went unpaid");
+}
+
+/// Lavaborn Muse burns an opponent who's hellbent on their upkeep.
+#[test]
+fn lavaborn_muse_burns_an_empty_handed_opponent() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::lavaborn_muse());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::Untap;
+    while g.step != TurnStep::Upkeep {
+        g.advance_step(vec![]).expect("advance");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "hellbent on their own upkeep");
+}
+
+/// Phage is safe off the hand and lethal when she's cheated in.
+#[test]
+fn phage_only_survives_a_hand_cast() {
+    let mut g = main_phase();
+    let phage = g.add_card_to_hand(0, catalog::phage_the_untouchable());
+    cast(&mut g, 0, phage, None);
+    assert!(g.players[0].is_alive(), "a hand cast is safe");
+    // Reanimated instead — the ETB rider fires.
+    g.remove_to_graveyard_with_triggers(phage);
+    drain_stack(&mut g);
+    let reanimate = g.add_card_to_hand(0, catalog::reanimate());
+    cast(&mut g, 0, reanimate, Some(Target::Permanent(phage)));
+    assert!(!g.players[0].is_alive(), "she wasn't cast from hand");
+}
+
+/// Mistform Seaswift can pass for any tribe until end of turn.
+#[test]
+fn mistform_seaswift_becomes_the_chosen_type() {
+    let mut g = main_phase();
+    let swift = g.add_card_to_battlefield(0, catalog::mistform_seaswift());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::CreatureType(
+        crabomination::card::CreatureType::Sliver,
+    )]));
+    activate(&mut g, 0, swift, 0, None);
+    let lord = g.add_card_to_battlefield(0, catalog::blade_sliver());
+    assert_eq!(power_of(&g, swift), 4, "the Sliver lord now sees it");
+    assert!(g.battlefield_find(lord).is_some());
+}
+
+/// Skirk Alarmist flips your morph up early — and takes it at end of turn.
+#[test]
+fn skirk_alarmist_flips_then_sacrifices() {
+    let mut g = main_phase();
+    let alarmist = g.add_card_to_battlefield(0, catalog::skirk_alarmist());
+    let hidden = g.add_card_to_battlefield(0, catalog::sootfeather_flock());
+    g.battlefield.iter_mut().find(|c| c.id == hidden).unwrap().turn_face_down();
+    activate(&mut g, 0, alarmist, 0, Some(Target::Permanent(hidden)));
+    assert!(!g.battlefield_find(hidden).unwrap().face_down, "flipped for free");
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hidden).is_none(), "and sacrificed at the end step");
+}
+
+/// Sunstrike Legionnaire untaps off every arrival and taps small creatures.
+#[test]
+fn sunstrike_legionnaire_untaps_on_arrivals() {
+    let mut g = main_phase();
+    let legionnaire = g.add_card_to_battlefield(0, catalog::sunstrike_legionnaire());
+    g.clear_sickness(legionnaire);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, 0, legionnaire, 0, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+    assert!(g.battlefield_find(legionnaire).unwrap().tapped);
+    let arrival = g.add_card_to_hand(0, catalog::llanowar_elves());
+    cast(&mut g, 0, arrival, None);
+    assert!(!g.battlefield_find(legionnaire).unwrap().tapped, "an arrival untapped it");
+}
+
+/// Unstable Hulk's Morph is a huge swing that costs you the next turn.
+#[test]
+fn unstable_hulk_swings_then_skips_your_turn() {
+    let mut g = main_phase();
+    let hulk = g.add_card_to_battlefield(0, catalog::unstable_hulk());
+    g.battlefield.iter_mut().find(|c| c.id == hulk).unwrap().turn_face_down();
+    mana(&mut g, 0);
+    g.perform_action(GameAction::TurnFaceUp { card_id: hulk }).expect("unmorph");
+    drain_stack(&mut g);
+    assert_eq!(power_of(&g, hulk), 8);
+    assert_eq!(g.players[0].skip_turns, 1);
+}
+
+/// Weaver of Lies hides every *other* morph creature when it flips.
+#[test]
+fn weaver_of_lies_hides_the_other_morphs() {
+    let mut g = main_phase();
+    let weaver = g.add_card_to_battlefield(0, catalog::weaver_of_lies());
+    let other = g.add_card_to_battlefield(1, catalog::branchsnap_lorian());
+    g.battlefield.iter_mut().find(|c| c.id == weaver).unwrap().turn_face_down();
+    mana(&mut g, 0);
+    g.perform_action(GameAction::TurnFaceUp { card_id: weaver }).expect("unmorph");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(other).unwrap().face_down, "the opposing morph went down");
+    assert!(!g.battlefield_find(weaver).unwrap().face_down, "but not the Weaver itself");
+}
+
+/// Elvish Soultiller shuffles a whole tribe back out of your graveyard.
+#[test]
+fn elvish_soultiller_reloads_a_tribe() {
+    let mut g = main_phase();
+    let tiller = g.add_card_to_battlefield(0, catalog::elvish_soultiller());
+    g.players[0].graveyard.push(crabomination::card::CardInstance::new(
+        CardId(9001),
+        catalog::llanowar_elves(),
+        0,
+    ));
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::CreatureType(
+        crabomination::card::CreatureType::Elf,
+    )]));
+    g.remove_to_graveyard_with_triggers(tiller);
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].library.iter().any(|c| c.id == CardId(9001)),
+        "the Elf went back into the library"
+    );
+}
+
+/// Goblin Clearcutter turns a Forest into three red-or-green mana.
+#[test]
+fn goblin_clearcutter_eats_a_forest_for_three() {
+    let mut g = main_phase();
+    let cutter = g.add_card_to_battlefield(0, catalog::goblin_clearcutter());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.clear_sickness(cutter);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cutter,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("activate");
+    assert!(g.battlefield_find(forest).is_none(), "the Forest was the cost");
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.amount(Color::Red) + pool.amount(Color::Green), 3);
+}
+
+/// Brood Sliver breeds a token off any connecting Sliver.
+#[test]
+fn brood_sliver_breeds_on_a_connection() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::brood_sliver());
+    let attacker = g.add_card_to_battlefield(0, catalog::blade_sliver());
+    g.clear_sickness(attacker);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    attack_with(&mut g, attacker);
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1);
+}
+
+/// Imperial Hellkite's Morph tutors up another Dragon.
+#[test]
+fn imperial_hellkite_fetches_a_dragon() {
+    let mut g = main_phase();
+    let kite = g.add_card_to_battlefield(0, catalog::imperial_hellkite());
+    let dragon = g.add_card_to_library(0, catalog::shivan_dragon());
+    g.battlefield.iter_mut().find(|c| c.id == kite).unwrap().turn_face_down();
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(dragon)),
+    ]));
+    mana(&mut g, 0);
+    g.perform_action(GameAction::TurnFaceUp { card_id: kite }).expect("unmorph");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dragon));
+}

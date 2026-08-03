@@ -1356,6 +1356,11 @@ pub enum Predicate {
     /// riders (Skitterbeam Battalion) — token copies and reanimated bodies
     /// don't re-fire. Backed by the persistent `CardInstance` cast flags.
     SourceWasCast,
+    /// The narrower sibling: true only if the source permanent reached the
+    /// battlefield by being cast **from its owner's hand** (Phage the
+    /// Untouchable's "if you didn't cast it from your hand, you lose the
+    /// game"). Backed by `CardInstance.cast_from_hand`.
+    SourceCastFromOwnersHand,
     /// CR 702.77 — true if a card in exile is champion-linked to the
     /// effect's source (`exiled_by` points at it). Gates "when a [type] is
     /// championed with this creature" riders (Mistbind Clique).
