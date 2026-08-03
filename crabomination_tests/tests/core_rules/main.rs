@@ -90,3 +90,4 @@ mod cr_recent64;
 mod cr_recent65;
 mod cr_recent66;
 mod cr_recent67;
+mod cr_recent68;

@@ -499,6 +499,12 @@ pub enum GameAction {
     /// Declare attackers: each attacker picks a defending player or a
     /// planeswalker controlled by a non-active player.
     DeclareAttackers(Vec<Attack>),
+    /// CR 702.22c — declare attackers and, in the same announcement, the
+    /// attacking bands. Each entry of `bands` lists one band's members: at
+    /// most one may lack `Keyword::Banding`, and every member must attack the
+    /// same defender (CR 702.22d). Plain `DeclareAttackers` is this with no
+    /// bands.
+    DeclareAttackersBanded { attacks: Vec<Attack>, bands: Vec<Vec<CardId>> },
     DeclareBlockers(Vec<(CardId, CardId)>),
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target>, #[serde(default)] x_value: Option<u32> },
     CastFlashback { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },

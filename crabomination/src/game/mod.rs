@@ -1171,6 +1171,12 @@ pub struct GameState {
     /// combat damage. Cleared when combat ends.
     #[serde(default)]
     pub(crate) blocked_attackers: Vec<CardId>,
+    /// CR 702.22c-f — the attacking bands declared this combat, each a list of
+    /// still-attacking members. A band lasts for the rest of combat even if a
+    /// member loses banding (CR 702.22e); a creature removed from combat drops
+    /// out of its band (CR 702.22f). Cleared when combat ends.
+    #[serde(default)]
+    pub(crate) attack_bands: Vec<Vec<CardId>>,
     /// CR 614.13-style ETB-control replacement (Gather Specimens): seats
     /// whose opponents' creatures enter under their control instead this
     /// turn. Cleared at cleanup.
@@ -1796,6 +1802,7 @@ impl Clone for GameState {
                 .combat_damage_prevented_to_players_this_turn
                 .clone(),
             blocked_attackers: self.blocked_attackers.clone(),
+            attack_bands: self.attack_bands.clone(),
             creature_etb_steal_this_turn: self.creature_etb_steal_this_turn.clone(),
             search_tax_paid_this_turn: self.search_tax_paid_this_turn.clone(),
             turn_scoped_spell_taxes: self.turn_scoped_spell_taxes.clone(),
@@ -2070,6 +2077,7 @@ impl GameState {
             damage_becomes_this_turn: None,
             combat_damage_prevented_to_players_this_turn: Vec::new(),
             blocked_attackers: Vec::new(),
+            attack_bands: Vec::new(),
             creature_etb_steal_this_turn: Vec::new(),
             search_tax_paid_this_turn: Vec::new(),
             turn_scoped_spell_taxes: Vec::new(),
@@ -10911,6 +10919,9 @@ impl GameState {
                 x_value,
             } => self.activate_loyalty_ability(card_id, ability_index, target, x_value),
             GameAction::DeclareAttackers(ids) => self.declare_attackers(ids),
+            GameAction::DeclareAttackersBanded { attacks, bands } => {
+                self.declare_attackers_banded(attacks, bands)
+            }
             GameAction::DeclareBlockers(assignments) => self.declare_blockers(assignments),
             GameAction::PassPriority => self.pass_priority(),
             GameAction::SubmitDecision(_) => unreachable!(),

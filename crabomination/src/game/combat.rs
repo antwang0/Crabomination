@@ -146,6 +146,18 @@ impl GameState {
         &mut self,
         attacks: Vec<Attack>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        self.declare_attackers_banded(attacks, vec![])
+    }
+
+    /// [`declare_attackers`] with CR 702.22c attacking bands announced in the
+    /// same step. Each `bands` entry lists one band's members.
+    ///
+    /// [`declare_attackers`]: Self::declare_attackers
+    pub fn declare_attackers_banded(
+        &mut self,
+        attacks: Vec<Attack>,
+        bands: Vec<Vec<CardId>>,
+    ) -> Result<Vec<GameEvent>, GameError> {
         if self.step != TurnStep::DeclareAttackers {
             return Err(GameError::WrongStep { actual: self.step });
         }
@@ -211,6 +223,37 @@ impl GameState {
                     {
                         return Err(GameError::InvalidPlaneswalkerAttackTarget(b_id));
                     }
+                }
+            }
+        }
+
+        // CR 702.22c-d — band legality: every member must be attacking, at
+        // most one may lack banding, at least one must have it, and they must
+        // all attack the same defender. Read from the *computed* keyword set
+        // so a granted banding counts.
+        {
+            let computed = self.compute_battlefield();
+            let has_banding = |id: CardId| {
+                computed.iter().any(|c| c.id == id && c.keywords.contains(&Keyword::Banding))
+            };
+            for members in &bands {
+                let Some(&first) = members.first() else { continue };
+                let targets: Vec<AttackTarget> = members
+                    .iter()
+                    .map(|m| {
+                        attacks
+                            .iter()
+                            .find(|a| a.attacker == *m)
+                            .map(|a| a.target)
+                            .ok_or(GameError::CannotAttack(first))
+                    })
+                    .collect::<Result<_, _>>()?;
+                let unbanded = members.iter().filter(|m| !has_banding(**m)).count();
+                if unbanded > 1
+                    || unbanded == members.len()
+                    || targets.iter().any(|t| *t != targets[0])
+                {
+                    return Err(GameError::CannotAttack(first));
                 }
             }
         }
@@ -971,6 +1014,16 @@ impl GameState {
                 }
             }
         }
+        // CR 702.22e — a declared band lasts for the rest of combat regardless
+        // of later banding loss; drop members that never made it into combat.
+        self.attack_bands = bands
+            .into_iter()
+            .map(|b| {
+                b.into_iter().filter(|m| self.attacking.iter().any(|a| a.attacker == *m)).collect()
+            })
+            .filter(|b: &Vec<CardId>| b.len() > 1)
+            .collect();
+
         // YourControl-scoped Attacks triggers (e.g. Battle Banner,
         // Sparring Regimen) are NOT walked here — the unified
         // `dispatch_triggers_for_events` path in `mod.rs` picks them up
@@ -1800,6 +1853,27 @@ impl GameState {
         // All valid — apply (merge into existing block_map so multiple
         // defenders can submit independently in multiplayer).
         self.blockers_declared = true;
+        // CR 702.22h — blocking one member of a band blocks every other member
+        // by that same blocker. Expanded before the apply loop so the added
+        // pairs go through the same bookkeeping and events.
+        let assignments: Vec<(CardId, CardId)> = {
+            let mut out = assignments;
+            for i in 0..out.len() {
+                let (blocker, attacker) = out[i];
+                let banded: Vec<CardId> = self
+                    .attack_bands
+                    .iter()
+                    .find(|b| b.contains(&attacker))
+                    .map(|b| b.iter().copied().filter(|m| *m != attacker).collect())
+                    .unwrap_or_default();
+                for m in banded {
+                    if !out.contains(&(blocker, m)) && !self.blocks(blocker, m) {
+                        out.push((blocker, m));
+                    }
+                }
+            }
+            out
+        };
         let mut events = vec![];
         for (blocker_id, attacker_id) in assignments {
             self.add_block(blocker_id, attacker_id);
@@ -1936,6 +2010,7 @@ impl GameState {
         self.attacking.clear();
         self.block_map.clear();
         self.blocked_attackers.clear();
+        self.attack_bands.clear();
         self.clear_combat_damage_plan();
         self.blockers_declared = false;
         // CR 702.39 — provoke's "block this combat" requirement ends here.

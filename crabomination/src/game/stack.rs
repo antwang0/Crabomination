@@ -1895,6 +1895,7 @@ impl GameState {
         self.attacking.clear();
         self.block_map.clear();
         self.blocked_attackers.clear();
+        self.attack_bands.clear();
         self.blockers_declared = false;
         // CR 724.1d — the turn skips straight to the cleanup step.
         self.step = TurnStep::End;
@@ -4391,6 +4392,11 @@ impl GameState {
     /// attacker values).
     pub(crate) fn remove_from_combat(&mut self, id: CardId) {
         self.attacking.retain(|a| a.attacker != id);
+        // CR 702.22f — a creature removed from combat leaves its band.
+        for band in self.attack_bands.iter_mut() {
+            band.retain(|m| *m != id);
+        }
+        self.attack_bands.retain(|b| b.len() > 1);
         self.block_map.remove(&id);
         self.block_map.retain(|_, atks| {
             atks.retain(|a| *a != id);
