@@ -5459,6 +5459,23 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **Onslaught's remaining ~62 gaps** (`set_gaps.py ons`). The bulk needs one
+  of three primitives: (a) a per-player "each player chooses a creature type"
+  choice (Harsh Mercy, Patriarch's Bidding, Peer Pressure, Riptide
+  Chronologist, Walking Desecration); (b) a "grant an activated ability for a
+  turn" duration (Psychic Trance, Lavamancer's Skill's Wizard rider,
+  Shade's Breath); (c) a reveal-until-nonland damage source
+  (Erratic Explosion, Kaboom!, Goblin Machinist). Butcher Orgg's
+  divide-your-own-combat-damage and Tephraderm's reflect-damage riders are
+  their own one-offs.
+- ⏳ **`Effect::MayCopyThisSpell` prompts the affected seat through the
+  installed decider**, not that seat's UI suspend — see the Server bullet
+  above. Same for the chain's retarget (`repoint_copy_target`).
+- ⏳ **The Chain cycle's toll is all-or-nothing per link.** The printed cards
+  let the affected player decline the copy *after* paying (they may sacrifice
+  a land, and only then choose whether to copy); the engine asks first and pays
+  only on a yes. Observationally identical unless a sacrifice trigger changes
+  the player's mind.
 - ✅ ~~**Bot multi-block seeding**~~ — the spare-capacity pass now seeds from
   every legal blocker with extra capacity, not just the ones the scoring loop
   assigned, so an idle 0/N `CanBlockAnyNumber` wall soaks the whole swing
