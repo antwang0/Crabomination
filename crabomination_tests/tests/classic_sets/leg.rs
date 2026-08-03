@@ -15,6 +15,13 @@ fn main_phase() -> GameState {
     g
 }
 
+fn mana(g: &mut GameState, seat: usize) {
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[seat].mana_pool.add(c, 20);
+    }
+    g.players[seat].mana_pool.add_colorless(20);
+}
+
 fn bands(g: &GameState, id: crabomination::card::CardId) -> bool {
     g.computed_permanent(id)
         .map(|c| c.keywords.iter().any(|k| matches!(k, Keyword::BandsWithOther(_))))
@@ -118,4 +125,146 @@ fn tolaria_hoses_bands_only_at_upkeep() {
         .is_err(),
         "not an upkeep step"
     );
+}
+
+// ── Wave 2 ──────────────────────────────────────────────────────────────────
+
+/// The Kobold lords stack on each other, and skip themselves.
+#[test]
+fn the_kobold_lords_pump_each_other_but_not_themselves() {
+    let mut g = main_phase();
+    let kobold = g.add_card_to_battlefield(0, catalog::crimson_kobolds());
+    let taskmaster = g.add_card_to_battlefield(0, catalog::kobold_taskmaster());
+    g.add_card_to_battlefield(0, catalog::kobold_drill_sergeant());
+    g.add_card_to_battlefield(0, catalog::kobold_overlord());
+    let c = g.computed_permanent(kobold).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 2), "0/1 plus +1/+0 and +0/+1");
+    assert!(c.keywords.contains(&Keyword::Trample));
+    assert!(c.keywords.contains(&Keyword::FirstStrike));
+    assert_eq!(
+        g.computed_permanent(taskmaster).unwrap().power,
+        1,
+        "the Taskmaster doesn't pump itself"
+    );
+}
+
+/// Free Kobolds are red despite having no mana cost.
+#[test]
+fn kobolds_are_red_with_no_mana_cost() {
+    let def = catalog::kobolds_of_kher_keep();
+    assert_eq!(def.cost.cmc(), 0);
+    assert_eq!(def.printed_colors(), vec![Color::Red]);
+}
+
+/// Divine Offering pays back the artifact's mana value.
+#[test]
+fn divine_offering_refunds_the_mana_value() {
+    let mut g = main_phase();
+    let relic = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let spell = g.add_card_to_hand(0, catalog::divine_offering());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(relic)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(relic).is_none());
+    assert_eq!(g.players[0].life, 22);
+}
+
+/// Remove Soul only answers creature spells.
+#[test]
+fn remove_soul_only_counters_creatures() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bear");
+    let counter = g.add_card_to_hand(1, catalog::remove_soul());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("counter");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+/// Gaseous Form takes the creature out of combat entirely.
+#[test]
+fn gaseous_form_blanks_combat_damage() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_earth());
+    g.clear_sickness(bear);
+    let form = g.add_card_to_hand(0, catalog::gaseous_form());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: form,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        crabomination::game::types::Attack {
+            attacker: bear,
+            target: crabomination::game::types::AttackTarget::Player(1),
+        },
+    ]))
+    .expect("attack");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, bear)])).expect("block");
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.battlefield_find(wall).unwrap().damage, 0, "no damage either way");
+}
+
+/// Immolation trades toughness for power — enough to kill a 2/2 outright.
+#[test]
+fn immolation_swings_the_stats() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::immolation());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "a 2/2 at +2/-2 is 4/0 and dies to SBA");
+}
+
+/// Amrou Kithkin walks past anything big.
+#[test]
+fn amrou_kithkin_dodges_big_blockers() {
+    let def = catalog::amrou_kithkin();
+    assert!(def.keywords.contains(&Keyword::CantBeBlockedByPowerAtLeast(3)));
 }

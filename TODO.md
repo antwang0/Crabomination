@@ -187,12 +187,18 @@ general "any player may …, if no one does …" shape, with
 
 ## Legends — opened
 
-`set_gaps.py leg` is at **268** (277 → 268; `sets::leg`, 8 cards, tests in
-`classic_sets/leg`). The wave exists to exercise CR 702.22's "bands with
-other [quality]" (`Keyword::BandsWithOther`): the five legendary band lands,
-Master of the Hunt's self-banding Wolves, and the two band-hosers (Shelkin
-Brownie, Tolaria). The rest of the set is untouched — Legends is a large,
-mechanically odd set and is a lower priority than closing the Scars block.
+`set_gaps.py leg` is at **238** (277 → 268 → 238; `sets::leg`, 39 cards,
+tests in `classic_sets/leg`). Wave 1 exists to exercise CR 702.22's "bands
+with other [quality]" (`Keyword::BandsWithOther`): the five legendary band
+lands, Master of the Hunt's self-banding Wolves, and the two band-hosers
+(Shelkin Brownie, Tolaria). Wave 2 added the plain bodies, the Kobold lord
+shell and the one-line spells/Auras, all on existing primitives.
+
+Recurring blockers in what's left: a one-shot "target creature becomes
+[color]" (the Dwarven Song / Heaven's Gate / Sea Kings' Blessing cycle), a
+one-shot switch-power-and-toughness (Transmutation), a filtered
+`PermanentsDontUntap` (Arena of the Ancients) and the "prevent all damage to
+target creature this turn" one-shot (Indestructible Aura).
 
 ## New Phyrexia — opened
 
