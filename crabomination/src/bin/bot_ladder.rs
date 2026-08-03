@@ -212,6 +212,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
     match name {
         "baseline" => Some(Pilot::Scored(EvalWeights::baseline())),
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),
+        "net-blend" => Some(Pilot::Scored(EvalWeights::net_eval_blend())),
         "v2" => Some(Pilot::Scored(EvalWeights::v2())),
         "pretap" => Some(Pilot::Scored(EvalWeights::legacy_mana())),
         "combat" => Some(Pilot::Scored(EvalWeights::combat_aware())),
@@ -252,7 +253,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, net (needs CRAB_NET=<weights.safetensors>)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, net, net-blend (net* need CRAB_NET=<weights.safetensors>)";
 
 /// Wilson score interval for `wins` out of `n` at `z`. Chosen over the
 /// normal approximation because it stays sane at small n and at p̂ = 0 or 1,
@@ -323,7 +324,7 @@ fn parse_args() -> Result<Args, String> {
         .ok_or_else(|| format!("unknown profile {a_name}; expected one of: {PROFILES}"))?;
     let b = parse_profile(&b_name)
         .ok_or_else(|| format!("unknown profile {b_name}; expected one of: {PROFILES}"))?;
-    if a_name == "net" || b_name == "net" {
+    if a_name.starts_with("net") || b_name.starts_with("net") {
         // The net profile silently equals atk-sim when the slot is empty,
         // which would make a forgotten CRAB_NET measure the wrong thing —
         // so an explicit weights file is mandatory here.

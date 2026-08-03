@@ -2404,8 +2404,17 @@ Each a small targeted feature; sweep batch by batch.
   game-length heads per the KataGo credit-assignment result), and
   `server/encode.rs` (observable-info-only encoder, SOS sealed vocab).
   A parity test pins the candle model and the engine forward pass to the
-  same numbers. Next: the concurrent selfplay_train loop
-  (actors + learner + gatekeeper), then net-eval as a gated profile.
+  same numbers. Phase B shipped too: the concurrent `selfplay_train`
+  loop (actor threads + throttled learner + atomic checkpoints, ~10.6
+  sealed games/s on 22 debug-build actors), the `net_eval` slot registry,
+  the `net`/`net-blend` bot profiles, and `bot_ladder --decks sealed`
+  (same-deck sealed mirrors — build quality cancels, rows measure
+  piloting). First bootstrap round (25k games, 21k steps), gated over
+  1 200 sealed-mirror games each: full net replacement **43.6 %**
+  [40.8, 46.4] (better than MCTS's 41.5, worse than the heuristic);
+  heuristic+net **blend 49.3 %** [46.5, 52.2] — parity on round-1
+  weights. Nothing adopted yet; the loop iterates from here
+  (`--use-best` self-improvement rounds, capacity, richer snapshots).
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
 
 ## Tier 14 — Replays, analysis & observability
