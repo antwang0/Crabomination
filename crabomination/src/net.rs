@@ -1574,6 +1574,12 @@ pub struct PermanentView {
     /// from `GameState::untap_prevented_by_static`.
     #[serde(default)]
     pub wont_untap: bool,
+    /// CR 508.1a — this creature can't attack on its controller's current
+    /// turn because it attacked during their last one (Giant Turtle) or is
+    /// serving a Wall of Dust ban. Clients badge it so the rejected
+    /// declaration is explained before it's made.
+    #[serde(default)]
+    pub cant_attack_this_turn: bool,
     /// True when the permanent has one or more finality counters
     /// (CR 122.1h). Clients can badge with a "→ exile on death" icon
     /// so the player knows the permanent will exile instead of going

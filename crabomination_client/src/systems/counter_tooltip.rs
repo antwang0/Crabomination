@@ -536,6 +536,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         // from the one-shot stun case above, which has its own line.
         lines.push(String::from("(locked: won't untap during its next untap step)"));
     }
+    // CR 508.1a — a turn-scoped attack ban, so the rejection is explained
+    // before the declaration is attempted (Giant Turtle, Wall of Dust).
+    if p.cant_attack_this_turn {
+        lines.push(String::from("(benched: can't attack this turn)"));
+    }
     // Surface +1/+1 and -1/-1 counter highlights — the most common
     // counter shapes carry a P/T delta that's often more important than
     // the printed body. Push (modern_decks batch 174): added the
@@ -1363,6 +1368,9 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Matrix => "Matrix",
         CounterType::Hatchling => "Hatchling",
         CounterType::Intervention => "Intervention",
+        CounterType::Pupa => "Pupa",
+        CounterType::Dream => "Dream",
+        CounterType::Pin => "Pin",
         CounterType::Loyalty => "Loyalty",
         CounterType::Charge => "Charge",
         CounterType::Manifestation => "Manifestation",
@@ -1564,6 +1572,7 @@ mod tests {
             loyalty_uses_remaining: None,
             has_stun_counters: false,
             wont_untap: false,
+            cant_attack_this_turn: false,
             has_finality_counters: false,
             dies_to_exile: false,
             dealt_damage_this_turn: false,

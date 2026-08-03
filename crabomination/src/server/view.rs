@@ -1405,6 +1405,13 @@ fn project_permanent(
         activated_ability_labels: project_activated_ability_labels(card),
         has_stun_counters: card.counter_count(crate::card::CounterType::Stun) > 0,
         wont_untap: state.untap_prevented_by_static(card.id),
+        cant_attack_this_turn: card.attack_ban == crate::card::AttackBan::Active
+            || (card.attacked_last_turn
+                && state
+                    .computed_permanent(card.id)
+                    .is_some_and(|cp| {
+                        cp.keywords.contains(&crate::card::Keyword::CantAttackIfAttackedLastTurn)
+                    })),
         has_finality_counters: card.counter_count(crate::card::CounterType::Finality) > 0,
         dies_to_exile: card.definition.dies_to_exile,
         has_shield_counters: card.counter_count(crate::card::CounterType::Shield) > 0,

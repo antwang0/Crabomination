@@ -4909,6 +4909,25 @@ impl GameState {
             .find(|c| c.id == id)
             .is_some_and(|c| self.graveyard_exiled_for(c) || c.disturb_back_exiles());
         let dies_suppressed = dies_suppressed || exiled_instead;
+        // CR 603.10 — record the Auras riding this permanent before it
+        // leaves, so `EventScope::EnchantedBySource` triggers fire off a
+        // destroy/sacrifice death too, not only the SBA lethal-damage path
+        // (Puppet Master). The orphaned-Aura SBA records the same pair; the
+        // dedup below keeps a single entry.
+        let riders: Vec<(CardId, usize)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.attached_to == Some(id))
+            .map(|c| (c.id, c.controller))
+            .collect();
+        if !riders.is_empty() {
+            let seen = self.auras_at_death.entry(id).or_default();
+            for r in riders {
+                if !seen.contains(&r) {
+                    seen.push(r);
+                }
+            }
+        }
         let (leave_triggers, dying_creature_controller): (Vec<DeathTrigger>, Option<usize>) = self
             .battlefield
             .iter()
