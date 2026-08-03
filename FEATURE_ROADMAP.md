@@ -2405,10 +2405,14 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** The whole Odyssey block is done — Odyssey, Torment
    and **Judgment** are all at zero (`set_gaps.py ody` / `tor` / `jud`).
-   **Onslaught** (`sets::ons` + `sets::ons2`) is open at 61 gaps after seven
-   waves (204 cards); the remaining bulk is the "each player chooses a creature
-   type" rares (Harsh Mercy, Patriarch's Bidding, Peer Pressure) and the
-   face-down/tribal one-offs. Then Legions / Scourge.
+   **Onslaught** (`sets::ons` / `ons2` / `ons3`) is open at 8 gaps after nine
+   waves (248 cards); what's left needs one dedicated primitive each — CR 612
+   text-changing (Artificial Evolution), combat-damage division (Butcher Orgg),
+   looking at a face-down permanent (Aven Soulgazer, Spy Network's rider), a
+   secret-number auction (Menacing Ogre), a chosen-colour-and-type token
+   (Riptide Replicator), a "when you gain control of this" trigger (Risky
+   Move), a prevention shield keyed to a chosen type (Circle of Solace) and an
+   opponent-picks-from-revealed (Animal Magnetism). Then Legions / Scourge.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2422,6 +2426,22 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Onslaught (ONS) waves 8-9** — `set_gaps.py ons` 61 → 8 (`sets::ons3`,
+  53 cards: the "choose a creature type" rares, the Morph one-offs, the
+  Auras, the tap-a-tribe artifacts and the utility shell). New:
+  `Effect::{ChooseCreatureTypeThen, EachPlayerChoosesCreatureTypeThen,
+  RevealUntilNonlandThen, NameCreatureTypeBy, HeadGames, TradeSecrets,
+  EachPlayerDiscardsElseLosesLife, EachPlayerRevealsCreaturesForTokens,
+  AnyLifeGainPunishedThisTurn}`,
+  `SelectionRequirement::{IsTypeChosenThisWay, SharesCreatureTypeWithTapped,
+  SharesCreatureTypeWithSacrificed, HasMorphAbility}`,
+  `Keyword::CantBeBlockedUnlessDefenderSharedType` (CR 509.1b),
+  `PlayerRef::MostControlledMatching`, `Value::CreaturesSharingTypeWith`,
+  `ExtraManaKind::FixedPerCreatureType`, `CounterType::Gold`, and CR 702.6e
+  activated-ability grants on `ConditionalEquipBonus`. Correctness:
+  `Effect::TurnFaceDown` / `LookAtHand` now surface their target filters at
+  cast time. Tests in `classic_sets/ons2`, `core_rules/cr_recent67`.
 
 - **Onslaught (ONS) waves 2-7** — `set_gaps.py ons` 219 → 61 (`sets::ons2`,
   157 cards: the Morph commons, the tap-a-tribe activations, the Avatar cycle,

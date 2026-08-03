@@ -247,6 +247,10 @@ pub enum DeckError {
     /// A card violates the chosen companion's deck-construction restriction
     /// (CR 702.139c). `card_name` is the first offending card.
     CompanionRestriction { companion: &'static str, card_name: &'static str },
+    /// CR 100.4a — the sideboard is over the format's limit.
+    SideboardTooLarge { found: u32, maximum: u32 },
+    /// CR 100.4 — the format doesn't use sideboards at all.
+    SideboardNotAllowed { found: u32 },
 }
 
 impl std::fmt::Display for DeckError {
@@ -269,6 +273,12 @@ impl std::fmt::Display for DeckError {
             }
             DeckError::CompanionRestriction { companion, card_name } => {
                 write!(f, "{card_name} violates {companion}'s companion restriction")
+            }
+            DeckError::SideboardTooLarge { found, maximum } => {
+                write!(f, "Sideboard has {found} cards but the maximum is {maximum}")
+            }
+            DeckError::SideboardNotAllowed { found } => {
+                write!(f, "This format has no sideboard, but {found} cards were listed")
             }
         }
     }
@@ -345,6 +355,71 @@ pub fn validate_deck(deck: &[CardDefinition], format: Format) -> Result<(), Vec<
             errors.push(DeckError::BannedCard { card_name: name });
         } else if *count > 1 && restricted.contains(name) {
             errors.push(DeckError::RestrictedCard { card_name: name, found: *count });
+        }
+    }
+
+    if errors.is_empty() { Ok(()) } else { Err(errors) }
+}
+
+/// CR 100.2a / 100.4a — validate a whole decklist: the main deck against
+/// [`validate_deck`], the sideboard against the format's size limit, and the
+/// copy limit against **main + sideboard combined** (the printed rule counts
+/// both). Basic lands stay exempt.
+pub fn validate_full_deck(deck: &Deck, format: Format) -> Result<(), Vec<DeckError>> {
+    let rules = format.rules();
+    let mut errors = match validate_deck(&deck.main, format) {
+        Ok(()) => Vec::new(),
+        Err(e) => e,
+    };
+
+    let side = deck.sideboard.len() as u32;
+    match rules.sideboard_size {
+        None if side > 0 => errors.push(DeckError::SideboardNotAllowed { found: side }),
+        Some(max) if side > max => {
+            errors.push(DeckError::SideboardTooLarge { found: side, maximum: max })
+        }
+        _ => {}
+    }
+
+    // CR 100.2a — the four-of limit counts the sideboard too. `validate_deck`
+    // already flagged main-only overruns, so only report names the combined
+    // count pushes over that the main deck alone did not.
+    let mut main_counts: HashMap<&'static str, u32> = HashMap::new();
+    let mut total_counts: HashMap<&'static str, u32> = HashMap::new();
+    for card in deck.main.iter().chain(deck.sideboard.iter()) {
+        if is_basic_land(card) {
+            continue;
+        }
+        *total_counts.entry(card.name).or_insert(0) += 1;
+    }
+    for card in &deck.main {
+        if !is_basic_land(card) {
+            *main_counts.entry(card.name).or_insert(0) += 1;
+        }
+    }
+    for (name, total) in &total_counts {
+        let main = main_counts.get(name).copied().unwrap_or(0);
+        if *total > rules.max_copies && main <= rules.max_copies {
+            errors.push(DeckError::TooManyCopies {
+                card_name: name,
+                found: *total,
+                maximum: rules.max_copies,
+            });
+        }
+    }
+
+    // CR 702.139c — a sideboard companion must legalise the main deck.
+    for c in deck.sideboard.iter().filter(|c| c.companion.is_some()) {
+        if companion_restriction_met(c, &deck.main, rules.min_deck_size).is_err()
+            && let Some(bad) = deck
+                .main
+                .iter()
+                .find(|m| !card_meets_companion(&c.companion.clone().unwrap(), m))
+        {
+            errors.push(DeckError::CompanionRestriction {
+                companion: c.name,
+                card_name: bad.name,
+            });
         }
     }
 

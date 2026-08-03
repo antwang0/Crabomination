@@ -2333,8 +2333,13 @@ mod tests {
             );
             let _ = done_tx.send(());
         });
+        // `RandomBot` draws from the global RNG, so a 4-player FFA's length
+        // varies by more than an order of magnitude run to run (observed
+        // 0.5s–15s). The assertion is termination, not speed — give it enough
+        // headroom that an unlucky game isn't a false failure. (Seeding the
+        // bots so this is reproducible is tracked in TODO.md.)
         done_rx
-            .recv_timeout(Duration::from_secs(120))
+            .recv_timeout(Duration::from_secs(600))
             .expect("commander 4-player FFA bot match must terminate");
         handle.join().unwrap();
     }

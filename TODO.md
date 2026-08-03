@@ -5459,15 +5459,28 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
-- ⏳ **Onslaught's remaining ~62 gaps** (`set_gaps.py ons`). The bulk needs one
-  of three primitives: (a) a per-player "each player chooses a creature type"
-  choice (Harsh Mercy, Patriarch's Bidding, Peer Pressure, Riptide
-  Chronologist, Walking Desecration); (b) a "grant an activated ability for a
-  turn" duration (Psychic Trance, Lavamancer's Skill's Wizard rider,
-  Shade's Breath); (c) a reveal-until-nonland damage source
-  (Erratic Explosion, Kaboom!, Goblin Machinist). Butcher Orgg's
-  divide-your-own-combat-damage and Tephraderm's reflect-damage riders are
-  their own one-offs.
+- ⏳ **Onslaught's last 8 gaps** (`set_gaps.py ons`). One dedicated primitive
+  each: CR 612 text-changing (Artificial Evolution), combat-damage division
+  among the defender and its creatures (Butcher Orgg), looking at a face-down
+  permanent (Aven Soulgazer — and Spy Network's face-down + library-top
+  riders, which ship without them), a simultaneous secret-number auction
+  (Menacing Ogre), a token of a chosen colour *and* creature type with a
+  counter-scaled P/T (Riptide Replicator), a "when you gain control of this
+  permanent" trigger (Risky Move), a prevention shield keyed to the source's
+  chosen creature type (Circle of Solace), and a reveal-N-an-opponent-picks
+  (Animal Magnetism — `Effect::LookPickToHand` has no `picked_by`).
+- ⏳ **Bot matches aren't reproducible.** `RandomBot` draws from the global
+  RNG, so `bot_vs_bot_commander_demo_terminates` varies 0.5s–15s+ run to run
+  and occasionally blew its old 120s ceiling. The ceiling is now 600s; the
+  real fix is a seeded RNG on `RandomBot` (and a seed printed on failure).
+- ⏳ **`Effect::EachPlayerChoosesCreatureTypeThen` asks the synchronous
+  decider for every seat**, so a UI player isn't prompted for their own
+  Harsh Mercy / Patriarch's Bidding pick (same gap as `TemptingOffer`). The
+  single-chooser `ChooseCreatureTypeThen` does suspend correctly.
+- ⏳ **`Effect::HeadGames`' search is a single `ChooseCards` prompt**, not the
+  standard `SearchLibrary` flow, so it doesn't route through the search-tax /
+  can't-search statics. Fold it into `Effect::Search` once that path can
+  search one player's library on another player's picks (CR 701.19a).
 - ⏳ **`Effect::MayCopyThisSpell` prompts the affected seat through the
   installed decider**, not that seat's UI suspend — see the Server bullet
   above. Same for the chain's retarget (`repoint_copy_target`).

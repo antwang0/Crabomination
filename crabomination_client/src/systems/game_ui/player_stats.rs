@@ -1168,9 +1168,22 @@ pub fn update_player_stats_chips(
         // Turn-scoped rules changes with no board trace (a land-tap mana
         // replacement, a floating "this turn, whenever …" watcher). Global, so
         // surface them once, on the active player's row.
+        // Capped so a turn with many floating watchers can't push the rest of
+        // the row (hexproof, any-colour mana) off screen.
         if p.seat == cv.active_player {
-            for note in &cv.turn_effects {
+            const MAX_TURN_EFFECT_CHIPS: usize = 3;
+            for note in cv.turn_effects.iter().take(MAX_TURN_EFFECT_CHIPS) {
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::TurnEffect, format!("⟲ {note}"));
+            }
+            if let Some(extra) = cv.turn_effects.len().checked_sub(MAX_TURN_EFFECT_CHIPS)
+                && extra > 0
+            {
+                spawn_stat_chip(
+                    row,
+                    &ui_fonts,
+                    StatChipKind::TurnEffect,
+                    format!("⟲ +{extra} more"),
+                );
             }
         }
         // CR 609.4b — a global permission; surface it once, on the viewer's row.

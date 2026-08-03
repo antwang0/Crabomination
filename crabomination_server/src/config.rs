@@ -150,24 +150,27 @@ pub(crate) fn load_deck_env(key: &str) -> Option<Vec<crabomination::cube::CardFa
             parsed.unknown.join(", "));
         std::process::exit(1);
     }
-    let defs: Vec<_> = parsed.main.iter().map(|f| f()).collect();
+    // CR 100.2a / 100.4a / 702.139c — main-deck legality, the sideboard size
+    // limit, the combined four-of count and the companion restriction all in
+    // one pass, so a bad list is rejected with every reason at once.
+    let deck = crabomination::format::Deck {
+        main: parsed.main.iter().map(|f| f()).collect(),
+        commanders: Vec::new(),
+        sideboard: parsed.sideboard.iter().map(|f| f()).collect(),
+    };
     let format = crabomination::format::Format::Modern;
-    if let Err(errs) = crabomination::format::validate_deck(&defs, format) {
+    if let Err(errs) = crabomination::format::validate_full_deck(&deck, format) {
         eprintln!("{key}: deck is not Modern-legal:");
         for e in &errs {
             eprintln!("  - {e}");
         }
         std::process::exit(1);
     }
-    // CR 702.139c — a sideboard companion must legalise the main deck.
-    let side: Vec<_> = parsed.sideboard.iter().map(|f| f()).collect();
-    for c in side.iter().filter(|c| c.companion.is_some()) {
-        if let Err(e) = crabomination::format::companion_restriction_met(c, &defs, format.rules().min_deck_size) {
-            eprintln!("{key}: {e}");
-            std::process::exit(1);
-        }
-    }
-    eprintln!("{key}: loaded {} cards from {path}", parsed.main.len());
+    eprintln!(
+        "{key}: loaded {} cards (+{} sideboard) from {path}",
+        parsed.main.len(),
+        parsed.sideboard.len()
+    );
     Some(parsed.main)
 }
 

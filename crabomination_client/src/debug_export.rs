@@ -267,6 +267,7 @@ mod tests {
             combat_chooser: None,
             max_attackers_per_combat: None,
             max_blockers_per_combat: None,
+            face_down_cast_cost: 3,
             day_night: None,
             combat_preview: None,
             castable_hand: vec![],

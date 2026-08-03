@@ -2417,7 +2417,7 @@ impl GameState {
     /// (CR 702.73a — changelings count toward every type). Powers
     /// `Value::GreatestSharedCreatureTypeCount` and Graxiplon's block
     /// restriction.
-    pub(crate) fn greatest_shared_type_count(&self, seat: usize) -> usize {
+    pub fn greatest_shared_type_count(&self, seat: usize) -> usize {
         use crate::card::{CardType, CreatureType, Keyword};
         let mut tally: std::collections::HashMap<CreatureType, usize> =
             std::collections::HashMap::new();
@@ -5503,6 +5503,20 @@ impl GameState {
                 crate::server::view::requirement_noun_public(filter),
                 crate::server::view::trigger_label_public(ability),
             ));
+        }
+        // False Cure — a global life-gain punish with no board trace.
+        if self.life_gain_punish_this_turn > 0 {
+            out.push(format!(
+                "Whenever a player gains life, they lose {} life for each 1 gained",
+                self.life_gain_punish_this_turn
+            ));
+        }
+        // CR 615 — sources whose damage is switched off for the rest of the
+        // turn (Chain of Silence). Named so the affected seat can plan combat.
+        for id in &self.all_damage_prevented_by_this_turn {
+            if let Some(c) = self.find_card_anywhere(*id) {
+                out.push(format!("{} deals no damage this turn", c.definition.name));
+            }
         }
         out
     }
