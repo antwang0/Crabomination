@@ -2382,3 +2382,35 @@ pub fn invader_parasite() -> CardDefinition {
         )
     }
 }
+
+/// Myr Superion — a 5/6 for {2} that only creature-produced mana can cast
+/// (CR 106.6b).
+pub fn myr_superion() -> CardDefinition {
+    CardDefinition {
+        spend_only_creature_mana: true,
+        ..artifact_creature(
+            "Myr Superion",
+            cost(&[generic(2)]),
+            vec![CreatureType::Myr],
+            5,
+            6,
+        )
+    }
+}
+
+/// Bludgeon Brawl — every other artifact becomes an Equipment with equip {X}
+/// and "Equipped creature gets +X/+0", X being its own mana value.
+pub fn bludgeon_brawl() -> CardDefinition {
+    CardDefinition {
+        name: "Bludgeon Brawl",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Each noncreature, non-Equipment artifact is an Equipment with \
+                          equip {X} and \"Equipped creature gets +X/+0,\" where X is that \
+                          artifact's mana value.",
+            effect: StaticEffect::ArtifactsAreEquipment,
+        }],
+        ..Default::default()
+    }
+}

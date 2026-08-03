@@ -613,6 +613,10 @@ pub struct SpellKind {
     pub planeswalker: bool,
     /// Casting a legendary spell (Untaidake, the Cloud Keeper).
     pub legendary: bool,
+    /// CR 106.6b — "spend only mana produced by creatures to cast this spell"
+    /// (Myr Superion). Unlike every other field this *narrows* what may pay:
+    /// [`ManaPool::pay_for_spell`] routes to [`ManaPool::pay_creature_only`].
+    pub creature_mana_only: bool,
 }
 
 /// WUBRG index for a color — used to bucket restricted mana per color.
@@ -650,6 +654,21 @@ pub struct ManaPool {
     /// from `colorless` exactly like `restricted` is from the color slots.
     #[serde(default)]
     restricted_colorless: Vec<(u32, SpendRestriction)>,
+    /// Provenance counter, WUBRG then colorless: how much of each bucket was
+    /// produced by a *creature*. Freely spendable like any other mana (unlike
+    /// `restricted`); only a "spend only mana produced by creatures" cost
+    /// (Myr Superion) reads it. Clamped to its bucket after every spend, in
+    /// the same conservative spirit as `snow`.
+    #[serde(default)]
+    creature: [u32; 6],
+}
+
+/// Index into [`ManaPool::creature`] for a color (5 = colorless).
+const fn prov_index(c: Option<Color>) -> usize {
+    match c {
+        Some(c) => color_index(c),
+        None => 5,
+    }
 }
 
 /// Side effects produced by paying a mana cost (e.g. Phyrexian mana life loss).
@@ -725,6 +744,49 @@ impl ManaPool {
         for (n, _) in self.restricted_colorless.iter_mut() {
             *n *= 2;
         }
+        for n in self.creature.iter_mut() {
+            *n *= 2;
+        }
+    }
+
+    /// Add mana that a creature produced (`None` color = colorless). Ordinary
+    /// mana in every respect; the provenance is only consulted by a "spend
+    /// only mana produced by creatures" cost.
+    pub fn add_from_creature(&mut self, color: Option<Color>, amount: u32) {
+        match color {
+            Some(c) => *self.slot_mut(c) += amount,
+            None => self.colorless += amount,
+        }
+        self.creature[prov_index(color)] += amount;
+    }
+
+    /// Tag `amount` mana already in `color`'s bucket as creature-produced.
+    /// Used by the mana-ability activation path, which sees the pool delta
+    /// after the payload resolved rather than at each individual add.
+    pub fn mark_from_creature(&mut self, color: Option<Color>, amount: u32) {
+        self.creature[prov_index(color)] += amount;
+        self.clamp_creature();
+    }
+
+    /// How much of `color`'s bucket (`None` = colorless) came from a creature.
+    pub fn creature_amount(&self, color: Option<Color>) -> u32 {
+        self.creature[prov_index(color)]
+    }
+
+    /// Total creature-produced mana floating.
+    pub fn creature_total(&self) -> u32 {
+        self.creature.iter().sum()
+    }
+
+    /// Clamp each provenance counter to the bucket it describes. Spending
+    /// paths don't know *which* mana of a color left the pool, so — exactly
+    /// like `snow` — we never claim more provenance than the bucket holds.
+    fn clamp_creature(&mut self) {
+        for c in Color::ALL {
+            let idx = color_index(c);
+            self.creature[idx] = self.creature[idx].min(*self.slot(c));
+        }
+        self.creature[5] = self.creature[5].min(self.colorless);
     }
 
     /// Add mana from a snow source. The mana is both colored and snow.
@@ -1073,8 +1135,35 @@ impl ManaPool {
         // Clamp it down — we can't distinguish which mana was snow, so
         // conservatively cap snow at the actual remaining pool size.
         tmp.snow = tmp.snow.min(tmp.total());
+        tmp.clamp_creature();
 
         *self = tmp;
+        Ok(side_effects)
+    }
+
+    /// Pay `cost` using **only** mana a creature produced (CR 106.6b —
+    /// Myr Superion). The creature-produced portion of the pool is lifted
+    /// into a scratch pool, paid there with the ordinary [`pay`] rules, and
+    /// the per-bucket difference is charged back to the real pool. On
+    /// failure the pool is left unchanged.
+    pub fn pay_creature_only(&mut self, cost: &ManaCost) -> Result<PaymentSideEffects, ManaError> {
+        let mut work = ManaPool::default();
+        for c in Color::ALL {
+            work.add(c, self.creature[color_index(c)]);
+        }
+        work.colorless = self.creature[5];
+        let side_effects = work.pay(cost)?;
+
+        for c in Color::ALL {
+            let idx = color_index(c);
+            let spent = self.creature[idx] - work.amount(c);
+            *self.slot_mut(c) -= spent;
+            self.creature[idx] -= spent;
+        }
+        let spent = self.creature[5] - work.colorless;
+        self.colorless -= spent;
+        self.creature[5] -= spent;
+        self.snow = self.snow.min(self.total());
         Ok(side_effects)
     }
 
@@ -1092,6 +1181,11 @@ impl ManaPool {
         cost: &ManaCost,
         kind: &SpellKind,
     ) -> Result<PaymentSideEffects, ManaError> {
+        // CR 106.6b — a creature-mana-only spell ignores the restricted
+        // pools entirely; only tagged provenance can fund it.
+        if kind.creature_mana_only {
+            return self.pay_creature_only(cost);
+        }
         // How much restricted mana, per color, may fund a spell of `kind`?
         let mut spendable = [0u32; 5];
         for (c, n, r) in &self.restricted {
@@ -1183,6 +1277,7 @@ impl ManaPool {
         // for the snow clamp in `pay`; re-clamp against the real total now
         // that the restricted remainder is back out of the buckets.
         result.snow = result.snow.min(result.total());
+        result.clamp_creature();
 
         *self = result;
         Ok(side_effects)
@@ -1204,6 +1299,7 @@ impl ManaPool {
         // See `pay()`: snow counter doesn't track which mana was snow.
         // Clamp conservatively so we never claim more snow than total.
         self.snow = self.snow.min(self.total());
+        self.clamp_creature();
     }
 
     pub fn empty(&mut self) {
@@ -1225,6 +1321,9 @@ impl ManaPool {
         for (c, n, r) in &other.restricted {
             self.add_restricted(*c, *n, *r);
         }
+        for (i, n) in other.creature.iter().enumerate() {
+            self.creature[i] += *n;
+        }
         for (n, r) in &other.restricted_colorless {
             self.add_restricted_colorless(*n, *r);
         }
@@ -1243,6 +1342,7 @@ impl ManaPool {
         self.green = self.green.saturating_sub(other.green);
         self.colorless = self.colorless.saturating_sub(other.colorless);
         self.snow = self.snow.min(self.total());
+        self.clamp_creature();
     }
 
     fn slot(&self, color: Color) -> &u32 {

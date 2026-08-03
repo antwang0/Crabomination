@@ -6131,6 +6131,36 @@ impl GameState {
                 }
             }
         }
+        // Bludgeon Brawl (CR 613 layers 4/7c) — while it's out, each
+        // noncreature, non-Equipment artifact gains the Equipment subtype and,
+        // once attached, hands its host +X/+0 for its own mana value.
+        for card in &self.battlefield {
+            let Some(x) = self.brawl_equip_mv(card) else { continue };
+            all_effects.push(ContinuousEffect {
+                timestamp: card.object_timestamp(),
+                source: card.id,
+                affected: AffectedPermanents::Specific(vec![card.id]),
+                layer: Layer::L4Type,
+                sublayer: None,
+                duration: EffectDuration::Indefinite,
+                modification: Modification::AddArtifactSubtype(
+                    crate::card::ArtifactSubtype::Equipment,
+                ),
+            });
+            let Some(target) = card.attached_to else { continue };
+            if x == 0 || !self.battlefield.iter().any(|c| c.id == target) {
+                continue;
+            }
+            all_effects.push(ContinuousEffect {
+                timestamp: card.object_timestamp(),
+                source: card.id,
+                affected: AffectedPermanents::Specific(vec![target]),
+                layer: Layer::L7PowerTough,
+                sublayer: Some(PtSublayer::Modify),
+                duration: EffectDuration::Indefinite,
+                modification: Modification::ModifyPowerToughness(x as i32, 0),
+            });
+        }
         // CR 702.6 — Equipment attachment statics. Each Equipment with a
         // live `attached_to` link and an `equipped_bonus` confers +P/+T
         // (layer 7c) and keyword grants (layer 6) on the creature it's
@@ -12256,6 +12286,22 @@ impl GameState {
         })
     }
 
+    /// Bludgeon Brawl — the equip {X} / "+X/+0" value a noncreature,
+    /// non-Equipment artifact picks up while an `ArtifactsAreEquipment`
+    /// static is in play, i.e. its own mana value. `None` for anything the
+    /// grant doesn't reach.
+    pub(crate) fn brawl_equip_mv(&self, card: &CardInstance) -> Option<u32> {
+        let def = &card.definition;
+        if !def.is_artifact() || def.is_creature() || def.is_equipment() {
+            return None;
+        }
+        self.battlefield
+            .iter()
+            .flat_map(|c| &c.definition.static_abilities)
+            .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::ArtifactsAreEquipment))
+            .then(|| def.cost.cmc())
+    }
+
     /// CR 702.6 — summed "equip costs you pay cost {N} less" reduction across
     /// the player's permanents (Auriok Steelshaper).
     fn equip_cost_reduction_for(&self, player: usize) -> u32 {
@@ -12294,12 +12340,18 @@ impl GameState {
             return Err(GameError::NotYourPriority);
         }
         let fortify = self.battlefield[equip_pos].definition.has_fortify().cloned();
-        if !self.battlefield[equip_pos].definition.is_equipment() && fortify.is_none() {
+        // Bludgeon Brawl grants both the subtype and an equip {X} cost.
+        let brawl = self.brawl_equip_mv(&self.battlefield[equip_pos]);
+        if !self.battlefield[equip_pos].definition.is_equipment()
+            && fortify.is_none()
+            && brawl.is_none()
+        {
             return Err(GameError::NotEquipment(equipment));
         }
-        let mut equip_cost = match &fortify {
-            Some(c) => c.clone(),
-            None => self.battlefield[equip_pos]
+        let mut equip_cost = match (&fortify, brawl) {
+            (Some(c), _) => c.clone(),
+            (None, Some(x)) => crate::mana::cost(&[crate::mana::generic(x)]),
+            (None, None) => self.battlefield[equip_pos]
                 .definition
                 .has_equip()
                 .cloned()
@@ -18435,6 +18487,9 @@ fn static_effect_to_effects(
             // Consulted directly in `equip()`, not a layer effect.
             | StaticEffect::ControllerEquipAtInstantSpeed
             | StaticEffect::EquipCostReduction { .. }
+            // Bludgeon Brawl — the granted subtype and bonus are synthesized
+            // per artifact in `compute_battlefield`, not from a modification.
+            | StaticEffect::ArtifactsAreEquipment
             // Recomputed live in `compute_battlefield`, not here.
             | StaticEffect::SelfHasKeywordWhile { .. }
             | StaticEffect::SelfHasKeywordWhilePredicate { .. }

@@ -10848,7 +10848,7 @@ impl GameState {
             };
         }
 
-        let auto_events = self.auto_tap_for_cost(payer, cost);
+        let auto_events = self.auto_tap_for_cost_filtered(payer, cost, kind.creature_mana_only);
         // Snapshot the pool *after* auto-tap so `pool_before` reflects the
         // mana actually available to `pay()`. Without this, a player who
         // starts with an empty pool and auto-taps lands to cover the cost
@@ -11113,9 +11113,22 @@ impl GameState {
     }
 
     pub fn auto_tap_for_cost(&mut self, player: usize, cost: &crate::mana::ManaCost) -> Vec<GameEvent> {
+        self.auto_tap_for_cost_filtered(player, cost, false)
+    }
+
+    /// `auto_tap_for_cost` with a CR 106.6b source filter: when
+    /// `creature_only`, only creature mana sources are tapped, so a
+    /// "spend only mana produced by creatures" cast (Myr Superion) never
+    /// strands itself by tapping lands it can't spend.
+    pub fn auto_tap_for_cost_filtered(
+        &mut self,
+        player: usize,
+        cost: &crate::mana::ManaCost,
+        creature_only: bool,
+    ) -> Vec<GameEvent> {
         let prev_priority = self.priority.player_with_priority;
         self.priority.player_with_priority = player;
-        let events = self.auto_tap_for_cost_inner(player, cost);
+        let events = self.auto_tap_for_cost_inner(player, cost, creature_only);
         self.priority.player_with_priority = prev_priority;
         events
     }
@@ -11135,7 +11148,12 @@ impl GameState {
         }
     }
 
-    fn auto_tap_for_cost_inner(&mut self, player: usize, cost: &crate::mana::ManaCost) -> Vec<GameEvent> {
+    fn auto_tap_for_cost_inner(
+        &mut self,
+        player: usize,
+        cost: &crate::mana::ManaCost,
+        creature_only: bool,
+    ) -> Vec<GameEvent> {
         let mut events = Vec::new();
 
         // Deduct what the pool already covers before deciding what to tap.
@@ -11262,6 +11280,9 @@ impl GameState {
                 if c.controller != player || c.tapped {
                     return None;
                 }
+                if creature_only && !self.permanent_is_creature(c.id) {
+                    return None;
+                }
                 self.effective_mana_abilities(c.id).into_iter()
                     .find(|(_, a)| effect_produces_color(&a.effect, color))
                     .map(|(idx, a)| (Self::mana_source_cost_rank(&a), c.id, idx))
@@ -11297,6 +11318,9 @@ impl GameState {
             // Same controller-vs-owner fix as the colored-pip loop.
             let source = self.battlefield.iter().filter_map(|c| {
                 if c.controller != player || c.tapped {
+                    return None;
+                }
+                if creature_only && !self.permanent_is_creature(c.id) {
                     return None;
                 }
                 self.effective_mana_abilities(c.id).into_iter().next()
@@ -11840,7 +11864,49 @@ impl GameState {
     }
 
     #[allow(clippy::too_many_arguments)]
+    /// CR 106.6b — mana a *creature* produces carries provenance so a
+    /// "spend only mana produced by creatures" cost (Myr Superion) can find
+    /// it. Tagging the pool delta here catches printed, granted (Cryptolith
+    /// Rite) and intrinsic mana abilities in one place.
     pub(crate) fn activate_ability(
+        &mut self,
+        card_id: CardId,
+        ability_index: usize,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        x_value: Option<u32>,
+        chosen_mode: Option<usize>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let creature_source =
+            self.battlefield.iter().any(|c| c.id == card_id) && self.permanent_is_creature(card_id);
+        let before = creature_source.then(|| self.players[p].mana_pool.clone());
+        let out = self.activate_ability_inner(
+            card_id,
+            ability_index,
+            target,
+            additional_targets,
+            x_value,
+            chosen_mode,
+        );
+        if let Some(before) = before {
+            let pool = &mut self.players[p].mana_pool;
+            for c in ManaColor::ALL {
+                let d = pool.amount(c).saturating_sub(before.amount(c));
+                if d > 0 {
+                    pool.mark_from_creature(Some(c), d);
+                }
+            }
+            let d = pool.colorless_amount().saturating_sub(before.colorless_amount());
+            if d > 0 {
+                pool.mark_from_creature(None, d);
+            }
+        }
+        out
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn activate_ability_inner(
         &mut self,
         card_id: CardId,
         ability_index: usize,

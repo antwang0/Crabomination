@@ -200,26 +200,21 @@ Recurring blockers in what's left: a filtered `PermanentsDontUntap` (Arena of
 the Ancients — the existing static is global) and a "prevent all damage to
 target creature this turn" one-shot (Indestructible Aura).
 
-## New Phyrexia — opened
+## New Phyrexia — closed
 
-`set_gaps.py nph` is at **2** (111 → 30 → 10 → 2; `sets::nph`, 109 cards,
-tests in `recent_b/nph`). Phyrexian mana, Infect, Living weapon, Metalcraft,
-the five Shrines and the Chancellor cycle's opening-hand reveal
+`set_gaps.py nph` is at **zero** (111 → 30 → 10 → 2 → 0; `sets::nph`, 111
+cards, tests in `recent_b/nph`). Phyrexian mana, Infect, Living weapon,
+Metalcraft, the five Shrines and the Chancellor cycle's opening-hand reveal
 (`OpeningHandEffect::RevealForDelayedTrigger`) all rode existing primitives.
-New across the three waves: `Effect::PermanentsEnterTappedThisTurn` (CR 614 —
-Due Respect's turn-scoped blanket enters-tapped replacement, cleared at
-cleanup), `Value::{Negate, CountersRemovedThisEffect}`,
-`SelectionRequirement::HasPhyrexianManaInCost` (CR 107.4f, backed by
-`ManaCost::has_phyrexian`) and `StaticEffect::PumpSelfByExiledWithStats`.
-
-Still open, and why — each wants one primitive:
-- **Myr Superion** — "spend only mana produced by creatures": needs mana
-  provenance (which permanent produced each floating mana), a roadmap Tier-5
-  item.
-- **Bludgeon Brawl** — "each noncreature, non-Equipment artifact is an
-  Equipment with equip {X} and 'Equipped creature gets +X/+0'": `equipped_bonus`
-  is read straight off `CardDefinition` at every consumer, so a *granted*
-  Equipment needs a computed equip-bonus override first.
+New across the four waves: `Effect::PermanentsEnterTappedThisTurn` (CR 614 —
+Due Respect), `Value::{Negate, CountersRemovedThisEffect}`,
+`SelectionRequirement::HasPhyrexianManaInCost` (CR 107.4f),
+`StaticEffect::PumpSelfByExiledWithStats`, **mana provenance**
+(`ManaPool::add_from_creature` / `pay_creature_only` +
+`SpellKind::creature_mana_only` + a creature-only auto-tap — Myr Superion),
+and `StaticEffect::ArtifactsAreEquipment` with
+`Modification::AddArtifactSubtype` (Bludgeon Brawl's granted Equipment
+subtype, computed equip {X} and computed +X/+0).
 
 ## Judgment — closed
 

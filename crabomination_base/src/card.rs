@@ -2854,6 +2854,13 @@ pub struct CardDefinition {
     /// hop (Captive Audience). Defaults to `false`.
     #[serde(default)]
     pub enters_under_opponent_control: bool,
+    /// CR 106.6b — "Spend only mana produced by creatures to cast this spell"
+    /// (Myr Superion). Surfaces on `spell_kind()` as
+    /// `SpellKind::creature_mana_only`, which narrows payment to the pool's
+    /// creature-produced provenance and keeps auto-tap off non-creature
+    /// sources. Defaults to `false`.
+    #[serde(default)]
+    pub spend_only_creature_mana: bool,
     /// "This spell costs {1} less to cast for each [filter] card in your
     /// graveyard" — the graveyard-counting sibling of `affinity_filter`.
     /// Generic-only, clamped by the caller. Powers Tolarian Terror /
@@ -4387,6 +4394,7 @@ impl CardDefinition {
             multicolored: self.printed_colors().len() >= 2,
             planeswalker: self.is_planeswalker(),
             legendary: self.supertypes.contains(&Supertype::Legendary),
+            creature_mana_only: self.spend_only_creature_mana,
         }
     }
 

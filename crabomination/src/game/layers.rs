@@ -108,6 +108,9 @@ pub enum Modification {
     SetLandTypes(Vec<LandType>),
     /// Vraska, Betrayal's Sting's −2 — "becomes a Treasure artifact".
     SetArtifactSubtypes(Vec<crate::card::ArtifactSubtype>),
+    /// Layer 4 — add one artifact subtype without clearing the printed set
+    /// (Bludgeon Brawl's granted Equipment).
+    AddArtifactSubtype(crate::card::ArtifactSubtype),
     /// CR 205.4 — grant a supertype (Legendary, etc.). Used by the Ring's
     /// level-1 emblem (CR 701.54c — "your Ring-bearer is legendary").
     AddSupertype(Supertype),
@@ -509,6 +512,11 @@ fn compute_permanent_pass(
             }
             Modification::SetLandTypes(lts) => subtypes.land_types = lts.clone(),
             Modification::SetArtifactSubtypes(ats) => subtypes.artifact_subtypes = ats.clone(),
+            Modification::AddArtifactSubtype(at) => {
+                if !subtypes.artifact_subtypes.contains(at) {
+                    subtypes.artifact_subtypes.push(*at);
+                }
+            }
 
             // Layer 5
             Modification::AddColor(c) => {

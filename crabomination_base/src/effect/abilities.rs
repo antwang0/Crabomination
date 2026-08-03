@@ -1477,6 +1477,11 @@ pub enum StaticEffect {
     /// Brass Squire-style discounts). Reduces the controller's equip-cost
     /// generic by `amount`, never below the colored portion.
     EquipCostReduction { amount: u32 },
+    /// CR 613 — "Each noncreature, non-Equipment artifact is an Equipment
+    /// with equip {X} and 'Equipped creature gets +X/+0,' where X is that
+    /// artifact's mana value" (Bludgeon Brawl). Global; the granted subtype,
+    /// equip cost and bonus are all computed per artifact.
+    ArtifactsAreEquipment,
     /// CR 602.5 / 614 — "Activated abilities cost {N} more to activate
     /// unless they're mana abilities." Applies to every player's
     /// activations (Suppression Field).

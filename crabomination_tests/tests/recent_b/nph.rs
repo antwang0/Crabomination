@@ -765,3 +765,69 @@ fn omen_machine_stops_draws() {
     assert_eq!(g.step, TurnStep::Draw);
     assert!(g.players[0].hand.is_empty(), "no turn-based draw");
 }
+
+/// CR 106.6b — Myr Superion can only be paid with mana a creature produced.
+#[test]
+fn myr_superion_spends_only_creature_mana() {
+    let mut g = main_phase();
+    let superion = g.add_card_to_hand(0, catalog::myr_superion());
+    g.players[0].mana_pool.add_colorless(2);
+    let cast = GameAction::CastSpell {
+        card_id: superion,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    assert!(g.perform_action(cast.clone()).is_err(), "land mana can't pay");
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add_from_creature(Some(Color::Green), 2);
+    g.perform_action(cast).expect("creature mana pays");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Myr Superion"));
+}
+
+/// Auto-tap for a creature-mana-only cast leaves lands alone.
+#[test]
+fn myr_superion_auto_taps_only_creatures() {
+    let mut g = main_phase();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let elf_a = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let elf_b = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    for id in [elf_a, elf_b] {
+        g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+    }
+    let superion = g.add_card_to_hand(0, catalog::myr_superion());
+    g.perform_action(GameAction::CastSpell {
+        card_id: superion,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("two Elves cover {2}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(forest).unwrap().tapped, "the Forest stayed up");
+    assert!(g.battlefield_find(elf_a).unwrap().tapped);
+}
+
+/// Bludgeon Brawl turns a plain artifact into an Equipment whose bonus is its
+/// own mana value.
+#[test]
+fn bludgeon_brawl_arms_every_artifact() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::bludgeon_brawl());
+    let ring = g.add_card_to_battlefield(0, catalog::sol_ring()); // mana value 1
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(
+        g.computed_permanent(ring)
+            .unwrap()
+            .subtypes
+            .artifact_subtypes
+            .contains(&crabomination::card::ArtifactSubtype::Equipment)
+    );
+    mana(&mut g, 0);
+    g.perform_action(GameAction::Equip { equipment: ring, target: bear }).expect("equip {1}");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "2 + Sol Ring's mana value");
+    assert_eq!(g.computed_permanent(bear).unwrap().toughness, 2);
+}

@@ -12784,6 +12784,8 @@ static LGN: &[Factory] = &[
     super::nph::omen_machine,
     super::nph::arm_with_aether,
     super::nph::hex_parasite,
+    super::nph::bludgeon_brawl,
+    super::nph::myr_superion,
     super::nph::rage_extractor,
     super::nph::invader_parasite,
     super::mbs::phyrexian_hydra,

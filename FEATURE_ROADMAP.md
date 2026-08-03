@@ -2417,16 +2417,17 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
-   Kamigawa block and **Mirrodin Besieged** are all at zero. **New Phyrexia**
-   is open at 2 after three waves (109 cards, `sets::nph`) and closes the Scars
-   block; **Legends** is open at 232 after three waves (45 cards, `sets::leg`).
+   Kamigawa block, **Mirrodin Besieged** and **New Phyrexia** (the Scars block
+   is closed) are all at zero. **Legends** is open at 232 after three waves
+   (45 cards, `sets::leg`).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
    that most closes the Arena "feel" gap.
 3. **Best-of-3 + sideboard + deck legality** (Tier 10) — makes constructed
    competitive.
-4. **Static-ability framework + mana provenance** — broad correctness wins.
+4. **Static-ability framework** — broad correctness wins. (Mana provenance
+   shipped; see "Already shipped".)
 5. **Smarter AI blocking** (Tier 13) — biggest single-player upgrade.
 6. Then the **Tier-4 mechanic sweep** and **Tier-3 object-model** features, batch
    by batch.
