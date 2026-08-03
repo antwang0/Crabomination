@@ -19831,35 +19831,92 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RevealTopOpponentChoosesToHand { count, counter } => {
+            Effect::RevealTopOpponentChoosesToHand {
+                count,
+                counter,
+                pick_filter,
+                pick_to_battlefield,
+            } => {
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let revealed: Vec<crate::card::CardId> =
                     self.players[p].library.iter().take(n).map(|c| c.id).collect();
-                if revealed.is_empty() { return Ok(()); }
-                // The opponent chooses which card goes to the controller's
-                // hand. Heuristic (no interactive prompt, like `Punisher`):
-                // give the controller the lowest-mana-value card and exile
-                // the rest.
-                let to_hand = revealed
+                if revealed.is_empty() {
+                    return Ok(());
+                }
+                // The opponent chooses. Heuristic (no interactive prompt, like
+                // `Punisher`): hand the controller the lowest-mana-value
+                // eligible card.
+                let eligible: Vec<crate::card::CardId> = revealed
                     .iter()
                     .copied()
-                    .min_by_key(|id| {
-                        self.players[p].library.iter()
+                    .filter(|id| match pick_filter {
+                        None => true,
+                        Some(f) => self.players[p]
+                            .library
+                            .iter()
                             .find(|c| c.id == *id)
-                            .map(|c| c.definition.cost.cmc())
-                            .unwrap_or(0)
+                            .is_some_and(|c| self.evaluate_requirement_on_card(f, c, p)),
                     })
-                    .unwrap();
-                self.move_card_to(to_hand, &ZoneDest::Hand(PlayerRef::You), ctx, events);
-                for id in revealed.into_iter().filter(|id| *id != to_hand) {
-                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    .collect();
+                let chosen = eligible.iter().copied().min_by_key(|id| {
+                    self.players[p]
+                        .library
+                        .iter()
+                        .find(|c| c.id == *id)
+                        .map(|c| c.definition.cost.cmc())
+                        .unwrap_or(0)
+                });
+                let (pick_dest, rest_dest) = if *pick_to_battlefield {
+                    (
+                        ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        ZoneDest::Graveyard,
+                    )
+                } else {
+                    (ZoneDest::Hand(PlayerRef::You), ZoneDest::Exile)
+                };
+                if let Some(id) = chosen {
+                    self.move_card_to(id, &pick_dest, ctx, events);
+                }
+                for id in revealed.into_iter().filter(|id| Some(*id) != chosen) {
+                    self.move_card_to(id, &rest_dest, ctx, events);
                     if let Some(kind) = counter
-                        && let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
-                            c.add_counters(*kind, 1);
-                        }
+                        && let Some(c) = self.exile.iter_mut().find(|c| c.id == id)
+                    {
+                        c.add_counters(*kind, 1);
+                    }
                 }
                 Ok(())
+            }
+
+            // Riptide Replicator — the token wears the artifact's as-enters
+            // colour and creature type, sized by its charge counters.
+            Effect::CreateTokenOfChosenColorAndType { pt } => {
+                let n = self.evaluate_value(pt, ctx).max(0);
+                let src = ctx.source.and_then(|s| self.find_card_anywhere(s));
+                let color = src.and_then(|c| c.chosen_color);
+                let ct = src.and_then(|c| c.chosen_creature_type);
+                let token = crate::card::TokenDefinition {
+                    name: ct.map(|t| format!("{t:?}")).unwrap_or_else(|| "Creature".into()),
+                    power: n,
+                    toughness: n,
+                    card_types: vec![crate::card::CardType::Creature],
+                    colors: color.into_iter().collect(),
+                    subtypes: crate::card::Subtypes {
+                        creature_types: ct.into_iter().collect(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                self.run_effect(
+                    &Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: crate::effect::Value::ONE,
+                        definition: token,
+                    },
+                    ctx,
+                    events,
+                )
             }
 
             Effect::BecomeMonarch { who } => {
@@ -27767,7 +27824,15 @@ impl GameState {
                     },
                 )
             }
-            (f, _) => f.clone(),
+            // Circle of Solace names its creature type as it enters; the
+            // candidate walk below is source-blind, so concretize here too.
+            (f, _) => {
+                let ct = ctx
+                    .source
+                    .and_then(|sid| self.find_card_anywhere(sid))
+                    .and_then(|src| src.chosen_creature_type);
+                f.resolve_chosen_creature_type(ct)
+            }
         };
         // CR 615.9 — the shield rechecks the chosen source's colour when it
         // would deal damage, so stamp what the filter demanded (the Circle of

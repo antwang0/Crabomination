@@ -12531,6 +12531,9 @@ static ONS3: &[Factory] = &[
     super::ons3::trade_secrets,
     super::ons3::strongarm_tactics,
     super::ons3::kamahls_summons,
+    super::ons3::animal_magnetism,
+    super::ons3::circle_of_solace,
+    super::ons3::riptide_replicator,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,

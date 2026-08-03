@@ -1195,3 +1195,63 @@ pub fn kamahls_summons() -> CardDefinition {
         },
     )
 }
+
+/// Animal Magnetism — an opponent hands you the worst of five creatures.
+pub fn animal_magnetism() -> CardDefinition {
+    sorcery(
+        "Animal Magnetism",
+        cost(&[generic(4), g()]),
+        Effect::RevealTopOpponentChoosesToHand {
+            count: Value::Const(5),
+            counter: None,
+            pick_filter: Some(R::Creature),
+            pick_to_battlefield: true,
+        },
+    )
+}
+
+/// Circle of Solace — a Circle of Protection aimed at one tribe.
+pub fn circle_of_solace() -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(Effect::NameCreatureType { what: Selector::This }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            effect: Effect::PreventNextDamageFromChosenSource {
+                filter: R::Creature.and(R::IsSourceChosenCreatureType),
+                reflect: false,
+                to: None,
+                gain_life: false,
+                redirect_to: None,
+                whole_turn: false,
+            },
+            ..Default::default()
+        }],
+        ..enchantment("Circle of Solace", cost(&[generic(3), w()]))
+    }
+}
+
+/// Riptide Replicator — X charge counters become X/X tokens of one tribe.
+pub fn riptide_replicator() -> CardDefinition {
+    CardDefinition {
+        name: "Riptide Replicator",
+        cost: cost(&[x(), generic(4)]),
+        card_types: vec![CardType::Artifact],
+        as_enters_effect: Some(Effect::Seq(vec![
+            Effect::ChooseColorForSelf,
+            Effect::NameCreatureType { what: Selector::This },
+        ])),
+        enters_with_counters: Some((CounterType::Charge, Value::XFromCost)),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            effect: Effect::CreateTokenOfChosenColorAndType {
+                pt: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Charge,
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

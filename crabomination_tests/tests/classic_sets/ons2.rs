@@ -599,3 +599,70 @@ fn trade_secrets_runs_once_when_declined() {
     assert_eq!(g.players[1].hand.len(), 2);
     assert_eq!(g.players[0].hand.len(), 4);
 }
+
+/// Animal Magnetism deploys the creature and bins the rest.
+#[test]
+fn animal_magnetism_deploys_a_revealed_creature() {
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::krosan_colossus());
+    let cheap = g.add_card_to_library(0, bear());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let magnetism = g.add_card_to_hand(0, catalog::animal_magnetism());
+    cast(&mut g, 0, magnetism, None);
+    assert!(g.battlefield_find(cheap).is_some(), "the opponent hands over the cheap one");
+    assert_eq!(g.players[0].graveyard.len(), 5, "the other four plus the spell");
+}
+
+/// Circle of Solace shields you from one hit by the named tribe only.
+#[test]
+fn circle_of_solace_shields_the_named_tribe() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::CreatureType(
+        CreatureType::Bear,
+    )]));
+    let circle = g.add_card_to_hand(0, catalog::circle_of_solace());
+    cast(&mut g, 0, circle, None);
+    let permanent =
+        g.battlefield.iter().find(|c| c.definition.name == "Circle of Solace").unwrap().id;
+    let b = g.add_card_to_battlefield(1, bear());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    activate(&mut g, 0, permanent, 0, None);
+    let mut ev = vec![];
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(0),
+        2,
+        Some(b),
+        &mut ev,
+    );
+    assert_eq!(g.players[0].life, 20, "the Bear's hit is prevented");
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Player(0),
+        1,
+        Some(elf),
+        &mut ev,
+    );
+    assert_eq!(g.players[0].life, 19, "the Elf isn't covered");
+}
+
+/// Riptide Replicator mints X/X tokens of the chosen colour and tribe.
+#[test]
+fn riptide_replicator_mints_the_chosen_tribe() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Color(Color::Blue),
+        DecisionAnswer::CreatureType(CreatureType::Wizard),
+    ]));
+    let rep = g.add_card_to_hand(0, catalog::riptide_replicator());
+    cast_x(&mut g, 0, rep, None, Some(3));
+    let permanent =
+        g.battlefield.iter().find(|c| c.definition.name == "Riptide Replicator").unwrap().id;
+    assert_eq!(g.battlefield_find(permanent).unwrap().counter_count(CounterType::Charge), 3);
+    g.clear_sickness(permanent);
+    activate(&mut g, 0, permanent, 0, None);
+    let token = g.battlefield.iter().find(|c| c.is_token).expect("token");
+    assert_eq!((token.definition.power, token.definition.toughness), (3, 3));
+    assert!(token.definition.subtypes.creature_types.contains(&CreatureType::Wizard));
+    assert!(token.definition.printed_colors().contains(&Color::Blue));
+}

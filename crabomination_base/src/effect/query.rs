@@ -231,7 +231,8 @@ impl Effect {
         match self {
             Effect::FlipUntilLoss { per_win } => per_win.requires_target(),
             Effect::HeadGames { who } | Effect::TradeSecrets { who } => player_has_target(who),
-            Effect::EachPlayerDiscardsElseLosesLife { .. }
+            Effect::CreateTokenOfChosenColorAndType { .. }
+            | Effect::EachPlayerDiscardsElseLosesLife { .. }
             | Effect::EachPlayerRevealsCreaturesForTokens { .. }
             | Effect::AnyLifeGainPunishedThisTurn { .. } => false,
             Effect::RevealUntilNonlandThen { then }

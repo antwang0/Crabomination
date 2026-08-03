@@ -6748,7 +6748,22 @@ pub enum Effect {
     /// Karn, Scion of Urza's +1 (reveal two, opponent chooses, exile the
     /// other with a silver counter). The opponent's pick is a heuristic
     /// (give the controller the lowest-value card), mirroring `Punisher`.
-    RevealTopOpponentChoosesToHand { count: Value, counter: Option<crate::card::CounterType> },
+    RevealTopOpponentChoosesToHand {
+        count: Value,
+        counter: Option<crate::card::CounterType>,
+        /// Only cards matching this may be chosen (Animal Magnetism's
+        /// "chooses a creature card"). `None` = anything revealed.
+        #[serde(default)]
+        pick_filter: Option<SelectionRequirement>,
+        /// The pick goes onto the battlefield instead of to hand, and the
+        /// rest to the graveyard instead of exile (Animal Magnetism).
+        #[serde(default)]
+        pick_to_battlefield: bool,
+    },
+
+    /// "Create an X/X creature token of the chosen color and type" — reads the
+    /// source's `chosen_color` + `chosen_creature_type` (Riptide Replicator).
+    CreateTokenOfChosenColorAndType { pt: Value },
 
     /// Return one card the controller owns with a `counter` counter on it
     /// from exile to their hand (removing the counter). Karn's −1. When more

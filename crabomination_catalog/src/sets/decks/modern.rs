@@ -8364,6 +8364,8 @@ pub fn karn_scion_of_urza() -> CardDefinition {
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::RevealTopOpponentChoosesToHand {
+                    pick_filter: None,
+                    pick_to_battlefield: false,
                     count: Value::Const(2),
                     counter: Some(CounterType::Silver),
                 },

@@ -5459,16 +5459,17 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
-- ⏳ **Onslaught's last 8 gaps** (`set_gaps.py ons`). One dedicated primitive
+- ⏳ **Onslaught's last 5 gaps** (`set_gaps.py ons`). One dedicated primitive
   each: CR 612 text-changing (Artificial Evolution), combat-damage division
   among the defender and its creatures (Butcher Orgg), looking at a face-down
   permanent (Aven Soulgazer — and Spy Network's face-down + library-top
   riders, which ship without them), a simultaneous secret-number auction
-  (Menacing Ogre), a token of a chosen colour *and* creature type with a
-  counter-scaled P/T (Riptide Replicator), a "when you gain control of this
-  permanent" trigger (Risky Move), a prevention shield keyed to the source's
-  chosen creature type (Circle of Solace), and a reveal-N-an-opponent-picks
-  (Animal Magnetism — `Effect::LookPickToHand` has no `picked_by`).
+  (Menacing Ogre), and a "when you gain control of this permanent" trigger
+  (Risky Move).
+- ⏳ **`RevealTopOpponentChoosesToHand`'s opponent is a heuristic**, not a
+  prompt — it hands over the lowest-mana-value eligible card. Fine for
+  Karn's +1 and Animal Magnetism, but a real pick belongs on the opposing
+  seat's decider.
 - ⏳ **Bot matches aren't reproducible.** `RandomBot` draws from the global
   RNG, so `bot_vs_bot_commander_demo_terminates` varies 0.5s–15s+ run to run
   and occasionally blew its old 120s ceiling. The ceiling is now 600s; the
