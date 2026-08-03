@@ -2464,6 +2464,12 @@ impl GameState {
     /// Lethal damage required for each blocker in `order` (its toughness, or 1
     /// under deathtouch per CR 702.2e). Blockers no longer on the battlefield
     /// resolve to 0.
+    /// CR 702.22 — the attacking bands declared this combat, for the server
+    /// view. Empty when nothing banded.
+    pub fn attack_bands_view(&self) -> Vec<Vec<CardId>> {
+        self.attack_bands.clone()
+    }
+
     /// Butcher Orgg — "you may assign this creature's combat damage divided as
     /// you choose among defending player and/or any number of creatures they
     /// control". Returns the divisible creature set (every creature the

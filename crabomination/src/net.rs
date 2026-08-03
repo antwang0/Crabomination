@@ -548,6 +548,12 @@ pub struct ClientView {
     /// hint. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub permanents_to_graveyard_this_turn: u32,
+    /// CR 702.22 — the attacking bands declared this combat, each a list of
+    /// still-attacking members. A blocker assigned to any member blocks the
+    /// whole band, so the client groups them and warns before the block.
+    /// Empty outside combat and whenever nothing banded.
+    #[serde(default)]
+    pub attack_bands: Vec<Vec<CardId>>,
 }
 
 impl ClientView {

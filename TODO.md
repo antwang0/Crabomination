@@ -5459,10 +5459,36 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
-- ⏳ **Onslaught's last 3 gaps** (`set_gaps.py ons`). One dedicated primitive
-  each: CR 612 text-changing (Artificial Evolution), combat-damage division
-  among the defender and its creatures (Butcher Orgg), and a "when you gain
-  control of this permanent" trigger (Risky Move).
+- ✅ ~~**Onslaught's last 4 gaps**~~ — shipped (`sets::ons4`); `set_gaps.py ons`
+  is at zero. Each landed its primitive: `Effect::ReplaceCreatureTypeText`,
+  `Keyword::DividesCombatDamageAmongDefenders`, `Effect::EachPlayerChoosesNumberHighestLoses`,
+  and `GameEvent::ControlChanged` + `EventKind::GainedControlOfThis`.
+- ⏳ **Legions is at 45 gaps** (`set_gaps.py lgn`). Wave 1 shipped 76 cards
+  (`sets::lgn`). The remainder wants one primitive each for the Morph
+  one-offs — Chromeshell Crab (exchange control of two creatures), Dermoplasm
+  (put a morph card from hand onto the battlefield, bouncing itself),
+  Willbender (retarget a spell/ability with a single target), Master of the
+  Veil / Weaver of Lies (turn a face-up morph creature back down), Planar
+  Guide (exile all creatures, return at the next end step) — plus the tribal
+  utility (Dark Supplicant's three-zone named search, Elvish Soultiller's
+  graveyard type-shuffle, Goblin Assassin's per-player coin flips, Hollow
+  Specter's pay-{X} reveal-and-choose, Magma Sliver's granted activated
+  pump, Mistform's "becomes the creature type of your choice", Riptide
+  Mangler's indefinite base-power copy, Sunstrike Legionnaire, Whipgrass
+  Entangler's Cleric-scaled per-creature attack/block tax).
+- ⏳ **"Bands with other" (CR 702.22b)** is unimplemented. Plain attacking
+  bands ship (`DeclareAttackersBanded`); the quality-scoped variant needs a
+  second keyword and a widened legality check in `declare_attackers_banded`.
+- ⏳ **The client can't declare attacking bands.** The engine action
+  (`GameAction::DeclareAttackersBanded`) and the `ClientView.attack_bands`
+  read-back ship, and the tooltip names a creature's bandmates, but the
+  attack UI has no band-grouping affordance — a human player can only attack
+  unbanded.
+- ⏳ **`Effect::ReplaceCreatureTypeText` rewrites the definition via a serde
+  round-trip.** It substitutes any string value equal to the type's variant
+  name, skipping the `name` key. That reaches every filter and effect body
+  without a per-variant visitor, but a future enum with a unit variant named
+  after a creature type would be caught in the same net.
 - ⏳ **Spy Network's "top card of that player's library" clause is dropped.**
   The hand and face-down halves ship (`LookAtHand` + `LookAtFaceDown`); a
   one-card library peek needs a `library_top_revealed_to` twin of

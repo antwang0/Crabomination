@@ -2147,9 +2147,13 @@ Each a small targeted feature; sweep batch by batch.
   order (deathtouch lethal = 1, CR 702.2e) and tramples the remainder
   (CR 510.1c/702.19g). Tests: `cr_702_2e_trample_deathtouch_*`,
   `cr_702_19g_*`.
-- 🟡 **Banding** (CR 509.2 / 510.1c) — a banding blocker routes the attacker's
-  combat-damage order + assignment to the *defending* player (Benalish Hero).
-  Remaining: attacking-band formation + "bands with other".
+- 🟡 **Banding** (CR 509.2 / 510.1c / 702.22) — a banding blocker routes the
+  attacker's combat-damage order + assignment to the *defending* player
+  (Benalish Hero), and **attacking bands** ship:
+  `GameAction::DeclareAttackersBanded` validates 702.22c/d, `attack_bands`
+  persists the band (702.22e), removal from combat drops a member (702.22f),
+  and a block on any member spreads across the band (702.22h). Surfaced to
+  clients via `ClientView.attack_bands`. Remaining: "bands with other".
 - ✅ **Multiple combat phases** — `AdditionalCombatPhase` (Hellkite Charger) +
   post-main insertion (Relentless Assault). First-combat detection
   (`combat_phases_this_turn` + `Predicate::IsFirstCombatPhaseThisTurn`) gates
@@ -2403,13 +2407,12 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** The whole Odyssey block is done — Odyssey, Torment
-   and **Judgment** are all at zero (`set_gaps.py ody` / `tor` / `jud`).
-   **Onslaught** (`sets::ons` / `ons2` / `ons3`) is open at 3 gaps after ten
-   waves (253 cards); what's left needs one dedicated primitive each — CR 612
-   text-changing (Artificial Evolution), combat-damage division among the
-   defender and its creatures (Butcher Orgg) and a "when you gain control of
-   this permanent" trigger (Risky Move). Then Legions / Scourge.
+0. **Next set to close.** The Odyssey block and **Onslaught** are all at zero
+   (`set_gaps.py ody` / `tor` / `jud` / `ons`). **Legions** (`sets::lgn`) is
+   open at 45 gaps after one wave (76 cards); the remainder is mostly
+   Sliver/tribal utility plus the Morph turn-up one-offs that each want a
+   primitive (Chromeshell Crab's control exchange, Dermoplasm's put-a-morph,
+   Willbender's retarget, Planar Guide's mass blink). Then Scourge.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2423,6 +2426,25 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Onslaught (ONS) closed** — `set_gaps.py ons` 4 → 0 (`sets::ons4`). Each of
+  the last four cards needed one primitive: `Effect::ReplaceCreatureTypeText`
+  (CR 612.1 — rewrites the target's *definition*, so the change reaches ability
+  text and survives the stack → battlefield hop; `Decision::ChooseCreatureTypePair`
+  + a two-stage client modal), `Keyword::DividesCombatDamageAmongDefenders`
+  (Butcher Orgg — free division over the defending player's creatures, factored
+  through `combat_assignment_plan`), `Effect::SecretNumberAuction` (Menacing
+  Ogre, replayed through `ask_seat_amount`), and `GameEvent::ControlChanged` +
+  `EventKind::GainedControlOfThis` (Risky Move) recorded at the `change_control`
+  chokepoint.
+
+- **Legions (LGN) opened** — `set_gaps.py lgn` 122 → 45 (`sets::lgn`, 76 cards).
+  Amplify (CR 702.38) rides `enters_with_counters` over `CardsInHandMatching`;
+  Provoke (CR 702.39) is an attack trigger over `Effect::Provoke`. New:
+  `GameAction::TurnFaceUpForX` (CR 702.36b — an `{X}` in a morph cost, Warbreak
+  Trumpeter), triggers now read the X stamped on their source permanent (not
+  just ETB triggers), and `StaticEffect::SpellsCantBeCounteredMatching` (Root
+  Sliver — symmetric, matched against the stack card).
 
 - **Onslaught (ONS) waves 8-10** — `set_gaps.py ons` 61 → 5 (`sets::ons3`,
   56 cards: the "choose a creature type" rares, the Morph one-offs, the

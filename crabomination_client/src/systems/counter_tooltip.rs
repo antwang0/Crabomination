@@ -85,6 +85,19 @@ pub fn update_alt_tooltip(
     if legend_rule_at_risk(&cv.battlefield, p) {
         body.push_str("\n⚠ legend rule: another copy is in play");
     }
+    // CR 702.22h — blocking one member of a band blocks the whole band, so
+    // name the bandmates a single block would drag in.
+    if let Some(band) = cv.attack_bands.iter().find(|b| b.contains(&p.id)) {
+        let mates: Vec<&str> = band
+            .iter()
+            .filter(|id| **id != p.id)
+            .filter_map(|id| cv.battlefield.iter().find(|c| c.id == *id))
+            .map(|c| c.name.as_str())
+            .collect();
+        if !mates.is_empty() {
+            body.push_str(&format!("\n⚔ banded with {}", mates.join(", ")));
+        }
+    }
 
     if tooltip_q.single_mut().is_ok() {
         // Existing tooltip — just refresh its text.

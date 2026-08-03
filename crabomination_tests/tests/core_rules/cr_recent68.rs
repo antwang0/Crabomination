@@ -172,6 +172,26 @@ fn cr_702_22f_removal_from_combat_leaves_the_band() {
     assert!(g.players[0].hand.iter().any(|c| c.id == pegasus), "and the Pegasus left combat");
 }
 
+/// The server view surfaces each band, so a defender can see which attackers
+/// one block would drag in (CR 702.22h).
+#[test]
+fn cr_702_22_bands_reach_the_server_view() {
+    use crabomination::server::view::project;
+    let mut g = main_phase();
+    let hero = g.add_card_to_battlefield(0, catalog::benalish_hero());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [hero, bear] {
+        g.clear_sickness(id);
+    }
+    to_declare_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackersBanded {
+        attacks: vec![at(hero, AttackTarget::Player(1)), at(bear, AttackTarget::Player(1))],
+        bands: vec![vec![hero, bear]],
+    })
+    .expect("declare band");
+    assert_eq!(project(&g, 1).attack_bands, vec![vec![hero, bear]]);
+}
+
 // ── CR 612 — creature-type text change ──────────────────────────────────────
 
 /// CR 612.2a — a creature-type word used to define a token is text, so the
