@@ -186,9 +186,32 @@ fn sos_archetypes(seed: u64) -> Vec<Archetype> {
         .collect()
 }
 
+/// Seeded sealed mirror decks — the learned-eval gate. Each row is one
+/// 6-pack SOS sealed pool built by the heuristic builder, played as a
+/// mirror: both pilots get the *same 40 cards*, so deck strength and build
+/// quality cancel and the row measures piloting alone. That is the honest
+/// comparison for the value net, which trains on sealed self-play — the
+/// college mirrors are constructed 60-card decks it never sees.
+fn sealed_archetypes(seed: u64, count: usize) -> Vec<Archetype> {
+    (0..count as u64)
+        .map(|i| {
+            let salt = |k: u64| {
+                seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(k * 0x5EA1_ED)
+            };
+            let pool = crabomination::selfplay::sealed_pool(salt(1));
+            let deck = crabomination::selfplay::heuristic_sealed_build(&pool, salt(2));
+            Archetype {
+                name: Box::leak(format!("sealed #{i}").into_boxed_str()),
+                deck,
+            }
+        })
+        .collect()
+}
+
 fn parse_profile(name: &str) -> Option<Pilot> {
     match name {
         "baseline" => Some(Pilot::Scored(EvalWeights::baseline())),
+        "net" => Some(Pilot::Scored(EvalWeights::net_eval())),
         "v2" => Some(Pilot::Scored(EvalWeights::v2())),
         "pretap" => Some(Pilot::Scored(EvalWeights::legacy_mana())),
         "combat" => Some(Pilot::Scored(EvalWeights::combat_aware())),
@@ -229,7 +252,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, net (needs CRAB_NET=<weights.safetensors>)";
 
 /// Wilson score interval for `wins` out of `n` at `z`. Chosen over the
 /// normal approximation because it stays sane at small n and at p̂ = 0 or 1,
@@ -286,7 +309,8 @@ fn parse_args() -> Result<Args, String> {
                      \n\
                      PROFILE is one of: {PROFILES}\n\
                      --decks fixed (4 hand-built archetypes) | cube (8 random cube pairs)\n\
-                     | sos (5 seeded college mirrors) | both (fixed+cube) | all\n\
+                     | sos (5 seeded college mirrors) | sealed (12 seeded sealed mirrors)\n\
+                     | both (fixed+cube) | all (fixed+cube+sos)\n\
                      --games is per archetype, split evenly across seats."
                 );
                 std::process::exit(0);
@@ -299,6 +323,18 @@ fn parse_args() -> Result<Args, String> {
         .ok_or_else(|| format!("unknown profile {a_name}; expected one of: {PROFILES}"))?;
     let b = parse_profile(&b_name)
         .ok_or_else(|| format!("unknown profile {b_name}; expected one of: {PROFILES}"))?;
+    if a_name == "net" || b_name == "net" {
+        // The net profile silently equals atk-sim when the slot is empty,
+        // which would make a forgotten CRAB_NET measure the wrong thing —
+        // so an explicit weights file is mandatory here.
+        let path = std::env::var("CRAB_NET")
+            .map_err(|_| "profile `net` needs CRAB_NET=<weights.safetensors>".to_string())?;
+        crabomination::server::net_eval::load_slot(
+            crabomination::server::net_eval::SLOT_BEST,
+            std::path::Path::new(&path),
+        )?;
+        eprintln!("loaded value net from {path}");
+    }
     Ok(Args {
         a,
         b,
@@ -344,8 +380,9 @@ fn main() {
             f.extend(sos_archetypes(args.seed));
             f
         }
+        "sealed" => sealed_archetypes(args.seed, 12),
         other => {
-            eprintln!("unknown --decks {other}; expected fixed, cube, sos, both or all");
+            eprintln!("unknown --decks {other}; expected fixed, cube, sos, sealed, both or all");
             std::process::exit(2);
         }
     };

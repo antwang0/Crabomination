@@ -17,6 +17,7 @@
 //! selfplay_train [--actors N] [--games N] [--steps N] [--batch N]
 //!                [--lr F] [--reuse F] [--window N] [--min-window N]
 //!                [--checkpoint-every N] [--out DIR] [--seed N]
+//!                [--use-best WEIGHTS.safetensors]
 //! ```
 //!
 //! With `--games`/`--steps` unset it runs until killed; the latest
@@ -58,6 +59,10 @@ struct Args {
     checkpoint_every: u64,
     out: PathBuf,
     seed: u64,
+    /// Weights for the actors to *play* with (a gate-passed promotion) —
+    /// this is what closes the self-improvement loop. Unset, actors play
+    /// the heuristic default (the bootstrap phase).
+    use_best: Option<PathBuf>,
 }
 
 fn parse_args() -> Args {
@@ -73,6 +78,7 @@ fn parse_args() -> Args {
         checkpoint_every: 2_000,
         out: PathBuf::from("nets"),
         seed: 0x0505_ACAD,
+        use_best: None,
     };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
@@ -89,6 +95,7 @@ fn parse_args() -> Args {
             "--checkpoint-every" => a.checkpoint_every = val().parse().expect("--checkpoint-every"),
             "--out" => a.out = PathBuf::from(val()),
             "--seed" => a.seed = val().parse().expect("--seed"),
+            "--use-best" => a.use_best = Some(PathBuf::from(val())),
             other => panic!("unknown flag {other} (see the module doc for usage)"),
         }
     }
@@ -122,13 +129,12 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab) {
         let deck_a = heuristic_sealed_build(&pool_a, salt(3));
         let deck_b = heuristic_sealed_build(&pool_b, salt(4));
         let template = sealed_game_template(&deck_a, &deck_b);
-        let rec = play_recorded_game(
-            &template,
-            [EvalWeights::default(), EvalWeights::default()],
-            salt(5),
-            4_000,
-            vocab,
-        );
+        let pilot = if args.use_best.is_some() {
+            EvalWeights::net_eval()
+        } else {
+            EvalWeights::default()
+        };
+        let rec = play_recorded_game(&template, [pilot, pilot], salt(5), 4_000, vocab);
         shared.games_done.fetch_add(1, Ordering::Relaxed);
         if rec.rows.is_empty() {
             shared.stalls.fetch_add(1, Ordering::Relaxed);
@@ -158,6 +164,14 @@ fn main() {
     if latest.exists() {
         trainer.load(&latest).expect("resume from latest.safetensors (delete it to start fresh)");
         eprintln!("resumed weights from {}", latest.display());
+    }
+    if let Some(best) = &args.use_best {
+        crabomination::server::net_eval::load_slot(
+            crabomination::server::net_eval::SLOT_BEST,
+            best,
+        )
+        .expect("--use-best weights load");
+        eprintln!("actors play with the net from {}", best.display());
     }
 
     let shared = Shared {

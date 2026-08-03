@@ -125,6 +125,14 @@ pub struct EvalWeights {
     /// when the sim ends inside burn range keeps the cost bounded to the
     /// positions where the extra cycle can actually reach a result.
     pub attack_race_horizon: bool,
+    /// Evaluate undecided positions with the learned value net registered
+    /// in this [`net_eval`](crate::server::net_eval) slot instead of the
+    /// material heuristic; 0 (default) is off. The net returns a win
+    /// probability scaled to 0..10 000, so a decided game's heuristic
+    /// ±100 000·unit still dominates every comparison, and an empty slot
+    /// falls back to the heuristic — a weights file is a runtime input,
+    /// never a build requirement.
+    pub net_slot: u8,
 }
 
 impl EvalWeights {
@@ -151,6 +159,7 @@ impl EvalWeights {
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_race_horizon: false,
+            net_slot: 0,
         }
     }
 
@@ -203,6 +212,7 @@ impl EvalWeights {
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_race_horizon: false,
+            net_slot: 0,
         }
     }
 
@@ -238,6 +248,7 @@ impl EvalWeights {
             legacy_pretap: false,
             attack_sim_spells: false,
             attack_race_horizon: false,
+            net_slot: 0,
         }
     }
 
@@ -424,6 +435,23 @@ impl EvalWeights {
     /// negative result is worth more than the code.
     pub const fn attack_search_race() -> Self {
         Self { attack_race_horizon: true, ..Self::attack_search_sim() }
+    }
+
+    /// The adopted default piloted by the learned SOS-sealed value net
+    /// ([`net_slot`](Self::net_slot) = the registry's best slot):
+    /// `eval_material` returns the net's win probability instead of the
+    /// material count, so every outcome-eval'd decision — casts, blocks,
+    /// modes, scries, sacrifices, the combat sims — optimizes the learned
+    /// value. Candidate *scoring* and the rest of the decision table stay
+    /// heuristic; the net replaces the judge, not the shortlist.
+    ///
+    /// Requires a net in slot 1 (`CRAB_NET` on the ladder, the training
+    /// loop's promotion in `selfplay_train`); with the slot empty this is
+    /// exactly `attack_search_sim`. Unmeasured until a trained net exists
+    /// — gate on sealed mirrors (`bot_ladder --decks sealed`) before any
+    /// adoption claim.
+    pub const fn net_eval() -> Self {
+        Self { net_slot: super::net_eval::SLOT_BEST, ..Self::attack_search_sim() }
     }
 
     /// The adopted default plus the searched block assignment.
@@ -7417,6 +7445,16 @@ fn first_damage_amount(effect: &Effect, x: u32) -> Option<i32> {
 /// Deliberately coarse — it's compared between candidate *outcomes* of the
 /// same tick, so shared terms cancel and only the action's delta matters.
 fn eval_material(state: &GameState, seat: usize, w: &EvalWeights) -> i32 {
+    // The learned value net, when a profile asks for it and a net is
+    // loaded. Undecided positions only: the heuristic's ±100 000·unit for
+    // a decided game must keep dominating the net's 0..10 000 range so
+    // "actually winning" always outranks "the net likes it".
+    if w.net_slot != 0
+        && state.game_over.is_none()
+        && let Some(p) = super::net_eval::win_prob(state, seat, w.net_slot)
+    {
+        return (p * 10_000.0) as i32;
+    }
     eval_material_inner(state, seat, w, false)
 }
 
