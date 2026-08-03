@@ -2147,13 +2147,17 @@ Each a small targeted feature; sweep batch by batch.
   order (deathtouch lethal = 1, CR 702.2e) and tramples the remainder
   (CR 510.1c/702.19g). Tests: `cr_702_2e_trample_deathtouch_*`,
   `cr_702_19g_*`.
-- 🟡 **Banding** (CR 509.2 / 510.1c / 702.22) — a banding blocker routes the
+- ✅ **Banding** (CR 509.2 / 510.1c / 702.22) — a banding blocker routes the
   attacker's combat-damage order + assignment to the *defending* player
   (Benalish Hero), and **attacking bands** ship:
   `GameAction::DeclareAttackersBanded` validates 702.22c/d, `attack_bands`
   persists the band (702.22e), removal from combat drops a member (702.22f),
   and a block on any member spreads across the band (702.22h). Surfaced to
-  clients via `ClientView.attack_bands`. Remaining: "bands with other".
+  clients via `ClientView.attack_bands`. **"Bands with other [quality]"**
+  ships as `Keyword::BandsWithOther(SelectionRequirement)` — band legality
+  without plain banding (702.22d), the defender's damage division against a
+  two-strong quality band (702.22j), and a payload-agnostic removal so
+  "loses all 'bands with other' abilities" (Shelkin Brownie, Tolaria) works.
 - ✅ **Multiple combat phases** — `AdditionalCombatPhase` (Hellkite Charger) +
   post-main insertion (Relentless Assault). First-combat detection
   (`combat_phases_this_turn` + `Predicate::IsFirstCombatPhaseThisTurn`) gates
@@ -2408,10 +2412,10 @@ Each a small targeted feature; sweep batch by batch.
 ## Suggested sequencing
 
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
-   **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**) and the
-   Kamigawa block are all at zero. **Mirrodin Besieged** (`sets::mbs`) is open
-   at 5 gaps after one wave (93 cards) — see TODO.md for the per-card
-   primitive each needs. Then New Phyrexia to close the Scars block.
+   **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
+   Kamigawa block and **Mirrodin Besieged** are all at zero. **New Phyrexia**
+   (111 gaps) closes the Scars block; **Legends** is open at 268 after the
+   banding wave (`sets::leg`).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2426,14 +2430,22 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Mirrodin Besieged (MBS) opened** — `set_gaps.py mbs` 98 → 5 (`sets::mbs`,
-  93 cards). New: `Effect::MatchingCantBlockThisTurn` (CR 509.1b — a blanket
-  "these creatures can't block this turn", checked in `declare_blockers`
-  alongside the per-pair lock), `CardDefinition.equip_sacrifice_filter`
-  ("Equip—Sacrifice an artifact", paid before the mana so a failed equip stays
-  atomic), and a `kind` on `StaticEffect::ReplaceDamageToSelfWithCounters` so
-  the CR 614 damage-to-counters replacement can shrink as well as grow
-  (Phyrexian Hydra next to Phytohydra).
+- **Mirrodin Besieged (MBS) closed** — `set_gaps.py mbs` 98 → 0 (`sets::mbs`,
+  98 cards). New across the two waves: `Effect::MatchingCantBlockThisTurn`
+  (CR 509.1b), `CardDefinition.equip_sacrifice_filter`, a `kind` on
+  `StaticEffect::ReplaceDamageToSelfWithCounters` (CR 614, shrink as well as
+  grow), `Effect::AnyPlayerMayAccept` + `PlayerRef::AcceptingPlayer` (the
+  general punisher/offer shape, replacing `AnyPlayerMayTakeDamageElse`),
+  `Effect::KnowledgePool`, `StaticEffect::HasActivatedAbilitiesOfExiledWithSelf`
+  and `SelectionRequirement::SameNameAsAPermanent`. Correctness: a search into
+  `ZoneDest::ExileWithSourceStamp` now stamps `exiled_with`, and
+  `Selector::MatchingAmong` filters cards outside the battlefield instead of
+  dropping them.
+
+- **CR 805 shared team turns** — `GameState.shared_team_turns` (set by
+  `apply_format` for Two-Headed Giant) makes the draw step draw for every
+  member of the active team (805.4b) and lets a teammate act at sorcery speed,
+  and so play their own land, on the team's turn (805.4c/805.5a).
 
 - **Scourge (SCG) closed** — `set_gaps.py scg` 32 → 0 (`sets::scg2`, the last
   32 cards). New primitives: `Effect::{DimensionalBreach, DimensionalBreachReturn}`

@@ -32,6 +32,41 @@ fn max_blocks_for(kws: &[Keyword]) -> usize {
 }
 
 impl GameState {
+    /// CR 702.22d/j — the qualities named by "bands with other [quality]" on
+    /// any of `ids`, read from the computed keyword set so granted instances
+    /// (Adventurers' Guildhouse) count.
+    pub(crate) fn bands_with_other_qualities(
+        &self,
+        ids: &[CardId],
+    ) -> Vec<crate::card::SelectionRequirement> {
+        let computed = self.compute_battlefield();
+        computed
+            .iter()
+            .filter(|c| ids.contains(&c.id))
+            .flat_map(|c| c.keywords.iter())
+            .filter_map(|k| match k {
+                Keyword::BandsWithOther(q) => Some((**q).clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// CR 702.22j — is this set of blockers a "bands with other [quality]"
+    /// band? True when at least two of them match a quality one of them bands
+    /// with, which hands the damage division to the defending player.
+    fn quality_band_assigner(&self, ids: &[CardId]) -> Option<usize> {
+        let qualities = self.bands_with_other_qualities(ids);
+        qualities.iter().find(|q| {
+            ids.iter()
+                .filter(|id| {
+                    self.evaluate_requirement_static(q, &Target::Permanent(**id), 0, None)
+                })
+                .count()
+                >= 2
+        })?;
+        ids.iter().find_map(|id| self.battlefield_find(*id)).map(|c| c.controller)
+    }
+
     /// `max_blocks_for` plus the board-dependent riders keyed on the blocker
     /// itself ("…for each Equipment attached to this creature").
     /// CR 506.2 / 509.1b — the tightest "no more than N creatures can
@@ -248,11 +283,21 @@ impl GameState {
                             .ok_or(GameError::CannotAttack(first))
                     })
                     .collect::<Result<_, _>>()?;
+                if targets.iter().any(|t| *t != targets[0]) {
+                    return Err(GameError::CannotAttack(first));
+                }
                 let unbanded = members.iter().filter(|m| !has_banding(**m)).count();
-                if unbanded > 1
-                    || unbanded == members.len()
-                    || targets.iter().any(|t| *t != targets[0])
-                {
+                let plain_band_ok = unbanded <= 1 && unbanded < members.len();
+                // CR 702.22d — the "bands with other [quality]" alternative:
+                // every member matches the quality and at least one of them
+                // has the ability (Adventurers' Guildhouse).
+                let quality_band_ok = !plain_band_ok
+                    && self.bands_with_other_qualities(members).iter().any(|q| {
+                        members.iter().all(|m| {
+                            self.evaluate_requirement_static(q, &Target::Permanent(*m), 0, None)
+                        })
+                    });
+                if !plain_band_ok && !quality_band_ok {
                     return Err(GameError::CannotAttack(first));
                 }
             }
@@ -2280,12 +2325,16 @@ impl GameState {
             // banding, the *defending* player (the blockers' controller), not
             // the attacking player, announces this attacker's damage order and
             // assignment. Otherwise the active (attacking) player decides.
-            let banding_assigner = blocker_ids.iter().find_map(|bid| {
-                computed
-                    .iter()
-                    .find(|c| c.id == *bid && c.keywords.contains(&Keyword::Banding))
-                    .map(|c| c.controller)
-            });
+            let banding_assigner = blocker_ids
+                .iter()
+                .find_map(|bid| {
+                    computed
+                        .iter()
+                        .find(|c| c.id == *bid && c.keywords.contains(&Keyword::Banding))
+                        .map(|c| c.controller)
+                })
+                // CR 702.22j — the "bands with other [quality]" arm.
+                .or_else(|| self.quality_band_assigner(&blocker_ids));
             // CR 510.1a — Defensive Formation: the defending player assigns
             // the damage of everything attacking them.
             let defending_seat = self.attacking.iter().find(|a| a.attacker == atk.id).and_then(

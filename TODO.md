@@ -176,60 +176,19 @@ Residual, not blocking the count:
 - **Parallel Thoughts**' draw replacement is offered as a yes/no
   `OptionalTrigger`; the AutoDecider declines it, so bots never mine the pile.
 
-## Mirrodin Besieged — opened
+## Mirrodin Besieged — closed
 
-`set_gaps.py mbs` is at **5** (98 → 5; `sets::mbs`, 93 cards, tests in
-`recent_b/mbs`). Infect, Metalcraft, Battle cry, Living weapon and the
-proliferate shells all rode existing primitives. New this wave:
-`Effect::MatchingCantBlockThisTurn` (CR 509.1b — Concussive Bolt's metalcraft
-rider), `CardDefinition.equip_sacrifice_filter` ("Equip—Sacrifice an
-artifact", Piston Sledge), and a `kind` on
-`StaticEffect::ReplaceDamageToSelfWithCounters` so the CR 614 replacement can
-shrink as well as grow (Phyrexian Hydra alongside Phytohydra).
+`set_gaps.py mbs` is at **0** (98 → 5 → 0; `sets::mbs`, 98 cards, tests in
+`recent_b/mbs`). The closing wave added `Effect::AnyPlayerMayAccept` (the
+general "any player may …, if no one does …" shape, with
+`PlayerRef::AcceptingPlayer` — Judgment's punisher family now rides it),
+`Effect::KnowledgePool`, `StaticEffect::HasActivatedAbilitiesOfExiledWithSelf`
+(Myr Welder) and `SelectionRequirement::SameNameAsAPermanent`.
 
-Still open, and why — each wants one primitive:
-- **Knowledge Pool** — imprint plus a cast replacement that exiles the spell
-  and offers a free cast from the pool.
-- **Mitotic Manipulation** — "look at seven, put one with the same name as a
-  permanent onto the battlefield": needs a `SameNameAsAPermanent` requirement.
-- **Myr Welder** — imprint plus "has all activated abilities of all cards
-  exiled with it" (`Effect::GainAllActivatedAbilitiesOf` is one-shot, not a
-  static over the linked exile set).
-- **Galvanoth** — "look at the top card; you may cast it free if it's an
-  instant or sorcery": a top-of-library free cast gated on card type.
-- **Distant Memories** — "any opponent may have you put that card into your
-  hand; if none does, draw three" (`Effect::PlayersMayAccept` shape, but the
-  accept and the fallback both act on the caster).
+## Judgment — closed
 
-## Judgment — opened
-
-`set_gaps.py jud` is at **18** (118 → 73 → 51 → 26 → 18); `sets::jud` ships
-103 cards across four waves (tests in `classic_sets/jud`): the white
-Nomad/Cleric shell, the Threshold bodies, the Dwarf tribe, the Phantom cycle
-(damage traded for +1/+1 counters), the four Advocates, the Wormfang hostage
-cycle, Worldgorger Dragon, Mirari's Wake and the punisher rares.
-
-Primitives it shipped: `StaticEffect::PreventDamageByRemovingCounters.single`
-(one counter per damage *event*, the Phantoms — Polukranos still sheds one per
-point); `Effect::AnyPlayerMayTakeDamageElse` (the punisher shape — Book
-Burning, Breaking Point, Dwarven Driller, Dwarven Scorcher);
-`Effect::ExchangeGraveyardAndLibrary` (Morality Shift).
-
-Still open, and why:
-- **The five Wishes** (Burning / Cunning / Golden / Living / Death) need the
-  "outside the game" sideboard zone — the Tier-10 ⏳ roadmap item.
-- **Riftstone Portal, Shaman's Trance, Spelljack** need play-from-another-zone
-  permissions the engine grants only via `MayPlayPermission` on a specific
-  card.
-- **Cephalid Constable** — "return up to that many target permanents that
-  player controls" was built and reverted: `MoveChosen` off a
-  `ControlledBy { DefendingPlayer }` set inside a combat-damage trigger
-  returned nothing, and the cause wasn't isolated. Needs a debugging pass.
-- **Sutured Ghoul** (CDA from exiled creature cards), **Scalpelexis**
-  (repeat-while-duplicate exile), **Soulgorger Orgg** (remember the life
-  lost), **Web of Inertia** / **Mist of Stagnation** / **Telekinetic Bonds** /
-  **Planar Chaos** / **Grave Consequences** / **Prismatic Strands** each need
-  one new primitive.
+`set_gaps.py jud` is at **0** (`sets::jud`/`jud2`, tests in
+`classic_sets/jud`).
 
 ## Odyssey — closed
 

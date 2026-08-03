@@ -365,20 +365,24 @@ impl GameState {
                 }
                 if first_draw_skip || skips_draw_step || charged_skip {
                 } else {
-                    let p = self.active_player_idx;
-                    // CR 504.1 — the turn-based draw-step draw is exempt from
-                    // Notion Thief's redirect ("except the first one they draw").
-                    self.in_turn_based_draw = true;
-                    let drew = self.draw_one(p, &mut events);
-                    self.in_turn_based_draw = false;
-                    if !drew {
-                        // CR 104.3c (or the Lab-Man win override). Game-over
-                        // check happens inside SBA.
-                        self.lose_to_empty_draw(p);
-                        let mut sba = self.check_state_based_actions();
-                        events.append(&mut sba);
-                        if self.is_game_over() {
-                            return Ok(events);
+                    // CR 805.4b / 805.6a — each player on the active team
+                    // draws, in seat order. A singleton team is just the
+                    // active player.
+                    for p in self.active_team_members() {
+                        // CR 504.1 — the turn-based draw-step draw is exempt from
+                        // Notion Thief's redirect ("except the first one they draw").
+                        self.in_turn_based_draw = true;
+                        let drew = self.draw_one(p, &mut events);
+                        self.in_turn_based_draw = false;
+                        if !drew {
+                            // CR 104.3c (or the Lab-Man win override). Game-over
+                            // check happens inside SBA.
+                            self.lose_to_empty_draw(p);
+                            let mut sba = self.check_state_based_actions();
+                            events.append(&mut sba);
+                            if self.is_game_over() {
+                                return Ok(events);
+                            }
                         }
                     }
                 }

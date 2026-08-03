@@ -1072,6 +1072,11 @@ pub enum Keyword {
     /// the counters ride an ETB trigger (`shortcut::bloodthirst`).
     Bloodthirst(u32),
     Banding,
+    /// CR 702.22d/j — "bands with other [quality]". Creatures matching the
+    /// quality may attack as a band as long as one of them has this ability,
+    /// and the defending player divides the damage of a creature blocked by
+    /// two or more of them (Adventurers' Guildhouse, Master of the Hunt).
+    BandsWithOther(Box<SelectionRequirement>),
     Equip(crate::mana::ManaCost),
     /// CR 702.151 — Reconfigure [cost]. An Equipment-creature attaches to a
     /// creature you control (or unattaches) for this cost at sorcery speed,

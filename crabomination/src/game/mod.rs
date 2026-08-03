@@ -862,6 +862,10 @@ pub struct GameState {
     /// Read by `PlayerRef::AcceptingPlayer`; saved/restored around the branch.
     #[serde(skip)]
     pub accepting_player: Option<usize>,
+    /// CR 805 — the shared team turns option: teams take turns rather than
+    /// players. Set by `apply_format` for Two-Headed Giant.
+    #[serde(default)]
+    pub shared_team_turns: bool,
     /// Transient: seats that sacrificed at least one permanent during the
     /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
@@ -1776,6 +1780,7 @@ impl Clone for GameState {
             nonland_cards_exiled_this_effect: self.nonland_cards_exiled_this_effect,
             countered_spell_controller: self.countered_spell_controller,
             accepting_player: self.accepting_player,
+            shared_team_turns: self.shared_team_turns,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             cards_sacrificed_this_resolution: self.cards_sacrificed_this_resolution.clone(),
             chosen_creature_type_scratch: self.chosen_creature_type_scratch,
@@ -2058,6 +2063,7 @@ impl GameState {
             nonland_cards_exiled_this_effect: 0,
             countered_spell_controller: None,
             accepting_player: None,
+            shared_team_turns: false,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             cards_sacrificed_this_resolution: Vec::new(),
             chosen_creature_type_scratch: None,
@@ -2521,6 +2527,8 @@ impl GameState {
         // trailing odd seat as a singleton (silly setup, but keeps
         // the helper total — the caller likely wants `assign_teams`).
         if matches!(format, crate::format::Format::TwoHeadedGiant) {
+            // CR 805.1 — 2HG always uses the shared team turns option.
+            self.shared_team_turns = true;
             let n = self.players.len();
             let mut partitions: Vec<Vec<usize>> = Vec::new();
             let mut i = 0;
@@ -2638,6 +2646,29 @@ impl GameState {
     /// own teammate (returns true for `a == b`).
     pub fn same_team(&self, a: usize, b: usize) -> bool {
         self.team_of(a) == self.team_of(b)
+    }
+
+    /// CR 805.4a — the seats on the active team, in seat order. Just the
+    /// active player outside the shared-team-turns option.
+    pub fn active_team_members(&self) -> Vec<usize> {
+        if !self.shared_team_turns {
+            return vec![self.active_player_idx];
+        }
+        let mut seats = vec![self.active_player_idx];
+        seats.extend(self.teammates(self.active_player_idx));
+        seats.sort_unstable();
+        seats
+    }
+
+    /// CR 805.4a / 805.5a — is `seat` on the active team? Under the shared
+    /// team turns option a teammate acts on the team's turn, so this (rather
+    /// than `active_player_idx == seat`) gates sorcery-speed timing.
+    pub fn on_active_team(&self, seat: usize) -> bool {
+        if self.shared_team_turns {
+            self.same_team(self.active_player_idx, seat)
+        } else {
+            self.active_player_idx == seat
+        }
     }
 
     // ── Life total helpers (Phase F) ──────────────────────────────────────
@@ -9690,7 +9721,9 @@ impl GameState {
     pub fn can_cast_sorcery_speed(&self, player: usize) -> bool {
         self.stack.is_empty()
             && self.step.is_main_phase()
-            && self.active_player_idx == player
+            // CR 805.5a — under shared team turns a teammate acts on the
+            // team's turn (and so gets their own land drop, CR 805.4c).
+            && self.on_active_team(player)
             && self.priority.player_with_priority == player
     }
 

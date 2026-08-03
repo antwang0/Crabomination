@@ -147,6 +147,7 @@ pub use sets::stx::*;
 pub use sets::thb::*;
 pub use sets::jud2::*;
 pub use sets::lgn::*;
+pub use sets::leg::*;
 pub use sets::mbs::*;
 pub use sets::scg::*;
 pub use sets::scg2::*;

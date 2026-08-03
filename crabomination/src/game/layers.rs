@@ -569,7 +569,19 @@ fn compute_permanent_pass(
 
     // Until-EOT keyword removals (Shadowspear) apply last — the removal's
     // timestamp is by construction later than any static grant this turn.
-    keywords.retain(|k| !card.removed_keywords_eot.contains(k) && !card.removed_keywords.contains(k));
+    // CR 702.22 — "loses all 'bands with other' abilities" (Shelkin Brownie,
+    // Tolaria) can't name a payload, so a removal of `BandsWithOther` strips
+    // every instance whatever its quality.
+    let removes_all_bands = card
+        .removed_keywords_eot
+        .iter()
+        .chain(&card.removed_keywords)
+        .any(|k| matches!(k, Keyword::BandsWithOther(_)));
+    keywords.retain(|k| {
+        !card.removed_keywords_eot.contains(k)
+            && !card.removed_keywords.contains(k)
+            && !(removes_all_bands && matches!(k, Keyword::BandsWithOther(_)))
+    });
     // CR 113.11 — "can't have or gain" beats any grant, whatever its
     // timestamp (Archetype of Courage vs. a later first-strike anthem).
     keywords.retain(|k| !cant_have_keywords.contains(k));
