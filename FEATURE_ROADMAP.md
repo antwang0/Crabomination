@@ -1985,7 +1985,9 @@ Each unblocks a large swath of cards.
 - 🟡 **Face-down permanents** (708) — `face_up_def` stashes the real card; Manifest
   / ManifestDread + `TurnFaceUp`; Morph/Megamorph cast-face-down ✅. Remaining:
   Disguise/Cloak edge cases (both core paths ship — see Tier 4).
-- ⏳ **Ante / conspiracy / dungeon / sticker / attraction** zones (novelty only).
+- 🟡 **Ante / conspiracy / sticker / attraction** zones. Ante ✅ (CR 407 — see
+  "Recently closed"); dungeons ✅ (CR 309). Remaining: conspiracy, sticker,
+  attraction.
 - ✅ **Emblems** as command-zone objects — `Player.emblems` + `CreateEmblem`,
   carrying both triggered and **static (anthem) abilities** (Vivien Reid's −8;
   synthesized into continuous effects in `gather_continuous_effects`).
@@ -2451,8 +2453,8 @@ Each a small targeted feature; sweep batch by batch.
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged** and **New Phyrexia** (the Scars block
-   is closed) are all at zero. **Legends** is open at 179 after three waves
-   (98 cards, `sets::leg`, `sets::leg2`).
+   is closed) are all at zero. **Legends** is open at 64 after five waves
+   (209 cards, `sets::leg`–`leg4`).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2468,47 +2470,36 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Recently closed (this push)
 
-- **Mirrodin Besieged (MBS) closed** — `set_gaps.py mbs` 98 → 0 (`sets::mbs`,
-  98 cards). New across the two waves: `Effect::MatchingCantBlockThisTurn`
-  (CR 509.1b), `CardDefinition.equip_sacrifice_filter`, a `kind` on
-  `StaticEffect::ReplaceDamageToSelfWithCounters` (CR 614, shrink as well as
-  grow), `Effect::AnyPlayerMayAccept` + `PlayerRef::AcceptingPlayer` (the
-  general punisher/offer shape, replacing `AnyPlayerMayTakeDamageElse`),
-  `Effect::KnowledgePool`, `StaticEffect::HasActivatedAbilitiesOfExiledWithSelf`
-  and `SelectionRequirement::SameNameAsAPermanent`. Correctness: a search into
-  `ZoneDest::ExileWithSourceStamp` now stamps `exiled_with`, and
-  `Selector::MatchingAmong` filters cards outside the battlefield instead of
-  dropping them.
+- **CR 407 ante zone** — `Zone::Ante`, `Player.ante`, `ZoneDest::Ante`,
+  `GameState.playing_for_ante`, `begin_ante_game` (407.2 opening ante) and
+  `award_ante_to` (the winner takes the zone, fired from the game-over SBA).
+  `CardDefinition.ante_only` + `DeckError::AnteCardOutsideAnteGame` enforce
+  407.3. New effects: `AnteTopOfLibrary` (optional, per-player then/else),
+  `Ante`, `AnteToGraveyard`, `TakeAnteCardForLibraryTop`, `ExchangeOwnership`
+  (407.3 — the only rules-legal ownership change) and `PlayerMayPayLifeElse`.
+  `sets::ante` ships all nine printed ante cards. Tests in
+  `core_rules/cr_recent72`.
 
-- **CR 805 shared team turns** — `GameState.shared_team_turns` (set by
-  `apply_format` for Two-Headed Giant) makes the draw step draw for every
-  member of the active team (805.4b) and lets a teammate act at sorcery speed,
-  and so play their own land, on the team's turn (805.4c/805.5a).
+- **CR 615 blocked-creature prevention** — `StaticEffect::
+  PreventAllDamageToThisFromBlocked` sits in `apply_prevention_shields`, not
+  the combat resolver, so a blocked attacker's noncombat damage is prevented
+  too (Wall of Vapor, Wall of Shadows).
 
+- **Legends opened wide** — `set_gaps.py leg` 179 → 64 across `sets::leg3`
+  (Walls, the mana batteries, the plain legends, the one-line spells) and
+  `sets::leg4` (the Elder Dragon cycle, the Glyph cycle, the utility
+  artifacts). New primitives:
+  `Selector::CreaturesBlockedByThisTurn` (the target-scoped twin of
+  `CreaturesBlockedBySourceThisTurn` — the whole Glyph cycle),
+  `Keyword::{CantBeTargetedByAuras, LegendaryLandwalk}`,
+  `Effect::MaySpendManaAsAnyColorThisTurn` with the seat-aware
+  `relax_cost_colors_for` (North Star), and
+  `CounterType::{MinusZeroMinusTwo, Glyph, Sleep, Matrix, Hatchling}`.
 
-- **New Phyrexia (NPH) closed** — `set_gaps.py nph` 2 → 0, closing the Scars
-  block. **CR 106.6b mana provenance**: `ManaPool` carries a per-bucket
-  `creature` counter tagged from the pool delta of any creature's mana ability
-  (printed, granted or intrinsic); `CardDefinition::spend_only_creature_mana` →
-  `SpellKind::creature_mana_only` routes payment through `pay_creature_only`
-  and runs auto-tap with a creature-source filter (Myr Superion). **CR 613
-  granted Equipment**: `StaticEffect::ArtifactsAreEquipment` +
-  `Modification::AddArtifactSubtype` compute the subtype, the equip {X} cost
-  and the "+X/+0" bonus per artifact rather than reading `equipped_bonus`
-  (Bludgeon Brawl).
-
-- **CR 314 / 900 / 904 Archenemy** — `CardType::Scheme`, `Supertype::Ongoing`,
-  a per-seat `scheme_deck`, `Format::Archenemy` and
-  `GameState::seat_archenemy` (40 life + the first turn). Setting a scheme in
-  motion is a turn-based action at the archenemy's precombat main (CR 904.9);
-  the finished-scheme sweep is an SBA (CR 904.10); `Effect::AbandonThisScheme`
-  covers CR 701.33. A face-up scheme's statics and step triggers function from
-  the command zone (CR 904.8). `sets::arc` ships eight schemes.
-
-- **CR 509.1b landwalk hosers** — `StaticEffect::LandwalkIgnored(LandType)`
-  blanks one landwalk flavor for every attacker, and `Effect::LoseAllLandwalk`
-  sheds every landwalk variant at once where `LoseKeyword`'s exact match can't
-  (Hammerheim).
+- **Client / server** — a `StatChipKind::Ante` chip surfaces the new zone,
+  the CR 609.4b any-colour chip is now seat-aware, and `CRAB_DECK_FORMAT`
+  picks the construction format decklists are validated against (was
+  hard-coded Modern).
 
 Only this push's entries are listed; earlier pushes are in `git log -p --
 FEATURE_ROADMAP.md`.

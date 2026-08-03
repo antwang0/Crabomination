@@ -75,9 +75,6 @@ Prison Barricade's kicked defender bypass is wired.
 
 ### Noticed this run (Odyssey wave) — not tackled
 
-- **`MagicCompRules_20260417.txt` is not in the repo.** The CR audit sections
-  below were maintained against a local copy; re-add it (or vendor a pinned
-  copy) before the next rules sweep.
 - **Interactive bodies inside a pile split** (carried forward): park the split
   result in the resume context, or debug-assert against a suspending body.
 - **CR 605.3c** — "once a player begins to activate a mana ability, it can't be
@@ -187,21 +184,38 @@ general "any player may …, if no one does …" shape, with
 
 ## Legends — opened
 
-`set_gaps.py leg` is at **179** (277 → 268 → 238 → 232 → 179; `sets::leg`,
-`sets::leg2`, 98 cards, tests in `classic_sets/leg`, `leg2`). Wave 1 exercises
-CR 702.22's "bands with other [quality]" (`Keyword::BandsWithOther`); wave 2
-added the plain bodies and one-line spells; wave 3 added the colour-shift
-cycle and Transmutation, then the landwalk hosers, the utility legends and the
-vanillas. New primitives in wave 3: `Effect::SwitchPowerToughness` (CR 613
-layer 7d), `StaticEffect::LandwalkIgnored(LandType)` (CR 509.1b — six cards)
-and `Effect::LoseAllLandwalk` (Hammerheim). Arena of the Ancients rode the
-existing `StaticEffect::PreventUntap { EachPermanent(..) }` and Indestructible
-Aura rode `Effect::PreventAllDamageThisTurn` — the old "blocked on a
-primitive" note for both was stale.
+`set_gaps.py leg` is at **64** (277 → 268 → 238 → 232 → 179 → 120 → 64;
+`sets::leg`–`leg4`, 209 cards, tests in `classic_sets/leg`–`leg4`). Waves 1–3
+covered CR 702.22 "bands with other", the plain bodies, the colour-shift cycle,
+the landwalk hosers and the vanillas. Wave 4 added the Walls, the mana-battery
+cycle, the plain legends and the one-line spells; wave 5 added the Elder Dragon
+cycle, the Glyph cycle and the utility artifacts. New primitives across 4/5:
+`StaticEffect::PreventAllDamageToThisFromBlocked`,
+`Selector::CreaturesBlockedByThisTurn`,
+`Keyword::{CantBeTargetedByAuras, LegendaryLandwalk}`,
+`Effect::MaySpendManaAsAnyColorThisTurn` (+ `relax_cost_colors_for`) and
+`CounterType::{MinusZeroMinusTwo, Glyph, Sleep, Matrix, Hatchling}`.
 
 Recurring blockers in what's left: "attach target Aura to another permanent"
 (Enchantment Alteration), damage-tally reads for Blazing Effigy / Backdraft,
-and the Glyph cycle's "creatures blocked by target Wall this turn" retrospect.
+"change base P/T to that of another creature" (Halfdane, Brine Hag, Sentinel),
+and the ante-adjacent oddities (Falling Star's dexterity clause).
+
+### Noticed but not tackled (wave 4/5)
+
+- **Wall of Shadows' "can't be the target of spells that can target only
+  Walls"** has no engine analog — there is no "this filter is Wall-only"
+  introspection on a spell's target filter.
+- **North Star is modelled as a whole-turn permission**, not the printed "for
+  one spell this turn"; nothing tracks "the next spell you cast" for a spend
+  permission yet.
+- **Imprison** ships only its can't-attack / can't-block halves; the printed
+  "pay {1} or destroy this Aura" clauses need a repeated pay-or-else rider on
+  someone else's activation.
+- **Hellfire's self-damage reads the turn's death tally**, not the sweep's own
+  count — there is no `Value::CreaturesDiedThisResolution`.
+- **Bronze Tablet folds its self-exile into a sacrifice**; the printed
+  exile-both-then-swap needs a two-object exile with a linked return.
 
 ## New Phyrexia — closed
 
@@ -4882,6 +4896,16 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired
+- ✅ **CR 407 — Ante** — `Zone::Ante` + `Player.ante` + `ZoneDest::Ante`;
+  `GameState::begin_ante_game` does the 407.2 opening ante and
+  `award_ante_to` the winner-takes-all (fired from the game-over SBA).
+  407.3's "remove this card from your deck" rides
+  `CardDefinition.ante_only` → `DeckError::AnteCardOutsideAnteGame`, and
+  `Effect::ExchangeOwnership` is the only ownership change in the engine.
+  All nine printed ante cards ship in `sets::ante`; tests
+  `core_rules/cr_recent72::cr_407_*`. ⏳ residual: Darkpact picks the first
+  ante card rather than targeting one, and Bronze Tablet folds its
+  exile-both into a sacrifice.
 - ✅ **CR 211 / 212 / 313 / 902 — Vanguard** — `CardType::Vanguard` +
   `CardDefinition.{hand_modifier, life_modifier}`; `GameState::seat_vanguard`
   seats the avatar in the command zone and applies both modifiers (and its
@@ -4904,6 +4928,11 @@ picking an item up.
   gate the SBA loss loop, `lose_to_empty_draw`, and the WinGame/LoseGame/
   PayOrLoseGame effects; Worship rides the same floor
   (`DamageWontReduceControllerLifeBelowOne`). `tests/recent109.rs`.
+- ✅ **CR 615 — blocked-creature prevention** —
+  `StaticEffect::PreventAllDamageToThisFromBlocked` lives in
+  `apply_prevention_shields`, so it covers noncombat damage from a blocked
+  attacker too (Wall of Vapor, Wall of Shadows;
+  `cr_615_blocker_prevents_damage_from_the_creature_it_blocks`).
 - ✅ **CR 113.11 — "can't have or gain [keyword]"** —
   `Modification::CantHaveKeyword` strips after every grant regardless of
   timestamp (the Theros Archetype cycle; `cr_113_11_*`).
@@ -5520,23 +5549,26 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **`Value::CreaturesDiedThisResolution`** — a resolution-scoped death tally
+  so a sweeper can bill its caster for its own kills (Hellfire). The turn-wide
+  `CreaturesDiedThisTurn` over-counts on a busy turn.
+- ⏳ **"Change base P/T to that of another creature"** — Halfdane, Brine Hag
+  and Sentinel each want an indefinite layer-7b set that *reads* another
+  permanent's live P/T at resolution. `Effect::SetBasePT` takes `Value`s, so
+  this is a `Value::PowerOf`/`ToughnessOf` snapshot problem, not a new layer.
+- ⏳ **"Attach target Aura to another permanent"** (Enchantment Alteration).
+  `Effect::Attach` moves the *source*; there is no re-attach of an arbitrary
+  targeted Aura.
+- ⏳ **A "next spell only" spend permission.** North Star grants CR 609.4b for
+  the whole turn (`Player.may_spend_any_color_this_turn`); the printed card
+  scopes it to one spell.
+
 - ✅ ~~**Onslaught's last 4 gaps**~~ — shipped (`sets::ons4`); `set_gaps.py ons`
   is at zero. Each landed its primitive: `Effect::ReplaceCreatureTypeText`,
   `Keyword::DividesCombatDamageAmongDefenders`, `Effect::EachPlayerChoosesNumberHighestLoses`,
   and `GameEvent::ControlChanged` + `EventKind::GainedControlOfThis`.
-- ⏳ **Legions is at 9 gaps** (`set_gaps.py lgn`). Three waves shipped 112
-  cards (`sets::lgn`). Each remaining card wants one primitive: Dermoplasm
-  (put a morph card from hand onto the battlefield, bouncing itself), Planar
-  Guide (exile all creatures, return at the next end step), Dark Supplicant
-  (three-zone search for a specific card name), Goblin Assassin (each player
-  flips; each tails sacrifices), Hollow Specter (pay {X}, they reveal X, you
-  choose one to discard), Riptide Mangler (indefinite base-power copy), Beacon
-  of Destiny (redirect the next damage to you onto this creature), Goblin Goon
-  (attack/block gated on out-creaturing the other side), Whipgrass Entangler
-  (a Cleric-scaled per-creature attack/block tax).
-- ⏳ **"Bands with other" (CR 702.22b)** is unimplemented. Plain attacking
-  bands ship (`DeclareAttackersBanded`); the quality-scoped variant needs a
-  second keyword and a widened legality check in `declare_attackers_banded`.
+- ⏳ **Legends is at 64 gaps** (`set_gaps.py leg`). Five waves shipped 209
+  cards; see "Legends — opened" above for what's left and why.
 - ⏳ **The client can't declare attacking bands.** The engine action
   (`GameAction::DeclareAttackersBanded`) and the `ClientView.attack_bands`
   read-back ship, and the tooltip names a creature's bandmates, but the
