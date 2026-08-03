@@ -3886,6 +3886,9 @@ pub enum DynamicPt {
     /// Power = toughness = the number of creatures on the battlefield, any
     /// controller. Beast of Burden.
     AllCreaturesOnBattlefield,
+    /// "Power and toughness are each equal to the total mana value of other
+    /// creatures you control" (Ancient Ooze).
+    TotalManaValueOfOtherControlledCreatures,
     /// Power = toughness = the total number of cards in ALL players' hands.
     /// Multani, Maro-Sorcerer.
     AllPlayersHandTotal,

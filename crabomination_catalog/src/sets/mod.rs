@@ -407,6 +407,7 @@ pub mod rav;
 pub mod rna;
 pub mod rna2;
 pub mod rtr;
+pub mod scg;
 pub mod shm;
 pub mod sos;
 pub mod stx;

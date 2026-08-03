@@ -4657,6 +4657,10 @@ pub enum Effect {
     /// (Gift of Immortality's end-step re-attach). No-op if the source isn't
     /// in a graveyard or the target isn't a battlefield permanent.
     ReturnSelfAttachedToTarget,
+    /// "Return this card from your graveyard to the battlefield attached to
+    /// that creature" — the trigger-source sibling of
+    /// [`Effect::ReturnSelfAttachedToTarget`] (the Scourge Dragon Auras).
+    ReturnSelfAttachedToTrigger,
     /// "Its controller chooses a creature they don't control. Return this card
     /// from its owner's graveyard to the battlefield attached to that
     /// creature" (Necrotic Plague). `chooser` picks; the pool is every creature

@@ -25340,16 +25340,20 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ReturnSelfAttachedToTarget => {
+            Effect::ReturnSelfAttachedToTarget | Effect::ReturnSelfAttachedToTrigger => {
                 // Gift of Immortality — return the source from its owner's
-                // graveyard attached to the slot-0 target.
+                // graveyard attached to the slot-0 target; the Scourge Dragon
+                // Auras attach to the creature that triggered them instead.
                 let Some(src) = ctx.source else { return Ok(()) };
-                let Some(host) = ctx.targets.first().and_then(|t| match t {
-                    Target::Permanent(id) => Some(*id),
-                    Target::Player(_) => None,
-                }) else {
-                    return Ok(());
+                let host = if matches!(effect, Effect::ReturnSelfAttachedToTrigger) {
+                    ctx.trigger_source.and_then(|e| e.as_permanent_id())
+                } else {
+                    ctx.targets.first().and_then(|t| match t {
+                        Target::Permanent(id) => Some(*id),
+                        Target::Player(_) => None,
+                    })
                 };
+                let Some(host) = host else { return Ok(()) };
                 if self.battlefield_find(host).is_none() {
                     return Ok(());
                 }

@@ -4589,8 +4589,18 @@ impl GameState {
                 Keyword::Morph(mc) | Keyword::Megamorph(mc) | Keyword::Disguise(mc) => Some(mc.clone()),
                 _ => None,
             });
+            // CR 702.36b — Exiled Doomsayer taxes every turn-up cost.
+            let morph_tax: u32 = self
+                .battlefield
+                .iter()
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .filter_map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::MorphCostsMore { amount } => Some(amount),
+                    _ => None,
+                })
+                .sum();
             match morph_cost {
-                Some(mc) => mc.with_x_value(x_value),
+                Some(mc) => mc.with_x_value(x_value).plus_generic(morph_tax),
                 None if real.is_creature() => real.cost.clone(),
                 // A face-down noncreature (manifested land/spell) can't be
                 // turned face up.

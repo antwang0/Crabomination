@@ -1107,6 +1107,12 @@ pub enum StaticEffect {
     /// on both damage funnels. Wrap in `WhileYourTurn` for turn-gated
     /// protection (Gideon Blackblade during your turn).
     PreventAllDamageToThis,
+    /// CR 702.29 — "Players can't cycle cards" (Stabilizer). Checked in
+    /// `cycle_card` before any cost is paid.
+    PlayersCantCycle,
+    /// CR 702.36b — "All morph costs cost {amount} more" (Exiled Doomsayer).
+    /// Applies to the turn-face-up cost, not to casting a card face down.
+    MorphCostsMore { amount: u32 },
     /// CR 615 — "If a source would deal `max` or less damage to this creature,
     /// prevent that damage" (Callous Giant). Per-event, all-or-nothing: a
     /// larger event is unaffected.

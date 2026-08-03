@@ -8037,6 +8037,19 @@ impl GameState {
                     }).count() as i32;
                     (n, base_t)
                 }
+                crate::card::DynamicPt::TotalManaValueOfOtherControlledCreatures => {
+                    let n: i32 = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.id != card.id
+                                && c.controller == card.controller
+                                && c.definition.is_creature()
+                        })
+                        .map(|c| c.definition.cost.cmc() as i32)
+                        .sum();
+                    (n, n)
+                }
                 crate::card::DynamicPt::AllCreaturesOnBattlefield => {
                     let n = self.battlefield.iter()
                         .filter(|c| c.definition.is_creature()).count() as i32;
@@ -11236,6 +11249,15 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Keyword;
         let seat = self.player_with_priority();
+        // CR 702.29 — Stabilizer shuts cycling off for everyone.
+        if self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::PlayersCantCycle))
+        }) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
         // Locate the card in `seat`'s hand and clone the cycling cost —
         // mana (`Cycling`) or life ("Cycling—Pay 2 life", `CyclingLife`).
         let (cycling_cost, life_cost) = self.players[seat]
@@ -17979,6 +18001,8 @@ fn static_effect_to_effects(
             | StaticEffect::PreventAllCombatDamageToAttached
             | StaticEffect::PreventAllCombatDamageToAndFromEnchanted
             | StaticEffect::PreventAllDamageToThis
+            | StaticEffect::PlayersCantCycle
+            | StaticEffect::MorphCostsMore { .. }
             | StaticEffect::PreventSmallDamageToThis { .. }
             | StaticEffect::CapLargeDamage { .. }
             | StaticEffect::PreventAllCombatDamageToThisFromBlockers

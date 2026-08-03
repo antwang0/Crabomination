@@ -325,6 +325,17 @@ impl ManaCost {
         }
     }
 
+    /// Return a copy of this cost with `n` more generic pips — the CR 601.2f
+    /// cost increases (Exiled Doomsayer's morph tax). `n == 0` is a no-op.
+    pub fn plus_generic(&self, n: u32) -> ManaCost {
+        if n == 0 {
+            return self.clone();
+        }
+        let mut symbols = self.symbols.clone();
+        symbols.push(ManaSymbol::Generic(n));
+        ManaCost { symbols }
+    }
+
     /// `with_x_value`, but each point of X becomes a coloured pip of `color`
     /// — CR 601.2g's "spend only [colour] mana on X" (Atalya, Samite Master).
     pub fn with_x_value_colored(&self, x_value: u32, color: Color) -> ManaCost {

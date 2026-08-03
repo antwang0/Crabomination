@@ -305,6 +305,7 @@ impl Effect {
             | Effect::DoubleYourSourcesDamageThisTurn
             | Effect::ReturnSelfTransformedAttached
             | Effect::ReturnSelfAttachedToTarget
+            | Effect::ReturnSelfAttachedToTrigger
             | Effect::ReturnSelfAttachedToChoiceOf { .. }
             | Effect::EachPlayerNamesCard { .. }
             | Effect::EachPlayerRevealTopKeepIfNamed { .. }
