@@ -18287,6 +18287,8 @@ fn static_effect_to_effects(
             | StaticEffect::RedirectChosenColorSpellDamageToController
             | StaticEffect::CantCastSharingColorWithLastCastSpell
             | StaticEffect::PermanentsDontUntap
+            // Consulted directly in the block-legality walk, not a layer effect.
+            | StaticEffect::LandwalkIgnored(_)
             | StaticEffect::GrantActivatedAbilityFromGraveyard { .. }
             // Gated at their action dispatch (`can_player_play_land`,
             // the convoke cast path); no layer effect.

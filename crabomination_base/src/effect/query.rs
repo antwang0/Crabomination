@@ -965,7 +965,9 @@ impl Effect {
             Effect::SetBasePower { what, power, .. } => {
                 sel_has_target(what) || value_has_target(power)
             }
-            Effect::LoseKeyword { what, .. } => sel_has_target(what),
+            Effect::LoseKeyword { what, .. } | Effect::LoseAllLandwalk { what, .. } => {
+                sel_has_target(what)
+            }
             Effect::SkipNextUntap { what } => sel_has_target(what),
             Effect::SkipPlayerUntapStep { player } => player_has_target(player),
             Effect::LandsDontUntapNextUntapStep { who }
@@ -1665,6 +1667,7 @@ impl Effect {
             | Effect::Flip { what }
             | Effect::LoseAllAbilities { what, .. }
             | Effect::LoseKeyword { what, .. }
+            | Effect::LoseAllLandwalk { what, .. }
             | Effect::SkipNextUntap { what }
             | Effect::GrantTriggeredAbility { what, .. }
             | Effect::GainActivatedAbility { what, .. }
@@ -3087,6 +3090,7 @@ impl Effect {
                 | Effect::Flip { what }
                 | Effect::LoseAllAbilities { what, .. }
                 | Effect::LoseKeyword { what, .. }
+                | Effect::LoseAllLandwalk { what, .. }
                 | Effect::SkipNextUntap { what }
                 | Effect::GrantTriggeredAbility { what, .. }
                 | Effect::GainActivatedAbility { what, .. }

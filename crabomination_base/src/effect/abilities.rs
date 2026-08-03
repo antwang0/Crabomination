@@ -2442,6 +2442,11 @@ pub enum StaticEffect {
     /// CR 502.4 — "Permanents don't untap during their controllers' untap
     /// steps" (Mist of Stagnation). Global; skips every seat's untap step.
     PermanentsDontUntap,
+    /// CR 509.1b — "Creatures with [type]walk can be blocked as though they
+    /// didn't have [type]walk" (Great Wall, Deadfall, Quagmire, Crevasse,
+    /// Gosta Dirk, Lord Magnus). Global; blanks that one landwalk flavor for
+    /// every player's attackers.
+    LandwalkIgnored(crate::card::LandType),
     /// Like `GrantActivatedAbility`, but the granting card is active from its
     /// owner's **graveyard** rather than the battlefield ("as long as this card
     /// is in your graveyard, lands you control have …" — Riftstone Portal).

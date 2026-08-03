@@ -1393,6 +1393,9 @@ impl GameState {
             for kw in kws_of(attacker_id) {
                 if let Keyword::Landwalk(lt) = kw
                     && self.defender_controls_land_type(defender_idx, lt)
+                    // CR 509.1b — Great Wall / Deadfall / Quagmire / Crevasse
+                    // / Gosta Dirk / Lord Magnus blank one landwalk flavor.
+                    && !self.landwalk_ignored(*lt)
                 {
                     return Err(GameError::CannotBlock(blocker_id));
                 }
@@ -2123,6 +2126,16 @@ impl GameState {
         self.battlefield.iter().any(|c| {
             c.controller == defender && c.definition.has_land_type(*lt)
         })
+    }
+
+    /// CR 509.1b — is this landwalk flavor blanked for everyone by a
+    /// `LandwalkIgnored` static in play (Great Wall, Deadfall, Quagmire,
+    /// Crevasse, Gosta Dirk, Lord Magnus)?
+    pub(crate) fn landwalk_ignored(&self, lt: crate::card::LandType) -> bool {
+        self.battlefield
+            .iter()
+            .flat_map(|c| &c.definition.static_abilities)
+            .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::LandwalkIgnored(t) if t == lt))
     }
 
     /// CR 510.1c — build the `Decision::CombatDamageOrder` asking the

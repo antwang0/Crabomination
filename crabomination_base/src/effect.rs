@@ -5165,6 +5165,10 @@ pub enum Effect {
     /// Shadowspear's "lose hexproof and indestructible until end of turn";
     /// `Duration::Permanent` is the indefinite loss (Ageless Sentinels).
     LoseKeyword { what: Selector, keyword: Keyword, duration: Duration },
+    /// CR 702.15 — "Target creature loses all landwalk abilities" (Hammerheim).
+    /// Layer-6 removal of every landwalk variant at once, which
+    /// `LoseKeyword`'s exact match can't express.
+    LoseAllLandwalk { what: Selector, duration: Duration },
     /// Each permanent picked by `what` doesn't untap during its
     /// controller's next untap step (Vorinclex's land lock, Exert-style
     /// `skip_next_untap` flag).

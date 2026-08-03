@@ -11669,6 +11669,41 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 702.15 — Hammerheim. Enumerate the permanent's *computed*
+            // landwalk keywords (printed or granted) and shed each one.
+            Effect::LoseAllLandwalk { what, duration } => {
+                let indefinite = matches!(duration, Duration::Permanent);
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let walks: Vec<crate::card::Keyword> = self
+                        .computed_permanent(cid)
+                        .map(|cp| cp.keywords)
+                        .unwrap_or_default()
+                        .into_iter()
+                        .filter(|k| {
+                            matches!(
+                                k,
+                                crate::card::Keyword::Landwalk(_)
+                                    | crate::card::Keyword::LandwalkFiltered(_)
+                                    | crate::card::Keyword::DomainLandwalk
+                            )
+                        })
+                        .collect();
+                    let Some(c) = self.battlefield_find_mut(cid) else { continue };
+                    let list = if indefinite {
+                        &mut c.removed_keywords
+                    } else {
+                        &mut c.removed_keywords_eot
+                    };
+                    for kw in walks {
+                        if !list.contains(&kw) {
+                            list.push(kw);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SkipNextUntap { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()

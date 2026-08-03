@@ -382,6 +382,9 @@ pub enum CounterType {
     Mine,
     /// Shred counter — Cephalid Vandal's self-milling upkeep tally.
     Shred,
+    /// Carrion counter — Osai Vultures' end-step tally of dead creatures;
+    /// remove two to pump.
+    Carrion,
     /// Delay counter — Delaying Shield banks damage dealt to its controller
     /// here and cashes it in at upkeep.
     Delay,

@@ -187,18 +187,21 @@ general "any player may …, if no one does …" shape, with
 
 ## Legends — opened
 
-`set_gaps.py leg` is at **232** (277 → 268 → 238 → 232; `sets::leg`,
-45 cards, tests in `classic_sets/leg`). Wave 1 exists to exercise CR 702.22's
-"bands with other [quality]" (`Keyword::BandsWithOther`): the five legendary
-band lands, Master of the Hunt's self-banding Wolves, and the two band-hosers
-(Shelkin Brownie, Tolaria). Wave 2 added the plain bodies, the Kobold lord
-shell and the one-line spells/Auras. Wave 3 added the five-card colour-shift
-cycle (on the existing `Effect::BecomeColor`) and Transmutation, behind a new
-`Effect::SwitchPowerToughness` (CR 613 layer 7d).
+`set_gaps.py leg` is at **179** (277 → 268 → 238 → 232 → 179; `sets::leg`,
+`sets::leg2`, 98 cards, tests in `classic_sets/leg`, `leg2`). Wave 1 exercises
+CR 702.22's "bands with other [quality]" (`Keyword::BandsWithOther`); wave 2
+added the plain bodies and one-line spells; wave 3 added the colour-shift
+cycle and Transmutation, then the landwalk hosers, the utility legends and the
+vanillas. New primitives in wave 3: `Effect::SwitchPowerToughness` (CR 613
+layer 7d), `StaticEffect::LandwalkIgnored(LandType)` (CR 509.1b — six cards)
+and `Effect::LoseAllLandwalk` (Hammerheim). Arena of the Ancients rode the
+existing `StaticEffect::PreventUntap { EachPermanent(..) }` and Indestructible
+Aura rode `Effect::PreventAllDamageThisTurn` — the old "blocked on a
+primitive" note for both was stale.
 
-Recurring blockers in what's left: a filtered `PermanentsDontUntap` (Arena of
-the Ancients — the existing static is global) and a "prevent all damage to
-target creature this turn" one-shot (Indestructible Aura).
+Recurring blockers in what's left: "attach target Aura to another permanent"
+(Enchantment Alteration), damage-tally reads for Blazing Effigy / Backdraft,
+and the Glyph cycle's "creatures blocked by target Wall this turn" retrospect.
 
 ## New Phyrexia — closed
 
