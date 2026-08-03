@@ -21817,6 +21817,94 @@ impl GameState {
                 Ok(())
             }
 
+            // The general shape of `RevealUntilNonlandDamage`: the revealed
+            // nonland's mana value is published for `then` to read.
+            Effect::RevealUntilNonlandThen { then } => {
+                let p = ctx.controller;
+                let mut hit: Option<(CardId, u32)> = None;
+                let mut revealed: Vec<CardInstance> = Vec::new();
+                while !self.players[p].library.is_empty() {
+                    let card = self.players[p].library.remove(0);
+                    let is_nonland = !card.definition.is_land();
+                    if is_nonland {
+                        hit = Some((card.id, card.definition.cost.cmc()));
+                    }
+                    revealed.push(card);
+                    if is_nonland {
+                        break;
+                    }
+                }
+                {
+                    use rand::seq::SliceRandom;
+                    revealed.shuffle(&mut rand::rng());
+                }
+                for c in revealed {
+                    self.players[p].library.push(c);
+                }
+                self.last_revealed_from_hand = hit;
+                self.run_effect(then, ctx, events)
+            }
+
+            // "Choose a creature type, then …" — stamp the pick on the source
+            // so `IsSourceChosenCreatureType` resolves inside the body.
+            Effect::ChooseCreatureTypeThen { who, then } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let chooser = self.resolve_player(who, ctx).unwrap_or(ctx.controller);
+                let decision = Decision::ChooseCreatureType {
+                    excluded: Vec::new(),
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    suggestions: self.creature_type_suggestions(chooser),
+                };
+                let answer = match self.stashed_resolution_answer.take() {
+                    Some(a) => a,
+                    None if self.players[chooser].wants_ui => {
+                        self.suspend_signal = Some((
+                            decision,
+                            PendingEffectState::CreatureTypeAnswerPending,
+                            effect.clone(),
+                        ));
+                        return Ok(());
+                    }
+                    None => self.decider.decide(&decision),
+                };
+                let DecisionAnswer::CreatureType(ct) = answer else {
+                    return Err(crate::game::GameError::DecisionAnswerMismatch);
+                };
+                if let Some(sid) = ctx.source
+                    && let Some(card) = self.find_card_anywhere_mut(sid)
+                {
+                    card.chosen_creature_type = Some(ct);
+                }
+                self.chosen_creature_type_scratch = Some(ct);
+                self.chosen_creature_types_scratch = vec![ct];
+                self.run_effect(then, ctx, events)
+            }
+
+            // Harsh Mercy / Patriarch's Bidding — every seat names a type in
+            // APNAP order, then the body reads the union. Multi-seat picks go
+            // through the synchronous decider (same gap as TemptingOffer).
+            Effect::EachPlayerChoosesCreatureTypeThen { then } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let seats = self.apnap_sort((0..self.players.len()).collect());
+                let mut chosen: Vec<crate::card::CreatureType> = Vec::new();
+                for p in seats {
+                    let decision = Decision::ChooseCreatureType {
+                        excluded: Vec::new(),
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        suggestions: self.creature_type_suggestions(p),
+                    };
+                    if let DecisionAnswer::CreatureType(ct) = self.decider.decide(&decision)
+                        && !chosen.contains(&ct)
+                    {
+                        chosen.push(ct);
+                    }
+                }
+                self.chosen_creature_types_scratch = chosen;
+                let r = self.run_effect(then, ctx, events);
+                self.chosen_creature_types_scratch.clear();
+                r
+            }
+
             Effect::PayLifeLookTake { who } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
@@ -23635,9 +23723,11 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::NameCreatureType { what } => {
+            Effect::NameCreatureType { what }
+            | Effect::NameCreatureTypeBy { what, who: _ } => {
                 // Cavern of Souls "as it enters, choose a creature type".
-                // The chooser is the source's controller. Suspend with a
+                // The chooser is the source's controller unless the card
+                // names one (Callous Oppressor's opponent). Suspend with a
                 // `ChooseCreatureType` decision so a UI player can pick;
                 // bots / AutoDecider resolve synchronously.
                 use crate::decision::Decision;
@@ -23653,7 +23743,12 @@ impl GameState {
                     })
                     .or(ctx.source);
                 let Some(target_id) = candidate else { return Ok(()); };
-                let chooser = ctx.controller;
+                let chooser = match effect {
+                    Effect::NameCreatureTypeBy { who, .. } => {
+                        self.resolve_player(who, ctx).unwrap_or(ctx.controller)
+                    }
+                    _ => ctx.controller,
+                };
                 let decision = Decision::ChooseCreatureType {
                     excluded: Vec::new(),
                     source: target_id,

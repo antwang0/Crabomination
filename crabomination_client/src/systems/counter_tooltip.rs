@@ -1413,6 +1413,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Depletion => "Depletion",
         CounterType::Hourglass => "Hourglass",
         CounterType::Feather => "Feather",
+        CounterType::Gold => "Gold",
         CounterType::Winch => "Winch",
     }
 }
@@ -1471,6 +1472,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Depletion => "This land's remaining taps — it's sacrificed once the last one is spent.",
         CounterType::Hourglass => "Temporal Distortion's tap tracker — this permanent doesn't untap while it has one; its controller's upkeep clears them.",
         CounterType::Feather => "Kangee, Aerie Keeper's kicked-X counters — other Birds you control get +1/+1 for each.",
+        CounterType::Gold => "Aurification's gold counters — each creature with one is a Wall with defender.",
         CounterType::Winch => "Mercadian Lift's crank — remove X to deploy a creature with mana value X from hand.",
         CounterType::Fungus => "Sporogenesis tally — this creature mints one Saproling per counter when it dies.",
         _ => return None,

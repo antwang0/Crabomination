@@ -313,6 +313,7 @@ pub fn precipitous_drop() -> CardDefinition {
                 toughness: -3,
                 keywords: vec![],
                 condition: Some(completed_a_dungeon()),
+                ..Default::default()
             }],
             ..Default::default()
         }),

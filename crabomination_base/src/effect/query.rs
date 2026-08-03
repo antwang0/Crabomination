@@ -230,6 +230,9 @@ impl Effect {
         }
         match self {
             Effect::FlipUntilLoss { per_win } => per_win.requires_target(),
+            Effect::RevealUntilNonlandThen { then }
+            | Effect::ChooseCreatureTypeThen { then, .. }
+            | Effect::EachPlayerChoosesCreatureTypeThen { then } => then.requires_target(),
             Effect::NextSpellCantBeCountered { .. } => false,
             Effect::Noop
             | Effect::SearchEachBasicLandType { .. }
@@ -1158,7 +1161,8 @@ impl Effect {
             | Effect::ExileChosenFromHand { from, count, .. } => {
                 sel_has_target(from) || value_has_target(count)
             }
-            Effect::NameCreatureType { what } => sel_has_target(what),
+            Effect::NameCreatureType { what }
+            | Effect::NameCreatureTypeBy { what, .. } => sel_has_target(what),
             Effect::NameCard { what, .. } => sel_has_target(what),
             Effect::LockTargetNameUntilYourNextTurn { what } => sel_has_target(what),
             Effect::NameOpponentCastLock => false,
@@ -1461,6 +1465,7 @@ impl Effect {
             // "Tap all lands target player controls" surfaces the implicit
             // Player filter (Mistbind Clique); plain selectors keep theirs.
             Effect::PhaseOut { what, .. }
+            | Effect::TurnFaceDown { what }
             | Effect::GrantSuspend { what, .. }
             | Effect::ModularCounters { what }
             | Effect::BecomeBlocked { what }
@@ -1636,6 +1641,7 @@ impl Effect {
             | Effect::DoubleCountersOnEach { what, .. }
             | Effect::DoubleAllCountersOn { what }
             | Effect::NameCreatureType { what }
+            | Effect::NameCreatureTypeBy { what, .. }
             | Effect::NameCard { what, .. }
             | Effect::LockTargetNameUntilYourNextTurn { what }
             | Effect::Explore { who: what } => sel_filter(what),
@@ -2775,7 +2781,9 @@ impl Effect {
                     1 => Some(&FINALE_SORCERY_SLOT),
                     _ => None,
                 },
-                Effect::PreventNextDamage { target, .. }
+                Effect::TurnFaceDown { what: target }
+                | Effect::LookAtHand { who: target }
+                | Effect::PreventNextDamage { target, .. }
                 | Effect::PreventNextDamageWithCounters { target, .. }
                 | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target, .. }
@@ -3032,6 +3040,7 @@ impl Effect {
                 | Effect::DoubleCountersOnEach { what, .. }
                 | Effect::DoubleAllCountersOn { what }
                 | Effect::NameCreatureType { what }
+                | Effect::NameCreatureTypeBy { what, .. }
                 | Effect::NameCard { what, .. }
                 | Effect::LockTargetNameUntilYourNextTurn { what }
                 | Effect::Explore { who: what } => sel_find(what, slot),

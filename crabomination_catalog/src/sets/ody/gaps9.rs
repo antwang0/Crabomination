@@ -523,6 +523,7 @@ pub fn setons_desire() -> CardDefinition {
                 toughness: 0,
                 keywords: vec![Keyword::AllMustBlock],
                 condition: Some(threshold()),
+                ..Default::default()
             }],
             ..Default::default()
         }),

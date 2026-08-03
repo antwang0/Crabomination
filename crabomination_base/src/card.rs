@@ -600,6 +600,8 @@ pub enum CounterType {
     Hourglass,
     /// Kangee, Aerie Keeper's kicked-X counters, which pump other Birds.
     Feather,
+    /// Aurification's gold counters (CR 122.1 — a marker counter).
+    Gold,
 }
 
 /// Every zone a card can occupy.
@@ -1633,6 +1635,8 @@ pub enum SelectionRequirement {
     /// The card has any cycling ability (Cycling / CyclingLife /
     /// Landcycling — CR 702.29). Zenith Flare's graveyard count.
     HasCyclingAbility,
+    /// Has a Morph / Megamorph / Disguise ability (Backslide).
+    HasMorphAbility,
     /// The card has Disturb (CR 702.146), regardless of its cost (Shipwreck
     /// Sifters' "Spirit card or a card with disturb" discard payoff).
     HasDisturb,
@@ -1756,6 +1760,16 @@ pub enum SelectionRequirement {
     /// Shares a colour with the permanent sacrificed to pay this spell's
     /// additional cost (Mind Extraction). False with nothing sacrificed.
     SharesColorWithSacrificed,
+    /// Shares a creature type with *every* permanent tapped to pay the
+    /// resolving ability's `tap_n_filter` cost (Cryptic Gateway). Vacuously
+    /// false when nothing was tapped this way.
+    SharesCreatureTypeWithTapped,
+    /// Shares a creature type with the permanent sacrificed to pay this
+    /// spell's additional cost (Endemic Plague). Changelings match.
+    SharesCreatureTypeWithSacrificed,
+    /// Is of a creature type chosen by an `EachPlayerChoosesCreatureTypeThen`
+    /// resolution (Harsh Mercy, Patriarch's Bidding). Changelings match.
+    IsTypeChosenThisWay,
     /// Shares a colour with the mana spent on this activation's cost
     /// (Protective Sphere). Concretized to an `Or` chain of `HasColor` at
     /// resolution; colourless mana matches nothing.
@@ -3688,6 +3702,11 @@ pub struct ConditionalEquipBonus {
     /// Evaluated against the bonus source's controller each layer pass.
     #[serde(default)]
     pub condition: Option<crate::effect::Predicate>,
+    /// Activated abilities the host gains only while `host_filter` matches
+    /// ("as long as enchanted creature is a Wizard, it has …" — Lavamancer's
+    /// Skill). Surfaced alongside `EquipBonus.activated_abilities`.
+    #[serde(default)]
+    pub activated_abilities: Vec<crate::effect::ActivatedAbility>,
 }
 
 /// CR 702.95 — the bonus each member of a Soulbond pair gains while paired.

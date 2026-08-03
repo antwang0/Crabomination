@@ -11548,6 +11548,22 @@ impl GameState {
             }
             if let Some(bonus) = &eq.definition.equipped_bonus {
                 out.extend(bonus.activated_abilities.iter().cloned());
+                // Host-conditional grants ("as long as enchanted creature is a
+                // Wizard, it has …" — Lavamancer's Skill).
+                for cond in &bonus.conditional {
+                    if cond.activated_abilities.is_empty() {
+                        continue;
+                    }
+                    if self.battlefield_find(card_id).is_some_and(|host| {
+                        self.evaluate_requirement_on_card(
+                            &cond.host_filter,
+                            host,
+                            eq.controller,
+                        )
+                    }) {
+                        out.extend(cond.activated_abilities.iter().cloned());
+                    }
+                }
             }
         }
         // CR 721.2a — Station `{N+}` activated-ability bands. While the source's
@@ -13743,6 +13759,7 @@ impl GameState {
         // Tap-N-as-cost (CR 602.5b): with tap/mana/life paid, tap each
         // pre-selected untapped permanent. Heritage Druid's "Tap three
         // untapped Elves you control" cost runs here.
+        self.tapped_for_cost = tap_n_picks.clone();
         for other_cid in tap_n_picks {
             if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid) {
                 c.tapped = true;

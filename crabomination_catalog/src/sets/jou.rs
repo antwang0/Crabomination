@@ -723,6 +723,7 @@ pub fn nyx_infusion() -> CardDefinition {
                 toughness: 4,
                 keywords: vec![],
                 condition: None,
+                ..Default::default()
             }],
             ..Default::default()
         },

@@ -2905,6 +2905,12 @@ impl GameState {
                     R::HasToxic => card.has_toxic(),
                     R::HasModular => card.has_modular(),
                     R::HasMutate => card.definition.mutate.is_some(),
+                    R::HasMorphAbility => card.definition.keywords.iter().any(|k| matches!(
+                        k,
+                        crate::card::Keyword::Morph(_)
+                            | crate::card::Keyword::Megamorph(_)
+                            | crate::card::Keyword::Disguise(_)
+                    )),
                     R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                         k,
                         crate::card::Keyword::Cycling(_)
@@ -3581,6 +3587,12 @@ impl GameState {
             R::HasToxic => card.has_toxic(),
             R::HasModular => card.has_modular(),
             R::HasMutate => card.definition.mutate.is_some(),
+            R::HasMorphAbility => card.definition.keywords.iter().any(|k| matches!(
+                k,
+                crate::card::Keyword::Morph(_)
+                    | crate::card::Keyword::Megamorph(_)
+                    | crate::card::Keyword::Disguise(_)
+            )),
             R::HasCyclingAbility => card.definition.keywords.iter().any(|k| matches!(
                 k,
                 crate::card::Keyword::Cycling(_)
@@ -3664,6 +3676,49 @@ impl GameState {
                 self.sacrificed_colors
                     .as_ref()
                     .is_some_and(|cs| cs.iter().any(|c| colors.contains(c)))
+            }
+            // Endemic Plague — "share a creature type with the sacrificed
+            // creature". Changeling matches everything (CR 702.73a).
+            R::SharesCreatureTypeWithSacrificed => {
+                let mine = &card.definition.subtypes.creature_types;
+                let wild = card.definition.keywords.contains(&crate::card::Keyword::Changeling);
+                self.sacrificed_card
+                    .and_then(|id| {
+                        self.died_card_snapshots.get(&id).or_else(|| self.find_card_anywhere(id))
+                    })
+                    .is_some_and(|s| {
+                        wild || s.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                            || s.definition
+                                .subtypes
+                                .creature_types
+                                .iter()
+                                .any(|t| mine.contains(t))
+                    })
+            }
+            // Harsh Mercy — "of a type chosen this way".
+            R::IsTypeChosenThisWay => {
+                card.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                    || self
+                        .chosen_creature_types_scratch
+                        .iter()
+                        .any(|t| card.definition.subtypes.creature_types.contains(t))
+            }
+            // Cryptic Gateway — "shares a creature type with EACH creature
+            // tapped this way". Changeling matches everything (CR 702.73a).
+            R::SharesCreatureTypeWithTapped => {
+                let mine = &card.definition.subtypes.creature_types;
+                let wild = card.definition.keywords.contains(&crate::card::Keyword::Changeling);
+                !self.tapped_for_cost.is_empty()
+                    && self.tapped_for_cost.iter().all(|id| {
+                        self.battlefield_find(*id).is_some_and(|t| {
+                            wild || t.definition.keywords.contains(&crate::card::Keyword::Changeling)
+                                || t.definition
+                                    .subtypes
+                                    .creature_types
+                                    .iter()
+                                    .any(|ct| mine.contains(ct))
+                        })
+                    })
             }
             // Concretized before the walk (`choose_damage_prevention_source`)
             // and slot-aware (`cross_slot_targets_ok`) respectively.

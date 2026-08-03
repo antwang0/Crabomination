@@ -2451,7 +2451,9 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::BecomeBasicLand { .. } => "Become basic land",
         Effect::Attach { .. } => "Attach",
         Effect::GrantSorceriesAsFlash { .. } => "Sorceries as flash",
-        Effect::NameCreatureType { .. } => "Name creature type",
+        Effect::NameCreatureType { .. } | Effect::NameCreatureTypeBy { .. } => {
+            "Name creature type"
+        }
         Effect::GrantTriggeredAbility { .. } => "Grant ability",
         Effect::LoseAllAbilities { .. } => "Remove abilities",
         Effect::DiscardAnyNumber { .. } => "Discard any number",

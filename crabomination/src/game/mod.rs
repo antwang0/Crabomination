@@ -540,6 +540,11 @@ pub struct GameState {
     /// by `Value::TappedForCostPower`. Reset between independent resolutions.
     #[serde(default)]
     pub(crate) tapped_for_cost_power: Option<i32>,
+    /// Transient: the permanents tapped to pay the activated ability currently
+    /// resolving (CR 602.5b `tap_n_filter` costs). Read by
+    /// `SelectionRequirement::SharesCreatureTypeWithTapped` (Cryptic Gateway).
+    #[serde(default)]
+    pub(crate) tapped_for_cost: Vec<CardId>,
     /// Transient: the firing event's amount for the trigger currently being
     /// targeted or resolved (stamped in `drain_trigger_queue` and
     /// `continue_trigger_resolution_with_source`). For died events this is
@@ -868,6 +873,11 @@ pub struct GameState {
     /// Read as a fallback by `IsSourceChosenCreatureType`.
     #[serde(skip)]
     pub(crate) chosen_creature_type_scratch: Option<crate::card::CreatureType>,
+    /// The creature types named by an `EachPlayerChoosesCreatureTypeThen`
+    /// resolution, read by `SelectionRequirement::IsTypeChosenThisWay`
+    /// (Harsh Mercy, Patriarch's Bidding). Cleared when the body finishes.
+    #[serde(default)]
+    pub(crate) chosen_creature_types_scratch: Vec<crate::card::CreatureType>,
     /// Transient: the card name chosen by an `Effect::NameCard` within the
     /// current resolution. Read by `SelectionRequirement::NamedBySource` so a
     /// reveal-until-the-named-card chain (Spoils of the Vault) can match even
@@ -1669,6 +1679,7 @@ impl Clone for GameState {
             cost_discarded_mana_value: self.cost_discarded_mana_value,
             block_poison_this_turn: self.block_poison_this_turn,
             tapped_for_cost_power: self.tapped_for_cost_power,
+            tapped_for_cost: self.tapped_for_cost.clone(),
             trigger_event_amount_scratch: self.trigger_event_amount_scratch,
             trigger_event_player_scratch: self.trigger_event_player_scratch,
             activation_mana_colors_scratch: self.activation_mana_colors_scratch.clone(),
@@ -1721,6 +1732,7 @@ impl Clone for GameState {
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             cards_sacrificed_this_resolution: self.cards_sacrificed_this_resolution.clone(),
             chosen_creature_type_scratch: self.chosen_creature_type_scratch,
+            chosen_creature_types_scratch: self.chosen_creature_types_scratch.clone(),
             turn_granted_triggers: self.turn_granted_triggers.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
             names_this_resolution: self.names_this_resolution.clone(),
@@ -1940,6 +1952,7 @@ impl GameState {
             cost_discarded_mana_value: None,
             block_poison_this_turn: 0,
             tapped_for_cost_power: None,
+            tapped_for_cost: Vec::new(),
             trigger_event_amount_scratch: 0,
             trigger_event_player_scratch: None,
             activation_mana_colors_scratch: Vec::new(),
@@ -1992,6 +2005,7 @@ impl GameState {
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             cards_sacrificed_this_resolution: Vec::new(),
             chosen_creature_type_scratch: None,
+            chosen_creature_types_scratch: Vec::new(),
             turn_granted_triggers: Vec::new(),
             named_card_this_resolution: None,
             names_this_resolution: HashMap::new(),

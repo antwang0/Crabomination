@@ -6418,6 +6418,26 @@ pub enum Effect {
     /// damage equal to that card's mana value to `to`, and bottom the
     /// reveals in a random order.
     RevealUntilNonlandDamage { to: Selector },
+
+    /// The general shape of [`Effect::RevealUntilNonlandDamage`]: reveal from
+    /// the top until a nonland card, bottom the reveals in a random order,
+    /// then run `then` with the revealed card's mana value published as
+    /// [`Value::LastRevealedManaValue`]. Goblin Machinist, Kaboom!.
+    RevealUntilNonlandThen { then: Box<Effect> },
+
+    /// "Choose a creature type, then [`then`]" — the resolution-time sibling
+    /// of [`Effect::NameCreatureType`]. Stamps the pick on the source's
+    /// `chosen_creature_type` (so `SelectionRequirement::
+    /// IsSourceChosenCreatureType` and friends resolve inside `then`) and
+    /// runs the body. Riptide Chronologist, Riptide Shapeshifter, Walking
+    /// Desecration, Peer Pressure.
+    ChooseCreatureTypeThen { who: PlayerRef, then: Box<Effect> },
+
+    /// "Each player chooses a creature type. [`then`]" — every seat picks in
+    /// APNAP order and the union is published for the body through
+    /// `SelectionRequirement::IsTypeChosenThisWay`. Harsh Mercy,
+    /// Patriarch's Bidding.
+    EachPlayerChoosesCreatureTypeThen { then: Box<Effect> },
     /// Skyserpent Seeker-style ramp: reveal from the top of your library until
     /// you reveal `count` land cards; put those lands onto the battlefield
     /// (`tapped`), and put the rest on the bottom of your library in a random
@@ -7183,6 +7203,10 @@ pub enum Effect {
     /// `caster_grants_uncounterable` to gate which creature spells the
     /// Cavern protects (only those that share the named type).
     NameCreatureType { what: Selector },
+
+    /// As [`Effect::NameCreatureType`], but a named player makes the choice
+    /// (Callous Oppressor — "an opponent chooses a creature type").
+    NameCreatureTypeBy { what: Selector, who: PlayerRef },
 
     /// CR 201.3 — "As [this] enters, choose a card name." Pithing Needle,
     /// Phyrexian Revoker. Asks the controller via the `NameCard` decision and

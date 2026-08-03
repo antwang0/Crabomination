@@ -3674,6 +3674,7 @@ pub fn gift_of_fangs() -> CardDefinition {
                 toughness: 4,
                 keywords: vec![],
                 condition: None,
+                ..Default::default()
             }],
             ..Default::default()
         }),

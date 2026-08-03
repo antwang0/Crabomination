@@ -5794,6 +5794,7 @@ pub fn zealots_conviction() -> CardDefinition {
                 condition: Some(Predicate::CorruptedActive {
                     who: PlayerRef::You,
                 }),
+                ..Default::default()
             }],
             ..Default::default()
         }),
