@@ -2027,6 +2027,13 @@ impl GameState {
         match effect {
             Effect::Noop => Ok(()),
 
+            // CR 104.4 — Divine Intervention ends the game with no winner.
+            Effect::GameIsADraw => {
+                self.game_over = Some(None);
+                events.push(GameEvent::GameOver { winner: None });
+                Ok(())
+            }
+
             // CR 609.4b — North Star's turn-scoped any-color permission.
             Effect::MaySpendManaAsAnyColorThisTurn { who } => {
                 if let Some(seat) = self.resolve_player(who, ctx) {
@@ -30504,6 +30511,15 @@ impl GameState {
                     }
                     // "{X}" — the resolution's declared X (Excise).
                     WardCost::GenericXFromCost => self.pay_generic(payer, ctx.x_value),
+                    // The source's own counter count (Primordial Ooze).
+                    WardCost::GenericCountersOnSource(kind) => {
+                        let n = ctx
+                            .source
+                            .and_then(|sid| self.battlefield_find(sid))
+                            .map(|c| c.counter_count(*kind))
+                            .unwrap_or(0);
+                        self.pay_generic(payer, n)
+                    }
                     // Essence Leak — the printed cost of the permanent this Aura is
                     // attached to.
                     WardCost::ManaCostOfAttached => {

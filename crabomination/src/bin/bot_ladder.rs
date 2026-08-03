@@ -196,7 +196,7 @@ fn sealed_archetypes(seed: u64, count: usize) -> Vec<Archetype> {
     (0..count as u64)
         .map(|i| {
             let salt = |k: u64| {
-                seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(k * 0x5EA1_ED)
+                seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(k * 0x5E_A1ED)
             };
             let pool = crabomination::selfplay::sealed_pool(salt(1));
             let deck = crabomination::selfplay::heuristic_sealed_build(&pool, salt(2));

@@ -409,9 +409,12 @@ pub fn to_safetensors(tensors: &[(&str, Vec<usize>, Vec<f32>)]) -> Vec<u8> {
 
 /// f32 slice → little-endian bytes without a bytemuck dependency. Only
 /// correct on little-endian targets, which is everything this project runs
-/// on (x86-64, aarch64, wasm32); the debug assert keeps us honest.
+/// on (x86-64, aarch64, wasm32); a big-endian build fails to compile rather
+/// than silently writing byte-swapped weights.
+#[cfg(not(target_endian = "little"))]
+compile_error!("crabomination_nn's weight serialisation assumes a little-endian target");
+
 fn bytemuck_cast(data: &[f32]) -> &[u8] {
-    debug_assert!(cfg!(target_endian = "little"));
     // SAFETY: f32 has no invalid bit patterns as bytes, alignment of u8 is 1,
     // and the length is the element count times size_of::<f32>.
     unsafe { std::slice::from_raw_parts(data.as_ptr() as *const u8, data.len() * 4) }

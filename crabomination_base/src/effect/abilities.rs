@@ -1168,6 +1168,11 @@ pub enum StaticEffect {
     /// blocked attacker's noncombat pings are prevented too (Wall of Vapor,
     /// Wall of Shadows).
     PreventAllDamageToThisFromBlocked,
+    /// "Prevent all combat damage that would be dealt to this creature by
+    /// [filter] creatures" — Enchanted Being (enchanted creatures), Wall of
+    /// Putrid Flesh, Marble Priest (Walls). Read in the combat-damage funnel
+    /// against the dealer.
+    PreventCombatDamageToThisFromMatching { filter: SelectionRequirement },
     /// CR 614.5 — "If a source would deal damage to an opponent or a
     /// permanent an opponent controls, it deals double that damage instead."
     /// (Gisela, Blade of Goldnight.) Scoped to the static's controller's

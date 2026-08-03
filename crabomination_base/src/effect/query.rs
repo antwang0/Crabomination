@@ -234,7 +234,7 @@ impl Effect {
             }
         }
         match self {
-            Effect::AbandonThisScheme => false,
+            Effect::AbandonThisScheme | Effect::GameIsADraw => false,
             Effect::AnteTopOfLibrary { who, then, else_, .. } => {
                 player_has_target(who)
                     || then.as_ref().is_some_and(|e| e.requires_target())

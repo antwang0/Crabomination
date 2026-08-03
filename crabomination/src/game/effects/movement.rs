@@ -167,7 +167,8 @@ impl GameState {
         // creatures it's blocking" (Wall of Vapor). Combat and noncombat alike,
         // so it sits in the funnel rather than the combat resolver.
         if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
-            && self.damage_from_blocked_prevented(tgt, src)
+            && (self.damage_from_blocked_prevented(tgt, src)
+                || self.combat_damage_from_matching_prevented(tgt, src))
         {
             if amount > 0 {
                 events.push(GameEvent::DamagePrevented {

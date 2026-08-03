@@ -4475,6 +4475,38 @@ impl GameState {
             })
     }
 
+    /// CR 615 — true when `tgt` prevents combat damage from creatures matching
+    /// its own filter (Enchanted Being, Marble Priest) and `dealer` matches.
+    pub fn combat_damage_from_matching_prevented(
+        &self,
+        tgt: crate::card::CardId,
+        dealer: crate::card::CardId,
+    ) -> bool {
+        use crate::effect::StaticEffect;
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        let filters: Vec<_> = self
+            .battlefield_find(tgt)
+            .into_iter()
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match &sa.effect {
+                StaticEffect::PreventCombatDamageToThisFromMatching { filter } => {
+                    Some(filter.clone())
+                }
+                _ => None,
+            })
+            .collect();
+        filters.iter().any(|f| {
+            self.evaluate_requirement_static(
+                f,
+                &crate::game::types::Target::Permanent(dealer),
+                self.battlefield_find(tgt).map(|c| c.controller).unwrap_or(0),
+                None,
+            )
+        })
+    }
+
     /// CR 615 — true when `tgt` is blocking `dealer` and prevents damage from
     /// the creatures it blocks (Wall of Vapor). Any damage, not just combat.
     pub fn damage_from_blocked_prevented(
@@ -18451,6 +18483,7 @@ fn static_effect_to_effects(
             | StaticEffect::CapLargeDamage { .. }
             | StaticEffect::PreventAllCombatDamageToThisFromBlockers
             | StaticEffect::PreventAllDamageToThisFromBlocked
+            | StaticEffect::PreventCombatDamageToThisFromMatching { .. }
             // Prevention statics read at damage time in
             // `apply_prevention_shields`; no layer effect.
             | StaticEffect::PreventDamageToAttachedPerPermanent { .. }

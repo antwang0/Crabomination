@@ -381,6 +381,8 @@ pub enum CounterType {
     Matrix,
     /// Hatchling counter (Triassic Egg).
     Hatchling,
+    /// Intervention counter (Divine Intervention).
+    Intervention,
     Loyalty,
     Charge,
     /// CR 122 — the manifestation counter Arbiter of the Ideal puts on the
@@ -655,6 +657,9 @@ pub enum WardCost {
     /// Generic mana equal to the resolution's declared `{X}` — "unless its
     /// controller pays {X}" (Excise).
     GenericXFromCost,
+    /// Generic mana equal to the number of `CounterType` counters on the
+    /// ability's source (Primordial Ooze's escalating upkeep).
+    GenericCountersOnSource(CounterType),
     Life(u32),
     /// Compound "Ward—{cost}, Pay N life" (Ovika, Enigma Goliath; Gisa, the
     /// Hellraiser). Both halves must be paid or the spell/ability is countered.

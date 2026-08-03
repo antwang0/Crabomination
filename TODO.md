@@ -184,17 +184,22 @@ general "any player may …, if no one does …" shape, with
 
 ## Legends — opened
 
-`set_gaps.py leg` is at **64** (277 → 268 → 238 → 232 → 179 → 120 → 64;
-`sets::leg`–`leg4`, 209 cards, tests in `classic_sets/leg`–`leg4`). Waves 1–3
+`set_gaps.py leg` is at **43** (277 → 268 → 238 → 232 → 179 → 120 → 64 → 43;
+`sets::leg`–`leg5`, 230 cards, tests in `classic_sets/leg`–`leg5`). Waves 1–3
 covered CR 702.22 "bands with other", the plain bodies, the colour-shift cycle,
 the landwalk hosers and the vanillas. Wave 4 added the Walls, the mana-battery
 cycle, the plain legends and the one-line spells; wave 5 added the Elder Dragon
-cycle, the Glyph cycle and the utility artifacts. New primitives across 4/5:
+cycle, the Glyph cycle and the utility artifacts; wave 6 added the
+block-and-kill creatures, the prevention bodies and the last legends.
+New primitives across 4/5/6:
 `StaticEffect::PreventAllDamageToThisFromBlocked`,
 `Selector::CreaturesBlockedByThisTurn`,
 `Keyword::{CantBeTargetedByAuras, LegendaryLandwalk}`,
 `Effect::MaySpendManaAsAnyColorThisTurn` (+ `relax_cost_colors_for`) and
-`CounterType::{MinusZeroMinusTwo, Glyph, Sleep, Matrix, Hatchling}`.
+`CounterType::{MinusZeroMinusTwo, Glyph, Sleep, Matrix, Hatchling,
+Intervention}`, `StaticEffect::PreventCombatDamageToThisFromMatching`,
+`Effect::GameIsADraw` (CR 104.4) and
+`WardCost::GenericCountersOnSource`.
 
 Recurring blockers in what's left: "attach target Aura to another permanent"
 (Enchantment Alteration), damage-tally reads for Blazing Effigy / Backdraft,
@@ -214,6 +219,10 @@ and the ante-adjacent oddities (Falling Star's dexterity clause).
   someone else's activation.
 - **Hellfire's self-damage reads the turn's death tally**, not the sweep's own
   count — there is no `Value::CreaturesDiedThisResolution`.
+- **Aisling Leprechaun / The Wretched read `CreaturesInCombatWith`**, not the
+  trigger's own subject: a `Blocks` / `BecomesBlocked` trigger's
+  `Selector::TriggerSource` didn't resolve to the other creature. Worth
+  running down — it affects every "that creature" combat trigger.
 - **Bronze Tablet folds its self-exile into a sacrifice**; the printed
   exile-both-then-swap needs a two-object exile with a linked return.
 
@@ -5549,6 +5558,13 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
+- ⏳ **A cost-sacrifice batch doesn't reach `Value::SacrificedTotalPower`.**
+  The activated-ability path now resets and accumulates
+  `sacrificed_{count,total_power}` over the whole `sac_other_picks` batch
+  (including `sac_all_matching_cost`), but the ability body still reads only
+  the *last* sacrificed permanent's power — the totals aren't threaded into
+  resolution the way the spell path's `Effect::WithSacrificedPt` wrapper does.
+  Sword of the Ages is held back on this.
 - ⏳ **`Value::CreaturesDiedThisResolution`** — a resolution-scoped death tally
   so a sweeper can bill its caster for its own kills (Hellfire). The turn-wide
   `CreaturesDiedThisTurn` over-counts on a busy turn.
@@ -5567,7 +5583,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   is at zero. Each landed its primitive: `Effect::ReplaceCreatureTypeText`,
   `Keyword::DividesCombatDamageAmongDefenders`, `Effect::EachPlayerChoosesNumberHighestLoses`,
   and `GameEvent::ControlChanged` + `EventKind::GainedControlOfThis`.
-- ⏳ **Legends is at 64 gaps** (`set_gaps.py leg`). Five waves shipped 209
+- ⏳ **Legends is at 43 gaps** (`set_gaps.py leg`). Six waves shipped 230
   cards; see "Legends — opened" above for what's left and why.
 - ⏳ **The client can't declare attacking bands.** The engine action
   (`GameAction::DeclareAttackersBanded`) and the `ClientView.attack_bands`

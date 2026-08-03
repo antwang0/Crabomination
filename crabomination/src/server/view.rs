@@ -1498,6 +1498,9 @@ fn project_permanent(
                 W::ReturnMatchingToHand(_) => "Ward—return a matching permanent".to_string(),
                 W::GenericSourcePower => "Ward—{X} (this creature's power)".to_string(),
                 W::GenericXFromCost => "Ward—{X}".to_string(),
+                W::GenericCountersOnSource(kind) => {
+                    format!("Ward—{{X}} (this permanent's {kind:?} counters)")
+                }
                 W::LifeSourcePower => "Ward—pay life equal to this creature's power".to_string(),
                 W::RemoveCounterFromPermanent => "Ward—remove a counter from a permanent".to_string(),
                 W::ManaCostOfAttached => "Ward—pay the enchanted permanent's mana cost".to_string(),

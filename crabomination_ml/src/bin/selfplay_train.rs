@@ -231,11 +231,11 @@ fn main() {
             step += 1;
             loss_ema = if loss_ema.is_nan() { loss } else { 0.99 * loss_ema + 0.01 * loss };
 
-            if step % args.checkpoint_every == 0 {
+            if step.is_multiple_of(args.checkpoint_every) {
                 checkpoint(&trainer, &args, &shared, step, consumed, loss_ema, start, &stats_path);
             }
         }
-        if step > 0 && step % args.checkpoint_every != 0 {
+        if step > 0 && !step.is_multiple_of(args.checkpoint_every) {
             checkpoint(&trainer, &args, &shared, step, consumed, loss_ema, start, &stats_path);
         }
         eprintln!(

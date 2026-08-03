@@ -2453,8 +2453,8 @@ Each a small targeted feature; sweep batch by batch.
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged** and **New Phyrexia** (the Scars block
-   is closed) are all at zero. **Legends** is open at 64 after five waves
-   (209 cards, `sets::leg`–`leg4`).
+   is closed) are all at zero. **Legends** is open at 43 after six waves
+   (230 cards, `sets::leg`–`leg5`).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2485,7 +2485,7 @@ Each a small targeted feature; sweep batch by batch.
   the combat resolver, so a blocked attacker's noncombat damage is prevented
   too (Wall of Vapor, Wall of Shadows).
 
-- **Legends opened wide** — `set_gaps.py leg` 179 → 64 across `sets::leg3`
+- **Legends opened wide** — `set_gaps.py leg` 179 → 43 across `sets::leg3`
   (Walls, the mana batteries, the plain legends, the one-line spells) and
   `sets::leg4` (the Elder Dragon cycle, the Glyph cycle, the utility
   artifacts). New primitives:

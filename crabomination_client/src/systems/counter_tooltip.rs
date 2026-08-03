@@ -1030,6 +1030,9 @@ pub(crate) fn keyword_label(kw: &crabomination::card::Keyword) -> String {
                 format!("Ward—{}, Pay {n} life", c.summary())
             }
             crabomination::card::WardCost::GenericXFromCost => "Ward—{X}".to_string(),
+            crabomination::card::WardCost::GenericCountersOnSource(k) => {
+                format!("Ward—{{X}} ({k:?} counters)")
+            }
             crabomination::card::WardCost::Discard(n) => format!("Ward—Discard {n}"),
             crabomination::card::WardCost::DiscardMatching(_, n) => {
                 format!("Ward—Discard {n} matching")
@@ -1359,6 +1362,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Sleep => "Sleep",
         CounterType::Matrix => "Matrix",
         CounterType::Hatchling => "Hatchling",
+        CounterType::Intervention => "Intervention",
         CounterType::Loyalty => "Loyalty",
         CounterType::Charge => "Charge",
         CounterType::Manifestation => "Manifestation",

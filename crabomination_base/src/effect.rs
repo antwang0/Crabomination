@@ -7779,6 +7779,10 @@ pub enum Effect {
     /// is a draw." Celestial Convergence.
     HighestLifeWinsElseDraw,
 
+    /// CR 104.4 — "the game is a draw" (Divine Intervention). Ends the game
+    /// with no winner.
+    GameIsADraw,
+
     /// "[Player] loses the game" (CR 104.3a). Eliminates the named player;
     /// the SBA pass promotes the last player standing to the winner.
     /// Strixhaven Stadium's ten-point payoff.

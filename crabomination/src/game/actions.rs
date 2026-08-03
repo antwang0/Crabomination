@@ -36,7 +36,7 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::SacrificeMatchingN(_, n) => *n == 0,
         // "{X}" is only free when the declared X was 0, which the caller
         // can't see here.
-        WardCost::GenericXFromCost => false,
+        WardCost::GenericXFromCost | WardCost::GenericCountersOnSource(_) => false,
         WardCost::SacrificePermanents(n) => *n == 0,
         // Dynamic — the source's power can change before payment.
         WardCost::GenericSourcePower | WardCost::LifeSourcePower => false,
@@ -13861,7 +13861,16 @@ impl GameState {
         // creature: …`, Korlash, Heir to Blackblade's `{B}, Sacrifice a
         // Swamp: …`, Witherbloom Harvester-style "sac another creature
         // for an effect" activations.
+        // CR 602.5b — the whole cost-sacrifice batch feeds
+        // `Value::Sacrificed{Count,TotalPower}` (Sword of the Ages sacrifices
+        // any number of creatures and reads their total power). Reset here so
+        // an earlier resolution's tally can't leak in.
+        self.sacrificed_count = 0;
+        self.sacrificed_total_power = 0;
         for other_cid in sac_other_picks {
+            self.sacrificed_count += 1;
+            self.sacrificed_total_power +=
+                self.battlefield_find(other_cid).map(|c| c.power()).unwrap_or(0);
             let is_creature = self
                 .battlefield_find(other_cid)
                 .map(|c| c.definition.is_creature())

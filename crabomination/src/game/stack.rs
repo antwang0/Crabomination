@@ -4587,6 +4587,15 @@ impl GameState {
                         _ => None,
                     })
                 })
+                // CR 614 — the dying permanent is already off the battlefield
+                // here, so its *own* replacement has to come from its snapshot
+                // (Firestorm Phoenix replaces its own death).
+                .chain(card.definition.static_abilities.iter().filter_map(|sa| match &sa.effect {
+                    crate::effect::StaticEffect::DiesToOwnersHandInstead { filter } => {
+                        Some((filter.clone(), card.controller))
+                    }
+                    _ => None,
+                }))
                 .collect::<Vec<_>>()
                 .iter()
                 // The stateful evaluator, not `requirement_matches_card` — the
