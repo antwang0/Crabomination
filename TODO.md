@@ -2018,6 +2018,13 @@ crabomination_client` compiles (first build ~6 min). The GUI still can't be
 *run* headless (no GPU/display — see the `verifier-client` skill), but client
 code and its unit tests now compile and test here.
 
+Two gotchas seen this run: `apt-get install` without a preceding `apt-get
+update` 404s on a stale index (the `.claude/hooks/install-client-deps.sh` hook
+already does the update, but its failures are silenced, so check
+`pkg-config --exists wayland-client` before blaming the crate); and a full
+`cargo test --workspace` including the client can fill the disk — `rm -rf
+target/debug/incremental` reclaims several GB without a full rebuild.
+
 ## Discovered follow-ups — Kamigawa: Neon Dynasty (`decks::recent95`–`recent101`)
 
 - **Prosperous Thief** — the printed trigger fires off any Ninja/Rogue you
