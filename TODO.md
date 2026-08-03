@@ -160,18 +160,22 @@ FEATURE_ROADMAP.md → "Recently closed" for what shipped.
 
 ## Scourge — opened
 
-`set_gaps.py scg` is at **39** (116 → 39; `sets::scg`, tests in
-`classic_sets/scg`, 77 cards). Storm, cycling + the Decree riders, the
+`set_gaps.py scg` is at **32** (116 → 39 → 32; `sets::scg`, tests in
+`classic_sets/scg`, 84 cards). Storm, cycling + the Decree riders, the
 "whenever a permanent is turned face up" payoffs, the Dragon Auras' graveyard
-re-attach, and the "greatest mana value among permanents you control" cycle
-all ride existing primitives.
+re-attach, the "greatest mana value among permanents you control" cycle and
+(as of the second wave) `Keyword::MorphCost` all ride existing primitives.
 
 Still open, and why — each wants one primitive:
-- **Morph with a non-mana turn-up cost** — `Keyword::Morph` carries a
-  `ManaCost`, so "Morph—Discard a Zombie card" (Putrid Raptor), "Sacrifice two
-  Mountains" (Skirk Volcanist), "Pay 5 life" (Zombie Cutthroat) and "Return a
-  Bird you control to its owner's hand" (Raven Guild Initiate) have no home.
-  Wants a `MorphCost` enum alongside the existing `WardCost` menu.
+- **Ambush Commander** — "Forests you control are 1/1 green Elf creatures that
+  are still lands": a `StaticEffect` that animates a *filtered set* of lands
+  continuously, rather than the one-shot `Effect::BecomeCreature`.
+- **Trap Digger** — needs a `CounterType::Trap` plus a `sac_other_filter` that
+  can read "a land with a trap counter on it" (`R::WithCounter` exists; the
+  counter type doesn't).
+- **Divergent Growth** — "until end of turn, lands you control gain '{T}: Add
+  one mana of any color'": a turn-scoped activated-ability grant over a filter
+  (the `GrantKeywordToMatchingThisTurn` shape, for abilities).
 - **Xantid Swarm** — "defending player can't cast spells this turn"; the
   engine has `cant_cast_noncreature_this_turn` but no blanket per-player lock.
 - **Rock Jockey** — a cast restriction keyed on whether the caster has played

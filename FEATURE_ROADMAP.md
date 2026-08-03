@@ -2409,10 +2409,9 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** The Odyssey block, **Onslaught** and **Legions** are
    all at zero (`set_gaps.py ody` / `tor` / `jud` / `ons` / `lgn`). **Scourge**
-   (`sets::scg`) is open at 39 gaps after one wave (77 cards). What's left is
-   mostly one primitive apiece — Morph with a non-mana turn-up cost (Putrid
-   Raptor, Skirk Volcanist, Zombie Cutthroat, Raven Guild Initiate), "target
-   player can't cast spells this turn" (Xantid Swarm), a cast restriction keyed
+   (`sets::scg`) is open at 32 gaps after two waves (84 cards). What's left is
+   mostly one primitive apiece — "target player can't cast spells this turn"
+   (Xantid Swarm), a cast restriction keyed
    on the turn's land drop (Rock Jockey), Karona's per-upkeep control hand-off,
    Day of the Dragons' exile-and-swap, Dimensional Breach's per-upkeep return,
    Parallel Thoughts' face-down draw pile, and Grip of Chaos' random
@@ -2443,11 +2442,15 @@ Each a small targeted feature; sweep batch by batch.
   rather than only the flat `{N}` arm, and `SetBasePower` surfaces a target
   hidden in its power value the way `DealDamage` already did.
 
-- **Scourge (SCG) opened** — `set_gaps.py scg` 116 → 39 (`sets::scg`, 77 cards).
-  New: `StaticEffect::PlayersCantCycle` (Stabilizer),
+- **Scourge (SCG) opened** — `set_gaps.py scg` 116 → 32 (`sets::scg`, 84 cards
+  across two waves). New: `StaticEffect::PlayersCantCycle` (Stabilizer),
   `StaticEffect::MorphCostsMore` + `ManaCost::plus_generic` (Exiled Doomsayer),
-  `Effect::ReturnSelfAttachedToTrigger` (the four Dragon Auras), and
-  `DynamicPt::TotalManaValueOfOtherControlledCreatures` (Ancient Ooze).
+  `Effect::ReturnSelfAttachedToTrigger` (the four Dragon Auras),
+  `DynamicPt::TotalManaValueOfOtherControlledCreatures` (Ancient Ooze), and
+  **CR 702.36b `Keyword::MorphCost`** — a turn-up cost drawn from the `WardCost`
+  menu rather than mana, paid through the shared `try_pay_ward_cost` (Putrid
+  Raptor, Zombie Cutthroat, Skirk Volcanist, Raven Guild Initiate), with two new
+  menu entries (`SacrificeMatchingN`, `ReturnMatchingToHand`).
 
 - **CR 804 deploy creatures** — `GameState.deploy_creatures` grants every
   creature "{T}: Target teammate gains control of this creature", backed by a
