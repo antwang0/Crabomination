@@ -2027,6 +2027,134 @@ impl GameState {
         match effect {
             Effect::Noop => Ok(()),
 
+            // ── CR 407 — the ante zone ─────────────────────────────────────
+            // CR 407.4 — "[who] antes the top card of their library." `then`
+            // runs once per player who anted, `else_` once per decline.
+            Effect::AnteTopOfLibrary { who, optional, then, else_ } => {
+                let seats = self.resolve_players(who, ctx);
+                let mut cursor = 0usize;
+                for seat in seats {
+                    let anted = if *optional {
+                        let Some(yes) = self.ask_seat_bool(
+                            &mut cursor,
+                            seat,
+                            "Ante the top card of your library?".into(),
+                            ctx.source.unwrap_or(CardId(0)),
+                            effect,
+                        ) else {
+                            return Ok(());
+                        };
+                        yes
+                    } else {
+                        true
+                    };
+                    let moved = anted && self.ante_top_card(seat);
+                    let branch = if moved { then } else { else_ };
+                    if let Some(inner) = branch {
+                        let mut sub = ctx.clone();
+                        sub.controller = seat;
+                        self.run_effect(inner, &sub, events)?;
+                    }
+                }
+                self.clear_answer_log();
+                Ok(())
+            }
+
+            // CR 407.4 — put the resolved cards into their owners' ante zones.
+            Effect::Ante { what } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    self.move_card_to(id, &crate::effect::ZoneDest::Ante, ctx, events);
+                }
+                Ok(())
+            }
+
+            // Jeweled Bird — "put all other cards you own from the ante into
+            // your graveyard."
+            Effect::AnteToGraveyard { who } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let source = ctx.source;
+                let all: Vec<CardInstance> = self.players[seat].ante.drain(..).collect();
+                let (stay, taken): (Vec<_>, Vec<_>) =
+                    all.into_iter().partition(|c| Some(c.id) == source);
+                self.players[seat].ante.extend(stay);
+                for card in taken {
+                    self.route_to_graveyard(card, events);
+                }
+                Ok(())
+            }
+
+            // Darkpact — take ownership of a card in the ante, then swap it
+            // with the top card of your library (CR 407.3).
+            Effect::TakeAnteCardForLibraryTop { who } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let from = (0..self.players.len()).find(|p| !self.players[*p].ante.is_empty());
+                let (Some(from), false) = (from, self.players[seat].library.is_empty()) else {
+                    return Ok(());
+                };
+                let mut picked = self.players[from].ante.remove(0);
+                picked.owner = seat;
+                picked.controller = seat;
+                let mut top = self.players[seat].library.remove(0);
+                top.owner = seat;
+                self.players[seat].library.insert(0, picked);
+                top.controller = seat;
+                self.players[seat].ante.push(top);
+                Ok(())
+            }
+
+            // CR 407.3 — the only rules-legal ownership change. Both objects
+            // swap owners and are then routed to their new homes.
+            Effect::ExchangeOwnership { a, b, a_to, b_to } => {
+                let pick = |g: &mut Self, sel: &Selector| -> Option<CardId> {
+                    g.resolve_selector(sel, ctx).into_iter().find_map(|e| e.as_card_id())
+                };
+                let (Some(a_id), Some(b_id)) = (pick(self, a), pick(self, b)) else {
+                    return Ok(());
+                };
+                let a_owner = self.find_card_anywhere(a_id).map(|c| c.owner);
+                let b_owner = self.find_card_anywhere(b_id).map(|c| c.owner);
+                let (Some(a_owner), Some(b_owner)) = (a_owner, b_owner) else { return Ok(()) };
+                self.set_card_owner(a_id, b_owner);
+                self.set_card_owner(b_id, a_owner);
+                self.move_card_to(a_id, a_to, ctx, events);
+                self.move_card_to(b_id, b_to, ctx, events);
+                Ok(())
+            }
+
+            // CR 119.4 — a *named* player, not the controller, is offered the
+            // life payment; declining (or being unable to pay) runs `else_`.
+            Effect::PlayerMayPayLifeElse { who, life, else_ } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let cost = self.evaluate_value(life, ctx).max(0);
+                let mut cursor = 0usize;
+                let afford = self.players[seat].life >= cost;
+                let paid = if afford {
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        seat,
+                        format!("Pay {cost} life?"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    yes
+                } else {
+                    false
+                };
+                self.clear_answer_log();
+                if paid {
+                    self.adjust_life_applied(seat, -cost);
+                    return Ok(());
+                }
+                self.run_effect(else_, ctx, events)
+            }
+
             // Samite Elder — read the live colors of `of` and hand each one
             // out as a separate Protection keyword.
             Effect::GrantProtectionFromColorsOf { what, of, duration } => {
@@ -29079,6 +29207,7 @@ impl GameState {
                         Zone::Library => self.players[p].library.iter().collect(),
                         Zone::Exile => self.exile.iter().filter(|c| c.owner == p).collect(),
                         Zone::Battlefield => self.battlefield.iter().filter(|c| c.controller == p).collect(),
+                        Zone::Ante => self.players[p].ante.iter().collect(),
                         Zone::Stack | Zone::Command => vec![],
                     };
                     // For battlefield-resident cards we use the

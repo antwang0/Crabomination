@@ -265,6 +265,8 @@ pub enum DeckError {
     SideboardTooLarge { found: u32, maximum: u32 },
     /// CR 100.4 — the format doesn't use sideboards at all.
     SideboardNotAllowed { found: u32 },
+    /// CR 407.3 — an ante-only card in a deck that isn't playing for ante.
+    AnteCardOutsideAnteGame { card_name: &'static str },
 }
 
 impl std::fmt::Display for DeckError {
@@ -293,6 +295,9 @@ impl std::fmt::Display for DeckError {
             }
             DeckError::SideboardNotAllowed { found } => {
                 write!(f, "This format has no sideboard, but {found} cards were listed")
+            }
+            DeckError::AnteCardOutsideAnteGame { card_name } => {
+                write!(f, "{card_name} may only be played in a game played for ante")
             }
         }
     }
@@ -342,6 +347,12 @@ pub fn validate_deck(deck: &[CardDefinition], format: Format) -> Result<(), Vec<
         && count > max {
             errors.push(DeckError::TooManyCards { found: count, maximum: max });
         }
+
+    // CR 407.3 — "Remove this card from your deck before playing if you're not
+    // playing for ante." No format here is an ante game.
+    for card in deck.iter().filter(|c| c.ante_only) {
+        errors.push(DeckError::AnteCardOutsideAnteGame { card_name: card.name });
+    }
 
     // Count copies of each non-basic card.
     let mut copy_counts: HashMap<&'static str, u32> = HashMap::new();

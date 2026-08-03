@@ -697,6 +697,11 @@ pub struct PlayerView {
     pub kept_mana: u32,
     pub library: LibraryView,
     pub graveyard: Vec<GraveyardCardView>,
+    /// CR 407.2 — cards this player owns in the ante zone. Public knowledge
+    /// ("may be examined by any player at any time"), so it's projected in
+    /// full for every viewer. Empty outside an ante game.
+    #[serde(default)]
+    pub ante: Vec<GraveyardCardView>,
     /// CR 702.26 — this player's phased-out permanents (id + name). They're
     /// in no visible zone, so the HUD needs its own listing to show they
     /// still exist (Out of Time, Vodalian Illusionist).

@@ -1694,7 +1694,8 @@ impl GameState {
             ZoneDest::Graveyard
             | ZoneDest::Exile
             | ZoneDest::ExilePlotted
-            | ZoneDest::ExileWithSourceStamp => dest.clone(),
+            | ZoneDest::ExileWithSourceStamp
+            | ZoneDest::Ante => dest.clone(),
         }
     }
 
@@ -1720,6 +1721,7 @@ impl GameState {
             ZoneDest::Library { .. } => crate::card::Zone::Library,
             ZoneDest::Battlefield { .. } => crate::card::Zone::Battlefield,
             ZoneDest::Graveyard => crate::card::Zone::Graveyard,
+            ZoneDest::Ante => crate::card::Zone::Ante,
             ZoneDest::Exile | ZoneDest::ExilePlotted | ZoneDest::ExileWithSourceStamp => {
                 crate::card::Zone::Exile
             }
@@ -1875,6 +1877,11 @@ impl GameState {
             ZoneDest::Graveyard => {
                 // CR 614.6 — graveyard-hate statics redirect to exile.
                 self.route_to_graveyard(card, events);
+            }
+            // CR 407.4 — the ante zone belongs to the card's owner.
+            ZoneDest::Ante => {
+                let owner = card.owner;
+                self.players[owner].ante.push(card);
             }
             ZoneDest::ExilePlotted => {
                 // CR 702.170 — exile it face up and mark it plotted so its

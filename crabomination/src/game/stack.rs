@@ -4479,6 +4479,11 @@ impl GameState {
                     reps.sort();
                     let winner = reps[0];
                     self.game_over = Some(Some(winner));
+                    // CR 407.2 — the winner becomes the owner of everything
+                    // in the ante zone.
+                    if self.playing_for_ante {
+                        self.award_ante_to(winner);
+                    }
                     events.push(GameEvent::GameOver { winner: Some(winner) });
                 }
                 _ => {}
@@ -4814,6 +4819,7 @@ impl GameState {
                 self.players[owner].library.insert(0, card)
             }
             Zone::Command => self.players[owner].command.push(card),
+            Zone::Ante => self.players[owner].ante.push(card),
             Zone::Battlefield | Zone::Stack => {
                 // Unsupported as a replacement redirect target — the
                 // card has already lost its battlefield identity

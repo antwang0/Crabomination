@@ -164,9 +164,7 @@ fn delight_in_the_hunt_mints_a_horror_and_fogs() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Horror"));
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.priority.player_with_priority = 1;
-    for c in [Color::Red] {
-        g.players[1].mana_pool.add(c, 5);
-    }
+    g.players[1].mana_pool.add(Color::Red, 5);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Permanent(bear)),

@@ -655,6 +655,8 @@ fn project_player(
             .iter()
             .map(|c| graveyard_entry(c, state, player_seat))
             .collect(),
+        // CR 407.2 — the ante zone is open information.
+        ante: player.ante.iter().map(|c| graveyard_entry(c, state, player_seat)).collect(),
         phased_out: state
             .phased_out
             .iter()

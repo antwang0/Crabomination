@@ -2066,6 +2066,8 @@ pub enum ZoneDest {
     ExileWithSourceStamp,
     /// Battlefield under `controller`, optionally tapped.
     Battlefield { controller: PlayerRef, tapped: bool },
+    /// CR 407.4 — the moved card's owner's ante zone.
+    Ante,
 }
 
 /// Where a countered spell goes after being lifted off the stack. The
@@ -8154,6 +8156,38 @@ pub enum Effect {
     /// fire, matching `ExchangeHandAndGraveyard`.
     ExchangeGraveyardAndLibrary { who: PlayerRef },
 
+    /// CR 407.4 — "[who] antes the top card of their library." With `optional`
+    /// each resolved player is asked first; `then` runs once per player who
+    /// actually anted (bound as that effect's controller — Rebirth's "that
+    /// player's life total becomes 20") and `else_` once per player who
+    /// declined (Amulet of Quoz's coin flip).
+    AnteTopOfLibrary {
+        who: PlayerRef,
+        #[serde(default)]
+        optional: bool,
+        #[serde(default)]
+        then: Option<Box<Effect>>,
+        #[serde(default)]
+        else_: Option<Box<Effect>>,
+    },
+    /// CR 407.4 — put `what` into its owner's ante zone from wherever it is.
+    Ante { what: Selector },
+    /// "Put all other cards you own from the ante into your graveyard"
+    /// (Jeweled Bird). Skips the effect's own source.
+    AnteToGraveyard { who: PlayerRef },
+    /// CR 407.3 — "You own target card in the ante. Exchange that card with
+    /// the top card of your library" (Darkpact). Ownership of the picked ante
+    /// card moves to `who` before the swap.
+    TakeAnteCardForLibraryTop { who: PlayerRef },
+    /// CR 407.3 — permanently exchange ownership of `a` and `b`, then send
+    /// each to `a_to` / `b_to` under its new owner (Tempest Efreet,
+    /// Timmerian Fiends). The only rules-legal ownership change.
+    ExchangeOwnership { a: Selector, b: Selector, a_to: ZoneDest, b_to: ZoneDest },
+    /// CR 119.4 — "[who] may pay N life. If they don't, `else_`." The asked
+    /// player isn't the effect's controller (Tempest Efreet, Bronze Tablet);
+    /// a seat that can't afford the life is never asked.
+    PlayerMayPayLifeElse { who: PlayerRef, life: Value, else_: Box<Effect> },
+
     /// "Each player may exile any number of cards from their graveyard,"
     /// then `then` runs once (Grave Consequences). Each seat picks its own
     /// batch via `Decision::ChooseCards`; unlike
@@ -8321,7 +8355,8 @@ fn zonedest_has_target(z: &ZoneDest) -> bool {
         ZoneDest::Graveyard
         | ZoneDest::Exile
         | ZoneDest::ExilePlotted
-        | ZoneDest::ExileWithSourceStamp => false,
+        | ZoneDest::ExileWithSourceStamp
+        | ZoneDest::Ante => false,
     }
 }
 

@@ -866,6 +866,10 @@ pub struct GameState {
     /// players. Set by `apply_format` for Two-Headed Giant.
     #[serde(default)]
     pub shared_team_turns: bool,
+    /// CR 407.1 — this game is being played for ante. Gates the opening ante
+    /// (CR 407.2) and deck legality for `CardDefinition.ante_only` cards.
+    #[serde(default)]
+    pub playing_for_ante: bool,
     /// CR 904.2a — the seat designated as the archenemy, who sets a scheme in
     /// motion at the start of each of their precombat main phases (CR 904.9).
     /// `None` outside the Archenemy variant.
@@ -1794,6 +1798,7 @@ impl Clone for GameState {
             countered_spell_controller: self.countered_spell_controller,
             accepting_player: self.accepting_player,
             shared_team_turns: self.shared_team_turns,
+            playing_for_ante: self.playing_for_ante,
             archenemy: self.archenemy,
             permanents_enter_tapped_this_turn: self.permanents_enter_tapped_this_turn,
             counters_removed_this_effect: self.counters_removed_this_effect,
@@ -2080,6 +2085,7 @@ impl GameState {
             countered_spell_controller: None,
             accepting_player: None,
             shared_team_turns: false,
+            playing_for_ante: false,
             archenemy: None,
             permanents_enter_tapped_this_turn: false,
             counters_removed_this_effect: 0,
@@ -17417,6 +17423,64 @@ impl GameState {
     /// payment that mutates the zone between the scan and the remove silently
     /// invalidates a stored index (removing the wrong card or panicking),
     /// while re-locating by id at removal time cannot.
+    /// CR 407.4 — move `seat`'s top library card into their ante zone.
+    /// Returns false (and does nothing) on an empty library.
+    #[doc(hidden)]
+    pub fn ante_top_card_for_test(&mut self, seat: usize) -> bool {
+        self.ante_top_card(seat)
+    }
+
+    pub(crate) fn ante_top_card(&mut self, seat: usize) -> bool {
+        if self.players[seat].library.is_empty() {
+            return false;
+        }
+        let card = self.players[seat].library.remove(0);
+        self.players[seat].ante.push(card);
+        true
+    }
+
+    /// CR 407.3 — reassign a card's owner wherever it currently lives, moving
+    /// it between owner-scoped zones so the new owner holds it.
+    pub(crate) fn set_card_owner(&mut self, id: CardId, owner: usize) {
+        if let Some(card) = self.find_card_anywhere_mut(id) {
+            card.owner = owner;
+        }
+    }
+
+    /// CR 407.1/407.2 — start playing for ante: flag the game and have every
+    /// player ante one random card from their deck. Call after libraries are
+    /// seated and before opening hands are drawn.
+    pub fn begin_ante_game(&mut self) {
+        use rand::RngExt;
+        self.playing_for_ante = true;
+        for seat in 0..self.players.len() {
+            let len = self.players[seat].library.len();
+            if len == 0 {
+                continue;
+            }
+            let idx = rand::rng().random_range(0..len);
+            let card = self.players[seat].library.remove(idx);
+            self.players[seat].ante.push(card);
+        }
+    }
+
+    /// CR 407.2 — at the end of the game the winner owns everything in the
+    /// ante zone. Collapses every seat's ante into the winner's.
+    pub fn award_ante_to(&mut self, winner: usize) {
+        let mut taken: Vec<CardInstance> = Vec::new();
+        for seat in 0..self.players.len() {
+            if seat == winner {
+                continue;
+            }
+            taken.extend(self.players[seat].ante.drain(..));
+        }
+        for card in taken.iter_mut() {
+            card.owner = winner;
+            card.controller = winner;
+        }
+        self.players[winner].ante.extend(taken);
+    }
+
     pub(crate) fn take_card(zone: &mut Vec<CardInstance>, id: CardId) -> Option<CardInstance> {
         let pos = zone.iter().position(|c| c.id == id)?;
         Some(zone.remove(pos))
@@ -17504,6 +17568,11 @@ impl GameState {
             if let Some(c) = p.library.iter().find(|c| c.id == id) {
                 return Some(c);
             }
+            // CR 407 — the ante zone is a real zone; a card there is still
+            // findable (Darkpact, the winner-takes-all sweep).
+            if let Some(c) = p.ante.iter().find(|c| c.id == id) {
+                return Some(c);
+            }
         }
         if let Some(c) = self.exile.iter().find(|c| c.id == id) {
             return Some(c);
@@ -17537,6 +17606,9 @@ impl GameState {
                 return Some(c);
             }
             if let Some(c) = p.library.iter_mut().find(|c| c.id == id) {
+                return Some(c);
+            }
+            if let Some(c) = p.ante.iter_mut().find(|c| c.id == id) {
                 return Some(c);
             }
         }
@@ -17573,6 +17645,9 @@ impl GameState {
             }
             if p.library.iter().any(|c| c.id == id) {
                 return Some(Zone::Library);
+            }
+            if p.ante.iter().any(|c| c.id == id) {
+                return Some(Zone::Ante);
             }
         }
         if self.exile.iter().any(|c| c.id == id) {

@@ -235,6 +235,19 @@ impl Effect {
         }
         match self {
             Effect::AbandonThisScheme => false,
+            Effect::AnteTopOfLibrary { who, then, else_, .. } => {
+                player_has_target(who)
+                    || then.as_ref().is_some_and(|e| e.requires_target())
+                    || else_.as_ref().is_some_and(|e| e.requires_target())
+            }
+            Effect::Ante { what } => sel_has_target(what),
+            Effect::AnteToGraveyard { who } | Effect::TakeAnteCardForLibraryTop { who } => {
+                player_has_target(who)
+            }
+            Effect::ExchangeOwnership { a, b, .. } => sel_has_target(a) || sel_has_target(b),
+            Effect::PlayerMayPayLifeElse { who, else_, .. } => {
+                player_has_target(who) || else_.requires_target()
+            }
             Effect::FlipUntilLoss { per_win } => per_win.requires_target(),
             Effect::HeadGames { who } | Effect::TradeSecrets { who } => player_has_target(who),
             Effect::LookAtFaceDown { what } => sel_has_target(what),
@@ -1933,6 +1946,7 @@ impl Effect {
                     ZoneDest::Graveyard => format!("put {t} into its owner's graveyard"),
                     ZoneDest::Battlefield { .. } => format!("put {t} onto the battlefield"),
                     ZoneDest::Library { .. } => format!("put {t} into its owner's library"),
+                    ZoneDest::Ante => format!("ante {t}"),
                 }
             }
             Effect::Destroy { .. } | Effect::DestroyAndRemember { .. } => {

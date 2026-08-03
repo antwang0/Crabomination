@@ -2143,6 +2143,11 @@ impl GameState {
                         .iter()
                         .filter(|c| c.controller == seat && c.definition.name == target_name)
                         .count(),
+                    crate::card::Zone::Ante => self.players[seat]
+                        .ante
+                        .iter()
+                        .filter(|c| c.definition.name == target_name)
+                        .count(),
                     crate::card::Zone::Stack | crate::card::Zone::Command => 0,
                 };
                 count >= n

@@ -628,6 +628,9 @@ pub enum Zone {
     Exile,
     Stack,
     Command,
+    /// CR 407 — the ante zone. Only exists while playing for ante; the winner
+    /// takes everything in it (CR 407.2).
+    Ante,
 }
 
 /// The "unless [...]" payment menu for `Keyword::Ward`. Each printed
@@ -3072,6 +3075,10 @@ pub struct CardDefinition {
     /// Any combat step, either player's turn.
     #[serde(default)]
     pub cast_only_during_combat: bool,
+    /// CR 407.3 — "Remove this card from your deck before playing if you're not
+    /// playing for ante." Deck legality rejects the card outside an ante game.
+    #[serde(default)]
+    pub ante_only: bool,
     /// "Cast this spell only before attackers are declared" (Master Warcraft).
     /// Gated in the cast-timing check: legal until the Declare Attackers step
     /// has produced attackers.
