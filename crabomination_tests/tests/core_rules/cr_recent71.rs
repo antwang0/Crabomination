@@ -214,3 +214,40 @@ fn cr_607_2_imprint_static_reads_only_its_own_exiles() {
     assert_eq!(g.granted_abilities_for(a).len(), base + 1);
     assert_eq!(g.granted_abilities_for(b).len(), base, "the other Welder is unaffected");
 }
+
+/// CR 702.22k — a blocker blocking a band has its damage divided by the
+/// active player, not by its own controller.
+#[test]
+fn cr_702_22k_active_player_divides_a_band_blockers_damage() {
+    use crabomination::decision::Decision;
+    use crabomination::game::types::ResumeContext;
+    let mut g = main_phase();
+    g.players[0].wants_ui = true;
+    let hero = g.add_card_to_battlefield(0, catalog::benalish_hero()); // banding
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::wall_of_stone());
+    for id in [hero, bear] {
+        g.clear_sickness(id);
+    }
+    to_declare_attackers(&mut g);
+    g.perform_action(GameAction::DeclareAttackersBanded {
+        attacks: vec![at(hero, AttackTarget::Player(1)), at(bear, AttackTarget::Player(1))],
+        bands: vec![vec![hero, bear]],
+    })
+    .expect("declare band");
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, hero)])).expect("block the band");
+    while g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        assert!(!g.is_game_over());
+    }
+    let pd = g.pending_decision.as_ref().expect("a combat decision");
+    assert!(
+        matches!(pd.resume, ResumeContext::CombatDamage { player: 0, attacker, .. } if attacker == blocker),
+        "the attacking player divides the blocker's damage: {:?}",
+        pd.resume
+    );
+    assert!(matches!(pd.decision, Decision::CombatDamageOrder { .. }));
+}

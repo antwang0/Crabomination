@@ -2156,8 +2156,9 @@ Each a small targeted feature; sweep batch by batch.
   clients via `ClientView.attack_bands`. **"Bands with other [quality]"**
   ships as `Keyword::BandsWithOther(SelectionRequirement)` — band legality
   without plain banding (702.22d), the defender's damage division against a
-  two-strong quality band (702.22j), and a payload-agnostic removal so
-  "loses all 'bands with other' abilities" (Shelkin Brownie, Tolaria) works.
+  two-strong quality band (702.22j), the active player dividing a band
+  blocker's damage (702.22k), and a payload-agnostic removal so "loses all
+  'bands with other' abilities" (Shelkin Brownie, Tolaria) works.
 - ✅ **Multiple combat phases** — `AdditionalCombatPhase` (Hellkite Charger) +
   post-main insertion (Relentless Assault). First-combat detection
   (`combat_phases_this_turn` + `Predicate::IsFirstCombatPhaseThisTurn`) gates

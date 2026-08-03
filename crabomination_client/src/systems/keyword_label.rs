@@ -126,6 +126,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Rampage(_) => "Rmp",
         Frenzy(_) => "Frz",
         Banding => "Bnd",
+        BandsWithOther(_) => "Bnd+",
         // Generalized menace — "can't be blocked except by N or more."
         CantBeBlockedExceptByN(_) => "Men+",
         // Evasion by blocker quality. "Can only be blocked by [filter]"

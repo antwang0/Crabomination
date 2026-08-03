@@ -2447,13 +2447,22 @@ impl GameState {
             {
                 continue;
             }
-            let assigner = bcp.controller;
+            // CR 702.22k — a blocker blocking a creature with banding (or two
+            // members of a "bands with other [quality]" band) has its damage
+            // divided by the ACTIVE player, not by its own controller.
+            let blocked = self.attackers_blocked_by(bid).to_vec();
+            let banded = blocked.iter().any(|aid| {
+                computed
+                    .iter()
+                    .any(|c| c.id == *aid && c.keywords.contains(&Keyword::Banding))
+            }) || self.quality_band_assigner(&blocked).is_some();
+            let assigner = if banded { self.active_player_idx } else { bcp.controller };
             let assigner_ui = self.players[assigner].wants_ui;
             let deathtouch = bcp.keywords.contains(&Keyword::Deathtouch);
             let total_power = combat_damage_value(bcp).max(0) as u32;
 
             if !self.combat_damage_order.contains_key(&bid) {
-                let default_order = self.attackers_blocked_by(bid).to_vec();
+                let default_order = blocked.clone();
                 let decision = self.combat_damage_order_decision(bid, &default_order);
                 if assigner_ui {
                     self.pending_decision = Some(PendingDecision {
