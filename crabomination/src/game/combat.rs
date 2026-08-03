@@ -1231,6 +1231,11 @@ impl GameState {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
+            // CR 509.1b — a blanket "can't block this turn" (Concussive
+            // Bolt's metalcraft rider) bars every block.
+            if self.cant_block_this_turn.contains(&blocker_id) {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
             // Per-pair "can't block this creature this turn" (Kozilek's
             // Pathfinder): the blocker is barred only from this attacker.
             if self.cant_block_pairs.contains(&(blocker_id, attacker_id)) {

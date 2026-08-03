@@ -512,6 +512,7 @@ impl Effect {
             }
             Effect::ThievesAuction
             | Effect::DimensionalBreach
+            | Effect::MatchingCantBlockThisTurn { .. }
             | Effect::DimensionalBreachReturn
             | Effect::ExileYourCreaturesForDragons { .. }
             | Effect::ExileFaceDownDrawPile { .. }

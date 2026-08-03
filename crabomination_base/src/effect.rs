@@ -7836,6 +7836,10 @@ pub enum Effect {
     /// declare-blockers validator rejects that specific block. Kozilek's
     /// Pathfinder ({C}: target creature can't block this creature this turn).
     CantBlockSourceThisTurn { target: Selector },
+    /// CR 509.1b — "creatures matching `filter` can't block this turn"
+    /// (Concussive Bolt's metalcraft rider). Snapshots the matching creatures
+    /// at resolution; cleared at cleanup.
+    MatchingCantBlockThisTurn { filter: SelectionRequirement },
 
     /// CR 508.1a — "[creatures] can attack this turn as though they didn't
     /// have defender." Records the resolved permanents in

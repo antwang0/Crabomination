@@ -2955,6 +2955,11 @@ pub struct CardDefinition {
     /// "Equip—Pay 3 life" (Nightmare Lash). Defaults to 0.
     #[serde(default)]
     pub equip_life_cost: u32,
+    /// "Equip—Sacrifice an artifact" (Piston Sledge): a sacrifice paid on top
+    /// of (usually instead of) the mana equip cost. The lowest-power match is
+    /// auto-picked; equipping fails cleanly when nothing matches.
+    #[serde(default)]
+    pub equip_sacrifice_filter: Option<SelectionRequirement>,
     /// Cheaper alternate equip cost usable when the equip target is a
     /// creature *token* — "Equip creature token {1}" (Team Pennant, the
     /// STX mascot-equipment cycle). Consulted in `equip` before the

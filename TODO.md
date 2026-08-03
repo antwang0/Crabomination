@@ -176,6 +176,34 @@ Residual, not blocking the count:
 - **Parallel Thoughts**' draw replacement is offered as a yes/no
   `OptionalTrigger`; the AutoDecider declines it, so bots never mine the pile.
 
+## Mirrodin Besieged — opened
+
+`set_gaps.py mbs` is at **7** (98 → 7; `sets::mbs`, 91 cards, tests in
+`recent_b/mbs`). Infect, Metalcraft, Battle cry, Living weapon and the
+proliferate shells all rode existing primitives. New this wave:
+`Effect::MatchingCantBlockThisTurn` (CR 509.1b — Concussive Bolt's metalcraft
+rider) and `CardDefinition.equip_sacrifice_filter` ("Equip—Sacrifice an
+artifact", Piston Sledge).
+
+Still open, and why — each wants one primitive:
+- **Knowledge Pool** — imprint plus a cast replacement that exiles the spell
+  and offers a free cast from the pool.
+- **Mitotic Manipulation** — "look at seven, put one with the same name as a
+  permanent onto the battlefield": needs a `SameNameAsAPermanent` requirement.
+- **Myr Welder** — imprint plus "has all activated abilities of all cards
+  exiled with it" (`Effect::GainAllActivatedAbilitiesOf` is one-shot, not a
+  static over the linked exile set).
+- **Galvanoth** — "look at the top card; you may cast it free if it's an
+  instant or sorcery": a top-of-library free cast gated on card type.
+- **Mirrorworks** — "whenever another nontoken artifact you control enters,
+  you may pay {2} to copy it": an ETB-scoped `MayPay` + `CreateTokenCopyOf`
+  on the *entering* permanent.
+- **Distant Memories** — "any opponent may have you put that card into your
+  hand; if none does, draw three" (`Effect::PlayersMayAccept` shape, but the
+  accept and the fallback both act on the caster).
+- **Phyrexian Hydra** — "prevent that damage; put a -1/-1 counter on this for
+  each 1 prevented": `ReplaceDamageToSelfWithCounters` is +1/+1-only.
+
 ## Judgment — opened
 
 `set_gaps.py jud` is at **18** (118 → 73 → 51 → 26 → 18); `sets::jud` ships

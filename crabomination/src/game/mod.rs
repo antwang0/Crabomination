@@ -1257,6 +1257,10 @@ pub struct GameState {
     /// cleanup. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub(crate) cant_block_pairs: Vec<(CardId, CardId)>,
+    /// CR 509.1b — creatures barred from blocking at all this turn
+    /// (Concussive Bolt). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) cant_block_this_turn: Vec<CardId>,
     /// CR 508.1a — creatures granted "can attack this turn as though it didn't
     /// have defender" (Krotiq Nestguard's activated ability). Cleared at cleanup.
     pub(crate) attack_despite_defender_this_turn: Vec<CardId>,
@@ -1830,6 +1834,7 @@ impl Clone for GameState {
             blocks_declared_this_turn: self.blocks_declared_this_turn.clone(),
             token_minting_source: self.token_minting_source,
             cant_block_pairs: self.cant_block_pairs.clone(),
+            cant_block_this_turn: self.cant_block_this_turn.clone(),
             attack_despite_defender_this_turn: self.attack_despite_defender_this_turn.clone(),
             damage_locked_until_turn_of: self.damage_locked_until_turn_of.clone(),
             prevention_shields: self.prevention_shields.clone(),
@@ -2108,6 +2113,7 @@ impl GameState {
             blocks_declared_this_turn: Vec::new(),
             token_minting_source: None,
             cant_block_pairs: Vec::new(),
+            cant_block_this_turn: Vec::new(),
             attack_despite_defender_this_turn: Vec::new(),
             damage_locked_until_turn_of: Vec::new(),
             prevention_shields: Vec::new(),
@@ -12284,6 +12290,35 @@ impl GameState {
         if life_cost > 0 && self.players[p].life <= life_cost as i32 {
             return Err(GameError::InsufficientLife);
         }
+        // "Equip—Sacrifice an artifact" (Piston Sledge). Resolve the victim
+        // before spending anything so a failed equip is atomic.
+        let sac_filter =
+            self.battlefield[equip_pos].definition.equip_sacrifice_filter.clone();
+        let sac_victim = match &sac_filter {
+            Some(filter) => {
+                let candidates: Vec<crate::card::CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.id != equipment)
+                    .map(|c| c.id)
+                    .filter(|id| {
+                        self.evaluate_requirement_static(
+                            filter,
+                            &crate::game::types::Target::Permanent(*id),
+                            p,
+                            Some(equipment),
+                        )
+                    })
+                    .collect();
+                Some(
+                    *self
+                        .auto_pick_lowest_power(&candidates, 1)
+                        .first()
+                        .ok_or(GameError::SelectionRequirementViolated)?,
+                )
+            }
+            None => None,
+        };
         // Pay the equip cost from the floated mana pool.
         self.players[p]
             .mana_pool
@@ -12291,8 +12326,17 @@ impl GameState {
             .map_err(GameError::Mana)?;
         self.spend_energy(p, energy_cost);
         self.pay_life_cost(p, life_cost);
-        // Attach.
-        self.battlefield[equip_pos].attached_to = Some(target);
+        if let Some(victim) = sac_victim {
+            let mut evs = vec![];
+            self.sacrifice_one(victim, p, &mut evs);
+            self.dispatch_triggers_for_events(&evs);
+        }
+        // Attach. The sacrifice above may have shifted the battlefield, so
+        // re-find the Equipment rather than reusing the stale index.
+        let Some(c) = self.battlefield.iter_mut().find(|c| c.id == equipment) else {
+            return Err(GameError::CardNotOnBattlefield(equipment));
+        };
+        c.attached_to = Some(target);
         Ok(vec![GameEvent::AttachmentMoved {
             attachment: equipment,
             attached_to: Some(target),

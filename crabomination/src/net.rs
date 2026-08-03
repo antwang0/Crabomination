@@ -808,6 +808,16 @@ pub struct PlayerView {
     /// combat skipped." Defaults to 0.
     #[serde(default)]
     pub skip_next_combat: u32,
+    /// CR 702.18 / 702.11 — this player can't be targeted at all right now
+    /// (Ivory Mask, Gilded Light's turn-scoped shroud, Leyline of Sanctity's
+    /// hexproof against opponents). Surfaced so the UI can grey out a
+    /// player-targeting spell instead of failing the cast.
+    #[serde(default)]
+    pub untargetable: bool,
+    /// CR 500 — number of this player's upcoming turns that will be skipped
+    /// (Lethal Vapors, Chronatog). Defaults to 0.
+    #[serde(default)]
+    pub skip_turns: u32,
     /// CR 723.1 — the seat currently making this player's decisions
     /// (Mindslaver), or `None` when they're playing themselves.
     #[serde(default)]

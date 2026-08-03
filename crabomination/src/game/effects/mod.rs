@@ -2137,6 +2137,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MatchingCantBlockThisTurn { filter } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    if !self.cant_block_this_turn.contains(&id) {
+                        self.cant_block_this_turn.push(id);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::DimensionalBreach => {
                 let source = ctx.source.unwrap_or(CardId(0));
                 let ids: Vec<CardId> = self.battlefield.iter().map(|c| c.id).collect();

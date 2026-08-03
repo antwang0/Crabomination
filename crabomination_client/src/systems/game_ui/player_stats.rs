@@ -1153,6 +1153,20 @@ pub fn update_player_stats_chips(
         if p.has_hexproof {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::PlayerHexproof, "◈ hexproof".to_string());
         }
+        // CR 702.18 — shroud binds you too, so the chip says *nobody* can aim
+        // at this seat (Ivory Mask, Gilded Light).
+        if p.untargetable && !p.has_hexproof {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::PlayerHexproof, "◈ shroud".to_string());
+        }
+        // CR 500 — turns this player will skip (Lethal Vapors, Chronatog).
+        if p.skip_turns > 0 {
+            let label = if p.skip_turns == 1 {
+                "⏭ skip turn".to_string()
+            } else {
+                format!("⏭ skip×{}", p.skip_turns)
+            };
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::SkipCombat, label);
+        }
         // CR 615 — Equal Treatment: every damage number on the board is a lie
         // this turn. Global, so surface it once, on the active player's row.
         if p.seat == cv.active_player
@@ -1504,6 +1518,13 @@ pub fn update_opponent_stats_rows(
                 // CR 702.11 — an opponent with player-level hexproof.
                 if p.has_hexproof {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::PlayerHexproof, "◈ hexproof".to_string());
+                }
+                // CR 702.18 — an untargetable opponent your removal can't aim at.
+                if p.untargetable && !p.has_hexproof {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::PlayerHexproof, "◈ shroud".to_string());
+                }
+                if p.skip_turns > 0 {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::SkipCombat, "⏭ skip turn".to_string());
                 }
             });
         }

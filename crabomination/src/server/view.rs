@@ -694,6 +694,16 @@ fn project_player(
         even_mv_cast_locked,
         development_locked: state.damping_engine_locks(player_seat),
         skip_next_combat: player.skip_next_combat,
+        // Shroud binds every seat; hexproof only binds opponents, so read the
+        // gate the way the viewer would experience it.
+        untargetable: state.player_has_static_shroud(player_seat)
+            || state
+                .check_target_legality(
+                    &crate::game::types::Target::Player(player_seat),
+                    viewer_seat,
+                )
+                .is_err(),
+        skip_turns: player.skip_turns,
         controlled_by: state.controlled_by.get(player_seat).copied().flatten(),
         // The *effective* cap, folding in Locust Miser / Minamo Scrollkeeper /
         // Reliquary Tower statics — the raw `Player.max_hand_size` ignores them
