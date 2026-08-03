@@ -1433,6 +1433,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Hourglass => "Hourglass",
         CounterType::Feather => "Feather",
         CounterType::Gold => "Gold",
+        CounterType::Trap => "Trap",
         CounterType::Winch => "Winch",
     }
 }

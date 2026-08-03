@@ -63,6 +63,7 @@ fn metalcraft_on(g: &mut GameState, seat: usize) {
 
 /// Printed stats and keywords, one table over the set.
 #[test]
+#[allow(clippy::type_complexity)]
 fn mbs_bodies_have_their_printed_stats() {
     let rows: &[(fn() -> CardDefinition, i32, i32, &[Keyword])] = &[
         (catalog::blightwidow, 2, 4, &[Keyword::Reach, Keyword::Infect]),
