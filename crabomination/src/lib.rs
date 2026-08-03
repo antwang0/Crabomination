@@ -33,6 +33,7 @@ pub mod game;
 pub mod net;
 pub mod player;
 pub mod replacement;
+pub mod selfplay;
 pub mod server;
 pub mod snapshot;
 pub mod sos_mode;

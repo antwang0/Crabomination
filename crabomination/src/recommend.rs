@@ -669,7 +669,7 @@ pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<Candid
 /// choice gets score jitter, and spell/land counts are sampled from the
 /// config ranges — so a field of these looks like a room of humans, not
 /// clones.
-fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, rng: &mut R) -> GauntletDeck {
+pub(crate) fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, rng: &mut R) -> GauntletDeck {
     // Same shape lattice as user candidates (pairs, splashes, 3/4/5-color).
     // A field that only ever builds pairs never bombs back at splash-shaped
     // candidates — inflating their measured win rates.
@@ -900,7 +900,7 @@ fn sample_deck_split<R: Rng>(cfg: &SimConfig, rng: &mut R) -> (usize, u32) {
 
 /// Unshuffled two-seat state with both libraries loaded — the clone-me
 /// template for [`play_one_game`].
-fn build_match_template(seat0: &[CardFactory], seat1: &[CardFactory]) -> GameState {
+pub(crate) fn build_match_template(seat0: &[CardFactory], seat1: &[CardFactory]) -> GameState {
     let mut g = GameState::new(vec![Player::new(0, "A"), Player::new(1, "B")]);
     for (seat, deck) in [seat0, seat1].into_iter().enumerate() {
         for &f in deck {
