@@ -1771,6 +1771,9 @@ pub enum SelectionRequirement {
     /// Has the same name as the card exiled with the ability's source
     /// (Extraplanar Lens' imprint).
     SameNameAsExiledWithSource,
+    /// The candidate shares a name with some permanent on the battlefield
+    /// (Mitotic Manipulation). A permanent matches itself.
+    SameNameAsAPermanent,
     /// The candidate shares a name with the effect's first target (Pack Hunt).
     SameNameAsTarget,
     /// Shares a colour with the card exiled with the ability's source

@@ -1375,6 +1375,11 @@ pub enum PendingEffectState {
         /// False for a zones-search that omits the library — no shuffle.
         #[serde(default = "crate::game::types::default_true")]
         include_library: bool,
+        /// The searching effect's source, so a `ZoneDest::ExileWithSourceStamp`
+        /// destination can stamp `exiled_with` after the placement (Distant
+        /// Memories). `place_card_in_dest` has no effect context of its own.
+        #[serde(default)]
+        source: Option<crate::card::CardId>,
     },
     /// Dakkon −6: the picked hand/graveyard card enters the battlefield.
     PutFromZonesPending { player: usize },

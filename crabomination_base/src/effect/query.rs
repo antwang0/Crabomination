@@ -363,9 +363,10 @@ impl Effect {
             Effect::ExileAnyNumberFromGraveyardOnSource { .. }
             | Effect::PreventAllDamageFromChosenColorGlobally
             | Effect::ShamansTrance => false,
-            Effect::AnyPlayerMayTakeDamageElse { who, otherwise, .. } => {
+            Effect::AnyPlayerMayAccept { who, accepted, otherwise, .. } => {
                 matches!(who, PlayerRef::Target(_))
                     || matches!(who, PlayerRef::ControllerOf(s) if sel_has_target(s))
+                    || accepted.requires_target()
                     || otherwise.requires_target()
             }
             // Mills the controller's own library, then branches on the milled
@@ -668,7 +669,7 @@ impl Effect {
             Effect::FactOrFiction { .. } => false,
             Effect::ReanimateAurasExileEot => false,
             Effect::AllureOfTheUnknown => false,
-            Effect::PossibilityStorm => false,
+            Effect::PossibilityStorm | Effect::KnowledgePool => false,
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),

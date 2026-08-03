@@ -29,6 +29,10 @@ pub enum PlayerRef {
     /// Aether's "its controller may put a creature card …"). Resolves to
     /// `GameState.countered_spell_controller`, stamped by the counter path.
     CounteredSpellController,
+    /// The seat that said yes to the innermost [`Effect::AnyPlayerMayAccept`]
+    /// offer (the punisher family's "have this deal damage to *them*").
+    /// Resolves to `GameState.accepting_player`.
+    AcceptingPlayer,
     /// The controller of the ability/spell.
     You,
     /// A specific chosen target slot (must resolve to a player).
@@ -7276,6 +7280,11 @@ pub enum Effect {
     /// their library in a random order.
     PossibilityStorm,
 
+    /// Knowledge Pool's cast replacement — the just-cast spell (the trigger
+    /// source) is exiled stamped `exiled_with = source`, and its caster may
+    /// then free-cast one of the *other* cards exiled with the source.
+    KnowledgePool,
+
     /// "Pay {cost} or you lose the game." Used for pact upkeep payments
     /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller
     /// can afford; eliminates the controller otherwise. (No interactive
@@ -8098,12 +8107,17 @@ pub enum Effect {
     /// token that's a copy of that creature" (Parallel Evolution).
     CopyEachCreatureToken,
 
-    /// The Judgment punisher shape — "any player may have [source] deal
-    /// `amount` damage to them. If no one does, `otherwise`." Walks the seats
-    /// `who` resolves to (in turn order from the controller) and takes the
-    /// first taker; `otherwise` runs only when every seat declines. Book
-    /// Burning, Breaking Point, Dwarven Driller, Dwarven Scorcher.
-    AnyPlayerMayTakeDamageElse { who: PlayerRef, amount: Value, otherwise: Box<Effect> },
+    /// The punisher / "any opponent may" shape — each seat `who` resolves to is
+    /// asked `prompt` in turn order from the controller. The first yes runs
+    /// `accepted` (with that seat readable as [`PlayerRef::AcceptingPlayer`])
+    /// and stops; `otherwise` runs only when every seat declines. Book Burning,
+    /// Breaking Point, Dwarven Driller, Dwarven Scorcher, Distant Memories.
+    AnyPlayerMayAccept {
+        who: PlayerRef,
+        prompt: String,
+        accepted: Box<Effect>,
+        otherwise: Box<Effect>,
+    },
 
     /// "Exchange your graveyard and your library, then shuffle" (Morality
     /// Shift). A whole-zone swap; per-card leaves-graveyard triggers don't

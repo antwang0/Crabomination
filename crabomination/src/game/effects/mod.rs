@@ -17233,6 +17233,7 @@ impl GameState {
                     include_graveyard,
                     include_hand,
                     include_library,
+                    source: ctx.source,
                 };
 
                 if self.players[picker].wants_ui {
@@ -20980,10 +20981,9 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::AnyPlayerMayTakeDamageElse { who, amount, otherwise } => {
-                // Book Burning / Breaking Point — the first willing seat eats
-                // the damage and cancels the punishment.
-                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+            Effect::AnyPlayerMayAccept { who, prompt, accepted, otherwise } => {
+                // Book Burning / Distant Memories — the first willing seat
+                // takes the offer and cancels the fallback.
                 let mut seats = self.resolve_players(who, ctx);
                 // Turn order from the controller, so the caster is asked first.
                 seats.sort_by_key(|s| (s + self.players.len() - ctx.controller) % self.players.len());
@@ -20992,7 +20992,7 @@ impl GameState {
                     let Some(yes) = self.ask_seat_bool(
                         &mut cursor,
                         seat,
-                        format!("Take {n} damage to stop this?"),
+                        prompt.clone(),
                         ctx.source.unwrap_or(CardId(0)),
                         effect,
                     ) else {
@@ -21000,8 +21000,10 @@ impl GameState {
                     };
                     if yes {
                         self.clear_answer_log();
-                        self.deal_damage_to_from(EntityRef::Player(seat), n, ctx.source, events);
-                        return Ok(());
+                        let prev = self.accepting_player.replace(seat);
+                        let out = self.run_effect(accepted, ctx, events);
+                        self.accepting_player = prev;
+                        return out;
                     }
                 }
                 self.clear_answer_log();
@@ -23098,6 +23100,65 @@ impl GameState {
                         continue;
                     }
                     self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::KnowledgePool => {
+                use crate::card::Zone;
+                use crate::decision::{Decision, DecisionAnswer};
+                // The just-cast spell is the trigger source; its caster exiles
+                // it into the pool, then may free-cast one of the OTHER cards
+                // already exiled with this artifact.
+                let Some(spell_id) = ctx.trigger_source.and_then(|e| e.as_card_id()) else {
+                    return Ok(());
+                };
+                let Some(pos) = self
+                    .stack
+                    .iter()
+                    .position(|si| matches!(si, StackItem::Spell { card, .. } if card.id == spell_id))
+                else {
+                    return Ok(());
+                };
+                let StackItem::Spell { card, caster, .. } = self.stack.remove(pos) else {
+                    return Ok(());
+                };
+                let mut c = *card;
+                c.exiled_with = ctx.source;
+                let eid = c.id;
+                self.exile.push(c);
+                events.push(GameEvent::PermanentExiled { card_id: eid });
+                // Offer each other card in the pool, in exile order.
+                let pool: Vec<CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == ctx.source && c.id != eid && !c.definition.is_land())
+                    .map(|c| c.id)
+                    .collect();
+                let src = ctx.source.unwrap_or(CardId(0));
+                for cid in pool {
+                    let Some(name) = self.find_card_anywhere(cid).map(|c| c.definition.name) else {
+                        continue;
+                    };
+                    let decision = Decision::OptionalTrigger {
+                        source: src,
+                        description: format!("Knowledge Pool: cast {name} without paying its mana cost?"),
+                    };
+                    let cast = match self.decider.kind() {
+                        crate::decision::DeciderKind::Auto => true,
+                        _ => matches!(self.decider.decide(&decision), DecisionAnswer::Bool(true)),
+                    };
+                    if cast {
+                        let def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                        let Some(def) = def else { continue };
+                        let auto_target =
+                            self.auto_target_for_effect_avoiding(&def.effect, caster, Some(cid));
+                        let cast_events = self.cast_card_for_free(
+                            caster, cid, Zone::Exile, auto_target, vec![], None, None, false,
+                        )?;
+                        events.extend(cast_events);
+                        break;
+                    }
                 }
                 Ok(())
             }
@@ -29100,6 +29161,14 @@ impl GameState {
                             ctx.controller,
                             ctx.source,
                         ),
+                        // Cards in a non-battlefield zone (a library/graveyard
+                        // walk) filter on the card itself — Galvanoth's
+                        // "if it's an instant or sorcery spell".
+                        EntityRef::Card(id) => self
+                            .find_card_anywhere(*id)
+                            .is_some_and(|c| {
+                                self.evaluate_requirement_on_card(filter, c, ctx.controller)
+                            }),
                         _ => false,
                     })
                     .collect()
@@ -29266,6 +29335,7 @@ impl GameState {
                 .and_then(|id| self.find_card_anywhere(*id))
                 .map(|c| c.owner),
             PlayerRef::CounteredSpellController => self.countered_spell_controller,
+            PlayerRef::AcceptingPlayer => self.accepting_player,
             // Ties go to the earliest seat (stands in for "you choose one").
             PlayerRef::LowestLife => (0..self.players.len()).min_by_key(|p| self.players[*p].life),
             // `max_by_key` returns the *last* maximum; fold keeps the earliest.

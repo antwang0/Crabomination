@@ -1475,9 +1475,13 @@ pub fn serene_sunset() -> CardDefinition {
 /// The Judgment punisher shape: "any player may have this deal N damage to
 /// them. If no one does, [otherwise]."
 fn punisher(who: PlayerRef, amount: i32, otherwise: Effect) -> Effect {
-    Effect::AnyPlayerMayTakeDamageElse {
+    Effect::AnyPlayerMayAccept {
         who,
-        amount: Value::Const(amount),
+        prompt: format!("Take {amount} damage to stop this?"),
+        accepted: Box::new(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::AcceptingPlayer),
+            amount: Value::Const(amount),
+        }),
         otherwise: Box::new(otherwise),
     }
 }

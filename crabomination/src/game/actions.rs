@@ -11505,6 +11505,15 @@ impl GameState {
         if let Some(c) = self.battlefield_find(card_id) {
             out.extend(c.granted_activated_abilities.iter().cloned());
             out.extend(c.granted_activated_eot.iter().cloned());
+            // Myr Welder — "has all activated abilities of all cards exiled
+            // with it", read live off the imprint pile.
+            if c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, StaticEffect::HasActivatedAbilitiesOfExiledWithSelf)
+            }) {
+                for imp in self.exile.iter().filter(|e| e.exiled_with == Some(card_id)) {
+                    out.extend(imp.definition.activated_abilities.iter().cloned());
+                }
+            }
             // CR 804.2 — the deploy creatures option gives every creature
             // "{T}: Target teammate gains control of this creature. Activate
             // only as a sorcery."

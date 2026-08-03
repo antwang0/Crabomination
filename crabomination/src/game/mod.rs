@@ -858,6 +858,10 @@ pub struct GameState {
     /// into Aether's "its controller may put a creature card …").
     #[serde(default)]
     pub countered_spell_controller: Option<usize>,
+    /// The seat that accepted the innermost `Effect::AnyPlayerMayAccept` offer.
+    /// Read by `PlayerRef::AcceptingPlayer`; saved/restored around the branch.
+    #[serde(skip)]
+    pub accepting_player: Option<usize>,
     /// Transient: seats that sacrificed at least one permanent during the
     /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
@@ -1771,6 +1775,7 @@ impl Clone for GameState {
             discard_causer: self.discard_causer,
             nonland_cards_exiled_this_effect: self.nonland_cards_exiled_this_effect,
             countered_spell_controller: self.countered_spell_controller,
+            accepting_player: self.accepting_player,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             cards_sacrificed_this_resolution: self.cards_sacrificed_this_resolution.clone(),
             chosen_creature_type_scratch: self.chosen_creature_type_scratch,
@@ -2052,6 +2057,7 @@ impl GameState {
             discard_causer: None,
             nonland_cards_exiled_this_effect: 0,
             countered_spell_controller: None,
+            accepting_player: None,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             cards_sacrificed_this_resolution: Vec::new(),
             chosen_creature_type_scratch: None,
@@ -15607,6 +15613,7 @@ impl GameState {
                 include_graveyard,
                 include_hand,
                 include_library,
+                source,
             } => {
                 let DecisionAnswer::Search(chosen_id) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
@@ -15676,6 +15683,13 @@ impl GameState {
                         };
                         if let Some(card) = taken {
                             self.place_card_in_dest(card, player, &to, &mut events);
+                            // CR 607 — `place_card_in_dest` carries no effect
+                            // context, so the linked-exile stamp is applied here.
+                            if matches!(to, crate::effect::ZoneDest::ExileWithSourceStamp)
+                                && let Some(c) = self.exile.iter_mut().find(|c| c.id == *card_id)
+                            {
+                                c.exiled_with = source;
+                            }
                             // Surface the found card so a downstream `Selector::LastMoved`
                             // can inspect its type (Oriq Loremage's "if instant/sorcery").
                             self.last_moved_cards.push(*card_id);
@@ -18334,6 +18348,7 @@ fn static_effect_to_effects(
             // Necrotic Ooze — surfaced via `granted_abilities_for`, not a layer.
             | StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures
             | StaticEffect::HasActivatedAbilitiesOfGraveyardLands
+            | StaticEffect::HasActivatedAbilitiesOfExiledWithSelf
             | StaticEffect::CostReductionPerCounterOnSource { .. }
             | StaticEffect::PreventDamageToThisRedirect
             | StaticEffect::HasActivatedAbilitiesOfLibraryTop { .. }

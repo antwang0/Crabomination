@@ -3000,6 +3000,10 @@ impl GameState {
                     R::NotToken => !card.is_token,
 
                     R::Warped => card.warped,
+                    // Mitotic Manipulation — "if it has the same name as a permanent".
+                    R::SameNameAsAPermanent => {
+                        self.battlefield.iter().any(|p| p.definition.name == card.definition.name)
+                    }
                     R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
                     R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
                     R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
@@ -3667,6 +3671,9 @@ impl GameState {
             }
             R::EnteredFromExileThisTurn => {
                 self.entered_from_exile_this_turn.contains(&card.id)
+            }
+            R::SameNameAsAPermanent => {
+                self.battlefield.iter().any(|p| p.definition.name == card.definition.name)
             }
             R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
             R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),

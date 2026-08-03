@@ -1838,6 +1838,10 @@ pub enum StaticEffect {
         #[serde(default)]
         condition: Option<crate::effect::Predicate>,
     },
+    /// "This permanent has all activated abilities of all cards exiled with
+    /// it" (Myr Welder). A self-static: `granted_abilities_for` folds in every
+    /// activated ability printed on a card stamped `exiled_with = this`.
+    HasActivatedAbilitiesOfExiledWithSelf,
     /// CR 605.1b — triggered mana ability: "Whenever [a matching land] is
     /// tapped for mana, its controller adds [extra]." Doesn't use the stack;
     /// resolved immediately at the mana-ability fast path. `enchanted_only`

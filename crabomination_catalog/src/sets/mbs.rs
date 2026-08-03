@@ -1957,3 +1957,122 @@ pub fn mirrorworks() -> CardDefinition {
         ..artifact("Mirrorworks", cost(&[generic(5)]))
     }
 }
+
+/// Knowledge Pool — imprint three cards per player, then every hand-cast spell
+/// is swapped for something already in the pool.
+pub fn knowledge_pool() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::ExileTopOfLibrary {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(3),
+                link_to_source: true,
+                face_down: false,
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                    .with_filter(Predicate::CastFromHand),
+                effect: Effect::KnowledgePool,
+            },
+        ],
+        ..artifact("Knowledge Pool", cost(&[generic(6)]))
+    }
+}
+
+/// Mitotic Manipulation — dig seven for a second copy of something you already
+/// have on the battlefield.
+pub fn mitotic_manipulation() -> CardDefinition {
+    sorcery(
+        "Mitotic Manipulation",
+        cost(&[generic(1), u(), u()]),
+        Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(7),
+            pick_filter: Some(R::SameNameAsAPermanent),
+            to_battlefield: true,
+            optional: true,
+            rest_to_graveyard: false,
+            take: None,
+            gain_life_if_pick: None,
+            gain_life_greatest_power_rest: false,
+            picked_lands_to_battlefield: false,
+            rest_bottom_random: false,
+            rest_to_exile: false,
+        },
+    )
+}
+
+/// Myr Welder — imprints artifact cards out of graveyards and wields every
+/// activated ability it has swallowed.
+pub fn myr_welder() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::ExileWithSource {
+                what: target_filtered(R::Artifact.and(R::InGraveyard)),
+            },
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "This creature has all activated abilities of all cards exiled with it.",
+            effect: StaticEffect::HasActivatedAbilitiesOfExiledWithSelf,
+        }],
+        ..artifact_creature("Myr Welder", cost(&[generic(3)]), vec![CreatureType::Myr], 1, 4)
+    }
+}
+
+/// Galvanoth — a free instant or sorcery off the top each upkeep.
+pub fn galvanoth() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::CastWithoutPayingImmediate {
+                what: Selector::MatchingAmong {
+                    inner: Box::new(Selector::TopOfLibrary {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                    }),
+                    filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                },
+                source_zone: crate::card::Zone::Library,
+                exile_after: false,
+                copy: false,
+                reduce_generic: 0,
+            },
+        }],
+        ..creature(
+            "Galvanoth",
+            cost(&[generic(3), r(), r()]),
+            vec![CreatureType::Beast],
+            3,
+            3,
+        )
+    }
+}
+
+/// Distant Memories — tutor, then let an opponent choose which half you get.
+pub fn distant_memories() -> CardDefinition {
+    sorcery(
+        "Distant Memories",
+        cost(&[generic(2), u(), u()]),
+        Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: R::Any,
+                to: ZoneDest::ExileWithSourceStamp,
+            },
+            Effect::AnyPlayerMayAccept {
+                who: PlayerRef::EachOpponent,
+                prompt: "Give them the exiled card instead of three draws?".into(),
+                accepted: Box::new(Effect::Move {
+                    what: Selector::CardExiledWithSource,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+                otherwise: Box::new(draw(3)),
+            },
+        ]),
+    )
+}

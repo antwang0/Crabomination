@@ -771,3 +771,100 @@ fn mirrorworks_copies_an_entering_artifact() {
         "the original plus its token copy"
     );
 }
+
+/// Mitotic Manipulation only takes a card that copies something already out.
+#[test]
+fn mitotic_manipulation_only_matches_a_named_permanent() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::hexplate_golem());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::oculus());
+    }
+    g.add_card_to_library(0, catalog::hexplate_golem());
+    let spell = g.add_card_to_hand(0, catalog::mitotic_manipulation());
+    cast(&mut g, 0, spell, None);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Hexplate Golem").count(),
+        2,
+        "the matching card came down; the Oculi were bottomed"
+    );
+}
+
+/// Myr Welder wields the activated ability of whatever it has imprinted.
+#[test]
+fn myr_welder_gains_the_imprinted_cards_ability() {
+    let mut g = main_phase();
+    let welder = g.add_card_to_battlefield(0, catalog::myr_welder());
+    g.battlefield_find_mut(welder).unwrap().summoning_sick = false;
+    let before = g.granted_abilities_for(welder).len();
+    let web = g.add_card_to_graveyard(0, catalog::decimator_web());
+    activate(&mut g, 0, welder, 0, Some(Target::Permanent(web)));
+    assert!(g.exile.iter().any(|c| c.id == web && c.exiled_with == Some(welder)));
+    assert_eq!(
+        g.granted_abilities_for(welder).len(),
+        before + 1,
+        "Decimator Web's activated ability is now the Welder's"
+    );
+}
+
+/// Galvanoth free-casts an instant off the top at upkeep.
+#[test]
+fn galvanoth_casts_the_top_instant_for_free() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::galvanoth());
+    g.add_card_to_library(0, catalog::choking_fumes());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.definition.name == "Choking Fumes"),
+        "it was cast and resolved without paying"
+    );
+}
+
+/// Distant Memories: an accepting opponent hands you the card instead of draws.
+#[test]
+fn distant_memories_accepted_gives_the_card_not_three_draws() {
+    let mut g = main_phase();
+    g.add_card_to_library(0, catalog::hexplate_golem());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::oculus());
+    }
+    let hand_before = g.players[0].hand.len();
+    let spell = g.add_card_to_hand(0, catalog::distant_memories());
+    let golem = g.players[0].library[0].id;
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Search(Some(golem)),
+        DecisionAnswer::Bool(true),
+    ]));
+    cast(&mut g, 0, spell, None);
+    // The opponent accepts, so the tutored card lands in hand rather than the
+    // caster drawing three — net zero over the spell leaving hand.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "the tutored card, not three draws");
+    assert_eq!(g.players[0].hand[0].definition.name, "Hexplate Golem");
+}
+
+/// Knowledge Pool swaps a hand-cast spell for something already in the pool.
+#[test]
+fn knowledge_pool_swaps_a_hand_cast_spell() {
+    let mut g = main_phase();
+    let pool = g.add_card_to_battlefield(0, catalog::knowledge_pool());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::choking_fumes());
+    }
+    // Imprint by hand — the permanent was placed directly, so no ETB fired.
+    let etb = catalog::knowledge_pool().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext {
+        source: Some(pool),
+        ..crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)
+    };
+    g.resolve_effect(&etb, &ctx).expect("imprint");
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(pool)).count(), 3);
+    let golem = g.add_card_to_hand(0, catalog::hexplate_golem());
+    cast(&mut g, 0, golem, None);
+    assert!(
+        g.exile.iter().any(|c| c.id == golem),
+        "the cast spell went into the pool instead of resolving"
+    );
+}
