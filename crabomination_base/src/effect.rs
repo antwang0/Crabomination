@@ -5236,6 +5236,9 @@ pub enum Effect {
     /// `BecomeColor` / `SetBasePT` / `LoseAllAbilities` for the full rewrite
     /// (Kasmina's Transmutation → blue Frog, Kenrith's Transformation → Elk,
     /// Turn to Frog, Lignify → Treefolk).
+    /// CR 613 layer 7d — "switch target creature's power and toughness" for
+    /// `duration` (Transmutation).
+    SwitchPowerToughness { what: Selector, duration: Duration },
     BecomeCreatureType { what: Selector, creature_types: Vec<crate::card::CreatureType>, duration: Duration },
     /// CR 205.1b / 613.4 — each permanent picked by `what` gains
     /// `creature_types` *in addition* to its own for `duration` (layer-4

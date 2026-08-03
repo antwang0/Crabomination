@@ -664,3 +664,61 @@ fn aura_shell(name: &'static str, c: ManaCost, bonus: EquipBonus) -> CardDefinit
 fn host() -> Selector {
     Selector::AttachedTo(Box::new(Selector::This))
 }
+
+// ── Wave 3: the colour-shift cycle and friends ──────────────────────────────
+
+/// "One or more target creatures become [color] until end of turn."
+fn color_shift(name: &'static str, c: ManaCost, color: Color) -> CardDefinition {
+    instant(
+        name,
+        c,
+        Effect::ApplyToTargets {
+            max_targets: 3,
+            min_targets: 1,
+            filter: R::Creature,
+            effect: Box::new(Effect::BecomeColor {
+                what: Selector::Target(0),
+                colors: vec![color],
+                duration: Duration::EndOfTurn,
+                additive: false,
+            }),
+        },
+    )
+}
+
+/// Dwarven Song — paint them red.
+pub fn dwarven_song() -> CardDefinition {
+    color_shift("Dwarven Song", cost(&[crate::mana::r()]), Color::Red)
+}
+
+/// Heaven's Gate — paint them white.
+pub fn heavens_gate() -> CardDefinition {
+    color_shift("Heaven's Gate", cost(&[crate::mana::w()]), Color::White)
+}
+
+/// Sea Kings' Blessing — paint them blue.
+pub fn sea_kings_blessing() -> CardDefinition {
+    color_shift("Sea Kings' Blessing", cost(&[crate::mana::u()]), Color::Blue)
+}
+
+/// Sylvan Paradise — paint them green.
+pub fn sylvan_paradise() -> CardDefinition {
+    color_shift("Sylvan Paradise", cost(&[g()]), Color::Green)
+}
+
+/// Touch of Darkness — paint them black.
+pub fn touch_of_darkness() -> CardDefinition {
+    color_shift("Touch of Darkness", cost(&[crate::mana::b()]), Color::Black)
+}
+
+/// Transmutation — flip a creature's stats around.
+pub fn transmutation() -> CardDefinition {
+    instant(
+        "Transmutation",
+        cost(&[generic(1), crate::mana::b()]),
+        Effect::SwitchPowerToughness {
+            what: target_filtered(R::Creature),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}

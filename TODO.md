@@ -187,17 +187,17 @@ general "any player may …, if no one does …" shape, with
 
 ## Legends — opened
 
-`set_gaps.py leg` is at **238** (277 → 268 → 238; `sets::leg`, 39 cards,
-tests in `classic_sets/leg`). Wave 1 exists to exercise CR 702.22's "bands
-with other [quality]" (`Keyword::BandsWithOther`): the five legendary band
-lands, Master of the Hunt's self-banding Wolves, and the two band-hosers
+`set_gaps.py leg` is at **232** (277 → 268 → 238 → 232; `sets::leg`,
+45 cards, tests in `classic_sets/leg`). Wave 1 exists to exercise CR 702.22's
+"bands with other [quality]" (`Keyword::BandsWithOther`): the five legendary
+band lands, Master of the Hunt's self-banding Wolves, and the two band-hosers
 (Shelkin Brownie, Tolaria). Wave 2 added the plain bodies, the Kobold lord
-shell and the one-line spells/Auras, all on existing primitives.
+shell and the one-line spells/Auras. Wave 3 added the five-card colour-shift
+cycle (on the existing `Effect::BecomeColor`) and Transmutation, behind a new
+`Effect::SwitchPowerToughness` (CR 613 layer 7d).
 
-Recurring blockers in what's left: a one-shot "target creature becomes
-[color]" (the Dwarven Song / Heaven's Gate / Sea Kings' Blessing cycle), a
-one-shot switch-power-and-toughness (Transmutation), a filtered
-`PermanentsDontUntap` (Arena of the Ancients) and the "prevent all damage to
+Recurring blockers in what's left: a filtered `PermanentsDontUntap` (Arena of
+the Ancients — the existing static is global) and a "prevent all damage to
 target creature this turn" one-shot (Indestructible Aura).
 
 ## New Phyrexia — opened

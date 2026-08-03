@@ -672,6 +672,7 @@ impl Effect {
             Effect::PossibilityStorm
             | Effect::KnowledgePool
             | Effect::PermanentsEnterTappedThisTurn => false,
+
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),
@@ -978,6 +979,7 @@ impl Effect {
             | Effect::BecomeChosenCreatureType { what, .. }
             | Effect::BecomeColor { what, .. }
             | Effect::BecomeCreatureType { what, .. }
+            | Effect::SwitchPowerToughness { what, .. }
             | Effect::AddCreatureTypes { what, .. }
             | Effect::ReplaceColorWord { what, .. }
             | Effect::ReplaceBasicLandType { what, .. }
@@ -1672,6 +1674,7 @@ impl Effect {
             | Effect::BecomeChosenCreatureType { what, .. }
             | Effect::BecomeColor { what, .. }
             | Effect::BecomeCreatureType { what, .. }
+            | Effect::SwitchPowerToughness { what, .. }
             | Effect::AddCreatureTypes { what, .. }
             | Effect::GrantMayPlay { what, .. }
             | Effect::StampMayPlaySurcharge { what, .. }
@@ -3097,6 +3100,7 @@ impl Effect {
                 | Effect::BecomeChosenCreatureType { what, .. }
                 | Effect::BecomeColor { what, .. }
                 | Effect::BecomeCreatureType { what, .. }
+                | Effect::SwitchPowerToughness { what, .. }
                 | Effect::AddCreatureTypes { what, .. }
                 | Effect::ReplaceColorWord { what, .. }
                 | Effect::ReplaceBasicLandType { what, .. }

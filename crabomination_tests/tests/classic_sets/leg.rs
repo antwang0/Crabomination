@@ -268,3 +268,45 @@ fn amrou_kithkin_dodges_big_blockers() {
     let def = catalog::amrou_kithkin();
     assert!(def.keywords.contains(&Keyword::CantBeBlockedByPowerAtLeast(3)));
 }
+
+/// The colour-shift cycle repaints a creature for the turn.
+#[test]
+fn touch_of_darkness_repaints_a_creature() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bear).unwrap().colors, vec![Color::Green]);
+    let spell = g.add_card_to_hand(0, catalog::touch_of_darkness());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().colors, vec![Color::Black]);
+    g.do_cleanup(&mut vec![]);
+    assert_eq!(g.computed_permanent(bear).unwrap().colors, vec![Color::Green]);
+}
+
+/// Transmutation flips a creature's stats for the turn.
+#[test]
+fn transmutation_switches_power_and_toughness() {
+    let mut g = main_phase();
+    let snake = g.add_card_to_battlefield(1, catalog::hornet_cobra()); // 2/1
+    let spell = g.add_card_to_hand(0, catalog::transmutation());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(snake)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(snake).unwrap();
+    assert_eq!((c.power, c.toughness), (1, 2));
+}

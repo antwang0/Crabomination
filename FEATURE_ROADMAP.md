@@ -2419,7 +2419,7 @@ Each a small targeted feature; sweep batch by batch.
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block and **Mirrodin Besieged** are all at zero. **New Phyrexia**
    is open at 2 after three waves (109 cards, `sets::nph`) and closes the Scars
-   block; **Legends** is open at 238 after two waves (39 cards, `sets::leg`).
+   block; **Legends** is open at 232 after three waves (45 cards, `sets::leg`).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
