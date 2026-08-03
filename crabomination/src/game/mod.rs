@@ -866,6 +866,10 @@ pub struct GameState {
     /// players. Set by `apply_format` for Two-Headed Giant.
     #[serde(default)]
     pub shared_team_turns: bool,
+    /// CR 614 — "permanents enter tapped this turn" (Due Respect). Cleared at
+    /// cleanup alongside the other turn-scoped flags.
+    #[serde(default)]
+    pub permanents_enter_tapped_this_turn: bool,
     /// Transient: seats that sacrificed at least one permanent during the
     /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
@@ -1781,6 +1785,7 @@ impl Clone for GameState {
             countered_spell_controller: self.countered_spell_controller,
             accepting_player: self.accepting_player,
             shared_team_turns: self.shared_team_turns,
+            permanents_enter_tapped_this_turn: self.permanents_enter_tapped_this_turn,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             cards_sacrificed_this_resolution: self.cards_sacrificed_this_resolution.clone(),
             chosen_creature_type_scratch: self.chosen_creature_type_scratch,
@@ -2064,6 +2069,7 @@ impl GameState {
             countered_spell_controller: None,
             accepting_player: None,
             shared_team_turns: false,
+            permanents_enter_tapped_this_turn: false,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             cards_sacrificed_this_resolution: Vec::new(),
             chosen_creature_type_scratch: None,

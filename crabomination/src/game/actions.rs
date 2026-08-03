@@ -2565,7 +2565,8 @@ impl GameState {
         let Some(idx) = self.battlefield.iter().position(|c| c.id == card_id) else {
             return;
         };
-        let mut should_tap = false;
+        // CR 614 — "permanents enter tapped this turn" (Due Respect).
+        let mut should_tap = self.permanents_enter_tapped_this_turn;
         // A permanent's own `EntersTapped { applies_to: This/Source }` (e.g.
         // Overlord of the Hauntwoods' "Everywhere" land token) taps itself —
         // the cross-permanent loop below skips the entering card, so handle the

@@ -7280,6 +7280,10 @@ pub enum Effect {
     /// their library in a random order.
     PossibilityStorm,
 
+    /// CR 614 — "Permanents enter tapped this turn" (Due Respect). A
+    /// turn-scoped blanket replacement over every entry path.
+    PermanentsEnterTappedThisTurn,
+
     /// Knowledge Pool's cast replacement — the just-cast spell (the trigger
     /// source) is exiled stamped `exiled_with = source`, and its caster may
     /// then free-cast one of the *other* cards exiled with the source.

@@ -185,6 +185,27 @@ general "any player may …, if no one does …" shape, with
 `Effect::KnowledgePool`, `StaticEffect::HasActivatedAbilitiesOfExiledWithSelf`
 (Myr Welder) and `SelectionRequirement::SameNameAsAPermanent`.
 
+## New Phyrexia — opened
+
+`set_gaps.py nph` is at **30** (111 → 30; `sets::nph`, 81 cards, tests in
+`recent_b/nph`). Phyrexian mana, Infect, Living weapon, Metalcraft and the
+five Shrines all rode existing primitives. New this wave:
+`Effect::PermanentsEnterTappedThisTurn` (CR 614 — Due Respect's turn-scoped
+blanket enters-tapped replacement, cleared at cleanup).
+
+Still open, and why — each wants one primitive:
+- **Act of Aggression / Arm with Aether / Bludgeon Brawl / Caged Sun /
+  Cathedral Membrane / Chancellor cycle / Conversion Chamber / Entomber Exarch
+  / Etched Monstrosity / Exclusion Ritual / Geosurge's spend-restriction /
+  Greenhilt Trainee / Gremlin Mine / Hex Parasite / Ichor Explosion /
+  Invader Parasite / Lashwrithe / Mycosynth Fiend / Myr Superion / Omen Machine
+  / Parasitic Implant / Phyrexian Ingester / Phyrexian Swarmlord /
+  Praetor's Grasp / Psychic Surgery / Rage Extractor / Tormentor Exarch /
+  Viridian Betrayers / Whispering Specter** — see `set_gaps.py nph` for the
+  live list. The recurring blockers are opening-hand reveals (the Chancellor
+  cycle), spend-restricted mana pools, and a "for each poison counter your
+  opponents have" `DynamicPt`.
+
 ## Judgment — closed
 
 `set_gaps.py jud` is at **0** (`sets::jud`/`jud2`, tests in

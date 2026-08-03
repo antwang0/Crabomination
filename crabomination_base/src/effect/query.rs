@@ -669,7 +669,9 @@ impl Effect {
             Effect::FactOrFiction { .. } => false,
             Effect::ReanimateAurasExileEot => false,
             Effect::AllureOfTheUnknown => false,
-            Effect::PossibilityStorm | Effect::KnowledgePool => false,
+            Effect::PossibilityStorm
+            | Effect::KnowledgePool
+            | Effect::PermanentsEnterTappedThisTurn => false,
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),

@@ -382,6 +382,7 @@ pub mod mmq3;
 pub mod mmq4;
 pub mod mmq5;
 pub mod mmq6;
+pub mod nph;
 pub mod nms;
 pub mod nms2;
 pub mod nms3;

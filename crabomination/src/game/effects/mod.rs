@@ -23104,6 +23104,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PermanentsEnterTappedThisTurn => {
+                self.permanents_enter_tapped_this_turn = true;
+                Ok(())
+            }
+
             Effect::KnowledgePool => {
                 use crate::card::Zone;
                 use crate::decision::{Decision, DecisionAnswer};
