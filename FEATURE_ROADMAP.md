@@ -2407,14 +2407,16 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** The Odyssey block and **Onslaught** are all at zero
-   (`set_gaps.py ody` / `tor` / `jud` / `ons`). **Legions** (`sets::lgn`) is
-   open at 9 gaps after three waves (112 cards); the remainder each want one
-   primitive (Dermoplasm's put-a-morph, Goblin Assassin's per-player flips,
-   Hollow Specter's pay-{X} reveal, Riptide Mangler's indefinite base-power
-   copy, Planar Guide's mass blink, Dark Supplicant's three-zone named search,
-   Beacon of Destiny's damage redirect, Goblin Goon's creature-count gate,
-   Whipgrass Entangler's scaled tax). Then Scourge.
+0. **Next set to close.** The Odyssey block, **Onslaught** and **Legions** are
+   all at zero (`set_gaps.py ody` / `tor` / `jud` / `ons` / `lgn`). **Scourge**
+   (`sets::scg`) is open at 39 gaps after one wave (77 cards). What's left is
+   mostly one primitive apiece — Morph with a non-mana turn-up cost (Putrid
+   Raptor, Skirk Volcanist, Zombie Cutthroat, Raven Guild Initiate), "target
+   player can't cast spells this turn" (Xantid Swarm), a cast restriction keyed
+   on the turn's land drop (Rock Jockey), Karona's per-upkeep control hand-off,
+   Day of the Dragons' exile-and-swap, Dimensional Breach's per-upkeep return,
+   Parallel Thoughts' face-down draw pile, and Grip of Chaos' random
+   retargeting. Then Mirrodin.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2428,6 +2430,37 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Legions (LGN) closed** — `set_gaps.py lgn` 9 → 0. New: `Effect::SearchZones`
+  (a real graveyard/hand/library search, replacing `SearchLibraryOrGraveyard`;
+  the CR 701.19 shuffle/tax/lock machinery applies only when the library is one
+  of the listed zones), `Effect::EachPlayerFlipsCoin` (each seat flips its own
+  coin in APNAP order, with the branch running under that seat so the body
+  reads "that player"), a `then` "if you do" rider on
+  `PutFromHandOntoBattlefield`, and
+  `Keyword::CantAttackOrBlockUnlessPayPerPermanent`. The blocker and affordance
+  gates now consult the whole pay-tax family through `attack_block_keyword_tax`
+  rather than only the flat `{N}` arm, and `SetBasePower` surfaces a target
+  hidden in its power value the way `DealDamage` already did.
+
+- **Scourge (SCG) opened** — `set_gaps.py scg` 116 → 39 (`sets::scg`, 77 cards).
+  New: `StaticEffect::PlayersCantCycle` (Stabilizer),
+  `StaticEffect::MorphCostsMore` + `ManaCost::plus_generic` (Exiled Doomsayer),
+  `Effect::ReturnSelfAttachedToTrigger` (the four Dragon Auras), and
+  `DynamicPt::TotalManaValueOfOtherControlledCreatures` (Ancient Ooze).
+
+- **CR 804 deploy creatures** — `GameState.deploy_creatures` grants every
+  creature "{T}: Target teammate gains control of this creature", backed by a
+  new `PlayerRef::EachTeammate`. CR 707.2: enters-as-copy now asks the
+  controller which permanent to copy instead of silently taking the biggest
+  body.
+
+- **Statics-granted abilities reach the client** — `PermanentView.abilities`
+  was truncated to printed + instance-granted, so a Cryptolith Rite / Magma
+  Sliver grant was live in the engine but invisible in the UI. It now mirrors
+  `granted_abilities_for`, which is what `activate_ability` indexes into. In
+  the same pass `AbilityView.gate_blocked` is really evaluated and the client
+  renders the "activate only if …" gate on the ability row.
 
 - **Onslaught (ONS) closed** — `set_gaps.py ons` 4 → 0 (`sets::ons4`). Each of
   the last four cards needed one primitive: `Effect::ReplaceCreatureTypeText`

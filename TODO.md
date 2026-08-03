@@ -152,6 +152,46 @@ Open follow-ups:
   the target filter, but a spell whose one slot is a player target is copied
   onto permanents too.
 
+## Legions — closed
+
+`set_gaps.py lgn` is at **zero** (122 → 9 → 0; `sets::lgn`, tests in
+`classic_sets/lgn`). The last nine each wanted one primitive; see
+FEATURE_ROADMAP.md → "Recently closed" for what shipped.
+
+## Scourge — opened
+
+`set_gaps.py scg` is at **39** (116 → 39; `sets::scg`, tests in
+`classic_sets/scg`, 77 cards). Storm, cycling + the Decree riders, the
+"whenever a permanent is turned face up" payoffs, the Dragon Auras' graveyard
+re-attach, and the "greatest mana value among permanents you control" cycle
+all ride existing primitives.
+
+Still open, and why — each wants one primitive:
+- **Morph with a non-mana turn-up cost** — `Keyword::Morph` carries a
+  `ManaCost`, so "Morph—Discard a Zombie card" (Putrid Raptor), "Sacrifice two
+  Mountains" (Skirk Volcanist), "Pay 5 life" (Zombie Cutthroat) and "Return a
+  Bird you control to its owner's hand" (Raven Guild Initiate) have no home.
+  Wants a `MorphCost` enum alongside the existing `WardCost` menu.
+- **Xantid Swarm** — "defending player can't cast spells this turn"; the
+  engine has `cant_cast_noncreature_this_turn` but no blanket per-player lock.
+- **Rock Jockey** — a cast restriction keyed on whether the caster has played
+  a land this turn (`Predicate::PlayedLandThisTurn`), plus the mirror
+  `StaticEffect` gated on "this was cast this turn"
+  (`Predicate::SourceCastThisTurn`).
+- **Karona, False God** (per-upkeep untap-and-hand-over), **Day of the
+  Dragons** (exile-and-swap with a leave trigger), **Dimensional Breach**
+  (per-upkeep return from a linked exile), **Parallel Thoughts** (a
+  face-down draw pile replacing draws), **Grip of Chaos** (random retargeting
+  of every single-target object), **Faces of the Past**, **Lethal Vapors**,
+  **Force Bubble**, **Form of the Dragon**, **Proteus Machine**,
+  **Sliver Overlord**, **Mischievous Quanar**, **Metamorphose**,
+  **Long-Term Plans** (third from the top), **Trap Digger**, **Soul Collector**,
+  **Forgotten Ancient**, **Ambush Commander**, **Primitive Etchings**,
+  **Pemmin's Aura**, **Uncontrolled Infestation**, **Fatal Mutation**,
+  **Frozen Solid**, **Goblin Psychopath**, **One with Nature**,
+  **Dragonstorm**, **Decree of Annihilation**'s cycling half is shipped but the
+  cast half exiles hands via a `CardsInZone` sweep that should be audited.
+
 ## Judgment — opened
 
 `set_gaps.py jud` is at **18** (118 → 73 → 51 → 26 → 18); `sets::jud` ships
