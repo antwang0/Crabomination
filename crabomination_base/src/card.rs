@@ -1776,6 +1776,9 @@ pub enum SelectionRequirement {
     /// Has the same name as the card exiled with the ability's source
     /// (Extraplanar Lens' imprint).
     SameNameAsExiledWithSource,
+    /// CR 107.4f — the card's mana cost contains at least one Phyrexian mana
+    /// symbol ("a spell with {H} in its mana cost" — Rage Extractor).
+    HasPhyrexianManaInCost,
     /// The candidate shares a name with some permanent on the battlefield
     /// (Mitotic Manipulation). A permanent matches itself.
     SameNameAsAPermanent,

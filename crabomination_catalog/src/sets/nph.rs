@@ -2161,3 +2161,224 @@ pub fn phyrexian_ingester() -> CardDefinition {
         )
     }
 }
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────────
+
+/// "You may reveal this from your opening hand" — the Chancellor cycle's
+/// first-upkeep payoff.
+fn chancellor_reveal(body: Effect) -> crate::effect::OpeningHandEffect {
+    crate::effect::OpeningHandEffect::RevealForDelayedTrigger {
+        kind: crate::effect::DelayedTriggerKind::YourNextUpkeep,
+        body,
+    }
+}
+
+/// Chancellor of the Dross — three life off each opponent before the game starts.
+pub fn chancellor_of_the_dross() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        opening_hand: Some(chancellor_reveal(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(3),
+        })),
+        ..creature(
+            "Chancellor of the Dross",
+            cost(&[generic(4), b(), b(), b()]),
+            vec![CreatureType::Phyrexian, CreatureType::Vampire],
+            6,
+            6,
+        )
+    }
+}
+
+/// Chancellor of the Forge — a free hasty Goblin, and a swarm when it lands.
+pub fn chancellor_of_the_forge() -> CardDefinition {
+    let goblin = TokenDefinition {
+        name: "Phyrexian Goblin".into(),
+        power: 1,
+        toughness: 1,
+        colors: vec![Color::Red],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Goblin],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Haste],
+        ..Default::default()
+    };
+    CardDefinition {
+        opening_hand: Some(chancellor_reveal(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: goblin.clone(),
+        })),
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::PermanentCountControlledByMatching(PlayerRef::You, R::Creature),
+            definition: goblin,
+        })],
+        ..creature(
+            "Chancellor of the Forge",
+            cost(&[generic(4), r(), r(), r()]),
+            vec![CreatureType::Phyrexian, CreatureType::Giant],
+            5,
+            5,
+        )
+    }
+}
+
+/// Chancellor of the Spires — a pre-game mill, then a free spell off their yard.
+pub fn chancellor_of_the_spires() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        opening_hand: Some(chancellor_reveal(Effect::Mill {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(7),
+        })),
+        triggered_abilities: vec![etb(Effect::CastWithoutPayingImmediate {
+            what: target_filtered(
+                R::HasCardType(CardType::Instant)
+                    .or(R::HasCardType(CardType::Sorcery))
+                    .and(R::InGraveyard)
+                    .and(R::ControlledByOpponent),
+            ),
+            source_zone: crate::card::Zone::Graveyard,
+            exile_after: false,
+            copy: false,
+            reduce_generic: 0,
+        })],
+        ..creature(
+            "Chancellor of the Spires",
+            cost(&[generic(4), u(), u(), u()]),
+            vec![CreatureType::Phyrexian, CreatureType::Sphinx],
+            5,
+            7,
+        )
+    }
+}
+
+/// Omen Machine — nobody draws; everybody plays off the top instead.
+pub fn omen_machine() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Players can't draw cards.",
+            effect: StaticEffect::PlayersSkipDraws,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Draw),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::ExileTopUntilNonlandMayPlay {
+                who: PlayerRef::ActivePlayer,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                free: true,
+                hand_unless_mv_below: None,
+                grant_to_exiling_player: true,
+            },
+        }],
+        ..artifact("Omen Machine", cost(&[generic(6)]))
+    }
+}
+
+/// Arm with Aether — your team bounces what it hits this turn.
+pub fn arm_with_aether() -> CardDefinition {
+    sorcery(
+        "Arm with Aether",
+        cost(&[generic(2), u()]),
+        Effect::GrantTriggeredAbilityThisTurnToMatching {
+            filter: R::Creature.and(R::ControlledByYou),
+            trigger: Box::new(TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::MayDo {
+                    description: "Bounce a creature that player controls?".into(),
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                    }),
+                },
+            }),
+        },
+    )
+}
+
+/// Hex Parasite — eats counters off anything and swells for each one.
+pub fn hex_parasite() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), phyrexian(Color::Black)]),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCountersUpTo {
+                    what: target_filtered(R::Permanent),
+                    amount: Value::XFromCost,
+                },
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::CountersRemovedThisEffect,
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..artifact_creature(
+            "Hex Parasite",
+            cost(&[generic(1)]),
+            vec![CreatureType::Phyrexian, CreatureType::Insect],
+            1,
+            1,
+        )
+    }
+}
+
+/// Rage Extractor — every Phyrexian-mana spell throws its mana value at something.
+pub fn rage_extractor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: R::HasPhyrexianManaInCost,
+                },
+            ),
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+            },
+        }],
+        ..artifact("Rage Extractor", cost(&[generic(4), phyrexian(Color::Red)]))
+    }
+}
+
+/// Invader Parasite — imprint a land and burn everyone who plays another.
+pub fn invader_parasite() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::ExileWithSource { what: target_filtered(R::Land) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::OpponentControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Land.and(R::SameNameAsExiledWithSource),
+                    }),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(
+                        Selector::TriggerSource,
+                    ))),
+                    amount: Value::Const(2),
+                },
+            },
+        ],
+        ..creature(
+            "Invader Parasite",
+            cost(&[generic(3), r(), r()]),
+            vec![CreatureType::Phyrexian, CreatureType::Insect],
+            3,
+            2,
+        )
+    }
+}

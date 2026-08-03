@@ -655,3 +655,113 @@ fn tormentor_exarch_shrinks_on_the_second_mode() {
     cast(&mut g, 0, exarch, Some(Target::Permanent(bear)));
     assert!(g.battlefield_find(bear).is_none(), "a 2/2 at -0/-2 dies to SBA");
 }
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────────
+
+/// A revealed Chancellor of the Dross drains three at the first upkeep.
+#[test]
+fn chancellor_of_the_dross_drains_from_the_opening_hand() {
+    let mut g = main_phase();
+    g.add_card_to_hand(0, catalog::chancellor_of_the_dross());
+    g.fire_start_of_game_effects();
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17);
+    assert_eq!(g.players[0].life, 23);
+}
+
+/// Chancellor of the Forge's ETB mints a Goblin per creature you control.
+#[test]
+fn chancellor_of_the_forge_swarms_on_arrival() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let chancellor = g.add_card_to_hand(0, catalog::chancellor_of_the_forge());
+    cast(&mut g, 0, chancellor, None);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Goblin").count(),
+        2,
+        "the Bear plus the Chancellor itself"
+    );
+}
+
+/// Chancellor of the Spires mills seven off the opening-hand reveal.
+#[test]
+fn chancellor_of_the_spires_mills_from_the_opening_hand() {
+    let mut g = main_phase();
+    for _ in 0..10 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    g.add_card_to_hand(0, catalog::chancellor_of_the_spires());
+    g.fire_start_of_game_effects();
+    g.step = TurnStep::Untap;
+    let _ = g.advance_step(Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), 7);
+}
+
+/// Hex Parasite eats counters and grows by however many it removed.
+#[test]
+fn hex_parasite_grows_by_the_counters_it_ate() {
+    let mut g = main_phase();
+    let parasite = g.add_card_to_battlefield(0, catalog::hex_parasite());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(victim).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: parasite,
+        ability_index: 0,
+        target: Some(Target::Permanent(victim)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(victim).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    assert_eq!(g.computed_permanent(parasite).unwrap().power, 4, "1 + 3 removed");
+}
+
+/// Rage Extractor only fires on spells with a Phyrexian symbol in their cost.
+#[test]
+fn rage_extractor_fires_on_phyrexian_costs() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::rage_extractor());
+    let plain = g.add_card_to_hand(0, catalog::whipflare());
+    cast(&mut g, 0, plain, None);
+    assert_eq!(g.players[1].life, 20, "a plain red cost has no Phyrexian symbol");
+    let phyrexian = g.add_card_to_hand(0, catalog::slash_panther());
+    cast(&mut g, 0, phyrexian, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 15, "mana value 5");
+}
+
+/// Invader Parasite burns whoever plays a land matching its imprint.
+#[test]
+fn invader_parasite_punishes_the_named_land() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let parasite = g.add_card_to_hand(0, catalog::invader_parasite());
+    cast(&mut g, 0, parasite, Some(Target::Permanent(land)));
+    assert!(g.exile.iter().any(|c| c.id == land));
+    let second = g.add_card_to_hand(1, catalog::forest());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::PlayLand(second)).expect("land drop");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18);
+}
+
+/// Omen Machine stops the draw step outright.
+#[test]
+fn omen_machine_stops_draws() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::omen_machine());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.players[0].hand.clear();
+    g.step = TurnStep::Upkeep;
+    let _ = g.advance_step(Vec::new());
+    assert_eq!(g.step, TurnStep::Draw);
+    assert!(g.players[0].hand.is_empty(), "no turn-based draw");
+}

@@ -1459,6 +1459,7 @@ impl GameState {
         self.damaged_this_resolution.clear();
         self.countered_spell_mana_spent = 0;
         self.countered_spell_controller = None;
+        self.counters_removed_this_effect = 0;
         self.countered_spell_mana_value = 0;
         self.players_sacrificed_this_resolution.clear();
         self.cards_sacrificed_this_resolution.clear();
@@ -12818,6 +12819,7 @@ impl GameState {
                             let ctrl = c.controller;
                             let mut left = budget;
                             let mut oil_removed = false;
+                            let mut taken = 0u32;
                             let kinds: Vec<CounterType> =
                                 c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| *k).collect();
                             for kind in kinds {
@@ -12825,10 +12827,12 @@ impl GameState {
                                 let removed = c.remove_counters(kind, left);
                                 if removed > 0 {
                                     left -= removed;
+                                    taken += removed;
                                     oil_removed |= kind == CounterType::Oil;
                                     events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count: removed });
                                 }
                             }
+                            self.counters_removed_this_effect += taken;
                             if oil_removed {
                                 self.players[ctrl].oil_activity_this_turn = true;
                             }
@@ -12836,6 +12840,7 @@ impl GameState {
                         EntityRef::Player(p) => {
                             let take = budget.min(self.players[p].poison_counters);
                             self.players[p].poison_counters -= take;
+                            self.counters_removed_this_effect += take;
                         }
                     }
                 }

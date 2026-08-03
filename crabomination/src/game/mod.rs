@@ -870,6 +870,10 @@ pub struct GameState {
     /// cleanup alongside the other turn-scoped flags.
     #[serde(default)]
     pub permanents_enter_tapped_this_turn: bool,
+    /// Counters removed by `Effect::RemoveCountersUpTo` during the current
+    /// resolution. Read by `Value::CountersRemovedThisEffect` (Hex Parasite).
+    #[serde(skip)]
+    pub counters_removed_this_effect: u32,
     /// Transient: seats that sacrificed at least one permanent during the
     /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
     /// so a follow-up step can gate on "if you sacrificed a permanent this way"
@@ -1786,6 +1790,7 @@ impl Clone for GameState {
             accepting_player: self.accepting_player,
             shared_team_turns: self.shared_team_turns,
             permanents_enter_tapped_this_turn: self.permanents_enter_tapped_this_turn,
+            counters_removed_this_effect: self.counters_removed_this_effect,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             cards_sacrificed_this_resolution: self.cards_sacrificed_this_resolution.clone(),
             chosen_creature_type_scratch: self.chosen_creature_type_scratch,
@@ -2070,6 +2075,7 @@ impl GameState {
             accepting_player: None,
             shared_team_turns: false,
             permanents_enter_tapped_this_turn: false,
+            counters_removed_this_effect: 0,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
             cards_sacrificed_this_resolution: Vec::new(),
             chosen_creature_type_scratch: None,

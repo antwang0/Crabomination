@@ -583,6 +583,7 @@ impl GameState {
             }
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
             Value::Negate(inner) => -self.evaluate_value(inner, ctx),
+            Value::CountersRemovedThisEffect => self.counters_removed_this_effect as i32,
             Value::ExiledForCostManaValue => self.exiled_for_cost_mana_value.unwrap_or(0),
             Value::CardsNamedLikeSourceInAllGraveyards => {
                 let Some(name) = ctx
@@ -3001,6 +3002,7 @@ impl GameState {
                     R::NotToken => !card.is_token,
 
                     R::Warped => card.warped,
+                    R::HasPhyrexianManaInCost => card.definition.cost.has_phyrexian(),
                     // Mitotic Manipulation — "if it has the same name as a permanent".
                     R::SameNameAsAPermanent => {
                         self.battlefield.iter().any(|p| p.definition.name == card.definition.name)
@@ -3676,6 +3678,7 @@ impl GameState {
             R::SameNameAsAPermanent => {
                 self.battlefield.iter().any(|p| p.definition.name == card.definition.name)
             }
+            R::HasPhyrexianManaInCost => card.definition.cost.has_phyrexian(),
             R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
             R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
             R::ProducesColorless => card.definition.produces_colorless(),

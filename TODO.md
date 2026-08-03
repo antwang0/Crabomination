@@ -187,30 +187,24 @@ general "any player may …, if no one does …" shape, with
 
 ## New Phyrexia — opened
 
-`set_gaps.py nph` is at **10** (111 → 30 → 10; `sets::nph`, 101 cards, tests
-in `recent_b/nph`). Phyrexian mana, Infect, Living weapon, Metalcraft and the
-five Shrines all rode existing primitives. New across the two waves:
-`Effect::PermanentsEnterTappedThisTurn` (CR 614 — Due Respect's turn-scoped
-blanket enters-tapped replacement, cleared at cleanup), `Value::Negate` and
-`StaticEffect::PumpSelfByExiledWithStats` (Phyrexian Ingester).
+`set_gaps.py nph` is at **2** (111 → 30 → 10 → 2; `sets::nph`, 109 cards,
+tests in `recent_b/nph`). Phyrexian mana, Infect, Living weapon, Metalcraft,
+the five Shrines and the Chancellor cycle's opening-hand reveal
+(`OpeningHandEffect::RevealForDelayedTrigger`) all rode existing primitives.
+New across the three waves: `Effect::PermanentsEnterTappedThisTurn` (CR 614 —
+Due Respect's turn-scoped blanket enters-tapped replacement, cleared at
+cleanup), `Value::{Negate, CountersRemovedThisEffect}`,
+`SelectionRequirement::HasPhyrexianManaInCost` (CR 107.4f, backed by
+`ManaCost::has_phyrexian`) and `StaticEffect::PumpSelfByExiledWithStats`.
 
 Still open, and why — each wants one primitive:
-- **The Chancellor cycle** (Dross / Forge / Spires) — an opening-hand reveal
-  that schedules "at the beginning of the first upkeep, …". No opening-hand
-  reveal machinery exists.
 - **Myr Superion** — "spend only mana produced by creatures": needs mana
   provenance (which permanent produced each floating mana), a roadmap Tier-5
   item.
-- **Rage Extractor** — "whenever you cast a spell with {H} in its mana cost":
-  needs a cast-time predicate over Phyrexian symbols in the cost.
-- **Hex Parasite** — "{X}{B/P}: Remove up to X counters from target permanent;
-  +1/+0 per counter removed": needs the removed-count published as a `Value`.
-- **Invader Parasite** — imprint a land, then punish same-named lands entering
-  under an opponent; needs a `NamedBySource`-style land-entry trigger filter.
-- **Omen Machine** — "players can't draw" plus a per-draw-step exile-and-cast.
-- **Arm with Aether** / **Bludgeon Brawl** — a turn-scoped granted trigger with
-  its own target, and "every noncreature artifact is an Equipment with equip
-  {X}".
+- **Bludgeon Brawl** — "each noncreature, non-Equipment artifact is an
+  Equipment with equip {X} and 'Equipped creature gets +X/+0'": `equipped_bonus`
+  is read straight off `CardDefinition` at every consumer, so a *granted*
+  Equipment needs a computed equip-bonus override first.
 
 ## Judgment — closed
 

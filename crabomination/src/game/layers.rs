@@ -578,9 +578,9 @@ fn compute_permanent_pass(
         .chain(&card.removed_keywords)
         .any(|k| matches!(k, Keyword::BandsWithOther(_)));
     keywords.retain(|k| {
-        !card.removed_keywords_eot.contains(k)
-            && !card.removed_keywords.contains(k)
-            && !(removes_all_bands && matches!(k, Keyword::BandsWithOther(_)))
+        !(card.removed_keywords_eot.contains(k)
+            || card.removed_keywords.contains(k)
+            || (removes_all_bands && matches!(k, Keyword::BandsWithOther(_))))
     });
     // CR 113.11 — "can't have or gain" beats any grant, whatever its
     // timestamp (Archetype of Courage vs. a later first-strike anthem).

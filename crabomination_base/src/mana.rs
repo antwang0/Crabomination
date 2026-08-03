@@ -165,6 +165,14 @@ impl ManaCost {
     }
 
     /// Mana value (formerly converted mana cost): sum of all pip values.
+    /// CR 107.4f — does this cost contain a Phyrexian mana symbol?
+    /// ("a spell with {H} in its mana cost" — Rage Extractor.)
+    pub fn has_phyrexian(&self) -> bool {
+        self.symbols.iter().any(|s| {
+            matches!(s, ManaSymbol::Phyrexian(_) | ManaSymbol::PhyrexianHybrid(_, _))
+        })
+    }
+
     pub fn cmc(&self) -> u32 {
         self.symbols
             .iter()

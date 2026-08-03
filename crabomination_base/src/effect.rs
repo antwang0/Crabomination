@@ -740,6 +740,10 @@ pub enum Value {
     /// `AdditionalCastCost::RevealFromHand` (Titan's Presence). 0 with no reveal.
     RevealedForCostPower,
     SacrificedPower,
+    /// How many counters the current resolution removed via
+    /// `Effect::RemoveCountersUpTo` — "for each counter removed this way"
+    /// (Hex Parasite). Reset between independent resolutions.
+    CountersRemovedThisEffect,
     /// The arithmetic negation of `inner` — "all creatures get -X/-X, where X
     /// is …" (Ichor Explosion) without a bespoke variant per source value.
     Negate(Box<Value>),
