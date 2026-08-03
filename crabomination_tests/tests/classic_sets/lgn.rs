@@ -920,8 +920,8 @@ fn celestial_gatekeeper_recurs_two_on_death() {
     }
     g.remove_to_graveyard_with_triggers(keeper);
     drain_stack(&mut g);
-    // The auto-targeter fills one of the two "up to two" slots from a
-    // graveyard (a UI seat picks both) — see TODO.md.
+    // The auto-targeter still fills only one of the two "up to two" graveyard
+    // slots (a UI seat picks both) — see TODO.md.
     assert!(g.battlefield_find(a).is_some() || g.battlefield_find(b).is_some());
     assert!(g.exile.iter().any(|c| c.id == keeper), "the Gatekeeper exiled itself");
 }

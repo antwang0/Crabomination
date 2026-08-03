@@ -5487,11 +5487,11 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   without a per-variant visitor, but a future enum with a unit variant named
   after a creature type would be caught in the same net.
 - ⏳ **The auto-targeter fills only one graveyard slot of an "up to N target"
-  trigger.** `auto_extra_targets_for` now peels a `Seq` whose only targeting
-  member is the multi-target body (Celestial Gatekeeper), and the max is read
-  correctly, but `auto_target_for_effect_avoiding_set` re-picks the already
-  claimed graveyard card, so the loop breaks after one. A `wants_ui` seat is
-  unaffected — it picks both.
+  trigger** (Celestial Gatekeeper). `auto_extra_targets_for` now peels a `Seq`
+  whose only targeting member is the multi-target body, and the graveyard walk
+  honors the `avoid` set, but the extra slot still comes back empty — the
+  remaining break is somewhere between the peel and
+  `auto_target_for_effect_avoiding_set`. A `wants_ui` seat picks both.
 - ⏳ **Spy Network's "top card of that player's library" clause is dropped.**
   The hand and face-down halves ship (`LookAtHand` + `LookAtFaceDown`); a
   one-card library peek needs a `library_top_revealed_to` twin of

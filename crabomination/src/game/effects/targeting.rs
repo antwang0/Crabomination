@@ -211,10 +211,15 @@ impl GameState {
         // graveyard; Ghost Vacuum (hostile) hits the opp's. Falls through
         // to the battlefield walk below if no graveyard match.
         if prefer_graveyard {
+            // The `avoid` set matters here too: a multi-slot trigger fanning
+            // out over a graveyard (Celestial Gatekeeper's "up to two target
+            // Bird and/or Cleric cards") re-picked the card it already claimed
+            // and stalled after one slot.
             for &p in &[primary_player, secondary_player] {
                 if let Some(c) = self.players[p]
                     .graveyard
                     .iter()
+                    .filter(|c| !avoid.contains(&c.id))
                     .map(|c| Target::Permanent(c.id))
                     .find(|t| is_legal(t))
                 {
