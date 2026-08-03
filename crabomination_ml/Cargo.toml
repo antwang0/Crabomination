@@ -1,0 +1,14 @@
+[package]
+name = "crabomination_ml"
+version = "0.1.0"
+edition = "2024"
+
+# The candle-based training half of the ML stack. Never a dependency of the
+# engine or client crates — inference lives in `crabomination_nn`, and the
+# safetensors files these two exchange are the only coupling.
+[dependencies]
+crabomination = { path = "../crabomination" }
+crabomination_nn = { path = "../crabomination_nn" }
+candle-core = "0.11"
+candle-nn = "0.11"
+rand = "0.10.2"

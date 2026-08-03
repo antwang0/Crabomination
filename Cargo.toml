@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crabomination_base", "crabomination_catalog", "crabomination", "crabomination_client", "crabomination_server", "crabomination_tests"]
+members = ["crabomination_base", "crabomination_catalog", "crabomination", "crabomination_client", "crabomination_server", "crabomination_tests", "crabomination_nn", "crabomination_ml"]
 
 [profile.dev]
 # opt-level = 0 (default) keeps clean compile times short. Dependencies
@@ -16,6 +16,12 @@ debug = "line-tables-only"
 # single monolithic file, so the linker only rewrites what changed on
 # an incremental build. (Linux/macOS already default to "unpacked".)
 split-debuginfo = "unpacked"
+
+# The NN forward pass runs inside the bot's simulation loops; at the
+# workspace's opt-level 0 a ~130k-parameter net would dwarf the game logic
+# around it. The crate is tiny, so opting it up costs seconds of compile.
+[profile.dev.package.crabomination_nn]
+opt-level = 3
 
 # Enable a large amount of optimization in the dev profile for dependencies.
 [profile.dev.package."*"]

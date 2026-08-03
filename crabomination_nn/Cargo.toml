@@ -1,0 +1,11 @@
+[package]
+name = "crabomination_nn"
+version = "0.1.0"
+edition = "2024"
+
+# Dependency-light on purpose: this crate is the *inference* half of the ML
+# work (`crabomination_ml` is the candle-based training half) and is a
+# dependency of the engine crate, which compiles for wasm32. safetensors is
+# pure Rust and wasm-safe.
+[dependencies]
+safetensors = "0.8"

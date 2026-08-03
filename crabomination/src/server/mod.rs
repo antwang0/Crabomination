@@ -68,6 +68,7 @@ pub type SnapshotSink = Arc<Mutex<SnapshotSinkState>>;
 
 pub mod mcts;
 pub mod bot;
+pub mod encode;
 pub mod lobby;
 mod replay;
 #[cfg(not(target_arch = "wasm32"))]

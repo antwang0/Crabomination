@@ -2394,6 +2394,16 @@ Each a small targeted feature; sweep batch by batch.
   (the sim casts nothing today, `simulate_attack_outcome` doc). A real
   `ChooseColor` policy (hand-pip demand) also landed off the Quandrix
   probe (11 % of its decisions were first-legal-White).
+- 🟡 **Learned evaluation (SOS sealed)** — the ML stack's Phase A shipped:
+  `crabomination_nn` (dependency-free inference + shard format, opt-3 in
+  debug via a per-package override; wasm-safe, no framework in the engine
+  or client path), `crabomination_ml` (candle trainer: deep-sets value
+  net over card embeddings + zone-pooled objects, auxiliary life-diff /
+  game-length heads per the KataGo credit-assignment result), and
+  `server/encode.rs` (observable-info-only encoder, SOS sealed vocab).
+  A parity test pins the candle model and the engine forward pass to the
+  same numbers. Next: the concurrent selfplay_train loop
+  (actors + learner + gatekeeper), then net-eval as a gated profile.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
 
 ## Tier 14 — Replays, analysis & observability
