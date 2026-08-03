@@ -30,6 +30,12 @@ fn main_phase() -> GameState {
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
+    // Enough library for the tests that run several turns out.
+    for seat in 0..2 {
+        for _ in 0..20 {
+            g.add_card_to_library(seat, catalog::mountain());
+        }
+    }
     g
 }
 
@@ -94,14 +100,24 @@ fn to_end_of_combat(g: &mut GameState) {
     drain_stack(g);
 }
 
-/// Hand the turn to `seat`, running the untap step's roll-overs.
-fn start_turn_of(g: &mut GameState, seat: usize) {
-    g.active_player_idx = seat;
-    g.step = TurnStep::Untap;
-    while g.step != TurnStep::Upkeep {
-        g.perform_action(GameAction::PassPriority).expect("pass");
+/// Run to the start of the next turn, so untap-step roll-overs really fire.
+fn end_turn(g: &mut GameState) {
+    let started = g.turn_number;
+    while g.turn_number == started {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(g);
     }
-    drain_stack(g);
+}
+
+/// Hand the turn to `seat` (one full turn cycle per call is two `end_turn`s).
+fn start_turn_of(g: &mut GameState, seat: usize) {
+    for _ in 0..4 {
+        if g.active_player_idx == seat && g.step == TurnStep::Upkeep {
+            return;
+        }
+        end_turn(g);
+    }
+    panic!("never reached seat {seat}");
 }
 
 // ── Creatures ──────────────────────────────────────────────────────────────
@@ -375,6 +391,223 @@ fn giant_slug_gains_landwalk_next_upkeep() {
             .any(|k| matches!(k, Keyword::Landwalk(_))),
         "chosen on the upkeep"
     );
+}
+
+
+
+// ── Wave 7b ────────────────────────────────────────────────────────────────
+
+/// Ayesha Tanaka counters an artifact's ability when its controller can't pay.
+#[test]
+fn ayesha_tanaka_counters_an_unpaid_artifact_ability() {
+    let mut g = main_phase();
+    let ayesha = g.add_card_to_battlefield(0, catalog::ayesha_tanaka());
+    g.clear_sickness(ayesha);
+    let doll = g.add_card_to_battlefield(1, catalog::voodoo_doll());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: doll,
+        ability_index: 0,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        x_value: Some(0),
+        mode: None,
+    })
+    .expect("activate");
+    let before = g.stack.len();
+    activate(&mut g, 0, ayesha, Some(Target::Permanent(doll)));
+    assert!(g.stack.len() < before, "the ability is gone");
+    assert_eq!(g.players[0].life, 20);
+}
+
+/// Cocoon locks its host down for three upkeeps, then upgrades it.
+#[test]
+fn cocoon_locks_then_upgrades_its_host() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::cocoon());
+    cast(&mut g, 0, aura, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).unwrap().tapped, "tapped on entry");
+    // Three upkeeps shed the counters; the fourth untap frees it and the
+    // fourth upkeep cashes the Cocoon in.
+    for _ in 0..4 {
+        start_turn_of(&mut g, 1);
+        start_turn_of(&mut g, 0);
+        drain_stack(&mut g);
+    }
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "the last counter came off");
+    let pt = g.computed_permanent(bear).unwrap();
+    assert!(pt.keywords.contains(&Keyword::Flying));
+    assert!(g.battlefield_find(aura).is_none(), "the Cocoon is spent");
+}
+
+/// Rasputin arrives with seven dreams and spends one for mana.
+#[test]
+fn rasputin_spends_a_dream_for_mana() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let card = g.add_card_to_hand(0, catalog::rasputin_dreamweaver());
+    cast(&mut g, 0, card, None);
+    let rasputin = card;
+    assert_eq!(g.battlefield_find(rasputin).unwrap().counter_count(CounterType::Dream), 7);
+    let before = g.players[0].mana_pool.total();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rasputin,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    assert_eq!(g.battlefield_find(rasputin).unwrap().counter_count(CounterType::Dream), 6);
+    assert_eq!(g.players[0].mana_pool.total(), before + 1);
+}
+
+/// Voodoo Doll gains a pin each upkeep and blows up on an untapped end step.
+#[test]
+fn voodoo_doll_punishes_you_for_leaving_it_untapped() {
+    use crabomination::card::CounterType;
+    let mut g = main_phase();
+    let doll = g.add_card_to_battlefield(0, catalog::voodoo_doll());
+    // Tapped, it survives its own end step and just banks pins.
+    g.battlefield_find_mut(doll).unwrap().tapped = true;
+    end_turn(&mut g);
+    start_turn_of(&mut g, 0);
+    assert_eq!(g.battlefield_find(doll).unwrap().counter_count(CounterType::Pin), 1);
+    g.battlefield_find_mut(doll).unwrap().tapped = false;
+    while g.step != TurnStep::End {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(doll).is_none(), "destroyed");
+    assert_eq!(g.players[0].life, 19);
+}
+
+/// Johan trades his own attack for a board-wide vigilance.
+#[test]
+fn johan_keeps_the_team_untapped() {
+    let mut g = main_phase();
+    let johan = g.add_card_to_battlefield(0, catalog::johan());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.clear_sickness(johan);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "vigilance");
+    assert!(
+        g.declare_attackers(vec![Attack { attacker: johan, target: AttackTarget::Player(1) }])
+            .is_err(),
+        "Johan sat this one out"
+    );
+}
+
+/// Gabriel Angelfire picks up one of its four abilities each upkeep.
+#[test]
+fn gabriel_angelfire_gains_a_chosen_ability() {
+    let mut g = main_phase();
+    let gabriel = g.add_card_to_battlefield(0, catalog::gabriel_angelfire());
+    start_turn_of(&mut g, 0);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(gabriel).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Nova Pentacle hands the next hit to a creature the opponent controls.
+#[test]
+fn nova_pentacle_redirects_onto_their_creature() {
+    let mut g = main_phase();
+    let pentacle = g.add_card_to_battlefield(0, catalog::nova_pentacle());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    activate(&mut g, 0, pentacle, Some(Target::Permanent(bear)));
+    assert_eq!(g.players[0].life, 20, "not me");
+    assert!(g.battlefield_find(bear).is_none(), "the Bear ate it");
+}
+
+/// Puppet Master buys the dead creature back to its owner's hand.
+#[test]
+fn puppet_master_returns_the_dead_creature() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::puppet_master());
+    cast(&mut g, 0, aura, Some(Target::Permanent(bear)));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, 0, bolt, Some(Target::Permanent(bear)));
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "back to its owner");
+}
+
+/// Relic Bind pings when the enchanted artifact taps.
+#[test]
+fn relic_bind_pings_on_a_tap() {
+    let mut g = main_phase();
+    let doll = g.add_card_to_battlefield(1, catalog::voodoo_doll());
+    let aura = g.add_card_to_hand(0, catalog::relic_bind());
+    cast(&mut g, 0, aura, Some(Target::Permanent(doll)));
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: doll,
+        ability_index: 0,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        x_value: Some(0),
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "the tap cost them a point");
+}
+
+/// Floral Spuzzem trades its damage for an artifact.
+#[test]
+fn floral_spuzzem_smashes_an_artifact_instead() {
+    let mut g = main_phase();
+    let spuzzem = g.add_card_to_battlefield(0, catalog::floral_spuzzem());
+    let doll = g.add_card_to_battlefield(1, catalog::voodoo_doll());
+    g.clear_sickness(spuzzem);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: spuzzem, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    while g.step != TurnStep::EndCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(doll).is_none(), "the Doll is gone");
+    assert_eq!(g.players[1].life, 20, "and no damage got through");
+}
+
+/// Remove Enchantments takes yours back and sweeps the rest.
+#[test]
+fn remove_enchantments_returns_yours_and_destroys_the_rest() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mine = g.add_card_to_hand(0, catalog::spirit_link());
+    cast(&mut g, 0, mine, Some(Target::Permanent(bear)));
+    let spell = g.add_card_to_hand(0, catalog::remove_enchantments());
+    cast(&mut g, 0, spell, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "yours comes home");
 }
 
 

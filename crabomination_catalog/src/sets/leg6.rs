@@ -182,7 +182,7 @@ pub fn wall_of_dust() -> CardDefinition {
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
-            effect: Effect::CantAttackNextTurn { what: Selector::TriggerSource },
+            effect: Effect::CantAttackNextTurn { what: Selector::BlockedAttacker },
         }],
         ..creature("Wall of Dust", cost(&[generic(2), r()]), vec![CreatureType::Wall], 1, 4)
     }
