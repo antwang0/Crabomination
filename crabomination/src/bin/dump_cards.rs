@@ -177,11 +177,14 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Landwalk(lt) => {
             return Some(format!("{:?}walk", lt));
         }
-        Keyword::LandwalkFiltered(_) | Keyword::DomainLandwalk => "Landwalk",
+        Keyword::LandwalkFiltered(_)
+        | Keyword::DomainLandwalk
+        | Keyword::LegendaryLandwalk => "Landwalk",
         // Engine-internal keywords with no Scryfall equivalent:
         // (CantBlock is a card-text restriction, not a Scryfall-tagged
         // keyword, so it's filtered the same way as Unblockable.)
-        Keyword::Regenerate(_) | Keyword::Unblockable | Keyword::CantBeCountered
+        Keyword::CantBeTargetedByAuras
+        | Keyword::Regenerate(_) | Keyword::Unblockable | Keyword::CantBeCountered
         | Keyword::Recursion | Keyword::Inspired | Keyword::CantBlock
         | Keyword::CantBlockPowerAtLeast(_)
         | Keyword::CantBlockGreaterPowerThanSelf

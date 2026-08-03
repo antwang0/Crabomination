@@ -5598,7 +5598,16 @@ impl GameState {
     /// paid through `try_pay_after_snapshot_mode` have their coloured pips
     /// relaxed to generic while this holds.
     pub fn spend_mana_as_any_color_active(&self) -> bool {
+        self.spend_mana_as_any_color_active_for(None)
+    }
+
+    /// The seat-aware form: also true when `seat` has this turn's North Star
+    /// permission.
+    pub fn spend_mana_as_any_color_active_for(&self, seat: Option<usize>) -> bool {
         use crate::effect::StaticEffect;
+        if seat.is_some_and(|s| self.players[s].may_spend_any_color_this_turn) {
+            return true;
+        }
         // False Dawn folds every colour into white and then lets white pay for
         // anything, so the relaxed-cost path covers both clauses.
         if !self.colored_mana_becomes_this_turn.is_empty() {
@@ -5616,8 +5625,18 @@ impl GameState {
     /// spend-as-any-color permission active, every coloured pip becomes generic
     /// (`{C}` pips are unaffected — CR 609.4b speaks of colours only).
     pub fn relax_cost_colors(&self, cost: &crate::mana::ManaCost) -> crate::mana::ManaCost {
+        self.relax_cost_colors_for(None, cost)
+    }
+
+    /// The seat-aware form: also relaxes for a seat holding this turn's North
+    /// Star permission.
+    pub fn relax_cost_colors_for(
+        &self,
+        seat: Option<usize>,
+        cost: &crate::mana::ManaCost,
+    ) -> crate::mana::ManaCost {
         use crate::mana::ManaSymbol;
-        if !self.spend_mana_as_any_color_active() {
+        if !self.spend_mana_as_any_color_active_for(seat) {
             return cost.clone();
         }
         let mut relaxed = 0;

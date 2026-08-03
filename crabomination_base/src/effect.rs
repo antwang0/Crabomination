@@ -213,6 +213,10 @@ pub enum Selector {
     /// `CardInstance.blocked_attackers_this_turn` — so it still resolves after
     /// combat has been torn down (Defiant Vanguard's end-of-combat sweep).
     CreaturesBlockedBySourceThisTurn,
+    /// The same read, but scoped to whatever `Selector` resolves to rather
+    /// than the effect's source — "creatures that were blocked by target Wall
+    /// this turn" (the Legends Glyph cycle).
+    CreaturesBlockedByThisTurn(Box<Selector>),
     /// CR 702.76 — the card hidden (exiled) by the source via Hideaway: the
     /// exile-zone card stamped `exiled_with == ctx.source`. Resolves to that
     /// single card so the activated ability can play it from exile.
@@ -4467,6 +4471,10 @@ pub enum Effect {
     ShuffleHandsDrawSame { who: PlayerRef },
     /// Shuffle `who`'s library (CR 103.2c). Mind's Desire's pre-exile shuffle.
     ShuffleLibrary { who: PlayerRef },
+    /// CR 609.4b — "you may spend mana as though it were mana of any type"
+    /// for the rest of the turn (North Star). The turn-scoped, single-seat
+    /// twin of `StaticEffect::PlayersMaySpendManaAsAnyColor`.
+    MaySpendManaAsAnyColorThisTurn { who: PlayerRef },
     /// Spellskite — change the primary target of the selected stack spell
     /// to this permanent, if it's a legal target for that spell (CR 115.7).
     RedirectSpellTargetToSelf { what: Selector },

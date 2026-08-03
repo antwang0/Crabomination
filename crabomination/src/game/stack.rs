@@ -2853,6 +2853,11 @@ impl GameState {
         // (Ennis the Debate Moderator) per turn.
         self.players[p].cards_exiled_this_turn = 0;
         self.players[p].cards_discarded_this_turn = 0;
+        // CR 609.4b — North Star's permission lasts the turn, for every seat
+        // that was granted one.
+        for pl in self.players.iter_mut() {
+            pl.may_spend_any_color_this_turn = false;
+        }
         // Reset per-spell-type tallies (instant/sorcery vs creature
         // casts). These refine `spells_cast_this_turn` for cards that
         // need exact-type filtering (Potioner's Trove "instant or

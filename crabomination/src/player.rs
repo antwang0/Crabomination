@@ -100,6 +100,10 @@ pub struct Player {
     /// existed deserialize cleanly as empty.
     #[serde(default)]
     pub command: CowBox<Vec<CardInstance>>,
+    /// CR 609.4b — "you may spend mana as though it were mana of any type"
+    /// for the rest of this turn (North Star). Cleared at cleanup.
+    #[serde(default)]
+    pub may_spend_any_color_this_turn: bool,
     /// CR 407 — cards this player owns in the ante zone. Only ever non-empty
     /// while `GameState.playing_for_ante`; the winner takes all of it
     /// (CR 407.2). `#[serde(default)]` for snapshot back-compat.
@@ -870,6 +874,7 @@ impl Player {
             hand: CowBox::default(),
             graveyard: CowBox::default(),
             command: CowBox::default(),
+            may_spend_any_color_this_turn: false,
             ante: CowBox::default(),
             scheme_deck: CowBox::default(),
             opponent_cast_spell_since_your_turn: false,

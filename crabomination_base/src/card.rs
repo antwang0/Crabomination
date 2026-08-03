@@ -372,6 +372,15 @@ pub enum CounterType {
     MinusOneMinusZero,
     /// -0/-2 counter (Spirit Shackle).
     MinusZeroMinusTwo,
+    /// Glyph counter (Glyph of Delusion) — the bearer doesn't untap while it
+    /// carries one, and sheds one each upkeep.
+    Glyph,
+    /// Sleep counter (Venarian Gold) — same lock, its own kind.
+    Sleep,
+    /// Matrix counter (Life Matrix) — spend one to regenerate.
+    Matrix,
+    /// Hatchling counter (Triassic Egg).
+    Hatchling,
     Loyalty,
     Charge,
     /// CR 122 — the manifestation counter Arbiter of the Ideal puts on the
@@ -1062,6 +1071,14 @@ pub enum Keyword {
     /// (Hisoka's Guard). `do_untap` asks the controller; declining leaves it
     /// tapped without cancelling the untap step for anything else.
     MayChooseNotToUntap,
+    /// "This creature can't be the target of Aura spells" (Bartel Runeaxe,
+    /// Tetsuo Umezawa). Checked alongside protection in the cast-time target
+    /// gate; abilities and non-Aura spells still reach it.
+    CantBeTargetedByAuras,
+    /// CR 702.14 — legendary landwalk: unblockable while the defending player
+    /// controls a legendary land (Livonya Silone). A supertype-scoped walk, so
+    /// it can't ride `Landwalk(LandType)`.
+    LegendaryLandwalk,
     /// CR 614.9 — "All damage that would be dealt to this creature is dealt to
     /// its controller instead" (Treacherous Link's host). Consulted at both
     /// damage funnels before shields and marked damage.

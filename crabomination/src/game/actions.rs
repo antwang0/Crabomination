@@ -5962,6 +5962,18 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // "Can't be the target of Aura spells" (Bartel Runeaxe,
+                // Tetsuo Umezawa) — narrower than protection: only Auras bounce.
+                if matches!(kw, Keyword::CantBeTargetedByAuras)
+                    && card
+                        .definition
+                        .subtypes
+                        .enchantment_subtypes
+                        .contains(&crate::card::EnchantmentSubtype::Aura)
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
                 // CR 702.16 — protection from a spell subtype (Kitsune
                 // Riftwalker's "protection from Arcane").
                 if let Keyword::ProtectionFromSpellSubtype(sub) = kw
@@ -10741,7 +10753,7 @@ impl GameState {
         // CR 609.4b — Mycosynth Lattice's "players may spend mana as though it
         // were mana of any color": relax the coloured pips before anything
         // downstream (auto-tap, float protection, `pay_for_spell`) reads them.
-        let relaxed = self.relax_cost_colors(cost);
+        let relaxed = self.relax_cost_colors_for(Some(payer), cost);
         let cost = &relaxed;
         if forced_only {
             // "Keep my leftover floating mana": lift out only the *excess*

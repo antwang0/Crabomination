@@ -1413,6 +1413,16 @@ impl GameState {
                 {
                     return Err(GameError::CannotBlock(blocker_id));
                 }
+                // CR 702.14 — legendary landwalk (Livonya Silone).
+                if matches!(kw, Keyword::LegendaryLandwalk)
+                    && self.battlefield.iter().any(|c| {
+                        c.controller == defender_idx
+                            && c.definition.is_land()
+                            && c.definition.supertypes.contains(&crate::card::Supertype::Legendary)
+                    })
+                {
+                    return Err(GameError::CannotBlock(blocker_id));
+                }
                 // CR 702.43 — domain landwalk: one landwalk per basic land
                 // type among the attacker's controller's lands.
                 if matches!(kw, Keyword::DomainLandwalk)

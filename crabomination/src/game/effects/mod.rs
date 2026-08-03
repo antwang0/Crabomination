@@ -2027,6 +2027,14 @@ impl GameState {
         match effect {
             Effect::Noop => Ok(()),
 
+            // CR 609.4b — North Star's turn-scoped any-color permission.
+            Effect::MaySpendManaAsAnyColorThisTurn { who } => {
+                if let Some(seat) = self.resolve_player(who, ctx) {
+                    self.players[seat].may_spend_any_color_this_turn = true;
+                }
+                Ok(())
+            }
+
             // ── CR 407 — the ante zone ─────────────────────────────────────
             // CR 407.4 — "[who] antes the top card of their library." `then`
             // runs once per player who anted, `else_` once per decline.
@@ -28758,6 +28766,21 @@ impl GameState {
                 self.blocks_declared_this_turn
                     .iter()
                     .filter(|(b, _)| *b == src)
+                    .map(|(_, a)| *a)
+                    .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
+                    .map(EntityRef::Permanent)
+                    .collect()
+            }
+            // The target-scoped twin of `CreaturesBlockedBySourceThisTurn`.
+            Selector::CreaturesBlockedByThisTurn(subject) => {
+                let Some(blocker) =
+                    self.resolve_selector(subject, ctx).into_iter().find_map(|e| e.as_permanent_id())
+                else {
+                    return vec![];
+                };
+                self.blocks_declared_this_turn
+                    .iter()
+                    .filter(|(b, _)| *b == blocker)
                     .map(|(_, a)| *a)
                     .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
                     .map(EntityRef::Permanent)
