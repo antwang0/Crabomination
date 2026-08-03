@@ -178,6 +178,7 @@ mod tests {
                 prevention_next_instances: 0,
                 prevention_source_names: Vec::new(),
                 ante: Vec::new(),
+                may_spend_any_color: false,
                 seat: 0,
                 name: "Alice".into(),
                 life: 20,

@@ -155,6 +155,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Spend-as-any-colour (CR 609.4b) — a neutral pewter, matching the
         // colorless mana pip: colour requirements have stopped mattering.
         StatChipKind::AnyColorMana => (Color::srgba(0.30, 0.30, 0.33, 1.0), theme::TEXT_PRIMARY),
+        // The ante zone is a wager — a warm, high-stakes tint.
+        StatChipKind::Ante => (Color::srgba(0.38, 0.22, 0.22, 1.0), theme::TEXT_PRIMARY),
         // Turn-scoped rules changes nobody can read off the board — a warm
         // amber so they stand out from the per-permanent chips.
         StatChipKind::TurnEffect => (Color::srgba(0.42, 0.30, 0.06, 1.0), theme::TEXT_PRIMARY),
@@ -243,8 +245,12 @@ pub(super) enum StatChipKind {
     /// CR 614.9 — this seat's incoming damage lands on a permanent instead
     /// (Palisade Giant, Turn the Tables).
     Redirect,
-    /// CR 609.4b — mana is spendable as any colour (Mycosynth Lattice).
+    /// CR 609.4b — mana is spendable as any colour (Mycosynth Lattice,
+    /// North Star).
     AnyColorMana,
+    /// CR 407 — cards this seat owns in the ante zone. Open information, and
+    /// the only place the zone shows up.
+    Ante,
 }
 
 /// Label for the land-drop chip (CR 305.2). `None` on the ordinary
@@ -256,6 +262,19 @@ pub(super) fn land_drop_chip_body(remaining: u32, played: u32) -> Option<String>
         (0, _) => None,
         (1, 0) => None,
         (n, _) => Some(format!("\u{1F726} {n} land drops")),
+    }
+}
+
+/// Label for the ante chip (CR 407.2). Names the cards while there are few,
+/// then falls back to a count. `None` when the seat has anted nothing.
+pub(super) fn ante_chip_body(ante: &[crabomination::net::GraveyardCardView]) -> Option<String> {
+    match ante.len() {
+        0 => None,
+        1..=2 => {
+            let names: Vec<&str> = ante.iter().map(|c| c.name.as_str()).collect();
+            Some(format!("\u{1F3B0} {}", names.join(", ")))
+        }
+        n => Some(format!("\u{1F3B0} ante \u{00D7}{n}")),
     }
 }
 
@@ -1213,8 +1232,14 @@ pub fn update_player_stats_chips(
                 );
             }
         }
-        // CR 609.4b — a global permission; surface it once, on the viewer's row.
-        if cv.spend_mana_as_any_color {
+        // CR 407 — the ante zone: names while the pile is small, a count once
+        // it grows. Only ever populated in a game played for ante.
+        if let Some(body) = ante_chip_body(&p.ante) {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Ante, body);
+        }
+        // CR 609.4b — board-wide (Mycosynth Lattice) or seat-scoped for the
+        // turn (North Star).
+        if cv.spend_mana_as_any_color || p.may_spend_any_color {
             spawn_stat_chip(
                 row,
                 &ui_fonts,
@@ -1664,7 +1689,42 @@ pub fn animate_life_flash(
 
 #[cfg(test)]
 mod tests {
-    use super::{commander_damage_style, commander_short_name, commander_tax_label, deck_chip_kind, hand_chip_label, land_drop_chip_body, poison_chip_style, revealed_hand_body, storm_chip_visible, StatChipKind};
+    use super::{ante_chip_body, commander_damage_style, commander_short_name, commander_tax_label, deck_chip_kind, hand_chip_label, land_drop_chip_body, poison_chip_style, revealed_hand_body, storm_chip_visible, StatChipKind};
+
+    fn ante_card(name: &str) -> crabomination::net::GraveyardCardView {
+        crabomination::net::GraveyardCardView {
+            id: crabomination::card::CardId(0),
+            name: name.into(),
+            card_types: Vec::new(),
+            mana_cost: crabomination::mana::ManaCost::default(),
+            power: 0,
+            toughness: 0,
+            flashback_cost: None,
+            retrace: false,
+            escape: None,
+            bestow_cost: None,
+            buyback_cost: None,
+            disturb_cost: None,
+            mayhem_cost: None,
+            harmonize_cost: None,
+            scavenge_cost: None,
+        }
+    }
+
+    /// CR 407.2 — the ante zone is open information, so the chip names what's
+    /// in it until the pile outgrows the stat row.
+    #[test]
+    fn ante_chip_names_a_small_pile_then_counts() {
+        assert_eq!(ante_chip_body(&[]), None);
+        assert_eq!(
+            ante_chip_body(&[ante_card("Black Lotus"), ante_card("Forest")]).as_deref(),
+            Some("\u{1F3B0} Black Lotus, Forest")
+        );
+        assert_eq!(
+            ante_chip_body(&[ante_card("A"), ante_card("B"), ante_card("C")]).as_deref(),
+            Some("\u{1F3B0} ante \u{00D7}3")
+        );
+    }
 
     #[test]
     fn revealed_hand_chip_shows_empty_and_truncates_long_hands() {

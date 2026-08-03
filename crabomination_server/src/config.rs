@@ -135,9 +135,43 @@ pub(crate) fn deck_overrides() -> &'static DeckOverrides {
     })
 }
 
-/// Read, parse, and Modern-validate the decklist at `$key`. Exits the
-/// process on a bad list — a misconfigured server shouldn't serve the
-/// wrong deck silently.
+/// The deck-construction format `CRAB_DECK` / `CRAB_BOT_DECK` are validated
+/// against, from `CRAB_DECK_FORMAT`. Distinct from `CRAB_FORMAT`, which picks
+/// what kind of *match* the server runs.
+pub(crate) fn deck_format_from_env() -> crabomination::format::Format {
+    parse_deck_format(env::var("CRAB_DECK_FORMAT").ok().as_deref())
+}
+
+/// Pure parser for `CRAB_DECK_FORMAT` (case-insensitive, whitespace-trimmed).
+/// Unknown values warn and fall back to Modern, matching the historical
+/// hard-coded behaviour.
+pub(crate) fn parse_deck_format(raw: Option<&str>) -> crabomination::format::Format {
+    use crabomination::format::Format as F;
+    let value = raw.map(|s| s.trim().to_ascii_lowercase());
+    match value.as_deref() {
+        Some("standard") => F::Standard,
+        Some("pioneer") => F::Pioneer,
+        Some("legacy") => F::Legacy,
+        Some("vintage") => F::Vintage,
+        Some("pauper") => F::Pauper,
+        Some("commander") | Some("edh") => F::Commander,
+        Some("freeform") | Some("none") => F::Freeform,
+        Some("modern") | Some("") | None => F::Modern,
+        Some(_) => {
+            eprintln!(
+                "warning: CRAB_DECK_FORMAT={:?} not recognized — falling back to modern. \
+                 Valid: standard | pioneer | modern | legacy | vintage | pauper | commander | \
+                 freeform.",
+                raw.unwrap_or_default()
+            );
+            F::Modern
+        }
+    }
+}
+
+/// Read, parse, and validate the decklist at `$key` against
+/// `CRAB_DECK_FORMAT`. Exits the process on a bad list — a misconfigured
+/// server shouldn't serve the wrong deck silently.
 pub(crate) fn load_deck_env(key: &str) -> Option<Vec<crabomination::cube::CardFactory>> {
     let path = env::var(key).ok()?;
     let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
@@ -158,9 +192,9 @@ pub(crate) fn load_deck_env(key: &str) -> Option<Vec<crabomination::cube::CardFa
         commanders: Vec::new(),
         sideboard: parsed.sideboard.iter().map(|f| f()).collect(),
     };
-    let format = crabomination::format::Format::Modern;
+    let format = deck_format_from_env();
     if let Err(errs) = crabomination::format::validate_full_deck(&deck, format) {
-        eprintln!("{key}: deck is not Modern-legal:");
+        eprintln!("{key}: deck is not {format:?}-legal:");
         for e in &errs {
             eprintln!("  - {e}");
         }
@@ -314,9 +348,21 @@ pub(crate) fn parse_pairing_timeout(raw: Option<&str>) -> Duration {
 #[cfg(test)]
 mod tests {
     use super::{
-        parse_pairing_timeout, parse_usize_clamped, parse_usize_min, parse_usize_or, Format,
-        DEFAULT_PAIRING_TIMEOUT, MAX_PAIRING_TIMEOUT,
+        parse_deck_format, parse_pairing_timeout, parse_usize_clamped, parse_usize_min,
+        parse_usize_or, Format, DEFAULT_PAIRING_TIMEOUT, MAX_PAIRING_TIMEOUT,
     };
+
+    #[test]
+    fn deck_format_parses_every_construction_format_and_falls_back() {
+        use crabomination::format::Format as F;
+        assert!(matches!(parse_deck_format(Some(" Legacy ")), F::Legacy));
+        assert!(matches!(parse_deck_format(Some("EDH")), F::Commander));
+        assert!(matches!(parse_deck_format(Some("freeform")), F::Freeform));
+        // Unset, empty and garbage all land on the historical Modern default.
+        assert!(matches!(parse_deck_format(None), F::Modern));
+        assert!(matches!(parse_deck_format(Some("")), F::Modern));
+        assert!(matches!(parse_deck_format(Some("blockbuster")), F::Modern));
+    }
 
     #[test]
     fn parse_pairing_timeout_covers_the_ladder() {

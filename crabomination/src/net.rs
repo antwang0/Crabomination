@@ -702,6 +702,11 @@ pub struct PlayerView {
     /// full for every viewer. Empty outside an ante game.
     #[serde(default)]
     pub ante: Vec<GraveyardCardView>,
+    /// CR 609.4b — this seat may spend mana as any colour for the rest of the
+    /// turn (North Star). The seat-scoped twin of the board-wide
+    /// `ClientView.spend_mana_as_any_color`.
+    #[serde(default)]
+    pub may_spend_any_color: bool,
     /// CR 702.26 — this player's phased-out permanents (id + name). They're
     /// in no visible zone, so the HUD needs its own listing to show they
     /// still exist (Out of Time, Vodalian Illusionist).
