@@ -2453,5 +2453,29 @@ Each a small targeted feature; sweep batch by batch.
   and so play their own land, on the team's turn (805.4c/805.5a).
 
 
+- **New Phyrexia (NPH) closed** — `set_gaps.py nph` 2 → 0, closing the Scars
+  block. **CR 106.6b mana provenance**: `ManaPool` carries a per-bucket
+  `creature` counter tagged from the pool delta of any creature's mana ability
+  (printed, granted or intrinsic); `CardDefinition::spend_only_creature_mana` →
+  `SpellKind::creature_mana_only` routes payment through `pay_creature_only`
+  and runs auto-tap with a creature-source filter (Myr Superion). **CR 613
+  granted Equipment**: `StaticEffect::ArtifactsAreEquipment` +
+  `Modification::AddArtifactSubtype` compute the subtype, the equip {X} cost
+  and the "+X/+0" bonus per artifact rather than reading `equipped_bonus`
+  (Bludgeon Brawl).
+
+- **CR 314 / 900 / 904 Archenemy** — `CardType::Scheme`, `Supertype::Ongoing`,
+  a per-seat `scheme_deck`, `Format::Archenemy` and
+  `GameState::seat_archenemy` (40 life + the first turn). Setting a scheme in
+  motion is a turn-based action at the archenemy's precombat main (CR 904.9);
+  the finished-scheme sweep is an SBA (CR 904.10); `Effect::AbandonThisScheme`
+  covers CR 701.33. A face-up scheme's statics and step triggers function from
+  the command zone (CR 904.8). `sets::arc` ships eight schemes.
+
+- **CR 509.1b landwalk hosers** — `StaticEffect::LandwalkIgnored(LandType)`
+  blanks one landwalk flavor for every attacker, and `Effect::LoseAllLandwalk`
+  sheds every landwalk variant at once where `LoseKeyword`'s exact match can't
+  (Hammerheim).
+
 Only this push's entries are listed; earlier pushes are in `git log -p --
 FEATURE_ROADMAP.md`.
