@@ -466,14 +466,18 @@ impl EvalWeights {
     /// sealed-mirror games vs `atk-sim` each): 43.6 % [40.8, 46.4] on the
     /// round-1 net (25 k games), 42.3 % [39.6, 45.1] on the round-2 net
     /// (4× the data), 43.4 % [40.6, 46.2] after round 2's over-reused
-    /// training tail. Better than the MCTS attempt's 41.5 %, worse than
-    /// the tuned heuristic, and — the finding — *flat across a 4× data
-    /// jump and a 4× step jump*: data volume is not the binding
-    /// constraint. The two suspects the flatness points at are the
-    /// train/inference distribution gap (turn-boundary snapshots vs the
-    /// post-action states eval consumes — since addressed by the
-    /// mid-turn snapshot cadence in `selfplay`) and probability
-    /// compression near 0.5 making candidate deltas ride on noise.
+    /// training tail, 44.7 % [41.9, 47.5] on the round-3 net (mid-turn
+    /// snapshot cadence, 10.5 M rows). Better than the MCTS attempt's
+    /// 41.5 %, worse than the tuned heuristic, and *flat-to-marginal
+    /// across a 4× data jump and the distribution fix*: neither data
+    /// volume nor snapshot coverage is the binding constraint at this
+    /// capacity. Worth naming what the net is actually up against:
+    /// `eval_material` scores the *outcomes of resolved simulations* — a
+    /// one-ply search with a perfect forward model — so a value net only
+    /// helps where it carries long-horizon signal the material count
+    /// misses, and a ~125 k-parameter pooled encoder evidently carries
+    /// little yet. Next levers, in order: capacity, richer object
+    /// features, search-improved training targets.
     pub const fn net_eval() -> Self {
         Self { net_slot: super::net_eval::SLOT_BEST, ..Self::attack_search_sim() }
     }
@@ -503,6 +507,13 @@ impl EvalWeights {
     /// confidence worth ±150 units, enough to outvote a mid-size body.
     /// Exists because the 100-scale blend measured as inert; where the
     /// right loudness lies is a ladder question, not an argument.
+    ///
+    /// **Measured, and the answer is "quieter"**: 45.9 % [43.1 %, 48.7 %]
+    /// over 1 200 sealed-mirror games with the round-3 net, vs 49.3 % for
+    /// the 100-scale blend on the same weights. Amplifying the net's
+    /// opinion hurts — where it disagrees with the heuristic it is wrong
+    /// more often than right, which bounds what any loudness of this
+    /// net's bias can contribute.
     pub const fn net_eval_blend300() -> Self {
         Self { net_blend_scale: 300, ..Self::net_eval() }
     }

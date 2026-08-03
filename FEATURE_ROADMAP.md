@@ -2417,10 +2417,16 @@ Each a small targeted feature; sweep batch by batch.
   not the constraint; heuristic+net blend 49.3 / 49.2 / 50.7 % — stable
   parity. The tail experiment also priced window over-reuse (loss 0.30 →
   0.14, zero strength change → the trainer now caps the tail). Round 3
-  in flight: mid-turn snapshot cadence (the eval-time states are
-  post-action, which turn-boundary training never showed the net),
-  per-head loss logging, and a blend-loudness sweep (`net-blend300`).
-  Nothing adopted yet.
+  measured (mid-turn snapshot cadence, 10.5 M rows, per-head loss
+  logging, capped tail): replacement 44.7 % [41.9, 47.5] — best yet but
+  within noise; blend 49.3 % — parity unchanged; **blend at 3× loudness
+  45.9 %** — amplifying the net hurts, i.e. where it disagrees with the
+  heuristic it is more often wrong. Standing diagnosis: `eval_material`
+  scores outcomes of resolved sims (a one-ply search with a perfect
+  model), so the net must carry long-horizon signal to add value, and
+  ~125 k params of pooled encoder doesn't yet. Next levers: capacity
+  (GPU territory), richer object features, search-improved targets.
+  Nothing adopted.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
 
 ## Tier 14 — Replays, analysis & observability
