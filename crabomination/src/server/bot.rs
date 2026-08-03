@@ -406,17 +406,22 @@ impl EvalWeights {
     /// burn range keeps going one cycle so a winning (or losing) race is
     /// scored as such instead of mid-sprint.
     ///
-    /// **Measured, inconclusive at the first decider**: 51.2 %
-    /// [49.8 %, 52.6 %] over 4 796 fixed+cube games vs `atk-sim`
-    /// (seed 11) — the interval straddles 50 %, so per the harness rule
-    /// this is not an adoption. The point edge (+1.2) sits right at the
-    /// MARGINAL bar and mono-red — the archetype the horizon exists
-    /// for — read 54.8 % [49.9 %, 59.6 %], but a 400-game archetype row
-    /// is a hint, not a result (see [`block_search`](Self::block_search)'s
-    /// methodological note). The pre-registered decision is a 4× run
-    /// (1 600 games/archetype, seed 12): adopt only if it clears 50 %
-    /// with at least a one-point edge, otherwise this stays a documented
-    /// experiment.
+    /// **Measured, and not adopted**: the pre-registered 4× decision run
+    /// (1 600 games/archetype, seed 12) read 50.2 % [49.5 %, 51.0 %]
+    /// over 19 200 fixed+cube games vs `atk-sim` — the interval
+    /// straddles 50 % and the edge is a fifth of the MARGINAL bar.
+    ///
+    /// The first decider (4 796 games, seed 11) had read 51.2 %
+    /// [49.8 %, 52.6 %] with mono-red — the archetype the horizon
+    /// exists for — at 54.8 % over 400 games. At 4× the sample the
+    /// pooled edge collapsed +1.2 → +0.2 and mono-red reverted to
+    /// 49.9 %: the same replication failure
+    /// [`block_search`](Self::block_search) documents, reproduced on a
+    /// different hypothesis. Whatever the extended horizon sees in the
+    /// last burn-range turn, the default profile's one-cycle sim
+    /// already prices well enough that the extra cycle (and its extra
+    /// fuel) buys nothing measurable. Kept as a profile because the
+    /// negative result is worth more than the code.
     pub const fn attack_search_race() -> Self {
         Self { attack_race_horizon: true, ..Self::attack_search_sim() }
     }

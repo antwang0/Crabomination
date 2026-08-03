@@ -2326,11 +2326,14 @@ Each a small targeted feature; sweep batch by batch.
   and the defender's tricks are visible at declaration time — adopted at
   54.4 % [53.0, 55.8] over 4 794 fixed+cube games with dimir control (the
   blind search's documented −5.2 archetype) the biggest winner at 61.3 %.
-  Race math is coded (`atk-race`: an attack sim that ends inside burn
-  range, any life ≤ 10, extends one turn cycle) but not adopted — the
-  first decider read 51.2 % [49.8 %, 52.6 %] over 4 796 fixed+cube games,
-  interval astride 50 %; a pre-registered 4× run (1 600 games/archetype)
-  decides. Remaining: multi-blocker math.
+  Race math (`atk-race`: an attack sim that ends inside burn range, any
+  life ≤ 10, extends one turn cycle) is measured and **not adopted**:
+  the pre-registered 4× decision run read 50.2 % [49.5 %, 51.0 %] over
+  19 200 fixed+cube games — the first decider's +1.2 (with mono-red at
+  54.8 %/400) collapsed to +0.2, mono-red back at 49.9 %, the
+  block-search replication failure reproduced on a fresh hypothesis.
+  Kept as a documented profile (`attack_search_race` doc). Remaining:
+  multi-blocker math.
 - 🟡 **Planeswalker piloting** — emblem values are priced by what the
   emblem actually does (draw/damage/drain/token/lifegain shapes, static
   buffs, clamped 20–60) instead of a near-flat constant, and a doomed
