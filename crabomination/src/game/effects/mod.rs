@@ -19889,6 +19889,20 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 708.2 — peek at a face-down permanent; the peek sticks for
+            // as long as it stays face down.
+            Effect::LookAtFaceDown { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let EntityRef::Permanent(id) = ent else { continue };
+                    if self.battlefield_find(id).is_some_and(|c| c.face_down)
+                        && !self.face_down_revealed_to.contains(&(id, ctx.controller))
+                    {
+                        self.face_down_revealed_to.push((id, ctx.controller));
+                    }
+                }
+                Ok(())
+            }
+
             // Riptide Replicator — the token wears the artifact's as-enters
             // colour and creature type, sized by its charge counters.
             Effect::CreateTokenOfChosenColorAndType { pt } => {

@@ -5459,13 +5459,15 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 
 ## Suggested next-up tasks
 
-- ⏳ **Onslaught's last 5 gaps** (`set_gaps.py ons`). One dedicated primitive
+- ⏳ **Onslaught's last 4 gaps** (`set_gaps.py ons`). One dedicated primitive
   each: CR 612 text-changing (Artificial Evolution), combat-damage division
-  among the defender and its creatures (Butcher Orgg), looking at a face-down
-  permanent (Aven Soulgazer — and Spy Network's face-down + library-top
-  riders, which ship without them), a simultaneous secret-number auction
-  (Menacing Ogre), and a "when you gain control of this permanent" trigger
-  (Risky Move).
+  among the defender and its creatures (Butcher Orgg), a simultaneous
+  secret-number auction (Menacing Ogre), and a "when you gain control of this
+  permanent" trigger (Risky Move).
+- ⏳ **Spy Network's "top card of that player's library" clause is dropped.**
+  The hand and face-down halves ship (`LookAtHand` + `LookAtFaceDown`); a
+  one-card library peek needs a `library_top_revealed_to` twin of
+  `GameState.face_down_revealed_to`.
 - ⏳ **`RevealTopOpponentChoosesToHand`'s opponent is a heuristic**, not a
   prompt — it hands over the lowest-mana-value eligible card. Fine for
   Karn's +1 and Animal Magnetism, but a real pick belongs on the opposing

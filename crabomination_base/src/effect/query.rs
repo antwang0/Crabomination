@@ -231,6 +231,7 @@ impl Effect {
         match self {
             Effect::FlipUntilLoss { per_win } => per_win.requires_target(),
             Effect::HeadGames { who } | Effect::TradeSecrets { who } => player_has_target(who),
+            Effect::LookAtFaceDown { what } => sel_has_target(what),
             Effect::CreateTokenOfChosenColorAndType { .. }
             | Effect::EachPlayerDiscardsElseLosesLife { .. }
             | Effect::EachPlayerRevealsCreaturesForTokens { .. }
@@ -2786,7 +2787,8 @@ impl Effect {
                     1 => Some(&FINALE_SORCERY_SLOT),
                     _ => None,
                 },
-                Effect::TurnFaceDown { what: target }
+                Effect::LookAtFaceDown { what: target }
+                | Effect::TurnFaceDown { what: target }
                 | Effect::LookAtHand { who: target }
                 | Effect::PreventNextDamage { target, .. }
                 | Effect::PreventNextDamageWithCounters { target, .. }

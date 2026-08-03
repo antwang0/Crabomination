@@ -1569,9 +1569,13 @@ fn project_permanent(
         // CR 708 — face-down permanents render as a 2/2 card back; only the
         // controller may peek at the real card's identity (708.2).
         face_down: card.face_down && card.face_up_def.is_some(),
-        face_down_name: (card.face_down && card.controller == viewer_seat)
-            .then(|| card.face_up_def.as_ref().map(|d| d.name.to_string()))
-            .flatten(),
+        // CR 708.2 — the controller always knows; another seat only after a
+        // "look at target face-down creature" effect (Aven Soulgazer).
+        face_down_name: (card.face_down
+            && (card.controller == viewer_seat
+                || state.face_down_revealed_to.contains(&(card.id, viewer_seat))))
+        .then(|| card.face_up_def.as_ref().map(|d| d.name.to_string()))
+        .flatten(),
         // SOS Prepare — surface the inset spell so the client can offer
         // "Cast <name> {cost}" on a prepared creature.
         prepare_spell_name: card

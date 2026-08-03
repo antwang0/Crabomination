@@ -12534,6 +12534,7 @@ static ONS3: &[Factory] = &[
     super::ons3::animal_magnetism,
     super::ons3::circle_of_solace,
     super::ons3::riptide_replicator,
+    super::ons3::aven_soulgazer,
 ];
 static PC2: &[Factory] = &[
     super::pc2::baleful_strix,

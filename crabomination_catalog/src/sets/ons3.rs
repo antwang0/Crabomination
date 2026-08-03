@@ -1009,6 +1009,12 @@ pub fn spy_network() -> CardDefinition {
         cost(&[u()]),
         Effect::Seq(vec![
             Effect::LookAtHand { who: target_filtered(R::Player) },
+            Effect::LookAtFaceDown {
+                what: Selector::ControlledBy {
+                    who: PlayerRef::Target(0),
+                    filter: R::Creature.and(R::FaceDown),
+                },
+            },
             Effect::RearrangeTop { who: PlayerRef::You, amount: Value::Const(4) },
         ]),
     )
@@ -1253,5 +1259,24 @@ pub fn riptide_replicator() -> CardDefinition {
             ..Default::default()
         }],
         ..Default::default()
+    }
+}
+
+/// Aven Soulgazer — {2}{W} peeks under a morph.
+pub fn aven_soulgazer() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            effect: Effect::LookAtFaceDown { what: target_filtered(R::Creature.and(R::FaceDown)) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Aven Soulgazer",
+            cost(&[generic(3), w(), w()]),
+            vec![CreatureType::Bird, CreatureType::Cleric],
+            3,
+            3,
+        )
     }
 }

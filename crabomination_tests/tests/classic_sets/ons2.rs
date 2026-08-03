@@ -666,3 +666,26 @@ fn riptide_replicator_mints_the_chosen_tribe() {
     assert!(token.definition.subtypes.creature_types.contains(&CreatureType::Wizard));
     assert!(token.definition.printed_colors().contains(&Color::Blue));
 }
+
+/// CR 708.2 — Aven Soulgazer's peek lets one opponent see the real card, and
+/// only that opponent.
+#[test]
+fn aven_soulgazer_peeks_under_a_morph() {
+    use crabomination::server::view::project;
+    let mut g = main_phase();
+    let gazer = g.add_card_to_battlefield(0, catalog::aven_soulgazer());
+    g.clear_sickness(gazer);
+    let morph = g.add_card_to_battlefield(1, catalog::skittish_valesk());
+    g.battlefield.iter_mut().find(|c| c.id == morph).unwrap().turn_face_down();
+    let name_for = |g: &GameState, seat: usize| {
+        project(g, seat)
+            .battlefield
+            .iter()
+            .find(|c| c.id == morph)
+            .and_then(|c| c.face_down_name.clone())
+    };
+    assert_eq!(name_for(&g, 0), None, "hidden before the peek");
+    activate(&mut g, 0, gazer, 0, Some(Target::Permanent(morph)));
+    assert_eq!(name_for(&g, 0), Some("Skittish Valesk".to_string()));
+    assert_eq!(name_for(&g, 1), Some("Skittish Valesk".to_string()), "its controller always knows");
+}

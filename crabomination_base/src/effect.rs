@@ -6761,6 +6761,11 @@ pub enum Effect {
         pick_to_battlefield: bool,
     },
 
+    /// CR 708.2 — "Look at target face-down creature." The resolving
+    /// controller sees the real card for as long as it stays face down
+    /// (`GameState.face_down_revealed_to`). Aven Soulgazer, Spy Network.
+    LookAtFaceDown { what: Selector },
+
     /// "Create an X/X creature token of the chosen color and type" — reads the
     /// source's `chosen_color` + `chosen_creature_type` (Riptide Replicator).
     CreateTokenOfChosenColorAndType { pt: Value },

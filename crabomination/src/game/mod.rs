@@ -1286,6 +1286,11 @@ pub struct GameState {
     /// Prison). Surfaced through the server view so a UI seat renders it.
     #[serde(default)]
     pub hands_revealed_to: Vec<(usize, usize)>,
+    /// CR 708.2 — `(face-down permanent, seat)` pairs a "look at target
+    /// face-down creature" effect has revealed (Aven Soulgazer, Spy Network).
+    /// The peek persists while the permanent stays face down.
+    #[serde(default)]
+    pub face_down_revealed_to: Vec<(CardId, usize)>,
     /// CR 500.8 — steps/phases a player skips for the rest of this turn
     /// (Fatespinner). `(seat, step)`; cleared at cleanup.
     #[serde(default)]
@@ -1808,6 +1813,7 @@ impl Clone for GameState {
             creature_deaths_drain_toughness_this_turn: self.creature_deaths_drain_toughness_this_turn,
             no_search_this_turn: self.no_search_this_turn,
             hands_revealed_to: self.hands_revealed_to.clone(),
+            face_down_revealed_to: self.face_down_revealed_to.clone(),
             skipped_steps_this_turn: self.skipped_steps_this_turn.clone(),
             cant_attack_player_this_turn: self.cant_attack_player_this_turn.clone(),
             graveyard_play_pooled_for: self.graveyard_play_pooled_for,
@@ -2080,6 +2086,7 @@ impl GameState {
             creature_deaths_drain_toughness_this_turn: false,
             no_search_this_turn: false,
             hands_revealed_to: Vec::new(),
+            face_down_revealed_to: Vec::new(),
             skipped_steps_this_turn: Vec::new(),
             cant_attack_player_this_turn: Vec::new(),
             graveyard_play_pooled_for: None,
