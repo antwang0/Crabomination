@@ -1102,6 +1102,19 @@ pub fn update_player_stats_chips(
         if cv.combat_damage_prevented_this_turn && p.seat == cv.active_player {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Fog, "🌫 fog".to_string());
         }
+        // CR 614 — everything you play this turn arrives tapped (Due Respect).
+        if cv.permanents_enter_tapped_this_turn && p.seat == cv.active_player {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::Fog,
+                "⤵ enters tapped".to_string(),
+            );
+        }
+        // CR 805 — the shared team turns option: teammates act on this turn.
+        if cv.shared_team_turns && p.seat == cv.active_player {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Controlled, "👥 team turn".to_string());
+        }
         // CR 506.2 / 509.1b — a global combat cap; surface it once, on the
         // active player's row, so neither seat plans an illegal declaration.
         if p.seat == cv.active_player {

@@ -2393,10 +2393,13 @@ Each a small targeted feature; sweep batch by batch.
 
 - ⏳ **Seeded / deterministic RNG** surfaced for reproducible games.
 - ⏳ **Snapshot round-trip property tests** + **action-sequence fuzzing**.
-- 🟡 **Crash-recovery / autosave** — a match that panics writes its pre-match
-  `GameState` plus the panic message to `CRAB_CRASH_DUMP_DIR`
+- 🟡 **Crash-recovery / autosave** — a match that panics writes a `GameState`
+  plus the panic message to `CRAB_CRASH_DUMP_DIR`
   (`crabomination_server::crash_dump`, atomic write + newest-N retention).
-  Remaining: periodic mid-match autosave and resume-from-dump.
+  The dumped state is the **live checkpoint**: the server hands every match a
+  `SnapshotSink`, which the actor republishes after each accepted action, so a
+  panic on turn 15 dumps turn 15 (falling back to the pre-match capture when
+  nothing published). Remaining: resume-from-dump.
 - ⏳ **Card-scripting DSL** to reduce catalog boilerplate.
 - ⏳ **Set / Scryfall import pipeline** (`scripts/verify_cards.py` exists — extend).
 - ⏳ **Card art / image pipeline**.

@@ -119,6 +119,8 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
         spend_mana_as_any_color: state.spend_mana_as_any_color_active(),
         combat_damage_prevented_this_turn: state.prevent_combat_damage_this_turn,
+        permanents_enter_tapped_this_turn: state.permanents_enter_tapped_this_turn,
+        shared_team_turns: state.shared_team_turns,
         damage_rewritten_this_turn: state.damage_rewritten_this_turn(),
         attack_tax_this_turn: state.attack_tax_this_turn,
         turn_effects: state.turn_effect_notes(),

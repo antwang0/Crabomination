@@ -263,6 +263,8 @@ mod tests {
             damage_cant_be_prevented_this_turn: false,
             spend_mana_as_any_color: false,
             combat_damage_prevented_this_turn: false,
+            permanents_enter_tapped_this_turn: false,
+            shared_team_turns: false,
             attack_tax_this_turn: 0,
             turn_effects: Vec::new(),
             block_tax_this_turn: 0,

@@ -44,6 +44,16 @@ pub(crate) fn capture(state: &crabomination::game::GameState) -> Option<String> 
     enabled().then(|| serde_json::to_string(state).ok()).flatten()
 }
 
+/// The latest mid-match checkpoint from a running match's snapshot sink,
+/// serialized. `None` when dumping is off, the match never published, or the
+/// state won't serialize — callers fall back to the pre-match capture.
+pub(crate) fn capture_checkpoint(
+    sink: Option<&crabomination::server::SnapshotSink>,
+) -> Option<String> {
+    let state = sink?.lock().ok()?.full_state()?;
+    serde_json::to_string(&state).ok()
+}
+
 /// Escape a string for a JSON double-quoted value (RFC 8259 §7).
 fn json_escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 2);
@@ -184,6 +194,22 @@ mod tests {
         left.sort();
         assert_eq!(left, vec!["crash-0000000003-0000.json", "crash-0000000004-0000.json"]);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A sink that has published a state yields it as the repro; an empty or
+    /// absent sink falls back to `None` so the caller uses the pre-match copy.
+    #[test]
+    fn capture_checkpoint_prefers_the_live_state() {
+        use crabomination::server::SnapshotSinkState;
+        use std::sync::{Arc, Mutex};
+        assert!(capture_checkpoint(None).is_none());
+        let sink = Arc::new(Mutex::new(SnapshotSinkState::default()));
+        assert!(capture_checkpoint(Some(&sink)).is_none(), "nothing published yet");
+        let mut state = crabomination::game::two_player_game();
+        state.turn_number = 15;
+        sink.lock().unwrap().state = Some(Arc::new(state));
+        let json = capture_checkpoint(Some(&sink)).expect("checkpoint");
+        assert!(json.contains("\"turn_number\":15"), "the live turn, not the opening one");
     }
 
     /// With no dump directory configured nothing is captured or written.

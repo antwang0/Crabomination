@@ -35,7 +35,8 @@ use std::time::{Duration, Instant};
 
 use crabomination::net::LobbyFormat;
 use crabomination::server::{
-    run_match, serve_lobbies, tcp_seat, ws_seat, ConnId, MatchOutcome, RandomBot, SeatOccupant,
+    run_match_full, serve_lobbies, tcp_seat, ws_seat, ConnId, MatchOutcome, RandomBot,
+    SeatOccupant, SnapshotSink,
 };
 
 mod config;
@@ -437,14 +438,22 @@ fn run_match_caught(
     ctx: &str,
 ) -> Option<MatchOutcome> {
     // Serialized only when `CRAB_CRASH_DUMP_DIR` is set — the state is
-    // consumed by `run_match`, so a repro has to be taken before the call.
+    // consumed by `run_match_full`, so the opening repro has to be taken
+    // before the call. The sink then keeps a live checkpoint: the actor
+    // republishes after every accepted action, so a panic on turn 15 dumps
+    // turn 15 rather than the opening hand.
     let pre_state = crash_dump::capture(&state);
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run_match(state, seats))) {
+    let sink: Option<SnapshotSink> = crash_dump::enabled().then(Default::default);
+    let sink_for_match = sink.clone();
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        run_match_full(state, seats, vec![], sink_for_match)
+    })) {
         Ok(outcome) => Some(outcome),
         Err(payload) => {
             let msg = panic_message(payload.as_ref());
-            let dumped = pre_state
-                .as_deref()
+            let checkpoint = crash_dump::capture_checkpoint(sink.as_ref());
+            let repro = checkpoint.as_deref().or(pre_state.as_deref());
+            let dumped = repro
                 .and_then(|json| crash_dump::write(ctx, &msg, json))
                 .map(|p| format!(", dump {}", p.display()))
                 .unwrap_or_default();

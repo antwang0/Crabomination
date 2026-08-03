@@ -291,6 +291,14 @@ pub struct ClientView {
     /// combat won't deal damage this turn. `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub combat_damage_prevented_this_turn: bool,
+    /// CR 614 — "permanents enter tapped this turn" (Due Respect) is in force.
+    /// Surfaced so the board can warn that everything you play lands tapped.
+    #[serde(default)]
+    pub permanents_enter_tapped_this_turn: bool,
+    /// CR 805 — the shared team turns option is on (Two-Headed Giant), so the
+    /// active player's teammates act and draw on this turn too.
+    #[serde(default)]
+    pub shared_team_turns: bool,
     /// CR 506.2 / 509.1b — the tightest "no more than N creatures can
     /// attack/block each combat" cap in play (Silent Arbiter), or `None` when
     /// combat participation is uncapped. Surfaced so the attack/block UI can
