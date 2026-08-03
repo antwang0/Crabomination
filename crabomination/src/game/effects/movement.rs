@@ -163,6 +163,21 @@ impl GameState {
         {
             return amount;
         }
+        // CR 615 — "prevent all damage that would be dealt to this creature by
+        // creatures it's blocking" (Wall of Vapor). Combat and noncombat alike,
+        // so it sits in the funnel rather than the combat resolver.
+        if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
+            && self.damage_from_blocked_prevented(tgt, src)
+        {
+            if amount > 0 {
+                events.push(GameEvent::DamagePrevented {
+                    amount,
+                    to_player: None,
+                    to_card: Some(tgt),
+                });
+            }
+            return 0;
+        }
         // CR 615.7 — "prevent all damage [source] would deal this turn"
         // (Burrenton Forge-Tender's chosen source, Hallow, Awe Strike). Lives
         // here rather than in `deal_damage_to_from` so the combat path — which

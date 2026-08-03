@@ -370,6 +370,8 @@ pub enum CounterType {
     MinusZeroMinusOne,
     /// -1/-0 counter.
     MinusOneMinusZero,
+    /// -0/-2 counter (Spirit Shackle).
+    MinusZeroMinusTwo,
     Loyalty,
     Charge,
     /// CR 122 — the manifestation counter Arbiter of the Ideal puts on the
@@ -5573,9 +5575,11 @@ impl CardInstance {
         let plus = self.counter_count(CounterType::PlusOnePlusOne) as i32;
         let minus = self.counter_count(CounterType::MinusOneMinusOne) as i32;
         let minus_zero_one = self.counter_count(CounterType::MinusZeroMinusOne) as i32;
+        let minus_zero_two = self.counter_count(CounterType::MinusZeroMinusTwo) as i32;
         self.definition.base_toughness() + self.toughness_bonus + self.perm_toughness_bonus + plus
             - minus
             - minus_zero_one
+            - 2 * minus_zero_two
     }
 
     pub fn counter_count(&self, ct: CounterType) -> u32 {

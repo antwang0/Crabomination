@@ -437,9 +437,10 @@ fn compute_permanent_pass(
         let plus = card.counter_count(CounterType::PlusOnePlusOne) as i32;
         let minus = card.counter_count(CounterType::MinusOneMinusOne) as i32;
         let minus_zero_one = card.counter_count(CounterType::MinusZeroMinusOne) as i32;
+        let minus_zero_two = card.counter_count(CounterType::MinusZeroMinusTwo) as i32;
         let minus_one_zero = card.counter_count(CounterType::MinusOneMinusZero) as i32;
         let base = plus - minus;
-        (base - minus_one_zero, base - minus_zero_one)
+        (base - minus_one_zero, base - minus_zero_one - 2 * minus_zero_two)
     };
 
     let mut set_pt: Option<(i32, i32)> = None;

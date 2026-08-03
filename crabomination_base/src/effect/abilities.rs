@@ -1162,6 +1162,12 @@ pub enum StaticEffect {
     /// Read in the combat-damage resolver's attacker-takes-from-blocker branch.
     /// Armored Transport.
     PreventAllCombatDamageToThisFromBlockers,
+    /// "Prevent all damage that would be dealt to this creature by creatures
+    /// it's blocking." The blocker-side mirror of
+    /// `PreventAllCombatDamageToThisFromBlockers`, and not combat-only — a
+    /// blocked attacker's noncombat pings are prevented too (Wall of Vapor,
+    /// Wall of Shadows).
+    PreventAllDamageToThisFromBlocked,
     /// CR 614.5 — "If a source would deal damage to an opponent or a
     /// permanent an opponent controls, it deals double that damage instead."
     /// (Gisela, Blade of Goldnight.) Scoped to the static's controller's

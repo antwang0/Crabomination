@@ -4469,6 +4469,24 @@ impl GameState {
             })
     }
 
+    /// CR 615 — true when `tgt` is blocking `dealer` and prevents damage from
+    /// the creatures it blocks (Wall of Vapor). Any damage, not just combat.
+    pub fn damage_from_blocked_prevented(
+        &self,
+        tgt: crate::card::CardId,
+        dealer: crate::card::CardId,
+    ) -> bool {
+        use crate::effect::StaticEffect;
+        !self.damage_cant_be_prevented_this_turn
+            && self.blocks(tgt, dealer)
+            && self.battlefield_find(tgt).is_some_and(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::PreventAllDamageToThisFromBlocked))
+            })
+    }
+
     /// CR 615 — true when `tgt` prevents all combat damage to itself and
     /// prevention isn't switched off this turn. Consulted by the combat-damage
     /// resolver to zero damage marked on Fog Bank / Guard Gomazoa.
@@ -18338,6 +18356,7 @@ fn static_effect_to_effects(
             | StaticEffect::PreventSmallDamageToThis { .. }
             | StaticEffect::CapLargeDamage { .. }
             | StaticEffect::PreventAllCombatDamageToThisFromBlockers
+            | StaticEffect::PreventAllDamageToThisFromBlocked
             // Prevention statics read at damage time in
             // `apply_prevention_shields`; no layer effect.
             | StaticEffect::PreventDamageToAttachedPerPermanent { .. }
