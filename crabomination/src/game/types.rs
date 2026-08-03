@@ -706,6 +706,10 @@ pub struct DelayedTrigger {
 /// What kind of future event a delayed trigger waits for.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DelayedKind {
+    /// Fires at the beginning of *every* player's upkeep, with the active
+    /// player as the acting seat (Dimensional Breach). Registered with
+    /// `fires_once: false`; the body removes it once its work is done.
+    EachPlayersUpkeep,
     /// "At the beginning of the next combat" — fires on the next Begin Combat
     /// step, whoever's turn it is (Legion's Initiative).
     NextCombat,

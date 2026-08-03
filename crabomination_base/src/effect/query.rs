@@ -510,7 +510,17 @@ impl Effect {
             Effect::CoinFlipDestroyLoop { win, lose, .. } => {
                 sel_has_target(win) || sel_has_target(lose)
             }
-            Effect::ThievesAuction => false,
+            Effect::ThievesAuction
+            | Effect::DimensionalBreach
+            | Effect::DimensionalBreachReturn
+            | Effect::ExileYourCreaturesForDragons { .. }
+            | Effect::ExileFaceDownDrawPile { .. }
+            | Effect::GrantActivatedAbilityToMatching { .. }
+            | Effect::DistributeCountersFromSource { .. }
+            | Effect::PlayerGainsShroudThisTurn { .. } => false,
+            Effect::RedirectDamageToThisThisTurn { to } => sel_has_target(to),
+            Effect::RedirectNextCombatDamageToController { what } => sel_has_target(what),
+            Effect::RevealDrawnCardThenIf { then, .. } => then.requires_target(),
             Effect::MayDealPowerThenNoCombatDamage { dealer, to } => {
                 sel_has_target(dealer) || sel_has_target(to)
             }
@@ -950,7 +960,7 @@ impl Effect {
             Effect::SetBasePower { what, power, .. } => {
                 sel_has_target(what) || value_has_target(power)
             }
-            Effect::LoseKeywordThisTurn { what, .. } => sel_has_target(what),
+            Effect::LoseKeyword { what, .. } => sel_has_target(what),
             Effect::SkipNextUntap { what } => sel_has_target(what),
             Effect::SkipPlayerUntapStep { player } => player_has_target(player),
             Effect::LandsDontUntapNextUntapStep { who }
@@ -1372,7 +1382,8 @@ impl Effect {
             | Effect::ApplyToTargets { filter, .. }
             | Effect::DeliverUntoEvil { filter, .. }
             | Effect::DestroyTargets { filter } => Some(filter),
-            Effect::PayAnyEnergyDealDamage { to } => sel_filter(to),
+            Effect::PayAnyEnergyDealDamage { to }
+            | Effect::RedirectDamageToThisThisTurn { to } => sel_filter(to),
             // Fight surfaces the *defender's* filter (the opp creature
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.
@@ -1647,7 +1658,7 @@ impl Effect {
             | Effect::Transform { what }
             | Effect::Flip { what }
             | Effect::LoseAllAbilities { what, .. }
-            | Effect::LoseKeywordThisTurn { what, .. }
+            | Effect::LoseKeyword { what, .. }
             | Effect::SkipNextUntap { what }
             | Effect::GrantTriggeredAbility { what, .. }
             | Effect::GainActivatedAbility { what, .. }
@@ -3068,7 +3079,7 @@ impl Effect {
                 | Effect::Transform { what }
                 | Effect::Flip { what }
                 | Effect::LoseAllAbilities { what, .. }
-                | Effect::LoseKeywordThisTurn { what, .. }
+                | Effect::LoseKeyword { what, .. }
                 | Effect::SkipNextUntap { what }
                 | Effect::GrantTriggeredAbility { what, .. }
                 | Effect::GainActivatedAbility { what, .. }

@@ -2563,7 +2563,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::HighestLifeWinsElseDraw => "Highest life wins (tie = draw)",
         Effect::Regenerate { .. } => "Regenerate",
         Effect::SacrificePermanent { .. } => "Sacrifice",
-        Effect::LoseKeywordThisTurn { .. } => "Remove keyword",
+        Effect::LoseKeyword { .. } => "Remove keyword",
         Effect::AddManaEqualToPermanentCost { .. } => "Add mana of cost",
         Effect::NameCardExileMatchingAllZones => "Name & exile all copies",
         Effect::EachPlayerNamesCard { .. } => "Each player names a card",

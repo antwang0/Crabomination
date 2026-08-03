@@ -646,7 +646,7 @@ pub fn canopy_claws() -> CardDefinition {
         ..instant(
             "Canopy Claws",
             cost(&[g()]),
-            Effect::LoseKeywordThisTurn {
+            Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: target_filtered(R::Creature),
                 keyword: Keyword::Flying,
             },
@@ -1316,7 +1316,7 @@ pub fn mirror_wall() -> CardDefinition {
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
-            effect: Effect::LoseKeywordThisTurn {
+            effect: Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: Selector::This,
                 keyword: Keyword::Defender,
             },

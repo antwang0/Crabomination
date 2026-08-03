@@ -404,6 +404,10 @@ pub struct Player {
     /// `Predicate::SearchedLibraryThisTurn` (Archive Trap's free alt cost).
     #[serde(default)]
     pub searched_library_this_turn: bool,
+    /// CR 702.18 — "You gain shroud until end of turn" (Gilded Light). While
+    /// set, no player may target this one. Cleared at cleanup.
+    #[serde(default)]
+    pub shroud_this_turn: bool,
     /// "You gain protection from everything until your next turn" (The One
     /// Ring). While set: this player can't be targeted and all damage to
     /// them is prevented. Cleared when their turn begins.
@@ -909,6 +913,7 @@ impl Player {
             silenced_this_turn: false,
             warped_spell_this_turn: false,
             searched_library_this_turn: false,
+            shroud_this_turn: false,
             protected_from_everything: false,
             cards_exiled_this_turn: 0,
             cards_to_graveyard_this_turn: 0,

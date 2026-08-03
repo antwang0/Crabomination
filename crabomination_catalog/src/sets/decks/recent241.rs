@@ -124,7 +124,7 @@ pub fn jaded_analyst() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![on_second_draw(Effect::Seq(vec![
-            Effect::LoseKeywordThisTurn {
+            Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: Selector::This,
                 keyword: Keyword::Defender,
             },

@@ -435,7 +435,7 @@ pub fn swooping_talon() -> CardDefinition {
         triggered_abilities: vec![provoke()],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
-            effect: Effect::LoseKeywordThisTurn {
+            effect: Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: Selector::This,
                 keyword: Keyword::Flying,
             },

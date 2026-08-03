@@ -11,10 +11,30 @@ use crate::game::{GameEvent, GameState, TriggerPush};
 impl GameState {
     /// CR 614.9 — if damage aimed at `ent` (a player, or a permanent that
     /// player controls) is covered by a `RedirectDamageToSelf` static
+    /// CR 614.9 — the standing turn-scoped redirect registered for `cid`
+    /// (Karona's Zealot), if its destination is still on the battlefield.
+    pub(crate) fn turn_damage_redirect_for(
+        &self,
+        cid: crate::card::CardId,
+    ) -> Option<crate::card::CardId> {
+        self.turn_damage_redirect
+            .iter()
+            .find(|(c, _)| *c == cid)
+            .and_then(|(_, to)| to.as_permanent_id())
+            .filter(|id| self.battlefield_find(*id).is_some())
+    }
+
     /// (Palisade Giant), return the redirecting permanent. The redirector
     /// never re-redirects its own damage.
     pub(crate) fn damage_redirect_target(&self, ent: EntityRef) -> Option<crate::card::CardId> {
         use crate::effect::StaticEffect;
+        // Karona's Zealot — a turn-scoped "all damage to it is dealt to that
+        // creature instead" outranks the standing Palisade-Giant statics.
+        if let EntityRef::Permanent(c) = ent
+            && let Some(to) = self.turn_damage_redirect_for(c)
+        {
+            return Some(to);
+        }
         let protected = match ent {
             EntityRef::Player(p) => p,
             EntityRef::Permanent(c) => self.battlefield_find(c)?.controller,

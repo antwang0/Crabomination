@@ -389,6 +389,13 @@ pub enum StaticEffect {
         toughness: i32,
         #[serde(default)]
         keywords: Vec<Keyword>,
+        /// Layer-4 creature types the animation grants (Ambush Commander's
+        /// "are 1/1 green Elf creatures"). Empty leaves the type line bare.
+        #[serde(default)]
+        creature_types: Vec<crate::card::CreatureType>,
+        /// Layer-5 colours the animation sets. Empty keeps the land colourless.
+        #[serde(default)]
+        colors: Vec<crate::mana::Color>,
     },
     /// CR 613 layer 4 — "All nonland permanents are legendary" (Leyline of
     /// Singularity). Adds the Legendary supertype to every nonland permanent
@@ -2338,6 +2345,15 @@ pub enum StaticEffect {
     ControllerSkipsDrawStep,
     /// "You can't play lands." Aggressive Mining. Gated in `play_land`.
     ControllerCantPlayLands,
+    /// Mistform Warchief — "Creature spells you cast that share a creature
+    /// type with this creature cost `amount` less to cast."
+    SharedCreatureTypeSpellCostReduction { amount: u32 },
+    /// Grip of Chaos — "Whenever a spell or ability is put onto the stack, if
+    /// it has a single target, reselect its target at random."
+    RandomizeSingleTargets,
+    /// Parallel Thoughts — "If you would draw a card, you may instead put the
+    /// top card of the pile you exiled into your hand."
+    MayDrawFromSourceExilePile,
     /// The symmetric sibling: "*Players* can't play lands" (Territorial
     /// Dispute) — binds every seat, not just the source's controller.
     NoPlayerCanPlayLands,

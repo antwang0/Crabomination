@@ -441,6 +441,11 @@ pub enum Selector {
     /// subjects match nothing.
     SharingColorWith(Box<Selector>),
 
+    /// Every battlefield creature sharing a creature type with the entity
+    /// `inner` resolves to (Faces of the Past). Changelings match everything
+    /// (CR 702.73a); a dead anchor is read from its death LKI.
+    SharingCreatureTypeWith(Box<Selector>),
+
     /// The union of two selectors, de-duplicated in left-then-right order.
     /// Lets one effect name two target slots at once (Barrin's Spite).
     Both(Box<Selector>, Box<Selector>),
@@ -5144,11 +5149,11 @@ pub enum Effect {
     /// turn" (Case of the Shattered Pact) — cleaner than a `Seq` of separate
     /// `GrantKeyword`s, which would each declare their own target.
     GrantKeywords { what: Selector, keywords: Vec<Keyword>, duration: Duration },
-    /// Each permanent picked by `what` loses `keyword` until end of turn
-    /// (CR 613.7 layer 6 — the removal outranks any earlier grant this
-    /// turn). Shadowspear's "creatures your opponents control lose
-    /// hexproof and indestructible until end of turn".
-    LoseKeywordThisTurn { what: Selector, keyword: Keyword },
+    /// Each permanent picked by `what` loses `keyword` for `duration`
+    /// (CR 613.7 layer 6 — the removal outranks any earlier grant).
+    /// Shadowspear's "lose hexproof and indestructible until end of turn";
+    /// `Duration::Permanent` is the indefinite loss (Ageless Sentinels).
+    LoseKeyword { what: Selector, keyword: Keyword, duration: Duration },
     /// Each permanent picked by `what` doesn't untap during its
     /// controller's next untap step (Vorinclex's land lock, Exert-style
     /// `skip_next_untap` flag).
@@ -6661,6 +6666,53 @@ pub enum Effect {
         #[serde(default)]
         then: Option<Box<Effect>>,
     },
+
+    /// CR 614.9 — "All damage that would be dealt to this creature this turn
+    /// is dealt to `to` instead" (Karona's Zealot). Registers a turn-scoped
+    /// redirect on the source; cleared at cleanup.
+    RedirectDamageToThisThisTurn { to: Selector },
+
+    /// CR 614 — "The next time `what` would deal combat damage this turn, it
+    /// deals that damage to its controller instead" (Goblin Psychopath).
+    RedirectNextCombatDamageToController { what: Selector },
+
+    /// CR 702.18 — "You gain shroud until end of turn" (Gilded Light). No
+    /// player, `who` included, may target them for the rest of the turn.
+    PlayerGainsShroudThisTurn { who: PlayerRef },
+
+    /// Dimensional Breach — exile all permanents; for as long as any remain
+    /// exiled this way, each player returns one they own to the battlefield
+    /// at the beginning of their upkeep.
+    DimensionalBreach,
+
+    /// The per-upkeep half of [`Effect::DimensionalBreach`]: the active player
+    /// returns one of the cards exiled by the source that they own.
+    DimensionalBreachReturn,
+
+    /// Day of the Dragons — exile all creatures you control, then create that
+    /// many `token` tokens. The exiled cards come back when the source leaves.
+    ExileYourCreaturesForDragons { token: crate::card::TokenDefinition },
+
+    /// Parallel Thoughts — search your library for `count` cards, exile them
+    /// in a face-down pile stamped to the source, and shuffle both piles.
+    ExileFaceDownDrawPile { count: Value },
+
+    /// "Lands you control gain '{T}: Add one mana of any color' until end of
+    /// turn" (Divergent Growth) — a duration-scoped `GrantActivatedAbility`.
+    GrantActivatedAbilityToMatching {
+        filter: SelectionRequirement,
+        ability: Box<crate::effect::ActivatedAbility>,
+        duration: Duration,
+    },
+
+    /// "You may move any number of `kind` counters from this creature onto
+    /// other creatures" (Forgotten Ancient). The controller distributes; the
+    /// auto-decider spreads them evenly over the matching creatures.
+    DistributeCountersFromSource { kind: crate::card::CounterType, filter: SelectionRequirement },
+
+    /// "Reveal the card you drew. If it matches `filter`, `then`" (Primitive
+    /// Etchings). Reads the draw that fired this trigger.
+    RevealDrawnCardThenIf { filter: SelectionRequirement, then: Box<Effect> },
 
     /// "Players can't cast creature or planeswalker spells until the end of
     /// your next turn" (Single Combat). Registers a game-wide lock keyed to the

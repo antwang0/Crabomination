@@ -379,7 +379,7 @@ pub fn fear_of_falling() -> CardDefinition {
                     toughness: Value::Const(0),
                     duration: Duration::UntilNextTurn,
                 },
-                Effect::LoseKeywordThisTurn {
+                Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: Selector::Target(0),
                     keyword: Keyword::Flying,
                 },

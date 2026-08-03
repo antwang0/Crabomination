@@ -569,7 +569,7 @@ fn compute_permanent_pass(
 
     // Until-EOT keyword removals (Shadowspear) apply last — the removal's
     // timestamp is by construction later than any static grant this turn.
-    keywords.retain(|k| !card.removed_keywords_eot.contains(k));
+    keywords.retain(|k| !card.removed_keywords_eot.contains(k) && !card.removed_keywords.contains(k));
     // CR 113.11 — "can't have or gain" beats any grant, whatever its
     // timestamp (Archetype of Courage vs. a later first-strike anthem).
     keywords.retain(|k| !cant_have_keywords.contains(k));

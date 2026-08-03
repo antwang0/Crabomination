@@ -127,7 +127,7 @@ pub fn crash_landing() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::LoseKeywordThisTurn {
+            Effect::LoseKeyword { duration: crate::effect::Duration::EndOfTurn,
                 what: target_filtered(R::Creature.and(R::HasKeyword(Keyword::Flying))),
                 keyword: Keyword::Flying,
             },

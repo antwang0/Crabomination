@@ -32753,7 +32753,7 @@ pub fn skyclave_squid() -> CardDefinition {
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
-            effect: Effect::LoseKeywordThisTurn {
+            effect: Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: Selector::This,
                 keyword: Keyword::Defender,
             },
@@ -50501,11 +50501,11 @@ pub fn shadowspear() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Seq(vec![
-                Effect::LoseKeywordThisTurn {
+                Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: opp_creatures(),
                     keyword: Keyword::Hexproof,
                 },
-                Effect::LoseKeywordThisTurn {
+                Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: opp_creatures(),
                     keyword: Keyword::Indestructible,
                 },

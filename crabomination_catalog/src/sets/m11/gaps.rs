@@ -237,7 +237,7 @@ pub fn gargoyle_sentinel() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             effect: Effect::Seq(vec![
-                Effect::LoseKeywordThisTurn { what: Selector::This, keyword: Keyword::Defender },
+                Effect::LoseKeyword { duration: Duration::EndOfTurn, what: Selector::This, keyword: Keyword::Defender },
                 Effect::GrantKeyword {
                     what: Selector::This,
                     keyword: Keyword::Flying,

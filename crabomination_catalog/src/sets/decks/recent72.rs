@@ -204,7 +204,7 @@ pub fn radjan_spirit() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::LoseKeywordThisTurn {
+            effect: Effect::LoseKeyword { duration: crate::effect::Duration::EndOfTurn,
                 what: target_filtered(R::Creature),
                 keyword: Keyword::Flying,
             },

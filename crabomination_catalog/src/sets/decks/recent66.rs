@@ -305,14 +305,14 @@ pub fn quick_draw() -> CardDefinition {
                 keyword: Keyword::FirstStrike,
                 duration: Duration::EndOfTurn,
             },
-            Effect::LoseKeywordThisTurn {
+            Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: Selector::ControlledBy {
                     who: PlayerRef::Target(1),
                     filter: R::Creature,
                 },
                 keyword: Keyword::FirstStrike,
             },
-            Effect::LoseKeywordThisTurn {
+            Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: Selector::ControlledBy {
                     who: PlayerRef::Target(1),
                     filter: R::Creature,

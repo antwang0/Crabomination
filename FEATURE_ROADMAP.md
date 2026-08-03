@@ -2407,15 +2407,11 @@ Each a small targeted feature; sweep batch by batch.
 
 ## Suggested sequencing
 
-0. **Next set to close.** The Odyssey block, **Onslaught** and **Legions** are
-   all at zero (`set_gaps.py ody` / `tor` / `jud` / `ons` / `lgn`). **Scourge**
-   (`sets::scg`) is open at 32 gaps after two waves (84 cards). What's left is
-   mostly one primitive apiece — "target player can't cast spells this turn"
-   (Xantid Swarm), a cast restriction keyed
-   on the turn's land drop (Rock Jockey), Karona's per-upkeep control hand-off,
-   Day of the Dragons' exile-and-swap, Dimensional Breach's per-upkeep return,
-   Parallel Thoughts' face-down draw pile, and Grip of Chaos' random
-   retargeting. Then Mirrodin.
+0. **Next set to close.** The Odyssey block, **Onslaught**, **Legions** and
+   **Scourge** are all at zero (`set_gaps.py ody` / `tor` / `jud` / `ons` /
+   `lgn` / `scg`), which closes the Onslaught block. Next up: **Champions of
+   Kamigawa** (`set_gaps.py chk`, still open) to finish the Kamigawa block, and
+   the remaining Mirrodin-era stragglers.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2429,6 +2425,35 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Scourge (SCG) closed** — `set_gaps.py scg` 32 → 0 (`sets::scg2`, the last
+  32 cards). New primitives: `Effect::{DimensionalBreach, DimensionalBreachReturn}`
+  + `DelayedKind::EachPlayersUpkeep` (a recurring delayed trigger that fires at
+  *every* upkeep and retires itself when its exile pile empties),
+  `Effect::ExileYourCreaturesForDragons` (Day of the Dragons),
+  `Effect::ExileFaceDownDrawPile` + `StaticEffect::MayDrawFromSourceExilePile`
+  (Parallel Thoughts — a CR 121.2a draw replacement off a face-down pile),
+  `StaticEffect::RandomizeSingleTargets` (Grip of Chaos, hooked at the three
+  stack-push sites), `StaticEffect::SharedCreatureTypeSpellCostReduction`
+  (Mistform Warchief, reading the source's *computed* types),
+  `Effect::{RedirectDamageToThisThisTurn, RedirectNextCombatDamageToController}`
+  (Karona's Zealot / Goblin Psychopath — a turn-scoped redirect honoured on
+  both the noncombat and combat damage paths),
+  `Effect::PlayerGainsShroudThisTurn` (Gilded Light),
+  `Effect::GrantActivatedAbilityToMatching` (Divergent Growth),
+  `Effect::DistributeCountersFromSource` (Forgotten Ancient),
+  `Effect::RevealDrawnCardThenIf` (Primitive Etchings),
+  `Selector::SharingCreatureTypeWith` (Faces of the Past, reading the dead
+  anchor's LKI), `CounterType::Trap`, and `MatchingLandsAreCreatures` extended
+  with creature types + colours (Ambush Commander). Correctness in the same
+  pass: `Effect::LoseKeywordThisTurn` became `Effect::LoseKeyword { duration }`
+  with a real indefinite removal (`CardInstance.removed_keywords`); a
+  `sac_other_filter` activation cost now evaluates candidates against the
+  *battlefield* (computed types + live counters) instead of the bare card
+  definition; `Effect::Search` into `LibraryPosition::FromTop(n)` shuffles
+  before it places (only `pos: Top` keeps the Goblin-Recruiter exemption);
+  `EventScope::EnchantedBySource` matches `TurnedFaceUp`; and
+  `PlayerRef::OwnerOfMoved` resolves outside `place_card_in_dest`.
 
 - **Legions (LGN) closed** — `set_gaps.py lgn` 9 → 0. New: `Effect::SearchZones`
   (a real graveyard/hand/library search, replacing `SearchLibraryOrGraveyard`;

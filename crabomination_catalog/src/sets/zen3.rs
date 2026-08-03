@@ -173,7 +173,7 @@ pub fn windrider_eel() -> CardDefinition {
 pub fn shoal_serpent() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Defender],
-        triggered_abilities: vec![landfall(Effect::LoseKeywordThisTurn {
+        triggered_abilities: vec![landfall(Effect::LoseKeyword { duration: Duration::EndOfTurn,
             what: Selector::This,
             keyword: Keyword::Defender,
         })],

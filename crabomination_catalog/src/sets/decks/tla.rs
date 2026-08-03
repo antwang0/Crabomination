@@ -4024,11 +4024,11 @@ pub fn the_fire_nation_drill() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Seq(vec![
-                Effect::LoseKeywordThisTurn {
+                Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: opp_permanents(),
                     keyword: Keyword::Hexproof,
                 },
-                Effect::LoseKeywordThisTurn {
+                Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: opp_permanents(),
                     keyword: Keyword::Indestructible,
                 },

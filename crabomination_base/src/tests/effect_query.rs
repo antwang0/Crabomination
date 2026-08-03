@@ -28,7 +28,7 @@ fn targeted_effects_carry_slot_filters() {
         Effect::Regenerate { what: tgt() },
         Effect::Transform { what: tgt() },
         Effect::LoseAllAbilities { what: tgt(), duration: Duration::EndOfTurn },
-        Effect::LoseKeywordThisTurn { what: tgt(), keyword: Keyword::Flying },
+        Effect::LoseKeyword { duration: Duration::EndOfTurn, what: tgt(), keyword: Keyword::Flying },
         Effect::ExileUntilSourceLeaves {
             what: tgt(),
             return_to: crate::card::ExileReturnZone::Battlefield,

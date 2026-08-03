@@ -531,7 +531,7 @@ pub fn thundercloud_elemental() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(3), u()]),
-                effect: Effect::LoseKeywordThisTurn {
+                effect: Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: Selector::EachPermanent(R::Creature.and(R::OtherThanSource)),
                     keyword: Keyword::Flying,
                 },

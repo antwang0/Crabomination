@@ -602,6 +602,8 @@ pub enum CounterType {
     Feather,
     /// Aurification's gold counters (CR 122.1 — a marker counter).
     Gold,
+    /// Trap Digger's trap counters — a marker on a land, spent by sacrificing it.
+    Trap,
 }
 
 /// Every zone a card can occupy.
@@ -5049,11 +5051,14 @@ pub struct CardInstance {
     /// snapshots) default to 0 — ordered before every tracked effect,
     /// matching the old pre-merge behavior.
     pub granted_keywords_eot_ts: Vec<u64>,
-    /// Keywords removed until end of turn via `Effect::LoseKeywordThisTurn`
+    /// Keywords removed until end of turn via `Effect::LoseKeyword`
     /// (Shadowspear's "creatures your opponents control lose hexproof and
     /// indestructible until end of turn"). Removal beats printed/granted/
     /// counter sources for the turn; cleared at Cleanup.
     pub removed_keywords_eot: Vec<Keyword>,
+    /// Keywords removed indefinitely (`Duration::Permanent`) — Ageless
+    /// Sentinels' "it loses defender". Survives cleanup.
+    pub removed_keywords: Vec<Keyword>,
     /// CR 122.1b — Keyword counters. Each entry maps a keyword to its
     /// count; the host gets the keyword while one or more such counters
     /// are on it. Applied as a layer-6 keyword addition during
@@ -5442,6 +5447,7 @@ impl CardInstance {
             granted_keywords_eot: Vec::new(),
             granted_keywords_eot_ts: Vec::new(),
             removed_keywords_eot: Vec::new(),
+            removed_keywords: Vec::new(),
             keyword_counters: std::collections::HashMap::new(),
             may_play_until: None,
             dealt_deathtouch_damage: false,
@@ -5557,7 +5563,7 @@ impl CardInstance {
         // Printed keyword, EOT-granted, or keyword counter (CR 122.1b)
         // all qualify. The keyword-counter check requires at least one
         // counter of the matching type to be present.
-        if self.removed_keywords_eot.contains(kw) {
+        if self.removed_keywords_eot.contains(kw) || self.removed_keywords.contains(kw) {
             return false;
         }
         self.definition.keywords.contains(kw)
@@ -6097,6 +6103,9 @@ struct CardInstanceWire {
     /// `granted_keywords_eot`'s lifetime. `#[serde(default)]` for back-compat.
     #[serde(default)]
     removed_keywords_eot: Vec<Keyword>,
+    /// Indefinite keyword removals (Ageless Sentinels).
+    #[serde(default)]
+    removed_keywords: Vec<Keyword>,
     /// Until-end-of-turn flashback grant (SOS "Flashback"). Shares the
     /// transient lifetime of `granted_keywords_eot`; serialized so a
     /// mid-turn snapshot restores it. `#[serde(default)]` for back-compat.
@@ -6316,6 +6325,7 @@ impl serde::Serialize for CardInstance {
             granted_keywords_eot: self.granted_keywords_eot.clone(),
             granted_keywords_eot_ts: self.granted_keywords_eot_ts.clone(),
             removed_keywords_eot: self.removed_keywords_eot.clone(),
+            removed_keywords: self.removed_keywords.clone(),
             granted_flashback_eot: self.granted_flashback_eot.clone(),
             granted_harmonize_eot: self.granted_harmonize_eot.clone(),
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
@@ -6474,6 +6484,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_keywords_eot = wire.granted_keywords_eot;
         c.granted_keywords_eot_ts = wire.granted_keywords_eot_ts;
         c.removed_keywords_eot = wire.removed_keywords_eot;
+        c.removed_keywords = wire.removed_keywords;
         c.granted_flashback_eot = wire.granted_flashback_eot;
         c.granted_harmonize_eot = wire.granted_harmonize_eot;
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;

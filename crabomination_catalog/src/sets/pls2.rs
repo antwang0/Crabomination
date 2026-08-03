@@ -966,6 +966,8 @@ pub fn natural_emergence() -> CardDefinition {
                 power: 2,
                 toughness: 2,
                 keywords: vec![Keyword::FirstStrike],
+                creature_types: vec![],
+                colors: vec![],
             },
         }],
         ..enchantment("Natural Emergence", cost(&[generic(2), r(), g()]))

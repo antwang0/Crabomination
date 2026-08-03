@@ -514,11 +514,11 @@ pub fn bonds_of_mortality() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[g()]),
             effect: Effect::Seq(vec![
-                Effect::LoseKeywordThisTurn {
+                Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
                     keyword: Keyword::Hexproof,
                 },
-                Effect::LoseKeywordThisTurn {
+                Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
                     keyword: Keyword::Indestructible,
                 },

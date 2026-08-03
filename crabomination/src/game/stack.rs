@@ -750,6 +750,7 @@ impl GameState {
         for dt in std::mem::take(&mut self.delayed_triggers) {
             let matches = match (&dt.kind, step) {
                 (DelayedKind::YourNextUpkeep, TurnStep::Upkeep) => dt.controller == active,
+                (DelayedKind::EachPlayersUpkeep, TurnStep::Upkeep) => true,
                 (DelayedKind::YourNextMainPhase, TurnStep::PreCombatMain) => {
                     dt.controller == active
                 }
@@ -2693,6 +2694,7 @@ impl GameState {
             pl.silenced_this_turn = false;
             pl.warped_spell_this_turn = false;
             pl.searched_library_this_turn = false;
+            pl.shroud_this_turn = false;
             pl.cards_to_graveyard_this_turn = 0;
             pl.descended_this_turn = false;
             pl.descend_count_this_turn = 0;
@@ -3021,6 +3023,8 @@ impl GameState {
         self.block_tax_this_turn = 0;
         self.damage_redirect_this_turn.clear();
         self.next_damage_redirect.clear();
+        self.turn_damage_redirect.clear();
+        self.next_combat_damage_to_controller.clear();
         self.combat_damage_redirect_this_turn.clear();
         self.doubled_damage_sources_this_turn.clear();
         self.damaged_creatures_die_this_turn = false;

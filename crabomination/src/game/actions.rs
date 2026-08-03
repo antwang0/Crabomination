@@ -689,6 +689,25 @@ pub fn cost_reduction_for_spell_full(
                 {
                     reduction += amount;
                 }
+                // Mistform Warchief — the shared type is read off the source's
+                // *computed* types, so its own {T} type-change counts.
+                StaticEffect::SharedCreatureTypeSpellCostReduction { amount }
+                    if src.controller == caster && card.definition.is_creature() =>
+                {
+                    let mine = state
+                        .computed_permanent(src.id)
+                        .map(|cp| cp.subtypes.creature_types.clone())
+                        .unwrap_or_else(|| src.definition.subtypes.creature_types.clone());
+                    if card
+                        .definition
+                        .subtypes
+                        .creature_types
+                        .iter()
+                        .any(|t| mine.contains(t))
+                    {
+                        reduction += amount;
+                    }
+                }
                 StaticEffect::CostReductionPerControllerExperience { filter }
                     if src.controller == caster
                         && state.evaluate_requirement_on_card(filter, card, caster) =>
@@ -7554,6 +7573,7 @@ impl GameState {
                 });
             }
         }
+        self.randomize_single_target_on_stack();
         self.push_on_cast_triggers_x(card_id, p, on_cast_triggers, x_value);
         // SpellCast / YourControl triggers (Prowess, Magecraft, Repartee, …)
         // fire *at cast time*, before the spell resolves. The trigger goes
@@ -7845,6 +7865,46 @@ impl GameState {
     /// Push a card's "when you cast this spell" triggers, carrying the cast's
     /// `x_value` so an on-cast trigger body can read `Value::XFromCost`
     /// (Hydroid Krasis's "gain half X life and draw half X cards").
+    /// Grip of Chaos — "Whenever a spell or ability is put onto the stack, if
+    /// it has a single target, reselect its target at random." Called right
+    /// after a push; a no-op unless a Grip is on the battlefield.
+    pub(crate) fn randomize_single_target_on_stack(&mut self) {
+        use crate::effect::StaticEffect;
+        use rand::seq::IteratorRandom;
+        if !self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::RandomizeSingleTargets))
+        }) {
+            return;
+        }
+        let Some(top) = self.stack.last() else { return };
+        let (effect, controller, source, single) = match top {
+            StackItem::Spell { card, caster, target, additional_targets, .. } => (
+                card.definition.effect.clone(),
+                *caster,
+                Some(card.id),
+                target.is_some() && additional_targets.is_empty(),
+            ),
+            StackItem::Trigger { source, controller, effect, target, .. } => {
+                ((**effect).clone(), *controller, Some(*source), target.is_some())
+            }
+        };
+        if !single {
+            return;
+        }
+        let choices =
+            self.enumerate_legal_targets_with_source(&effect, controller, source);
+        let Some(pick) = choices.into_iter().choose(&mut rand::rng()) else { return };
+        match self.stack.last_mut() {
+            Some(StackItem::Spell { target, .. }) | Some(StackItem::Trigger { target, .. }) => {
+                *target = Some(pick);
+            }
+            None => {}
+        }
+    }
+
     pub(crate) fn push_on_cast_triggers_x(
         &mut self,
         source: CardId,
@@ -10122,6 +10182,10 @@ impl GameState {
     /// spells and abilities, and no ignore-hexproof static pierces it.
     pub fn player_has_static_shroud(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
+        // Gilded Light's turn-scoped grant rides the same check.
+        if self.players.get(player).is_some_and(|p| p.shroud_this_turn) {
+            return true;
+        }
         self.battlefield.iter().any(|c| {
             c.controller == player
                 && c.definition
@@ -12666,8 +12730,20 @@ impl GameState {
                 .filter(|c| c.id != card_id && c.controller == p)
                 .filter(|c| !needs_attached_to_source || c.attached_to == Some(card_id))
                 .filter(|c| !needs_host_of_source || host == Some(c.id))
-                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                 .map(|c| c.id)
+                .collect::<Vec<_>>()
+                .into_iter()
+                // Battlefield-aware: the cost filter reads computed types and
+                // live counters (Ambush Commander's animated Forests, Trap
+                // Digger's "land with a trap counter on it").
+                .filter(|id| {
+                    self.evaluate_requirement_static(
+                        filter,
+                        &Target::Permanent(*id),
+                        p,
+                        Some(card_id),
+                    )
+                })
                 .collect();
             if candidates.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
@@ -14147,6 +14223,7 @@ impl GameState {
                     .mana_spent_by_color(activation_mana_colors)
                     .build(),
             );
+            self.randomize_single_target_on_stack();
             // CR 702.21: Ward also fires on activated abilities targeting
             // an opp's Ward permanent (the "or ability" half of 702.21a).
             // Push Ward triggers above the just-queued ability so they

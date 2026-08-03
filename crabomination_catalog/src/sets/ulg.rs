@@ -1561,15 +1561,15 @@ pub fn walking_sponge() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::ChooseMode(vec![
-                Effect::LoseKeywordThisTurn {
+                Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: target_filtered(R::Creature),
                     keyword: Keyword::Flying,
                 },
-                Effect::LoseKeywordThisTurn {
+                Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: target_filtered(R::Creature),
                     keyword: Keyword::FirstStrike,
                 },
-                Effect::LoseKeywordThisTurn {
+                Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: target_filtered(R::Creature),
                     keyword: Keyword::Trample,
                 },

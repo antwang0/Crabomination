@@ -303,7 +303,7 @@ pub fn spectacular_pileup() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![cycling(cost(&[generic(2)]))],
         effect: Effect::Seq(vec![
-            Effect::LoseKeywordThisTurn {
+            Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: Selector::EachPermanent(creature_or_vehicle()),
                 keyword: Keyword::Indestructible,
             },

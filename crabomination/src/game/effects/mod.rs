@@ -2137,6 +2137,219 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DimensionalBreach => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                let ids: Vec<CardId> = self.battlefield.iter().map(|c| c.id).collect();
+                for id in ids {
+                    self.move_card_to(id, &ZoneDest::ExileWithSourceStamp, ctx, events);
+                }
+                if self.exile.iter().any(|c| c.exiled_with == Some(source)) {
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind: DelayedKind::EachPlayersUpkeep,
+                        effect: Effect::DimensionalBreachReturn,
+                        target: None,
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: false,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::DimensionalBreachReturn => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                let seat = self.active_player_idx;
+                if let Some(pos) =
+                    self.exile.iter().position(|c| c.exiled_with == Some(source) && c.owner == seat)
+                {
+                    let card = self.exile.remove(pos);
+                    self.place_card_in_dest(
+                        card,
+                        seat,
+                        &ZoneDest::Battlefield {
+                            controller: crate::effect::PlayerRef::Seat(seat),
+                            tapped: false,
+                        },
+                        events,
+                    );
+                }
+                // CR 603.7 — the delayed ability lives only while cards remain.
+                if !self.exile.iter().any(|c| c.exiled_with == Some(source)) {
+                    self.delayed_triggers.retain(|dt| {
+                        !(dt.source == source
+                            && matches!(dt.kind, DelayedKind::EachPlayersUpkeep))
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::ExileYourCreaturesForDragons { token } => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                let seat = ctx.controller;
+                let ids: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .map(|c| c.id)
+                    .collect();
+                let n = ids.len() as i32;
+                for id in ids {
+                    self.move_card_to(id, &ZoneDest::ExileWithSourceStamp, ctx, events);
+                }
+                let _ = source;
+                if n > 0 {
+                    self.run_effect(
+                        &Effect::CreateToken {
+                            who: crate::effect::PlayerRef::Seat(seat),
+                            count: crate::effect::Value::Const(n),
+                            definition: token.clone(),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
+            Effect::ExileFaceDownDrawPile { count } => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                let seat = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                for _ in 0..n {
+                    if self.players[seat].library.is_empty() {
+                        break;
+                    }
+                    let mut card = self.players[seat].library.remove(0);
+                    card.face_down = true;
+                    card.exiled_with = Some(source);
+                    let card_id = card.id;
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id });
+                }
+                self.shuffle_library(seat, events);
+                Ok(())
+            }
+
+            Effect::GrantActivatedAbilityToMatching { filter, ability, duration } => {
+                if !matches!(duration, Duration::EndOfTurn) {
+                    return Ok(());
+                }
+                let ids: Vec<CardId> = self
+                    .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                for id in ids {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.granted_activated_eot.push((**ability).clone());
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::DistributeCountersFromSource { kind, filter } => {
+                let Some(source) = ctx.source else { return Ok(()) };
+                let available =
+                    self.battlefield_find(source).map(|c| c.counter_count(*kind)).unwrap_or(0);
+                if available == 0 {
+                    return Ok(());
+                }
+                let targets: Vec<CardId> = self
+                    .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter(|id| *id != source)
+                    .collect();
+                if targets.is_empty() {
+                    return Ok(());
+                }
+                // Auto policy: spread the whole pile as evenly as it goes.
+                let mut left = available;
+                for (i, id) in targets.iter().enumerate() {
+                    let share = left / (targets.len() - i) as u32;
+                    if share == 0 {
+                        continue;
+                    }
+                    left -= share;
+                    let moved = share.min(
+                        self.battlefield_find(source).map(|c| c.counter_count(*kind)).unwrap_or(0),
+                    );
+                    if moved == 0 {
+                        continue;
+                    }
+                    if let Some(f) = self.battlefield_find_mut(source) {
+                        f.remove_counters(*kind, moved);
+                    }
+                    events.push(GameEvent::CounterRemoved {
+                        card_id: source,
+                        counter_type: *kind,
+                        count: moved,
+                    });
+                    if let Some(t) = self.battlefield_find_mut(*id) {
+                        t.add_counters(*kind, moved);
+                    }
+                    events.push(GameEvent::CounterAdded {
+                        card_id: *id,
+                        counter_type: *kind,
+                        count: moved,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::RevealDrawnCardThenIf { filter, then } => {
+                let seat = ctx.controller;
+                let drawn = self.players[seat].hand.last().map(|c| c.id);
+                let Some(cid) = drawn else { return Ok(()) };
+                let matched = self.players[seat]
+                    .hand
+                    .iter()
+                    .find(|c| c.id == cid)
+                    .is_some_and(|c| self.evaluate_requirement_on_card(filter, c, seat));
+                if let Some(c) = self.players[seat].hand.iter().find(|c| c.id == cid) {
+                    events.push(GameEvent::TopCardRevealed {
+                        player: seat,
+                        card_name: c.definition.name,
+                        is_land: c.definition.is_land(),
+                    });
+                }
+                if matched {
+                    self.run_effect(then, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            Effect::RedirectDamageToThisThisTurn { to } => {
+                let Some(dest) = self.resolve_selector(to, ctx).into_iter().next() else {
+                    return Ok(());
+                };
+                if let Some(src) = ctx.source {
+                    self.turn_damage_redirect.retain(|(c, _)| *c != src);
+                    self.turn_damage_redirect.push((src, dest));
+                }
+                Ok(())
+            }
+
+            Effect::RedirectNextCombatDamageToController { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && !self.next_combat_damage_to_controller.contains(&cid)
+                    {
+                        self.next_combat_damage_to_controller.push(cid);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::PlayerGainsShroudThisTurn { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.players[p].shroud_this_turn = true;
+                }
+                Ok(())
+            }
+
             Effect::RedirectNextDamageTo { what, to } => {
                 let Some(dest) = self.resolve_selector(to, ctx).into_iter().next() else {
                     return Ok(());
@@ -11422,13 +11635,20 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LoseKeywordThisTurn { what, keyword } => {
+            Effect::LoseKeyword { what, keyword, duration } => {
+                let indefinite = matches!(duration, Duration::Permanent);
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find_mut(cid)
-                        && !c.removed_keywords_eot.contains(keyword)
                     {
-                        c.removed_keywords_eot.push(keyword.clone());
+                        let list = if indefinite {
+                            &mut c.removed_keywords
+                        } else {
+                            &mut c.removed_keywords_eot
+                        };
+                        if !list.contains(keyword) {
+                            list.push(keyword.clone());
+                        }
                     }
                 }
                 Ok(())
@@ -28403,6 +28623,27 @@ impl GameState {
                     .collect()
             }
 
+            Selector::SharingCreatureTypeWith(inner) => {
+                let Some(anchor) =
+                    self.resolve_selector(inner, ctx).into_iter().find_map(|e| e.as_card_id())
+                else {
+                    return vec![];
+                };
+                let Some(snap) = self.lki_snapshot(anchor) else { return vec![] };
+                let wild = snap.has_keyword(&Keyword::Changeling);
+                let types = snap.definition.subtypes.creature_types.clone();
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.definition.card_types.contains(&CardType::Creature))
+                    .filter(|c| {
+                        wild
+                            || c.has_keyword(&Keyword::Changeling)
+                            || c.definition.subtypes.creature_types.iter().any(|t| types.contains(t))
+                    })
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
+
             Selector::Both(a, b) => {
                 let mut out = self.resolve_selector(a, ctx);
                 for e in self.resolve_selector(b, ctx) {
@@ -29003,6 +29244,13 @@ impl GameState {
             PlayerRef::You => Some(ctx.controller),
             PlayerRef::Seat(p) => Some(*p),
             PlayerRef::ActivePlayer => Some(self.active_player_idx),
+            // The owner of the card this resolution last moved (Metamorphose's
+            // "that opponent may put a permanent from their hand …").
+            PlayerRef::OwnerOfMoved => self
+                .last_moved_cards
+                .last()
+                .and_then(|id| self.find_card_anywhere(*id))
+                .map(|c| c.owner),
             PlayerRef::CounteredSpellController => self.countered_spell_controller,
             // Ties go to the earliest seat (stands in for "you choose one").
             PlayerRef::LowestLife => (0..self.players.len()).min_by_key(|p| self.players[*p].life),
@@ -29146,8 +29394,6 @@ impl GameState {
                     }
                     _ => None,
                 }),
-            // Resolved per-card inside `place_card_in_dest`; meaningless here.
-            PlayerRef::OwnerOfMoved => None,
             PlayerRef::ControllerOf(sel) => self
                 .resolve_selector(sel, ctx)
                 .into_iter()

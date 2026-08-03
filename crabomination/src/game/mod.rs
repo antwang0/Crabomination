@@ -1297,6 +1297,15 @@ pub struct GameState {
     /// at cleanup.
     #[serde(default)]
     pub next_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
+    /// CR 614.9 — "All damage that would be dealt to `.0` this turn is dealt
+    /// to `.1` instead" (Karona's Zealot). Unlike `next_damage_redirect` this
+    /// isn't consumed by the first event; cleared at cleanup.
+    #[serde(default)]
+    pub turn_damage_redirect: Vec<(CardId, crate::game::effects::EntityRef)>,
+    /// CR 614.9 — creatures whose next combat damage this turn is dealt to
+    /// their own controller instead (Goblin Psychopath). Cleared at cleanup.
+    #[serde(default)]
+    pub next_combat_damage_to_controller: Vec<CardId>,
     /// CR — Shadow of Doubt: no player may search a library this turn.
     pub no_search_this_turn: bool,
     /// CR 701.19 — `(viewer, owner)` pairs where `viewer` has looked at
@@ -1829,6 +1838,8 @@ impl Clone for GameState {
             block_tax_this_turn: self.block_tax_this_turn,
             damage_redirect_this_turn: self.damage_redirect_this_turn.clone(),
             next_damage_redirect: self.next_damage_redirect.clone(),
+            turn_damage_redirect: self.turn_damage_redirect.clone(),
+            next_combat_damage_to_controller: self.next_combat_damage_to_controller.clone(),
             combat_damage_redirect_this_turn: self.combat_damage_redirect_this_turn.clone(),
             damaged_creatures_die_this_turn: self.damaged_creatures_die_this_turn,
             creature_deaths_drain_toughness_this_turn: self.creature_deaths_drain_toughness_this_turn,
@@ -2105,6 +2116,8 @@ impl GameState {
             block_tax_this_turn: 0,
             damage_redirect_this_turn: Vec::new(),
             next_damage_redirect: Vec::new(),
+            turn_damage_redirect: Vec::new(),
+            next_combat_damage_to_controller: Vec::new(),
             combat_damage_redirect_this_turn: Vec::new(),
             damaged_creatures_die_this_turn: false,
             creature_deaths_drain_toughness_this_turn: false,
@@ -11612,6 +11625,23 @@ impl GameState {
         })
     }
 
+    /// Parallel Thoughts — the id of a permanent `p` controls whose
+    /// `MayDrawFromSourceExilePile` static offers its exiled pile as a draw.
+    fn source_exile_draw_pile_for(&self, p: usize) -> Option<crate::card::CardId> {
+        self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, c),
+                        Some(crate::effect::StaticEffect::MayDrawFromSourceExilePile)
+                    )
+                })
+                .then_some(c.id)
+        })
+    }
+
     /// `StaticEffect::ControllerMaySkipDraws` (Obstinate Familiar).
     fn controller_may_skip_draws(&self, p: usize) -> bool {
         self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
@@ -11768,6 +11798,30 @@ impl GameState {
         }
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
+        }
+        // CR 121.2a — Parallel Thoughts: "you may instead put the top card of
+        // the pile you exiled into your hand." Optional; declining falls
+        // through to the ordinary draw.
+        if let Some(src) = self.source_exile_draw_pile_for(p)
+            && let Some(pos) = self.exile.iter().position(|c| c.exiled_with == Some(src))
+        {
+            use crate::decision::{Decision, DecisionAnswer};
+            let yes = matches!(
+                self.decider.decide(&Decision::OptionalTrigger {
+                    source: src,
+                    description: "Draw from the exiled pile instead?".to_string(),
+                }),
+                DecisionAnswer::Bool(true)
+            );
+            if yes {
+                let mut card = self.exile.remove(pos);
+                card.face_down = false;
+                let card_id = card.id;
+                self.players[p].hand.push(card);
+                self.players[p].cards_drawn_this_turn += 1;
+                events.push(GameEvent::CardDrawn { player: p, card_id });
+                return true;
+            }
         }
         // CR 121.2a — Tomorrow, Azami's Familiar: look at the top N instead,
         // keep one, bottom the rest.
@@ -14310,6 +14364,7 @@ impl GameState {
                 .intervening_if(intervening_if)
                 .build(),
         );
+        self.randomize_single_target_on_stack();
         // CR 603 — a TRIGGERED ability choosing targets also fires
         // "becomes the target of a spell or ability" listeners (Tenured
         // Concocter); the cast and activated-ability paths already emit
@@ -15519,8 +15574,18 @@ impl GameState {
                 // destinations (Goblin Recruiter's "shuffle, then put them on
                 // top") are exempt — the multi-pick search chains single
                 // searches, and a later link's shuffle would bury the cards
-                // an earlier link already placed on top.
-                if include_library && !matches!(to, crate::effect::ZoneDest::Library { .. }) {
+                // an earlier link already placed on top. Only `pos: Top` is
+                // exempt: Long-Term Plans ("shuffle and put that card third
+                // from the top") must shuffle before it places.
+                if include_library
+                    && !matches!(
+                        to,
+                        crate::effect::ZoneDest::Library {
+                            pos: crate::effect::LibraryPosition::Top,
+                            ..
+                        }
+                    )
+                {
                     self.shuffle_library(player, &mut events);
                 }
                 if let Some(card_id) = chosen_id
@@ -17760,7 +17825,14 @@ fn static_effect_to_effects(
                     None => vec![],
                 }
             }
-            StaticEffect::MatchingLandsAreCreatures { filter, power, toughness, keywords } => {
+            StaticEffect::MatchingLandsAreCreatures {
+                filter,
+                power,
+                toughness,
+                keywords,
+                creature_types,
+                colors,
+            } => {
                 let affected = AffectedPermanents::CardMatch {
                     source_controller: card.controller,
                     requirement: Box::new(filter.clone()),
@@ -17785,6 +17857,12 @@ fn static_effect_to_effects(
                 out.extend(keywords.iter().map(|kw| {
                     mk(Layer::L6Ability, None, Modification::AddKeyword(kw.clone()))
                 }));
+                out.extend(creature_types.iter().map(|ct| {
+                    mk(Layer::L4Type, None, Modification::AddCreatureType(*ct))
+                }));
+                if !colors.is_empty() {
+                    out.push(mk(Layer::L5Color, None, Modification::SetColors(colors.clone())));
+                }
                 out
             }
             StaticEffect::SetColorOfMatchingToChosen { applies_to } => {
@@ -17952,6 +18030,11 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentActivityCostsMoreOnYourTurn { .. }
             | StaticEffect::ControllerHasHexproof
             | StaticEffect::ControllerHasShroud
+            // Mistform Warchief / Grip of Chaos / Parallel Thoughts — read at
+            // the cast-cost, target-selection and draw-replacement sites.
+            | StaticEffect::SharedCreatureTypeSpellCostReduction { .. }
+            | StaticEffect::RandomizeSingleTargets
+            | StaticEffect::MayDrawFromSourceExilePile
             // IgnoreOpponentsCreatureHexproof — consulted in
             // `check_target_legality_with_source` (Glaring Spotlight); no
             // layer effect.

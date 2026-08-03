@@ -2813,7 +2813,7 @@ pub fn rebel_salvo() -> CardDefinition {
             ArtifactSubtype::Equipment,
         )),
         effect: Effect::Seq(vec![
-            Effect::LoseKeywordThisTurn {
+            Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: Selector::Target(0),
                 keyword: Keyword::Indestructible,
             },

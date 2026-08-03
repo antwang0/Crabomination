@@ -2736,6 +2736,20 @@ impl GameState {
             // instead of its blockers, blocked or not.
             let free_targets = self.free_division_targets(atk.id, computed);
 
+            // Goblin Psychopath — the charge armed by a lost coin flip sends
+            // this attacker's whole combat-damage assignment at its
+            // controller instead (CR 614.9).
+            if let Some(seat) = self.take_combat_damage_diversion(atk.id) {
+                let raw = if prevent_combat_damage { 0 } else { atk.power.max(0) as u32 };
+                self.deal_damage_to_from(
+                    crate::game::effects::EntityRef::Player(seat),
+                    raw,
+                    Some(atk.id),
+                    &mut events,
+                );
+                continue;
+            }
+
             if blocker_ids.is_empty() && free_targets.is_empty() {
                 // CR 510.1c — an attacker that became blocked stays blocked
                 // even if all its blockers left combat (died to first-strike
@@ -2862,6 +2876,10 @@ impl GameState {
                     let dealt = if self.combat_damage_prevented_to_self(blocker_id) { 0 } else { dealt };
                     lifelink_dealt += dealt;
 
+                    // Karona's Zealot — a standing turn-scoped redirect moves
+                    // the whole combat-damage event onto another creature.
+                    let blocker_id =
+                        self.turn_damage_redirect_for(blocker_id).unwrap_or(blocker_id);
                     if dealt > 0 && let Some(b) = self.battlefield_find_mut(blocker_id) {
                         b.dealt_damage_this_turn = true;
                         b.damage_dealt_to_this_turn += dealt.max(0) as u32;
@@ -3010,7 +3028,8 @@ impl GameState {
                         }
                         let infect = bc.keywords.contains(&Keyword::Infect)
                             || bc.keywords.contains(&Keyword::Wither);
-                        if let Some(attacker) = self.battlefield_find_mut(atk.id) {
+                        let hit = self.turn_damage_redirect_for(atk.id).unwrap_or(atk.id);
+                        if let Some(attacker) = self.battlefield_find_mut(hit) {
                             attacker.dealt_damage_this_turn = true;
                             attacker.damage_dealt_to_this_turn += dmg;
                             attacker.damaged_by_this_turn.push(bid);
@@ -3018,7 +3037,7 @@ impl GameState {
                                 attacker
                                     .add_counters(crate::card::CounterType::MinusOneMinusOne, dmg);
                                 events.push(GameEvent::CounterAdded {
-                                    card_id: atk.id,
+                                    card_id: hit,
                                     counter_type: crate::card::CounterType::MinusOneMinusOne,
                                     count: dmg,
                                 });
@@ -3030,7 +3049,7 @@ impl GameState {
                                 events.push(GameEvent::DamageDealt {
                                     amount: dmg,
                                     to_player: None,
-                                    to_card: Some(atk.id),
+                                    to_card: Some(hit),
                                     combat: true,
                                     from_controller: Some(bc.controller),
                                     from_card: Some(bid),
@@ -3200,6 +3219,15 @@ impl GameState {
             count: grow,
         });
         0
+    }
+
+    /// Goblin Psychopath — "the next time this would deal combat damage this
+    /// turn, it deals that damage to you instead". Consumes the charge and
+    /// returns the creature's controller.
+    pub(crate) fn take_combat_damage_diversion(&mut self, id: CardId) -> Option<usize> {
+        let idx = self.next_combat_damage_to_controller.iter().position(|c| *c == id)?;
+        self.next_combat_damage_to_controller.remove(idx);
+        self.battlefield_find(id).map(|c| c.controller)
     }
 
     /// CR 614.9 — Treacherous Link: does `id` redirect damage aimed at it onto

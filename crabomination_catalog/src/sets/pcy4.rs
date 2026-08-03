@@ -122,7 +122,7 @@ pub fn vintara_elephant() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             any_player: true,
-            effect: Effect::LoseKeywordThisTurn {
+            effect: Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: Selector::This,
                 keyword: Keyword::Trample,
             },
@@ -139,7 +139,7 @@ pub fn zerapa_minotaur() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2)]),
             any_player: true,
-            effect: Effect::LoseKeywordThisTurn {
+            effect: Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: Selector::This,
                 keyword: Keyword::FirstStrike,
             },

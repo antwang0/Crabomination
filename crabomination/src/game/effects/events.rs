@@ -529,7 +529,10 @@ pub(crate) fn event_matches_spec(
                     .is_some_and(|auras| auras.iter().any(|(a, _)| *a == source.id)),
             // "Whenever enchanted creature attacks" (the Theros Ordeals) —
             // the host is still on the battlefield, so read `attached_to`.
-            GameEvent::AttackerDeclared(cid) | GameEvent::PermanentTapped { card_id: cid, .. } => {
+            // "When enchanted creature is turned face up" (Fatal Mutation).
+            GameEvent::AttackerDeclared(cid)
+            | GameEvent::TurnedFaceUp { card_id: cid }
+            | GameEvent::PermanentTapped { card_id: cid, .. } => {
                 state
                     .battlefield_find(source.id)
                     .and_then(|a| a.attached_to)

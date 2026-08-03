@@ -529,7 +529,7 @@ pub fn cephalid_snitch() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             sac_cost: true,
-            effect: Effect::LoseKeywordThisTurn {
+            effect: Effect::LoseKeyword { duration: Duration::EndOfTurn,
                 what: target_filtered(R::Creature),
                 keyword: Keyword::Protection(Color::Black),
             },

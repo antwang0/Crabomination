@@ -158,43 +158,23 @@ Open follow-ups:
 `classic_sets/lgn`). The last nine each wanted one primitive; see
 FEATURE_ROADMAP.md → "Recently closed" for what shipped.
 
-## Scourge — opened
+## Scourge — closed
 
-`set_gaps.py scg` is at **32** (116 → 39 → 32; `sets::scg`, tests in
-`classic_sets/scg`, 84 cards). Storm, cycling + the Decree riders, the
-"whenever a permanent is turned face up" payoffs, the Dragon Auras' graveyard
-re-attach, the "greatest mana value among permanents you control" cycle and
-(as of the second wave) `Keyword::MorphCost` all ride existing primitives.
+`set_gaps.py scg` is at **zero** (116 → 39 → 32 → 0; `sets::scg` + `sets::scg2`,
+tests in `classic_sets/{scg,scg2}`, 116 cards). The closing wave's primitives
+are listed in FEATURE_ROADMAP.md → "Recently closed".
 
-Still open, and why — each wants one primitive:
-- **Ambush Commander** — "Forests you control are 1/1 green Elf creatures that
-  are still lands": a `StaticEffect` that animates a *filtered set* of lands
-  continuously, rather than the one-shot `Effect::BecomeCreature`.
-- **Trap Digger** — needs a `CounterType::Trap` plus a `sac_other_filter` that
-  can read "a land with a trap counter on it" (`R::WithCounter` exists; the
-  counter type doesn't).
-- **Divergent Growth** — "until end of turn, lands you control gain '{T}: Add
-  one mana of any color'": a turn-scoped activated-ability grant over a filter
-  (the `GrantKeywordToMatchingThisTurn` shape, for abilities).
-- **Xantid Swarm** — "defending player can't cast spells this turn"; the
-  engine has `cant_cast_noncreature_this_turn` but no blanket per-player lock.
-- **Rock Jockey** — a cast restriction keyed on whether the caster has played
-  a land this turn (`Predicate::PlayedLandThisTurn`), plus the mirror
-  `StaticEffect` gated on "this was cast this turn"
-  (`Predicate::SourceCastThisTurn`).
-- **Karona, False God** (per-upkeep untap-and-hand-over), **Day of the
-  Dragons** (exile-and-swap with a leave trigger), **Dimensional Breach**
-  (per-upkeep return from a linked exile), **Parallel Thoughts** (a
-  face-down draw pile replacing draws), **Grip of Chaos** (random retargeting
-  of every single-target object), **Faces of the Past**, **Lethal Vapors**,
-  **Force Bubble**, **Form of the Dragon**, **Proteus Machine**,
-  **Sliver Overlord**, **Mischievous Quanar**, **Metamorphose**,
-  **Long-Term Plans** (third from the top), **Trap Digger**, **Soul Collector**,
-  **Forgotten Ancient**, **Ambush Commander**, **Primitive Etchings**,
-  **Pemmin's Aura**, **Uncontrolled Infestation**, **Fatal Mutation**,
-  **Frozen Solid**, **Goblin Psychopath**, **One with Nature**,
-  **Dragonstorm**, **Decree of Annihilation**'s cycling half is shipped but the
-  cast half exiles hands via a `CardsInZone` sweep that should be audited.
+Residual, not blocking the count:
+- **Decree of Annihilation**'s cycling half is shipped; the cast half exiles
+  hands via a `CardsInZone` sweep that should be audited.
+- **Grip of Chaos** retargets at the three stack-push sites (spell, activated
+  ability, triggered ability). A spell put on the stack by *another* effect
+  (a copy, a cascade free cast) isn't re-randomized.
+- **Forgotten Ancient**'s upkeep distribution is engine-chosen (spread evenly
+  over the matching creatures) rather than a real "any number, your choice"
+  prompt; needs a `Decision::DistributeCounters`-style pick to be faithful.
+- **Parallel Thoughts**' draw replacement is offered as a yes/no
+  `OptionalTrigger`; the AutoDecider declines it, so bots never mine the pile.
 
 ## Judgment — opened
 

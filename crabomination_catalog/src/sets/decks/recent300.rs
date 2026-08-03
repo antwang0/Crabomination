@@ -70,7 +70,7 @@ pub fn grozoth() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[generic(4)]),
-                effect: Effect::LoseKeywordThisTurn {
+                effect: Effect::LoseKeyword { duration: Duration::EndOfTurn,
                     what: Selector::This,
                     keyword: Keyword::Defender,
                 },
