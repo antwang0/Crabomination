@@ -2424,9 +2424,14 @@ Each a small targeted feature; sweep batch by batch.
   heuristic it is more often wrong. Standing diagnosis: `eval_material`
   scores outcomes of resolved sims (a one-ply search with a perfect
   model), so the net must carry long-horizon signal to add value, and
-  ~125 k params of pooled encoder doesn't yet. Next levers: capacity
-  (GPU territory), richer object features, search-improved targets.
-  Nothing adopted.
+  ~125 k params of pooled encoder doesn't yet. Round 4 (5× capacity
+  ~600 k params, keyword object features, CUDA-ready `cuda` feature
+  flag): 43.8 / 48.8 / 47.1 % — same bands, **but the CPU learner only
+  managed 0.4 visits/row before the tail cap**, so capacity remains
+  untested until the learner moves to the GPU (`pacman -S cuda`, then
+  `--features cuda`). Next levers: GPU-scale training, search-improved
+  targets, and Phase C's build net — where there is no incumbent
+  perfect-model search to beat. Nothing adopted.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over snapshots).
 
 ## Tier 14 — Replays, analysis & observability

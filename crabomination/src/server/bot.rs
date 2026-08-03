@@ -467,11 +467,15 @@ impl EvalWeights {
     /// round-1 net (25 k games), 42.3 % [39.6, 45.1] on the round-2 net
     /// (4× the data), 43.4 % [40.6, 46.2] after round 2's over-reused
     /// training tail, 44.7 % [41.9, 47.5] on the round-3 net (mid-turn
-    /// snapshot cadence, 10.5 M rows). Better than the MCTS attempt's
-    /// 41.5 %, worse than the tuned heuristic, and *flat-to-marginal
-    /// across a 4× data jump and the distribution fix*: neither data
-    /// volume nor snapshot coverage is the binding constraint at this
-    /// capacity. Worth naming what the net is actually up against:
+    /// snapshot cadence, 10.5 M rows), 43.8 % [41.0, 46.6] on the
+    /// round-4 net (5× capacity + keyword object features — but only
+    /// 0.4 learner visits per row: at 600 k parameters the CPU learner,
+    /// not generation, is the bottleneck, so round 4 tested capacity at
+    /// half an epoch; a fair capacity test needs the GPU learner).
+    /// Better than the MCTS attempt's 41.5 %, worse than the tuned
+    /// heuristic, and *flat-to-marginal across a 4× data jump and the
+    /// distribution fix*: neither data volume nor snapshot coverage is
+    /// the binding constraint at small capacity. Worth naming what the net is actually up against:
     /// `eval_material` scores the *outcomes of resolved simulations* — a
     /// one-ply search with a perfect forward model — so a value net only
     /// helps where it carries long-horizon signal the material count
@@ -487,11 +491,12 @@ impl EvalWeights {
     /// labor: the heuristic resolves small material deltas exactly, the
     /// net tilts close calls it has an opinion about.
     ///
-    /// **Measured three times**: 49.3 % [46.5, 52.2] (round-1 net),
+    /// **Measured four times**: 49.3 % [46.5, 52.2] (round-1 net),
     /// 49.2 % [46.4, 52.1] (round-2 net, 4× the data), 50.7 %
-    /// [47.9, 53.6] (round 2 after its over-reused tail) over 1 200
+    /// [47.9, 53.6] (round 2 after its over-reused tail), 48.8 %
+    /// [45.9, 51.6] (round-4 capacity net, undertrained) over 1 200
     /// sealed-mirror games each vs `atk-sim` — stable statistical parity
-    /// while the same nets score 42–44 % as full replacements. The
+    /// while the same nets score 42–45 % as full replacements. The
     /// stability says the ±50-unit bias is mostly inert (the net's
     /// probability hovers near 0.5 in balanced positions, so the bias
     /// rarely clears a decision margin) — hence the louder
@@ -509,8 +514,9 @@ impl EvalWeights {
     /// right loudness lies is a ladder question, not an argument.
     ///
     /// **Measured, and the answer is "quieter"**: 45.9 % [43.1 %, 48.7 %]
-    /// over 1 200 sealed-mirror games with the round-3 net, vs 49.3 % for
-    /// the 100-scale blend on the same weights. Amplifying the net's
+    /// over 1 200 sealed-mirror games with the round-3 net (47.1 %
+    /// [44.3, 49.9] with round 4's), vs 49.3 % / 48.8 % for the
+    /// 100-scale blend on the same weights. Amplifying the net's
     /// opinion hurts — where it disagrees with the heuristic it is wrong
     /// more often than right, which bounds what any loudness of this
     /// net's bias can contribute.

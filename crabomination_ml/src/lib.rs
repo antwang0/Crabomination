@@ -183,7 +183,9 @@ pub struct LossParts {
 
 impl Trainer {
     pub fn new(cfg: &NetConfig, lr: f64) -> CResult<Trainer> {
-        let dev = Device::Cpu;
+        // CPU unless the crate was built with the `cuda` feature AND a
+        // device is present — then this silently returns the GPU.
+        let dev = Device::cuda_if_available(0)?;
         let varmap = VarMap::new();
         let vb = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
         let model = build_model(cfg, vb)?;

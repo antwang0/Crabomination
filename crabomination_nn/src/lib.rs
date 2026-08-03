@@ -51,16 +51,24 @@ pub const G_GY_SELF: usize = 3;
 pub const G_GY_OPP: usize = 4;
 
 /// Per-object feature count. Baked into encoded rows — bump
-/// [`SHARD_VERSION`] if it changes.
-pub const OBJ_FEATS: usize = 12;
+/// [`SHARD_VERSION`] if it changes. Feats 12..=19 are the evasion/combat
+/// keyword flags added in round 4 (flying, reach, menace, deathtouch,
+/// lifelink, trample, first-or-double strike, vigilance): the pooled
+/// encoder previously saw a Serra Angel and a Hill Giant as the same
+/// 4-mana 4/4-ish body.
+pub const OBJ_FEATS: usize = 20;
 /// Global scalar feature count. Baked into encoded rows likewise.
 pub const GLOBAL_FEATS: usize = 24;
 
 /// Standard trainer configuration (the file's shapes win at load time).
-pub const EMB_DIM: usize = 16;
-pub const OBJ_HIDDEN: usize = 32;
-pub const TRUNK_H1: usize = 256;
-pub const TRUNK_H2: usize = 128;
+/// Sizes quadrupled in round 4 (~600 k parameters, from ~125 k): four
+/// gate rounds measured the small net flat at 42–45 % as a replacement
+/// judge across data-volume and distribution fixes, leaving capacity the
+/// first untested lever.
+pub const EMB_DIM: usize = 32;
+pub const OBJ_HIDDEN: usize = 64;
+pub const TRUNK_H1: usize = 512;
+pub const TRUNK_H2: usize = 256;
 
 /// One card object as the net sees it: a vocabulary index plus a small
 /// dense feature vector (effective P/T, tapped, counters, ...). Index 0 is
@@ -105,7 +113,7 @@ pub struct TrainRow {
 /// `OBJ_FEATS`, `GLOBAL_FEATS`, group order, or the row layout changes —
 /// stale shards must fail loudly, not decode as garbage.
 pub const SHARD_MAGIC: [u8; 4] = *b"CRML";
-pub const SHARD_VERSION: u32 = 1;
+pub const SHARD_VERSION: u32 = 2;
 
 /// Serialize rows into a self-describing shard (little-endian throughout).
 pub fn write_shard(rows: &[TrainRow]) -> Vec<u8> {

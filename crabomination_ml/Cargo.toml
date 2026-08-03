@@ -12,3 +12,10 @@ crabomination_nn = { path = "../crabomination_nn" }
 candle-core = "0.11"
 candle-nn = "0.11"
 rand = "0.10.2"
+
+[features]
+# `cargo build --release -p crabomination_ml --features cuda` puts the
+# learner on the GPU (Device::cuda_if_available in Trainer::new does the
+# runtime pick). Needs the CUDA toolkit installed (`pacman -S cuda`);
+# without the feature everything runs CPU exactly as before.
+cuda = ["candle-core/cuda", "candle-nn/cuda"]

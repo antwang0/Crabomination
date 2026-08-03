@@ -133,6 +133,7 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
 /// Printed-card features shared by every zone (hand, graveyard, and the
 /// base of a battlefield object).
 fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
+    use crate::card::Keyword;
     let def = &c.definition;
     let mut feats = [0.0f32; OBJ_FEATS];
     feats[0] = def.cost.cmc() as f32 / 8.0;
@@ -141,6 +142,30 @@ fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
     feats[3] = if def.is_planeswalker() { 1.0 } else { 0.0 };
     feats[4] = def.power.max(0) as f32 / 8.0;
     feats[5] = def.toughness.max(0) as f32 / 8.0;
+    // Evasion/combat keywords, granted ones included (`has_keyword`
+    // reads printed + granted lists; the granted lists are simply empty
+    // off the battlefield). First and double strike share a flag — for a
+    // value function they mean the same thing at this resolution.
+    for (i, kw) in [
+        Keyword::Flying,
+        Keyword::Reach,
+        Keyword::Menace,
+        Keyword::Deathtouch,
+        Keyword::Lifelink,
+        Keyword::Trample,
+        Keyword::FirstStrike,
+        Keyword::Vigilance,
+    ]
+    .iter()
+    .enumerate()
+    {
+        if c.has_keyword(kw) {
+            feats[12 + i] = 1.0;
+        }
+    }
+    if c.has_keyword(&Keyword::DoubleStrike) {
+        feats[18] = 1.0;
+    }
     EncodedObject { card: vocab.index_of(def.name), feats }
 }
 
