@@ -212,6 +212,8 @@ fn parse_profile(name: &str) -> Option<Pilot> {
     match name {
         "baseline" => Some(Pilot::Scored(EvalWeights::baseline())),
         "landseq" => Some(Pilot::Scored(EvalWeights::land_sequencing())),
+        "mull" => Some(Pilot::Scored(EvalWeights::mulligan_quality())),
+        "gang" => Some(Pilot::Scored(EvalWeights::block_gang_search())),
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),
         "net-blend" => Some(Pilot::Scored(EvalWeights::net_eval_blend())),
         "net-blend300" => Some(Pilot::Scored(EvalWeights::net_eval_blend300())),
@@ -255,7 +257,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, net, net-blend, net-blend300 (net* need CRAB_NET=<weights.safetensors>)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, net, net-blend, net-blend300 (net* need CRAB_NET=<weights.safetensors>)";
 
 /// Wilson score interval for `wins` out of `n` at `z`. Chosen over the
 /// normal approximation because it stays sane at small n and at p̂ = 0 or 1,

@@ -153,6 +153,30 @@ pub struct EvalWeights {
     ///   otherwise, so it is preferred early and penalized when the
     ///   untapped mana would actually be spent.
     pub land_urgency: bool,
+    /// Judge opening hands by what is *in* them, not just how many lands
+    /// and whether one spell is castable. The shipped rule keeps every
+    /// 2–5-land hand with a single cheap spell and ships every 6-land
+    /// hand, so "two lands, one two-drop, four six-drops" is a keep and
+    /// "six lands and a bomb" is a mulligan. This adds a card-quality
+    /// sum ([`crate::draft::card_quality`]), a redundancy requirement at
+    /// two lands, and an on-the-draw allowance — the extra card is
+    /// exactly what makes a marginal hand keepable.
+    pub mull_quality: bool,
+    /// Offer gang-blocks *for value* to the block search.
+    ///
+    /// The greedy pass already piles blockers onto an attacker, but only
+    /// when `life_threatened` — that is, only to survive lethal. Off
+    /// that trigger it blocks an attacker solely when one creature can
+    /// kill it alone, so two 2/2s never eat a 4/4 however good that
+    /// trade is. And [`block_search`](Self::block_search) can only ever
+    /// *remove* blockers from the greedy set; adding one was outside the
+    /// space it explored, which is why its documented null result says
+    /// nothing about this.
+    ///
+    /// The gangs are candidates, not decisions:
+    /// [`simulate_block_outcome`] prices the blockers that die against
+    /// the attacker that dies, and ties keep the greedy assignment.
+    pub block_gang: bool,
 }
 
 impl EvalWeights {
@@ -182,6 +206,8 @@ impl EvalWeights {
             net_slot: 0,
             net_blend_scale: 0,
             land_urgency: false,
+            mull_quality: false,
+            block_gang: false,
         }
     }
 
@@ -237,6 +263,8 @@ impl EvalWeights {
             net_slot: 0,
             net_blend_scale: 0,
             land_urgency: false,
+            mull_quality: false,
+            block_gang: false,
         }
     }
 
@@ -275,6 +303,8 @@ impl EvalWeights {
             net_slot: 0,
             net_blend_scale: 0,
             land_urgency: false,
+            mull_quality: false,
+            block_gang: false,
         }
     }
 
@@ -533,6 +563,53 @@ impl EvalWeights {
         Self { land_urgency: true, ..Self::attack_search_sim() }
     }
 
+    /// The adopted default plus quality-aware mulligans
+    /// ([`mull_quality`](Self::mull_quality)).
+    ///
+    /// **Measured and not adopted**: 50.7 % [49.7 %, 51.7 %] over 9 600
+    /// sealed games, 50.2 % [49.6 %, 50.8 %] over 28 800 on the
+    /// pre-registered decider. The fourth consecutive evaporation of a
+    /// sub-10 000-game edge in this harness (after
+    /// [`block_search`](Self::block_search),
+    /// [`attack_search_race`](Self::attack_search_race) and
+    /// [`land_sequencing`](Self::land_sequencing)) — at this point any
+    /// result here under ~20 000 games should be read as a hypothesis
+    /// however clean its interval looks.
+    ///
+    /// The rule changes are still the right *shape* — its tests pin two
+    /// hands the shipped heuristic reads backwards — so the likely
+    /// reading is that opening-hand quality matters less than it feels
+    /// like it should when both seats mulligan by the same rule in a
+    /// mirror: the edge cancels.
+    pub const fn mulligan_quality() -> Self {
+        Self { mull_quality: true, ..Self::attack_search_sim() }
+    }
+
+    /// Value gang-blocks ([`block_gang`](Self::block_gang)) plus the
+    /// `block_search` that scores them — with the search at 0 the gang
+    /// candidates are never evaluated, so the two ship together.
+    ///
+    /// **Adopted — this is [`EvalWeights::default`].** 51.3 %
+    /// [50.7 %, 51.9 %] (seed 43) and 51.1 % [50.5 %, 51.7 %] (seed 97),
+    /// 28 800 sealed games each vs `atk-sim`, after a 9 600-game
+    /// screening read 51.0 %. Unlike the four other play-side profiles
+    /// tried alongside it, the edge did not shrink at 3× the sample.
+    ///
+    /// What it adds: at a healthy life total the greedy pass blocks an
+    /// attacker only when one creature kills it alone, so two 2/2s never
+    /// ate a 4/4 however good the trade. Gangs are now offered as
+    /// candidates and [`simulate_block_outcome`] prices the dead
+    /// blockers against the dead attacker.
+    ///
+    /// The bundle caveat, stated plainly: `block_search` alone measured
+    /// null (50.4 % over 30 000 games) and is switched on here. That is
+    /// not evidence the earlier rejection was wrong — the search had
+    /// nothing to find while its only candidates were "block with one
+    /// fewer creature".
+    pub const fn block_gang_search() -> Self {
+        Self { block_gang: true, block_search: 2, ..Self::attack_search_sim() }
+    }
+
     pub const fn net_eval() -> Self {
         Self { net_slot: super::net_eval::SLOT_BEST, ..Self::attack_search_sim() }
     }
@@ -761,6 +838,7 @@ impl Default for EvalWeights {
     /// | combat-aware evaluation | 51.3 % [50.4 %, 52.2 %] | 12 000 |
     /// | searched attacks | 52.4 % [51.3 %, 53.5 %] | 8 000 |
     /// | spell-casting combat sims | 54.4 % [53.0 %, 55.8 %] | 4 794 |
+    /// | value gang-blocks | 51.3 % [50.7 %, 51.9 %] | 28 800 |
     ///
     /// The attack search was additionally confirmed on cube decks —
     /// 53.8 % [53.0 %, 54.6 %] over 13 695 decided games — where the fixed
@@ -771,8 +849,20 @@ impl Default for EvalWeights {
     /// against an identical-profile control at 48.9 % — and the largest
     /// per-deck gain landed exactly where the blind attack search had its
     /// documented regression: dimir control, 44.8 % blind → 61.3 % seeing.
+    /// Gang-blocking (see [`block_gang_search`](Self::block_gang_search))
+    /// was adopted last, on two independent 28 800-game sealed runs —
+    /// 51.3 % [50.7 %, 51.9 %] and 51.1 % [50.5 %, 51.7 %]. It is the
+    /// only one of five play-side heuristics tried in that push to
+    /// survive its decider, and the difference is instructive: the
+    /// other four refined decisions the bot already made competently,
+    /// while this one added a line it could not previously express at
+    /// all (the greedy pass gangs only under lethal threat, and
+    /// [`block_search`](Self::block_search) could only ever *remove*
+    /// blockers). Note that adopting it also turns `block_search` on,
+    /// which measured null by itself — the search was never the
+    /// problem; it had nothing worth searching.
     fn default() -> Self {
-        Self::attack_search_sim()
+        Self::block_gang_search()
     }
 }
 
@@ -1037,7 +1127,7 @@ fn decide_pending_policy(
         // Smarter mulligan than AutoDecider's blanket Keep:
         // ship hands that are flooded or screwed on lands.
         crate::decision::Decision::Mulligan { mulligans_taken, .. } => {
-            decide_mulligan(state, seat, *mulligans_taken)
+            decide_mulligan(state, seat, *mulligans_taken, w)
         }
         // Unlike AutoDecider (which declines every tutor), the
         // bot actually fetches — preferring a basic land toward
@@ -2663,6 +2753,7 @@ fn decide_mulligan(
     state: &GameState,
     seat: usize,
     mulligans_taken: usize,
+    w: &EvalWeights,
 ) -> crate::decision::DecisionAnswer {
     use crate::decision::DecisionAnswer;
     let hand = &state.players[seat].hand;
@@ -2691,7 +2782,63 @@ fn decide_mulligan(
         }
         need.is_subset_of(producible)
     });
-    let keepable = ((2..=5).contains(&lands) && has_early_play) || hand.len() <= 3;
+    if !w.mull_quality {
+        let keepable = ((2..=5).contains(&lands) && has_early_play) || hand.len() <= 3;
+        return if keepable || mulligans_taken >= 2 {
+            DecisionAnswer::Keep
+        } else {
+            DecisionAnswer::TakeMulligan
+        };
+    }
+
+    // How many spells this hand can actually deploy in the early turns,
+    // not merely whether one exists: a two-lander living off a single
+    // two-drop is a hand that does nothing from turn three.
+    let castable_soon = |extra_lands: usize| -> usize {
+        hand.iter()
+            .filter(|c| {
+                if c.definition.is_land() || c.definition.cost.cmc() as usize > lands + extra_lands
+                {
+                    return false;
+                }
+                let mut need = crate::mana::ColorSet::empty();
+                for col in c.definition.cost.colors() {
+                    need.insert(col);
+                }
+                need.is_subset_of(producible)
+            })
+            .count()
+    };
+    let early_plays = castable_soon(1);
+    // What the hand is worth if it does get to cast its spells. Uses the
+    // sealed builder's card scorer, which prices bodies, evasion and
+    // preparation spells — the same blindness that made the builder pick
+    // filler over bombs would otherwise make the mulligan ship bombs.
+    let quality: i32 = hand
+        .iter()
+        .filter(|c| !c.definition.is_land())
+        .map(|c| crate::draft::card_quality(&c.definition))
+        .sum();
+    // The player who isn't the starting player sees one more card before
+    // their first real turn, which is what rescues a marginal hand.
+    let on_draw = state.active_player_idx != seat;
+
+    let keepable = if hand.len() <= 3 {
+        // Below four cards the next mulligan costs more than the hand.
+        true
+    } else {
+        match lands {
+            0 | 1 => false,
+            2 => early_plays >= 2 || (on_draw && has_early_play),
+            3..=5 => has_early_play,
+            // Flood is a keep only when the spells justify the risk.
+            // Calibrated against concrete cards rather than a round
+            // number: a 4/4 flier scores 7 and clears this, three
+            // vanilla bears score 6 and don't.
+            6 => quality >= 7,
+            _ => false,
+        }
+    };
     if keepable || mulligans_taken >= 2 {
         DecisionAnswer::Keep
     } else {
@@ -5955,6 +6102,10 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
         }
     }
 
+    if w.block_gang {
+        candidates.extend(gang_block_candidates(state, seat, &greedy, w));
+    }
+
     let mut best: Option<(usize, i32)> = None;
     for (i, cand) in candidates.iter().enumerate() {
         let Some(score) = simulate_block_outcome(state, seat, cand, w) else { continue };
@@ -5966,6 +6117,88 @@ fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(C
         Some((i, _)) => candidates.swap_remove(i),
         None => greedy,
     }
+}
+
+/// Block assignments that add a gang onto an attacker the greedy pass
+/// left alone, one candidate per attacker worth ganging.
+///
+/// Only attackers nobody is already blocking are considered: piling onto
+/// an existing block changes a trade the greedy pass already reasoned
+/// about, while an unblocked attacker is one it decided it *couldn't*
+/// profitably block alone — exactly the case a gang exists for. Blockers
+/// are taken cheapest-first so the gang spends the least material that
+/// still kills, and a candidate is only emitted when the gang actually
+/// kills (an assignment that merely chumps harder is strictly worse than
+/// the greedy one and would only waste a simulation).
+///
+/// Illegal declarations (menace needing two, a "must be blocked"
+/// attacker left uncovered) are not filtered here: the engine rejects
+/// them and [`simulate_block_outcome`] returns `None`, which drops the
+/// candidate. Legality is the engine's job, not this heuristic's.
+fn gang_block_candidates(
+    state: &GameState,
+    seat: usize,
+    greedy: &[(CardId, CardId)],
+    w: &EvalWeights,
+) -> Vec<Vec<(CardId, CardId)>> {
+    use crate::card::Keyword;
+    const MAX_CANDIDATES: usize = 3;
+
+    let blocked: std::collections::HashSet<CardId> =
+        greedy.iter().map(|(_, a)| *a).collect();
+    let used: std::collections::HashSet<CardId> = greedy.iter().map(|(b, _)| *b).collect();
+
+    // Idle bodies, cheapest first: the gang should cost as little as it
+    // can and still kill.
+    let mut idle: Vec<&crate::card::CardInstance> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && bot_can_block(c) && !used.contains(&c.id))
+        .collect();
+    idle.sort_by_key(|c| permanent_value(state, c.id, w));
+    if idle.len() < 2 {
+        return Vec::new();
+    }
+
+    // Unblocked attackers, most valuable first — the gang is only worth
+    // its losses against a real threat.
+    let mut targets: Vec<&crate::card::CardInstance> = state
+        .attacking
+        .iter()
+        .filter(|a| !blocked.contains(&a.attacker))
+        .filter_map(|a| state.battlefield_find(a.attacker))
+        .filter(|c| c.controller != seat)
+        .collect();
+    targets.sort_by_key(|c| -permanent_value(state, c.id, w));
+
+    let mut out = Vec::new();
+    for atk in targets.into_iter().take(MAX_CANDIDATES) {
+        let a_flying = atk.has_keyword(&Keyword::Flying);
+        let a_tough = atk.toughness() - atk.damage as i32;
+        let mut gang: Vec<CardId> = Vec::new();
+        let mut dmg = 0i32;
+        for b in &idle {
+            if a_flying && !b.has_keyword(&Keyword::Flying) && !b.has_keyword(&Keyword::Reach) {
+                continue;
+            }
+            gang.push(b.id);
+            dmg += b.power().max(0);
+            if b.has_keyword(&Keyword::Deathtouch) || dmg >= a_tough {
+                break;
+            }
+        }
+        // A single blocker is the greedy pass's own decision, already
+        // scored; two or more that kill is the new option.
+        if gang.len() < 2 || dmg < a_tough {
+            continue;
+        }
+        let mut cand = greedy.to_vec();
+        for b in gang {
+            cand.push((b, atk.id));
+        }
+        out.push(cand);
+    }
+    out
 }
 
 /// Declare `blocks`, run combat damage, and score the board for `seat`.
@@ -9593,15 +9826,89 @@ mod tests {
         // 1 land + 6 spells → mulligan.
         g.add_card_to_hand(0, catalog::island());
         for _ in 0..6 { g.add_card_to_hand(0, catalog::grizzly_bears()); }
-        assert!(matches!(decide_mulligan(&g, 0, 0), DecisionAnswer::TakeMulligan));
+        assert!(matches!(decide_mulligan(&g, 0, 0, &EvalWeights::default()), DecisionAnswer::TakeMulligan));
         // Stop digging after two mulligans even on a bad hand.
-        assert!(matches!(decide_mulligan(&g, 0, 2), DecisionAnswer::Keep));
+        assert!(matches!(decide_mulligan(&g, 0, 2, &EvalWeights::default()), DecisionAnswer::Keep));
 
         // 3 lands + 4 spells, colors aligned (Forests for green bears) → keep.
         let mut g2 = two_player_game();
         for _ in 0..3 { g2.add_card_to_hand(0, catalog::forest()); }
         for _ in 0..4 { g2.add_card_to_hand(0, catalog::grizzly_bears()); }
-        assert!(matches!(decide_mulligan(&g2, 0, 0), DecisionAnswer::Keep));
+        assert!(matches!(decide_mulligan(&g2, 0, 0, &EvalWeights::default()), DecisionAnswer::Keep));
+    }
+
+    /// Two 2/2s eat a 4/4 when life isn't threatened. The greedy pass
+    /// only gangs under lethal pressure, and `block_search` can only
+    /// remove blockers, so at a healthy life total this attacker used to
+    /// get through untouched — trading two bears for a bomb is a fine
+    /// deal the bot simply never considered.
+    #[test]
+    fn gang_blocks_for_value_not_only_for_survival() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareBlockers;
+        g.active_player_idx = 1;
+        // A 4/4 attacking a comfortable life total.
+        let big = g.add_card_to_battlefield(1, catalog::serra_angel());
+        g.clear_sickness(big);
+        let bear_a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let bear_b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear_a);
+        g.clear_sickness(bear_b);
+        g.players[0].life = 20;
+        g.set_attacking(vec![Attack { attacker: big, target: crate::game::types::AttackTarget::Player(0) }]);
+
+        // Serra Angel flies; ground bears can't block it at all, so the
+        // gang must be legal to be offered. Swap to a ground fatty.
+        let mut g2 = two_player_game();
+        g2.step = TurnStep::DeclareBlockers;
+        g2.active_player_idx = 1;
+        let fatty = g2.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+        g2.clear_sickness(fatty);
+        let b1 = g2.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b2 = g2.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b3 = g2.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for b in [b1, b2, b3] { g2.clear_sickness(b); }
+        g2.players[0].life = 20;
+        g2.set_attacking(vec![Attack { attacker: fatty, target: crate::game::types::AttackTarget::Player(0) }]);
+
+        let greedy = pick_blocks(&g2, 0);
+        assert!(greedy.iter().filter(|(_, a)| *a == fatty).count() <= 1,
+            "greedy blocks the 6/4 with at most one body at 20 life: {greedy:?}");
+
+        let gangs = gang_block_candidates(&g2, 0, &greedy, &EvalWeights::block_gang_search());
+        assert!(!gangs.is_empty(), "a gang candidate is offered");
+        let gang = &gangs[0];
+        let on_fatty = gang.iter().filter(|(_, a)| *a == fatty).count();
+        assert!(on_fatty >= 2, "the gang puts two or more blockers on it: {gang:?}");
+    }
+
+    /// `mull_quality` fixes the two hands the shipped rule reads
+    /// backwards: a two-lander whose only play is one two-drop (kept
+    /// today, does nothing from turn three) and a six-land hand holding
+    /// a bomb (shipped today, a fine limited keep).
+    #[test]
+    fn mull_quality_judges_the_hand_not_just_the_land_count() {
+        use crate::decision::DecisionAnswer;
+        let w = EvalWeights::mulligan_quality();
+
+        // Two Forests, one castable bear, four uncastable six-drops.
+        let mut thin = two_player_game();
+        for _ in 0..2 { thin.add_card_to_hand(0, catalog::forest()); }
+        thin.add_card_to_hand(0, catalog::grizzly_bears());
+        for _ in 0..4 { thin.add_card_to_hand(0, catalog::craw_wurm()); }
+        assert!(matches!(decide_mulligan(&thin, 0, 0, &EvalWeights::default()), DecisionAnswer::Keep),
+            "the shipped rule keeps this on the strength of one two-drop");
+        assert!(matches!(decide_mulligan(&thin, 0, 0, &w), DecisionAnswer::TakeMulligan),
+            "one play is not a keep at two lands");
+
+        // Six Plains and Serra Angel: flooded, but the payoff is real.
+        let mut flooded = two_player_game();
+        for _ in 0..6 { flooded.add_card_to_hand(0, catalog::plains()); }
+        flooded.add_card_to_hand(0, catalog::serra_angel());
+        assert!(matches!(decide_mulligan(&flooded, 0, 0, &EvalWeights::default()), DecisionAnswer::TakeMulligan),
+            "the shipped rule ships every six-land hand");
+        assert!(matches!(decide_mulligan(&flooded, 0, 0, &w), DecisionAnswer::Keep),
+            "a bomb carries the flood");
     }
 
     /// Color-screw: enough lands and a fine curve, but the lands can't make
@@ -9612,7 +9919,7 @@ mod tests {
         let mut g = two_player_game();
         for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
         for _ in 0..4 { g.add_card_to_hand(0, catalog::grizzly_bears()); }
-        assert!(matches!(decide_mulligan(&g, 0, 0), DecisionAnswer::TakeMulligan),
+        assert!(matches!(decide_mulligan(&g, 0, 0, &EvalWeights::default()), DecisionAnswer::TakeMulligan),
             "no green source for the green spells → color screw → mulligan");
     }
 
@@ -9625,7 +9932,7 @@ mod tests {
         // 3 lands + four {6} Obsianus Golems → no spell castable by turn ~4.
         for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
         for _ in 0..4 { g.add_card_to_hand(0, catalog::obsianus_golem()); }
-        assert!(matches!(decide_mulligan(&g, 0, 0), DecisionAnswer::TakeMulligan),
+        assert!(matches!(decide_mulligan(&g, 0, 0, &EvalWeights::default()), DecisionAnswer::TakeMulligan),
             "no early play despite enough lands → mulligan");
     }
 

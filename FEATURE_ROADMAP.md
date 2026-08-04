@@ -2343,8 +2343,19 @@ Each a small targeted feature; sweep batch by batch.
   19 200 fixed+cube games — the first decider's +1.2 (with mono-red at
   54.8 %/400) collapsed to +0.2, mono-red back at 49.9 %, the
   block-search replication failure reproduced on a fresh hypothesis.
-  Kept as a documented profile (`attack_search_race` doc). Remaining:
-  multi-blocker math.
+  Kept as a documented profile (`attack_search_race` doc).
+  **Multi-blocker math landed and is adopted**: value gang-blocks
+  (`gang` / `block_gang`, now `EvalWeights::default`). The greedy pass
+  gangs only under lethal threat and `block_search` could only ever
+  *remove* blockers, so "two 2/2s eat a 4/4 at 20 life" was in no search
+  space the bot had; gangs are now candidates the block sim prices (dead
+  blockers against dead attacker). Two independent 28 800-game sealed
+  runs: 51.3 % [50.7, 51.9] and 51.1 % [50.5, 51.7], after a 9 600-game
+  screening at 51.0 % — the only one of five play-side profiles tried in
+  this push whose edge did not shrink at 3× the sample. Adopting it also
+  switches on `block_search`, which measured null alone: the search had
+  nothing to find while its only candidates were "block with one fewer
+  creature".
 - 🟡 **Planeswalker piloting** — emblem values are priced by what the
   emblem actually does (draw/damage/drain/token/lifegain shapes, static
   buffs, clamped 20–60) instead of a near-flat constant, and a doomed
@@ -2387,7 +2398,13 @@ Each a small targeted feature; sweep batch by batch.
   (`decide_optional_by_outcome`). Remaining: land-drop choice, deliberate
   hold-up planning.
 - 🟡 **Mulligan decisions** — `RandomBot` ships flood/screw mulligans with
-  color-screw awareness. Remaining: transitive fetch/dual sources.
+  color-screw awareness. A quality-aware rule (`mull` — card-quality sum,
+  a redundancy requirement at two lands, on-the-draw allowance) is
+  **measured and not adopted**: 50.2 % [49.6, 50.8] over 28 800 sealed
+  games. Its tests stay as documentation of two hands the shipped rule
+  reads backwards (a two-lander living off one two-drop is kept; six
+  lands and a bomb is shipped). Remaining: transitive fetch/dual
+  sources.
 - 🟡 **Targeting / mode / X-value choices** — mid-resolution modals are picked
   by settled-outcome eval (`decide_mode_by_outcome`), scry/surveil/rearrange
   order for real (`decide_scry` — flood to the bottom, bricks off the top,
