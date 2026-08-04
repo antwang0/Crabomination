@@ -288,6 +288,17 @@ static CNS: &[Factory] = &[
     super::cns::brago_king_eternal,
     super::cns::canal_dredger,
     super::cns::cogwork_spy,
+    super::cns::academy_elite,
+    super::cns::drakestown_forgotten,
+    super::cns::realm_seekers,
+    super::cns::rousing_of_souls,
+    super::cns::selvalas_charge,
+    super::cns::selvalas_enforcer,
+    super::cns::selvala_explorer_returned,
+    super::cns::woodvine_elemental,
+    super::cns::marchesas_emissary,
+    super::cns::marchesas_infiltrator,
+    super::cns::treasonous_ogre,
 ];
 static ATQ: &[Factory] = &[
     super::atq::amulet_of_kroog,

@@ -528,3 +528,296 @@ pub fn cogwork_spy() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Removing a +1/+1 counter is this card's activation cost.
+fn counter_cost(mana: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: mana,
+        remove_counter_cost: Some((crate::card::CounterType::PlusOnePlusOne, 1)),
+        effect,
+        ..Default::default()
+    }
+}
+
+/// Academy Elite — sized by the instants and sorceries in every graveyard.
+pub fn academy_elite() -> CardDefinition {
+    CardDefinition {
+        name: "Academy Elite",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        enters_with_counters: Some((
+            crate::card::CounterType::PlusOnePlusOne,
+            Value::CardsInAllGraveyardsMatching {
+                filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+            },
+        )),
+        activated_abilities: vec![counter_cost(
+            cost(&[generic(2), u()]),
+            Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+        )],
+        ..Default::default()
+    }
+}
+
+/// Drakestown Forgotten — sized by the creatures in every graveyard.
+pub fn drakestown_forgotten() -> CardDefinition {
+    CardDefinition {
+        name: "Drakestown Forgotten",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        enters_with_counters: Some((
+            crate::card::CounterType::PlusOnePlusOne,
+            Value::CardsInAllGraveyardsMatching { filter: R::Creature },
+        )),
+        activated_abilities: vec![counter_cost(
+            cost(&[generic(2), b()]),
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Realm Seekers — sized by every hand at the table.
+pub fn realm_seekers() -> CardDefinition {
+    CardDefinition {
+        name: "Realm Seekers",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Scout],
+            ..Default::default()
+        },
+        enters_with_counters: Some((
+            crate::card::CounterType::PlusOnePlusOne,
+            Value::Sum(vec![
+                Value::HandSizeOf(PlayerRef::You),
+                Value::HandSizeOf(PlayerRef::EachOpponent),
+            ]),
+        )),
+        activated_abilities: vec![counter_cost(
+            cost(&[generic(2), g()]),
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: R::Land,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+// ── Parley ─────────────────────────────────────────────────────────────────
+
+/// Rousing of Souls — parley for a flock of Spirits.
+pub fn rousing_of_souls() -> CardDefinition {
+    CardDefinition {
+        name: "Rousing of Souls",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Parley {
+            then: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CardsRevealedThisEffect,
+                definition: TokenDefinition {
+                    keywords: vec![Keyword::Flying],
+                    ..token("Spirit", 1, 1, CreatureType::Spirit, vec![Color::White])
+                },
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Selvala's Charge — parley for a herd of Elephants.
+pub fn selvalas_charge() -> CardDefinition {
+    CardDefinition {
+        name: "Selvala's Charge",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Parley {
+            then: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CardsRevealedThisEffect,
+                definition: token("Elephant", 3, 3, CreatureType::Elephant, vec![Color::Green]),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Selvala's Enforcer — parley to grow itself.
+pub fn selvalas_enforcer() -> CardDefinition {
+    CardDefinition {
+        name: "Selvala's Enforcer",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Parley {
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::CardsRevealedThisEffect,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Selvala, Explorer Returned — parley for green mana and life.
+pub fn selvala_explorer_returned() -> CardDefinition {
+    CardDefinition {
+        name: "Selvala, Explorer Returned",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![crate::card::Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Parley {
+                then: Box::new(Effect::Seq(vec![
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::OfColor(Color::Green, Value::CardsRevealedThisEffect),
+                    },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::CardsRevealedThisEffect,
+                    },
+                ])),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Woodvine Elemental — parley on attack pumps the team.
+pub fn woodvine_elemental() -> CardDefinition {
+    CardDefinition {
+        name: "Woodvine Elemental",
+        cost: cost(&[generic(4), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Parley {
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: R::Creature.and(R::IsAttacking),
+                    },
+                    power: Value::CardsRevealedThisEffect,
+                    toughness: Value::CardsRevealedThisEffect,
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Dethrone ───────────────────────────────────────────────────────────────
+
+/// Marchesa's Emissary — a hexproof dethroner.
+pub fn marchesas_emissary() -> CardDefinition {
+    CardDefinition {
+        name: "Marchesa's Emissary",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Hexproof],
+        triggered_abilities: vec![crate::effect::shortcut::dethrone()],
+        ..Default::default()
+    }
+}
+
+/// Marchesa's Infiltrator — a dethroner that draws on connection.
+pub fn marchesas_infiltrator() -> CardDefinition {
+    CardDefinition {
+        name: "Marchesa's Infiltrator",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            crate::effect::shortcut::dethrone(),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Treasonous Ogre — a dethroner that burns life for red mana.
+pub fn treasonous_ogre() -> CardDefinition {
+    CardDefinition {
+        name: "Treasonous Ogre",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ogre, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::dethrone()],
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 3,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Red]),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

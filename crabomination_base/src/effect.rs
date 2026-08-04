@@ -7866,6 +7866,12 @@ pub enum Effect {
     /// "Each player chooses a land they control of each basic land type.
     /// Return those lands to their owners' hands" (Planar Overlay).
     EachPlayerReturnsALandOfEachBasicType,
+    /// Parley — "each player reveals the top card of their library. For each
+    /// nonland card revealed this way, [`then`]. Then each player draws a
+    /// card." The nonland count is published as
+    /// `Value::CardsRevealedThisEffect` for the body to read, and the revealed
+    /// cards stay on top (the draw takes them).
+    Parley { then: Box<Effect> },
     /// "Reveal any number of `filter` cards in your hand, then [`then`]" — the
     /// Urza's Destiny Scent / Seer cycle and Metalworker. The revealed count is
     /// published as `Value::CardsRevealedThisEffect` for the body to read.

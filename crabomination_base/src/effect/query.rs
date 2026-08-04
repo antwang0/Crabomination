@@ -1352,7 +1352,9 @@ impl Effect {
             Effect::Balance | Effect::BalanceMatching { .. } => false,
             Effect::GenesisWave => false,
             Effect::ShuffleHandsDrawSame { who } => player_has_target(who),
-            Effect::RevealAnyNumberFromHand { then, .. } => then.requires_target(),
+            Effect::RevealAnyNumberFromHand { then, .. } | Effect::Parley { then } => {
+                then.requires_target()
+            }
             Effect::DestroyEachMatchingWithManaValue { .. }
             | Effect::ExtraManaOnLandTapThisTurn { .. } => false,
             Effect::GuessColorCountInHand { who, .. } => player_has_target(who),
@@ -1687,7 +1689,8 @@ impl Effect {
             // MayDo wraps an inner effect — surface its filter so the
             // cast prompt narrows correctly when the inner effect needs
             // a target (e.g. "you may sacrifice [target permanent]").
-            Effect::RevealAnyNumberFromHand { then: body, .. }
+            Effect::Parley { then: body }
+            | Effect::RevealAnyNumberFromHand { then: body, .. }
             | Effect::MayExileSelfThen { body }
             | Effect::MayExileFromYourGraveyard { then: body, .. }
             | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
@@ -2785,7 +2788,8 @@ impl Effect {
                     Some(m) if m < modes.len() => eff_find(&modes[m], slot, None, kicked),
                     _ => modes.iter().find_map(|m| eff_find(m, slot, None, kicked)),
                 },
-                Effect::RevealAnyNumberFromHand { then: body, .. }
+                Effect::Parley { then: body }
+                | Effect::RevealAnyNumberFromHand { then: body, .. }
                 | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
                 | Effect::CapTargetsAtX { body }
                 | Effect::TargetsExactlyX { body }

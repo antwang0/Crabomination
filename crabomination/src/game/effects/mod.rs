@@ -26608,6 +26608,29 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Parley { then } => {
+                // CR 701 ability word — no rules meaning of its own; the count
+                // it publishes is what the body reads.
+                let seats: Vec<usize> = self.apnap_sort(
+                    (0..self.players.len()).filter(|&p| !self.players[p].eliminated).collect(),
+                );
+                let mut nonland = 0u32;
+                for &p in &seats {
+                    let Some(top) = self.players[p].library.first() else { continue };
+                    let (name, is_land) = (top.definition.name, top.definition.is_land());
+                    events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
+                    if !is_land {
+                        nonland += 1;
+                    }
+                }
+                self.cards_revealed_this_resolution = nonland;
+                self.run_effect(then, ctx, events)?;
+                for &p in &seats {
+                    self.draw_one(p, events);
+                }
+                Ok(())
+            }
+
             Effect::ExileAndReturnToOwner { what } => {
                 // Flicker — an immediate blink. Tokens cease to exist (CR
                 // 111.7), and the returned card is a new object.

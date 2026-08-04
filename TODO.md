@@ -8785,10 +8785,14 @@ Planeshift is at zero `set_gaps.py` gaps (86 cards this run); Invasion went
   (double agenda — two named cards per conspiracy; `named_card` holds one).
   Worldknit ships with its card-pool gate dropped: the engine has no card-pool
   concept to read.
-- **Conspiracy (CNS) proper is untouched.** `sets::cns` is the conspiracy-card
-  sheet only; `set_gaps.py cns` still lists ~180 regular cards (the will-of-the-
-  council / council's-dilemma voting cycle, Dack Fayden, the Cogwork draft
-  matters shell). The voting mechanic (CR 701.32) is the prerequisite.
+- **Conspiracy (CNS) is opened, not closed.** 16 regular cards ship; the rest
+  need one of two mechanics. **Voting** (CR 701.32 — will of the council /
+  council's dilemma) has no engine support at all: it wants a seat-ordered
+  poll with a public tally and a tie rule, plus a `Decision::Vote` and its
+  client modal. **Draft-matters** (Cogwork Librarian, Aether Searcher, Canal
+  Dredger's and Cogwork Spy's draft clauses, Agent of Acquisitions) needs the
+  draft engine to expose per-pick hooks; the two cards that ship drop those
+  clauses.
 - **`GameState::seat_static_sources` is the seat-scoped twin of
   `all_static_sources`.** Controller-scoped statics that still walk
   `self.battlefield` directly won't see a conspiracy; the two cast gates and

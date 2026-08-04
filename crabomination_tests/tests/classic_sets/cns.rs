@@ -352,3 +352,75 @@ fn canal_dredger_bottoms_a_graveyard_card() {
     assert!(g.players[0].graveyard.is_empty());
     assert_eq!(g.players[0].library.last().map(|c| c.id), Some(bear));
 }
+
+/// Parley counts the nonland tops, runs the body once, then everyone draws.
+#[test]
+fn parley_counts_nonland_reveals_then_refills() {
+    let mut g = main_phase();
+    g.players[0].library.clear();
+    g.players[1].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // nonland top
+    g.add_card_to_library(0, catalog::mountain());
+    g.add_card_to_library(1, catalog::mountain()); // land top
+    g.add_card_to_library(1, catalog::mountain());
+    let spell = g.add_card_to_hand(0, catalog::rousing_of_souls());
+    let hands = [g.players[0].hand.len(), g.players[1].hand.len()];
+    cast(&mut g, 0, spell, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1);
+    // The spell left hand (-1), then both players drew (+1 each).
+    assert_eq!(g.players[0].hand.len(), hands[0]);
+    assert_eq!(g.players[1].hand.len(), hands[1] + 1);
+}
+
+#[test]
+fn selvalas_enforcer_grows_on_the_parley() {
+    let mut g = main_phase();
+    let enforcer = g.add_card_to_hand(0, catalog::selvalas_enforcer());
+    cast(&mut g, 0, enforcer, None);
+    // Both libraries are all Mountains, so no nonland was revealed.
+    assert_eq!(
+        g.battlefield_find(enforcer).expect("enforcer").counter_count(CounterType::PlusOnePlusOne),
+        0
+    );
+}
+
+#[test]
+fn academy_elite_is_sized_by_the_graveyards() {
+    let mut g = main_phase();
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears()); // not an I/S
+    let elite = g.add_card_to_hand(0, catalog::academy_elite());
+    cast(&mut g, 0, elite, None);
+    assert_eq!(
+        g.battlefield_find(elite).expect("elite").counter_count(CounterType::PlusOnePlusOne),
+        2
+    );
+}
+
+#[test]
+fn treasonous_ogre_dethrones_and_burns_life_for_red() {
+    let mut g = main_phase();
+    let ogre = g.add_card_to_battlefield(0, catalog::treasonous_ogre());
+    g.clear_sickness(ogre);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ogre,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    assert_eq!(g.players[0].life, 17);
+    assert!(g.players[0].mana_pool.total() > 0);
+    // Dethrone: attacking the (tied) most-life player grows it.
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: ogre, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ogre).expect("ogre").counter_count(CounterType::PlusOnePlusOne),
+        1
+    );
+}

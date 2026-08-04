@@ -2495,8 +2495,9 @@ Each a small targeted feature; sweep batch by batch.
    is closed), **Legends** (273 cards, `sets::leg`–`leg7`), **Antiquities**
    (64 cards, `sets::atq`), **Arabian Nights** (63 cards, `sets::arn`) and
    **The Dark** (97 cards, `sets::drk`/`drk2`) are all at zero. **Conspiracy** (CNS)
-   is barely started: `sets::cns` holds 18 of the 24 *conspiracy cards* plus
-   four of the set's ~180 regular cards.
+   is opened, not closed: `sets::cns` holds 18 of the 24 *conspiracy cards*
+   plus 16 regular cards. The will-of-the-council / council's-dilemma voting
+   cycle (CR 701.32) and the draft-matters shell are the bulk of what's left.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2543,9 +2544,16 @@ Each a small targeted feature; sweep batch by batch.
   (807.2 defaults, 807.3 random seating). The 807.4 turn markers are open;
   see TODO.md.
 
-- **Conspiracy's first regular cards** — Deathreap Ritual, Brago King Eternal,
-  Canal Dredger, Cogwork Spy. The set's will-of-the-council voting cycle
-  (CR 701.32) is the prerequisite for the rest; tracked in TODO.md.
+- **Conspiracy's regular cards opened** — 16 of ~180: Deathreap Ritual, Brago
+  King Eternal, Canal Dredger, Cogwork Spy, the graveyard/hand-sized
+  counter creatures (Academy Elite, Drakestown Forgotten, Realm Seekers), the
+  dethrone shell (Marchesa's Emissary / Infiltrator, Treasonous Ogre) and the
+  **parley** cycle behind a new `Effect::Parley` (each player reveals their
+  top card, the nonland count is published as
+  `Value::CardsRevealedThisEffect` for the body, then everyone draws) —
+  Rousing of Souls, Selvala's Charge, Selvala's Enforcer, Selvala Explorer
+  Returned, Woodvine Elemental. The voting cycle (CR 701.32) is the
+  prerequisite for the rest; tracked in TODO.md.
 
 Only this push's entries are listed; earlier pushes are in `git log -p --
 FEATURE_ROADMAP.md`.
