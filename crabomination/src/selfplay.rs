@@ -53,6 +53,20 @@ pub fn heuristic_sealed_build_with(
     build_random_deck(pool, &cfg, &mut rng).cards
 }
 
+/// A random sealed opponent: a fresh 6-pack pool, built by the same
+/// heuristic builder the training loop and recommender use. Returns the
+/// 40-card deck and a label naming the seed, so a match can be
+/// reproduced ("Sealed #12345").
+///
+/// Exists for the client's Sealed game mode — the point of that mode is
+/// to play a hand-built deck against the field the recommender races
+/// against, so the opponent has to come from the same generator.
+pub fn random_sealed_opponent(seed: u64) -> (Vec<CardFactory>, String) {
+    let pool = sealed_pool(seed);
+    let deck = heuristic_sealed_build(&pool, seed ^ 0x5EA1_ED);
+    (deck, format!("Sealed #{seed}"))
+}
+
 /// Unshuffled two-seat template with both libraries loaded — clone per
 /// game.
 pub fn sealed_game_template(seat0: &[CardFactory], seat1: &[CardFactory]) -> GameState {

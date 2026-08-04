@@ -548,7 +548,9 @@ fn compute_pack_card_width(window: Vec2, n_cards: usize) -> f32 {
 /// button always produces something playable.
 fn pool_for_format(format: MatchFormat) -> DraftPool {
     match format {
-        MatchFormat::Sos => DraftPool::Sos,
+        // Sealed drafts from the SOS pool — it's the set the sealed
+        // mode's opponents are generated from.
+        MatchFormat::Sos | MatchFormat::Sealed => DraftPool::Sos,
         MatchFormat::Cube | MatchFormat::Modern | MatchFormat::Commander => DraftPool::Cube,
     }
 }
@@ -2295,6 +2297,7 @@ fn format_label(format: MatchFormat) -> &'static str {
         MatchFormat::Modern => "Modern",
         MatchFormat::Cube => "Cube",
         MatchFormat::Sos => "SoS",
+        MatchFormat::Sealed => "Sealed",
         MatchFormat::Commander => "Commander",
     }
 }

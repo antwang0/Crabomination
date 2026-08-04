@@ -149,6 +149,12 @@ pub enum MatchFormat {
     Modern,
     Cube,
     Sos,
+    /// Sealed: your hand-built 40 from `decks/sealed.txt` against a
+    /// randomly generated sealed deck — the same pool generator and
+    /// (repaired) builder the recommender races its candidates against,
+    /// so a deck that tests well here is being tested against the same
+    /// field the tool reports on.
+    Sealed,
     /// 1v1 Commander: both seats run the Rofellos mono-green
     /// demo deck. 100-card singleton, 40 life, commander seated in
     /// the command zone before opening-hand draw. Built via
@@ -169,6 +175,7 @@ impl MatchFormat {
             MatchFormat::Modern => build_demo_state(),
             MatchFormat::Cube => build_cube_state(),
             MatchFormat::Sos => build_sos_state(),
+            MatchFormat::Sealed => build_sealed_state(),
             MatchFormat::Commander => build_commander_state(),
         }
     }
@@ -180,6 +187,7 @@ impl MatchFormat {
             "modern" => Some(MatchFormat::Modern),
             "cube" => Some(MatchFormat::Cube),
             "sos" => Some(MatchFormat::Sos),
+            "sealed" => Some(MatchFormat::Sealed),
             "commander" | "edh" => Some(MatchFormat::Commander),
             _ => None,
         }
@@ -190,6 +198,7 @@ impl MatchFormat {
             MatchFormat::Modern => "Modern",
             MatchFormat::Cube => "Cube",
             MatchFormat::Sos => "SoS",
+            MatchFormat::Sealed => "Sealed",
             MatchFormat::Commander => "Commander",
         }
     }
@@ -199,7 +208,8 @@ impl MatchFormat {
         match self {
             MatchFormat::Modern => MatchFormat::Cube,
             MatchFormat::Cube => MatchFormat::Sos,
-            MatchFormat::Sos => MatchFormat::Commander,
+            MatchFormat::Sos => MatchFormat::Sealed,
+            MatchFormat::Sealed => MatchFormat::Commander,
             MatchFormat::Commander => MatchFormat::Modern,
         }
     }
@@ -211,9 +221,71 @@ impl MatchFormat {
             MatchFormat::Modern => LF::Modern,
             MatchFormat::Cube => LF::Cube,
             MatchFormat::Sos => LF::Sos,
+            // No wire gamemode for Sealed: a hosted lobby can't see the
+            // local deck file, so a Sealed lobby would silently deal a
+            // different deck than the one being tested. Falls back to
+            // SoS for lobby creation; Sealed is a local vs-bot mode.
+            MatchFormat::Sealed => LF::Sos,
             MatchFormat::Commander => LF::Commander,
         }
     }
+}
+
+/// Where the Sealed mode reads your deck from: `$CRAB_SEALED_DECK` if
+/// set, otherwise `<repo>/decks/sealed.txt`.
+pub fn sealed_deck_path() -> std::path::PathBuf {
+    if let Ok(p) = std::env::var("CRAB_SEALED_DECK") {
+        return std::path::PathBuf::from(p);
+    }
+    let mut dir: &std::path::Path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    loop {
+        if dir.join("Cargo.lock").exists() {
+            return dir.join("decks").join("sealed.txt");
+        }
+        match dir.parent() {
+            Some(p) => dir = p,
+            None => return std::path::PathBuf::from("decks/sealed.txt"),
+        }
+    }
+}
+
+/// Sealed: your hand-built deck against a randomly generated one.
+///
+/// The opponent is drawn from the same generator the recommender's
+/// gauntlet uses, so "how does my build do here" is the same question
+/// the tool answers — just played by hand. A missing or unparseable deck
+/// file is not fatal: the seat falls back to a generated build so the
+/// mode always starts, with the reason on stderr.
+fn build_sealed_state() -> GameState {
+    use rand::RngExt;
+    let seed: u64 = rand::rng().random();
+    let (opponent, opp_label) = crabomination::selfplay::random_sealed_opponent(seed);
+
+    let path = sealed_deck_path();
+    let player = match std::fs::read_to_string(&path) {
+        Ok(text) => {
+            let parse = crabomination::decklist::parse_decklist(&text);
+            for bad in &parse.unknown {
+                eprintln!("sealed: skipping unrecognized line {bad:?}");
+            }
+            if parse.main.len() < 40 {
+                eprintln!(
+                    "sealed: {} has {} maindeck cards (want 40) — filling the seat with a generated deck",
+                    path.display(),
+                    parse.main.len()
+                );
+                crabomination::selfplay::random_sealed_opponent(seed ^ 0xF00D).0
+            } else {
+                eprintln!("sealed: playing {} ({} cards) vs {opp_label}", path.display(), parse.main.len());
+                parse.main
+            }
+        }
+        Err(e) => {
+            eprintln!("sealed: {} unreadable ({e}) — using a generated deck", path.display());
+            crabomination::selfplay::random_sealed_opponent(seed ^ 0xF00D).0
+        }
+    };
+    crabomination::draft::build_draft_match_state(player, opponent, "You".into(), opp_label)
 }
 
 /// Active text-edit field in the menu.
@@ -1067,7 +1139,9 @@ fn handle_action_buttons(
                     match format {
                         MatchFormat::Modern => crabomination::format::Format::Modern,
                         MatchFormat::Commander => crabomination::format::Format::Commander,
-                        MatchFormat::Cube | MatchFormat::Sos => {
+                        // Sealed lists are limited-legal 40s like the
+                        // draft pools.
+                        MatchFormat::Cube | MatchFormat::Sos | MatchFormat::Sealed => {
                             crabomination::format::Format::Draft
                         }
                     },
