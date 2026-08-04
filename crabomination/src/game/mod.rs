@@ -1439,6 +1439,10 @@ pub struct GameState {
     /// cleanup.
     #[serde(default)]
     pub shroud_waivers: Vec<(CardId, usize)>,
+    /// CR 701.38 — `(seat, option index)` for every vote cast on the most
+    /// recent ballot, read by `PlayerRef::OpponentsWhoVotedDifferently`.
+    #[serde(default)]
+    pub last_vote: Vec<(usize, usize)>,
     /// CR 500.8 — steps/phases a player skips for the rest of this turn
     /// (Fatespinner). `(seat, step)`; cleared at cleanup.
     #[serde(default)]
@@ -2016,6 +2020,7 @@ impl Clone for GameState {
             hands_revealed_to: self.hands_revealed_to.clone(),
             face_down_revealed_to: self.face_down_revealed_to.clone(),
             shroud_waivers: self.shroud_waivers.clone(),
+            last_vote: self.last_vote.clone(),
             skipped_steps_this_turn: self.skipped_steps_this_turn.clone(),
             cant_attack_player_this_turn: self.cant_attack_player_this_turn.clone(),
             graveyard_play_pooled_for: self.graveyard_play_pooled_for,
@@ -2323,6 +2328,7 @@ impl GameState {
             hands_revealed_to: Vec::new(),
             face_down_revealed_to: Vec::new(),
             shroud_waivers: Vec::new(),
+            last_vote: Vec::new(),
             skipped_steps_this_turn: Vec::new(),
             cant_attack_player_this_turn: Vec::new(),
             graveyard_play_pooled_for: None,
@@ -19412,6 +19418,8 @@ fn static_effect_to_effects(
             | StaticEffect::RedirectChosenColorSpellDamageToController
             | StaticEffect::CantCastSharingColorWithLastCastSpell
             | StaticEffect::PermanentsDontUntap
+            // Read by the `Effect::Vote` ballot loop, not a layer effect.
+            | StaticEffect::AdditionalVotes(_)
             // Consulted directly in the block-legality walk, not a layer effect.
             | StaticEffect::LandwalkIgnored(_)
             // Consulted directly by the cast gate, not a layer effect.

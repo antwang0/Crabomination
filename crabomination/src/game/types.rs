@@ -1951,6 +1951,9 @@ pub enum GameEvent {
     /// CR 701.38 — a player cast one vote on a ballot; `choice` is the
     /// printed word they voted for.
     Voted { player: usize, choice: String },
+    /// CR 701.38 — every player has finished voting on a ballot (Grudge
+    /// Keeper). Fired once per `Effect::Vote`, after the tally is known.
+    VotingFinished,
     CoinFlipWon { player: usize },
     /// CR 701.49 — `player` ventured into `room` of `dungeon`.
     DungeonRoomEntered { player: usize, dungeon: String, room: String },

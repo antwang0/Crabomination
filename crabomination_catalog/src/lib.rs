@@ -158,6 +158,7 @@ pub use sets::leg6::*;
 pub use sets::leg7::*;
 pub use sets::atq::*;
 pub use sets::cns::*;
+pub use sets::cns2::*;
 pub use sets::drk::*;
 pub use sets::drk2::*;
 pub use sets::ohop::*;

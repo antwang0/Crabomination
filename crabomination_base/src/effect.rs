@@ -125,6 +125,9 @@ pub enum PlayerRef {
     /// by [`Effect::RememberPlayerOnSource`]) — "that player" on a later
     /// trigger. Soul Scourge, Laquatus's Champion.
     ChosenPlayerOfSource,
+    /// CR 701.38 — each opponent whose vote in the most recent ballot differed
+    /// from the effect's controller's (Grudge Keeper).
+    OpponentsWhoVotedDifferently,
 }
 
 /// Which players a player-targeted static effect affects. The static
@@ -284,6 +287,9 @@ pub enum Selector {
     /// than choosing a fresh one — e.g. Conciliator's Duelist's "exile
     /// up to one *target* creature".
     CastSpellTarget(u8),
+    /// Every permanent the just-cast spell targets, across all its slots
+    /// ("gain control of those permanents" — Dack Fayden's emblem).
+    AllCastSpellTargets,
 
     /// CR 702 Radiance (Ravnica) — the `subject` permanent plus every other
     /// permanent on the battlefield that shares a card type with it (creatures
@@ -2576,6 +2582,10 @@ pub enum EventKind {
     /// CR 705.1 — the player lost a coin flip ("Whenever you lose a coin
     /// flip"). Fires once per lost flip; matched to `GameEvent::CoinFlipLost`.
     LostCoinFlip,
+    /// CR 701.38 — "Whenever players finish voting" (Grudge Keeper). Fires
+    /// once per ballot, after every vote is cast; matched to
+    /// `GameEvent::VotingFinished`.
+    VotingFinished,
     /// CR 706.6 — the player rolled one or more dice ("Whenever you roll one
     /// or more dice"). Fires once per roll; matched to `GameEvent::DiceRolled`.
     RolledDice,
@@ -5061,6 +5071,19 @@ pub enum Effect {
     /// deterministic for bots/tests. No targeting (CR 701.31c), so it ignores
     /// hexproof/shroud.
     WillOfTheCouncilExile { filter: SelectionRequirement },
+    /// The general form of [`Effect::WillOfTheCouncilExile`]: each player votes
+    /// for one of the cards `candidates` resolves to (which may live in any
+    /// zone), and every card tied for most votes is moved to `to` (Custodi
+    /// Squire's graveyard ballot).
+    WillOfTheCouncilOnCards { candidates: Selector, to: ZoneDest },
+    /// "Put the bottom card of your library into your graveyard. If it's a
+    /// creature card with power less than or equal to `max_power`, put it onto
+    /// the battlefield" (Grenzo, Dungeon Warden).
+    BottomCardToGraveyardThenDeploy { max_power: Value },
+    /// "Starting with you, each player chooses one permanent matching each of
+    /// `filters` from among those controlled by the player to their left.
+    /// Destroy each permanent chosen this way." Grenzo's Rebuttal.
+    EachPlayerDestroysChosenFromLeftNeighbor { filters: Vec<SelectionRequirement> },
     /// CR 603.6e — "Exile [what] until [this] leaves the battlefield."
     /// Moves the resolved card(s) to exile, linking each to the source
     /// permanent (the ability's source). When that source leaves play the
@@ -8656,6 +8679,9 @@ pub enum VoteTally {
     Majority,
     /// Council's dilemma — every option's effect runs once per vote it drew.
     PerVote,
+    /// "…each choice with the most votes or tied for most votes" (Council
+    /// Guardian): every winning option's effect runs once.
+    AllTied,
 }
 
 impl Default for Effect {

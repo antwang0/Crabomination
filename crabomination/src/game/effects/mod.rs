@@ -575,6 +575,61 @@ impl GameState {
         Ok(())
     }
 
+    /// CR 701.31 — each player (controller first) votes for one of `candidates`;
+    /// every card tied for most votes is moved to `to`. Shared by
+    /// `WillOfTheCouncilExile` and `WillOfTheCouncilOnCards`.
+    fn run_council_card_vote(
+        &mut self,
+        candidates: &[CardId],
+        to: &ZoneDest,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let Some(&first) = candidates.first() else { return };
+        let mut seats = vec![ctx.controller];
+        seats.extend(self.opponents_of(ctx.controller));
+        let legal: Vec<Target> = candidates.iter().map(|id| Target::Permanent(*id)).collect();
+        let mut tally: std::collections::HashMap<CardId, u32> = std::collections::HashMap::new();
+        for seat in seats {
+            let answer = self.decider.decide(&crate::decision::Decision::ChooseTarget {
+                optional: false,
+                source: ctx.source.unwrap_or(CardId(0)),
+                legal: legal.clone(),
+                source_name: ctx.source_name.unwrap_or("").to_string(),
+                description: format!("P{seat}: vote for a card"),
+            });
+            let voted = match answer {
+                DecisionAnswer::Target(Target::Permanent(id)) if candidates.contains(&id) => id,
+                _ => first,
+            };
+            *tally.entry(voted).or_insert(0) += 1;
+        }
+        let best = tally.values().copied().max().unwrap_or(0);
+        let winners: Vec<CardId> = candidates
+            .iter()
+            .copied()
+            .filter(|id| best > 0 && tally.get(id).copied().unwrap_or(0) == best)
+            .collect();
+        for id in winners {
+            self.move_card_to(id, to, ctx, events);
+        }
+    }
+
+    /// CR 701.38 — how many *extra* votes `seat` gets from active
+    /// `StaticEffect::AdditionalVotes` sources (Brago's Representative).
+    fn additional_votes_for(&self, seat: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match sa.effect {
+                StaticEffect::AdditionalVotes(n) => Some(n),
+                _ => None,
+            })
+            .sum()
+    }
+
     /// CR 706.1 — one die roll routed through the decider, clamped to the
     /// die's face range. Shared by `Effect::RollDie` and the CR 706.8 stored-
     /// result effects.
@@ -1729,6 +1784,10 @@ impl GameState {
             self.sacrificed_power = Some(stats.0);
             self.sacrificed_toughness = Some(stats.1);
             self.sacrificed_mana_value = Some(stats.2);
+            // The running batch tally — "the total power of the creatures
+            // sacrificed this way" (Reign of the Pit).
+            self.sacrificed_total_power += stats.0;
+            self.sacrificed_count += 1;
         }
         // `Selector::SacrificedCard` — "if you sacrificed an Island this way"
         // (Serendib Djinn) reads whatever the last sacrifice took.
@@ -10317,25 +10376,32 @@ impl GameState {
                 let ballot: Vec<String> =
                     options.iter().map(|o| o.label.clone()).collect();
                 let source = ctx.source.unwrap_or(CardId(0));
+                let mut cast: Vec<(usize, usize)> = Vec::new();
                 for i in 0..n {
                     let seat = (ctx.controller + i) % n;
-                    let Some(pick) = self.ask_seat_option(
-                        &mut cursor,
-                        seat,
-                        "Vote".to_string(),
-                        source,
-                        ballot.clone(),
-                        effect,
-                    ) else {
-                        return Ok(());
-                    };
-                    votes[pick] += 1;
-                    events.push(GameEvent::Voted {
-                        player: seat,
-                        choice: ballot[pick].clone(),
-                    });
+                    // CR 701.38 — Brago's Representative-style extra votes.
+                    for _ in 0..1 + self.additional_votes_for(seat) {
+                        let Some(pick) = self.ask_seat_option(
+                            &mut cursor,
+                            seat,
+                            "Vote".to_string(),
+                            source,
+                            ballot.clone(),
+                            effect,
+                        ) else {
+                            return Ok(());
+                        };
+                        votes[pick] += 1;
+                        cast.push((seat, pick));
+                        events.push(GameEvent::Voted {
+                            player: seat,
+                            choice: ballot[pick].clone(),
+                        });
+                    }
                 }
                 self.clear_answer_log();
+                self.last_vote = cast;
+                events.push(GameEvent::VotingFinished);
                 match tally {
                     VoteTally::Majority => {
                         // Ties go to the later option — every printed ballot
@@ -10344,6 +10410,14 @@ impl GameState {
                         let winner =
                             votes.iter().rposition(|v| *v == best).unwrap_or(0);
                         self.run_effect(&options[winner].effect, ctx, events)?;
+                    }
+                    VoteTally::AllTied => {
+                        let best = votes.iter().copied().max().unwrap_or(0);
+                        for (opt, count) in options.iter().zip(&votes) {
+                            if *count == best && best > 0 {
+                                self.run_effect(&opt.effect, ctx, events)?;
+                            }
+                        }
                     }
                     VoteTally::PerVote => {
                         for (opt, count) in options.iter().zip(votes) {
@@ -10356,9 +10430,85 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WillOfTheCouncilOnCards { candidates, to } => {
+                let ids: Vec<CardId> = self
+                    .resolve_selector(candidates, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_card_id())
+                    .collect();
+                self.run_council_card_vote(&ids, to, ctx, events);
+                Ok(())
+            }
+
+            Effect::BottomCardToGraveyardThenDeploy { max_power } => {
+                let seat = ctx.controller;
+                if self.players[seat].library.is_empty() {
+                    return Ok(());
+                }
+                let card = self.players[seat].library.pop().expect("nonempty");
+                let id = card.id;
+                let deployable = card.definition.is_creature()
+                    && card.definition.power <= self.evaluate_value(max_power, ctx);
+                self.players[seat].graveyard.push(card);
+                events.push(GameEvent::CardMilled { player: seat, card_id: id });
+                if deployable {
+                    self.move_card_to(
+                        id,
+                        &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        ctx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerDestroysChosenFromLeftNeighbor { filters } => {
+                let n = self.players.len();
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut doomed: Vec<CardId> = Vec::new();
+                for i in 0..n {
+                    let seat = (ctx.controller + i) % n;
+                    let neighbor = (seat + 1) % n;
+                    for filter in filters {
+                        let legal: Vec<Target> = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == neighbor && !doomed.contains(&c.id))
+                            .filter(|c| {
+                                self.evaluate_requirement_static(
+                                    filter,
+                                    &Target::Permanent(c.id),
+                                    seat,
+                                    Some(source),
+                                )
+                            })
+                            .map(|c| Target::Permanent(c.id))
+                            .collect();
+                        let Some(first) = legal.first().cloned() else { continue };
+                        let picked = match self.decider.decide(
+                            &crate::decision::Decision::ChooseTarget {
+                                optional: false,
+                                source,
+                                legal: legal.clone(),
+                                source_name: ctx.source_name.unwrap_or("").to_string(),
+                                description: format!("P{seat}: choose a permanent to destroy"),
+                            },
+                        ) {
+                            DecisionAnswer::Target(t) if legal.contains(&t) => t,
+                            _ => first,
+                        };
+                        if let Target::Permanent(id) = picked {
+                            doomed.push(id);
+                        }
+                    }
+                }
+                for id in doomed {
+                    self.destroy_permanent(id, false, events);
+                }
+                Ok(())
+            }
+
             Effect::WillOfTheCouncilExile { filter } => {
-                // CR 701.31 — gather the candidate permanents (relative to the
-                // controller), then collect one vote per player.
                 let candidates: Vec<CardId> = self
                     .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)
                     .into_iter()
@@ -10367,43 +10517,7 @@ impl GameState {
                         _ => None,
                     })
                     .collect();
-                if candidates.is_empty() {
-                    return Ok(());
-                }
-                // Vote order: controller first, then their opponents.
-                let mut seats = vec![ctx.controller];
-                seats.extend(self.opponents_of(ctx.controller));
-                let legal: Vec<Target> =
-                    candidates.iter().map(|id| Target::Permanent(*id)).collect();
-                let mut tally: std::collections::HashMap<CardId, u32> =
-                    std::collections::HashMap::new();
-                for seat in seats {
-                    let answer = self.decider.decide(&crate::decision::Decision::ChooseTarget {
-                        optional: false,
-                        source: ctx.source.unwrap_or(crate::card::CardId(0)),
-                        legal: legal.clone(),
-                        source_name: ctx.source_name.unwrap_or("").to_string(),
-                        description: format!("P{seat}: vote for a permanent"),
-                    });
-                    let voted = match answer {
-                        DecisionAnswer::Target(Target::Permanent(id))
-                            if candidates.contains(&id) =>
-                        {
-                            id
-                        }
-                        _ => candidates[0],
-                    };
-                    *tally.entry(voted).or_insert(0) += 1;
-                }
-                let max_votes = tally.values().copied().max().unwrap_or(0);
-                let losers: Vec<CardId> = candidates
-                    .iter()
-                    .copied()
-                    .filter(|id| tally.get(id).copied().unwrap_or(0) == max_votes && max_votes > 0)
-                    .collect();
-                for id in losers {
-                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
-                }
+                self.run_council_card_vote(&candidates, &ZoneDest::Exile, ctx, events);
                 Ok(())
             }
 
@@ -30421,6 +30535,32 @@ impl GameState {
                 }
             }
 
+            Selector::AllCastSpellTargets => {
+                let cast_id = match ctx.trigger_source {
+                    Some(EntityRef::Card(cid)) | Some(EntityRef::Permanent(cid)) => Some(cid),
+                    _ => None,
+                };
+                let Some(cid) = cast_id else { return vec![] };
+                self.stack
+                    .iter()
+                    .rev()
+                    .find_map(|si| match si {
+                        StackItem::Spell { card, target, additional_targets, .. }
+                            if card.id == cid =>
+                        {
+                            Some(
+                                target
+                                    .iter()
+                                    .chain(additional_targets.iter())
+                                    .map(target_to_entity)
+                                    .collect(),
+                            )
+                        }
+                        _ => None,
+                    })
+                    .unwrap_or_default()
+            }
+
             Selector::SharingColorWith(inner) => {
                 let Some(anchor) = self
                     .resolve_selector(inner, ctx)
@@ -31020,6 +31160,27 @@ impl GameState {
                     .filter(|i| self.players[*i].is_alive())
                     .collect(),
             ),
+            // CR 701.38 — Grudge Keeper: opponents none of whose votes matched
+            // any of the controller's on the most recent ballot.
+            PlayerRef::OpponentsWhoVotedDifferently => {
+                let mine: Vec<usize> = self
+                    .last_vote
+                    .iter()
+                    .filter(|(seat, _)| *seat == ctx.controller)
+                    .map(|(_, pick)| *pick)
+                    .collect();
+                self.apnap_sort(
+                    self.opponents_of(ctx.controller)
+                        .into_iter()
+                        .filter(|i| self.players[*i].is_alive())
+                        .filter(|i| {
+                            self.last_vote
+                                .iter()
+                                .any(|(seat, pick)| seat == i && !mine.contains(pick))
+                        })
+                        .collect(),
+                )
+            }
             PlayerRef::EachPlayer => self.apnap_sort(
                 (0..self.players.len())
                     .filter(|i| self.players[*i].is_alive())
@@ -31225,6 +31386,10 @@ impl GameState {
                 self.opponents_of(ctx.controller)
                     .into_iter()
                     .find(|i| self.players[*i].is_alive())
+            }
+            PlayerRef::OpponentsWhoVotedDifferently => {
+                // Singular fallback — `resolve_players` returns the full set.
+                self.resolve_players(pref, ctx).first().copied()
             }
             PlayerRef::EachPlayer => (0..self.players.len()).find(|i| self.players[*i].is_alive()),
             PlayerRef::EachPlayerWithoutMaxSpeed => (0..self.players.len())

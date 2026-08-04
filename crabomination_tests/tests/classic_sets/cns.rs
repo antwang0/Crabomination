@@ -40,6 +40,21 @@ fn cast(g: &mut GameState, seat: usize, id: CardId, target: Option<Target>) {
     drain_stack(g);
 }
 
+fn activate_n(g: &mut GameState, seat: usize, id: CardId, index: usize, target: Option<Target>) {
+    mana(g, seat);
+    g.priority.player_with_priority = seat;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: index,
+        target,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(g);
+}
+
 fn upkeep(g: &mut GameState) {
     g.step = TurnStep::Upkeep;
     g.fire_step_triggers(TurnStep::Upkeep);
@@ -533,4 +548,259 @@ fn coercive_portal_carnage_wipes_the_board() {
     upkeep(&mut g);
     assert!(g.battlefield_find(portal).is_none(), "Portal sacrificed itself");
     assert!(g.battlefield.iter().all(|c| c.definition.is_land()), "nonlands destroyed");
+}
+
+// ── The in-game remainder (`catalog::sets::cns2`) ───────────────────────────
+
+/// Bite of the Black Rose's losing option doesn't happen.
+#[test]
+fn bite_of_the_black_rose_shrinks_on_a_sickness_majority() {
+    let mut g = main_phase();
+    mana(&mut g, 0);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::bite_of_the_black_rose());
+    ballot(&mut g, [0, 0]); // sickness, sickness
+    cast(&mut g, 0, id, None);
+    assert!(g.battlefield_find(bear).is_none(), "-2/-2 killed the 2/2");
+}
+
+/// Brago's Representative votes twice.
+#[test]
+fn bragos_representative_votes_twice() {
+    let mut g = main_phase();
+    mana(&mut g, 0);
+    g.add_card_to_battlefield(0, catalog::bragos_representative());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::tyrants_choice());
+    // Seat 0 casts both its votes for death; seat 1's lone torture vote loses.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(0),
+        DecisionAnswer::Amount(0),
+        DecisionAnswer::Amount(1),
+    ]));
+    cast(&mut g, 0, id, None);
+    assert_eq!(g.players[1].life, 20, "torture lost 2-1");
+    assert!(g.battlefield.iter().all(|c| c.controller != 1), "the edict resolved");
+}
+
+/// Council Guardian takes protection from every colour tied for most votes.
+#[test]
+fn council_guardian_gains_every_winning_protection() {
+    let mut g = main_phase();
+    let id = g.add_card_to_hand(0, catalog::council_guardian());
+    ballot(&mut g, [0, 2]); // blue, red — one vote each
+    cast(&mut g, 0, id, None);
+    let kw = g.computed_permanent(id).expect("guardian").keywords;
+    assert!(kw.contains(&Keyword::Protection(Color::Blue)));
+    assert!(kw.contains(&Keyword::Protection(Color::Red)));
+    assert!(!kw.contains(&Keyword::Protection(Color::Green)));
+}
+
+/// Custodi Squire's ballot returns the winning graveyard card.
+#[test]
+fn custodi_squire_returns_the_voted_card() {
+    let mut g = main_phase();
+    let relic = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::custodi_squire());
+    cast(&mut g, 0, id, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == relic), "returned to hand");
+}
+
+/// Dack Fayden's −2 steals an artifact outright.
+#[test]
+fn dack_fayden_steals_an_artifact() {
+    let mut g = main_phase();
+    let dack = g.add_card_to_battlefield(0, catalog::dack_fayden());
+    let rock = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: dack, ability_index: 1, target: Some(Target::Permanent(rock)), x_value: None,
+    })
+    .expect("minus two");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rock).expect("rock").controller, 0);
+}
+
+/// Dack's Duplicate copies with haste and dethrone bolted on.
+#[test]
+fn dacks_duplicate_copies_with_haste_and_dethrone() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(1, catalog::sengir_vampire());
+    let id = g.add_card_to_hand(0, catalog::dacks_duplicate());
+    cast(&mut g, 0, id, None);
+    let cp = g.computed_permanent(id).expect("duplicate");
+    assert_eq!((cp.power, cp.toughness), (4, 4), "copied the Vampire");
+    assert!(cp.keywords.contains(&Keyword::Haste));
+    let card = g.battlefield_find(id).expect("duplicate").clone();
+    assert_eq!(card.definition.triggered_abilities.len(), 1, "dethrone bolted on");
+}
+
+/// Extract from Darkness mills, then reanimates.
+#[test]
+fn extract_from_darkness_mills_then_reanimates() {
+    let mut g = main_phase();
+    let body = g.add_card_to_graveyard(1, catalog::sengir_vampire());
+    let id = g.add_card_to_hand(0, catalog::extract_from_darkness());
+    cast(&mut g, 0, id, None);
+    assert_eq!(g.battlefield_find(body).expect("body").controller, 0);
+    assert_eq!(g.players[1].graveyard.len(), 2, "milled two");
+}
+
+/// Flamewright makes Constructs, then throws them.
+#[test]
+fn flamewright_builds_and_fires_constructs() {
+    let mut g = main_phase();
+    let smith = g.add_card_to_battlefield(0, catalog::flamewright());
+    g.clear_sickness(smith);
+    activate_n(&mut g, 0, smith, 0, None);
+    let token = g.battlefield.iter().find(|c| c.is_token).expect("Construct").id;
+    g.battlefield_find_mut(smith).unwrap().tapped = false;
+    activate_n(&mut g, 0, smith, 1, Some(Target::Player(1)));
+    assert!(g.battlefield_find(token).is_none(), "the Construct was sacrificed");
+    assert_eq!(g.players[1].life, 19);
+}
+
+/// Grenzo digs the bottom card up when it's small enough.
+#[test]
+fn grenzo_deploys_a_small_bottom_creature() {
+    let mut g = main_phase();
+    let grenzo = g.add_card_to_battlefield(0, catalog::grenzo_dungeon_warden());
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    activate_n(&mut g, 0, grenzo, 0, None);
+    assert!(g.battlefield_find(bear).is_some(), "2 power fits under Grenzo's 2");
+}
+
+/// Grudge Keeper drains the opponents who voted the other way.
+#[test]
+fn grudge_keeper_punishes_dissent() {
+    let mut g = main_phase();
+    mana(&mut g, 0);
+    g.add_card_to_battlefield(0, catalog::grudge_keeper());
+    let id = g.add_card_to_hand(0, catalog::plea_for_power());
+    ballot(&mut g, [1, 0]); // knowledge vs. time
+    cast(&mut g, 0, id, None);
+    assert_eq!(g.players[1].life, 18, "voted against you");
+}
+
+/// Ignition Team counts tapped lands and animates one.
+#[test]
+fn ignition_team_counts_tapped_lands() {
+    let mut g = main_phase();
+    for seat in 0..2 {
+        let land = g.add_card_to_battlefield(seat, catalog::mountain());
+        g.battlefield_find_mut(land).unwrap().tapped = true;
+    }
+    let target = g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::ignition_team());
+    cast(&mut g, 0, id, None);
+    assert_eq!(
+        g.battlefield_find(id).expect("team").counter_count(CounterType::PlusOnePlusOne),
+        2
+    );
+    activate_n(&mut g, 0, id, 0, Some(Target::Permanent(target)));
+    let cp = g.computed_permanent(target).expect("land");
+    assert_eq!((cp.power, cp.toughness), (4, 4));
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+}
+
+/// Magister of Worth's condemnation spares only itself.
+#[test]
+fn magister_of_worth_condemns_everything_else() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::magister_of_worth());
+    ballot(&mut g, [1, 1]); // condemnation
+    cast(&mut g, 0, id, None);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(id).is_some(), "the Angel survives");
+}
+
+/// Marchesa hands out dethrone and buys back countered creatures.
+#[test]
+fn marchesa_returns_a_countered_creature() {
+    let mut g = main_phase();
+    let marchesa = g.add_card_to_battlefield(0, catalog::marchesa_the_black_rose());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let card = g.battlefield_find(bear).expect("bear").clone();
+    assert_eq!(g.statics_granted_triggers_for(&card).len(), 1, "granted dethrone");
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let mut events = vec![];
+    g.destroy_permanent(bear, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "back at the next end step");
+    assert!(g.battlefield_find(marchesa).is_some());
+}
+
+/// Marchesa's Smuggler slips a creature past the blockers.
+#[test]
+fn marchesas_smuggler_grants_haste_and_evasion() {
+    let mut g = main_phase();
+    let smuggler = g.add_card_to_battlefield(0, catalog::marchesas_smuggler());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate_n(&mut g, 0, smuggler, 0, Some(Target::Permanent(bear)));
+    let cp = g.computed_permanent(bear).expect("bear");
+    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords.contains(&Keyword::Unblockable));
+}
+
+/// Muzzio digs as deep as your biggest artifact.
+#[test]
+fn muzzio_deploys_an_artifact_from_the_top() {
+    let mut g = main_phase();
+    let muzzio = g.add_card_to_battlefield(0, catalog::muzzio_visionary_architect());
+    g.clear_sickness(muzzio);
+    g.add_card_to_battlefield(0, catalog::sol_ring()); // mana value 1
+    let rock = g.add_card_to_library(0, catalog::sol_ring());
+    let top = g.players[0].library.iter().position(|c| c.id == rock).expect("in library");
+    let card = g.players[0].library.remove(top);
+    g.players[0].library.insert(0, card);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![rock])]));
+    activate_n(&mut g, 0, muzzio, 0, None);
+    assert!(g.battlefield_find(rock).is_some(), "put onto the battlefield");
+}
+
+/// Reign of the Pit's Demon is as big as the bodies it ate.
+#[test]
+fn reign_of_the_pit_sizes_its_demon() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2 power
+    g.add_card_to_battlefield(1, catalog::sengir_vampire()); // 4 power
+    let id = g.add_card_to_hand(0, catalog::reign_of_the_pit());
+    cast(&mut g, 0, id, None);
+    let demon = g.battlefield.iter().find(|c| c.is_token).expect("Demon");
+    assert_eq!((demon.definition.power, demon.definition.toughness), (6, 6));
+}
+
+/// Scourge of the Throne untaps the team and buys a second combat.
+#[test]
+fn scourge_of_the_throne_buys_a_second_combat() {
+    let mut g = main_phase();
+    let dragon = g.add_card_to_battlefield(0, catalog::scourge_of_the_throne());
+    g.clear_sickness(dragon);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: dragon, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(dragon).expect("dragon").tapped, "untapped by its own trigger");
+    assert_eq!(g.additional_combat_phases, 1);
+}
+
+/// Split Decision counters on a denial majority.
+#[test]
+fn split_decision_counters_on_denial() {
+    let mut g = main_phase();
+    mana(&mut g, 1);
+    let bolt = g.add_card_to_hand(1, catalog::shock());
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast bolt");
+    let id = g.add_card_to_hand(0, catalog::split_decision());
+    ballot(&mut g, [0, 0]); // denial
+    cast(&mut g, 0, id, Some(Target::Permanent(bolt)));
+    assert_eq!(g.players[0].life, 20, "the bolt was countered");
 }

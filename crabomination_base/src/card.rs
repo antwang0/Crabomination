@@ -316,6 +316,8 @@ pub enum PlaneswalkerSubtype {
     // Modern_decks cube expansion (Saheeli Rai, Tamiyo Collector of Tales,
     // Geyadrone Dihada, Urza Chief Artificer).
     Saheeli, Tamiyo, Dihada, Urza,
+    // CNS (Dack Fayden).
+    Dack,
     // THB walker.
     Calix,
     // THS walker.

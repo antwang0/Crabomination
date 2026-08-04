@@ -139,6 +139,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::LibraryShuffled, GameEvent::LibraryShuffled { .. }) => true,
         (EventKind::TappedForMana, GameEvent::TappedForMana { .. }) => true,
         (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
+        (EventKind::VotingFinished, GameEvent::VotingFinished) => true,
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
         (EventKind::AuraAttached, GameEvent::AuraAttached { .. }) => true,

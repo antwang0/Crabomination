@@ -252,7 +252,10 @@ impl Effect {
             | Effect::EnterExilingGraveyardCreaturesForCounters { .. }
             | Effect::ExileSelfWithCountdown
             | Effect::WaiveShroudForPlayerThisTurn { .. }
-            | Effect::DestroyEachUnlessPaysLife { .. } => false,
+            | Effect::DestroyEachUnlessPaysLife { .. }
+            | Effect::WillOfTheCouncilOnCards { .. }
+            | Effect::BottomCardToGraveyardThenDeploy { .. }
+            | Effect::EachPlayerDestroysChosenFromLeftNeighbor { .. } => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),
             Effect::CoffinExile { what } => sel_has_target(what),
@@ -515,7 +518,7 @@ impl Effect {
             Effect::WillOfTheCouncilExile { .. } => false,
             // CR 701.38 votes are untargeted; the chosen option's body may
             // target, but it's chosen at resolution.
-            Effect::Vote { .. } => false,
+            Effect::Vote { options, .. } => options.iter().any(|o| o.effect.requires_target()),
             Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ReturnGraveyardPermanentsDifferentNames => false,
             Effect::ReturnGraveyardCardsToHand { .. } => false,
@@ -2940,6 +2943,9 @@ impl Effect {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::TapOrUntap { what } => sel_find(what, slot),
+                Effect::Vote { options, .. } => {
+                    options.iter().find_map(|o| eff_find(&o.effect, slot, mode, kicked))
+                }
                 Effect::AtEndOfCombat { body } | Effect::AtNextTurnsUpkeep { body } => {
                     eff_find(body, slot, mode, kicked)
                 }

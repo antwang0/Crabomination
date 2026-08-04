@@ -2496,6 +2496,8 @@ pub enum GameEventWire {
     TappedForMana { card_id: CardId, player: usize },
     /// Wire mirror of `GameEvent::CoinFlipWon` (CR 705.1).
     Voted { player: usize, choice: String },
+    /// Wire mirror of `GameEvent::VotingFinished` — closes a ballot in the log.
+    VotingFinished,
     CoinFlipWon { player: usize },
     /// Wire mirror of `GameEvent::DungeonRoomEntered` (CR 701.49).
     DungeonRoomEntered { player: usize, dungeon: String, room: String },
@@ -2719,6 +2721,7 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::Voted { player, choice } => {
                 GameEventWire::Voted { player: *player, choice: choice.clone() }
             }
+            GameEvent::VotingFinished => GameEventWire::VotingFinished,
             GameEvent::CoinFlipWon { player } => GameEventWire::CoinFlipWon { player: *player },
             GameEvent::DungeonRoomEntered { player, dungeon, room } => {
                 GameEventWire::DungeonRoomEntered {
@@ -3053,6 +3056,7 @@ impl GameEventWire {
             E::LibraryShuffled { player } => format!("{} shuffled their library", pn(*player)),
             E::TappedForMana { player, .. } => format!("{} tapped a source for mana", pn(*player)),
             E::Voted { player, choice } => format!("{} voted for {choice}", pn(*player)),
+            E::VotingFinished => "voting ends".to_string(),
             E::CoinFlipWon { player } => format!("{} won a coin flip", pn(*player)),
             E::DungeonRoomEntered { player, dungeon, room } => {
                 format!("{} ventures into {room} ({dungeon})", pn(*player))

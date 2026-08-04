@@ -1834,6 +1834,10 @@ pub enum StaticEffect {
     PreventUntap {
         applies_to: Selector,
     },
+    /// CR 701.38 — "While voting, you get `0` additional votes" (Brago's
+    /// Representative). Read by the `Effect::Vote` ballot loop, which gives the
+    /// source's controller that many extra picks.
+    AdditionalVotes(u32),
     /// Trinisphere: while the source is untapped, every spell that would
     /// cost less than `amount` mana to cast costs that much instead
     /// (generic is added to bring the total up). Applies to all players.
