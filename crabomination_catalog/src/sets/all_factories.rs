@@ -10355,6 +10355,9 @@ static LEG4: &[Factory] = &[
 ];
 static LEG6: &[Factory] = &[
     super::atq::amulet_of_kroog,
+    super::atq::mishras_war_machine,
+    super::atq::power_artifact,
+    super::atq::titanias_song,
     super::atq::armageddon_clock,
     super::atq::ashnods_battle_gear,
     super::atq::ashnods_transmogrant,

@@ -2304,6 +2304,12 @@ pub enum StaticEffect {
     /// instead" (Possessed Portal). Global draw replacement consulted in
     /// `draw_one`.
     PlayersSkipDraws,
+    /// Titania's Song — each noncreature artifact loses all abilities. Pairs
+    /// with `NoncreatureArtifactsAreCreatures` for the animation half.
+    NoncreatureArtifactsLoseAbilities,
+    /// Power Artifact — the enchanted permanent's activated abilities cost
+    /// `amount` less to activate, never below one mana.
+    AttachedActivatedAbilitiesCostLess { amount: u32 },
     /// Cursed Rack — "the chosen player's maximum hand size is N", read off
     /// the source's `chosen_player` slot.
     ChosenPlayerMaxHandSize(u32),

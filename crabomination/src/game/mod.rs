@@ -7216,6 +7216,31 @@ impl GameState {
                 });
             }
         }
+        // Titania's Song — the ability-stripping half of the same animation
+        // (layer 6), paired on the card with `NoncreatureArtifactsAreCreatures`.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                if !matches!(
+                    sa.effect,
+                    crate::effect::StaticEffect::NoncreatureArtifactsLoseAbilities
+                ) {
+                    continue;
+                }
+                use crate::card::SelectionRequirement as R;
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.object_timestamp(),
+                    source: card.id,
+                    affected: AffectedPermanents::CardMatch {
+                        source_controller: card.controller,
+                        requirement: Box::new(R::Artifact.and(R::Not(Box::new(R::Creature)))),
+                    },
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::RemoveAllAbilities,
+                });
+            }
+        }
         // Sliver Legion — "each [type] gets +P/+T for each OTHER [type]".
         // The bonus differs per affected permanent (it excludes itself), so
         // this is gathered state-aware: one Specific effect per matching
@@ -19093,6 +19118,7 @@ fn static_effect_to_effects(
             // enchantment count; resolved in `gather_continuous_effects`.
             | StaticEffect::NonAuraEnchantmentsAreCreatures { .. }
             | StaticEffect::NoncreatureArtifactsAreCreatures
+            | StaticEffect::NoncreatureArtifactsLoseAbilities
             // AllNonlandPermanentsAreLegendary — Leyline of Singularity scans
             // the live battlefield; resolved in `gather_continuous_effects`.
             | StaticEffect::AllNonlandPermanentsAreLegendary
@@ -19312,6 +19338,8 @@ fn static_effect_to_effects(
             // Cursed Rack — read by `max_hand_size_for`; Martyrs of Korlis —
             // read in the damage funnel. Neither is a layer effect.
             | StaticEffect::ChosenPlayerMaxHandSize(_)
+            // Power Artifact — read by `activate_ability`'s cost pipeline.
+            | StaticEffect::AttachedActivatedAbilitiesCostLess { .. }
             | StaticEffect::RedirectArtifactDamageToSourceWhileUntapped
             // Arboria / Land Equilibrium — consulted by `declare_attackers`
             // and the battlefield-entry funnel; no layer effect.

@@ -4938,9 +4938,9 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 - ⏳ **Onslaught is at 219 gaps.** The remaining bulk is Morph (engine support
   ships) and the tribal commons; Legions and Scourge follow.
 
-## Antiquities (ATQ) — remaining 12
+## Antiquities (ATQ) — remaining 9
 
-`sets::atq` ships 52 of the set's 64 gaps. Each of the rest wants one primitive
+`sets::atq` ships 55 of the set's 64 gaps. Each of the rest wants one primitive
 the engine doesn't have yet:
 
 - **Clockwork Avian / Tetravus** — `+1/+0` counters with a printed cap, and
@@ -4948,11 +4948,10 @@ the engine doesn't have yet:
 - **Primal Clay / Urza's Avenger** — as-enters choice of a whole P/T + keyword
   + subtype profile (`enters_as_choice` only sets P/T), and a repeatable
   `{0}`-shrink-for-a-chosen-keyword.
-- **Titania's Song / Xenic Poltergeist** — animate *every* noncreature artifact
-  (or one, until your next upkeep) with P/T equal to mana value, losing all
-  abilities; needs a layer-4/7b static keyed on mana value.
-- **Power Artifact** — activated-ability cost reduction on the enchanted
-  permanent, floored at one mana.
+- **Xenic Poltergeist** — the one-shot half of Titania's Song, scoped to a
+  single artifact "until your next upkeep"; `Duration` has no such window yet.
+  (Titania's Song itself ships; its "keeps working until end of turn if this
+  leaves the battlefield" rider is dropped.)
 - **Transmute Artifact** — sacrifice-then-search with a pay-the-difference
   branch.
 - **Tawnos's Coffin** — exile a creature *and its Auras*, noting counters, and
@@ -4961,7 +4960,6 @@ the engine doesn't have yet:
   Antiquities") in `CardDefinition`.
 - **Goblin Artisans** — coin flip that counters *your own* artifact spell,
   with the "isn't the target of another Goblin Artisans" linked restriction.
-- **Mishra's War Machine** — printed Banding plus an upkeep discard-or-take-3.
 
 ## MagicCompRules coverage audit
 

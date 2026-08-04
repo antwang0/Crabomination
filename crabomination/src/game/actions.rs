@@ -13466,6 +13466,26 @@ impl GameState {
                 effective_mana_cost.reduce_generic(total.min(max_cut));
             }
         }
+        // Power Artifact — the enchanted permanent's activated abilities cost
+        // {N} less (generic-only, floored at one mana of the printed cost).
+        if !effective_mana_cost.symbols.is_empty() {
+            let total: u32 = self
+                .battlefield
+                .iter()
+                .filter(|c| c.attached_to == Some(card_id))
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .map(|sa| match sa.effect {
+                    crate::effect::StaticEffect::AttachedActivatedAbilitiesCostLess { amount } => {
+                        amount
+                    }
+                    _ => 0,
+                })
+                .sum();
+            if total > 0 {
+                let max_cut = effective_mana_cost.cmc().saturating_sub(1);
+                effective_mana_cost.reduce_generic(total.min(max_cut));
+            }
+        }
         // Boom Scholar — exhaust abilities of your *other* permanents cost {N}
         // less (generic-only, floored at one mana of the printed cost).
         if ability.exhaust && !effective_mana_cost.symbols.is_empty() {

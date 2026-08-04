@@ -887,3 +887,55 @@ fn urzas_chalice_gains_life_off_any_artifact_spell() {
     cast(&mut g, 1, tome, None);
     assert_eq!(g.players[0].life, 21);
 }
+
+#[test]
+fn power_artifact_discounts_the_enchanted_artifacts_abilities() {
+    let mut g = main_phase();
+    let tome = g.add_card_to_battlefield(0, catalog::jalum_tome()); // {2}, {T}
+    let aura = g.add_card_to_hand(0, catalog::power_artifact());
+    cast(&mut g, 0, aura, Some(Target::Permanent(tome)));
+    g.players[0].mana_pool.empty();
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tome,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("{2} floored to one mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
+#[test]
+fn titanias_song_animates_artifacts_and_blanks_them() {
+    let mut g = main_phase();
+    let tome = g.add_card_to_battlefield(0, catalog::jalum_tome()); // mana value 3
+    let engine = g.add_card_to_battlefield(0, catalog::dragon_engine());
+    g.add_card_to_battlefield(0, catalog::titanias_song());
+    let cp = g.computed_permanent(tome).expect("tome");
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(
+        g.computed_permanent(tome).expect("tome").lost_all_abilities,
+        "a noncreature artifact loses its abilities"
+    );
+    // An artifact that was already a creature is untouched.
+    let cp = g.computed_permanent(engine).expect("engine");
+    assert_eq!((cp.power, cp.toughness), (1, 3));
+}
+
+#[test]
+fn mishras_war_machine_bites_when_you_dont_feed_it() {
+    let mut g = main_phase();
+    let machine = g.add_card_to_battlefield(0, catalog::mishras_war_machine());
+    g.players[0].hand.clear();
+    for _ in 0..2 {
+        end_turn(&mut g);
+    }
+    assert_eq!(g.players[0].life, 17);
+    assert!(g.battlefield_find(machine).expect("live").tapped);
+}

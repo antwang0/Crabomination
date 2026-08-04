@@ -405,6 +405,32 @@ pub fn jalum_tome() -> CardDefinition {
     }
 }
 
+/// Mishra's War Machine — a banding juggernaut with an upkeep appetite.
+pub fn mishras_war_machine() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Banding],
+        triggered_abilities: vec![TriggeredAbility {
+            event: your_upkeep(),
+            effect: Effect::MayDiscard {
+                description: "Discard a card to Mishra's War Machine?".into(),
+                count: Value::Const(1),
+                then: Box::new(Effect::Noop),
+                else_: Some(Box::new(Effect::Seq(vec![
+                    Effect::DealDamage { to: Selector::You, amount: Value::Const(3) },
+                    Effect::Tap { what: Selector::This },
+                ]))),
+            },
+        }],
+        ..artifact_creature(
+            "Mishra's War Machine",
+            cost(&[generic(7)]),
+            vec![CreatureType::Juggernaut],
+            5,
+            5,
+        )
+    }
+}
+
 /// Mightstone — everyone's attackers hit harder.
 pub fn mightstone() -> CardDefinition {
     CardDefinition {
@@ -979,6 +1005,37 @@ pub fn circle_of_protection_artifacts() -> CardDefinition {
             ..Default::default()
         }],
         ..enchantment("Circle of Protection: Artifacts", cost(&[generic(1), w()]))
+    }
+}
+
+/// Power Artifact — the enchanted artifact's abilities get two cheaper.
+pub fn power_artifact() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted artifact's activated abilities cost {2} less to activate. \
+                          This effect can't reduce the mana in that cost to less than one mana.",
+            effect: StaticEffect::AttachedActivatedAbilitiesCostLess { amount: 2 },
+        }],
+        ..aura("Power Artifact", cost(&[u(), u()]), R::Artifact)
+    }
+}
+
+/// Titania's Song — every noncreature artifact wakes up as a blank body.
+/// (The "keeps working until end of turn if this leaves" rider is dropped.)
+pub fn titanias_song() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Each noncreature artifact loses all abilities.",
+                effect: StaticEffect::NoncreatureArtifactsLoseAbilities,
+            },
+            StaticAbility {
+                description: "Each noncreature artifact becomes an artifact creature with power \
+                              and toughness each equal to its mana value.",
+                effect: StaticEffect::NoncreatureArtifactsAreCreatures,
+            },
+        ],
+        ..enchantment("Titania's Song", cost(&[generic(3), g()]))
     }
 }
 
