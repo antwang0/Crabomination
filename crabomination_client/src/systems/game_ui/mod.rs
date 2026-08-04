@@ -183,6 +183,7 @@ fn event_color(ev: &crabomination::net::GameEventWire) -> Color {
         E::CoinFlipWon { .. }
         | E::CoinFlipLost { .. }
         | E::DiceRolled { .. }
+        | E::Voted { .. }
         | E::EnergyGained { .. } => theme::ACCENT_GOLD,
 
         _ => theme::TEXT_BODY,
@@ -203,6 +204,8 @@ fn event_glyph(ev: &crabomination::net::GameEventWire) -> &'static str {
         // Coin flips and die rolls — a die glyph flags randomization outcomes.
         E::CoinFlipWon { .. } | E::CoinFlipLost { .. } | E::DiceRolled { .. } => "⚄ ",
         E::EnergyGained { .. } => "⚡ ",
+        // CR 701.38 — each vote on a ballot gets a ticked-box glyph.
+        E::Voted { .. } => "☑ ",
         // Phasing — a hollow circle reads as "now you don't".
         E::PermanentPhasedOut { .. } => "◌ ",
         _ => "",
