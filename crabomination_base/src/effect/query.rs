@@ -270,7 +270,9 @@ impl Effect {
             | Effect::ReplaceTargetLandManaWithColorless { what }
             | Effect::PreventTargetingDamageThisTurn { what } => sel_has_target(what),
             Effect::NameCardRevealRandomDiscardNamed { who, .. } => player_has_target(who),
-            Effect::AtYourNextUpkeep { body } => body.requires_target(),
+            Effect::AtYourNextUpkeep { body } | Effect::AtNextTurnsUpkeep { body } => {
+                body.requires_target()
+            }
             Effect::ReattachTargetAura { aura, to } => sel_has_target(aura) || sel_has_target(to),
             Effect::AnteToGraveyard { who }
             | Effect::TakeAnteCardForLibraryTop { who }
@@ -530,7 +532,12 @@ impl Effect {
             Effect::RevealHandDiscardAllMatching { who, .. }
             | Effect::RevealHand { who }
             | Effect::RevealTopOfLibrary { who }
+            | Effect::RevealTopThenShuffle { who, .. }
+            | Effect::RemoveAllPoison { who }
             | Effect::PlayerCantCastMatchingThisTurn { who, .. } => player_has_target(who),
+            Effect::DamageEachCreaturePerAura { .. }
+            | Effect::SacrificeSourceUnlessTapCreature
+            | Effect::EachPlayerDrawsUpToElseGainsLife { .. } => false,
             Effect::NameCardTargetDiscardsMatching
             | Effect::NameCardExileMatchingAllZones
             | Effect::FertileImagination { .. }

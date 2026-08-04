@@ -1361,6 +1361,18 @@ impl GameState {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
+            // CR 509.1b — "can't block creatures with power equal to or
+            // greater than this creature's toughness" (Ironclaw Curse).
+            if kws_of(blocker_id).contains(&Keyword::CantBlockPowerAtLeastOwnToughness)
+                && let (Some(b), Some(a)) = (
+                    self.computed_permanent(blocker_id),
+                    self.computed_permanent(attacker_id),
+                )
+                && a.power >= b.toughness
+            {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
             // CR 509.1b — a blanket "can't block this turn" (Concussive
             // Bolt's metalcraft rider) bars every block.
             if self.cant_block_this_turn.contains(&blocker_id) {

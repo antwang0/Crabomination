@@ -339,6 +339,8 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::PlusZeroPlusOne => "+0/+1",
         CounterType::PlusTwoPlusZero => "+2/+0",
         CounterType::PlusZeroPlusTwo => "+0/+2",
+        CounterType::PlusTwoPlusTwo => "+2/+2",
+        CounterType::Currency => "Currency",
         CounterType::MinusZeroMinusTwo => "-0/-2",
         CounterType::Glyph => "Glyph",
         CounterType::Sleep => "Sleep",
@@ -446,7 +448,8 @@ fn counter_label_color(kind: CounterType) -> Color {
         CounterType::PlusOnePlusOne
         | CounterType::PlusOnePlusZero
         | CounterType::PlusTwoPlusZero
-        | CounterType::PlusZeroPlusTwo => Color::srgb(0.45, 0.95, 0.50),
+        | CounterType::PlusZeroPlusTwo
+        | CounterType::PlusTwoPlusTwo => Color::srgb(0.45, 0.95, 0.50),
         CounterType::MinusOneMinusOne
         | CounterType::MinusZeroMinusOne
         | CounterType::MinusOneMinusZero

@@ -12004,6 +12004,7 @@ impl GameState {
         chosen_mode: Option<usize>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        self.check_free_activation_loop(card_id, ability_index)?;
         let creature_source =
             self.battlefield.iter().any(|c| c.id == card_id) && self.permanent_is_creature(card_id);
         let before = creature_source.then(|| self.players[p].mana_pool.clone());
@@ -12407,6 +12408,17 @@ impl GameState {
             {
                 return Err(GameError::AbilitySuppressedByNamedCard);
             }
+        }
+
+        // CR 602.5 — "activated abilities with {T} in their costs can't be
+        // activated" (Serra Bestiary). Read off the computed keyword set so a
+        // granted restriction applies immediately.
+        if (ability.tap_cost || ability.untap_self_cost)
+            && self.computed_permanent(card_id).is_some_and(|cp| {
+                cp.keywords.contains(&Keyword::CantActivateTapAbilities)
+            })
+        {
+            return Err(GameError::AbilityAlreadyUsedThisTurn);
         }
 
         // CR 602.5g/h — a creature's ability with a {T} or {Q} cost can't be

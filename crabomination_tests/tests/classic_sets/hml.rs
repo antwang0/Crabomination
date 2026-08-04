@@ -764,3 +764,166 @@ fn jovens_ferrets_pin_whatever_blocked_them() {
     g.do_untap();
     assert!(g.battlefield_find(blocker).expect("blocker").tapped, "and it stays down");
 }
+
+// ── Closing wave (`catalog::sets::hml2`) ───────────────────────────────────
+
+/// The Homelands cantrip rider draws on the *next turn's* upkeep, not the
+/// caster's own.
+#[test]
+fn headstone_exiles_and_cantrips_next_upkeep() {
+    let mut g = main_phase();
+    let victim = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::headstone());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, 0, id, Some(Target::Permanent(victim)));
+    assert!(g.players[1].graveyard.is_empty(), "the graveyard card was exiled");
+    assert_eq!(g.players[0].hand.len(), hand - 1, "no draw yet");
+    g.active_player_idx = 1;
+    g.turn_number += 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "drew on the next turn's upkeep");
+}
+
+/// Prophecy gains life only off a land, and shuffles either way.
+#[test]
+fn prophecy_gains_life_off_a_land() {
+    let mut g = main_phase();
+    g.add_card_to_library(1, catalog::forest());
+    let forest = g.players[1].library.pop().expect("forest");
+    g.players[1].library.insert(0, forest);
+    let id = g.add_card_to_hand(0, catalog::prophecy());
+    cast(&mut g, 0, id, Some(Target::Player(1)));
+    assert_eq!(g.players[0].life, 21, "a land on top is worth a life");
+}
+
+/// Leeches strips poison and burns for what it took.
+#[test]
+fn leeches_converts_poison_into_damage() {
+    let mut g = main_phase();
+    g.players[1].poison_counters = 3;
+    let id = g.add_card_to_hand(0, catalog::leeches());
+    cast(&mut g, 0, id, Some(Target::Player(1)));
+    assert_eq!(g.players[1].poison_counters, 0);
+    assert_eq!(g.players[1].life, 17, "3 poison became 3 damage");
+}
+
+/// Baki's Curse scales with Auras, so an unenchanted creature is untouched.
+#[test]
+fn bakis_curse_only_hits_enchanted_creatures() {
+    let mut g = main_phase();
+    let clean = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cursed = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(1, catalog::ironclaw_curse());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(cursed);
+    let id = g.add_card_to_hand(0, catalog::bakis_curse());
+    cast(&mut g, 0, id, None);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(clean).is_some(), "no Aura, no damage");
+    assert!(g.battlefield_find(cursed).is_none(), "2 damage killed the 2/1");
+}
+
+/// Baron Sengir grows off a creature its damage killed.
+#[test]
+fn baron_sengir_grows_off_its_victims() {
+    let mut g = main_phase();
+    let baron = g.add_card_to_battlefield(0, catalog::baron_sengir());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(victim),
+        5,
+        Some(baron),
+        &mut evs,
+    );
+    let mut sba = g.check_state_based_actions();
+    evs.append(&mut sba);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(baron).expect("baron");
+    assert_eq!((cp.power, cp.toughness), (7, 7), "+2/+2 counter");
+}
+
+/// Ironclaw Curse shrinks its host and keeps it off anything its own size.
+#[test]
+fn ironclaw_curse_blocks_big_attackers() {
+    let mut g = main_phase();
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 → 2/1
+    let aura = g.add_card_to_battlefield(1, catalog::ironclaw_curse());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(blocker);
+    assert_eq!(g.computed_permanent(blocker).expect("bear").toughness, 1);
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).is_err(),
+        "power 2 >= toughness 1, so it can't block"
+    );
+}
+
+/// Serra Bestiary shuts off the enchanted creature's tap abilities.
+#[test]
+fn serra_bestiary_locks_tap_abilities() {
+    let mut g = main_phase();
+    let tim = g.add_card_to_battlefield(1, catalog::prodigal_sorcerer());
+    g.clear_sickness(tim);
+    let aura = g.add_card_to_battlefield(0, catalog::serra_bestiary());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(tim);
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: tim, ability_index: 0, target: Some(Target::Player(0)),
+            additional_targets: vec![], x_value: None, mode: None,
+        })
+        .is_err(),
+        "{{T}} abilities are locked"
+    );
+}
+
+/// Truce pays out life for every card a player declines to draw.
+#[test]
+fn truce_pays_life_for_declined_draws() {
+    let mut g = main_phase();
+    // Seat 0 draws both, seat 1 draws none.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(2),
+        DecisionAnswer::Amount(0),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::truce());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, 0, id, None);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "drew two");
+    assert_eq!(g.players[0].life, 20, "and gained nothing");
+    assert_eq!(g.players[1].life, 24, "two declined cards = 4 life");
+}
+
+/// Koskun Falls eats itself when its controller won't tap a creature.
+#[test]
+fn koskun_falls_sacrifices_itself_without_a_creature() {
+    let mut g = main_phase();
+    let falls = g.add_card_to_battlefield(0, catalog::koskun_falls());
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(falls).is_none(), "no creature to tap");
+}
+
+/// Drudge Spell's Skeletons die with it.
+#[test]
+fn drudge_spell_takes_its_skeletons_with_it() {
+    let mut g = main_phase();
+    let spell = g.add_card_to_battlefield(0, catalog::drudge_spell());
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    activate_n(&mut g, 0, spell, 0, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1, "one Skeleton");
+    g.sacrifice_one(spell, 0, &mut Vec::new());
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield.iter().all(|c| !c.is_token), "Skeletons destroyed with the enchantment");
+}

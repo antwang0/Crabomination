@@ -26734,6 +26734,138 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopThenShuffle { who, filter, on_match } => {
+                let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let matched = self.players[seat]
+                    .library
+                    .first()
+                    .is_some_and(|c| self.evaluate_requirement_on_card(filter, c, ctx.controller));
+                if !self.library_tops_revealed.contains(&seat) {
+                    self.library_tops_revealed.push(seat);
+                }
+                if matched {
+                    self.run_effect(on_match, ctx, events)?;
+                }
+                self.shuffle_library(seat, events);
+                Ok(())
+            }
+
+            Effect::RemoveAllPoison { who } => {
+                if let Some(seat) = self.resolve_player(who, ctx) {
+                    self.players[seat].poison_counters = 0;
+                }
+                Ok(())
+            }
+
+            Effect::DamageEachCreaturePerAura { amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                let hits: Vec<(CardId, u32)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.permanent_is_creature(c.id))
+                    .map(|c| {
+                        let auras = self
+                            .battlefield
+                            .iter()
+                            .filter(|a| a.attached_to == Some(c.id) && a.definition.is_aura())
+                            .count() as u32;
+                        (c.id, n.saturating_mul(auras))
+                    })
+                    .filter(|(_, dmg)| *dmg > 0)
+                    .collect();
+                for (id, dmg) in hits {
+                    self.deal_damage_to_from(EntityRef::Permanent(id), dmg, ctx.source, events);
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeSourceUnlessTapCreature => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let p = ctx.controller;
+                let candidates: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == p && !c.tapped && self.permanent_is_creature(c.id)
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let auto = candidates.first().map(|(id, _)| *id).into_iter().collect();
+                let picked = if candidates.is_empty() {
+                    Vec::new()
+                } else {
+                    let Some(v) = self.ask_seat_cards(
+                        p,
+                        "Tap an untapped creature you control?".to_string(),
+                        src,
+                        candidates,
+                        0,
+                        1,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    if v.is_empty() && !self.seat_suspends(p) { auto } else { v }
+                };
+                match picked.first() {
+                    Some(id) => {
+                        if let Some(c) = self.battlefield_find_mut(*id) {
+                            c.tapped = true;
+                        }
+                        events.push(GameEvent::PermanentTapped {
+                            card_id: *id,
+                            actor: Some(p),
+                            as_attacker: false,
+                        });
+                    }
+                    None => self.sacrifice_one(src, p, events),
+                }
+                Ok(())
+            }
+
+            Effect::EachPlayerDrawsUpToElseGainsLife { max, life_per_card } => {
+                let mut cursor = 0usize;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let mut picks: Vec<(usize, u32)> = Vec::new();
+                for seat in self.apnap_sort((0..self.players.len()).collect()) {
+                    let Some(n) = self.ask_seat_amount(
+                        &mut cursor,
+                        seat,
+                        format!("Draw up to {max} cards"),
+                        source,
+                        *max,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    picks.push((seat, n));
+                }
+                self.clear_answer_log();
+                for (seat, n) in picks {
+                    let mut sub = ctx.clone();
+                    sub.controller = seat;
+                    if n > 0 {
+                        self.run_effect(
+                            &Effect::Draw { who: Selector::You, amount: crate::effect::Value::Const(n as i32) },
+                            &sub,
+                            events,
+                        )?;
+                    }
+                    let short = max.saturating_sub(n);
+                    if short > 0 {
+                        self.run_effect(
+                            &Effect::GainLife {
+                                who: Selector::You,
+                                amount: crate::effect::Value::Const((short * life_per_card) as i32),
+                            },
+                            &sub,
+                            events,
+                        )?;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PlayerCantPlayLandsThisTurn { player } => {
                 if let Some(seat) = self.resolve_player(player, ctx) {
                     self.players[seat].cant_play_lands_this_turn = true;
@@ -27860,6 +27992,21 @@ impl GameState {
                     controller: ctx.controller,
                     source: ctx.source.unwrap_or(CardId(0)),
                     kind: crate::game::types::DelayedKind::YourNextUpkeep,
+                    effect: (**body).clone(),
+                    target: ctx.targets.first().cloned(),
+                    bound_token: None,
+                    bound_subject: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
+            Effect::AtNextTurnsUpkeep { body } => {
+                let after_turn = self.turn_number;
+                self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                    controller: ctx.controller,
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    kind: crate::game::types::DelayedKind::NextUpkeep { after_turn },
                     effect: (**body).clone(),
                     target: ctx.targets.first().cloned(),
                     bound_token: None,

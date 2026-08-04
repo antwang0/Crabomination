@@ -1,5 +1,5 @@
 //! CR conformance: 115.7c multi-slot retargeting, 601.2c distinct slots,
-//! 706.10 activated-ability copies, and the 104.4b free-activation watchdog.
+//! 706.10 activated-ability copies, and the 104.4b / 732.3 loop guards.
 
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
@@ -94,3 +94,52 @@ fn cr_104_4b_free_activation_is_watched() {
     assert!(!ActivatedAbility { once_per_turn: true, ..free }.is_free(), "a per-turn cap bounds it");
 }
 
+
+/// CR 732.3 — a fragmented loop of free activations is broken by rejecting
+/// the repeat, not by drawing the game (that's 732.4's mandatory case).
+#[test]
+fn cr_732_3_repeated_free_activation_is_rejected() {
+    use crabomination::card::{CardDefinition, CardType};
+    use crabomination::effect::{ActivatedAbility, Effect};
+    use crabomination::game::types::GameError;
+    // "{0}: This creature gains flying" — no cost, no state change.
+    let looper = CardDefinition {
+        name: "Looper",
+        card_types: vec![CardType::Creature],
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::GrantKeyword {
+                what: crabomination::effect::Selector::This,
+                keyword: crabomination::card::Keyword::Flying,
+                duration: crabomination::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_battlefield(0, looper);
+    g.clear_sickness(id);
+    let activate = |g: &mut GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: Vec::new(),
+            x_value: None,
+            mode: None,
+        })
+    };
+    for _ in 0..50 {
+        activate(&mut g).expect("under the cap");
+        drain_stack(&mut g);
+    }
+    assert!(
+        matches!(activate(&mut g), Err(GameError::LoopMustBeBroken)),
+        "the repeat past the cap is refused"
+    );
+    assert!(g.game_over.is_none(), "a fragmented loop is not a draw");
+}

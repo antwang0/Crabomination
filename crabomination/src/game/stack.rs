@@ -846,6 +846,9 @@ impl GameState {
             let matches = match (&dt.kind, step) {
                 (DelayedKind::YourNextUpkeep, TurnStep::Upkeep) => dt.controller == active,
                 (DelayedKind::EachPlayersUpkeep, TurnStep::Upkeep) => true,
+                (DelayedKind::NextUpkeep { after_turn }, TurnStep::Upkeep) => {
+                    self.turn_number > *after_turn
+                }
                 (DelayedKind::YourNextMainPhase, TurnStep::PreCombatMain) => {
                     dt.controller == active
                 }
@@ -1359,6 +1362,43 @@ impl GameState {
     /// trigger chain (storm counts, cascade webs) so it only fires on a real
     /// loop.
     pub const MANDATORY_LOOP_DRAW_REPEATS: u32 = 400;
+
+    /// CR 732.3 — how many times the *same* free activation (`{0}:` with no
+    /// cost line) may be repeated without the game-state fingerprint moving
+    /// before it's rejected. A fragmented loop is broken by a different game
+    /// choice, not by a draw, so this is a rejection rather than 104.4b's
+    /// `game_over`. Set far above any legitimate repeat.
+    pub const FREE_ACTIVATION_REPEAT_CAP: u32 = 50;
+
+    /// CR 732.3 guard — reject a free activation that would repeat a loop.
+    /// Called before any cost is paid, so a rejected activation leaves no
+    /// trace. Non-free abilities always pass and clear the watch: paying a
+    /// cost is itself a game choice that moves the state.
+    pub(crate) fn check_free_activation_loop(
+        &mut self,
+        card_id: CardId,
+        ability_index: usize,
+    ) -> Result<(), GameError> {
+        let free = self
+            .find_card_anywhere(card_id)
+            .and_then(|c| c.definition.activated_abilities.get(ability_index))
+            .is_some_and(|a| a.is_free());
+        if !free {
+            self.free_activation_watch = (0, None, 0);
+            return Ok(());
+        }
+        let fp = self.loop_fingerprint();
+        let key = Some((card_id, ability_index));
+        if self.free_activation_watch.0 == fp && self.free_activation_watch.1 == key {
+            if self.free_activation_watch.2 >= Self::FREE_ACTIVATION_REPEAT_CAP {
+                return Err(GameError::LoopMustBeBroken);
+            }
+            self.free_activation_watch.2 += 1;
+        } else {
+            self.free_activation_watch = (fp, key, 1);
+        }
+        Ok(())
+    }
 
     pub fn resolve_top_of_stack(&mut self) -> Result<Vec<GameEvent>, GameError> {
         // A spell resolution consumed a cast, so only abilities can loop with

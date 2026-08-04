@@ -362,6 +362,14 @@ pub struct GameState {
     /// changes the fingerprint (or any spell / player action) resets it.
     #[serde(default)]
     pub mandatory_loop_watch: (u64, u32),
+    /// CR 732.3 — fragmented-loop guard for *free* activations (`{0}:` with no
+    /// cost line). Holds the state fingerprint, the `(source, ability index)`
+    /// last activated for free, and how many times that pair has been
+    /// activated without the fingerprint moving. Past
+    /// `FREE_ACTIVATION_REPEAT_CAP` the repeat is rejected, forcing a
+    /// different game choice instead of an endless loop.
+    #[serde(default)]
+    pub free_activation_watch: (u64, Option<(CardId, usize)>, u32),
     /// Priority state — tracks who can act and when the stack resolves.
     pub priority: PriorityState,
     /// Active continuous effects from resolved spells, abilities, and static abilities.
@@ -1801,6 +1809,7 @@ impl Clone for GameState {
             turn_number: self.turn_number,
             game_over: self.game_over,
             mandatory_loop_watch: self.mandatory_loop_watch,
+            free_activation_watch: self.free_activation_watch,
             priority: self.priority.clone(),
             continuous_effects: self.continuous_effects.clone(),
             next_effect_timestamp: self.next_effect_timestamp,
@@ -2112,6 +2121,7 @@ impl GameState {
             turn_number: 1,
             game_over: None,
             mandatory_loop_watch: (0, 0),
+            free_activation_watch: (0, None, 0),
             priority: PriorityState::new(0),
             continuous_effects: CowBox::default(),
             next_effect_timestamp: 1,

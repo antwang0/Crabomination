@@ -1377,6 +1377,8 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::PlusZeroPlusOne => "+0/+1",
         CounterType::PlusTwoPlusZero => "+2/+0",
         CounterType::PlusZeroPlusTwo => "+0/+2",
+        CounterType::PlusTwoPlusTwo => "+2/+2",
+        CounterType::Currency => "Currency",
         CounterType::MinusZeroMinusTwo => "-0/-2",
         CounterType::Glyph => "Glyph",
         CounterType::Sleep => "Sleep",

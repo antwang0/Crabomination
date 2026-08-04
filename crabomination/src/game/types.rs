@@ -731,6 +731,10 @@ pub enum DelayedKind {
     NextCombat,
     /// At the beginning of `controller`'s next upkeep.
     YourNextUpkeep,
+    /// "At the beginning of the next turn's upkeep" — whoever's turn it is,
+    /// gated on a turn after `after_turn` so a registration made during an
+    /// upkeep waits for the *next* one (the Homelands cantrip cycle).
+    NextUpkeep { after_turn: u32 },
     /// At the beginning of the next end step (any player's).
     NextEndStep,
     /// "At the beginning of the end step of that player's next turn" — fires
@@ -2456,6 +2460,10 @@ pub enum GameError {
     /// CR 801 — the object or player is outside the actor's range of influence.
     #[error("Out of your range of influence")]
     OutOfRange,
+    /// CR 732.3 — this free activation has been repeated without moving the
+    /// game state; the loop must be broken by a different game choice.
+    #[error("This would repeat a loop — make a different choice (CR 732.3)")]
+    LoopMustBeBroken,
     #[error("Card {0:?} not found in hand")]
     CardNotInHand(CardId),
     #[error("Card {0:?} not found in graveyard")]

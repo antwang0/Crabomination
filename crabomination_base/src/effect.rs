@@ -4224,6 +4224,26 @@ pub enum Effect {
     /// Windreader). Knowledge only — the top card becomes visible to every
     /// player for as long as it stays on top.
     RevealTopOfLibrary { who: PlayerRef },
+    /// "Reveal the top card of `who`'s library. If it matches `filter`,
+    /// `on_match`. Then that player shuffles." (Prophecy.)
+    RevealTopThenShuffle {
+        who: PlayerRef,
+        filter: SelectionRequirement,
+        on_match: Box<Effect>,
+    },
+    /// "`who` loses all poison counters" (Leeches). Emits no `PoisonAdded`.
+    RemoveAllPoison { who: PlayerRef },
+    /// "Deals `amount` damage to each creature for each Aura attached to that
+    /// creature" (Baki's Curse). Creatures with no Aura take nothing.
+    DamageEachCreaturePerAura { amount: Value },
+    /// "Sacrifice this permanent unless you tap an untapped creature you
+    /// control" (Koskun Falls). The tap is a real cost paid on resolution;
+    /// declining, or controlling no untapped creature, sacrifices the source.
+    SacrificeSourceUnlessTapCreature,
+    /// "Each player may draw up to `max` cards. For each card less than `max`
+    /// a player draws this way, that player gains `life_per_card` life."
+    /// (Truce.) Asked in APNAP order.
+    EachPlayerDrawsUpToElseGainsLife { max: u32, life_per_card: u32 },
     /// Liar's Pendulum: name a card, then target opponent guesses whether a
     /// card with that name is in your hand. Reveal and draw when they guess
     /// wrong. The guess rides a `Decision::OptionalTrigger` asked of the
@@ -4320,6 +4340,10 @@ pub enum Effect {
     /// one-shot delayed trigger bound to the resolving source (Giant Slug,
     /// Hazezon Tamar).
     AtYourNextUpkeep { body: Box<Effect> },
+    /// CR 603.7a — "At the beginning of the next turn's upkeep, `body`."
+    /// Fires on the very next upkeep step, whoever's turn it is; the Homelands
+    /// cantrip rider (Headstone, Jinx, Prophecy, Renewal).
+    AtNextTurnsUpkeep { body: Box<Effect> },
     /// CR 702.141 Encore — for each opponent, create a token copy of the
     /// source (read from exile after the encore cost exiled it) that attacks
     /// that opponent this turn if able (goad-style requirement). The tokens

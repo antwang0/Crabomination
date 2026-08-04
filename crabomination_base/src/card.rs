@@ -390,6 +390,10 @@ pub enum CounterType {
     PlusTwoPlusZero,
     /// +0/+2 counter (Frankenstein's Monster).
     PlusZeroPlusTwo,
+    /// +2/+2 counter (Baron Sengir).
+    PlusTwoPlusTwo,
+    /// Currency counter (Trade Caravan) — pure bookkeeping, no P/T effect.
+    Currency,
     /// -0/-2 counter (Spirit Shackle).
     MinusZeroMinusTwo,
     /// Glyph counter (Glyph of Delusion) — the bearer doesn't untap while it
@@ -1263,6 +1267,12 @@ pub enum Keyword {
     /// Silence). Enforced from the *computed* keyword set in
     /// `declare_attackers`, so layer-granted variants are honored.
     CantAttack,
+    /// CR 602.5 restriction — "activated abilities with {T} in their costs
+    /// can't be activated" (Serra Bestiary).
+    CantActivateTapAbilities,
+    /// CR 509.1b restriction — "can't block creatures with power equal to or
+    /// greater than this creature's toughness" (Ironclaw Curse).
+    CantBlockPowerAtLeastOwnToughness,
     /// CR 602.5c — "[This permanent]'s activated abilities can't be
     /// activated." A static restriction on the bearer (or an Aura grant —
     /// Detention Vortex, Stupor-style locks). Enforced from the *computed*
@@ -5891,11 +5901,13 @@ impl CardInstance {
         let minus_one_zero = self.counter_count(CounterType::MinusOneMinusZero) as i32;
         let plus_one_zero = self.counter_count(CounterType::PlusOnePlusZero) as i32;
         let plus_two_zero = self.counter_count(CounterType::PlusTwoPlusZero) as i32;
+        let plus_two_two = self.counter_count(CounterType::PlusTwoPlusTwo) as i32;
         self.definition.base_power() + self.power_bonus + self.perm_power_bonus + plus
             - minus
             - minus_one_zero
             + plus_one_zero
             + 2 * plus_two_zero
+            + 2 * plus_two_two
     }
 
     pub fn toughness(&self) -> i32 {
@@ -5905,12 +5917,14 @@ impl CardInstance {
         let minus_zero_two = self.counter_count(CounterType::MinusZeroMinusTwo) as i32;
         let plus_zero_one = self.counter_count(CounterType::PlusZeroPlusOne) as i32;
         let plus_zero_two = self.counter_count(CounterType::PlusZeroPlusTwo) as i32;
+        let plus_two_two = self.counter_count(CounterType::PlusTwoPlusTwo) as i32;
         self.definition.base_toughness() + self.toughness_bonus + self.perm_toughness_bonus + plus
             - minus
             - minus_zero_one
             - 2 * minus_zero_two
             + plus_zero_one
             + 2 * plus_zero_two
+            + 2 * plus_two_two
     }
 
     pub fn counter_count(&self, ct: CounterType) -> u32 {
