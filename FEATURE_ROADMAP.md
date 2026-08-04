@@ -2558,8 +2558,13 @@ Each a small targeted feature; sweep batch by batch.
   off the lethal-damage SBA (Puppet Master).
 
 - **Client / server** — `PermanentView.cant_attack_this_turn` surfaces a live
-  CR 508.1a turn ban and the counter tooltip explains it; the Scream counter
-  has a name + reminder in the coin strip and tooltip.
+  CR 508.1a turn ban and the counter tooltip explains it; the Scream and Doom
+  counters have names + reminders in the coin strip and tooltip.
+  `ClientView.attackable_players` now drops defenders no attacker could legally
+  be declared at (an unfiltered "creatures can't attack you", Arboria's
+  did-nothing-last-turn lock, a Web of Inertia turn ban), so the attack UI stops
+  offering illegal defenders — `player_cant_be_attacked_at_all`,
+  `cr_recent74::cr_508_1_attackable_players_drops_a_locked_out_defender`.
 
 Only this push's entries are listed; earlier pushes are in `git log -p --
 FEATURE_ROADMAP.md`.

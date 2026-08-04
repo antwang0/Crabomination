@@ -196,3 +196,16 @@ fn cr_808_3a_teammates_are_not_legal_attack_targets() {
         "CR 802 — any opposing player is a legal defender"
     );
 }
+
+// ── CR 508.1 — the view's attackable-players list honours prohibitions ─────
+
+#[test]
+fn cr_508_1_attackable_players_drops_a_locked_out_defender() {
+    let mut g = main_phase();
+    assert_eq!(g.attackable_players_for(0), vec![1]);
+    g.add_card_to_battlefield(0, catalog::arboria());
+    assert!(
+        g.attackable_players_for(0).is_empty(),
+        "seat 1 did nothing on their last turn, so no attacker can be declared at them"
+    );
+}

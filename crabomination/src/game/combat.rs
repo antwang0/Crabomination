@@ -2128,8 +2128,34 @@ impl GameState {
                 self.players[*p].is_alive()
                     && !self.same_team(seat, *p)
                     && restriction.is_none_or(|only| only == Some(*p))
+                    && !self.player_cant_be_attacked_at_all(seat, *p)
             })
             .collect()
+    }
+
+    /// CR 508.1 — `defender` can't be attacked by `seat` no matter which
+    /// creature is declared: an unfiltered "creatures can't attack you"
+    /// (Blazing Archon), Arboria's did-nothing-last-turn lock, or a
+    /// turn-scoped Web of Inertia ban. Attacker-*filtered* prohibitions are
+    /// left to `declare_attackers`, which sees the actual batch.
+    pub(crate) fn player_cant_be_attacked_at_all(&self, seat: usize, defender: usize) -> bool {
+        use crate::effect::StaticEffect;
+        if self.cant_attack_player_this_turn.contains(&(seat, defender)) {
+            return true;
+        }
+        self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                match self.active_static(&sa.effect, c) {
+                    Some(StaticEffect::CreaturesCantAttackController { filter: None, .. }) => {
+                        c.controller == defender
+                    }
+                    Some(StaticEffect::PlayersCantBeAttackedUnlessTheyActedLastTurn) => {
+                        !self.acted_on_their_last_turn(defender)
+                    }
+                    _ => false,
+                }
+            })
+        })
     }
 
     /// CR 803.1a/b — the single seat the active player may attack under the
