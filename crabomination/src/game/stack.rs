@@ -105,6 +105,10 @@ impl GameState {
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => {
                 Self::governing_modal(body)
             }
+            // A modal step inside a sequence still governs the whole
+            // resolution's mode slot — Urza's Avenger's "-1/-1 and gains your
+            // choice of …". The first modal step wins.
+            Effect::Seq(steps) => steps.iter().find_map(Self::governing_modal),
             _ => None,
         }
     }
@@ -330,6 +334,9 @@ impl GameState {
                     } => !(player == active && turn > installed_turn),
                     _ => true,
                 });
+                // CR 801.2c — ranges of influence are determined as each turn
+                // begins, so a player leaving only shifts them now.
+                self.refresh_range_matrix();
                 // CR 723.1 — a pending player-control effect applies to the
                 // next turn its target actually takes, and expires here.
                 self.apply_pending_player_control(self.active_player_idx);
@@ -399,6 +406,16 @@ impl GameState {
             }
             TurnStep::Upkeep => {
                 self.upkeep_steps_this_turn = self.upkeep_steps_this_turn.saturating_add(1);
+                // CR 611.2b — "until your next upkeep" ends as that upkeep
+                // begins, before any of this step's turn-based actions.
+                let (active, turn) = (self.active_player_idx, self.turn_number);
+                self.continuous_effects.retain(|e| match e.duration {
+                    crate::game::layers::EffectDuration::UntilYourNextUpkeep {
+                        player,
+                        installed_turn,
+                    } => !(player == active && turn > installed_turn),
+                    _ => true,
+                });
                 // CR 702.32 / 702.62 — Fading / Vanishing tick down as a
                 // turn-based action at upkeep, before step triggers.
                 let mut fv = self.process_fading_vanishing();

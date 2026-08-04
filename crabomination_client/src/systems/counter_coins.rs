@@ -140,7 +140,9 @@ pub fn init_counter_coin_assets(
 
 fn material_for(kind: CounterType, assets: &CounterCoinAssets) -> Handle<StandardMaterial> {
     match kind {
-        CounterType::PlusOnePlusOne => assets.plus_one_plus_one.clone(),
+        CounterType::PlusOnePlusOne | CounterType::PlusOnePlusZero => {
+            assets.plus_one_plus_one.clone()
+        }
         CounterType::MinusOneMinusOne => assets.minus_one_minus_one.clone(),
         CounterType::Loyalty => assets.loyalty.clone(),
         CounterType::Charge => assets.charge.clone(),
@@ -333,6 +335,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::MinusOneMinusOne => "-1/-1",
         CounterType::MinusZeroMinusOne => "-0/-1",
         CounterType::MinusOneMinusZero => "-1/-0",
+        CounterType::PlusOnePlusZero => "+1/+0",
         CounterType::MinusZeroMinusTwo => "-0/-2",
         CounterType::Glyph => "Glyph",
         CounterType::Sleep => "Sleep",
@@ -435,7 +438,9 @@ fn counter_token(kind: CounterType) -> &'static str {
 /// fills are deliberately dark for solidity; these are their readable twins).
 fn counter_label_color(kind: CounterType) -> Color {
     match kind {
-        CounterType::PlusOnePlusOne => Color::srgb(0.45, 0.95, 0.50),
+        CounterType::PlusOnePlusOne | CounterType::PlusOnePlusZero => {
+            Color::srgb(0.45, 0.95, 0.50)
+        }
         CounterType::MinusOneMinusOne
         | CounterType::MinusZeroMinusOne
         | CounterType::MinusOneMinusZero

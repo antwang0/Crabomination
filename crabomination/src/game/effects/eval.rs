@@ -3527,6 +3527,7 @@ impl GameState {
                         })
                     }
                     R::HasName(name) => card.definition.name == name.as_str(),
+                    R::OriginallyPrintedIn(set) => set.contains(card.definition.name),
                     R::ManaValueAtMostControllerHand => {
                         card.definition.cost.cmc() as usize <= self.players[controller].hand.len()
                     }
@@ -4068,6 +4069,7 @@ impl GameState {
             // Name match works in any zone — used by Grandeur
             // activations that walk a hand for a same-named card.
             R::HasName(name) => card.definition.name == name.as_str(),
+            R::OriginallyPrintedIn(set) => set.contains(card.definition.name),
             // Resolved to a concrete `HasName` by callers that have the
             // source in hand (RevealUntilFind); vacuously false otherwise.
             // No source context here; the per-resolution scratchpad is the

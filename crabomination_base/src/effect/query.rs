@@ -236,7 +236,15 @@ impl Effect {
         match self {
             Effect::AbandonThisScheme | Effect::GameIsADraw
             | Effect::ExileCostSacrificedBatch
+            | Effect::CoffinReturn
+            | Effect::TransmuteArtifact
+            | Effect::ExileTokensCreatedBySourceForCounters { .. }
+            | Effect::RemoveCountersToCreateTokens { .. }
             | Effect::ExileSelfWithCountdown => false,
+            Effect::CoffinExile { what } => sel_has_target(what),
+            Effect::AddCounterCapped { what, amount, cap, .. } => {
+                sel_has_target(what) || value_has_target(amount) || value_has_target(cap)
+            }
             Effect::RedirectSpellDamageToItsController { what }
             | Effect::TapAndHoldWhileSourceTapped { what } => sel_has_target(what),
             Effect::AnteTopOfLibrary { who, then, else_, .. } => {

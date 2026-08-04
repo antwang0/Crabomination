@@ -61,7 +61,8 @@ pub(crate) fn map_effect_duration(
         crate::effect::Duration::EndOfTurn => EffectDuration::UntilEndOfTurn,
         crate::effect::Duration::EndOfCombat => EffectDuration::UntilEndOfCombat,
         crate::effect::Duration::UntilNextTurn
-        | crate::effect::Duration::UntilYourNextUntap => EffectDuration::UntilNextTurn,
+        | crate::effect::Duration::UntilYourNextUntap
+        | crate::effect::Duration::UntilYourNextUpkeep => EffectDuration::UntilNextTurn,
         crate::effect::Duration::WhileSourceTapped => EffectDuration::WhileSourceTapped,
         crate::effect::Duration::Permanent => EffectDuration::Indefinite,
     }
@@ -2602,6 +2603,154 @@ impl GameState {
                     }
                 }
                 Ok(())
+            }
+
+            Effect::TransmuteArtifact => {
+                let seat = ctx.controller;
+                if self.no_search_this_turn
+                    || self.player_search_locked_by_opponent(seat)
+                    || !self.pay_search_tax(seat)
+                {
+                    return Ok(());
+                }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let candidates: Vec<(CardId, String)> = self.players[seat]
+                    .library
+                    .iter()
+                    .filter(|c| c.definition.is_artifact())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() {
+                    self.shuffle_library(seat, events);
+                    return Ok(());
+                }
+                let Some(picked) = self.ask_seat_cards(
+                    seat,
+                    "Search for an artifact card".to_string(),
+                    source,
+                    candidates,
+                    0,
+                    1,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.players[seat].searched_library_this_turn = true;
+                events.push(GameEvent::PlayerSearchedLibrary { player: seat });
+                let Some(&found) = picked.first() else {
+                    self.shuffle_library(seat, events);
+                    return Ok(());
+                };
+                let paid = self.sacrificed_mana_value.unwrap_or(0);
+                let found_mv = self
+                    .find_card_anywhere(found)
+                    .map(|c| c.definition.cost.cmc())
+                    .unwrap_or(0);
+                let enters = ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                };
+                let dest = if found_mv <= paid {
+                    enters
+                } else {
+                    let diff = found_mv - paid;
+                    let surcharge = crate::mana::cost(&[crate::mana::generic(diff)]);
+                    let mut cursor = 0;
+                    let Some(yes) = self.ask_seat_bool(
+                        &mut cursor,
+                        seat,
+                        format!("Pay {{{diff}}} to put it onto the battlefield?"),
+                        source,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    if yes && self.players[seat].mana_pool.pay(&surcharge).is_ok() {
+                        enters
+                    } else {
+                        ZoneDest::Graveyard
+                    }
+                };
+                self.move_card_to(found, &dest, ctx, events);
+                self.shuffle_library(seat, events);
+                Ok(())
+            }
+
+            // Tetravus — shed counters into flying bodies, or reabsorb them.
+            Effect::RemoveCountersToCreateTokens { kind, definition } => {
+                let Some(source) = ctx.source else { return Ok(()) };
+                let have = self
+                    .battlefield_find(source)
+                    .map(|c| c.counter_count(*kind))
+                    .unwrap_or(0);
+                if have == 0 { return Ok(()); }
+                let mut cursor = 0;
+                let Some(n) = self.ask_seat_amount(
+                    &mut cursor,
+                    ctx.controller,
+                    format!("Remove how many {kind:?} counters?"),
+                    source,
+                    have,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if n == 0 { return Ok(()); }
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.remove_counters(*kind, n);
+                }
+                events.push(GameEvent::CounterRemoved {
+                    card_id: source,
+                    counter_type: *kind,
+                    count: n,
+                });
+                self.run_effect(
+                    &Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: crate::effect::Value::Const(n as i32),
+                        definition: definition.clone(),
+                    },
+                    ctx,
+                    events,
+                )
+            }
+
+            Effect::ExileTokensCreatedBySourceForCounters { kind } => {
+                let Some(source) = ctx.source else { return Ok(()) };
+                let tokens: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.created_by == Some(source))
+                    .map(|c| c.id)
+                    .collect();
+                if tokens.is_empty() { return Ok(()); }
+                let mut cursor = 0;
+                let Some(n) = self.ask_seat_amount(
+                    &mut cursor,
+                    ctx.controller,
+                    "Exile how many of its tokens?".to_string(),
+                    source,
+                    tokens.len() as u32,
+                    effect,
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                if n == 0 { return Ok(()); }
+                for id in tokens.into_iter().take(n as usize) {
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                }
+                self.run_effect(
+                    &Effect::AddCounter {
+                        what: Selector::This,
+                        kind: *kind,
+                        amount: crate::effect::Value::Const(n as i32),
+                    },
+                    ctx,
+                    events,
+                )
             }
 
             // Goblin Game — everyone hides at least one item; the fewest
@@ -13003,6 +13152,34 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddCounterCapped { what, kind, amount, cap } => {
+                // Clamp per target: the cap is on the resulting pool, not on
+                // the amount, so a target already at the cap gets nothing.
+                if self.counters_locked() { return Ok(()); }
+                let want = self.evaluate_value(amount, ctx).max(0) as u32;
+                let cap = self.evaluate_value(cap, ctx).max(0) as u32;
+                for ent in self.resolve_selector(what, ctx) {
+                    let EntityRef::Permanent(cid) = ent else { continue };
+                    let have = self
+                        .battlefield_find(cid)
+                        .map(|c| c.counter_count(*kind))
+                        .unwrap_or(0);
+                    let n = want.min(cap.saturating_sub(have));
+                    if n == 0 { continue; }
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.add_counters(*kind, n);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: cid,
+                            counter_type: *kind,
+                            count: n,
+                        });
+                    }
+                    self.permanents_gained_counter_this_turn.insert(cid);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
             Effect::AddCounter { what, kind, amount } => {
                 let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 if base == 0 { return Ok(()); }
@@ -14383,6 +14560,95 @@ impl GameState {
                     )?;
                 }
                 self.shuffle_library(p, events);
+                Ok(())
+            }
+
+            Effect::CoffinExile { what } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(host) =
+                    self.resolve_selector(what, ctx).first().and_then(|e| e.as_permanent_id())
+                else {
+                    return Ok(());
+                };
+                let noted: Vec<(CounterType, u32)> = self
+                    .battlefield_find(host)
+                    .map(|c| c.counters.iter().map(|(k, v)| (*k, *v)).collect())
+                    .unwrap_or_default();
+                let auras: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.attached_to == Some(host) && c.definition.is_enchantment())
+                    .map(|c| c.id)
+                    .collect();
+                for cid in std::iter::once(host).chain(auras) {
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_with = Some(src);
+                    }
+                }
+                // The note survives in the exiled object's (otherwise unread)
+                // counter map, so `CoffinReturn` can restore it.
+                if let Some(c) = self.exile.iter_mut().find(|c| c.id == host) {
+                    for (kind, n) in noted {
+                        c.add_counters(kind, n);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CoffinReturn => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                let linked: Vec<CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(src))
+                    .map(|c| c.id)
+                    .collect();
+                // The creature is the one the Coffin noted counters for; the
+                // rest of the pile is its Auras.
+                let Some(&host) = linked
+                    .iter()
+                    .find(|id| {
+                        self.exile
+                            .iter()
+                            .any(|c| c.id == **id && c.definition.is_creature())
+                    })
+                    .or(linked.first())
+                else {
+                    return Ok(());
+                };
+                let noted: Vec<(CounterType, u32)> = self
+                    .exile
+                    .iter()
+                    .find(|c| c.id == host)
+                    .map(|c| c.counters.iter().map(|(k, v)| (*k, *v)).collect())
+                    .unwrap_or_default();
+                for cid in std::iter::once(host).chain(linked.into_iter().filter(|c| *c != host)) {
+                    let Some(owner) = self.exile.iter().find(|c| c.id == cid).map(|c| c.owner)
+                    else {
+                        continue;
+                    };
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_with = None;
+                    }
+                    self.move_card_to(
+                        cid,
+                        &ZoneDest::Battlefield {
+                            controller: PlayerRef::Seat(owner),
+                            tapped: cid == host,
+                        },
+                        ctx,
+                        events,
+                    );
+                    if cid != host && let Some(c) = self.battlefield_find_mut(cid) {
+                        c.attached_to = Some(host);
+                    }
+                }
+                if let Some(c) = self.battlefield_find_mut(host) {
+                    for (kind, n) in noted {
+                        c.add_counters(kind, n);
+                    }
+                }
                 Ok(())
             }
 
@@ -28879,8 +29145,18 @@ impl GameState {
         // Hand-rolled (no closure/guard) — this sits inside the effect
         // recursion, where debug-build frame size is at a premium.
         self.freeze_layers_push();
-        let out = self.resolve_selector_inner(sel, ctx);
+        let mut out = self.resolve_selector_inner(sel, ctx);
         self.freeze_layers_pop();
+        // CR 801.10 — the parts of an effect that would reach an object or
+        // player outside its controller's range of influence do nothing.
+        if self.range_of_influence.is_some() {
+            out.retain(|e| match e {
+                EntityRef::Player(p) => self.player_in_range_of(ctx.controller, *p),
+                EntityRef::Permanent(c) | EntityRef::Card(c) => {
+                    self.object_in_range_of(ctx.controller, *c)
+                }
+            });
+        }
         out
     }
 
@@ -29740,6 +30016,16 @@ impl GameState {
     /// every player. Non-collective `PlayerRef` variants resolve to a single
     /// seat (or empty if the reference can't be resolved).
     pub fn resolve_players(&self, pref: &PlayerRef, ctx: &EffectContext) -> Vec<usize> {
+        // CR 801.10 — an effect can't touch players outside its controller's
+        // range of influence; the rest of it works normally.
+        let seats = self.resolve_players_unranged(pref, ctx);
+        if self.range_of_influence.is_none() {
+            return seats;
+        }
+        seats.into_iter().filter(|p| self.player_in_range_of(ctx.controller, *p)).collect()
+    }
+
+    fn resolve_players_unranged(&self, pref: &PlayerRef, ctx: &EffectContext) -> Vec<usize> {
         match pref {
             // CR 101.4 / 121.2c — "each player"/"each opponent" fan-outs
             // resolve in APNAP order (active player first, then turn order),

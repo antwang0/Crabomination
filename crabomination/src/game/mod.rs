@@ -298,6 +298,16 @@ pub struct GameState {
     /// restrict every attack to the nearest living opponent in one direction.
     #[serde(default)]
     pub attack_option: AttackOption,
+    /// CR 801 — the limited range of influence option, in seats. `None` (the
+    /// default) is the unlimited range every two-player and Free-for-All game
+    /// uses; `Some(n)` limits each player to the `n` seats either side of them.
+    #[serde(default)]
+    pub range_of_influence: Option<u32>,
+    /// CR 801.2c — the range matrix, recomputed as each turn begins so a
+    /// player leaving the game only shifts ranges on the next turn.
+    /// `range_matrix[a][b]` is "b is within a's range". Empty means unlimited.
+    #[serde(default)]
+    pub range_matrix: Vec<Vec<bool>>,
     /// Partition of seats into teams. Every seat appears in exactly one
     /// entry; free-for-all formats have one singleton team per seat,
     /// team formats (Two-Headed Giant) have multiple seats per team.
@@ -1744,6 +1754,8 @@ impl Clone for GameState {
         Self {
             players: self.players.clone(),
             attack_option: self.attack_option,
+            range_of_influence: self.range_of_influence,
+            range_matrix: self.range_matrix.clone(),
             teams: self.teams.clone(),
             deploy_creatures: self.deploy_creatures,
             battlefield: self.battlefield.clone(),
@@ -2047,6 +2059,8 @@ impl GameState {
         Self {
             players,
             attack_option: AttackOption::default(),
+            range_of_influence: None,
+            range_matrix: Vec::new(),
             teams,
             deploy_creatures: false,
             battlefield: CowBox::default(),
@@ -2756,6 +2770,66 @@ impl GameState {
     /// own teammate (returns true for `a == b`).
     pub fn same_team(&self, a: usize, b: usize) -> bool {
         self.team_of(a) == self.team_of(b)
+    }
+
+    /// CR 801.2 — is `other` within `observer`'s range of influence? Always
+    /// true with the unlimited default (`range_of_influence == None`), and
+    /// always true for `observer` itself (CR 801.2b).
+    pub fn player_in_range_of(&self, observer: usize, other: usize) -> bool {
+        if observer == other || self.range_of_influence.is_none() {
+            return true;
+        }
+        match self.range_matrix.get(observer).and_then(|row| row.get(other)) {
+            Some(v) => *v,
+            // Not yet snapshotted (a state built mid-turn) — fall back to the
+            // live seating.
+            None => self.seats_within_range(observer).contains(&other),
+        }
+    }
+
+    /// CR 801.2d — is the object `card` within `observer`'s range? An object is
+    /// in range when its controller is.
+    pub fn object_in_range_of(&self, observer: usize, card: CardId) -> bool {
+        if self.range_of_influence.is_none() {
+            return true;
+        }
+        match self.find_card_anywhere(card) {
+            Some(c) => self.player_in_range_of(observer, c.controller),
+            None => true,
+        }
+    }
+
+    /// The living seats within `observer`'s range, measured around the table
+    /// over living seats only (a dead seat no longer occupies a chair).
+    fn seats_within_range(&self, observer: usize) -> Vec<usize> {
+        let Some(n) = self.range_of_influence else {
+            return (0..self.players.len()).collect();
+        };
+        let living: Vec<usize> =
+            (0..self.players.len()).filter(|p| self.players[*p].is_alive()).collect();
+        let Some(here) = living.iter().position(|p| *p == observer) else {
+            return vec![observer];
+        };
+        let len = living.len() as isize;
+        let n = (n as isize).min(len / 2);
+        (-n..=n)
+            .map(|d| living[((here as isize + d).rem_euclid(len)) as usize])
+            .collect()
+    }
+
+    /// CR 801.2c — snapshot every player's range as the turn begins.
+    pub fn refresh_range_matrix(&mut self) {
+        if self.range_of_influence.is_none() {
+            self.range_matrix.clear();
+            return;
+        }
+        let len = self.players.len();
+        self.range_matrix = (0..len)
+            .map(|observer| {
+                let inside = self.seats_within_range(observer);
+                (0..len).map(|other| observer == other || inside.contains(&other)).collect()
+            })
+            .collect();
     }
 
     /// CR 805.4a — the seats on the active team, in seat order. Just the
@@ -10069,6 +10143,10 @@ impl GameState {
     ) -> EffectDuration {
         match duration {
             crate::effect::Duration::UntilYourNextUntap => EffectDuration::UntilYourNextTurn {
+                player: controller,
+                installed_turn: self.turn_number,
+            },
+            crate::effect::Duration::UntilYourNextUpkeep => EffectDuration::UntilYourNextUpkeep {
                 player: controller,
                 installed_turn: self.turn_number,
             },

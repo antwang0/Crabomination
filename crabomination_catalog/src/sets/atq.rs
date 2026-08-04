@@ -1179,3 +1179,242 @@ pub fn reverse_polarity() -> CardDefinition {
         },
     )
 }
+
+/// Clockwork Avian — a 0/4 flier wound up to 4/4, shedding a charge each combat
+/// it fights in; your upkeep can wind it back to four.
+pub fn clockwork_avian() -> CardDefinition {
+    let shed = || TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+        effect: Effect::DelayUntil {
+            kind: crate::effect::DelayedTriggerKind::EndOfCombat,
+            body: Box::new(Effect::RemoveCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusZero,
+                amount: Value::ONE,
+            }),
+        },
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::PlusOnePlusZero, Value::Const(4))),
+        triggered_abilities: vec![
+            shed(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                ..shed()
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            tap_cost: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+                Predicate::IsTurnOf(PlayerRef::You),
+            ])),
+            effect: Effect::AddCounterCapped {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusZero,
+                amount: Value::XFromCost,
+                cap: Value::Const(4),
+            },
+            ..Default::default()
+        }],
+        ..artifact_creature("Clockwork Avian", cost(&[generic(5)]), vec![CreatureType::Bird], 0, 4)
+    }
+}
+
+/// Goblin Artisans — gamble for a card, and eat one of your own artifact spells
+/// when the coin says no.
+pub fn goblin_artisans() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::FlipCoin {
+                count: Value::ONE,
+                on_heads: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                on_tails: Box::new(Effect::CounterSpell {
+                    what: target_filtered(
+                        R::IsSpellOnStack.and(R::Artifact).and(R::ControlledByYou),
+                    ),
+                }),
+            },
+            ..Default::default()
+        }],
+        ..creature("Goblin Artisans", cost(&[r()]), vec![CreatureType::Goblin, CreatureType::Artificer], 1, 1)
+    }
+}
+
+/// Golgothian Sylex — the Brothers' War undone: every Antiquities card on the
+/// board is sacrificed, itself included.
+pub fn golgothian_sylex() -> CardDefinition {
+    artifact(
+        "Golgothian Sylex",
+        cost(&[generic(4)]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::SacrificeAllMatching {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                filter: R::Not(Box::new(R::IsToken))
+                    .and(R::OriginallyPrintedIn(crate::card::OriginalSet::Antiquities)),
+            },
+            ..Default::default()
+        }],
+    )
+}
+
+/// Primal Clay — pick a body as it enters: 3/3, 2/2 flier, or 1/6 wall.
+pub fn primal_clay() -> CardDefinition {
+    use crate::card::EntersChoiceMode;
+    CardDefinition {
+        enters_as_choice: Some(vec![
+            EntersChoiceMode { power: 3, toughness: 3, keywords: vec![] },
+            EntersChoiceMode { power: 2, toughness: 2, keywords: vec![Keyword::Flying] },
+            EntersChoiceMode { power: 1, toughness: 6, keywords: vec![Keyword::Defender] },
+        ]),
+        ..artifact_creature(
+            "Primal Clay",
+            cost(&[generic(4)]),
+            vec![CreatureType::Shapeshifter],
+            0,
+            0,
+        )
+    }
+}
+
+/// Tawnos's Coffin — a creature (and its Auras) held in stasis until the Coffin
+/// untaps or leaves; it comes back tapped with the counters it went in with.
+pub fn tawnoss_coffin() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::MayChooseNotToUntap],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::CoffinReturn,
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesUntapped, EventScope::SelfSource),
+                effect: Effect::CoffinReturn,
+            },
+        ],
+        ..artifact(
+            "Tawnos's Coffin",
+            cost(&[generic(4)]),
+            vec![ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                effect: Effect::CoffinExile { what: target_filtered(R::Creature) },
+                ..Default::default()
+            }],
+        )
+    }
+}
+
+/// Tetravus — trades its +1/+1 counters for flying 1/1s at upkeep, and takes
+/// them back the same way.
+pub fn tetravus() -> CardDefinition {
+    let tetravite = crate::card::TokenDefinition {
+        name: "Tetravite".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying, Keyword::CantBeTargetedByAuras],
+        ..Default::default()
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource),
+                effect: Effect::RemoveCountersToCreateTokens {
+                    kind: CounterType::PlusOnePlusOne,
+                    definition: tetravite,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::SelfSource),
+                effect: Effect::ExileTokensCreatedBySourceForCounters {
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            },
+        ],
+        ..artifact_creature(
+            "Tetravus",
+            cost(&[generic(6)]),
+            vec![CreatureType::Construct],
+            1,
+            1,
+        )
+    }
+}
+
+/// Transmute Artifact — trade one artifact for any other, paying the difference
+/// in mana (or watching it hit the graveyard).
+pub fn transmute_artifact() -> CardDefinition {
+    CardDefinition {
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: R::Artifact.and(R::ControlledByYou),
+            count: 1,
+        }],
+        ..sorcery("Transmute Artifact", cost(&[u(), u()]), Effect::TransmuteArtifact)
+    }
+}
+
+/// Urza's Avenger — shrinks itself to buy an evasion keyword, over and over.
+pub fn urzas_avenger() -> CardDefinition {
+    let grant = |kw: Keyword| Effect::GrantKeyword {
+        what: Selector::This,
+        keyword: kw,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::ChooseMode(vec![
+                    grant(Keyword::Banding),
+                    grant(Keyword::Flying),
+                    grant(Keyword::FirstStrike),
+                    grant(Keyword::Trample),
+                ]),
+            ]),
+            ..Default::default()
+        }],
+        ..artifact_creature(
+            "Urza's Avenger",
+            cost(&[generic(6)]),
+            vec![CreatureType::Shapeshifter],
+            4,
+            4,
+        )
+    }
+}
+
+/// Xenic Poltergeist — animates an artifact at its own mana value until your
+/// next upkeep.
+pub fn xenic_poltergeist() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::BecomeCreature {
+                what: target_filtered(R::Artifact.and(R::Not(Box::new(R::Creature)))),
+                power: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                toughness: Value::ManaValueOf(Box::new(Selector::Target(0))),
+                creature_types: vec![],
+                keywords: vec![],
+                duration: Duration::UntilYourNextUpkeep,
+            },
+            ..Default::default()
+        }],
+        ..creature("Xenic Poltergeist", cost(&[generic(1), b(), b()]), vec![CreatureType::Spirit], 1, 1)
+    }
+}

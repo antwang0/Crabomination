@@ -2425,6 +2425,9 @@ pub enum GameError {
     /// A one-spell-per-turn lock (Rule of Law, CR 601) bars this cast.
     #[error("A one-spell-per-turn effect bars casting more spells this turn")]
     SpellLimitReached,
+    /// CR 801 — the object or player is outside the actor's range of influence.
+    #[error("Out of your range of influence")]
+    OutOfRange,
     #[error("Card {0:?} not found in hand")]
     CardNotInHand(CardId),
     #[error("Card {0:?} not found in graveyard")]

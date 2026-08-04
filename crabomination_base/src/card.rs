@@ -370,6 +370,8 @@ pub enum CounterType {
     MinusZeroMinusOne,
     /// -1/-0 counter.
     MinusOneMinusZero,
+    /// +1/+0 counter (Clockwork Avian's wind-up charge).
+    PlusOnePlusZero,
     /// -0/-2 counter (Spirit Shackle).
     MinusZeroMinusTwo,
     /// Glyph counter (Glyph of Delusion) — the bearer doesn't untap while it
@@ -2278,6 +2280,11 @@ pub enum SelectionRequirement {
     /// `static_str_serde` adapter — the catalog passes a one-time
     /// `.to_string()` at definition time, negligible overhead.
     HasName(String),
+    /// True when the candidate's printed name was originally printed in the
+    /// named expansion (CR 201.3 — Golgothian Sylex's "a name originally
+    /// printed in the Antiquities expansion"). Matched against a static name
+    /// table, so reprints under the same name still count.
+    OriginallyPrintedIn(OriginalSet),
     /// True when the candidate's name matches the name the resolving
     /// source stamped via `Effect::NameCard` (its `named_card` field).
     /// Used by reveal-until-the-named-card effects (Spoils of the Vault):
@@ -3548,6 +3555,46 @@ pub struct EnterMode {
     #[serde(default)]
     pub keywords: Vec<Keyword>,
 }
+
+/// An expansion a card name was *originally* printed in — the reference set
+/// for `SelectionRequirement::OriginallyPrintedIn` (CR 201.3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum OriginalSet {
+    Antiquities,
+}
+
+impl OriginalSet {
+    /// The set's full name list. Reprints share the name, so a matching
+    /// printed name is the whole test.
+    pub fn contains(self, name: &str) -> bool {
+        match self {
+            OriginalSet::Antiquities => ANTIQUITIES_NAMES.binary_search(&name).is_ok(),
+        }
+    }
+}
+
+/// Antiquities' 85 distinct card names, sorted for `binary_search`.
+static ANTIQUITIES_NAMES: [&str; 85] = [
+    "Amulet of Kroog", "Argivian Archaeologist", "Argivian Blacksmith", "Argothian Pixies",
+    "Argothian Treefolk", "Armageddon Clock", "Artifact Blast", "Artifact Possession",
+    "Artifact Ward", "Ashnod's Altar", "Ashnod's Battle Gear", "Ashnod's Transmogrant", "Atog",
+    "Battering Ram", "Bronze Tablet", "Candelabra of Tawnos",
+    "Circle of Protection: Artifacts", "Citanul Druid", "Clay Statue", "Clockwork Avian",
+    "Colossus of Sardia", "Coral Helm", "Crumble", "Cursed Rack", "Damping Field", "Detonate",
+    "Drafna's Restoration", "Dragon Engine", "Dwarven Weaponsmith", "Energy Flux",
+    "Feldon's Cane", "Gaea's Avenger", "Gate to Phyrexia", "Goblin Artisans",
+    "Golgothian Sylex", "Grapeshot Catapult", "Haunting Wind", "Hurkyl's Recall",
+    "Ivory Tower", "Jalum Tome", "Martyrs of Korlis", "Mightstone", "Millstone",
+    "Mishra's Factory", "Mishra's War Machine", "Mishra's Workshop", "Obelisk of Undoing",
+    "Onulet", "Orcish Mechanics", "Ornithopter", "Phyrexian Gremlins", "Power Artifact",
+    "Powerleech", "Priest of Yawgmoth", "Primal Clay", "Rakalite", "Reconstruction",
+    "Reverse Polarity", "Rocket Launcher", "Sage of Lat-Nam", "Shapeshifter", "Shatterstorm",
+    "Staff of Zegon", "Strip Mine", "Su-Chi", "Tablet of Epityr", "Tawnos's Coffin",
+    "Tawnos's Wand", "Tawnos's Weaponry", "Tetravus", "The Rack", "Titania's Song",
+    "Transmute Artifact", "Triskelion", "Urza's Avenger", "Urza's Chalice", "Urza's Mine",
+    "Urza's Miter", "Urza's Power Plant", "Urza's Tower", "Wall of Spears", "Weakstone",
+    "Xenic Poltergeist", "Yawgmoth Demon", "Yotian Soldier",
+];
 
 fn one_u32() -> u32 { 1 }
 
@@ -5691,9 +5738,11 @@ impl CardInstance {
         let plus = self.counter_count(CounterType::PlusOnePlusOne) as i32;
         let minus = self.counter_count(CounterType::MinusOneMinusOne) as i32;
         let minus_one_zero = self.counter_count(CounterType::MinusOneMinusZero) as i32;
+        let plus_one_zero = self.counter_count(CounterType::PlusOnePlusZero) as i32;
         self.definition.base_power() + self.power_bonus + self.perm_power_bonus + plus
             - minus
             - minus_one_zero
+            + plus_one_zero
     }
 
     pub fn toughness(&self) -> i32 {

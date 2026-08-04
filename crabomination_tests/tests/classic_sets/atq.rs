@@ -939,3 +939,219 @@ fn mishras_war_machine_bites_when_you_dont_feed_it() {
     assert_eq!(g.players[0].life, 17);
     assert!(g.battlefield_find(machine).expect("live").tapped);
 }
+
+// ── The last nine (2026-08 wave) ───────────────────────────────────────────
+
+#[test]
+fn clockwork_avian_winds_down_after_attacking() {
+    let mut g = main_phase();
+    let avian = g.add_card_to_hand(0, catalog::clockwork_avian());
+    cast(&mut g, 0, avian, None);
+    assert_eq!(g.computed_permanent(avian).expect("avian").power, 4);
+    g.clear_sickness(avian);
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: avian, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    while g.step != TurnStep::PostCombatMain {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert_eq!(
+        g.battlefield_find(avian).expect("avian").counter_count(CounterType::PlusOnePlusZero),
+        3,
+    );
+}
+
+#[test]
+fn clockwork_avian_rewind_stops_at_four() {
+    let mut g = main_phase();
+    let avian = g.add_card_to_hand(0, catalog::clockwork_avian());
+    cast(&mut g, 0, avian, None);
+    g.battlefield_find_mut(avian).expect("avian").remove_counters(CounterType::PlusOnePlusZero, 3);
+    g.clear_sickness(avian);
+    g.step = TurnStep::Upkeep;
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: avian,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(5),
+        mode: None,
+    })
+    .expect("wind up");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(avian).expect("avian").counter_count(CounterType::PlusOnePlusZero),
+        4,
+        "the cap holds even though X was 5",
+    );
+}
+
+#[test]
+fn clockwork_avian_cant_be_wound_outside_your_upkeep() {
+    let mut g = main_phase();
+    let avian = g.add_card_to_battlefield(0, catalog::clockwork_avian());
+    g.clear_sickness(avian);
+    mana(&mut g, 0);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: avian,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: Some(1),
+            mode: None,
+        })
+        .is_err()
+    );
+}
+
+#[test]
+fn goblin_artisans_counters_your_own_spell_on_tails() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(false)]));
+    let artisans = g.add_card_to_battlefield(0, catalog::goblin_artisans());
+    g.clear_sickness(artisans);
+    let chalice = g.add_card_to_hand(0, catalog::urzas_chalice());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: chalice,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast chalice");
+    activate(&mut g, 0, artisans, Some(Target::Permanent(chalice)));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == chalice));
+}
+
+#[test]
+fn golgothian_sylex_wipes_the_antiquities_board() {
+    let mut g = main_phase();
+    let sylex = g.add_card_to_battlefield(0, catalog::golgothian_sylex());
+    let atog = g.add_card_to_battlefield(1, catalog::atog());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    activate(&mut g, 0, sylex, None);
+    assert!(g.battlefield_find(atog).is_none(), "Antiquities card sacrificed");
+    assert!(g.battlefield_find(sylex).is_none(), "the Sylex eats itself too");
+    assert!(g.battlefield_find(bear).is_some(), "a non-Antiquities card is spared");
+}
+
+#[test]
+fn primal_clay_enters_as_the_chosen_body() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(2)]));
+    let clay = g.add_card_to_hand(0, catalog::primal_clay());
+    cast(&mut g, 0, clay, None);
+    let cp = g.computed_permanent(clay).expect("clay");
+    assert_eq!((cp.power, cp.toughness), (1, 6));
+    assert!(cp.keywords.contains(&Keyword::Defender));
+}
+
+#[test]
+fn tawnoss_coffin_returns_its_prisoner_when_it_untaps() {
+    let mut g = main_phase();
+    let coffin = g.add_card_to_battlefield(0, catalog::tawnoss_coffin());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).expect("bear").add_counters(CounterType::PlusOnePlusOne, 2);
+    activate(&mut g, 0, coffin, Some(Target::Permanent(bear)));
+    assert!(g.battlefield_find(bear).is_none(), "exiled");
+    g.battlefield_find_mut(coffin).expect("coffin").tapped = false;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentUntapped { card_id: coffin }]);
+    drain_stack(&mut g);
+    let back = g.battlefield_find(bear).expect("returned");
+    assert!(back.tapped, "returns tapped");
+    assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 2, "noted counters restored");
+}
+
+#[test]
+fn tetravus_trades_counters_for_fliers_and_back() {
+    let mut g = main_phase();
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Amount(2),
+        DecisionAnswer::Amount(0),
+    ]));
+    let tet = g.add_card_to_hand(0, catalog::tetravus());
+    cast(&mut g, 0, tet, None);
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(tet).expect("tetravus").counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Tetravite").count(),
+        2,
+    );
+    // Second upkeep: reabsorb both tokens. The exile trigger resolves first,
+    // so it takes the leading answer.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Amount(2),
+        DecisionAnswer::Amount(0),
+    ]));
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(tet).expect("tetravus").counter_count(CounterType::PlusOnePlusOne), 3);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Tetravite").count(), 0);
+}
+
+#[test]
+fn transmute_artifact_swaps_down_for_free() {
+    let mut g = main_phase();
+    let chalice = g.add_card_to_battlefield(0, catalog::urzas_chalice()); // {1}
+    let target = g.add_card_to_library(0, catalog::millstone()); // {2}
+    let ta = g.add_card_to_hand(0, catalog::transmute_artifact());
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Cards(vec![target]),
+        DecisionAnswer::Bool(true),
+    ]));
+    cast(&mut g, 0, ta, None);
+    assert!(g.battlefield_find(chalice).is_none(), "the chalice was the cost");
+    assert!(g.battlefield_find(target).is_some(), "paid the one-mana difference");
+}
+
+#[test]
+fn transmute_artifact_bins_the_find_when_the_surcharge_is_declined() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::urzas_chalice()); // {1}
+    let target = g.add_card_to_library(0, catalog::millstone()); // {2}
+    let ta = g.add_card_to_hand(0, catalog::transmute_artifact());
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Cards(vec![target]),
+        DecisionAnswer::Bool(false),
+    ]));
+    cast(&mut g, 0, ta, None);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == target));
+}
+
+#[test]
+fn urzas_avenger_buys_flying_by_shrinking() {
+    let mut g = main_phase();
+    let av = g.add_card_to_battlefield(0, catalog::urzas_avenger());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: av,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: Some(1),
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(av).expect("avenger");
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn xenic_poltergeist_animates_an_artifact_at_its_mana_value() {
+    let mut g = main_phase();
+    let ghost = g.add_card_to_battlefield(0, catalog::xenic_poltergeist());
+    g.clear_sickness(ghost);
+    let stone = g.add_card_to_battlefield(0, catalog::millstone()); // {2}
+    activate(&mut g, 0, ghost, Some(Target::Permanent(stone)));
+    let cp = g.computed_permanent(stone).expect("millstone");
+    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+}

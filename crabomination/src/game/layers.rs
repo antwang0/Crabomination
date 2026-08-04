@@ -39,6 +39,10 @@ pub enum EffectDuration {
     /// turns and expires as the recorded player's next turn begins. Carries
     /// the turn it was installed on so it never expires on its own turn.
     UntilYourNextTurn { player: usize, installed_turn: u32 },
+    /// CR 611.2b — "until your next upkeep": the untap step of the recorded
+    /// player's next turn still sees the effect; it expires as that upkeep
+    /// begins (Xenic Poltergeist).
+    UntilYourNextUpkeep { player: usize, installed_turn: u32 },
     /// Expires when the current combat phase ends (CR 511.2 — "Effects
     /// that last 'until end of combat' expire at the end of the combat
     /// phase"). Cleared as the end-of-combat step ends. If the effect
@@ -431,16 +435,21 @@ fn compute_permanent_pass(
     // *after* a 7b set (CR 613.7c — an animated manland keeps its pumps).
     let base_power = card.definition.base_power();
     let base_toughness = card.definition.base_toughness();
-    // CR 613.7f — +1/+1, -1/-1, and the rarer -0/-1 / -1/-0 counters. The
-    // last two affect only one of power/toughness, so track per-stat deltas.
+    // CR 613.7f — +1/+1, -1/-1, and the rarer -0/-1 / -0/-2 / -1/-0 / +1/+0
+    // counters. The latter affect only one of power/toughness, so track
+    // per-stat deltas.
     let (counter_power_delta, counter_toughness_delta) = {
         let plus = card.counter_count(CounterType::PlusOnePlusOne) as i32;
         let minus = card.counter_count(CounterType::MinusOneMinusOne) as i32;
         let minus_zero_one = card.counter_count(CounterType::MinusZeroMinusOne) as i32;
         let minus_zero_two = card.counter_count(CounterType::MinusZeroMinusTwo) as i32;
         let minus_one_zero = card.counter_count(CounterType::MinusOneMinusZero) as i32;
+        let plus_one_zero = card.counter_count(CounterType::PlusOnePlusZero) as i32;
         let base = plus - minus;
-        (base - minus_one_zero, base - minus_zero_one - 2 * minus_zero_two)
+        (
+            base - minus_one_zero + plus_one_zero,
+            base - minus_zero_one - 2 * minus_zero_two,
+        )
     };
 
     let mut set_pt: Option<(i32, i32)> = None;

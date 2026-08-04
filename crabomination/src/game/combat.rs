@@ -223,6 +223,8 @@ impl GameState {
                         || self.same_team(self.active_player_idx, target_player)
                         || !self.players[target_player].is_alive()
                         || seat_restriction.is_some_and(|only| only != Some(target_player))
+                        // CR 801.3 — only opponents inside the attacker's range.
+                        || !self.player_in_range_of(p, target_player)
                         // "Creatures they control can't attack you this turn"
                         // (Web of Inertia).
                         || self
@@ -240,6 +242,7 @@ impl GameState {
                         || self.same_team(self.active_player_idx, pw.controller)
                         || !self.players[pw.controller].is_alive()
                         || seat_restriction.is_some_and(|only| only != Some(pw.controller))
+                        || !self.player_in_range_of(p, pw.controller)
                     {
                         return Err(GameError::InvalidPlaneswalkerAttackTarget(pw_id));
                     }
@@ -2115,9 +2118,10 @@ impl GameState {
     /// CR 702.15 — does `defender` control a land with the given land type?
     /// Reads printed land subtypes (Forest/Island/…), so dual lands and
     /// nonbasics with the type count.
-    /// CR 802 / 803 — the seats `seat` may legally declare attacks against
-    /// right now. Empty when it isn't `seat`'s combat, and narrowed to one
-    /// entry (or none) by the attack-left / attack-right option.
+    /// CR 802 / 803 / 801.3 — the seats `seat` may legally declare attacks
+    /// against right now. Empty when it isn't `seat`'s combat, and narrowed to
+    /// one entry (or none) by the attack-left / attack-right option; under a
+    /// limited range of influence, only opponents inside `seat`'s range.
     pub fn attackable_players_for(&self, seat: usize) -> Vec<usize> {
         if self.active_player_idx != seat {
             return Vec::new();
@@ -2128,6 +2132,7 @@ impl GameState {
                 self.players[*p].is_alive()
                     && !self.same_team(seat, *p)
                     && restriction.is_none_or(|only| only == Some(*p))
+                    && self.player_in_range_of(seat, *p)
                     && !self.player_cant_be_attacked_at_all(seat, *p)
             })
             .collect()

@@ -2006,6 +2006,10 @@ pub enum Duration {
     EndOfCombat,
     /// Until controller's next untap step.
     UntilYourNextUntap,
+    /// Until controller's next upkeep — one step later than
+    /// `UntilYourNextUntap`, so the affected permanent is still animated as
+    /// its controller untaps (Xenic Poltergeist).
+    UntilYourNextUpkeep,
     /// Until the start of the next turn.
     UntilNextTurn,
     /// CR 611.2c — "for as long as this permanent remains tapped" (Thran
@@ -4426,6 +4430,12 @@ pub enum Effect {
     PutIntoLibraryBeneathTop { what: Selector, count: Value },
     /// Search `who`'s library for a card matching `filter` and move to `to`.
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
+    /// Transmute Artifact — search your library for an artifact card; if its
+    /// mana value is at most the sacrificed artifact's it enters, otherwise
+    /// you may pay the difference in generic mana to bring it in, and it goes
+    /// to the graveyard if you don't. Reads the cast-cost sacrifice's mana
+    /// value (`sacrificed_mana_value`).
+    TransmuteArtifact,
     /// Search several of `who`'s zones at once for a card matching `filter`
     /// and move it to `to` — "search your graveyard, hand, and/or library"
     /// (Dark Supplicant, Delivery Moogle). Candidates pool every listed zone;
@@ -4912,6 +4922,14 @@ pub enum Effect {
     /// Sunforger — search the controller's library for a card matching
     /// `filter`, cast it without paying its mana cost, then shuffle.
     SearchAndCastFree { filter: SelectionRequirement },
+    /// Tawnos's Coffin — exile [what] and every Aura attached to it, stamped
+    /// `exiled_with = source`, keeping the creature's counters noted on the
+    /// exiled object (CR 122.2 otherwise drops them).
+    CoffinExile { what: Selector },
+    /// The return half: put the noted creature back tapped with its noted
+    /// counters and re-attach the Auras exiled with it. Fires off the Coffin's
+    /// leaves-the-battlefield *and* becomes-untapped triggers.
+    CoffinReturn,
     /// Flickerform — exile the source's host and every Aura attached to it,
     /// then at the next end step return the host and re-attach the Auras.
     FlickerHostWithAuras,
@@ -5395,6 +5413,10 @@ pub enum Effect {
     /// of these "creature becomes X" effects).
     LoseAllAbilities { what: Selector, duration: Duration },
     AddCounter    { what: Selector, kind: CounterType, amount: Value },
+    /// "Put up to `amount` `kind` counters on [what]. This ability can't cause
+    /// the total number of `kind` counters on it to be greater than `cap`."
+    /// Clamps per target against its current pool (Clockwork Avian).
+    AddCounterCapped { what: Selector, kind: CounterType, amount: Value, cap: Value },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
     /// CR 603.7e — "When you next cast a creature spell this turn, that
     /// creature enters with N additional counters of `kind`." Registers a
@@ -5688,6 +5710,14 @@ pub enum Effect {
     WeldArtifacts { what: Selector },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
+    /// "You may remove any number of `kind` counters from this. If you do,
+    /// create that many `definition` tokens." The tokens are stamped
+    /// `created_by = source`, so `ExileTokensCreatedBySourceForCounters` can
+    /// trade them back (Tetravus).
+    RemoveCountersToCreateTokens { kind: CounterType, definition: TokenDefinition },
+    /// The mirror: "you may exile any number of tokens created with this. If
+    /// you do, put that many `kind` counters on it" (Tetravus).
+    ExileTokensCreatedBySourceForCounters { kind: CounterType },
     /// Register a `DelayedKind::NextEndStep` exile for every token minted
     /// earlier in this resolution (reads `last_created_tokens`). Chain after
     /// a `CreateToken` inside a `Seq` for "create N transient tokens, exile

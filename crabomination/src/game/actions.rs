@@ -9831,6 +9831,15 @@ impl GameState {
         caster: usize,
         source_card_id: Option<CardId>,
     ) -> Result<(), GameError> {
+        // CR 801.4 — objects and players outside the caster's range of
+        // influence can't be targeted by their spells or abilities.
+        let out_of_range = match target {
+            Target::Player(p) => !self.player_in_range_of(caster, *p),
+            Target::Permanent(c) => !self.object_in_range_of(caster, *c),
+        };
+        if out_of_range {
+            return Err(GameError::InvalidTarget);
+        }
         let cid = match target {
             Target::Player(p) => {
                 if self.player_has_static_shroud(*p)
@@ -11959,6 +11968,12 @@ impl GameState {
         chosen_mode: Option<usize>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+
+        // CR 801.6 — a player can't activate abilities of an object outside
+        // their range of influence.
+        if !self.object_in_range_of(p, card_id) {
+            return Err(GameError::OutOfRange);
+        }
 
         // Consume any "another permanent" cost picks from an
         // `ActivateAbilityChoice` resume up front, so a failure anywhere below
