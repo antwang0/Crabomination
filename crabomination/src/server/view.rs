@@ -2518,6 +2518,18 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         | Effect::MaySacrificeSource { then, .. } => ability_effect_label(then),
         Effect::Learn { .. } => "Learn",
         Effect::Venture => "Venture into the dungeon",
+        Effect::VentureInto { dungeon } => match dungeon.as_str() {
+            "Undercity" => "Venture into Undercity",
+            _ => "Venture into the dungeon",
+        },
+        Effect::TakeInitiative { .. } => "Take the initiative",
+        Effect::WaiveShroudForPlayerThisTurn { .. } => "Waive shroud for a player",
+        Effect::WillOfTheCouncilOnCards { .. } => "Will of the council",
+        Effect::DestroyEachUnlessPaysLife { .. } => "Destroy unless they pay life",
+        Effect::BottomCardToGraveyardThenDeploy { .. } => "Bottom card: mill, maybe deploy",
+        Effect::EachPlayerDestroysChosenFromLeftNeighbor { .. } => {
+            "Each player strips their left neighbour"
+        }
         Effect::Populate { .. } => "Populate",
         Effect::LoseLife { .. } => "Pay life / fetch land",
         Effect::Search { .. } => "Search library",
