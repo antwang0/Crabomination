@@ -268,6 +268,9 @@ pub enum Selector {
     /// Now a card in its owner's graveyard — Rescue from the Underworld
     /// reanimates it alongside its target.
     SacrificedCard,
+    /// The card(s) exiled from a graveyard to pay this activation's cost
+    /// (Necropolis). Empty outside such an activation.
+    CostExiledCards,
 
     /// The chosen target slot (0-indexed) of the spell whose cast
     /// triggered this ability. Resolves against the topmost matching
@@ -3650,6 +3653,9 @@ pub enum Effect {
     Learn   { who: PlayerRef },
     /// Discard `amount` cards. If `random`, chosen randomly; else by `who`.
     Discard { who: Selector, amount: Value, random: bool },
+    /// "…discards a [filter] card at random" (Rag Man). Only cards matching
+    /// `filter` are eligible; nothing is discarded when none do.
+    DiscardMatchingAtRandom { who: PlayerRef, filter: SelectionRequirement },
     /// "`who` exiles `amount` card(s) from their hand" — the player chooses
     /// (auto-decider exiles by hand order). Like `Discard` but routes to
     /// exile instead of the graveyard (Ashiok, Nightmare Muse −3).
@@ -4033,6 +4039,10 @@ pub enum Effect {
     /// imprint-style permanent link with no return rider). Agatha's Soul
     /// Cauldron's {T} ability.
     ExileWithSource { what: Selector },
+    /// "Exile all [filter]. For each permanent exiled this way, its controller
+    /// draws a card" (Martyr's Cry). The draw is per exiled permanent and goes
+    /// to the permanent's controller, not the effect's.
+    ExileEachMatchingThenControllerDraws { filter: SelectionRequirement },
     /// Tempting offer (ability word, CR 207.2c): run `body` for the
     /// controller; each opponent may copy it for themselves, and the
     /// controller re-runs it once per opponent who accepted. Tempt with
@@ -5160,6 +5170,16 @@ pub enum Effect {
     /// turn" (Wall of Dust). Arms `CardInstance.attack_ban`, which the
     /// controller's untap step promotes and that turn's cleanup clears.
     CantAttackNextTurn { what: Selector },
+    /// CR 508.1a — "[creatures] can't attack this turn" (Festival). Arms the
+    /// ban live for the current turn rather than the next one.
+    CantAttackThisTurn { what: Selector },
+    /// "Until end of turn, if you tap a land you control for mana, it produces
+    /// [color] instead of any other type" (Deep Water). The turn-scoped,
+    /// controller-scoped sibling of `StaticEffect::LandsProduceColorInstead`.
+    YourLandsProduceColorThisTurn(crate::mana::Color),
+    /// "Each player may discard up to `max` cards. This deals damage to each
+    /// player equal to `max` minus the number they discarded" (Mind Bomb).
+    EachPlayerMayDiscardUpToThenDamage { max: u32 },
     /// CR 701.3c — "attach target Aura attached to a [type] to another
     /// permanent of that type" (Enchantment Alteration). Moves the *targeted*
     /// Aura rather than the source; the new host must satisfy the Aura's own

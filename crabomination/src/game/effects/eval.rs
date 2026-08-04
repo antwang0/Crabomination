@@ -964,8 +964,10 @@ impl GameState {
                 .resolve_selector(s, ctx)
                 .into_iter()
                 .filter_map(|e| match e {
+                    // Any zone: a graveyard/exile card has a mana value too
+                    // (Necropolis reads the card it exiled as a cost).
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
-                        self.battlefield_find(cid).map(|c| c.definition.cost.cmc() as i32)
+                        self.find_card_anywhere(cid).map(|c| c.definition.cost.cmc() as i32)
                     }
                     EntityRef::Player(_) => None,
                 })

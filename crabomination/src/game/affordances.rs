@@ -361,11 +361,12 @@ impl GameState {
                     // CR 508.1g — the whole pay-gate family is legal only if the
                     // seat can produce the tax (pool + auto-tappable sources).
                     Keyword::CantAttackOrBlockUnlessPay(_)
+                    | Keyword::CantAttackUnlessPay(_)
                     | Keyword::CantAttackOrBlockUnlessPayPerCounter(_)
                     | Keyword::CantAttackOrBlockUnlessPayPerCardInEnchanterHand
                     | Keyword::CantAttackOrBlockUnlessPayPerPermanent(_) => self.could_pay_generic(
                         seat,
-                        self.attack_block_keyword_tax(c.id, &kws),
+                        self.attack_block_keyword_tax(c.id, &kws, true),
                     ),
                     // CR 508.1g — Hollow Warrior needs a spare untapped match
                     // that isn't the attacker itself.

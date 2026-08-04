@@ -2121,6 +2121,10 @@ pub enum StaticEffect {
     /// symmetric lock that also binds the source's controller (City in a
     /// Bottle).
     PlayersCantPlayMatching { filter: SelectionRequirement },
+    /// CR 614.13 — "Lands can't enter the battlefield" (Worms of the Earth).
+    /// A replacement that removes the land from the event entirely, so it
+    /// stops effects that put lands in without playing them too.
+    LandsCantEnterTheBattlefield,
     /// Circu, Dimir Lobotomist — the controller's opponents can't cast spells
     /// sharing a name with any card exiled with the source (`exiled_with`).
     /// The broad sibling of `OpponentsCantCastNamed`, which reads one name.

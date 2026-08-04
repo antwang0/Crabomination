@@ -236,6 +236,9 @@ impl Effect {
         match self {
             Effect::AbandonThisScheme | Effect::GameIsADraw
             | Effect::ExileCostSacrificedBatch
+            | Effect::ExileEachMatchingThenControllerDraws { .. }
+            | Effect::YourLandsProduceColorThisTurn(_)
+            | Effect::EachPlayerMayDiscardUpToThenDamage { .. }
             | Effect::CoffinReturn
             | Effect::TransmuteArtifact
             | Effect::ExileTokensCreatedBySourceForCounters { .. }
@@ -257,6 +260,7 @@ impl Effect {
             }
             Effect::Ante { what }
             | Effect::CantAttackNextTurn { what }
+            | Effect::CantAttackThisTurn { what }
             | Effect::ReplaceTargetLandManaWithColorless { what }
             | Effect::PreventTargetingDamageThisTurn { what } => sel_has_target(what),
             Effect::NameCardRevealRandomDiscardNamed { who, .. } => player_has_target(who),
@@ -806,6 +810,7 @@ impl Effect {
                 value_has_target(amount) || value_has_target(take)
             }
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
+            Effect::DiscardMatchingAtRandom { who, .. } => player_has_target(who),
             Effect::ExileFromHand { who, amount } => sel_has_target(who) || value_has_target(amount),
             Effect::CastUpToNFromOpponentsExile { count } => value_has_target(count),
             Effect::DiscardAnyNumber { who } => sel_has_target(who),

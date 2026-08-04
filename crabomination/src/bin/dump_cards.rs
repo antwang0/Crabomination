@@ -200,10 +200,14 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackOrBlockUnlessHandSizeAtMost(_)
         | Keyword::CantAttackOrBlockUnlessDelirium
         | Keyword::CantAttackOrBlockUnlessPay(_)
+        | Keyword::CantAttackUnlessPay(_)
+        | Keyword::DoesntUntapIfAttackedLastTurn
+        | Keyword::CantBeTargetedBySpellsUnlessAttackedOrBlocked
         | Keyword::CantAttackOrBlockUnlessPayPerCounter(_)
         | Keyword::CantAttackOrBlockUnlessPayPerCardInEnchanterHand
         | Keyword::CantAttackOrBlockUnlessPayPerPermanent(_)
         | Keyword::AttackBlockCostTapAnother(_)
+        | Keyword::AttackCostSacrifice(_, _)
         | Keyword::LivingMetal
         | Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn
         | Keyword::CantAttackOrBlockUnlessDescend(_)

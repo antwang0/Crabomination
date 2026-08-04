@@ -295,6 +295,8 @@ fn ward_suffix(cost: &WardCost) -> String {
         ReturnMatchingToHand(_) => "rtn".into(),
         RemoveCounterFromPermanent => "ctr-".into(),
         ManaCostOfAttached => "MC".into(),
+        ManaOrLife(c, n) => format!("{}/{n}♥", c.cmc()),
+        SacrificeAttachedHost => "sacE".into(),
         GenericSourcePower => "P".into(),
         GenericXFromCost => "X".into(),
         LifeSourcePower => "P♥".into(),

@@ -372,6 +372,8 @@ pub enum CounterType {
     MinusOneMinusZero,
     /// +1/+0 counter (Clockwork Avian's wind-up charge).
     PlusOnePlusZero,
+    /// +0/+1 counter (Living Armor, Necropolis).
+    PlusZeroPlusOne,
     /// -0/-2 counter (Spirit Shackle).
     MinusZeroMinusTwo,
     /// Glyph counter (Glyph of Delusion) — the bearer doesn't untap while it
@@ -735,6 +737,13 @@ pub enum WardCost {
     /// "…unless you pay its mana cost" — the printed cost of the permanent the
     /// source is attached to (Essence Leak).
     ManaCostOfAttached,
+    /// "…unless that player pays {cost} or N life" — a two-way menu (Erosion).
+    /// Auto-payment prefers the mana half and falls back to the life half.
+    ManaOrLife(crate::mana::ManaCost, u32),
+    /// "…unless they sacrifice that [permanent]" — the permanent the source
+    /// Aura is attached to, specifically (Curse Artifact). Unpayable once the
+    /// Aura has come unattached.
+    SacrificeAttachedHost,
 }
 
 impl WardCost {
@@ -1286,6 +1295,17 @@ pub enum Keyword {
     /// CR 508.1a restriction — "This creature can't attack if defending player
     /// controls an untapped land" (Branded Brawlers).
     CantAttackIfDefenderHasUntappedLand,
+    /// CR 508.1g cost — "This creature can't attack unless its controller pays
+    /// {N}" (Brainwash). The attack-only sibling of
+    /// `CantAttackOrBlockUnlessPay`; paid out of the same declare-attackers
+    /// pool as the Propaganda tax.
+    CantAttackUnlessPay(u32),
+    /// CR 502.3 — "This doesn't untap during its controller's untap step if it
+    /// attacked during their last turn" (Goblin Rock Sled, Tangle Kelp).
+    DoesntUntapIfAttackedLastTurn,
+    /// CR 115.6 — "This creature can't be the target of spells unless it
+    /// attacked or blocked this turn" (Lurker). Abilities may still target it.
+    CantBeTargetedBySpellsUnlessAttackedOrBlocked,
     /// CR 508.1a restriction — "This creature can't attack if it attacked
     /// during your last turn" (Giant Turtle). Reads the bearer's
     /// `attacked_last_turn` roll-over flag.
@@ -1320,6 +1340,10 @@ pub enum Keyword {
     /// are declared (Floodtide Serpent); enforced in `declare_attackers`,
     /// which picks and bounces one matching permanent per such attacker.
     AttackCostBounce(Box<SelectionRequirement>),
+    /// CR 508.1g cost — "This creature can't attack unless you sacrifice N
+    /// [filter]" (Leviathan). Paid as attackers are declared; the declaration
+    /// is rejected when the pool is short.
+    AttackCostSacrifice(Box<SelectionRequirement>, u32),
     /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
     /// unless you have N or fewer cards in hand" (Hazoret the Fervent, the
     /// Amonkhet Gods). Enforced in `declare_attackers` / blocker legality
@@ -4063,6 +4087,9 @@ pub enum DynamicPt {
     },
     /// Power = toughness = the controller's life total (Serra Avatar).
     ControllerLife,
+    /// `inner` during the controller's turn, `base_p`/`base_t` on every other
+    /// turn (Angry Mob).
+    OnlyDuringYourTurn { inner: Box<DynamicPt>, base_p: i32, base_t: i32 },
     /// `base_p`/`base_t` plus one for each untapped permanent the controller's
     /// *opponents* control (Copperhoof Vorrac).
     BasePlusOpponentsUntappedPermanents { base_p: i32, base_t: i32 },
@@ -5781,10 +5808,12 @@ impl CardInstance {
         let minus = self.counter_count(CounterType::MinusOneMinusOne) as i32;
         let minus_zero_one = self.counter_count(CounterType::MinusZeroMinusOne) as i32;
         let minus_zero_two = self.counter_count(CounterType::MinusZeroMinusTwo) as i32;
+        let plus_zero_one = self.counter_count(CounterType::PlusZeroPlusOne) as i32;
         self.definition.base_toughness() + self.toughness_bonus + self.perm_toughness_bonus + plus
             - minus
             - minus_zero_one
             - 2 * minus_zero_two
+            + plus_zero_one
     }
 
     pub fn counter_count(&self, ct: CounterType) -> u32 {

@@ -6742,6 +6742,56 @@ impl GameState {
                 Ok(())
             }
 
+            // Rag Man — "discards a [filter] card at random". Only matching
+            // cards are eligible, so an opponent holding no creature loses
+            // nothing.
+            Effect::DiscardMatchingAtRandom { who, filter } => {
+                use rand::seq::IndexedRandom;
+                for p in self.resolve_players(who, ctx) {
+                    if !self.same_team(p, ctx.controller)
+                        && self.player_cant_be_made_to_discard(p)
+                    {
+                        continue;
+                    }
+                    let pool: Vec<crate::card::CardId> = self.players[p]
+                        .hand
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                        .map(|c| c.id)
+                        .collect();
+                    if let Some(&cid) = pool.choose(&mut rand::rng()) {
+                        self.discard_card(p, cid, events);
+                    }
+                }
+                Ok(())
+            }
+
+            // Martyr's Cry — exile every match, then pay each *controller* a
+            // card for each of theirs that left.
+            Effect::ExileEachMatchingThenControllerDraws { filter } => {
+                let victims: Vec<(crate::card::CardId, usize)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, c.controller))
+                    .map(|c| (c.id, c.controller))
+                    .collect();
+                let mut per_seat = vec![0usize; self.players.len()];
+                for (id, seat) in victims {
+                    if self.battlefield_find(id).is_none() {
+                        continue;
+                    }
+                    self.remove_from_battlefield_to_exile(id);
+                    events.push(GameEvent::PermanentExiled { card_id: id });
+                    per_seat[seat] += 1;
+                }
+                for (seat, n) in per_seat.into_iter().enumerate() {
+                    for _ in 0..n {
+                        self.draw_one(seat, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileFromHand { who, amount } => {
                 // Player exiles `amount` cards from their hand. Auto-picks by
                 // hand order (a wants_ui client could surface a picker; the
@@ -8165,6 +8215,60 @@ impl GameState {
                 Ok(())
             }
 
+            // Festival — the ban is live for the turn it resolves in.
+            Effect::CantAttackThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.attack_ban = crate::card::AttackBan::Active;
+                    }
+                }
+                Ok(())
+            }
+
+            // Deep Water — every land this player taps for mana this turn
+            // produces the named colour instead.
+            Effect::YourLandsProduceColorThisTurn(color) => {
+                self.players[ctx.controller].lands_produce_color_this_turn = Some(*color);
+                Ok(())
+            }
+
+            // Mind Bomb — each player trades cards for damage.
+            Effect::EachPlayerMayDiscardUpToThenDamage { max } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let source = ctx.source.unwrap_or(CardId(0));
+                for p in 0..self.players.len() {
+                    let hand: Vec<(CardId, String)> = self.players[p]
+                        .hand
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let cap = (*max as usize).min(hand.len());
+                    let picked = if cap == 0 {
+                        vec![]
+                    } else {
+                        match self.decider.decide(&Decision::ChooseCards {
+                            source,
+                            prompt: format!("Discard up to {max} cards to prevent that much damage?"),
+                            candidates: hand,
+                            min: 0,
+                            max: cap as u32,
+                        }) {
+                            DecisionAnswer::Cards(ids) => ids,
+                            _ => vec![],
+                        }
+                    };
+                    for cid in &picked {
+                        self.discard_card(p, *cid, events);
+                    }
+                    let dmg = (*max as usize).saturating_sub(picked.len()) as u32;
+                    if dmg > 0 {
+                        self.deal_damage_to_from(EntityRef::Player(p), dmg, ctx.source, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CantAttackNextTurn { what } => {
                 // CR 508.1a — arm the ban; the bearer's untap step makes it
                 // live for exactly that turn (Wall of Dust).
@@ -8683,12 +8787,19 @@ impl GameState {
                     .source
                     .and_then(|s| self.battlefield_find(s))
                     .is_some_and(|c| c.definition.is_land())
-                    && let Some(color) = self.battlefield.iter().find_map(|c| {
-                        c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
-                            crate::effect::StaticEffect::LandsProduceColorInstead(col) => Some(col),
-                            _ => None,
+                    && let Some(color) = self
+                        .battlefield
+                        .iter()
+                        .find_map(|c| {
+                            c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                                crate::effect::StaticEffect::LandsProduceColorInstead(col) => {
+                                    Some(col)
+                                }
+                                _ => None,
+                            })
                         })
-                    })
+                        // Deep Water — the turn-scoped, controller-scoped twin.
+                        .or(self.players[p].lands_produce_color_this_turn)
                 {
                     add_one(self, p, color);
                     events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
@@ -29497,6 +29608,9 @@ impl GameState {
                     }
                 })
                 .collect(),
+            Selector::CostExiledCards => {
+                self.cost_exiled_cards.iter().map(|&cid| EntityRef::Card(cid)).collect()
+            }
             Selector::LastDamagerOf(inner) => self
                 .resolve_selector(inner, ctx)
                 .into_iter()
@@ -31224,6 +31338,37 @@ impl GameState {
                         match mc {
                             None => true,
                             Some(mc) => self.pay_mana_as(payer, &mc),
+                        }
+                    }
+                    // Erosion — "{1} or 1 life"; take the mana half when it's
+                    // available, else the life half.
+                    WardCost::ManaOrLife(mc, life) => {
+                        let saved_priority = self.priority.player_with_priority;
+                        self.priority.player_with_priority = payer;
+                        let paid_mana = self.try_pay_with_auto_tap(payer, mc).is_ok();
+                        self.priority.player_with_priority = saved_priority;
+                        if paid_mana {
+                            true
+                        } else if self.effective_life(payer) >= *life as i32 {
+                            self.pay_life_cost(payer, *life);
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    // Curse Artifact — sacrifice the permanent this Aura is on.
+                    WardCost::SacrificeAttachedHost => {
+                        let host = ctx
+                            .source
+                            .and_then(|sid| self.battlefield_find(sid))
+                            .and_then(|c| c.attached_to)
+                            .filter(|h| self.battlefield_find(*h).is_some());
+                        match host {
+                            Some(h) => {
+                                self.sacrifice_one(h, payer, events);
+                                true
+                            }
+                            None => false,
                         }
                     }
                     WardCost::Life(n) => {

@@ -519,6 +519,11 @@ pub struct GameState {
     /// Card id of the permanent sacrificed for the current cost/resolution —
     /// read by `Selector::SacrificedCard` (Rescue from the Underworld).
     pub(crate) sacrificed_card: Option<CardId>,
+    /// Cards exiled from a graveyard to pay the current activation's
+    /// `exile_other_filter` cost — read by `Selector::CostExiledCards`
+    /// (Necropolis's "the exiled card's mana value").
+    #[serde(default)]
+    pub(crate) cost_exiled_cards: Vec<CardId>,
     /// Transient: whether the last card discarded during the current
     /// resolution was multicolored (Stormscale Anarch). Stamped in
     /// `discard_card`.
@@ -1807,6 +1812,7 @@ impl Clone for GameState {
             sacrificed_was_vehicle: self.sacrificed_was_vehicle,
             sacrificed_colors: self.sacrificed_colors.clone(),
             sacrificed_card: self.sacrificed_card,
+            cost_exiled_cards: self.cost_exiled_cards.clone(),
             last_discarded_was_multicolored: self.last_discarded_was_multicolored,
             last_discarded_colors: self.last_discarded_colors.clone(),
             last_discarded_card_types: self.last_discarded_card_types,
@@ -2113,6 +2119,7 @@ impl GameState {
             sacrificed_was_vehicle: None,
             sacrificed_colors: None,
             sacrificed_card: None,
+            cost_exiled_cards: Vec::new(),
             last_discarded_was_multicolored: None,
             last_discarded_colors: Vec::new(),
             last_discarded_card_types: 0,
@@ -8653,6 +8660,20 @@ impl GameState {
             .sum();
         for card in &self.battlefield {
             let Some(formula) = card.definition.dynamic_pt.clone() else { continue };
+            // Angry Mob — the board-reading formula applies only on its
+            // controller's turn; every other turn it's the printed base.
+            let mut off_turn_base = None;
+            let formula = match formula {
+                crate::card::DynamicPt::OnlyDuringYourTurn { inner, base_p, base_t } => {
+                    if self.active_player_idx == card.controller {
+                        *inner
+                    } else {
+                        off_turn_base = Some((base_p, base_t));
+                        *inner
+                    }
+                }
+                other => other,
+            };
             let (power, toughness) = match formula {
                 crate::card::DynamicPt::DistinctTypesInAllGraveyards => {
                     (goyf_n, goyf_n + 1)
@@ -9140,7 +9161,12 @@ impl GameState {
                         .unwrap_or(0);
                     (base_p - hi, base_t - hi)
                 }
+                // Unwrapped above; a doubly-wrapped formula is meaningless.
+                crate::card::DynamicPt::OnlyDuringYourTurn { base_p, base_t, .. } => {
+                    (base_p, base_t)
+                }
             };
+            let (power, toughness) = off_turn_base.unwrap_or((power, toughness));
             all_effects.push(ContinuousEffect {
                 timestamp: card.object_timestamp(),
                 source: card.id,
@@ -10790,7 +10816,7 @@ impl GameState {
         // CR 508.1g — the whole "unless its controller pays {N}" family (flat,
         // per-counter, per-enchanter-hand-card, per-permanent) is legal only if
         // the seat can actually produce the tax.
-        let tax = self.attack_block_keyword_tax(blocker.id, &blocker_cp.keywords);
+        let tax = self.attack_block_keyword_tax(blocker.id, &blocker_cp.keywords, false);
         if tax > 0 && !self.could_pay_generic(owner, tax) {
             return false;
         }
@@ -19149,6 +19175,9 @@ fn static_effect_to_effects(
             | StaticEffect::OpponentsCantCastNamed
             | StaticEffect::OpponentsCantCastMatching { .. }
             | StaticEffect::PlayersCantPlayMatching { .. }
+            // LandsCantEnterTheBattlefield — an ETB replacement checked on the
+            // battlefield-entry funnel; no layer effect.
+            | StaticEffect::LandsCantEnterTheBattlefield
             | StaticEffect::OpponentsCantCastNamesExiledWithSource
             // CreatureSpellsMayPayExtraForCounters — an additional-cost offer
             // read at cast time; no continuous-layer effect.

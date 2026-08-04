@@ -819,7 +819,7 @@ impl GameState {
         for atk in &attacks {
             {
                 total_tax += self
-                    .attack_block_keyword_tax(atk.attacker, computed_kw(atk.attacker));
+                    .attack_block_keyword_tax(atk.attacker, computed_kw(atk.attacker), true);
             }
         }
         if total_tax > 0 {
@@ -871,6 +871,46 @@ impl GameState {
                     &ctx,
                     &mut events,
                 );
+            }
+            self.dispatch_triggers_for_events(&events);
+        }
+
+        // CR 508.1g — Leviathan's attack cost: sacrifice N matching permanents
+        // per such attacker. The pool is shared, so two Leviathans need four
+        // Islands.
+        {
+            let mut spent: Vec<CardId> = Vec::new();
+            for atk in &attacks {
+                let costs: Vec<(crate::card::SelectionRequirement, u32)> =
+                    computed_kw(atk.attacker)
+                        .iter()
+                        .filter_map(|k| match k {
+                            Keyword::AttackCostSacrifice(f, n) => Some(((**f).clone(), *n)),
+                            _ => None,
+                        })
+                        .collect();
+                for (f, n) in costs {
+                    for _ in 0..n {
+                        let pick = self.battlefield.iter().find(|c| {
+                            c.controller == p
+                                && !spent.contains(&c.id)
+                                && self.evaluate_requirement_static(
+                                    &f,
+                                    &crate::game::types::Target::Permanent(c.id),
+                                    p,
+                                    Some(atk.attacker),
+                                )
+                        });
+                        match pick {
+                            Some(c) => spent.push(c.id),
+                            None => return Err(GameError::CannotAttack(atk.attacker)),
+                        }
+                    }
+                }
+            }
+            let mut events = Vec::new();
+            for id in spent {
+                self.sacrifice_one(id, p, &mut events);
             }
             self.dispatch_triggers_for_events(&events);
         }
@@ -1647,7 +1687,7 @@ impl GameState {
                     continue;
                 };
                 *owed.entry(seat).or_default() +=
-                    self.attack_block_keyword_tax(blocker_id, kws_of(blocker_id));
+                    self.attack_block_keyword_tax(blocker_id, kws_of(blocker_id), false);
             }
             for (seat, amount) in owed {
                 let tax = crate::mana::cost(&[crate::mana::generic(amount)]);
@@ -3830,11 +3870,18 @@ impl GameState {
     /// CR 508.1a / 509.1a — the "can't attack or block unless its controller
     /// pays {N}" tax carried by `id`'s own computed keywords. Shared by the
     /// declare-attackers and declare-blockers payment loops.
-    pub(crate) fn attack_block_keyword_tax(&self, id: CardId, keywords: &[Keyword]) -> u32 {
+    pub(crate) fn attack_block_keyword_tax(
+        &self,
+        id: CardId,
+        keywords: &[Keyword],
+        for_attack: bool,
+    ) -> u32 {
         keywords
             .iter()
             .map(|k| match k {
                 Keyword::CantAttackOrBlockUnlessPay(n) => *n,
+                // Brainwash — attack-only, so it's excluded at the block site.
+                Keyword::CantAttackUnlessPay(n) if for_attack => *n,
                 // Myr Prototype — the tax is its own counter count.
                 Keyword::CantAttackOrBlockUnlessPayPerCounter(kind) => {
                     self.battlefield_find(id).map(|c| c.counter_count(*kind)).unwrap_or(0)

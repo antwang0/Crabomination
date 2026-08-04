@@ -140,9 +140,9 @@ pub fn init_counter_coin_assets(
 
 fn material_for(kind: CounterType, assets: &CounterCoinAssets) -> Handle<StandardMaterial> {
     match kind {
-        CounterType::PlusOnePlusOne | CounterType::PlusOnePlusZero => {
-            assets.plus_one_plus_one.clone()
-        }
+        CounterType::PlusOnePlusOne
+        | CounterType::PlusOnePlusZero
+        | CounterType::PlusZeroPlusOne => assets.plus_one_plus_one.clone(),
         CounterType::MinusOneMinusOne => assets.minus_one_minus_one.clone(),
         CounterType::Loyalty => assets.loyalty.clone(),
         CounterType::Charge => assets.charge.clone(),
@@ -336,6 +336,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::MinusZeroMinusOne => "-0/-1",
         CounterType::MinusOneMinusZero => "-1/-0",
         CounterType::PlusOnePlusZero => "+1/+0",
+        CounterType::PlusZeroPlusOne => "+0/+1",
         CounterType::MinusZeroMinusTwo => "-0/-2",
         CounterType::Glyph => "Glyph",
         CounterType::Sleep => "Sleep",

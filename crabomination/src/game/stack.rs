@@ -2204,6 +2204,10 @@ impl GameState {
                 cp.keywords.iter().any(|k| {
                     matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
                         if card.counter_count(*kind) > 0)
+                        || (matches!(
+                            k,
+                            crate::card::Keyword::DoesntUntapIfAttackedLastTurn
+                        ) && card.attacked_own_turn)
                 })
             })
             || card
@@ -2593,6 +2597,19 @@ impl GameState {
             })
             .map(|c| c.id)
             .collect();
+        // CR 502.3 — "doesn't untap … if it attacked during your last turn",
+        // read off the computed keywords so an Aura's grant counts (Tangle
+        // Kelp).
+        let attack_locked: Vec<crate::card::CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                self.computed_permanent(c.id).is_some_and(|cp| {
+                    cp.keywords.contains(&crate::card::Keyword::DoesntUntapIfAttackedLastTurn)
+                })
+            })
+            .map(|c| c.id)
+            .collect();
         // Track which permanents actually flip tapped→untapped so we can
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
@@ -2625,6 +2642,16 @@ impl GameState {
                 // Entrancing Lyre — a lock source keeps itself tapped while it
                 // still locks a creature.
                 if card.tapped && lock_sources.contains(&card.id) {
+                    if active {
+                        card.summoning_sick = false;
+                    }
+                    continue;
+                }
+                // Goblin Rock Sled / Tangle Kelp — "doesn't untap … if it
+                // attacked during your last turn". `attacked_own_turn` still
+                // holds the previous own-turn attack; the roll-over into
+                // `attacked_last_turn` happens after this loop.
+                if card.attacked_own_turn && attack_locked.contains(&card.id) {
                     if active {
                         card.summoning_sick = false;
                     }
@@ -2933,6 +2960,10 @@ impl GameState {
         // Forbidding Spirit's "until your next turn" attack tax expires when
         // the taxed player's own turn begins.
         self.players[self.active_player_idx].attack_tax_until_your_turn = 0;
+        // Deep Water's colour override lasts only for the turn it was made in.
+        for pl in &mut self.players {
+            pl.lands_produce_color_this_turn = None;
+        }
         // CR 702.108 — fire "becomes untapped" (Inspired) triggers for every
         // permanent that flipped tapped→untapped this step.
         if !untapped_now.is_empty() {

@@ -40,7 +40,10 @@ pub(crate) fn ward_cost_is_trivial(cost: &crate::card::WardCost) -> bool {
         WardCost::SacrificePermanents(n) => *n == 0,
         // Dynamic — the source's power can change before payment.
         WardCost::GenericSourcePower | WardCost::LifeSourcePower => false,
-        WardCost::RemoveCounterFromPermanent | WardCost::ManaCostOfAttached => false,
+        WardCost::RemoveCounterFromPermanent
+        | WardCost::ManaCostOfAttached
+        | WardCost::ManaOrLife(_, _)
+        | WardCost::SacrificeAttachedHost => false,
     }
 }
 
@@ -5980,6 +5983,16 @@ impl GameState {
                     self.players[p].hand.push(card);
                     return Err(GameError::TargetHasProtection(cid));
                 }
+                // Lurker — "can't be the target of spells unless it attacked
+                // or blocked this turn". Abilities still reach it.
+                if matches!(kw, Keyword::CantBeTargetedBySpellsUnlessAttackedOrBlocked)
+                    && self
+                        .battlefield_find(cid)
+                        .is_some_and(|c| !c.attacked_this_turn && !c.blocked_this_turn)
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
                 // "Can't be the target of Aura spells" (Bartel Runeaxe,
                 // Tetsuo Umezawa) — narrower than protection: only Auras bounce.
                 if matches!(kw, Keyword::CantBeTargetedByAuras)
@@ -9932,6 +9945,18 @@ impl GameState {
         // Ward creature — the Ward trigger fires and counters the spell unless
         // the caster pays the Ward cost at resolution time.
         Ok(())
+    }
+
+    /// True while any player controls a `LandsCantEnterTheBattlefield` source
+    /// (Worms of the Earth).
+    pub(crate) fn lands_cant_enter_the_battlefield(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::LandsCantEnterTheBattlefield))
+        })
     }
 
     /// True while any player controls a `GraveyardCardsUntargetable` source
@@ -14323,9 +14348,11 @@ impl GameState {
         // `{2}{R}{W}, Exile a card from your graveyard: +1/+1 EOT`
         // (count 1), and Grim Lavamancer's `{R}, {T}, Exile two cards
         // from your graveyard` (count 2).
+        self.cost_exiled_cards.clear();
         for other_cid in exile_other_picks {
             if let Some(card) = Self::take_card(&mut self.players[p].graveyard, other_cid) {
                 self.exile.push(card);
+                self.cost_exiled_cards.push(other_cid);
                 self.players[p].cards_exiled_this_turn = self.players[p]
                     .cards_exiled_this_turn
                     .saturating_add(1);

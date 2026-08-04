@@ -1620,6 +1620,14 @@ impl GameState {
         {
             return;
         }
+        // Worms of the Earth — "lands can't enter the battlefield". The card
+        // stays where it is.
+        if matches!(dest, ZoneDest::Battlefield { .. })
+            && self.find_card_anywhere(cid).is_some_and(|c| c.definition.is_land())
+            && self.lands_cant_enter_the_battlefield()
+        {
+            return;
+        }
         // Grafdigger's Cage / Soulless Jailer — locked cards in graveyards
         // and libraries can't enter the battlefield.
         if matches!(dest, ZoneDest::Battlefield { .. }) {

@@ -710,6 +710,10 @@ pub struct Player {
     /// untap step runs; non-land permanents untap normally. `#[serde(default)]`.
     #[serde(default)]
     pub lands_dont_untap_next_untap: u32,
+    /// Deep Water — while set, every land this player taps for mana produces
+    /// this colour instead of its own. Cleared at end of turn.
+    #[serde(default)]
+    pub lands_produce_color_this_turn: Option<crate::mana::Color>,
     /// CR 502.3 sibling of `lands_dont_untap_next_untap` for creatures
     /// (Blinding Beam's "creatures don't untap during target player's next
     /// untap step"). Decremented and applied in `do_untap`.
@@ -1015,6 +1019,7 @@ impl Player {
             next_draw_replacements: Vec::new(),
             skip_next_combat: 0,
             lands_dont_untap_next_untap: 0,
+            lands_produce_color_this_turn: None,
             creatures_dont_untap_next_untap: 0,
             firebending_kept_red: 0,
             extra_turns: 0,
