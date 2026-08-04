@@ -936,6 +936,9 @@ pub enum Value {
     /// source). Backs "as long as three or more cards are exiled with this
     /// creature" static thresholds (Veteran Survivor).
     CardsExiledWithSourceCount,
+    /// Half (rounded down) the damage dealt this turn by the highest-dealing
+    /// sorcery spell `who` cast this turn. Backdraft; 0 if they cast none.
+    HalfGreatestSorceryDamageThisTurn { who: PlayerRef },
     /// Number of distinct power values among creatures the controller
     /// controls. Backs Golden Ratio's "draw a card for each different
     /// power among creatures you control."
@@ -1360,6 +1363,10 @@ pub enum Predicate {
     /// intervening-'if' half of "…if [this] is still on the battlefield"
     /// (Shirei, Shizo's Caretaker's delayed return).
     SourceOnBattlefield,
+    /// The source is blocking a creature that at least one *other* blocker
+    /// matching `filter` is also blocking, and every blocker on it matches
+    /// `filter` (Wall of Caltrops' banding intervening-'if').
+    SourceCoBlockersAllMatch { filter: crate::card::SelectionRequirement },
     /// CR 701.60 — the source permanent is suspected. Backed by
     /// `CardInstance.suspected`. Powers Repeat Offender's "if this creature
     /// is suspected, … otherwise, suspect it."
@@ -6764,6 +6771,16 @@ pub enum Effect {
     /// CR 614 — "The next time `what` would deal combat damage this turn, it
     /// deals that damage to its controller instead" (Goblin Psychopath).
     RedirectNextCombatDamageToController { what: Selector },
+
+    /// CR 614.9 — "All damage that would be dealt this turn by target spell is
+    /// dealt to that spell's controller instead" (Reverberation). Keyed on the
+    /// spell's card id, so it keeps redirecting after the spell has resolved.
+    RedirectSpellDamageToItsController { what: Selector },
+
+    /// Exile the resolving source with its `CardDefinition.exile_countdown`
+    /// counters on it (All Hallow's Eve). The upkeep tick and the payoff live
+    /// on the definition; this only starts the fuse.
+    ExileSelfWithCountdown,
 
     /// CR 702.18 — "You gain shroud until end of turn" (Gilded Light). No
     /// player, `who` included, may target them for the rest of the turn.

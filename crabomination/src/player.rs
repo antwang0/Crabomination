@@ -150,6 +150,10 @@ pub struct Player {
     /// `TurnStarted`. Powers Damping Sphere's "second-and-onward spells
     /// cost {1} more" static.
     pub spells_cast_this_turn: u32,
+    /// Sorcery spells cast this turn — Backdraft's "a player who cast one or
+    /// more sorcery spells this turn". Reset at Cleanup.
+    #[serde(default)]
+    pub sorceries_cast_this_turn: u32,
     /// Per-name lifetime cast counter — "you've cast another spell named X
     /// this game" (Approach of the Second Sun). Bumped in `finalize_cast`
     /// with the cast card's printed name; never reset. Defaults empty for
@@ -888,6 +892,7 @@ impl Player {
             extra_loyalty_activations: 0,
             activated_loyalty_this_turn: false,
             spells_cast_this_turn: 0,
+            sorceries_cast_this_turn: 0,
             spells_cast_by_name_this_game: std::collections::HashMap::new(),
             spells_cast_this_game_turn: 0,
             noncreature_spells_cast_this_game_turn: 0,

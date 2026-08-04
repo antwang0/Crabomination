@@ -792,6 +792,19 @@ impl GameState {
         {
             return;
         }
+        // CR 614.9 — Reverberation: everything the targeted spell would deal
+        // this turn hits that spell's controller instead.
+        if !self.in_damage_redirect
+            && let Some(src) = source
+            && let Some((_, to)) =
+                self.spell_damage_to_controller.iter().find(|(s, _)| *s == src).copied()
+            && ent != EntityRef::Player(to)
+        {
+            self.in_damage_redirect = true;
+            self.deal_damage_to_from(EntityRef::Player(to), amount, source, events);
+            self.in_damage_redirect = false;
+            return;
+        }
         // CR 614.9 — Harsh Judgment: an I/S spell of the chosen colour burns
         // its own controller instead of the enchantment's controller.
         if !self.in_damage_redirect
@@ -950,6 +963,17 @@ impl GameState {
         let amount = self.apply_prevention_shields(ent, amount, source, events);
         if amount == 0 {
             return;
+        }
+        // Backdraft — tally the damage each sorcery spell deals as it resolves.
+        let sorcery_caster = self.resolving_source.as_ref().and_then(|(rid, caster, _, types)| {
+            (Some(*rid) == source && types.contains(&crate::card::CardType::Sorcery))
+                .then_some((*rid, *caster))
+        });
+        if let Some((src, caster)) = sorcery_caster {
+            match self.sorcery_damage_this_turn.iter_mut().find(|(s, _, _)| *s == src) {
+                Some(entry) => entry.2 += amount,
+                None => self.sorcery_damage_this_turn.push((src, caster, amount)),
+            }
         }
         // CR 702.90b — damage dealt to a player by a source with infect
         // doesn't cause life loss; it gives the player poison counters

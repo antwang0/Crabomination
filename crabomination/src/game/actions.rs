@@ -7398,6 +7398,11 @@ impl GameState {
         self.last_cast_spell_colors = card.definition.printed_colors();
         self.players[p].spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_game_turn += 1;
+        if card.definition.card_types.contains(&crate::card::CardType::Sorcery) {
+            self.players[p].sorceries_cast_this_turn += 1;
+        }
+        // Arboria — "cast a spell … during their last turn".
+        self.note_acted_on_own_turn(p);
         for (seat, pl) in self.players.iter_mut().enumerate() {
             if seat != p {
                 pl.opponent_cast_spell_since_your_turn = true;

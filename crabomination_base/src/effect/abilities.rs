@@ -2304,6 +2304,20 @@ pub enum StaticEffect {
     /// instead" (Possessed Portal). Global draw replacement consulted in
     /// `draw_one`.
     PlayersSkipDraws,
+    /// CR 121.2a — Chains of Mephistopheles: every draw except a player's
+    /// turn-based draw-step draw becomes "discard a card; if you do, draw a
+    /// card, otherwise mill a card". CR 614.5 keeps the replacement from
+    /// re-applying to the draw it hands back.
+    ChainsOfMephistopheles,
+    /// CR 508.1 — Arboria: "Creatures can't attack a player unless that player
+    /// cast a spell or put a nontoken permanent onto the battlefield during
+    /// their last turn." Global; read off `GameState.acted_on_own_turn`.
+    PlayersCantBeAttackedUnlessTheyActedLastTurn,
+    /// CR 614 — Land Equilibrium: a land entering under an opponent who
+    /// controls at least as many lands as the source's controller brings a
+    /// sacrifice with it. Applied in the battlefield-entry funnel, so the
+    /// sacrifice happens without using the stack.
+    OpponentLandsEnterThenSacrifice,
     /// Shared Fate — "If a player would draw a card, that player exiles the
     /// top card of one of their opponents' libraries face down instead. Each
     /// player may look at and play the cards they exiled this way." The draw

@@ -702,6 +702,21 @@ impl GameState {
                 }
             };
             let Some(d) = defender else { continue };
+            // CR 508.1 — Arboria: a player who did nothing on their own last
+            // turn can't be attacked at all.
+            if !self.acted_on_their_last_turn(d)
+                && self.battlefield.iter().any(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            self.active_static(&sa.effect, c),
+                            Some(crate::effect::StaticEffect::
+                                PlayersCantBeAttackedUnlessTheyActedLastTurn)
+                        )
+                    })
+                })
+            {
+                return Err(GameError::CannotAttack(atk.attacker));
+            }
             // (source id, optional attacker filter) for each live prohibition.
             let locks: Vec<(CardId, Option<crate::card::SelectionRequirement>)> = self
                 .battlefield

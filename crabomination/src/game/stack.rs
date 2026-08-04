@@ -295,6 +295,12 @@ impl GameState {
                 // end as the granting player's turn begins.
                 let ap = self.active_player_idx;
                 self.damage_locked_until_turn_of.retain(|(_, seat)| *seat != ap);
+                // Arboria — the active player's "acted during their last turn"
+                // flag starts over as their new turn begins.
+                if self.acted_on_own_turn.len() < self.players.len() {
+                    self.acted_on_own_turn.resize(self.players.len(), false);
+                }
+                self.acted_on_own_turn[ap] = false;
                 // CR 614.10 — a skipped untap step skips its turn-based
                 // actions (untapping, phasing, day/night), but the turn
                 // itself still begins.
@@ -401,6 +407,9 @@ impl GameState {
                 // Uvilda — hone counters tick down at the owner's upkeep.
                 let mut hone = self.process_hone();
                 events.append(&mut hone);
+                // All Hallow's Eve — exile fuses tick at the owner's upkeep.
+                let mut fuse = self.process_exile_countdowns();
+                events.append(&mut fuse);
                 // CR 702.24 — cumulative upkeep: age counter + pay-or-sacrifice.
                 let mut cu = self.process_cumulative_upkeep();
                 events.append(&mut cu);
@@ -507,6 +516,7 @@ impl GameState {
                 self.players[self.active_player_idx].opponent_cast_spell_since_your_turn = false;
                 for pl in &mut self.players {
                     pl.spells_cast_this_game_turn = 0;
+                    pl.sorceries_cast_this_turn = 0;
                     pl.noncreature_spells_cast_this_game_turn = 0;
                     pl.nonartifact_spells_cast_this_game_turn = 0;
                     pl.multicolored_spells_cast_this_turn = 0;
@@ -3139,6 +3149,8 @@ impl GameState {
         self.next_damage_redirect.clear();
         self.turn_damage_redirect.clear();
         self.next_combat_damage_to_controller.clear();
+        self.spell_damage_to_controller.clear();
+        self.sorcery_damage_this_turn.clear();
         self.combat_damage_redirect_this_turn.clear();
         self.doubled_damage_sources_this_turn.clear();
         self.damaged_creatures_die_this_turn = false;

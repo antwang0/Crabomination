@@ -444,6 +444,9 @@ pub enum CounterType {
     /// Winch counter — Mercadian Lift's crank; remove X to deploy a creature
     /// with mana value X from hand.
     Winch,
+    /// Scream counter — All Hallow's Eve's exile fuse; one comes off each of
+    /// the owner's upkeeps and the card cashes in when the last is removed.
+    Scream,
     /// Growth counter — used on enchantments that count tutoring or
     /// life-gain progress (Comforting Counsel, "as long as N or more
     /// growth counters …"). Distinct from `Charge` so the static-toggle
@@ -2008,6 +2011,12 @@ pub enum SelectionRequirement {
     SpellTargetsControllerOrControlled,
     /// A stack spell that targets at least one creature (Intervene).
     SpellTargetsCreature,
+    /// A stack spell whose effect would destroy a land the evaluating player
+    /// controls — either a mass destroy whose filter can catch one, or a
+    /// targeted destroy pointed at one (Equinox).
+    SpellWouldDestroyALandYouControl,
+    /// A *player* who cast one or more sorcery spells this turn (Backdraft).
+    CastSorceryThisTurn,
     /// A spell *or ability* on the stack that targets a land the evaluating
     /// player controls (Teferi's Response).
     TargetsALandYouControl,
@@ -2599,6 +2608,17 @@ pub struct TokenDefinition {
     pub back_face: Option<Box<TokenDefinition>>,
 }
 
+/// A `CardDefinition.exile_countdown` fuse: exile the card with `count`
+/// counters of `counter`, tick one off at each of the owner's upkeeps, and
+/// resolve `effect` (after the card is put into its owner's graveyard) when
+/// the last one comes off.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExileCountdown {
+    pub counter: CounterType,
+    pub count: u32,
+    pub effect: crate::effect::Effect,
+}
+
 // ── Card definition ───────────────────────────────────────────────────────────
 
 /// Static blueprint for a card; cloned into `CardInstance` at game-time.
@@ -2778,6 +2798,12 @@ pub struct CardDefinition {
     /// board state rather than an event (Hidden Predators, Veiled Crocodile).
     #[serde(default)]
     pub state_trigger: Option<StateTriggeredAbility>,
+    /// An exile fuse: the card exiles itself with `count` counters
+    /// (`Effect::ExileSelfWithCountdown`), one comes off at each of the
+    /// owner's upkeeps, and when the last is removed the engine puts the card
+    /// into its owner's graveyard and resolves `effect`. All Hallow's Eve.
+    #[serde(default)]
+    pub exile_countdown: Option<ExileCountdown>,
     /// CR 614 — "As this enters, choose [mode A] or [mode B]." A *persistent*
     /// mode choice (unlike `enters_as_choice`, which only sets P/T): the
     /// controller picks one mode as the permanent enters and that mode's

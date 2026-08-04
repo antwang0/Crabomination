@@ -1365,6 +1365,21 @@ pub struct GameState {
     /// their own controller instead (Goblin Psychopath). Cleared at cleanup.
     #[serde(default)]
     pub next_combat_damage_to_controller: Vec<CardId>,
+    /// CR 614.9 — `(spell card id, that spell's controller)`: all damage the
+    /// spell would deal this turn goes to its controller instead
+    /// (Reverberation). Cleared at cleanup.
+    #[serde(default)]
+    pub spell_damage_to_controller: Vec<(CardId, usize)>,
+    /// `(sorcery card id, caster, damage dealt)` for every sorcery spell that
+    /// has dealt damage this turn — Backdraft's "half the damage dealt by one
+    /// of those sorcery spells". Cleared at cleanup.
+    #[serde(default)]
+    pub sorcery_damage_this_turn: Vec<(CardId, usize, u32)>,
+    /// Per seat: this player cast a spell or put a nontoken permanent onto the
+    /// battlefield during their own most recent turn (Arboria). Reset for a
+    /// player as their untap step begins.
+    #[serde(default)]
+    pub acted_on_own_turn: Vec<bool>,
     /// CR — Shadow of Doubt: no player may search a library this turn.
     pub no_search_this_turn: bool,
     /// CR 701.19 — `(viewer, owner)` pairs where `viewer` has looked at
@@ -1567,6 +1582,14 @@ pub struct GameState {
     /// damage event). Transient.
     #[serde(skip)]
     pub(crate) in_damage_redirect: bool,
+    /// CR 614.5 reentrancy guard for Chains of Mephistopheles — the draw the
+    /// replacement hands back isn't replaced again. Transient.
+    #[serde(skip)]
+    pub(crate) in_chains_replacement: bool,
+    /// `Effect::ExileSelfWithCountdown` fired during this resolution, so the
+    /// spell goes to exile with its fuse instead of the graveyard. Transient.
+    #[serde(skip)]
+    pub(crate) exile_resolving_spell_with_countdown: bool,
     /// Reentrancy guard for token-mint replacements (Academy Manufactor) —
     /// the replacement's extra mints aren't re-replaced (CR 614.5). Transient.
     #[serde(skip)]
@@ -1914,6 +1937,9 @@ impl Clone for GameState {
             next_damage_redirect: self.next_damage_redirect.clone(),
             turn_damage_redirect: self.turn_damage_redirect.clone(),
             next_combat_damage_to_controller: self.next_combat_damage_to_controller.clone(),
+            spell_damage_to_controller: self.spell_damage_to_controller.clone(),
+            sorcery_damage_this_turn: self.sorcery_damage_this_turn.clone(),
+            acted_on_own_turn: self.acted_on_own_turn.clone(),
             combat_damage_redirect_this_turn: self.combat_damage_redirect_this_turn.clone(),
             damaged_creatures_die_this_turn: self.damaged_creatures_die_this_turn,
             creature_deaths_drain_toughness_this_turn: self.creature_deaths_drain_toughness_this_turn,
@@ -1948,6 +1974,8 @@ impl Clone for GameState {
             in_turn_based_draw: self.in_turn_based_draw,
             in_draw_redirect: self.in_draw_redirect,
             in_damage_redirect: self.in_damage_redirect,
+            in_chains_replacement: self.in_chains_replacement,
+            exile_resolving_spell_with_countdown: self.exile_resolving_spell_with_countdown,
             in_token_replacement: self.in_token_replacement,
             temporary_control: self.temporary_control.clone(),
             temporary_copies: self.temporary_copies.clone(),
@@ -2205,6 +2233,9 @@ impl GameState {
             next_damage_redirect: Vec::new(),
             turn_damage_redirect: Vec::new(),
             next_combat_damage_to_controller: Vec::new(),
+            spell_damage_to_controller: Vec::new(),
+            sorcery_damage_this_turn: Vec::new(),
+            acted_on_own_turn: Vec::new(),
             combat_damage_redirect_this_turn: Vec::new(),
             damaged_creatures_die_this_turn: false,
             creature_deaths_drain_toughness_this_turn: false,
@@ -2239,6 +2270,8 @@ impl GameState {
             in_turn_based_draw: false,
             in_draw_redirect: false,
             in_damage_redirect: false,
+            in_chains_replacement: false,
+            exile_resolving_spell_with_countdown: false,
             in_token_replacement: false,
             temporary_control: Vec::new(),
             temporary_copies: Vec::new(),
@@ -4190,6 +4223,134 @@ impl GameState {
             card.granted_alt_cast_cost_eot = Some(cost);
         }
         events
+    }
+
+    /// `CardDefinition.exile_countdown` — tick one counter off each exiled
+    /// card the active player owns; when the last comes off, put the card into
+    /// its owner's graveyard and resolve the fuse's effect (All Hallow's Eve).
+    pub fn process_exile_countdowns(&mut self) -> Vec<crate::game::GameEvent> {
+        let active = self.active_player_idx;
+        let mut events = Vec::new();
+        let fused: Vec<CardId> = self
+            .exile
+            .iter()
+            .filter(|c| {
+                c.owner == active
+                    && c.definition
+                        .exile_countdown
+                        .as_ref()
+                        .is_some_and(|f| c.counter_count(f.counter) > 0)
+            })
+            .map(|c| c.id)
+            .collect();
+        for id in fused {
+            let Some(card) = self.exile.iter().find(|c| c.id == id) else { continue };
+            let fuse = card.definition.exile_countdown.clone().expect("filtered above");
+            let card = self.exile.iter_mut().find(|c| c.id == id).expect("just found");
+            card.remove_counters(fuse.counter, 1);
+            events.push(crate::game::GameEvent::CounterRemoved {
+                card_id: id,
+                counter_type: fuse.counter,
+                count: 1,
+            });
+            if card.counter_count(fuse.counter) > 0 {
+                continue;
+            }
+            let pos = self.exile.iter().position(|c| c.id == id).expect("just found");
+            let card = self.exile.remove(pos);
+            let owner = card.owner;
+            self.players[owner].graveyard.push(card);
+            let ctx = crate::game::effects::EffectContext::for_ability(id, owner, None);
+            if let Ok(mut evs) = self.resolve_effect(&fuse.effect, &ctx) {
+                events.append(&mut evs);
+            }
+        }
+        events
+    }
+
+    /// Arboria — note that `p` cast a spell or put a nontoken permanent onto
+    /// the battlefield during their own turn. Actions taken on someone else's
+    /// turn don't count ("during their last turn").
+    pub(crate) fn note_acted_on_own_turn(&mut self, p: usize) {
+        if p != self.active_player_idx {
+            return;
+        }
+        if self.acted_on_own_turn.len() < self.players.len() {
+            self.acted_on_own_turn.resize(self.players.len(), false);
+        }
+        self.acted_on_own_turn[p] = true;
+    }
+
+    /// Land Equilibrium — a land just entered under `p`. For each opponent's
+    /// `OpponentLandsEnterThenSacrifice` static whose controller now has fewer
+    /// lands than `p` (i.e. `p` had at least as many before the land entered),
+    /// `p` sacrifices a land of their choice.
+    pub(crate) fn apply_land_equilibrium(&mut self, p: usize) {
+        use crate::effect::StaticEffect;
+        let lands = |state: &Self, seat: usize| {
+            state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count()
+        };
+        let mine = lands(self, p);
+        let watchers: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller != p
+                    && mine > lands(self, c.controller)
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            self.active_static(&sa.effect, c),
+                            Some(StaticEffect::OpponentLandsEnterThenSacrifice)
+                        )
+                    })
+            })
+            .map(|c| c.id)
+            .collect();
+        for src in watchers {
+            let candidates: Vec<(CardId, String)> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p && c.definition.is_land())
+                .map(|c| (c.id, c.definition.name.to_string()))
+                .collect();
+            if candidates.is_empty() {
+                continue;
+            }
+            let pick = if self.players[p].wants_ui {
+                match self.decider.decide(&crate::decision::Decision::ChooseCards {
+                    source: src,
+                    prompt: "Sacrifice a land (Land Equilibrium)".to_string(),
+                    candidates: candidates.clone(),
+                    min: 1,
+                    max: 1,
+                }) {
+                    crate::decision::DecisionAnswer::Cards(v) => v.first().copied(),
+                    _ => None,
+                }
+            } else {
+                None
+            };
+            // Auto policy: give up the cheapest land.
+            let pick = pick.filter(|id| candidates.iter().any(|(c, _)| c == id)).or_else(|| {
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.controller == p && c.definition.is_land())
+                    .min_by_key(|c| (c.definition.cost.cmc(), c.id.0))
+                    .map(|c| c.id)
+            });
+            if let Some(id) = pick {
+                let mut evs = Vec::new();
+                self.sacrifice_one(id, p, &mut evs);
+                self.dispatch_triggers_for_events(&evs);
+            }
+        }
+    }
+
+    /// Arboria — true if `p` acted during their most recent turn. The flag is
+    /// cleared as `p`'s untap step begins, so during any other player's turn it
+    /// still describes `p`'s last turn.
+    pub(crate) fn acted_on_their_last_turn(&self, p: usize) -> bool {
+        self.acted_on_own_turn.get(p).copied().unwrap_or(false)
     }
 
     /// Remove one time counter from a suspended card in exile; when the last
@@ -12226,6 +12387,45 @@ impl GameState {
                 return true;
             }
         }
+        // CR 121.2a — Chains of Mephistopheles: every draw but the turn-based
+        // draw-step draw becomes "discard a card; if you do, draw a card,
+        // otherwise mill a card". CR 614.5 — the draw it hands back isn't
+        // replaced again.
+        if !self.in_turn_based_draw
+            && !self.in_chains_replacement
+            && self.battlefield.iter().any(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| sa.effect == crate::effect::StaticEffect::ChainsOfMephistopheles)
+            })
+        {
+            self.in_chains_replacement = true;
+            let pick = self.players[p]
+                .hand
+                .iter()
+                .min_by_key(|c| (c.definition.cost.cmc(), c.id.0))
+                .map(|c| c.id);
+            let drew = match pick {
+                Some(cid) if self.discard_card(p, cid, events) => self.draw_one(p, events),
+                _ => {
+                    let n = self.mill_count_for(p, 1);
+                    for _ in 0..n {
+                        if self.players[p].library.is_empty() {
+                            break;
+                        }
+                        let card = self.players[p].library.remove(0);
+                        let cid = card.id;
+                        if !self.route_to_graveyard(card, events) {
+                            events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                        }
+                    }
+                    true
+                }
+            };
+            self.in_chains_replacement = false;
+            return drew;
+        }
         // CR 614 — Notion Thief: redirect an opponent's draw (except the
         // turn-based first draw of their draw step) to the thief's controller.
         if !self.in_turn_based_draw
@@ -13142,6 +13342,8 @@ impl GameState {
                     let ts = self.next_timestamp();
                     let mut face_down_ctrl = None;
                     let mut pw_ctrl = None;
+                    let mut acted = None;
+                    let mut land_ctrl = None;
                     if let Some(c) = self.battlefield_find_mut(*card_id) {
                         c.entered_turn = Some(turn);
                         c.battlefield_timestamp = ts;
@@ -13151,6 +13353,22 @@ impl GameState {
                         if c.definition.is_planeswalker() {
                             pw_ctrl = Some(c.controller);
                         }
+                        if !c.is_token {
+                            acted = Some(c.controller);
+                        }
+                        if c.definition.is_land() {
+                            land_ctrl = Some(c.controller);
+                        }
+                    }
+                    // Arboria — "put a nontoken permanent onto the battlefield
+                    // during their last turn".
+                    if let Some(p) = acted {
+                        self.note_acted_on_own_turn(p);
+                    }
+                    // Land Equilibrium — the entering land brings a sacrifice
+                    // with it (CR 614, so ahead of trigger dispatch).
+                    if let Some(p) = land_ctrl {
+                        self.apply_land_equilibrium(p);
                     }
                     // "If a planeswalker entered under your control this turn"
                     // (Oath of Chandra) — counted on the one path every entry
@@ -17266,6 +17484,24 @@ impl GameState {
             self.exile.push(card);
             return Ok(events);
         }
+        // All Hallow's Eve — the spell exiled itself instead of resolving into
+        // the graveyard; light the fuse as it lands (CR 400.7).
+        if self.exile_resolving_spell_with_countdown
+            && let Some(fuse) = card.definition.exile_countdown.clone()
+        {
+            self.exile_resolving_spell_with_countdown = false;
+            let mut card = card;
+            let card_id = card.id;
+            card.add_counters(fuse.counter, fuse.count);
+            self.exile.push(card);
+            events.push(GameEvent::PermanentExiled { card_id });
+            events.push(GameEvent::CounterAdded {
+                card_id,
+                counter_type: fuse.counter,
+                count: fuse.count,
+            });
+            return Ok(events);
+        }
         // CR 614.6 — an instant/sorcery bound for the graveyard is exiled
         // instead under Rest in Peace / Leyline of the Void.
         self.route_to_graveyard(card, &mut events);
@@ -19004,6 +19240,11 @@ fn static_effect_to_effects(
             | StaticEffect::MayReplaceDrawWithRevealUntilKind
             | StaticEffect::ControllerAssignsAttackersCombatDamage
             | StaticEffect::PlayersSkipDraws
+            | StaticEffect::ChainsOfMephistopheles
+            // Arboria / Land Equilibrium — consulted by `declare_attackers`
+            // and the battlefield-entry funnel; no layer effect.
+            | StaticEffect::PlayersCantBeAttackedUnlessTheyActedLastTurn
+            | StaticEffect::OpponentLandsEnterThenSacrifice
             | StaticEffect::SharedFate
             // Uba Mask — consulted by `draw_one`; no layer effect.
             | StaticEffect::PlayersDrawExiledPlayable

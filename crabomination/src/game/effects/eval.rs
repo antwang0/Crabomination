@@ -22,6 +22,44 @@ pub(crate) fn card_is_outlaw(card: &CardInstance) -> bool {
                 .any(|t| card.definition.subtypes.creature_types.contains(t)))
 }
 
+/// Equinox — `(targeted, mass)`: does this spell's effect destroy lands by
+/// pointing at one, and/or by sweeping them?
+pub(crate) fn effect_destroys_lands(e: &crate::effect::Effect) -> (bool, bool) {
+    use crate::effect::{Effect, Selector};
+    let or = |a: (bool, bool), b: (bool, bool)| (a.0 || b.0, a.1 || b.1);
+    match e {
+        Effect::Seq(v) => v.iter().map(effect_destroys_lands).fold((false, false), or),
+        Effect::MayDo { body, .. } => effect_destroys_lands(body),
+        Effect::Destroy { what } | Effect::DestroyNoRegen { what } | Effect::DestroyAndRemember { what } => {
+            match what {
+                Selector::Target(_) | Selector::TargetFiltered { .. } => (true, false),
+                Selector::EachPermanent(f) => (false, filter_can_match_land(f)),
+                _ => (false, false),
+            }
+        }
+        Effect::DestroyTargets { filter } | Effect::DestroyTargetsPolymorph { filter } => {
+            (filter_can_match_land(filter), false)
+        }
+        Effect::DestroyEachMatchingWithManaValue { filter, .. } => {
+            (false, filter_can_match_land(filter))
+        }
+        Effect::DestroyLandOfEachBasicType => (false, true),
+        _ => (false, false),
+    }
+}
+
+/// Can a selection requirement match a land at all? Conservative: only
+/// filters that positively admit lands count.
+fn filter_can_match_land(f: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match f {
+        R::Any | R::Permanent | R::Land | R::IsNonbasicLand | R::HasLandType(_) => true,
+        R::And(a, b) => filter_can_match_land(a) && filter_can_match_land(b),
+        R::Or(a, b) => filter_can_match_land(a) || filter_can_match_land(b),
+        _ => false,
+    }
+}
+
 impl GameState {
     /// CR 700.5 — `player`'s devotion to `colors`: the number of mana
     /// symbols matching any listed color among the mana costs of
@@ -347,6 +385,15 @@ impl GameState {
                     }
                 }
                 seats.len() as i32
+            }
+            Value::HalfGreatestSorceryDamageThisTurn { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                self.sorcery_damage_this_turn
+                    .iter()
+                    .filter(|(_, caster, _)| *caster == p)
+                    .map(|(_, _, dmg)| (dmg / 2) as i32)
+                    .max()
+                    .unwrap_or(0)
             }
             Value::DistinctPowerYouControl => {
                 let mut powers: Vec<i32> = self
@@ -1591,6 +1638,27 @@ impl GameState {
             Predicate::SourceOnBattlefield => {
                 ctx.source.is_some_and(|cid| self.battlefield_find(cid).is_some())
             }
+            // Wall of Caltrops — every blocker on the creature the source is
+            // blocking matches `filter`, and at least one of them isn't the
+            // source.
+            Predicate::SourceCoBlockersAllMatch { filter } => {
+                let Some(src) = ctx.source else { return false };
+                let Some(attackers) = self.block_map.get(&src) else { return false };
+                attackers.iter().any(|atk| {
+                    let peers: Vec<CardId> = self
+                        .block_map
+                        .iter()
+                        .filter(|(_, blocked)| blocked.contains(atk))
+                        .map(|(b, _)| *b)
+                        .collect();
+                    peers.iter().any(|b| *b != src)
+                        && peers.iter().all(|b| {
+                            self.battlefield_find(*b).is_some_and(|c| {
+                                self.evaluate_requirement_on_card(filter, c, c.controller)
+                            })
+                        })
+                })
+            }
             Predicate::SourceIsCreature => ctx
                 .source
                 .and_then(|cid| self.computed_permanent(cid))
@@ -2722,6 +2790,10 @@ impl GameState {
                     None => true,
                 }
             }
+            // Backdraft — "choose a player who cast one or more sorcery
+            // spells this turn".
+            R::CastSorceryThisTurn => matches!(target, Target::Player(p)
+                if self.players.get(*p).is_some_and(|pl| pl.sorceries_cast_this_turn > 0)),
             R::ControlledByOpponent => match target {
                 Target::Permanent(cid) => self
                     .battlefield_find(*cid)
@@ -3138,6 +3210,33 @@ impl GameState {
                             && target.iter().chain(additional_targets.iter()).any(|t| {
                                 matches!(t, crate::game::types::Target::Permanent(id)
                                     if self.battlefield.iter().any(|o| o.id == *id && o.definition.is_creature()))
+                            })
+                    }),
+                    // Equinox — a stack spell whose effect destroys lands, and
+                    // that either sweeps them or points at one of yours.
+                    R::SpellWouldDestroyALandYouControl => self.stack.iter().any(|si| {
+                        let StackItem::Spell { card: c, target, additional_targets, .. } = si
+                        else {
+                            return false;
+                        };
+                        if c.id != card.id {
+                            return false;
+                        }
+                        let (targeted, mass) = effect_destroys_lands(&c.definition.effect);
+                        if mass {
+                            return self
+                                .battlefield
+                                .iter()
+                                .any(|o| o.controller == controller && o.definition.is_land());
+                        }
+                        targeted
+                            && target.iter().chain(additional_targets.iter()).any(|t| {
+                                matches!(t, crate::game::types::Target::Permanent(pid)
+                                    if self.battlefield.iter().any(|o| {
+                                        o.id == *pid
+                                            && o.controller == controller
+                                            && o.definition.is_land()
+                                    }))
                             })
                     }),
                     // Teferi's Response — a stack item (spell or ability) with
@@ -4045,6 +4144,8 @@ impl GameState {
             | R::IsSpellOnStack | R::SpellNotCastFromHand
             | R::SpellTargetsControllerOrControlled
             | R::SpellTargetsCreature
+            | R::SpellWouldDestroyALandYouControl
+            | R::CastSorceryThisTurn
             | R::SpellTargetsOnlySource
             | R::SpellWithSingleTarget
             | R::DealtDamageToControllerThisTurn | R::IsBestowed

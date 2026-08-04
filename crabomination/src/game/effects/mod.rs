@@ -2522,6 +2522,52 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RedirectSpellDamageToItsController { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_card_id() else { continue };
+                    let Some(controller) = self.stack.iter().find_map(|it| match it {
+                        crate::game::types::StackItem::Spell { card, caster, .. }
+                            if card.id == cid =>
+                        {
+                            Some(*caster)
+                        }
+                        _ => None,
+                    }) else {
+                        continue;
+                    };
+                    self.spell_damage_to_controller.retain(|(c, _)| *c != cid);
+                    self.spell_damage_to_controller.push((cid, controller));
+                }
+                Ok(())
+            }
+
+            Effect::ExileSelfWithCountdown => {
+                // A resolving spell isn't in a zone yet, so the fuse is lit by
+                // the post-resolution disposal path.
+                let Some(src) = ctx.source else { return Ok(()) };
+                let Some(fuse) = self
+                    .find_card_anywhere(src)
+                    .and_then(|c| c.definition.exile_countdown.clone())
+                else {
+                    self.exile_resolving_spell_with_countdown = true;
+                    return Ok(());
+                };
+                self.run_effect(
+                    &Effect::Move { what: Selector::This, to: ZoneDest::Exile },
+                    ctx,
+                    events,
+                )?;
+                if let Some(card) = self.exile.iter_mut().find(|c| c.id == src) {
+                    card.add_counters(fuse.counter, fuse.count);
+                    events.push(GameEvent::CounterAdded {
+                        card_id: src,
+                        counter_type: fuse.counter,
+                        count: fuse.count,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::PlayerGainsShroudThisTurn { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.players[p].shroud_this_turn = true;

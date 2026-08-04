@@ -2485,9 +2485,9 @@ Each a small targeted feature; sweep batch by batch.
 
 0. **Next set to close.** The Odyssey block, the Onslaught block (**ONS**,
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
-   Kamigawa block, **Mirrodin Besieged** and **New Phyrexia** (the Scars block
-   is closed) are all at zero. **Legends** is open at 9 after seven waves
-   (264 cards, `sets::leg`–`leg6`).
+   Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
+   is closed) and **Legends** (273 cards, `sets::leg`–`leg7`) are all at
+   zero.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2502,6 +2502,26 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Legends complete** — `set_gaps.py leg` 9 → 0 (`sets::leg7`, the set's last
+  nine cards). New primitives: `CardDefinition.exile_countdown` (a general
+  exile fuse ticked at the owner's upkeep by `process_exile_countdowns`, lit by
+  `Effect::ExileSelfWithCountdown` on the post-resolution disposal path — All
+  Hallow's Eve, `CounterType::Scream`),
+  `StaticEffect::ChainsOfMephistopheles` (a CR 121.2a draw replacement in
+  `draw_one` with a CR 614.5 reentrancy guard),
+  `StaticEffect::PlayersCantBeAttackedUnlessTheyActedLastTurn` +
+  `GameState.acted_on_own_turn` (Arboria — set on cast and on any nontoken
+  entry, reset at the player's untap),
+  `StaticEffect::OpponentLandsEnterThenSacrifice` (Land Equilibrium, applied in
+  the battlefield-entry funnel so it doesn't use the stack),
+  `Effect::RedirectSpellDamageToItsController` + `spell_damage_to_controller`
+  (Reverberation), `Value::HalfGreatestSorceryDamageThisTurn` +
+  `sorcery_damage_this_turn` and `R::CastSorceryThisTurn` (Backdraft),
+  `R::SpellWouldDestroyALandYouControl` (Equinox — a real walk of the spell's
+  effect tree, targeted vs. mass), and
+  `Predicate::SourceCoBlockersAllMatch` (Wall of Caltrops' banding
+  intervening-'if'). Tests in `classic_sets/leg7`.
 
 - **Cost-sacrifice batches (CR 602.5b)** — the whole batch (`sac_cost` +
   `sac_other_picks` + `sac_all_matching_cost`) is threaded into
@@ -2521,28 +2541,9 @@ Each a small targeted feature; sweep batch by batch.
   `EventScope::EnchantedBySource` triggers fire off a sac outlet and not only
   off the lethal-damage SBA (Puppet Master).
 
-- **Legends wave 7** — `set_gaps.py leg` 43 → 9 (`sets::leg6`, 34 cards).
-  New primitives: `Keyword::CantAttackIfAttackedLastTurn` with the
-  `attacked_own_turn` / `attacked_last_turn` untap roll-over,
-  `Effect::CantAttackNextTurn` + `AttackBan` (Wall of Dust),
-  `Effect::ReattachTargetAura` (Enchantment Alteration, re-checking the Aura's
-  enchant filter), `Effect::{NameCardThenRevealTopBin, AtYourNextUpkeep}`,
-  `EachPlayerMayPutPermanentFromHand.repeat` (Eureka),
-  `Value::DamageToSourceThisTurnFromOthersNamedSame` (Blazing Effigy),
-  `R::{DealtDamageToSourceThisTurn, BlockingOrBlockedBySource}`,
-  `CounterType::{Pupa, Dream, Pin}`, an indefinite per-land mana replacement
-  (`Effect::ReplaceTargetLandManaWithColorless` — `LandManaReplacement` gains
-  `land` + `indefinite`), `Effect::NameCardRevealRandomDiscardNamed`, and
-  `Selector::GreatestManaValueControlledMatching` (Juxtapose), and a
-  targets-aware damage shield — `GameState.resolution_targets` lets the funnel
-  tell "damage from a spell or ability that targets this" apart from
-  incidental damage, powering `Effect::PreventTargetingDamageThisTurn`
-  (Silhouette) and
-  `StaticEffect::PreventTargetingDamageWhileYouControlAnotherCreature`
-  (Bronze Horse).
-
 - **Client / server** — `PermanentView.cant_attack_this_turn` surfaces a live
-  CR 508.1a turn ban and the counter tooltip explains it.
+  CR 508.1a turn ban and the counter tooltip explains it; the Scream counter
+  has a name + reminder in the coin strip and tooltip.
 
 Only this push's entries are listed; earlier pushes are in `git log -p --
 FEATURE_ROADMAP.md`.

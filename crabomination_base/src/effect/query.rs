@@ -235,7 +235,9 @@ impl Effect {
         }
         match self {
             Effect::AbandonThisScheme | Effect::GameIsADraw
-            | Effect::ExileCostSacrificedBatch => false,
+            | Effect::ExileCostSacrificedBatch
+            | Effect::ExileSelfWithCountdown => false,
+            Effect::RedirectSpellDamageToItsController { what } => sel_has_target(what),
             Effect::AnteTopOfLibrary { who, then, else_, .. } => {
                 player_has_target(who)
                     || then.as_ref().is_some_and(|e| e.requires_target())
@@ -2797,6 +2799,7 @@ impl Effect {
                     sel_find(aura, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::PreventTargetingDamageThisTurn { what }
+                | Effect::RedirectSpellDamageToItsController { what }
                 | Effect::ReplaceTargetLandManaWithColorless { what } => sel_find(what, slot),
                 Effect::DealDamageExcessTo { to, amount, excess_to, .. } => sel_find(to, slot)
                     .or_else(|| val_find(amount, slot))

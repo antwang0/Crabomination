@@ -10354,6 +10354,15 @@ static LEG4: &[Factory] = &[
     super::leg4::reincarnation,
 ];
 static LEG6: &[Factory] = &[
+    super::leg7::all_hallows_eve,
+    super::leg7::arboria,
+    super::leg7::backdraft,
+    super::leg7::chains_of_mephistopheles,
+    super::leg7::equinox,
+    super::leg7::knowledge_vault,
+    super::leg7::land_equilibrium,
+    super::leg7::reverberation,
+    super::leg7::wall_of_caltrops,
     super::leg6::blazing_effigy,
     super::leg6::brine_hag,
     super::leg6::giant_slug,
