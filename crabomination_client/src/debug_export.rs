@@ -237,6 +237,7 @@ mod tests {
                 arbiter_cant_attack: false,
                 life_locked: false,
                 has_hexproof: false,
+                in_your_range: true,
                 commander_damage_taken: vec![],
                 team: 0,
                 dungeon: None,

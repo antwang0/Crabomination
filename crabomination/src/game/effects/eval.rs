@@ -3062,6 +3062,12 @@ impl GameState {
                     R::SharesCardTypeWithExiledBySource => self
                         .shares_card_type_with_exiled_by(source, &card.definition),
                     R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
+                    R::PowerAtMostSourcePower => {
+                        card.definition.is_creature()
+                            && source
+                                .and_then(|s| self.battlefield_find(s))
+                                .is_some_and(|src| card.power() <= src.power())
+                    }
                     R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
                     R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
                     R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
@@ -3779,6 +3785,7 @@ impl GameState {
             // share check only resolves through `evaluate_requirement_static`.
             R::SharesCardTypeWithExiledBySource => false,
             R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
+            R::PowerAtMostSourcePower => false,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
             // No source/battlefield context in the on-card evaluator (used
             // for hidden-zone cards); the source-relative Mentor check only

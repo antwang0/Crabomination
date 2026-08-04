@@ -2330,6 +2330,12 @@ impl GameState {
         if !self.can_player_play_land(p) {
             return Err(GameError::AlreadyPlayedLand);
         }
+        // City in a Bottle — a symmetric play-lock binds land plays too.
+        if let Some(c) = self.find_card_anywhere(card_id)
+            && self.play_locked_for_all(p, c)
+        {
+            return Err(GameError::SpellNameLocked);
+        }
         // Cornered Market — a nonbasic land sharing a nontoken permanent's
         // name can't be played.
         if !self.find_card_anywhere(card_id).is_some_and(|c| c.definition.is_basic())
@@ -2415,6 +2421,7 @@ impl GameState {
             .ok_or(GameError::CardNotInHand(card_id))?;
         let cid = card.id;
         self.players[p].hand.push(card);
+        self.players[p].last_drawn_card = Some(cid);
         Ok(vec![GameEvent::CardDrawn { player: p, card_id: cid }])
     }
 
@@ -5749,6 +5756,12 @@ impl GameState {
                 self.players[p].hand.push(card);
                 return Err(GameError::CantCastNoncreature);
             }
+        }
+
+        // City in a Bottle — a symmetric play-lock binds every seat.
+        if self.play_locked_for_all(p, &card) {
+            self.players[p].hand.push(card);
+            return Err(GameError::SpellNameLocked);
         }
 
         // Llawan — an opponent's static locks a whole class of spells.
@@ -10042,6 +10055,21 @@ impl GameState {
                             if self.evaluate_requirement_on_card(filter, card, player)
                     )
                 })
+        })
+    }
+
+    /// City in a Bottle — a symmetric `PlayersCantPlayMatching` static in play
+    /// whose filter matches `card`. Binds every seat, its controller included.
+    pub(crate) fn play_locked_for_all(&self, player: usize, card: &crate::card::CardInstance) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    &sa.effect,
+                    StaticEffect::PlayersCantPlayMatching { filter }
+                        if self.evaluate_requirement_on_card(filter, card, player)
+                )
+            })
         })
     }
 

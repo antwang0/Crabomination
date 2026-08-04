@@ -2871,6 +2871,7 @@ impl GameState {
         // and similar). Other players' tallies advance independently
         // and are reset on their own untap.
         self.players[p].cards_drawn_this_turn = 0;
+        self.players[p].last_drawn_card = None;
         // Reset the per-turn {E}-spent tally (Izzet Generatorium's draw gate).
         self.players[p].energy_spent_this_turn = 0;
         // Reset the "cards left your graveyard this turn" tally; powers
@@ -4485,6 +4486,9 @@ impl GameState {
                 newly_eliminated.push(i);
             }
         }
+        // CR 809.5b — a team loses when its emperor loses; the generals go
+        // out with them and leave under the same CR 800.4a rules.
+        newly_eliminated.extend(self.apply_emperor_losses());
         // CR 800.4a — when a player leaves the game, every card and token
         // they own leaves with them, and permanents they controlled but
         // didn't own revert to their owners' control. (Stack items the

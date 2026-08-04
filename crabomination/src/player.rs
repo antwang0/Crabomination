@@ -635,6 +635,19 @@ pub struct Player {
     /// drew from an empty library). Eliminated players are skipped by turn
     /// and priority rotation; the game ends when ≤ 1 player remains.
     pub eliminated: bool,
+    /// CR 801.2a — this seat's own range of influence, overriding the table
+    /// default (`GameState.range_of_influence`). Emperor games give the
+    /// emperor 2 and each general 1 (CR 809.3a).
+    #[serde(default)]
+    pub range_of_influence: Option<u32>,
+    /// The last card this player drew this turn (CR 121 — "the last card you
+    /// drew this turn"). Cleared as their turn begins. Sindbad, Jandor's Ring.
+    #[serde(default)]
+    pub last_drawn_card: Option<crate::card::CardId>,
+    /// CR 809.2 — this seat is their team's emperor. Their team loses when
+    /// they lose (CR 809.5b).
+    #[serde(default)]
+    pub is_emperor: bool,
     /// The authoritative reason this player was eliminated, recorded at the
     /// moment `eliminated` flips to `true`. Lets consumers (the server's
     /// win-kind stats) read the true cause instead of guessing from the
@@ -988,6 +1001,9 @@ impl Player {
             city_blessing: false,
             max_hand_size: default_max_hand_size(),
             eliminated: false,
+            last_drawn_card: None,
+            range_of_influence: None,
+            is_emperor: false,
             loss_cause: None,
             cant_lose_this_turn: false,
             damage_floor_this_turn: false,

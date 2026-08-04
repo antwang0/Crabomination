@@ -1185,6 +1185,15 @@ pub fn update_player_stats_chips(
         if p.has_hexproof {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::PlayerHexproof, "◈ hexproof".to_string());
         }
+        // CR 801.2 — this seat sits outside your range of influence.
+        if !p.in_your_range {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::PlayerHexproof,
+                "⊘ out of range".to_string(),
+            );
+        }
         // CR 702.18 — shroud binds you too, so the chip says *nobody* can aim
         // at this seat (Ivory Mask, Gilded Light).
         if p.untargetable && !p.has_hexproof {

@@ -976,6 +976,11 @@ pub struct PlayerView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub has_hexproof: bool,
+    /// CR 801.2 — false when a limited range of influence puts this seat
+    /// outside the viewer's reach: the viewer can't target it, attack it, or
+    /// affect it, so the client greys it out. Always true in an unlimited game.
+    #[serde(default = "default_true")]
+    pub in_your_range: bool,
     /// CR 903.10a — combat damage this player has been dealt by each
     /// individual commander, one entry per source commander that has hit
     /// them. 21 from a *single* commander is a loss, so each entry is

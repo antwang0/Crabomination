@@ -308,6 +308,11 @@ pub struct GameState {
     /// `range_matrix[a][b]` is "b is within a's range". Empty means unlimited.
     #[serde(default)]
     pub range_matrix: Vec<Vec<bool>>,
+    /// CR 809.3c — the Emperor variant's attack restriction: a player may only
+    /// attack the seats immediately either side of them (and their
+    /// planeswalkers / battles), even when their range of influence is wider.
+    #[serde(default)]
+    pub attack_adjacent_only: bool,
     /// Partition of seats into teams. Every seat appears in exactly one
     /// entry; free-for-all formats have one singleton team per seat,
     /// team formats (Two-Headed Giant) have multiple seats per team.
@@ -1756,6 +1761,7 @@ impl Clone for GameState {
             attack_option: self.attack_option,
             range_of_influence: self.range_of_influence,
             range_matrix: self.range_matrix.clone(),
+            attack_adjacent_only: self.attack_adjacent_only,
             teams: self.teams.clone(),
             deploy_creatures: self.deploy_creatures,
             battlefield: self.battlefield.clone(),
@@ -2061,6 +2067,7 @@ impl GameState {
             attack_option: AttackOption::default(),
             range_of_influence: None,
             range_matrix: Vec::new(),
+            attack_adjacent_only: false,
             teams,
             deploy_creatures: false,
             battlefield: CowBox::default(),
@@ -2772,11 +2779,77 @@ impl GameState {
         self.team_of(a) == self.team_of(b)
     }
 
+    /// CR 809 — set the game up as an Emperor game of `teams` teams of
+    /// `per_team` players each (three by default). Seats are dealt out team by
+    /// team so each team sits together with its emperor in the middle
+    /// (CR 809.2); ranges are 2 for emperors and 1 for generals (CR 809.3a),
+    /// the deploy-creatures option is on (CR 809.3b), and attacks are limited
+    /// to the seats immediately either side (CR 809.3c).
+    pub fn set_emperor_variant(&mut self, teams: usize, per_team: usize) {
+        let partitions: Vec<Vec<usize>> =
+            (0..teams).map(|t| (0..per_team).map(|i| t * per_team + i).collect()).collect();
+        let _ = self.assign_teams(partitions.clone());
+        for part in &partitions {
+            let middle = part[part.len() / 2];
+            for &seat in part {
+                let emperor = seat == middle;
+                self.players[seat].is_emperor = emperor;
+                self.players[seat].range_of_influence = Some(if emperor { 2 } else { 1 });
+            }
+        }
+        self.deploy_creatures = true;
+        self.attack_adjacent_only = true;
+        self.refresh_range_matrix();
+    }
+
+    /// CR 811 — set the game up as an Alternating Teams game of `teams` teams
+    /// of `per_team` players each: seats are interleaved so no one sits next
+    /// to a teammate (CR 811.3), the range of influence is 2 (CR 811.2a) and
+    /// the deploy-creatures option stays off (CR 811.2c).
+    pub fn set_alternating_teams(&mut self, teams: usize, per_team: usize) {
+        let partitions: Vec<Vec<usize>> =
+            (0..teams).map(|t| (0..per_team).map(|i| i * teams + t).collect()).collect();
+        let _ = self.assign_teams(partitions);
+        self.range_of_influence = Some(2);
+        self.deploy_creatures = false;
+        self.attack_adjacent_only = false;
+        self.refresh_range_matrix();
+    }
+
+    /// CR 809.5b — a team loses when its emperor loses. Returns the seats
+    /// newly knocked out by their emperor's defeat.
+    pub(crate) fn apply_emperor_losses(&mut self) -> Vec<usize> {
+        if !self.players.iter().any(|p| p.is_emperor) {
+            return Vec::new();
+        }
+        let doomed: Vec<usize> = self
+            .teams
+            .iter()
+            .filter(|t| {
+                t.members.iter().any(|&s| self.players[s].is_emperor && self.players[s].eliminated)
+            })
+            .flat_map(|t| t.members.clone())
+            .filter(|&s| !self.players[s].eliminated)
+            .collect();
+        for &seat in &doomed {
+            self.players[seat].eliminated = true;
+            self.players[seat].loss_cause.get_or_insert(crate::player::LossCause::Other);
+        }
+        doomed
+    }
+
+    /// CR 801 — is the limited range of influence option on for this game?
+    /// True when the table sets a default range or any seat carries its own.
+    pub fn limited_range(&self) -> bool {
+        self.range_of_influence.is_some()
+            || self.players.iter().any(|p| p.range_of_influence.is_some())
+    }
+
     /// CR 801.2 — is `other` within `observer`'s range of influence? Always
     /// true with the unlimited default (`range_of_influence == None`), and
     /// always true for `observer` itself (CR 801.2b).
     pub fn player_in_range_of(&self, observer: usize, other: usize) -> bool {
-        if observer == other || self.range_of_influence.is_none() {
+        if observer == other || !self.limited_range() {
             return true;
         }
         match self.range_matrix.get(observer).and_then(|row| row.get(other)) {
@@ -2790,7 +2863,7 @@ impl GameState {
     /// CR 801.2d — is the object `card` within `observer`'s range? An object is
     /// in range when its controller is.
     pub fn object_in_range_of(&self, observer: usize, card: CardId) -> bool {
-        if self.range_of_influence.is_none() {
+        if !self.limited_range() {
             return true;
         }
         match self.find_card_anywhere(card) {
@@ -2802,7 +2875,7 @@ impl GameState {
     /// The living seats within `observer`'s range, measured around the table
     /// over living seats only (a dead seat no longer occupies a chair).
     fn seats_within_range(&self, observer: usize) -> Vec<usize> {
-        let Some(n) = self.range_of_influence else {
+        let Some(n) = self.players[observer].range_of_influence.or(self.range_of_influence) else {
             return (0..self.players.len()).collect();
         };
         let living: Vec<usize> =
@@ -2819,7 +2892,7 @@ impl GameState {
 
     /// CR 801.2c — snapshot every player's range as the turn begins.
     pub fn refresh_range_matrix(&mut self) {
-        if self.range_of_influence.is_none() {
+        if !self.limited_range() {
             self.range_matrix.clear();
             return;
         }
@@ -12495,6 +12568,7 @@ impl GameState {
         let drew = match self.players[p].draw_top() {
             Some(id) => {
                 self.cards_drawn_this_resolution += 1;
+                self.players[p].last_drawn_card = Some(id);
                 events.push(GameEvent::CardDrawn { player: p, card_id: id });
                 if self.players[p].cards_drawn_this_turn == 1 {
                     events.push(GameEvent::FirstCardDrawnThisTurn { player: p, card_id: id });
@@ -12602,6 +12676,7 @@ impl GameState {
                 let card_id = card.id;
                 self.players[p].hand.push(card);
                 self.players[p].cards_drawn_this_turn += 1;
+                self.players[p].last_drawn_card = Some(card_id);
                 events.push(GameEvent::CardDrawn { player: p, card_id });
                 true
             }
@@ -19046,6 +19121,7 @@ fn static_effect_to_effects(
             // no layer effect.
             | StaticEffect::OpponentsCantCastNamed
             | StaticEffect::OpponentsCantCastMatching { .. }
+            | StaticEffect::PlayersCantPlayMatching { .. }
             | StaticEffect::OpponentsCantCastNamesExiledWithSource
             // CreatureSpellsMayPayExtraForCounters — an additional-cost offer
             // read at cast time; no continuous-layer effect.

@@ -1576,6 +1576,9 @@ impl GameState {
             self.sacrificed_toughness = Some(stats.1);
             self.sacrificed_mana_value = Some(stats.2);
         }
+        // `Selector::SacrificedCard` — "if you sacrificed an Island this way"
+        // (Serendib Djinn) reads whatever the last sacrifice took.
+        self.sacrificed_card = Some(id);
         let is_creature = self.permanent_is_creature(id);
         // Cache a snapshot for AnotherOfYours / death-matters triggers and the
         // per-turn artifact-sacrifice tally (which reads the sacrificed
@@ -3275,6 +3278,7 @@ impl GameState {
                 {
                     let card = self.players[p].library.remove(pos);
                     self.players[p].hand.push(card);
+                    self.players[p].last_drawn_card = Some(chosen);
                     events.push(GameEvent::CardDrawn { player: p, card_id: chosen });
                 }
                 self.shuffle_library(p, events);
@@ -25614,6 +25618,67 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PayPerCounterOrSacrifice { kind, per, then } => {
+                let Some(id) = ctx.source else { return Ok(()) };
+                let Some(card) = self.battlefield_find(id) else { return Ok(()) };
+                let (p, n) = (card.controller, card.counter_count(*kind));
+                let mut pips = Vec::new();
+                for _ in 0..n {
+                    pips.extend(per.symbols.iter().cloned());
+                }
+                let due = crate::mana::ManaCost::new(pips);
+                match self.try_pay_with_auto_tap(p, &due) {
+                    Ok(receipt) => {
+                        events.extend(receipt.auto_events);
+                        self.run_effect(then, ctx, events)
+                    }
+                    Err(_) => {
+                        self.sacrifice_one(id, p, events);
+                        Ok(())
+                    }
+                }
+            }
+
+            // Cuombajj Witches — the opponent to the controller's left aims
+            // the second point.
+            Effect::OpponentChoosesTargetForDamage { amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0);
+                let Some(chooser) = self
+                    .opponents_of(ctx.controller)
+                    .into_iter()
+                    .find(|s| self.players[*s].is_alive())
+                else {
+                    return Ok(());
+                };
+                let source = ctx.source.unwrap_or(CardId(0));
+                let candidates = self.legal_targets_for_filter(
+                    &crate::card::SelectionRequirement::Any,
+                    true,
+                    chooser,
+                    Some(source),
+                );
+                let Some(pick) = candidates.first().cloned() else { return Ok(()) };
+                let pick = match self.decider.decide(&crate::decision::Decision::ChooseTarget {
+                    source,
+                    legal: candidates.clone(),
+                    source_name: String::new(),
+                    description: "Choose a target for the opponent's damage".to_string(),
+                    optional: false,
+                }) {
+                    crate::decision::DecisionAnswer::Target(t) if candidates.contains(&t) => t,
+                    _ => pick,
+                };
+                let sub = EffectContext { targets: vec![pick], ..ctx.clone() };
+                self.run_effect(
+                    &Effect::DealDamage {
+                        to: Selector::Target(0),
+                        amount: crate::effect::Value::Const(n),
+                    },
+                    &sub,
+                    events,
+                )
+            }
+
             Effect::SacrificeSourceUnlessPayValue { generic } => {
                 // "Pay {1} for each card in your hand" (Megatherium).
                 let Some(id) = ctx.source else { return Ok(()) };
@@ -29149,7 +29214,7 @@ impl GameState {
         self.freeze_layers_pop();
         // CR 801.10 — the parts of an effect that would reach an object or
         // player outside its controller's range of influence do nothing.
-        if self.range_of_influence.is_some() {
+        if self.limited_range() {
             out.retain(|e| match e {
                 EntityRef::Player(p) => self.player_in_range_of(ctx.controller, *p),
                 EntityRef::Permanent(c) | EntityRef::Card(c) => {
@@ -29291,6 +29356,12 @@ impl GameState {
                 .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
                 .map(|id| vec![EntityRef::Permanent(id)])
                 .unwrap_or_default(),
+            Selector::LastCardYouDrew => self.players[ctx.controller]
+                .last_drawn_card
+                .filter(|id| self.players[ctx.controller].hand.iter().any(|c| c.id == *id))
+                .map(EntityRef::Card)
+                .into_iter()
+                .collect(),
             Selector::TokensCreatedBySource => self
                 .battlefield
                 .iter()
@@ -29332,9 +29403,22 @@ impl GameState {
                     return vec![];
                 };
                 // The attackers the subject blocks, plus the creatures
-                // blocking the subject.
+                // blocking the subject. A dies-trigger can resolve after the
+                // block map is torn down, so fall back to the turn's declared
+                // blocks (Abu Ja'far).
                 let mut out = self.attackers_blocked_by(subj).to_vec();
                 out.extend(self.blockers_of(subj));
+                if out.is_empty() {
+                    out.extend(self.blocks_declared_this_turn.iter().filter_map(|(b, a)| {
+                        if *b == subj {
+                            Some(*a)
+                        } else if *a == subj {
+                            Some(*b)
+                        } else {
+                            None
+                        }
+                    }));
+                }
                 out.into_iter()
                     .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
                     .map(EntityRef::Permanent)
@@ -30019,7 +30103,7 @@ impl GameState {
         // CR 801.10 — an effect can't touch players outside its controller's
         // range of influence; the rest of it works normally.
         let seats = self.resolve_players_unranged(pref, ctx);
-        if self.range_of_influence.is_none() {
+        if !self.limited_range() {
             return seats;
         }
         seats.into_iter().filter(|p| self.player_in_range_of(ctx.controller, *p)).collect()
@@ -30122,6 +30206,23 @@ impl GameState {
             PlayerRef::You => Some(ctx.controller),
             PlayerRef::Seat(p) => Some(*p),
             PlayerRef::ActivePlayer => Some(self.active_player_idx),
+            PlayerRef::PlayerWithMostLife => {
+                let mut best: Option<(usize, i32)> = None;
+                let mut tied = false;
+                for seat in 0..self.players.len() {
+                    if !self.players[seat].is_alive() {
+                        continue;
+                    }
+                    let life = self.effective_life(seat);
+                    match best {
+                        Some((_, top)) if life > top => { best = Some((seat, life)); tied = false }
+                        Some((_, top)) if life == top => tied = true,
+                        None => best = Some((seat, life)),
+                        _ => {}
+                    }
+                }
+                (!tied).then(|| best.map(|(s, _)| s)).flatten()
+            }
             // The owner of the card this resolution last moved (Metamorphose's
             // "that opponent may put a permanent from their hand …").
             PlayerRef::OwnerOfMoved => self
@@ -31044,6 +31145,7 @@ impl GameState {
                 if let Some(card) = card {
                     let cid = card.id;
                     self.players[p].hand.push(card);
+                    self.players[p].last_drawn_card = Some(cid);
                     events.push(GameEvent::CardDrawn { player: p, card_id: cid });
                 }
                 Ok(())

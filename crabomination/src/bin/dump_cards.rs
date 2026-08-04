@@ -210,6 +210,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackOrBlockUnlessCityBlessing
         | Keyword::AttacksAlone | Keyword::CantAttackAlone | Keyword::CantAttackOrBlockAlone | Keyword::CantAttackUnlessCastCreatureThisTurn
         | Keyword::CantAttackUnlessLandTypeOnBattlefield(_)
+        | Keyword::CantAttackUnlessDefenderControlsLandType(_)
         | Keyword::CantAttackUnlessLandCount(_, _)
         | Keyword::CantAttackUnlessOpponentDamaged
         | Keyword::CantAttackUnlessGreaterPowerAttacks

@@ -225,6 +225,8 @@ impl GameState {
                         || seat_restriction.is_some_and(|only| only != Some(target_player))
                         // CR 801.3 — only opponents inside the attacker's range.
                         || !self.player_in_range_of(p, target_player)
+                        // CR 809.3c — Emperor: only the seats either side.
+                        || !self.seat_attackable_from(p, target_player)
                         // "Creatures they control can't attack you this turn"
                         // (Web of Inertia).
                         || self
@@ -243,6 +245,7 @@ impl GameState {
                         || !self.players[pw.controller].is_alive()
                         || seat_restriction.is_some_and(|only| only != Some(pw.controller))
                         || !self.player_in_range_of(p, pw.controller)
+                        || !self.seat_attackable_from(p, pw.controller)
                     {
                         return Err(GameError::InvalidPlaneswalkerAttackTarget(pw_id));
                     }
@@ -500,6 +503,18 @@ impl GameState {
                     if !satisfied {
                         return Err(GameError::CannotAttack(id));
                     }
+                }
+                // CR 508.1a — Merchant Ship: the defending player must control
+                // a land of the named type.
+                if let Some(lt) = computed_kw(id).iter().find_map(|k| match k {
+                    Keyword::CantAttackUnlessDefenderControlsLandType(lt) => Some(*lt),
+                    _ => None,
+                }) && let Some(d) = self.defender_for(atk.target)
+                    && !self.battlefield.iter().any(|c| {
+                        c.controller == d && c.definition.subtypes.land_types.contains(&lt)
+                    })
+                {
+                    return Err(GameError::CannotAttack(id));
                 }
                 // CR 508.1a — Branded Brawlers: the defender having any
                 // untapped land locks the attack.
@@ -2133,6 +2148,7 @@ impl GameState {
                     && !self.same_team(seat, *p)
                     && restriction.is_none_or(|only| only == Some(*p))
                     && self.player_in_range_of(seat, *p)
+                    && self.seat_attackable_from(seat, *p)
                     && !self.player_cant_be_attacked_at_all(seat, *p)
             })
             .collect()
@@ -2161,6 +2177,26 @@ impl GameState {
                 }
             })
         })
+    }
+
+    /// CR 809.3c — under the Emperor variant's attack option, `defender` must
+    /// be seated immediately next to `seat` (measured over living seats).
+    /// Always true when the option is off.
+    pub(crate) fn seat_attackable_from(&self, seat: usize, defender: usize) -> bool {
+        if !self.attack_adjacent_only {
+            return true;
+        }
+        let living: Vec<usize> =
+            (0..self.players.len()).filter(|p| self.players[*p].is_alive()).collect();
+        let (Some(here), Some(there)) = (
+            living.iter().position(|p| *p == seat),
+            living.iter().position(|p| *p == defender),
+        ) else {
+            return false;
+        };
+        let n = living.len() as isize;
+        let d = (here as isize - there as isize).rem_euclid(n);
+        d == 1 || d == n - 1
     }
 
     /// CR 803.1a/b — the single seat the active player may attack under the

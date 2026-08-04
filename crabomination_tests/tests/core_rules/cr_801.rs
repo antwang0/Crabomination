@@ -1,9 +1,10 @@
-//! CR 801 — the limited range of influence option.
+//! CR 801 — the limited range of influence option, and the CR 809 Emperor
+//! variant and the CR 811 Alternating Teams variant built on top of it.
 
 use crabomination::card::CardId;
 use crabomination::catalog;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
-use crabomination::game::{multi_player_game, *};
+use crabomination::game::{AttackOption, multi_player_game, *};
 use crabomination::mana::Color;
 
 /// A five-seat table with range 1, ranges already snapshotted.
@@ -165,4 +166,91 @@ fn cr_801_1_unlimited_range_is_the_default() {
     let g = multi_player_game(5);
     assert!(g.range_of_influence.is_none());
     assert!(g.player_in_range_of(0, 3));
+}
+
+// ── CR 809 — the Emperor variant ──────────────────────────────────────────
+
+/// Two teams of three, seated together with the emperor in the middle.
+fn emperor_table() -> GameState {
+    let mut g = multi_player_game(6);
+    g.set_emperor_variant(2, 3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g
+}
+
+/// CR 809.2 / 809.3a/b — seating, per-seat ranges, and the deploy option.
+#[test]
+fn cr_809_3a_emperors_see_two_seats_and_generals_one() {
+    let g = emperor_table();
+    assert!(g.players[1].is_emperor && g.players[4].is_emperor);
+    assert_eq!(g.players[1].range_of_influence, Some(2));
+    assert_eq!(g.players[0].range_of_influence, Some(1));
+    assert!(g.deploy_creatures);
+    // The emperor at seat 1 reaches both generals and the far team's edge.
+    assert!(g.player_in_range_of(1, 3));
+    assert!(!g.player_in_range_of(1, 4));
+    // A general only reaches its neighbours.
+    assert!(g.player_in_range_of(0, 5));
+    assert!(!g.player_in_range_of(0, 2));
+}
+
+/// CR 809.3c — an emperor can't attack at all at the start of the game: the
+/// only opponents in range are two seats away.
+#[test]
+fn cr_809_3c_emperors_cant_attack_anyone() {
+    let mut g = emperor_table();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    assert!(g.attackable_players_for(1).is_empty());
+}
+
+/// CR 809.3c — a general attacks only the opposing general beside them.
+#[test]
+fn cr_809_3c_generals_attack_only_their_neighbour() {
+    let g = emperor_table();
+    assert_eq!(g.attackable_players_for(0), vec![5]);
+}
+
+/// CR 809.5b — a team loses when its emperor loses.
+#[test]
+fn cr_809_5b_a_team_falls_with_its_emperor() {
+    let mut g = emperor_table();
+    g.players[4].life = 0;
+    let _ = g.check_state_based_actions();
+    for seat in 3..6 {
+        assert!(g.players[seat].eliminated, "seat {seat} went out with its emperor");
+    }
+    for seat in 0..3 {
+        assert!(!g.players[seat].eliminated, "the other team is untouched");
+    }
+}
+
+// ── CR 811 — Alternating Teams ────────────────────────────────────────────
+
+/// CR 811.2a/811.2c/811.3 — interleaved seating, range 2, no deploy option.
+#[test]
+fn cr_811_3_teams_are_interleaved_around_the_table() {
+    let mut g = multi_player_game(6);
+    g.set_alternating_teams(3, 2);
+    for seat in 0..6 {
+        let left = (seat + 1) % 6;
+        assert!(!g.same_team(seat, left), "seat {seat} sits next to a teammate");
+    }
+    assert_eq!(g.range_of_influence, Some(2));
+    assert!(!g.deploy_creatures);
+}
+
+/// CR 811.2b — attack-left composes with the range: the only legal defender
+/// is the seat to your left, which is never a teammate.
+#[test]
+fn cr_811_2b_attack_left_hits_the_next_team_over() {
+    let mut g = multi_player_game(6);
+    g.set_alternating_teams(3, 2);
+    g.attack_option = AttackOption::AttackLeft;
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert_eq!(g.attackable_players_for(0), vec![1]);
 }

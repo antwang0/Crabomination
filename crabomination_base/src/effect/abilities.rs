@@ -2117,6 +2117,10 @@ pub enum StaticEffect {
     OpponentsCantCastNamed,
     /// "Your opponents can't cast [filter] spells" (Llawan, Cephalid Empress).
     OpponentsCantCastMatching { filter: SelectionRequirement },
+    /// "Players can't cast spells or play lands matching `filter`" — a
+    /// symmetric lock that also binds the source's controller (City in a
+    /// Bottle).
+    PlayersCantPlayMatching { filter: SelectionRequirement },
     /// Circu, Dimir Lobotomist — the controller's opponents can't cast spells
     /// sharing a name with any card exiled with the source (`exiled_with`).
     /// The broad sibling of `OpponentsCantCastNamed`, which reads one name.

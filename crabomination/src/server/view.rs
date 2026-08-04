@@ -75,7 +75,25 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                 let hexproof = state.player_has_static_shroud(i)
                     || (state.player_has_static_hexproof(i)
                         && !(i != viewer_seat && state.player_ignores_hexproof(viewer_seat)));
-                project_player(state, p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0, state.player_cannot_gain_life_now(i), hexproof, known_library_top(state, i, viewer_seat))
+                project_player(
+                    state,
+                    p,
+                    i,
+                    viewer_seat,
+                    &state.prevention_shields,
+                    SeatFacts {
+                        devotion,
+                        draw_cap: state.draw_cap_for(i),
+                        is_monarch: state.monarch == Some(i),
+                        commander_damage_taken: commander_damage_taken(state, i),
+                        team: state.team_of(i).0,
+                        cannot_gain_life: state.player_cannot_gain_life_now(i),
+                        has_hexproof: hexproof,
+                        known_top: known_library_top(state, i, viewer_seat),
+                        in_viewer_range: viewer
+                            .is_none_or(|v| state.player_in_range_of(v, i)),
+                    },
+                )
             })
             .collect(),
         battlefield: {
@@ -530,12 +548,11 @@ fn known_library_top(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn project_player(
-    state: &GameState,
-    player: &Player,
-    player_seat: usize,
-    viewer_seat: usize,
-    prevention_shields: &[crate::game::types::PreventionShield],
+/// The per-seat facts the caller derives once (some need viewer context, some
+/// need whole-board walks) and hands to `project_player`. Bundled so the
+/// projection keeps one argument per *kind* of input rather than a dozen
+/// positional flags.
+struct SeatFacts {
     devotion: [u32; 5],
     draw_cap: Option<u32>,
     is_monarch: bool,
@@ -544,7 +561,30 @@ fn project_player(
     cannot_gain_life: bool,
     has_hexproof: bool,
     known_top: Vec<crate::net::KnownCard>,
+    /// CR 801.2 — is this seat inside the viewer's range of influence? Always
+    /// true outside a limited-range game.
+    in_viewer_range: bool,
+}
+
+fn project_player(
+    state: &GameState,
+    player: &Player,
+    player_seat: usize,
+    viewer_seat: usize,
+    prevention_shields: &[crate::game::types::PreventionShield],
+    facts: SeatFacts,
 ) -> PlayerView {
+    let SeatFacts {
+        devotion,
+        draw_cap,
+        is_monarch,
+        commander_damage_taken,
+        team,
+        cannot_gain_life,
+        has_hexproof,
+        known_top,
+        in_viewer_range,
+    } = facts;
     use crate::game::types::PreventionTarget;
     let has_prevention_shield = prevention_shields
         .iter()
@@ -834,6 +874,7 @@ fn project_player(
         draws_stolen_by: state.draws_stolen_from(player_seat),
         life_locked: player.life_locked_this_turn,
         has_hexproof,
+        in_your_range: in_viewer_range,
         commander_damage_taken,
         team,
         dungeon: state.players[player_seat].dungeon.as_ref().and_then(|(name, room)| {

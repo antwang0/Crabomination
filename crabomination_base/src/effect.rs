@@ -50,6 +50,9 @@ pub enum PlayerRef {
     EachPlayerWithoutMaxSpeed,
     /// The active player (whose turn it is).
     ActivePlayer,
+    /// The single player with more life than every other (Ghazbán Ogre).
+    /// Resolves to nothing when two or more players are tied for the lead.
+    PlayerWithMostLife,
     /// The owner of a selected entity.
     OwnerOf(Box<Selector>),
     /// The owner of the card currently being moved (resolved per-card by
@@ -221,6 +224,11 @@ pub enum Selector {
     /// exile-zone card stamped `exiled_with == ctx.source`. Resolves to that
     /// single card so the activated ability can play it from exile.
     CardExiledWithSource,
+
+    /// The last card the effect's controller drew this turn, if it's still in
+    /// their hand (`Player.last_drawn_card`). Sindbad's "discard it if it isn't
+    /// a land", Jandor's Ring's discard cost.
+    LastCardYouDrew,
 
     /// The most-recently-created token from `Effect::CreateToken` in
     /// the current resolution. Used by Quandrix-style "create a token,
@@ -7968,6 +7976,17 @@ pub enum Effect {
     /// sibling of `SacrificeSourceUnlessPay`, where the generic amount is a
     /// `Value` read at resolution (Megatherium, Extravagant Spirit).
     SacrificeSourceUnlessPayValue { generic: Value },
+    /// "Sacrifice this unless you pay `per` for each `kind` counter on it. If
+    /// you pay, `then`." Cyclone's escalating upkeep.
+    PayPerCounterOrSacrifice {
+        kind: crate::card::CounterType,
+        per: crate::mana::ManaCost,
+        then: Box<Effect>,
+    },
+    /// "…and `amount` damage to any target of an opponent's choice"
+    /// (Cuombajj Witches). The opponent to the controller's left picks;
+    /// CR 801.5a keeps the pick inside both players' ranges of influence.
+    OpponentChoosesTargetForDamage { amount: Value },
 
     /// CR 614.9 — "Prevent all combat damage that would be dealt to and dealt
     /// by `target` this turn." Adds the target creature to

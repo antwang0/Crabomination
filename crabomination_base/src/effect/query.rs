@@ -240,7 +240,9 @@ impl Effect {
             | Effect::TransmuteArtifact
             | Effect::ExileTokensCreatedBySourceForCounters { .. }
             | Effect::RemoveCountersToCreateTokens { .. }
+            | Effect::OpponentChoosesTargetForDamage { .. }
             | Effect::ExileSelfWithCountdown => false,
+            Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::CoffinExile { what } => sel_has_target(what),
             Effect::AddCounterCapped { what, amount, cap, .. } => {
                 sel_has_target(what) || value_has_target(amount) || value_has_target(cap)

@@ -68,6 +68,10 @@ pub fn enumerate_for_cast(
         if p.seat != cv.your_seat && p.has_hexproof {
             continue;
         }
+        // CR 801.4 — a seat outside your range of influence can't be targeted.
+        if !p.in_your_range {
+            continue;
+        }
         if evaluate_player(&filter, p, cv.your_seat) {
             out.players.insert(p.seat);
         }

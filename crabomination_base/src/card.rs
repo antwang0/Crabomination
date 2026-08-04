@@ -406,6 +406,8 @@ pub enum CounterType {
     /// Fuse counter — Goblin Bomb's upkeep coin-flip tally; remove five to
     /// deal 20. Distinct from `Charge` so the two don't share a pool.
     Fuse,
+    /// Wind counter — Cyclone's escalating upkeep tally.
+    Wind,
     /// Mine counter — Mine Layer's land trap; a mined land that taps is
     /// destroyed.
     Mine,
@@ -1269,6 +1271,10 @@ pub enum Keyword {
     /// [land type] on the battlefield" (Glacial Crasher). Any player's land
     /// counts; enforced in `declare_attackers`.
     CantAttackUnlessLandTypeOnBattlefield(LandType),
+    /// CR 508.1a restriction — "This creature can't attack unless defending
+    /// player controls a [land type]" (Merchant Ship, Island Fish Jasconius).
+    /// The defender-scoped sibling of `CantAttackUnlessLandTypeOnBattlefield`.
+    CantAttackUnlessDefenderControlsLandType(LandType),
     /// CR 508.1a restriction — "This creature can't attack unless there are N
     /// or more [land type]s on the battlefield" (Harbor Serpent). Any player's
     /// lands count; the N=1 case is `CantAttackUnlessLandTypeOnBattlefield`.
@@ -1748,6 +1754,9 @@ pub enum SelectionRequirement {
     /// source (`exiled_with == source`) — Holistic Wisdom's return gate.
     SharesCardTypeWithExiledBySource,
     PowerAtMost(i32),
+    /// Power no greater than the *source's* current power (Old Man of the Sea's
+    /// "creature with power less than or equal to this creature's power").
+    PowerAtMostSourcePower,
     ToughnessAtMost(i32),
     /// "Toughness X or less, where X is the number of [filter] you control"
     /// (Scourge of Fleets' Islands). The count is taken from the evaluating
@@ -3561,6 +3570,7 @@ pub struct EnterMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OriginalSet {
     Antiquities,
+    ArabianNights,
 }
 
 impl OriginalSet {
@@ -3569,6 +3579,7 @@ impl OriginalSet {
     pub fn contains(self, name: &str) -> bool {
         match self {
             OriginalSet::Antiquities => ANTIQUITIES_NAMES.binary_search(&name).is_ok(),
+            OriginalSet::ArabianNights => ARABIAN_NIGHTS_NAMES.binary_search(&name).is_ok(),
         }
     }
 }
@@ -3594,6 +3605,26 @@ static ANTIQUITIES_NAMES: [&str; 85] = [
     "Transmute Artifact", "Triskelion", "Urza's Avenger", "Urza's Chalice", "Urza's Mine",
     "Urza's Miter", "Urza's Power Plant", "Urza's Tower", "Wall of Spears", "Weakstone",
     "Xenic Poltergeist", "Yawgmoth Demon", "Yotian Soldier",
+];
+
+/// Arabian Nights' 78 distinct card names, sorted for `binary_search`.
+static ARABIAN_NIGHTS_NAMES: [&str; 78] = [
+    "Abu Ja'far", "Aladdin", "Aladdin's Lamp", "Aladdin's Ring", "Ali Baba", "Ali from Cairo",
+    "Army of Allah", "Bazaar of Baghdad", "Bird Maiden", "Bottle of Suleiman", "Brass Man",
+    "Camel", "City in a Bottle", "City of Brass", "Cuombajj Witches", "Cyclone",
+    "Dancing Scimitar", "Dandân", "Desert", "Desert Nomads", "Desert Twister",
+    "Diamond Valley", "Drop of Honey", "Ebony Horse", "El-Hajjâj", "Elephant Graveyard",
+    "Erg Raiders", "Erhnam Djinn", "Eye for an Eye", "Fishliver Oil", "Flying Carpet",
+    "Flying Men", "Ghazbán Ogre", "Giant Tortoise", "Guardian Beast", "Hasran Ogress",
+    "Hurr Jackal", "Ifh-Bíff Efreet", "Island Fish Jasconius", "Island of Wak-Wak",
+    "Jandor's Ring", "Jandor's Saddlebags", "Jeweled Bird", "Jihad", "Junún Efreet",
+    "Juzám Djinn", "Khabál Ghoul", "King Suleiman", "Kird Ape", "Library of Alexandria",
+    "Magnetic Mountain", "Merchant Ship", "Metamorphosis", "Mijae Djinn", "Moorish Cavalry",
+    "Mountain", "Nafs Asp", "Oasis", "Old Man of the Sea", "Oubliette", "Piety", "Pyramids",
+    "Repentant Blacksmith", "Ring of Ma'rûf", "Rukh Egg", "Sandals of Abdallah", "Sandstorm",
+    "Serendib Djinn", "Serendib Efreet", "Shahrazad", "Sindbad", "Singing Tree",
+    "Sorceress Queen", "Stone-Throwing Devils", "Unstable Mutation", "War Elephant",
+    "Wyluli Wolf", "Ydwen Efreet",
 ];
 
 fn one_u32() -> u32 { 1 }
