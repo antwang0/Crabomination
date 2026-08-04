@@ -169,6 +169,14 @@ pub(crate) fn event_matches_spec(
         }
     }
 
+    // "…activates an ability without {T} in its activation cost" (Haunting
+    // Wind) — a tap-cost activation is left to the companion tap trigger.
+    if spec.exclude_tap_cost_abilities
+        && matches!(event, GameEvent::AbilityActivated { tap_cost: true, .. })
+    {
+        return false;
+    }
+
     // "…becomes tapped, if it isn't being declared as an attacker" (Verity
     // Circle) — exclude the CR 508.1f attacker tap.
     if spec.exclude_attacker_taps

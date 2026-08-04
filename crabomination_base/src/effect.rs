@@ -936,6 +936,8 @@ pub enum Value {
     /// source). Backs "as long as three or more cards are exiled with this
     /// creature" static thresholds (Veteran Survivor).
     CardsExiledWithSourceCount,
+    /// Damage dealt to `who` this turn by artifact sources (Reverse Polarity).
+    ArtifactDamageToPlayerThisTurn { who: PlayerRef },
     /// Half (rounded down) the damage dealt this turn by the highest-dealing
     /// sorcery spell `who` cast this turn. Backdraft; 0 if they cast none.
     HalfGreatestSorceryDamageThisTurn { who: PlayerRef },
@@ -2755,6 +2757,12 @@ pub struct EventSpec {
     /// Circle). Defaults to false. Only meaningful for `Tapped`.
     #[serde(default)]
     pub exclude_attacker_taps: bool,
+    /// "…activates an ability without {T} in its activation cost" (Haunting
+    /// Wind, Powerleech, Artifact Possession). Only meaningful for
+    /// `AbilityActivated`; a tap-cost activation is filtered out so the
+    /// companion `Tapped` trigger is the one that fires.
+    #[serde(default)]
+    pub exclude_tap_cost_abilities: bool,
     /// Restricts a damage event by the object that *dealt* it — "whenever a
     /// Goblin deals combat damage to a player" (Cabal Slaver). `Selector::
     /// TriggerSource` binds the damaged player on those events, so the dealer
@@ -2773,12 +2781,18 @@ impl EventSpec {
             per_subject_cap: None,
             actor_is_opponent: false,
             exclude_attacker_taps: false,
+            exclude_tap_cost_abilities: false,
             dealer_filter: None,
         }
     }
     /// "…becomes tapped, if it isn't being declared as an attacker" (Verity Circle).
     pub fn not_as_attacker(mut self) -> Self {
         self.exclude_attacker_taps = true;
+        self
+    }
+    /// "…activates an ability without {T} in its activation cost" (Haunting Wind).
+    pub fn without_tap_cost(mut self) -> Self {
+        self.exclude_tap_cost_abilities = true;
         self
     }
     pub fn with_filter(mut self, p: Predicate) -> Self {
@@ -6776,6 +6790,10 @@ pub enum Effect {
     /// dealt to that spell's controller instead" (Reverberation). Keyed on the
     /// spell's card id, so it keeps redirecting after the spell has resolved.
     RedirectSpellDamageToItsController { what: Selector },
+
+    /// Tap `what` and hold it down for as long as the source stays tapped
+    /// (Phyrexian Gremlins). Registers a `PreventUntap` tied to the source.
+    TapAndHoldWhileSourceTapped { what: Selector },
 
     /// Exile the resolving source with its `CardDefinition.exile_countdown`
     /// counters on it (All Hallow's Eve). The upkeep tick and the payoff live

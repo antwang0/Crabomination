@@ -1950,14 +1950,19 @@ impl crate::game::GameState {
                     _ => 0,
                 })
                 .sum::<usize>();
-        // Set-to-N overrides (Necrodominance) — smallest wins.
+        // Set-to-N overrides (Necrodominance) plus Cursed Rack's chosen-player
+        // cap — smallest wins.
         let set_to: Option<usize> = self
             .battlefield
             .iter()
-            .filter(|c| c.controller == player)
-            .flat_map(|c| c.definition.static_abilities.iter())
-            .filter_map(|sa| match sa.effect {
-                StaticEffect::ControllerMaxHandSize(n) => Some(n as usize),
+            .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
+            .filter_map(|(c, sa)| match sa.effect {
+                StaticEffect::ControllerMaxHandSize(n) if c.controller == player => {
+                    Some(n as usize)
+                }
+                StaticEffect::ChosenPlayerMaxHandSize(n) if c.chosen_player == Some(player) => {
+                    Some(n as usize)
+                }
                 _ => None,
             })
             .min();
@@ -9884,6 +9889,22 @@ impl GameState {
         {
             return Err(GameError::InvalidTarget);
         }
+        // Artifact Ward — "can't be the target of abilities from [filter]
+        // sources". Only ability sources reach here with a `source_card_id` on
+        // the battlefield; a spell's own cast gate is upstream.
+        if let Some(src) = source_card_id
+            && self
+                .computed_permanent(*cid)
+                .into_iter()
+                .flat_map(|cp| cp.keywords)
+                .any(|k| match k {
+                    Keyword::CantBeTargetedByAbilitiesFromMatching(f) => self
+                        .evaluate_requirement_static(&f, &Target::Permanent(src), controller, Some(src)),
+                    _ => false,
+                })
+        {
+            return Err(GameError::InvalidTarget);
+        }
         // Ward is enforced via triggered abilities on the stack (CR 702.21a),
         // not as a pre-flight targeting restriction. The caster CAN target a
         // Ward creature — the Ward trigger fires and counters the spell unless
@@ -13669,7 +13690,12 @@ impl GameState {
         // out (Flamescroll Celebrant, CR 605.1), and the log skips the
         // tap-for-mana spam.
         if !is_mana_ability(&ability.effect) {
-            events.push(GameEvent::AbilityActivated { source: card_id, exhaust: ability.exhaust, adapt: ability.effect.is_adapt() });
+            events.push(GameEvent::AbilityActivated {
+                source: card_id,
+                exhaust: ability.exhaust,
+                adapt: ability.effect.is_adapt(),
+                tap_cost: ability.tap_cost || ability.untap_self_cost,
+            });
         }
 
         // Mark the ability as used for the once-per-turn budget. (After

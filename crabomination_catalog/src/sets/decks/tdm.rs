@@ -832,6 +832,7 @@ pub fn kheru_goldkeeper() -> CardDefinition {
                 per_subject_cap: None,
                 actor_is_opponent: false,
                 exclude_attacker_taps: false,
+                exclude_tap_cost_abilities: false,
                 dealer_filter: None,
             },
             effect: Effect::CreateToken {

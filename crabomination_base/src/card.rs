@@ -447,6 +447,9 @@ pub enum CounterType {
     /// Scream counter — All Hallow's Eve's exile fuse; one comes off each of
     /// the owner's upkeeps and the card cashes in when the last is removed.
     Scream,
+    /// Doom counter — Armageddon Clock's upkeep tally; it burns everyone for
+    /// that much each draw step.
+    Doom,
     /// Growth counter — used on enchantments that count tutoring or
     /// life-gain progress (Comforting Counsel, "as long as N or more
     /// growth counters …"). Distinct from `Charge` so the static-toggle
@@ -1086,6 +1089,13 @@ pub enum Keyword {
     /// (Hisoka's Guard). `do_untap` asks the controller; declining leaves it
     /// tapped without cancelling the untap step for anything else.
     MayChooseNotToUntap,
+    /// "Prevent all damage that would be dealt to this by [filter] sources"
+    /// (Argothian Treefolk's artifact sources, Argothian Pixies' artifact
+    /// creatures, Artifact Ward's host). Applied in the damage funnel.
+    PreventDamageFromMatching(Box<SelectionRequirement>),
+    /// "This can't be the target of abilities from [filter] sources"
+    /// (Artifact Ward). Checked at the activated/triggered targeting gate.
+    CantBeTargetedByAbilitiesFromMatching(Box<SelectionRequirement>),
     /// "This creature can't be the target of Aura spells" (Bartel Runeaxe,
     /// Tetsuo Umezawa). Checked alongside protection in the cast-time target
     /// gate; abilities and non-Aura spells still reach it.
@@ -3962,6 +3972,13 @@ pub enum DynamicPt {
     /// permanents matching `filter` the controller controls. The `*`-toughness
     /// sibling of `PermanentsControlledMatching` (Treefolk Seedlings, `2/*`).
     PermanentsControlledMatchingToughness {
+        base_p: i32,
+        base_t: i32,
+        filter: Box<SelectionRequirement>,
+    },
+    /// `base_p`/`base_t` plus the number of permanents matching `filter` the
+    /// controller's *opponents* control (Gaea's Avenger).
+    BasePlusOpponentsMatching {
         base_p: i32,
         base_t: i32,
         filter: Box<SelectionRequirement>,

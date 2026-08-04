@@ -392,6 +392,9 @@ impl GameState {
                         }
                     }
                 }
+                // CR 504.1 — "at the beginning of your draw step" triggers go
+                // on the stack after the turn-based draw (Armageddon Clock).
+                self.fire_step_triggers(TurnStep::Draw);
                 self.give_priority_to_active();
             }
             TurnStep::Upkeep => {
@@ -3151,6 +3154,7 @@ impl GameState {
         self.next_combat_damage_to_controller.clear();
         self.spell_damage_to_controller.clear();
         self.sorcery_damage_this_turn.clear();
+        self.artifact_damage_to_players_this_turn.clear();
         self.combat_damage_redirect_this_turn.clear();
         self.doubled_damage_sources_this_turn.clear();
         self.damaged_creatures_die_this_turn = false;

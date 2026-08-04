@@ -154,7 +154,7 @@ pub fn encode_deck(
         let mv = def.cost.cmc();
         mv_sum += mv;
         // Curve buckets 0..=6: mv ≤1, 2, 3, 4, 5, 6, 7+.
-        let bucket = (mv.max(1).min(7) - 1) as usize;
+        let bucket = (mv.clamp(1, 7) - 1) as usize;
         feats[bucket] += 1.0 / 8.0;
         if def.is_creature() {
             creatures += 1;

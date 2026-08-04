@@ -2304,6 +2304,12 @@ pub enum StaticEffect {
     /// instead" (Possessed Portal). Global draw replacement consulted in
     /// `draw_one`.
     PlayersSkipDraws,
+    /// Cursed Rack — "the chosen player's maximum hand size is N", read off
+    /// the source's `chosen_player` slot.
+    ChosenPlayerMaxHandSize(u32),
+    /// CR 614.9 — Martyrs of Korlis: while the source is untapped, all damage
+    /// artifacts would deal to its controller is dealt to it instead.
+    RedirectArtifactDamageToSourceWhileUntapped,
     /// CR 121.2a — Chains of Mephistopheles: every draw except a player's
     /// turn-based draw-step draw becomes "discard a card; if you do, draw a
     /// card, otherwise mill a card". CR 614.5 keeps the replacement from

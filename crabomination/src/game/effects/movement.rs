@@ -754,6 +754,21 @@ impl GameState {
             self.in_damage_redirect = false;
             return;
         }
+        // "Prevent all damage that would be dealt to this by [filter] sources"
+        // (Argothian Treefolk / Pixies, Artifact Ward's host).
+        if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
+            && self
+                .computed_permanent(tgt)
+                .into_iter()
+                .flat_map(|cp| cp.keywords)
+                .any(|k| match k {
+                    crate::card::Keyword::PreventDamageFromMatching(f) => self
+                        .evaluate_requirement_static(&f, &crate::game::types::Target::Permanent(src), self.battlefield_find(tgt).map_or(0, |c| c.controller), Some(src)),
+                    _ => false,
+                })
+        {
+            return;
+        }
         // CR 702.16e — protection from the source's color prevents the whole
         // damage event to a permanent (noncombat damage path).
         if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
@@ -790,6 +805,29 @@ impl GameState {
         if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
             && self.shared_color_creature_damage_prevented(src, tgt)
         {
+            return;
+        }
+        // CR 614.9 — Martyrs of Korlis: while it's untapped, artifact damage
+        // aimed at its controller lands on it instead.
+        if !self.in_damage_redirect
+            && let EntityRef::Player(victim) = ent
+            && source.is_some_and(|s| self.source_is_artifact(s))
+            && let Some(martyr) = self.battlefield.iter().find(|c| {
+                c.controller == victim
+                    && !c.tapped
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            self.active_static(&sa.effect, c),
+                            Some(crate::effect::StaticEffect::
+                                RedirectArtifactDamageToSourceWhileUntapped)
+                        )
+                    })
+            })
+        {
+            let to = martyr.id;
+            self.in_damage_redirect = true;
+            self.deal_damage_to_from(EntityRef::Permanent(to), amount, source, events);
+            self.in_damage_redirect = false;
             return;
         }
         // CR 614.9 — Reverberation: everything the targeted spell would deal
@@ -963,6 +1001,15 @@ impl GameState {
         let amount = self.apply_prevention_shields(ent, amount, source, events);
         if amount == 0 {
             return;
+        }
+        // Reverse Polarity — tally artifact damage dealt to each player.
+        if let (EntityRef::Player(victim), Some(src)) = (ent, source)
+            && self.source_is_artifact(src)
+        {
+            match self.artifact_damage_to_players_this_turn.iter_mut().find(|(s, _)| *s == victim) {
+                Some(entry) => entry.1 += amount,
+                None => self.artifact_damage_to_players_this_turn.push((victim, amount)),
+            }
         }
         // Backdraft — tally the damage each sorcery spell deals as it resolves.
         let sorcery_caster = self.resolving_source.as_ref().and_then(|(rid, caster, _, types)| {

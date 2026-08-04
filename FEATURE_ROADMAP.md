@@ -2487,7 +2487,7 @@ Each a small targeted feature; sweep batch by batch.
    **LGN**, **SCG**), the Mirrodin block (**MRD**, **DST**, **5DN**), the
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
    is closed) and **Legends** (273 cards, `sets::leg`–`leg7`) are all at
-   zero.
+   zero. **Antiquities** is open at 12 after one wave (`sets::atq`).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2502,6 +2502,22 @@ Each a small targeted feature; sweep batch by batch.
 7. **Replays, spectator, social, accessibility** as the product matures.
 
 ## Recently closed (this push)
+
+- **Antiquities opened** — `set_gaps.py atq` 64 → 12 (`sets::atq`, 52 cards).
+  New primitives: `Keyword::{PreventDamageFromMatching,
+  CantBeTargetedByAbilitiesFromMatching}` (Argothian Treefolk / Pixies,
+  Artifact Ward), `StaticEffect::{ChosenPlayerMaxHandSize (Cursed Rack),
+  RedirectArtifactDamageToSourceWhileUntapped (Martyrs of Korlis)}`,
+  `Value::ArtifactDamageToPlayerThisTurn` + a per-turn tally (Reverse
+  Polarity), `Effect::TapAndHoldWhileSourceTapped` (Phyrexian Gremlins),
+  `DynamicPt::BasePlusOpponentsMatching` (Gaea's Avenger),
+  `CounterType::Doom`, and `EventSpec.exclude_tap_cost_abilities` +
+  `GameEvent::AbilityActivated.tap_cost` so "becomes tapped **or** activates
+  an ability without {T}" fires exactly once (Haunting Wind, Powerleech,
+  Artifact Possession). Correctness: **CR 504.1** — "at the beginning of your
+  draw step" triggers now fire at all (`fire_step_triggers(TurnStep::Draw)`
+  was simply missing). Tests in `classic_sets/atq` (53). Still open: 12 cards
+  needing bigger primitives (see TODO.md).
 
 - **Legends complete** — `set_gaps.py leg` 9 → 0 (`sets::leg7`, the set's last
   nine cards). New primitives: `CardDefinition.exile_countdown` (a general

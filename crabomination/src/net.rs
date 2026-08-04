@@ -2418,7 +2418,7 @@ pub enum GameEventWire {
         #[serde(default)]
         face: crate::game::CastFace,
     },
-    AbilityActivated { source: CardId, #[serde(default)] exhaust: bool, #[serde(default)] adapt: bool },
+    AbilityActivated { source: CardId, #[serde(default)] exhaust: bool, #[serde(default)] adapt: bool, #[serde(default)] tap_cost: bool },
     ManaAdded { player: usize, color: Color, #[serde(default)] source: Option<CardId> },
     ColorlessManaAdded { player: usize, #[serde(default)] source: Option<CardId> },
     PermanentEntered { card_id: CardId },
@@ -2592,8 +2592,13 @@ impl From<&GameEvent> for GameEventWire {
                 card_id: *card_id,
                 face: *face,
             },
-            GameEvent::AbilityActivated { source, exhaust, adapt } => {
-                GameEventWire::AbilityActivated { source: *source, exhaust: *exhaust, adapt: *adapt }
+            GameEvent::AbilityActivated { source, exhaust, adapt, tap_cost } => {
+                GameEventWire::AbilityActivated {
+                    source: *source,
+                    exhaust: *exhaust,
+                    adapt: *adapt,
+                    tap_cost: *tap_cost,
+                }
             }
             GameEvent::ManaAdded { player, color, source } => GameEventWire::ManaAdded {
                 player: *player,
@@ -2946,7 +2951,7 @@ impl GameEventWire {
                 format!("{} {verb} {}", pn(*player), name(*card_id))
             }
             E::SpellCast { player, card_id, .. } => format!("{} cast {}", pn(*player), name(*card_id)),
-            E::AbilityActivated { source, exhaust, adapt } => format!(
+            E::AbilityActivated { source, exhaust, adapt, .. } => format!(
                 "{} {} activated",
                 name(*source),
                 if *exhaust { "exhaust ability" } else if *adapt { "adapt ability" } else { "ability" }

@@ -1375,6 +1375,10 @@ pub struct GameState {
     /// of those sorcery spells". Cleared at cleanup.
     #[serde(default)]
     pub sorcery_damage_this_turn: Vec<(CardId, usize, u32)>,
+    /// `(seat, damage)` dealt to each player by artifact sources this turn
+    /// (Reverse Polarity). Cleared at cleanup.
+    #[serde(default)]
+    pub artifact_damage_to_players_this_turn: Vec<(usize, u32)>,
     /// Per seat: this player cast a spell or put a nontoken permanent onto the
     /// battlefield during their own most recent turn (Arboria). Reset for a
     /// player as their untap step begins.
@@ -1939,6 +1943,9 @@ impl Clone for GameState {
             next_combat_damage_to_controller: self.next_combat_damage_to_controller.clone(),
             spell_damage_to_controller: self.spell_damage_to_controller.clone(),
             sorcery_damage_this_turn: self.sorcery_damage_this_turn.clone(),
+            artifact_damage_to_players_this_turn: self
+                .artifact_damage_to_players_this_turn
+                .clone(),
             acted_on_own_turn: self.acted_on_own_turn.clone(),
             combat_damage_redirect_this_turn: self.combat_damage_redirect_this_turn.clone(),
             damaged_creatures_die_this_turn: self.damaged_creatures_die_this_turn,
@@ -2235,6 +2242,7 @@ impl GameState {
             next_combat_damage_to_controller: Vec::new(),
             spell_damage_to_controller: Vec::new(),
             sorcery_damage_this_turn: Vec::new(),
+            artifact_damage_to_players_this_turn: Vec::new(),
             acted_on_own_turn: Vec::new(),
             combat_damage_redirect_this_turn: Vec::new(),
             damaged_creatures_die_this_turn: false,
@@ -4266,6 +4274,22 @@ impl GameState {
             }
         }
         events
+    }
+
+    /// True when `src` is an artifact — a battlefield permanent, a resolving
+    /// spell, or a card in any other zone. Reverse Polarity / Martyrs of Korlis.
+    pub(crate) fn source_is_artifact(&self, src: CardId) -> bool {
+        use crate::card::CardType::Artifact;
+        if let Some(cp) = self.computed_permanent(src) {
+            return cp.card_types.contains(&Artifact);
+        }
+        if let Some((id, _, _, types)) = self.resolving_source.as_ref()
+            && *id == src
+        {
+            return types.contains(&Artifact);
+        }
+        self.find_card_anywhere(src)
+            .is_some_and(|c| c.definition.card_types.contains(&Artifact))
     }
 
     /// Arboria — note that `p` cast a spell or put a nontoken permanent onto
@@ -8680,6 +8704,17 @@ impl GameState {
                 crate::card::DynamicPt::ControllerLife => {
                     let n = self.players[card.controller].life;
                     (n, n)
+                }
+                crate::card::DynamicPt::BasePlusOpponentsMatching { base_p, base_t, filter } => {
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            !self.same_team(c.controller, card.controller)
+                                && self.evaluate_requirement_on_card(&filter, c, c.controller)
+                        })
+                        .count() as i32;
+                    (base_p + n, base_t + n)
                 }
                 crate::card::DynamicPt::BasePlusOpponentsUntappedPermanents { base_p, base_t } => {
                     let n = self
@@ -19274,6 +19309,10 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerAssignsAttackersCombatDamage
             | StaticEffect::PlayersSkipDraws
             | StaticEffect::ChainsOfMephistopheles
+            // Cursed Rack — read by `max_hand_size_for`; Martyrs of Korlis —
+            // read in the damage funnel. Neither is a layer effect.
+            | StaticEffect::ChosenPlayerMaxHandSize(_)
+            | StaticEffect::RedirectArtifactDamageToSourceWhileUntapped
             // Arboria / Land Equilibrium — consulted by `declare_attackers`
             // and the battlefield-entry funnel; no layer effect.
             | StaticEffect::PlayersCantBeAttackedUnlessTheyActedLastTurn

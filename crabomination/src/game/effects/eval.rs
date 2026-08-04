@@ -386,6 +386,13 @@ impl GameState {
                 }
                 seats.len() as i32
             }
+            Value::ArtifactDamageToPlayerThisTurn { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0 };
+                self.artifact_damage_to_players_this_turn
+                    .iter()
+                    .find(|(seat, _)| *seat == p)
+                    .map_or(0, |(_, n)| *n as i32)
+            }
             Value::HalfGreatestSorceryDamageThisTurn { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
                 self.sorcery_damage_this_turn

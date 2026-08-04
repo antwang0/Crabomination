@@ -2541,6 +2541,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TapAndHoldWhileSourceTapped { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.tapped = true;
+                        c.untap_locked_by = ctx.source;
+                        events.push(GameEvent::PermanentTapped {
+                            card_id: cid,
+                            actor: Some(ctx.controller),
+                            as_attacker: false,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileSelfWithCountdown => {
                 // A resolving spell isn't in a zone yet, so the fuse is lit by
                 // the post-resolution disposal path.

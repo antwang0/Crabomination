@@ -4938,6 +4938,31 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 - ⏳ **Onslaught is at 219 gaps.** The remaining bulk is Morph (engine support
   ships) and the tribal commons; Legions and Scourge follow.
 
+## Antiquities (ATQ) — remaining 12
+
+`sets::atq` ships 52 of the set's 64 gaps. Each of the rest wants one primitive
+the engine doesn't have yet:
+
+- **Clockwork Avian / Tetravus** — `+1/+0` counters with a printed cap, and
+  an upkeep counters↔tokens exchange linked to the tokens this creature made.
+- **Primal Clay / Urza's Avenger** — as-enters choice of a whole P/T + keyword
+  + subtype profile (`enters_as_choice` only sets P/T), and a repeatable
+  `{0}`-shrink-for-a-chosen-keyword.
+- **Titania's Song / Xenic Poltergeist** — animate *every* noncreature artifact
+  (or one, until your next upkeep) with P/T equal to mana value, losing all
+  abilities; needs a layer-4/7b static keyed on mana value.
+- **Power Artifact** — activated-ability cost reduction on the enchanted
+  permanent, floored at one mana.
+- **Transmute Artifact** — sacrifice-then-search with a pay-the-difference
+  branch.
+- **Tawnos's Coffin** — exile a creature *and its Auras*, noting counters, and
+  return the whole bundle re-attached when the Coffin untaps or leaves.
+- **Golgothian Sylex** — needs per-card set provenance ("originally printed in
+  Antiquities") in `CardDefinition`.
+- **Goblin Artisans** — coin flip that counters *your own* artifact spell,
+  with the "isn't the target of another Goblin Artisans" linked restriction.
+- **Mishra's War Machine** — printed Banding plus an upkeep discard-or-take-3.
+
 ## MagicCompRules coverage audit
 
 Periodic spot-check against the rules document (`MagicCompRules_20260417.txt`).
@@ -5351,6 +5376,10 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
 - 🟡 **CR 613 — Interaction of Continuous Effects** — 613.7 timestamps ✅ (object timestamps stamped on entry/attach/face-up/transform from the shared effect counter; statics order by `object_timestamp()`; tests `cr_613_7_*`). Remaining: no dependency analyzer (613.8); CDA-first pre-pass (613.3). (EOT keyword grants now join the walk timestamped — audit P1 row closed. Static keyword-grant scopes now route a `ToughnessGreaterThanPower` leaf through the `CardMatch` dynamic path — read against printed P/T + counters per the `CardMatchPowerGated` approximation — so Tapestry Warden / Ancient Lumberknot grant their keyword only to your T>P creatures.) Layer-4 additive card-type static ✅ (`StaticEffect::AddCardTypeToMatching` — "nontoken artifacts you control are lands in addition to their other types", Toph, the First Metalbender; `toph_metalbender_artifacts_are_lands_and_end_step_earthbend`). **CR 613.2 computed-subtype consistency ✅** — `HasArtifactSubtype`/`HasLandType`/`HasSupertype` requirements now read a battlefield permanent's *computed* (post-layer) subtypes/supertypes, matching card-type and creature-type checks, so continuous subtype grants (Sugar Coat's Food, Vraska's Treasure, Song of the Dryads' Forest, the Ring-bearer's Legendary) are seen by aura-legality SBAs and filters (`blb::sugar_coat_makes_a_food`; fixed the Alpine Moon test that had leaned on the printed-subtype read). `EquipBonus.set_artifact_types` installs the layer-4 artifact-subtype override.
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b). 208.3 noncreature P/T now observable for `*`-power Vehicles: `DynamicPt::LandsControlledPower` sets power off a count while toughness stays printed, `computed_permanent()` reports it on a non-crewed (noncreature) Vehicle (Lumbering Worldwagon `*`/4; test `lumbering_worldwagon_power_tracks_lands`). Conditional base-P/T set ✅ (`StaticEffect::SetBasePtIf` — live layer-7b SetPowerToughness gated on a predicate; counters/+N stack on top per 613.7c/f — Snowmelt Stag "5/2 during your turn"; `snowmelt_stag_*`). CR 604.3 CDAs: `DynamicPt::LandsControlledPlusLandsInControllerGraveyard` (Multani, Yavimaya's Avatar), `DynamicPt::CardTypesInOpponentsGraveyards` (Nighthawk Scavenger), `DynamicPt::InstantsSorceriesInControllerGraveyard` (Enigma Drake), `DynamicPt::CreaturesControlledPower` (Suki `*`/4), `DynamicPt::PlusCountersOnLandsControlledPower` (Toph `*`/3), `DynamicPt::NoncreatureNonlandCardsInControllerGraveyard` (Dragonfly Swarm `*`/3), `DynamicPt::ColorsAmongAlliesControlledPower` (Earthen Ally `*`/2), `DynamicPt::EnchantmentsInPlay` (Yavimaya Enchantress `2/2`, +1/+1 per enchantment in play — `tests/recent72.rs`), `DynamicPt::ForestsInPlay` (Traproot Kami `0/*`, toughness = Forests on the battlefield — `tests/recent100.rs`), all live-recomputed by `computed_permanent()`; `tests/recent47.rs`, `tests/recent50.rs`, `tests/tla.rs`.
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). 119.7 rest-of-game lifegain lock ✅ (`Effect::LifeGainLockGame` sets the permanent `Player.cannot_gain_life` flag, distinct from the turn-scoped lock — Screaming Nemesis via `Selector::Target(0)`; test `screaming_nemesis_redirects_damage`). Life-total-threshold statics ✅ (`Predicate::PlayerLifeAtLeast` gates a live self-anthem — Angel of Vitality's +2/+2 at 25+ life; `cr_119_*`, `tests/recent17.rs`). Life-vs-*starting*-total statics ✅ (`Predicate::PlayerLifeAtLeastAboveStarting` gates tiered self-pumps — Elenda, Saint of Dusk +1/+1/menace above starting, +5/+5 more at 10+ above; `elenda_scales_with_life`). Exact-life gate ✅ (`Predicate::PlayerLifeExactly` — Hidetsugu's Second Rite deals 10 only if the targeted player is at exactly 10; `hidetsugus_second_rite_needs_exactly_ten`). Redistribute-life-totals (119.7) is exact at two players — Reverse the Sands rides `ExchangeLifeTotals`, `reverse_the_sands_swaps_life_totals`; a true multiplayer redistribution (each player picks which total they get back) is still open. Remaining: per-source life-gain replacement breadth. (Audit follow-up closed: every `LifeGained` emitter now uses `adjust_life_applied`, and `SetLifeTotal`/`ExchangeLifeTotals` route through the funnel — so a can't-gain-life lock on the player who would gain blocks their half of an exchange while the other still loses; test `cr_119_7_exchange_life_totals_respects_cant_gain_life`.)
+- ✅ **CR 504.1 — draw-step triggers** — `advance_step` never called
+  `fire_step_triggers(TurnStep::Draw)`, so every "at the beginning of your
+  draw step" ability was inert. Now fires after the turn-based draw
+  (Armageddon Clock; `classic_sets/atq::armageddon_clock_ticks_up_and_burns_everyone`).
 - 🟡 **CR 121 — Drawing a Card** — one-shot draw replacement ✅
   (`Effect::ReplaceYourNextDrawThisTurn` queues a charge on
   `Player.next_draw_replacements`; `draw_one` spends the front charge and
