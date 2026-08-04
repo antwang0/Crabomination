@@ -3028,6 +3028,19 @@ pub struct ActivatedAbility {
     pub generic_cost_value: Option<Value>,
 }
 
+impl ActivatedAbility {
+    /// True when activating this costs and restricts nothing — every field but
+    /// the body sits at its default, so it can be re-activated without bound.
+    /// Read by the CR 104.4b mandatory-loop watchdog. Deliberately conservative:
+    /// any cost, gate or per-turn cap makes it non-free, which at worst means a
+    /// loop goes undetected.
+    pub fn is_free(&self) -> bool {
+        let mut probe = self.clone();
+        probe.effect = Self::default().effect;
+        probe == Self::default()
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LoyaltyAbility {
     pub loyalty_cost: i32,

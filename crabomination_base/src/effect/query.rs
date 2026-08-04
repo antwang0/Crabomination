@@ -509,6 +509,9 @@ impl Effect {
             Effect::HauntCreature { .. } => false,
             // CR 701.31 — voting is untargeted; choices happen at resolution.
             Effect::WillOfTheCouncilExile { .. } => false,
+            // CR 701.38 votes are untargeted; the chosen option's body may
+            // target, but it's chosen at resolution.
+            Effect::Vote { .. } => false,
             Effect::CycleRecurFromGraveyard { .. } => false,
             Effect::ReturnGraveyardPermanentsDifferentNames => false,
             Effect::ReturnGraveyardCardsToHand { .. } => false,

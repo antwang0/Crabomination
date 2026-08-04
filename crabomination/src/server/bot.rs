@@ -2999,33 +2999,45 @@ fn cast_candidates(
         }
     }
 
-    // Spree (CR 702.172): a Spree spell must be cast via `CastSpellSpree` with
-    // at least one chosen mode — a plain `CastSpell` resolves it as a no-op. For
-    // each Spree card, offer each single mode whose (base + mode) cost is
-    // payable and whose effect has a legal target; `would_accept` is the final
-    // gate. One mode per candidate keeps the search small while still letting
-    // the bot leverage removal / draw Spree spells (Explosive Derailment,
-    // Final Showdown, Jailbreak Scheme, …).
+    // Spree (CR 702.172) / Tiered / ChooseModesCast: these must be cast via
+    // `CastSpellSpree` with the chosen modes stamped — a plain `CastSpell`
+    // skips the modes' additional costs. Offer each single mode, plus the
+    // every-mode combination for Spree so a bot with mana up can escalate
+    // rather than always firing the cheapest tier; `would_accept` gates
+    // affordability, so unpayable combinations drop out on their own.
     for c in state.players[seat].hand.iter() {
-        let Effect::Spree { modes } = &c.definition.effect else { continue };
-        for (i, sm) in modes.iter().enumerate() {
-            let mode_effect = &sm.effect;
-            let (target, additional_targets) = if mode_effect.requires_target() {
-                let (t, extras) = state.auto_targets_for_effect_all_slots(mode_effect, seat, None);
-                if t.is_none() {
-                    continue;
+        let (modes, combo): (Vec<&Effect>, bool) = match &c.definition.effect {
+            Effect::Spree { modes } => (modes.iter().map(|m| &m.effect).collect(), true),
+            Effect::Tiered { modes } => (modes.iter().map(|m| &m.effect).collect(), false),
+            Effect::ChooseModesCast { modes, .. } => (modes.iter().collect(), false),
+            _ => continue,
+        };
+        // Each target-bearing mode consumes exactly one target slot at
+        // resolution, in printed order.
+        let pick = |picks: Vec<u8>| -> Option<GameAction> {
+            let mut slots: Vec<crate::game::types::Target> = Vec::new();
+            for &i in &picks {
+                let eff = modes[i as usize];
+                if eff.requires_target() {
+                    let (t, _) = state.auto_targets_for_effect_all_slots(eff, seat, None);
+                    slots.push(t?);
                 }
-                (t, extras)
-            } else {
-                (None, vec![])
-            };
-            let action = GameAction::CastSpellSpree {
+            }
+            let mut slots = slots.into_iter();
+            Some(GameAction::CastSpellSpree {
                 card_id: c.id,
-                spree_modes: vec![i as u8],
-                target,
-                additional_targets,
+                spree_modes: picks,
+                target: slots.next(),
+                additional_targets: slots.collect(),
                 x_value: None,
-            };
+            })
+        };
+        let mut candidates: Vec<Vec<u8>> = (0..modes.len() as u8).map(|i| vec![i]).collect();
+        if combo && modes.len() > 1 {
+            candidates.push((0..modes.len() as u8).collect());
+        }
+        for picks in candidates {
+            let Some(action) = pick(picks) else { continue };
             if GameState::would_accept_on(probe, action.clone()) {
                 castable.push(action);
             }

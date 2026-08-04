@@ -424,3 +424,113 @@ fn treasonous_ogre_dethrones_and_burns_life_for_red() {
         1
     );
 }
+
+// ── Voting, CR 701.38 ──────────────────────────────────────────────────────
+
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+
+/// Vote answers, in seat order starting with the controller.
+fn ballot(g: &mut GameState, picks: [u32; 2]) {
+    g.decider = Box::new(ScriptedDecider::new(picks.map(DecisionAnswer::Amount)));
+}
+
+/// CR 701.38 — will of the council: the option with the most votes happens.
+#[test]
+fn plea_for_power_majority_wins() {
+    let mut g = main_phase();
+    mana(&mut g, 0);
+    let id = g.add_card_to_hand(0, catalog::plea_for_power());
+    ballot(&mut g, [1, 1]); // knowledge, knowledge
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 3, "knowledge drew three");
+    assert_eq!(g.players[0].extra_turns, 0, "time lost the vote");
+}
+
+/// CR 701.38 — a tied will-of-the-council vote resolves to the printed
+/// "…or the vote is tied" option, which is always the later one.
+#[test]
+fn tyrants_choice_tie_goes_to_torture() {
+    let mut g = main_phase();
+    mana(&mut g, 0);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::tyrants_choice());
+    ballot(&mut g, [0, 1]); // death, torture
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16, "torture broke the tie");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 1, "no edict");
+}
+
+/// CR 701.38 — council's dilemma: every option fires once per vote it drew.
+#[test]
+fn capital_punishment_dilemma_runs_both_options() {
+    let mut g = main_phase();
+    mana(&mut g, 0);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::capital_punishment());
+    ballot(&mut g, [0, 1]); // death, taxes
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.controller != 1), "the death vote ate the creature");
+    assert!(g.players[1].hand.is_empty(), "the taxes vote ate the card");
+}
+
+/// Lieutenants of the Guard splits its dilemma across counters and tokens.
+#[test]
+fn lieutenants_of_the_guard_splits_its_votes() {
+    let mut g = main_phase();
+    mana(&mut g, 0);
+    let card = g.add_card_to_hand(0, catalog::lieutenants_of_the_guard());
+    ballot(&mut g, [0, 1]); // strength, numbers
+    g.perform_action(GameAction::CastSpell {
+        card_id: card, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let id = g.battlefield.iter().find(|c| c.definition.name == "Lieutenants of the Guard").unwrap().id;
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield.iter().filter(|c| c.is_token).count(), 1, "one Soldier token");
+}
+
+/// Messenger Jays loots once per quill vote.
+#[test]
+fn messenger_jays_loots_per_quill_vote() {
+    let mut g = main_phase();
+    mana(&mut g, 0);
+    let card = g.add_card_to_hand(0, catalog::messenger_jays());
+    ballot(&mut g, [1, 1]); // quill, quill
+    g.perform_action(GameAction::CastSpell {
+        card_id: card, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    let hand = g.players[0].hand.len();
+    drain_stack(&mut g);
+    let id = g.battlefield.iter().find(|c| c.definition.name == "Messenger Jays").unwrap().id;
+    assert_eq!(g.players[0].hand.len(), hand, "two draws, two discards");
+    assert_eq!(g.players[0].graveyard.len(), 2, "both loots discarded");
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+/// Coercive Portal's carnage vote sacrifices itself and wipes the board.
+#[test]
+fn coercive_portal_carnage_wipes_the_board() {
+    let mut g = main_phase();
+    let portal = g.add_card_to_battlefield(0, catalog::coercive_portal());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    ballot(&mut g, [0, 0]); // carnage, carnage
+    upkeep(&mut g);
+    assert!(g.battlefield_find(portal).is_none(), "Portal sacrificed itself");
+    assert!(g.battlefield.iter().all(|c| c.definition.is_land()), "nonlands destroyed");
+}

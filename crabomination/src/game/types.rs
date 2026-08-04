@@ -1944,6 +1944,9 @@ pub enum GameEvent {
     /// (Extraplanar Lens, War's Toll). The tapped permanent is the subject.
     TappedForMana { card_id: CardId, player: usize },
     /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).
+    /// CR 701.38 — a player cast one vote on a ballot; `choice` is the
+    /// printed word they voted for.
+    Voted { player: usize, choice: String },
     CoinFlipWon { player: usize },
     /// CR 701.49 — `player` ventured into `room` of `dungeon`.
     DungeonRoomEntered { player: usize, dungeon: String, room: String },

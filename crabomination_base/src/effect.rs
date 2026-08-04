@@ -5022,6 +5022,10 @@ pub enum Effect {
     /// (Decaying Soil's upkeep). Auto-picks the cheapest matches; fewer
     /// matches than `count` exiles what there is.
     ExileFromGraveyard { who: PlayerRef, count: Value, filter: SelectionRequirement },
+    /// CR 701.38 — an option vote. Starting with the controller and proceeding
+    /// in turn order, each player votes for one of `options`; how the tally is
+    /// spent is `tally`'s business. Untargeted, so it ignores hexproof/shroud.
+    Vote { options: Vec<VoteOption>, tally: VoteTally },
     /// CR 701.31 — "Will of the council." Starting with the controller, each
     /// player votes for one permanent matching `filter` (evaluated relative to
     /// the controller, so Council's Judgment's "a nonland permanent you don't
@@ -5076,8 +5080,8 @@ pub enum Effect {
     /// Illusionist's Bracers — copy the activated ability that just triggered
     /// this. Mana abilities never reach the stack, so the topmost `activated`
     /// stack item from the source is always a legal copy target (CR 706.10).
-    /// The copy inherits the original's targets; the printed "you may choose
-    /// new targets" prompt is a TODO.md follow-up.
+    /// The copy may choose new targets in every declared slot; the original
+    /// is offered first, so a conservative decider keeps it.
     CopyActivatedAbilityMayChooseTargets,
     /// Exile each resolved permanent, then return it to the battlefield under
     /// its owner's control at the beginning of the next end step, entering with
@@ -6319,12 +6323,11 @@ pub enum Effect {
     /// could legally target, each copy aimed at a different one. No-op when the
     /// spell targets anything besides the source.
     CopyForEachOtherTargetableCreature,
-    /// CR 115.7 — "You may choose new targets for target spell." Repoints
-    /// the targeted spell's primary target in place (Redirect). The
-    /// spell's controller's opponent (the redirector) is consulted via
-    /// `Decision::ChooseTarget`, original offered first so AutoDecider
-    /// keeps it. Unlike `CopySpellMayChooseTargets` this mutates the
-    /// original spell rather than a copy.
+    /// CR 115.7c — "You may choose new targets for target spell." Repoints
+    /// every declared slot of the targeted spell in place (Redirect), each
+    /// against its own printed filter. This effect's controller (the
+    /// redirector) chooses via `Decision::ChooseTarget`. Unlike
+    /// `CopySpellMayChooseTargets` this mutates the original spell.
     ChooseNewTargetsForSpell { what: Selector },
     /// Psychic Battle — each player reveals the top card of their library; the
     /// player who revealed the greatest mana value (uniquely) may repoint the
@@ -7051,8 +7054,8 @@ pub enum Effect {
     /// chooses one of them, which goes to the controller's hand. Each
     /// remaining revealed card is exiled, gaining `counter` if `Some`.
     /// Karn, Scion of Urza's +1 (reveal two, opponent chooses, exile the
-    /// other with a silver counter). The opponent's pick is a heuristic
-    /// (give the controller the lowest-value card), mirroring `Punisher`.
+    /// other with a silver counter). A UI opponent is prompted; a bot chooser
+    /// gives the controller the lowest-mana-value card.
     RevealTopOpponentChoosesToHand {
         count: Value,
         counter: Option<crate::card::CounterType>,
@@ -7068,8 +7071,8 @@ pub enum Effect {
 
     /// "Return a card of an opponent's choice matching `filter` from your
     /// graveyard to your hand" — untargeted (Tasigur, the Golden Fang). The
-    /// opponent's pick uses the same adversarial heuristic as
-    /// `RevealTopOpponentChoosesToHand`: hand back the lowest-mana-value match.
+    /// choosing opponent is prompted when they want a UI; a bot chooser hands
+    /// back the lowest-mana-value match.
     ReturnFromGraveyardOpponentChooses { filter: SelectionRequirement },
 
     /// Menacing Ogre — every player secretly picks a number up to `max`, the
@@ -8588,6 +8591,31 @@ pub enum OpeningHandEffect {
     /// post-mulligan. The variant exists so the catalog can declaratively
     /// flag the card and `apply_opening_hand_effects` skips it.
     MulliganHelper,
+}
+
+/// One choice on a CR 701.38 ballot: the word players vote for, and what that
+/// word does.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct VoteOption {
+    pub label: String,
+    pub effect: Effect,
+}
+
+impl VoteOption {
+    pub fn new(label: &str, effect: Effect) -> Self {
+        Self { label: label.to_string(), effect }
+    }
+}
+
+/// How a CR 701.38 vote is spent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum VoteTally {
+    /// Will of the council — only the option with the most votes happens. The
+    /// printed tie-breaker is always the later option ("…or the vote is tied"),
+    /// so a tie resolves to the highest-indexed tied option.
+    Majority,
+    /// Council's dilemma — every option's effect runs once per vote it drew.
+    PerVote,
 }
 
 impl Default for Effect {

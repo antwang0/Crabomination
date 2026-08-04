@@ -390,6 +390,11 @@ pub(crate) fn event_matches_spec(
             // Move). The kind arm above already pinned the new controller.
             event,
             GameEvent::ControlChanged { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // "Whenever this permanent activates an ability" — the equipped
+            // creature's own activations (Illusionist's Bracers, CR 706.10).
+            event,
+            GameEvent::AbilityActivated { source: cid, .. } if *cid == source.id
         ),
         // CR 810.8 — in Two-Headed Giant, "you" effects fan out to
         // teammates: a "whenever you gain life" trigger on team A

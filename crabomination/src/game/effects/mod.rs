@@ -868,10 +868,26 @@ impl GameState {
             // target (CR 115.7). Legal targets are enumerated against the
             // copy's own effect; the original is offered first so the
             // default (AutoDecider) keeps it.
-            let copy_target = if choose_new_targets && target.is_some() {
-                self.repoint_copy_target(&orig_card_def, caster, &target)
+            let (copy_target, copy_extra) = if choose_new_targets && target.is_some() {
+                let t = self.repoint_copy_target(&orig_card_def, caster, &target);
+                let mut taken: Vec<Target> = t.iter().cloned().collect();
+                for (i, o) in additional_targets.iter().enumerate() {
+                    let pick = self
+                        .repoint_copy_slot(
+                            &orig_card_def.effect,
+                            orig_card_def.name,
+                            caster,
+                            (i + 1) as u8,
+                            &Some(o.clone()),
+                            &taken,
+                        )
+                        .unwrap_or_else(|| o.clone());
+                    taken.push(pick);
+                }
+                let extra = taken.split_off(t.iter().len());
+                (t, extra)
             } else {
-                target.clone()
+                (target.clone(), additional_targets.clone())
             };
             let new_id = self.next_id();
             let mut copy_inst = crate::card::CardInstance::new(new_id, orig_card_def.clone(), caster);
@@ -882,7 +898,7 @@ impl GameState {
                 card: Box::new(copy_inst),
                 caster,
                 target: copy_target,
-                additional_targets: additional_targets.clone(),
+                additional_targets: copy_extra,
                 mode,
                 x_value,
                 converged_value,
@@ -905,10 +921,26 @@ impl GameState {
         if snap.definition.keywords.contains(&crate::card::Keyword::CantBeCopied) {
             return;
         }
-        let copy_target = if snap.target.is_some() {
-            self.repoint_copy_target(&snap.definition, seat, &snap.target)
+        let (copy_target, copy_extra) = if snap.target.is_some() {
+            let t = self.repoint_copy_target(&snap.definition, seat, &snap.target);
+            let mut taken: Vec<crate::game::types::Target> = t.iter().cloned().collect();
+            for (i, o) in snap.additional_targets.iter().enumerate() {
+                let pick = self
+                    .repoint_copy_slot(
+                        &snap.definition.effect,
+                        snap.definition.name,
+                        seat,
+                        (i + 1) as u8,
+                        &Some(o.clone()),
+                        &taken,
+                    )
+                    .unwrap_or_else(|| o.clone());
+                taken.push(pick);
+            }
+            let extra = taken.split_off(t.iter().len());
+            (t, extra)
         } else {
-            None
+            (None, snap.additional_targets.clone())
         };
         let new_id = self.next_id();
         let mut copy_inst =
@@ -919,7 +951,7 @@ impl GameState {
             card: Box::new(copy_inst),
             caster: seat,
             target: copy_target,
-            additional_targets: snap.additional_targets.clone(),
+            additional_targets: copy_extra,
             mode: snap.mode,
             x_value: snap.x_value,
             converged_value: snap.converged_value,
@@ -938,8 +970,34 @@ impl GameState {
         caster: usize,
         original: &Option<crate::game::types::Target>,
     ) -> Option<crate::game::types::Target> {
+        self.repoint_copy_slot(&def.effect, def.name, caster, 0, original, &[])
+    }
+
+    /// Slot-aware form of `repoint_copy_target`: slot 0 walks the effect's own
+    /// enumeration, later slots filter that pool by the slot's printed
+    /// requirement (CR 115.7c — a copy may re-aim *every* declared slot).
+    fn repoint_copy_slot(
+        &mut self,
+        effect: &crate::effect::Effect,
+        name: &str,
+        caster: usize,
+        slot: u8,
+        original: &Option<crate::game::types::Target>,
+        taken: &[crate::game::types::Target],
+    ) -> Option<crate::game::types::Target> {
         use crate::decision::{Decision, DecisionAnswer};
-        let mut legal = self.enumerate_legal_targets(&def.effect, caster);
+        let slot_filter = effect.target_filter_for_slot(slot).cloned();
+        // CR 601.2c — the slots of one spell must name different objects.
+        let mut legal: Vec<crate::game::types::Target> = self
+            .enumerate_legal_targets(effect, caster)
+            .into_iter()
+            .filter(|t| !taken.contains(t))
+            .filter(|t| {
+                slot_filter
+                    .as_ref()
+                    .is_none_or(|f| self.evaluate_requirement_static(f, t, caster, None))
+            })
+            .collect();
         if legal.is_empty() {
             return original.clone();
         }
@@ -963,7 +1021,7 @@ impl GameState {
             optional: false,
             source,
             legal: legal.clone(),
-            source_name: def.name.to_string(),
+            source_name: name.to_string(),
             description: "choose new targets for the copy".to_string(),
         });
         match answer {
@@ -986,7 +1044,7 @@ impl GameState {
         chooser: usize,
         original: &Option<crate::game::types::Target>,
     ) -> Option<crate::game::types::Target> {
-        self.retarget_slot(effect, name, chooser, 0, original)
+        self.retarget_slot(effect, name, chooser, 0, original, &[])
     }
 
     /// CR 115.7 — repoint one declared target slot. Slot 0 walks the effect's
@@ -999,14 +1057,16 @@ impl GameState {
         chooser: usize,
         slot: u8,
         original: &Option<crate::game::types::Target>,
+        taken: &[crate::game::types::Target],
     ) -> Option<crate::game::types::Target> {
         use crate::decision::{Decision, DecisionAnswer};
         use crate::game::types::Target;
         let slot_filter = effect.target_filter_for_slot(slot).cloned();
+        // CR 601.2c — the slots of one spell must name different objects.
         let mut legal: Vec<Target> = self
             .enumerate_legal_targets(effect, chooser)
             .into_iter()
-            .filter(|t| Some(t) != original.as_ref())
+            .filter(|t| Some(t) != original.as_ref() && !taken.contains(t))
             .filter(|t| {
                 slot_filter.as_ref().is_none_or(|f| {
                     self.evaluate_requirement_static(f, t, chooser, None)
@@ -3073,7 +3133,45 @@ impl GameState {
                 }) else {
                     return Ok(());
                 };
-                let copy = self.stack[idx].clone();
+                let mut copy = self.stack[idx].clone();
+                // CR 706.10 — "you may choose new targets for the copy".
+                if let StackItem::Trigger {
+                    controller,
+                    effect,
+                    target,
+                    additional_targets,
+                    ..
+                } = &mut copy
+                    && target.is_some()
+                {
+                    let (eff, who) = ((**effect).clone(), *controller);
+                    let name = self
+                        .find_card_anywhere(owner)
+                        .map(|c| c.definition.name.to_string())
+                        .unwrap_or_default();
+                    let orig = target.clone();
+                    let extra = additional_targets.clone();
+                    let new_target = self.repoint_copy_slot(&eff, &name, who, 0, &orig, &[]);
+                    let mut taken: Vec<Target> = new_target.iter().cloned().collect();
+                    for (i, o) in extra.iter().enumerate() {
+                        let pick = self
+                            .repoint_copy_slot(
+                                &eff,
+                                &name,
+                                who,
+                                (i + 1) as u8,
+                                &Some(o.clone()),
+                                &taken,
+                            )
+                            .unwrap_or_else(|| o.clone());
+                        taken.push(pick);
+                    }
+                    let new_extra: Vec<Target> = taken.split_off(new_target.iter().len());
+                    if let StackItem::Trigger { target, additional_targets, .. } = &mut copy {
+                        *target = new_target;
+                        *additional_targets = new_extra;
+                    }
+                }
                 self.stack.push(copy);
                 Ok(())
             }
@@ -10107,6 +10205,59 @@ impl GameState {
                         let cid = card.id;
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Vote { options, tally } => {
+                use crate::effect::VoteTally;
+                if options.is_empty() {
+                    return Ok(());
+                }
+                // CR 701.38a — starting with the controller, in turn order.
+                let n = self.players.len();
+                let mut cursor = 0usize;
+                let mut votes = vec![0u32; options.len()];
+                let ballot: Vec<String> =
+                    options.iter().map(|o| o.label.clone()).collect();
+                let source = ctx.source.unwrap_or(CardId(0));
+                for i in 0..n {
+                    let seat = (ctx.controller + i) % n;
+                    let prompt = format!("Vote: {}", ballot.join(" or "));
+                    let Some(pick) = self.ask_seat_amount(
+                        &mut cursor,
+                        seat,
+                        prompt,
+                        source,
+                        options.len() as u32 - 1,
+                        effect,
+                    ) else {
+                        return Ok(());
+                    };
+                    let pick = (pick as usize).min(options.len() - 1);
+                    votes[pick] += 1;
+                    events.push(GameEvent::Voted {
+                        player: seat,
+                        choice: ballot[pick].clone(),
+                    });
+                }
+                self.clear_answer_log();
+                match tally {
+                    VoteTally::Majority => {
+                        // Ties go to the later option — every printed ballot
+                        // puts "…or the vote is tied" on the last choice.
+                        let best = votes.iter().copied().max().unwrap_or(0);
+                        let winner =
+                            votes.iter().rposition(|v| *v == best).unwrap_or(0);
+                        self.run_effect(&options[winner].effect, ctx, events)?;
+                    }
+                    VoteTally::PerVote => {
+                        for (opt, count) in options.iter().zip(votes) {
+                            for _ in 0..count {
+                                self.run_effect(&opt.effect, ctx, events)?;
+                            }
+                        }
                     }
                 }
                 Ok(())
@@ -21061,8 +21212,7 @@ impl GameState {
 
             Effect::ReturnFromGraveyardOpponentChooses { filter } => {
                 let p = ctx.controller;
-                // The opponent hands back the least useful match (lowest MV).
-                let pick = self.players[p]
+                let mut matches: Vec<(CardId, String, u32)> = self.players[p]
                     .graveyard
                     .iter()
                     .filter(|c| {
@@ -21073,11 +21223,34 @@ impl GameState {
                             ctx.source,
                         )
                     })
-                    .min_by_key(|c| c.definition.cost.cmc())
-                    .map(|c| c.id);
-                if let Some(id) = pick {
-                    self.move_card_to(id, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
+                    .collect();
+                if matches.is_empty() {
+                    return Ok(());
                 }
+                // A bot chooser hands back the least useful match (lowest MV);
+                // a UI opponent is prompted for real.
+                matches.sort_by_key(|(_, _, mv)| *mv);
+                let chooser = self.opponents_of(p).first().copied().unwrap_or(p);
+                let mut cursor = 0usize;
+                let candidates: Vec<(CardId, String)> =
+                    matches.iter().map(|(id, n, _)| (*id, n.clone())).collect();
+                let Some(picked) = self.ask_seat_cards_logged(
+                    &mut cursor,
+                    chooser,
+                    "Choose a card to return to its owner's hand".to_string(),
+                    ctx.source.unwrap_or(CardId(0)),
+                    candidates,
+                    1,
+                    1,
+                    effect,
+                    vec![matches[0].0],
+                ) else {
+                    return Ok(());
+                };
+                self.clear_answer_log();
+                let id = picked.first().copied().unwrap_or(matches[0].0);
+                self.move_card_to(id, &ZoneDest::Hand(PlayerRef::You), ctx, events);
                 Ok(())
             }
 
@@ -21094,29 +21267,42 @@ impl GameState {
                 if revealed.is_empty() {
                     return Ok(());
                 }
-                // The opponent chooses. Heuristic (no interactive prompt, like
-                // `Punisher`): hand the controller the lowest-mana-value
-                // eligible card.
-                let eligible: Vec<crate::card::CardId> = revealed
+                // The opponent chooses. A bot chooser hands the controller the
+                // lowest-mana-value eligible card; a UI opponent is prompted.
+                let mut eligible: Vec<(crate::card::CardId, String, u32)> = revealed
                     .iter()
-                    .copied()
-                    .filter(|id| match pick_filter {
-                        None => true,
-                        Some(f) => self.players[p]
-                            .library
-                            .iter()
-                            .find(|c| c.id == *id)
-                            .is_some_and(|c| self.evaluate_requirement_on_card(f, c, p)),
+                    .filter_map(|id| self.players[p].library.iter().find(|c| c.id == *id))
+                    .filter(|c| {
+                        pick_filter
+                            .as_ref()
+                            .is_none_or(|f| self.evaluate_requirement_on_card(f, c, p))
                     })
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc()))
                     .collect();
-                let chosen = eligible.iter().copied().min_by_key(|id| {
-                    self.players[p]
-                        .library
-                        .iter()
-                        .find(|c| c.id == *id)
-                        .map(|c| c.definition.cost.cmc())
-                        .unwrap_or(0)
-                });
+                eligible.sort_by_key(|(_, _, mv)| *mv);
+                let chosen = if eligible.is_empty() {
+                    None
+                } else {
+                    let chooser = self.opponents_of(p).first().copied().unwrap_or(p);
+                    let mut cursor = 0usize;
+                    let candidates: Vec<(CardId, String)> =
+                        eligible.iter().map(|(id, n, _)| (*id, n.clone())).collect();
+                    let Some(picked) = self.ask_seat_cards_logged(
+                        &mut cursor,
+                        chooser,
+                        "Choose a revealed card for its owner".to_string(),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates,
+                        1,
+                        1,
+                        effect,
+                        vec![eligible[0].0],
+                    ) else {
+                        return Ok(());
+                    };
+                    self.clear_answer_log();
+                    Some(picked.first().copied().unwrap_or(eligible[0].0))
+                };
                 let (pick_dest, rest_dest) = if *pick_to_battlefield {
                     (
                         ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
@@ -25187,14 +25373,14 @@ impl GameState {
                 // CR 115.7c — "the target or targets": every declared slot is
                 // repointed, each against its own filter.
                 let new_target = self.retarget_spell(&eff, &name, who, &orig);
-                let new_extra: Vec<Target> = extra
-                    .iter()
-                    .enumerate()
-                    .map(|(i, t)| {
-                        self.retarget_slot(&eff, &name, who, (i + 1) as u8, &Some(t.clone()))
-                            .unwrap_or_else(|| t.clone())
-                    })
-                    .collect();
+                let mut taken: Vec<Target> = new_target.iter().cloned().collect();
+                for (i, t) in extra.iter().enumerate() {
+                    let pick = self
+                        .retarget_slot(&eff, &name, who, (i + 1) as u8, &Some(t.clone()), &taken)
+                        .unwrap_or_else(|| t.clone());
+                    taken.push(pick);
+                }
+                let new_extra: Vec<Target> = taken.split_off(new_target.iter().len());
                 match &mut self.stack[idx] {
                     StackItem::Spell { target, additional_targets, .. }
                     | StackItem::Trigger { target, additional_targets, .. } => {
@@ -25206,9 +25392,9 @@ impl GameState {
             }
 
             Effect::ChooseNewTargetsForSpell { what } => {
-                // CR 115.7 — repoint the targeted spell's primary target in
-                // place. The controller of *this* effect (Redirect's caster)
-                // chooses; the original target is offered first.
+                // CR 115.7c — repoint *every* declared target slot of the
+                // spell in place, each against its own printed filter. The
+                // controller of this effect (Redirect's caster) chooses.
                 let chooser = ctx.controller;
                 let spell_ids: Vec<CardId> = self
                     .resolve_selector(what, ctx)
@@ -25225,11 +25411,15 @@ impl GameState {
                     }) else {
                         continue;
                     };
-                    let (def, orig_target) =
-                        if let crate::game::types::StackItem::Spell { card, target, .. } =
-                            &self.stack[idx]
+                    let (def, orig_target, orig_extra) =
+                        if let crate::game::types::StackItem::Spell {
+                            card,
+                            target,
+                            additional_targets,
+                            ..
+                        } = &self.stack[idx]
                         {
-                            (card.definition.clone(), target.clone())
+                            (card.definition.clone(), target.clone(), additional_targets.clone())
                         } else {
                             continue;
                         };
@@ -25238,10 +25428,29 @@ impl GameState {
                     }
                     let new_target =
                         self.retarget_spell(&def.effect, def.name, chooser, &orig_target);
-                    if let crate::game::types::StackItem::Spell { target, .. } =
-                        &mut self.stack[idx]
+                    let mut taken: Vec<Target> = new_target.iter().cloned().collect();
+                    for (i, t) in orig_extra.iter().enumerate() {
+                        let pick = self
+                            .retarget_slot(
+                                &def.effect,
+                                def.name,
+                                chooser,
+                                (i + 1) as u8,
+                                &Some(t.clone()),
+                                &taken,
+                            )
+                            .unwrap_or_else(|| t.clone());
+                        taken.push(pick);
+                    }
+                    let new_extra: Vec<Target> = taken.split_off(new_target.iter().len());
+                    if let crate::game::types::StackItem::Spell {
+                        target,
+                        additional_targets,
+                        ..
+                    } = &mut self.stack[idx]
                     {
                         *target = new_target;
+                        *additional_targets = new_extra;
                     }
                 }
                 Ok(())

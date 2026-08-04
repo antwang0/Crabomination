@@ -821,3 +821,206 @@ pub fn treasonous_ogre() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Voting (CR 701.38) ─────────────────────────────────────────────────────
+
+use crate::effect::{VoteOption, VoteTally};
+
+/// Each opponent sacrifices a creature of their choice.
+fn opponents_sacrifice_creature() -> Effect {
+    Effect::Sacrifice {
+        who: Selector::Player(PlayerRef::EachOpponent),
+        count: Value::ONE,
+        filter: R::Creature,
+    }
+}
+
+/// Plea for Power — will of the council: an extra turn, or three cards.
+pub fn plea_for_power() -> CardDefinition {
+    CardDefinition {
+        name: "Plea for Power",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Vote {
+            tally: VoteTally::Majority,
+            options: vec![
+                VoteOption::new(
+                    "time",
+                    Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::ONE },
+                ),
+                VoteOption::new(
+                    "knowledge",
+                    Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                ),
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Tyrant's Choice — will of the council: edicts, or four life.
+pub fn tyrants_choice() -> CardDefinition {
+    CardDefinition {
+        name: "Tyrant's Choice",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Vote {
+            tally: VoteTally::Majority,
+            options: vec![
+                VoteOption::new("death", opponents_sacrifice_creature()),
+                VoteOption::new(
+                    "torture",
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(4),
+                    },
+                ),
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Capital Punishment — council's dilemma: an edict per death vote, a discard
+/// per taxes vote.
+pub fn capital_punishment() -> CardDefinition {
+    CardDefinition {
+        name: "Capital Punishment",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Vote {
+            tally: VoteTally::PerVote,
+            options: vec![
+                VoteOption::new("death", opponents_sacrifice_creature()),
+                VoteOption::new(
+                    "taxes",
+                    Effect::Discard {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::ONE,
+                        random: false,
+                    },
+                ),
+            ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Lieutenants of the Guard — council's dilemma on entry: counters or Soldiers.
+pub fn lieutenants_of_the_guard() -> CardDefinition {
+    CardDefinition {
+        name: "Lieutenants of the Guard",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Vote {
+                tally: VoteTally::PerVote,
+                options: vec![
+                    VoteOption::new(
+                        "strength",
+                        Effect::AddCounter {
+                            what: Selector::This,
+                            kind: crate::card::CounterType::PlusOnePlusOne,
+                            amount: Value::ONE,
+                        },
+                    ),
+                    VoteOption::new(
+                        "numbers",
+                        Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::ONE,
+                            definition: token(
+                                "Soldier",
+                                1,
+                                1,
+                                CreatureType::Soldier,
+                                vec![Color::White],
+                            ),
+                        },
+                    ),
+                ],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Messenger Jays — council's dilemma on entry: counters, or loot per quill.
+pub fn messenger_jays() -> CardDefinition {
+    CardDefinition {
+        name: "Messenger Jays",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Vote {
+                tally: VoteTally::PerVote,
+                options: vec![
+                    VoteOption::new(
+                        "feather",
+                        Effect::AddCounter {
+                            what: Selector::This,
+                            kind: crate::card::CounterType::PlusOnePlusOne,
+                            amount: Value::ONE,
+                        },
+                    ),
+                    VoteOption::new(
+                        "quill",
+                        Effect::Seq(vec![
+                            Effect::Draw { who: Selector::You, amount: Value::ONE },
+                            Effect::Discard {
+                                who: Selector::You,
+                                amount: Value::ONE,
+                                random: false,
+                            },
+                        ]),
+                    ),
+                ],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Coercive Portal — will of the council each upkeep: board wipe, or a card.
+pub fn coercive_portal() -> CardDefinition {
+    CardDefinition {
+        name: "Coercive Portal",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Vote {
+                tally: VoteTally::Majority,
+                options: vec![
+                    VoteOption::new(
+                        "carnage",
+                        Effect::Seq(vec![
+                            Effect::SacrificeSource,
+                            Effect::Destroy { what: Selector::EachPermanent(R::Nonland) },
+                        ]),
+                    ),
+                    VoteOption::new(
+                        "homage",
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    ),
+                ],
+            },
+        }],
+        ..Default::default()
+    }
+}

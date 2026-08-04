@@ -299,6 +299,12 @@ static CNS: &[Factory] = &[
     super::cns::marchesas_emissary,
     super::cns::marchesas_infiltrator,
     super::cns::treasonous_ogre,
+    super::cns::plea_for_power,
+    super::cns::tyrants_choice,
+    super::cns::capital_punishment,
+    super::cns::lieutenants_of_the_guard,
+    super::cns::messenger_jays,
+    super::cns::coercive_portal,
 ];
 static OHOP: &[Factory] = &[
     super::ohop::academy_at_tolaria_west,

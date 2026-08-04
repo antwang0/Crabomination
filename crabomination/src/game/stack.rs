@@ -1361,9 +1361,16 @@ impl GameState {
     pub const MANDATORY_LOOP_DRAW_REPEATS: u32 = 400;
 
     pub fn resolve_top_of_stack(&mut self) -> Result<Vec<GameEvent>, GameError> {
-        // Only triggered abilities can loop without a player choice: a spell
-        // resolution consumed a cast, and an activation consumed a cost.
-        let was_trigger = matches!(self.stack.last(), Some(StackItem::Trigger { .. }));
+        // A spell resolution consumed a cast, so only abilities can loop with
+        // nothing spent: every triggered ability, plus activations whose cost
+        // line is empty (`{0}:` with no tap/sac/cap — `ActivatedAbility::is_free`).
+        let was_trigger = match self.stack.last() {
+            Some(StackItem::Trigger { activated: false, .. }) => true,
+            Some(StackItem::Trigger { source, activated: true, .. }) => self
+                .find_card_anywhere(*source)
+                .is_some_and(|c| c.definition.activated_abilities.iter().any(|a| a.is_free())),
+            _ => false,
+        };
         let mut events = self.resolve_top_of_stack_inner()?;
         if was_trigger && self.game_over.is_none() {
             let fp = self.loop_fingerprint();
