@@ -92,6 +92,7 @@ fn main() {
                     CardType::Sorcery => "Sorcery",
                     CardType::Kindred => "Kindred",
                     CardType::Vanguard => "Vanguard",
+                    CardType::Conspiracy => "Conspiracy",
                     CardType::Scheme => "Scheme",
                 })
                 .collect();

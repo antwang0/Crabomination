@@ -4663,12 +4663,20 @@ pub fn sync_command_zone(
     // Collect every (CardId, owner, slot) currently in any command
     // zone, so the spawn loop can reuse the layout helper.
     let mut want: HashMap<CardId, (usize, usize)> = HashMap::new();
-    let mut want_name: HashMap<CardId, String> = HashMap::new();
+    // `None` = render the card back: CR 315.7 hides another player's
+    // face-down hidden-agenda conspiracy, but the object is still there.
+    let mut want_name: HashMap<CardId, Option<String>> = HashMap::new();
     for player in &view.players {
         for (slot, entry) in player.command.iter().enumerate() {
-            if let crabomination::net::HandCardView::Known(k) = entry {
-                want.insert(k.id, (player.seat, slot));
-                want_name.insert(k.id, k.name.clone());
+            match entry {
+                crabomination::net::HandCardView::Known(k) => {
+                    want.insert(k.id, (player.seat, slot));
+                    want_name.insert(k.id, Some(k.name.clone()));
+                }
+                crabomination::net::HandCardView::Hidden { id } => {
+                    want.insert(*id, (player.seat, slot));
+                    want_name.insert(*id, None);
+                }
             }
         }
     }
@@ -4688,10 +4696,15 @@ pub fn sync_command_zone(
         if have.contains(card_id) {
             continue;
         }
-        let name = want_name.get(card_id).cloned().unwrap_or_default();
+        let hidden = want_name.get(card_id).map(|n| n.is_none()).unwrap_or(false);
+        let name = want_name.get(card_id).cloned().flatten().unwrap_or_default();
         let target = crate::card::command_zone_card_transform(*owner, viewer, n_seats, *slot);
-        let front_mat = card_front_material(&name, &mut materials, &asset_server);
         let back_mat = card_assets.back_material.clone();
+        let front_mat = if hidden {
+            back_mat.clone()
+        } else {
+            card_front_material(&name, &mut materials, &asset_server)
+        };
         let entity = crate::card::spawn_single_card(
             &mut commands,
             &card_assets.card_mesh,

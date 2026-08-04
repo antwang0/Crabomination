@@ -754,14 +754,22 @@ fn project_player(
         // Reliquary Tower statics — the raw `Player.max_hand_size` ignores them
         // and made the client's cleanup-discard hint wrong.
         max_hand_size: state.effective_max_hand_size(player_seat),
-        // Command zone is public — every viewer sees every card as
+        // The command zone is public — every viewer sees every card as
         // `Known`. We reuse `HandCardView` for the card shape since
         // it already carries name / cost / types / target hints,
         // which is what the UI needs to render and previs casting.
+        // CR 315.7 is the one exception: a face-down hidden-agenda
+        // conspiracy is visible only to its own controller.
         command: player
             .command
             .iter()
-            .map(|c| HandCardView::Known(known_card(c)))
+            .map(|c| {
+                if c.face_down && c.definition.is_conspiracy() && player_seat != viewer_seat {
+                    HandCardView::Hidden { id: c.id }
+                } else {
+                    HandCardView::Known(known_card(c))
+                }
+            })
             .collect(),
         commanders: player.commanders.clone(),
         // Tax tally per commander (CR 903.8). Resolve each id to a name the

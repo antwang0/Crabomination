@@ -21,6 +21,7 @@ mod usg2;
 mod usg3;
 mod bro;
 mod chk;
+mod cns;
 mod chk2;
 mod chk3;
 mod dgm;

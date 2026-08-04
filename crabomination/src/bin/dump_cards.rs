@@ -266,6 +266,7 @@ fn card_type_str(ct: &CardType) -> &'static str {
         CardType::Sorcery => "Sorcery",
         CardType::Kindred => "Kindred",
         CardType::Vanguard => "Vanguard",
+        CardType::Conspiracy => "Conspiracy",
         CardType::Scheme => "Scheme",
     }
 }

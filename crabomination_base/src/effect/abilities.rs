@@ -874,6 +874,12 @@ pub enum StaticEffect {
     /// "You can't cast creature spells" (Grid Monitor). The creature-side
     /// sibling of `ControllerCantCastNoncreatureSpells`.
     ControllerCantCastCreatureSpells,
+    /// "You can't cast instant or sorcery spells" (Hymn of the Wilds).
+    ControllerCantCastInstantsOrSorceries,
+    /// CR 315.5a — "You are the starting player" (Power Play). Read by
+    /// `GameState::apply_starting_player_conspiracies` before the first turn;
+    /// ties are broken at random.
+    ControllerIsStartingPlayer,
     /// "Noncreature spells with mana value `min_mana_value` or greater can't be
     /// cast" and (when `or_has_x`) "noncreature spells with {X} in their mana
     /// costs can't be cast." Global — locks every player while any permanent
@@ -1779,6 +1785,14 @@ pub enum StaticEffect {
     /// `chosen_type_etb_counter_specs`; the source's live power (layers applied)
     /// sets the count, so a pumped Biomancer grants more.
     OtherCreaturesEnterWithCountersEqualToSourcePower { kind: CounterType },
+    /// "Each permanent you control matching `filter` enters with `amount`
+    /// additional `kind` counters on it" (Muzzio's Preparations — the filter
+    /// carries `NamedBySource`, resolved against the source's chosen name).
+    MatchingEntersWithExtraCounters {
+        filter: SelectionRequirement,
+        kind: CounterType,
+        amount: u32,
+    },
     /// "Each planeswalker you control enters with an additional `amount`
     /// loyalty counters on it" (Oath of Gideon). Read alongside the
     /// creature-scoped enters-with statics in `chosen_type_etb_counter_specs`.

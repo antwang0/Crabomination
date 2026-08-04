@@ -653,7 +653,9 @@ pub fn cost_reduction_for_spell_full(
 ) -> u32 {
     use crate::effect::StaticEffect;
     let mut reduction = 0u32;
-    for src in &state.battlefield {
+    // CR 315.5 — a face-up conspiracy's cost statics apply from the command
+    // zone (Hymn of the Wilds, Brago's Favor), so walk those too.
+    for src in state.all_static_sources() {
         for sa in &src.definition.static_abilities {
             match &sa.effect {
                 StaticEffect::GraveyardCastCostReduction { amount }
@@ -5791,6 +5793,14 @@ impl GameState {
             return Err(GameError::CantCastNoncreature);
         }
 
+        // Hymn of the Wilds — its controller can't cast instants or sorceries.
+        if (card.definition.is_instant() || card.definition.is_sorcery())
+            && self.player_cant_cast_instants_or_sorceries(p)
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::CantCastNoncreature);
+        }
+
         // Grid Monitor — its controller can't cast creature spells.
         if card.definition.is_creature() && self.player_cant_cast_creature_spells(p) {
             self.players[p].hand.push(card);
@@ -10053,11 +10063,21 @@ impl GameState {
     /// static (Nikya of the Old Ways).
     pub(crate) fn player_cant_cast_noncreature_spells(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
-        self.battlefield.iter().any(|c| {
-            c.controller == player
-                && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, StaticEffect::ControllerCantCastNoncreatureSpells)
-                })
+        self.seat_static_sources(player).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, StaticEffect::ControllerCantCastNoncreatureSpells)
+            })
+        })
+    }
+
+    /// True while `player` controls a `ControllerCantCastInstantsOrSorceries`
+    /// static (Hymn of the Wilds, from the command zone).
+    pub(crate) fn player_cant_cast_instants_or_sorceries(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.seat_static_sources(player).any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, StaticEffect::ControllerCantCastInstantsOrSorceries)
+            })
         })
     }
 
@@ -10530,7 +10550,7 @@ impl GameState {
         // CR 902.5 — a Vanguard avatar's cast trigger fires from the command
         // zone (Serra Angel Avatar's "whenever you cast a spell, gain 2 life").
         for (seat, pl) in self.players.iter().enumerate() {
-            for c in pl.command.iter().filter(|c| c.definition.is_vanguard()) {
+            for c in pl.command.iter().filter(|c| c.command_zone_abilities_active()) {
                 for t in &c.definition.triggered_abilities {
                     if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, seat) {
                         candidates.push((

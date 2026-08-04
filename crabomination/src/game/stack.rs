@@ -761,7 +761,7 @@ impl GameState {
             for c in player
                 .command
                 .iter()
-                .filter(|c| c.definition.is_vanguard() || c.definition.is_scheme())
+                .filter(|c| c.command_zone_abilities_active() || c.definition.is_scheme())
             {
                 for t in &c.definition.triggered_abilities {
                     let scoped_to_owner = matches!(

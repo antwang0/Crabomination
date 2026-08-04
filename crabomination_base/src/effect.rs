@@ -659,6 +659,9 @@ pub enum Value {
     /// to a defending player). One in a normal 1v1 combat; more in multiplayer
     /// when a batch spreads attackers across seats.
     OpponentsAttackedThisCombat,
+    /// The game's current turn number (CR 500 — the first turn is 1). Powers
+    /// "the first upkeep" gates (Sentinel Dispatch).
+    TurnNumber,
     GraveyardSizeOf(PlayerRef),
     /// Number of cards in `who`'s graveyard matching `filter`. Powers
     /// "equal to the number of Arcane cards in your graveyard" (Ire of

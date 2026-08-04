@@ -265,6 +265,17 @@ static ARN: &[Factory] = &[
     super::arn::aladdins_lamp,
     super::arn::shahrazad,
 ];
+static CNS: &[Factory] = &[
+    super::cns::power_play,
+    super::cns::hymn_of_the_wilds,
+    super::cns::weight_advantage,
+    super::cns::sentinel_dispatch,
+    super::cns::hold_the_perimeter,
+    super::cns::bragos_favor,
+    super::cns::immediate_action,
+    super::cns::iterative_analysis,
+    super::cns::muzzios_preparations,
+];
 static ATQ: &[Factory] = &[
     super::atq::amulet_of_kroog,
     super::atq::armageddon_clock,
@@ -20561,6 +20572,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("arc", ARC),
     ("arn", ARN),
     ("atq", ATQ),
+    ("cns", CNS),
     ("bfz", BFZ),
     ("bng", BNG),
     ("bng2", BNG2),

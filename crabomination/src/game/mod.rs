@@ -3352,6 +3352,100 @@ impl GameState {
         id
     }
 
+    /// A static ability's source object: a permanent, or a card functioning
+    /// from the command zone (a face-up conspiracy, a Vanguard avatar).
+    pub(crate) fn static_source(&self, id: CardId) -> Option<&CardInstance> {
+        self.battlefield_find(id).or_else(|| {
+            self.players
+                .iter()
+                .flat_map(|p| p.command.iter())
+                .find(|c| c.id == id && c.command_zone_abilities_active())
+        })
+    }
+
+    /// Every object whose *controller-scoped* static abilities apply to
+    /// `seat`: the permanents they control plus their face-up command-zone
+    /// conspiracies (CR 315.5). Vanguard avatars ride along too (CR 902.5).
+    pub(crate) fn seat_static_sources(
+        &self,
+        seat: usize,
+    ) -> impl Iterator<Item = &CardInstance> {
+        self.battlefield
+            .iter()
+            .filter(move |c| c.controller == seat)
+            .chain(self.players[seat].command.iter().filter(|c| c.command_zone_abilities_active()))
+    }
+
+    /// Every object contributing controller-scoped statics to *any* seat —
+    /// the battlefield plus every face-up command-zone conspiracy. A
+    /// command-zone card's `controller` is its owner (CR 315.6).
+    pub(crate) fn all_static_sources(&self) -> impl Iterator<Item = &CardInstance> {
+        self.battlefield.iter().chain(
+            self.players
+                .iter()
+                .flat_map(|p| p.command.iter().filter(|c| c.command_zone_abilities_active())),
+        )
+    }
+
+    /// CR 315.5a — "You are the starting player" (Power Play). Call before
+    /// the first turn: the seat claiming it becomes the active player, and a
+    /// random one wins if several claim it. Also re-seats the CR 103.7a
+    /// opening-draw skip. Returns the starting seat.
+    pub fn apply_starting_player_conspiracies(&mut self) -> usize {
+        use rand::seq::IteratorRandom;
+        let claimants: Vec<usize> = (0..self.players.len())
+            .filter(|&seat| {
+                self.seat_static_sources(seat).any(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        sa.effect == crate::effect::StaticEffect::ControllerIsStartingPlayer
+                    })
+                })
+            })
+            .collect();
+        if let Some(seat) = claimants.into_iter().choose(&mut rand::rng()) {
+            self.active_player_idx = seat;
+            self.priority.player_with_priority = seat;
+            self.skip_first_draw = self.players.len() <= 2;
+        }
+        self.active_player_idx
+    }
+
+    /// CR 315.2 — put a conspiracy from `seat`'s sideboard into the command
+    /// zone before the game begins. A hidden-agenda conspiracy goes in face
+    /// down with `agenda` secretly named (CR 702.106); pass `None` for the
+    /// face-up ones. The card stays in the command zone for the whole game
+    /// (CR 315.3).
+    pub fn seat_conspiracy(
+        &mut self,
+        seat: usize,
+        def: crate::card::CardDefinition,
+        agenda: Option<&str>,
+    ) -> crate::card::CardId {
+        let id = crate::card::CardId(self.next_id);
+        self.next_id = self.next_id.saturating_add(1);
+        let mut card = CardInstance::new(id, def, seat);
+        if let Some(name) = agenda {
+            card.face_down = true;
+            card.named_card = Some(name.to_string());
+        }
+        self.players[seat].command.push(card);
+        id
+    }
+
+    /// CR 702.106b — turn a face-down hidden-agenda conspiracy face up,
+    /// revealing the named card. Its abilities start functioning immediately
+    /// (CR 315.5). Returns false when `id` isn't a face-down conspiracy.
+    pub fn reveal_hidden_agenda(&mut self, seat: usize, id: CardId) -> bool {
+        let Some(card) = self.players[seat].command.iter_mut().find(|c| c.id == id) else {
+            return false;
+        };
+        if !card.definition.is_conspiracy() || !card.face_down {
+            return false;
+        }
+        card.face_down = false;
+        true
+    }
+
     // ── Replacement effects (Phase H) ─────────────────────────────────────
 
     /// Register `effect` with the engine. Returns the assigned id so the
@@ -3907,7 +4001,7 @@ impl GameState {
         }
         let entering_types = ec.definition.subtypes.creature_types.clone();
         let mut specs = pw_specs;
-        for src in &self.battlefield {
+        for src in self.all_static_sources() {
             if src.controller != controller || src.id == entering {
                 continue;
             }
@@ -3959,6 +4053,22 @@ impl GameState {
                         if *amount > 0 && (changeling || types.iter().any(|t| entering_types.contains(t))) =>
                     {
                         specs.push((*kind, *amount));
+                    }
+                    // Muzzio's Preparations — a filtered enters-with rider; the
+                    // filter's `NamedBySource` leaves read the source's own
+                    // named card (CR 702.106 hidden agenda).
+                    StaticEffect::MatchingEntersWithExtraCounters { filter, kind, amount }
+                        if *amount > 0 =>
+                    {
+                        let filter = filter.resolve_named_by_source(src.named_card.as_deref());
+                        if self.evaluate_requirement_static(
+                            &filter,
+                            &crate::game::Target::Permanent(entering),
+                            controller,
+                            Some(src.id),
+                        ) {
+                            specs.push((*kind, *amount));
+                        }
                     }
                     // Master Biomancer — any other creature you control enters
                     // with additional counters equal to the source's live power.
@@ -6719,6 +6829,40 @@ impl GameState {
                 }
             }
         }
+        // CR 315.5 / 902.5 — a face-up Conspiracy (or a Vanguard avatar) in
+        // the command zone has its static abilities affect the game from
+        // there. The card never leaves, so the effects are indefinite.
+        for (seat, player) in self.players.iter().enumerate() {
+            for card in player.command.iter().filter(|c| c.command_zone_abilities_active()) {
+                for mut e in
+                    static_ability_to_effects(card, card.object_timestamp(), self.active_player_idx == seat)
+                {
+                    e.duration = EffectDuration::Indefinite;
+                    // CR 702.106 — a revealed hidden agenda's "with the chosen
+                    // name" filters concretize against the name it named.
+                    let named = card.named_card.as_deref();
+                    match &mut e.affected {
+                        AffectedPermanents::CardMatch { requirement, .. }
+                        | AffectedPermanents::CardMatchPowerGated { requirement, .. } => {
+                            *requirement = Box::new(requirement.resolve_named_by_source(named));
+                        }
+                        _ => {}
+                    }
+                    if let AffectedPermanents::AllOpponents {
+                        source_controller,
+                        friendly_seats,
+                        ..
+                    } = &mut e.affected
+                        && friendly_seats.is_empty()
+                    {
+                        let mut seats = self.teammates(*source_controller);
+                        seats.push(*source_controller);
+                        *friendly_seats = seats;
+                    }
+                    all_effects.push(e);
+                }
+            }
+        }
         // Bludgeon Brawl (CR 613 layers 4/7c) — while it's out, each
         // noncreature, non-Equipment artifact gains the Equipment subtype and,
         // once attached, hands its host +X/+0 for its own mana value.
@@ -8445,13 +8589,14 @@ impl GameState {
                 })
             })
             .collect();
-        // CR 904.8 — a face-up scheme's statics function from the command zone,
-        // so it joins the anthem walk exactly like an emblem does.
+        // CR 904.8 / 315.5 — a face-up scheme's or conspiracy's statics
+        // function from the command zone, so they join the anthem walk exactly
+        // like an emblem does.
         let face_up_schemes: Vec<&CardInstance> = self
             .players
             .iter()
             .flat_map(|p| p.command.iter())
-            .filter(|c| c.definition.is_scheme())
+            .filter(|c| c.definition.is_scheme() || c.command_zone_abilities_active())
             .collect();
         for card in self
             .battlefield
@@ -8492,6 +8637,10 @@ impl GameState {
                 if *only_your_turn && self.active_player_idx != card.controller {
                     continue;
                 }
+                // CR 702.106 — "with the chosen name" filters concretize
+                // against the source's own named card (hidden agenda).
+                let resolved = filter.resolve_named_by_source(card.named_card.as_deref());
+                let filter = &resolved;
                 // Chitterspitter — "+P/+T for each [kind] counter on this".
                 let scale = match scale_by_counters_on_self {
                     Some(kind) => card.counter_count(*kind) as i32,
@@ -14479,7 +14628,7 @@ impl GameState {
         }
         // CR 902.5 — a Vanguard avatar's triggers fire from the command zone.
         for player in &self.players {
-            for card in player.command.iter().filter(|c| c.definition.is_vanguard()) {
+            for card in player.command.iter().filter(|c| c.command_zone_abilities_active()) {
                 for ta in &card.definition.triggered_abilities {
                     for ev in events {
                         if is_event_hardcoded(ev, &ta.event) {
@@ -19699,6 +19848,9 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerCantCastPermanentSpells
             | StaticEffect::ControllerCantCastNoncreatureSpells
             | StaticEffect::ControllerCantCastCreatureSpells
+            | StaticEffect::ControllerCantCastInstantsOrSorceries
+            | StaticEffect::ControllerIsStartingPlayer
+            | StaticEffect::MatchingEntersWithExtraCounters { .. }
             | StaticEffect::NoncreatureSpellsCantBeCastIf { .. }
             | StaticEffect::NoncreatureSpellsWithChosenManaValueCantBeCast
             | StaticEffect::SelfCostReducedPerDiscardThisTurn { .. }

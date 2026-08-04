@@ -33,6 +33,10 @@ pub enum CardType {
     /// CR 313 — a Vanguard avatar. Never a permanent: it starts in the command
     /// zone and its abilities function from there (CR 902.5).
     Vanguard,
+    /// CR 315 — a Conspiracy. Never a permanent and never castable: it starts
+    /// in the command zone and stays there, its static and triggered
+    /// abilities functioning from there while it is face up (CR 315.5).
+    Conspiracy,
 }
 
 /// Supertypes that modify a card's identity and rules interactions.
@@ -2402,6 +2406,28 @@ impl SelectionRequirement {
         }
     }
 
+    /// Concretize `NamedBySource` against the source's chosen card name
+    /// (`HasName`, or "matches nothing" when nothing was named), recursing
+    /// through And/Or/Not. CR 702.106 hidden agenda.
+    pub fn resolve_named_by_source(&self, name: Option<&str>) -> Self {
+        match self {
+            Self::NamedBySource => match name {
+                Some(n) => Self::HasName(n.to_string()),
+                None => Self::Not(Box::new(Self::Any)),
+            },
+            Self::And(a, b) => Self::And(
+                Box::new(a.resolve_named_by_source(name)),
+                Box::new(b.resolve_named_by_source(name)),
+            ),
+            Self::Or(a, b) => Self::Or(
+                Box::new(a.resolve_named_by_source(name)),
+                Box::new(b.resolve_named_by_source(name)),
+            ),
+            Self::Not(inner) => Self::Not(Box::new(inner.resolve_named_by_source(name))),
+            other => other.clone(),
+        }
+    }
+
     /// Concretize `SameNameAsTarget` against the effect's target name
     /// (`HasName`, or "matches nothing" with no target), recursing through
     /// And/Or/Not. Pack Hunt.
@@ -4499,6 +4525,7 @@ impl CardDefinition {
     pub fn is_planeswalker(&self) -> bool { self.card_types.contains(&CardType::Planeswalker) }
     pub fn is_battle(&self) -> bool { self.card_types.contains(&CardType::Battle) }
     pub fn is_vanguard(&self) -> bool { self.card_types.contains(&CardType::Vanguard) }
+    pub fn is_conspiracy(&self) -> bool { self.card_types.contains(&CardType::Conspiracy) }
     /// CR 314.1 — a scheme card.
     pub fn is_scheme(&self) -> bool { self.card_types.contains(&CardType::Scheme) }
     /// CR 904.11 — an "Ongoing Scheme", exempt from the 904.10 sweep.
@@ -5899,6 +5926,14 @@ impl CardInstance {
     }
 
     /// CR 708 — flip this permanent face down: stash the real definition in
+    /// CR 902.5 / 315.5 — this command-zone card's abilities function from
+    /// there. A Vanguard avatar always does; a Conspiracy only while it is
+    /// face up (CR 315.5b — a face-down conspiracy has no characteristics).
+    pub fn command_zone_abilities_active(&self) -> bool {
+        self.definition.is_vanguard()
+            || (self.definition.is_conspiracy() && !self.face_down)
+    }
+
     /// `face_up_def` and swap `definition` to the vanilla 2/2 face-down
     /// creature. No-op if already face down.
     pub fn turn_face_down(&mut self) {
