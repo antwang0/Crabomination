@@ -5291,9 +5291,14 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   616.1c/616.1g ✅: the enters-as-a-copy replacement outranks the enters-tapped
   one, so tappedness is re-decided against the copied characteristics
   (`reapply_enters_tapped_after_copy`; Clone of Rusted Sentinel enters tapped —
-  `cr_recent42::cr_616_1c_*`). Remaining: 616.1a self-replacement priority, and
-  the 616.1e player *choice* of which applicable replacement to apply (the
-  engine applies them in a fixed order).
+  `cr_recent42::cr_616_1c_*`). **616.1e player choice ✅ for draws** — the
+  competing "dig instead of drawing" replacements (Parallel Thoughts, Tomorrow,
+  Archmage Ascension, Abundance) are enumerated as `DrawDig` and the drawing
+  player picks which applies (`choose_draw_replacement` / `apply_draw_dig`); a
+  declined optional pick drops out and the choice is offered again. A headless
+  seat keeps the canonical order. `cr_recent74::cr_616_1e_*`. Remaining:
+  616.1a self-replacement priority, and the same player choice for the
+  non-draw replacement families (ETB, damage, counters).
 
 ### Partial (🟡) — remaining gap noted
 - ✅ **CR 702.43 — Modular.** `Keyword::Modular(N)` is a real marker keyword
@@ -5310,11 +5315,20 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   pile from before the 122.3 annihilation, so Young Wolf with a +1/+1 counter
   that takes three -1/-1 counters stays dead. Tests `cr_recent41::cr_704_8*`.
 
+- ✅ **CR 808 — Team vs. Team** — teams partition seats (`assign_teams`,
+  `same_team`, `teammates`) with per-seat resources (no shared hand, mana or
+  life — `Team.shared_life` stays `None`, unlike CR 810 2HG), and 808.3a's
+  attack-multiple-players default falls out of `declare_attackers` rejecting a
+  teammate as defender. `cr_recent74::cr_808_*`. ⏳ residual: 808.4's
+  center-seat first-player rule isn't modeled (seat 0 always starts).
 - 🟡 **CR 509.2 / 510.1c — Banding** — a banding blocker routes the blocked
-  attacker's damage order + assignment to the defending player (Benalish Hero;
-  test `cr_509_2_banding_blocker_lets_defender_assign_damage`). Remaining:
-  attacking-band formation, "bands with other", and the band-blocks-multiple
-  damage-distribution corner.
+  attacker's damage order + assignment to the defending player, including
+  banding *granted during the combat* (Wall of Caltrops' block trigger;
+  `cr_509_2_banding_blocker_lets_defender_assign_damage`,
+  `cr_recent74::cr_509_2_banding_gained_midcombat_still_routes_assignment`).
+  Attacking bands (`declare_attackers_banded`) and "bands with other"
+  (`Keyword::BandsWithOther` + `bands_with_other_qualities`) both ship.
+  Remaining: the band-blocks-multiple damage-distribution corner.
 - 🟡 **CR 303 — Auras** — characteristic-overriding Auras ✅ (`EquipBonus.{set_base_pt,set_card_types,set_creature_types,set_colors,remove_abilities}` install layer 4/5/6/7b continuous effects on the host — Ichthyomorphosis "0/1 blue Fish, no abilities", One with the Stars "becomes an enchantment", Heliod's Punishment "loses abilities + can't attack/block"; removal is ordered before the aura's own keyword grants so they survive — test `cr_613_aura_set_base_pt_then_counter`). **Aura/Equipment-granted step triggers ✅** (CR 702.6e — `fire_step_triggers` now dispatches `EquipBonus.triggered_abilities` whose kind is a step, sourced on the host and scoped to the host's controller; Pillory of the Sleepless's "enchanted creature has: at your upkeep, you lose 1 life" — `cr_702_6e_aura_granted_upkeep_trigger_keys_on_host_controller`). **CR 303.4a "enchant player" ✅** — `CardInstance.attached_to_player` anchors an Aura to a seat, `PlayerRef::EnchantedPlayer` and `EventScope::EnchantedBySource` read it, `StaticEffect::PumpPT` takes a `Selector::ControlledBy` anthem scope, and the orphan-Aura SBA leaves player-Auras alone (`catalog::sets::curses`; tests `core_rules/cr_recent37`). **CR 702.103f ✅** — a bestowed Aura that is unattached *or* attached to an illegal object reverts to a creature instead of dying. Remaining: replacement-style Aura ETB (enters attached under another rule).
 - 🟡 **CR 603.10 — Last-Known Information** — full LKI for mid-resolution stack sources (e.g. lifelink 702.15c). Aura death LKI is now path-independent: `remove_to_graveyard_with_triggers` records `auras_at_death` before the host leaves, so `EventScope::EnchantedBySource` triggers fire on the destroy/sacrifice funnel as well as the lethal-damage SBA (`cr_603_10_enchanted_dies_trigger_fires_on_a_sacrifice`). (CR 603.6d "leaves the battlefield" self-source triggers now also fire on the lethal-damage SBA path, not just the destroy/sacrifice path — Thought-Knot Seer's LTB draw.) Sac-as-cost activated abilities that read the sacrificed source's own counters at resolution now stash `leaves_bf_lki` during cost payment (it outlives the per-dispatch `died_card_snapshots` clear) so `Value::TotalCountersOn { This }` reads the last-known total — Twitching Doll's "Spider per counter on it" (`twitching_doll_nests_then_sacs_for_spiders`). `SelectionRequirement::ControlledByYou` now falls back to `died_card_snapshots` for the LKI controller, so a graveyard-scoped "a creature you control dies" trigger fires only for your creatures — Furious Forebear (`cr_603_10_died_creature_controller_read_from_lki`). CR 603.10a self-death: both self-death funnels (SBA lethal-damage + destroy/sacrifice) now evaluate a filtered `YourControl`/`AnyPlayer` death trigger's `.with_filter` against the dying creature via the death snapshot, and the destroy/sacrifice path fires self-inclusive scopes (was SelfSource-only) so an aristocrat drains for its own sacrifice (`cruel_celebrant_drains_on_its_own_sacrifice`).
 - 🟡 **CR 704 — State-Based Actions** — Saga SBA ✅ (`saga_chapters` reach
@@ -5343,7 +5357,7 @@ recover from `git log -p -- TODO.md`. A few rows carry a residual ⏳ gap inline
   resolves its body — auto-targeting it when it needs one — and unused charges
   clear at the turn boundary. The Onslaught Words cycle;
   `classic_sets/ons::words_cycle_replaces_the_next_draw`). Draw-count
-  replacement (121.2a) ✅ via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought Reflection; stacks per 614.5, reentrancy-guarded); **condition-gated** draw doubling ✅ (`ControllerDrawsDoubledIf` — Vnwxt's max-speed draw-two; test `cr_121_2a_conditional_draw_replacement`). Draw-count board gates ✅ via `SelectionRequirement::ControllerDrewAtLeastThisTurn(n)` (reads `Player.cards_drawn_this_turn`), wired as a `SelfHasKeywordWhile` condition (Foggy Swamp Hunters lifelink/menace, June unblockable). Choose-to-draw (121.3 / 121.2b) ✅ — `GameState::may_choose_to_draw` stops `Effect::MayDo` / `Effect::MayPay` offering an optional draw to a capped player (a rules-declined `MayPay` still runs its `else_`), and the per-turn cap now gates `draw_one` itself so *every* draw source is capped, not just `Effect::Draw`'s count; an empty library deliberately doesn't block the choice. Remaining: mid-cast face-down draw (121.8); reveal-on-draw (121.9).
+  replacement (121.2a) ✅ via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought Reflection; stacks per 614.5, reentrancy-guarded); **condition-gated** draw doubling ✅ (`ControllerDrawsDoubledIf` — Vnwxt's max-speed draw-two; test `cr_121_2a_conditional_draw_replacement`). Draw-count board gates ✅ via `SelectionRequirement::ControllerDrewAtLeastThisTurn(n)` (reads `Player.cards_drawn_this_turn`), wired as a `SelfHasKeywordWhile` condition (Foggy Swamp Hunters lifelink/menace, June unblockable). Choose-to-draw (121.3 / 121.2b) ✅ — `GameState::may_choose_to_draw` stops `Effect::MayDo` / `Effect::MayPay` offering an optional draw to a capped player (a rules-declined `MayPay` still runs its `else_`), and the per-turn cap now gates `draw_one` itself so *every* draw source is capped, not just `Effect::Draw`'s count; an empty library deliberately doesn't block the choice. Chains of Mephistopheles ships as a global replacement in `draw_one` with a CR 614.5 reentrancy guard (`cr_recent74::cr_121_2a_chains_replaces_each_extra_draw_once`). Remaining: mid-cast face-down draw (121.8); reveal-on-draw (121.9).
 - ✅ **CR 506.4 — Removed from combat.** A Gustcloak's "untap it and remove it
   from combat" pulls the attacker out before the damage step, so no combat
   damage is exchanged (`Effect::RemoveFromCombat` off `EventKind::BecomesBlocked`;

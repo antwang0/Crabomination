@@ -12260,132 +12260,32 @@ impl GameState {
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
         }
-        // CR 121.2a — Parallel Thoughts: "you may instead put the top card of
-        // the pile you exiled into your hand." Optional; declining falls
-        // through to the ordinary draw.
-        if let Some(src) = self.source_exile_draw_pile_for(p)
-            && let Some(pos) = self.exile.iter().position(|c| c.exiled_with == Some(src))
-        {
-            use crate::decision::{Decision, DecisionAnswer};
-            let yes = matches!(
-                self.decider.decide(&Decision::OptionalTrigger {
-                    source: src,
-                    description: "Draw from the exiled pile instead?".to_string(),
-                }),
-                DecisionAnswer::Bool(true)
-            );
-            if yes {
-                let mut card = self.exile.remove(pos);
-                card.face_down = false;
-                let card_id = card.id;
-                self.players[p].hand.push(card);
-                self.players[p].cards_drawn_this_turn += 1;
-                events.push(GameEvent::CardDrawn { player: p, card_id });
+        // CR 616.1e — several "instead of drawing, dig" replacements can
+        // apply to the same draw; the affected player picks which one applies.
+        // A declined optional pick drops out and the choice is made again.
+        let mut declined: Vec<DrawDig> = Vec::new();
+        loop {
+            let mut applicable: Vec<DrawDig> = Vec::new();
+            if self.source_exile_draw_pile_for(p).is_some_and(|src| {
+                self.exile.iter().any(|c| c.exiled_with == Some(src))
+            }) {
+                applicable.push(DrawDig::ExilePile);
+            }
+            if self.look_instead_of_drawing(p).is_some() {
+                applicable.push(DrawDig::LookN);
+            }
+            if self.player_may_tutor_instead_of_drawing(p) {
+                applicable.push(DrawDig::Tutor);
+            }
+            if self.player_may_reveal_until_kind_instead_of_drawing(p) {
+                applicable.push(DrawDig::RevealUntilKind);
+            }
+            applicable.retain(|k| !declined.contains(k));
+            let Some(kind) = self.choose_draw_replacement(p, &applicable) else { break };
+            if self.apply_draw_dig(kind, p, events) {
                 return true;
             }
-        }
-        // CR 121.2a — Tomorrow, Azami's Familiar: look at the top N instead,
-        // keep one, bottom the rest.
-        if let Some(n) = self.look_instead_of_drawing(p) {
-            let ctx =
-                crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), p, None);
-            if let Ok(mut evs) = self.resolve_effect(
-                &crate::effect::Effect::LookPickToHand {
-                    who: crate::effect::PlayerRef::Seat(p),
-                    count: crate::effect::Value::Const(n as i32),
-                    rest_to_graveyard: false,
-                    pick_filter: None,
-                    take: None,
-                    to_battlefield: false,
-                    gain_life_if_pick: None,
-                    gain_life_greatest_power_rest: false,
-                    optional: false,
-                    picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
-                    rest_to_exile: false,
-                },
-                &ctx,
-            ) {
-                events.append(&mut evs);
-            }
-            return true;
-        }
-        // CR 121.2a — Archmage Ascension: "you may instead search your library
-        // for a card, put that card into your hand, then shuffle." Optional and
-        // controller-scoped, so it reads through the counter/turn gates.
-        if self.player_may_tutor_instead_of_drawing(p) {
-            use crate::decision::{Decision, DecisionAnswer};
-            let yes = matches!(
-                self.decider.decide(&Decision::OptionalTrigger {
-                    source: crate::card::CardId(0),
-                    description: "Search your library for a card instead of drawing?".to_string(),
-                }),
-                DecisionAnswer::Bool(true)
-            );
-            if yes && !self.players[p].library.is_empty() {
-                let ctx = crate::game::effects::EffectContext::for_ability(
-                    crate::card::CardId(0),
-                    p,
-                    None,
-                );
-                if let Ok(mut evs) = self.resolve_effect(
-                    &crate::effect::Effect::Search {
-                        who: crate::effect::PlayerRef::Seat(p),
-                        filter: crate::card::SelectionRequirement::Any,
-                        to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(p)),
-                    },
-                    &ctx,
-                ) {
-                    events.append(&mut evs);
-                }
-                return true;
-            }
-        }
-        // CR 121.2a — Abundance: "choose land or nonland and reveal cards from
-        // the top of your library until you reveal a card of the chosen kind."
-        if self.player_may_reveal_until_kind_instead_of_drawing(p) {
-            use crate::decision::{Decision, DecisionAnswer};
-            let yes = matches!(
-                self.decider.decide(&Decision::OptionalTrigger {
-                    source: crate::card::CardId(0),
-                    description: "Reveal until a land/nonland instead of drawing?".to_string(),
-                }),
-                DecisionAnswer::Bool(true)
-            );
-            // Auto policy: dig for whichever kind the hand is shorter on.
-            let want_land = self.players[p]
-                .hand
-                .iter()
-                .filter(|c| c.definition.is_land())
-                .count()
-                * 2
-                < self.players[p].hand.len();
-            if yes && !self.players[p].library.is_empty() {
-                let ctx = crate::game::effects::EffectContext::for_ability(
-                    crate::card::CardId(0),
-                    p,
-                    None,
-                );
-                let filter = if want_land {
-                    crate::card::SelectionRequirement::Land
-                } else {
-                    crate::card::SelectionRequirement::Nonland
-                };
-                if let Ok(mut evs) = self.resolve_effect(
-                    &crate::effect::Effect::RevealUntilFind {
-                        who: crate::effect::PlayerRef::Seat(p),
-                        find: filter,
-                        to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(p)),
-                        cap: crate::effect::Value::Const(500),
-                        life_per_revealed: 0,
-                        miss_dest: crate::effect::RevealMissDest::BottomRandom,
-                    },
-                    &ctx,
-                ) {
-                    events.append(&mut evs);
-                }
-                return true;
-            }
+            declined.push(kind);
         }
         // CR 121.2a — Chains of Mephistopheles: every draw but the turn-based
         // draw-step draw becomes "discard a card; if you do, draw a card,
@@ -12512,6 +12412,139 @@ impl GameState {
             }
         }
         drew
+    }
+
+    /// CR 616.1e — ask `p` which applicable draw replacement to apply. `None`
+    /// when nothing applies; the canonical order stands for a headless seat.
+    fn choose_draw_replacement(&mut self, p: usize, applicable: &[DrawDig]) -> Option<DrawDig> {
+        let first = *applicable.first()?;
+        if applicable.len() < 2 || !self.players[p].wants_ui {
+            return Some(first);
+        }
+        let decision = crate::decision::Decision::ChooseMode {
+            source: crate::card::CardId(0),
+            num_modes: applicable.len(),
+            mode_texts: applicable.iter().map(|k| k.label().to_string()).collect(),
+        };
+        match self.decider.decide(&decision) {
+            crate::decision::DecisionAnswer::Mode(i) => {
+                Some(applicable.get(i).copied().unwrap_or(first))
+            }
+            _ => Some(first),
+        }
+    }
+
+    /// Apply one chosen draw replacement. `false` means the player declined an
+    /// optional one, so the caller offers the rest (CR 616.1e).
+    fn apply_draw_dig(&mut self, kind: DrawDig, p: usize, events: &mut Vec<GameEvent>) -> bool {
+        use crate::decision::{Decision, DecisionAnswer};
+        let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), p, None);
+        let ask = |state: &mut Self, prompt: &str| {
+            matches!(
+                state.decider.decide(&Decision::OptionalTrigger {
+                    source: crate::card::CardId(0),
+                    description: prompt.to_string(),
+                }),
+                DecisionAnswer::Bool(true)
+            )
+        };
+        match kind {
+            // Parallel Thoughts — "you may instead put the top card of the
+            // pile you exiled into your hand."
+            DrawDig::ExilePile => {
+                let Some(src) = self.source_exile_draw_pile_for(p) else { return false };
+                let Some(pos) = self.exile.iter().position(|c| c.exiled_with == Some(src)) else {
+                    return false;
+                };
+                if !ask(self, "Draw from the exiled pile instead?") {
+                    return false;
+                }
+                let mut card = self.exile.remove(pos);
+                card.face_down = false;
+                let card_id = card.id;
+                self.players[p].hand.push(card);
+                self.players[p].cards_drawn_this_turn += 1;
+                events.push(GameEvent::CardDrawn { player: p, card_id });
+                true
+            }
+            // Tomorrow, Azami's Familiar — look at the top N, keep one,
+            // bottom the rest. Mandatory.
+            DrawDig::LookN => {
+                let Some(n) = self.look_instead_of_drawing(p) else { return false };
+                if let Ok(mut evs) = self.resolve_effect(
+                    &crate::effect::Effect::LookPickToHand {
+                        who: crate::effect::PlayerRef::Seat(p),
+                        count: crate::effect::Value::Const(n as i32),
+                        rest_to_graveyard: false,
+                        pick_filter: None,
+                        take: None,
+                        to_battlefield: false,
+                        gain_life_if_pick: None,
+                        gain_life_greatest_power_rest: false,
+                        optional: false,
+                        picked_lands_to_battlefield: false,
+                        rest_bottom_random: false,
+                        rest_to_exile: false,
+                    },
+                    &ctx,
+                ) {
+                    events.append(&mut evs);
+                }
+                true
+            }
+            // Archmage Ascension — "you may instead search your library for a
+            // card, put that card into your hand, then shuffle."
+            DrawDig::Tutor => {
+                if self.players[p].library.is_empty()
+                    || !ask(self, "Search your library for a card instead of drawing?")
+                {
+                    return false;
+                }
+                if let Ok(mut evs) = self.resolve_effect(
+                    &crate::effect::Effect::Search {
+                        who: crate::effect::PlayerRef::Seat(p),
+                        filter: crate::card::SelectionRequirement::Any,
+                        to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(p)),
+                    },
+                    &ctx,
+                ) {
+                    events.append(&mut evs);
+                }
+                true
+            }
+            // Abundance — "choose land or nonland and reveal cards from the top
+            // of your library until you reveal a card of the chosen kind."
+            DrawDig::RevealUntilKind => {
+                if self.players[p].library.is_empty()
+                    || !ask(self, "Reveal until a land/nonland instead of drawing?")
+                {
+                    return false;
+                }
+                // Auto policy: dig for whichever kind the hand is shorter on.
+                let want_land = self.players[p].hand.iter().filter(|c| c.definition.is_land()).count()
+                    * 2
+                    < self.players[p].hand.len();
+                let filter = if want_land {
+                    crate::card::SelectionRequirement::Land
+                } else {
+                    crate::card::SelectionRequirement::Nonland
+                };
+                if let Ok(mut evs) = self.resolve_effect(
+                    &crate::effect::Effect::RevealUntilFind {
+                        who: crate::effect::PlayerRef::Seat(p),
+                        find: filter,
+                        to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(p)),
+                        cap: crate::effect::Value::Const(500),
+                        life_per_revealed: 0,
+                        miss_dest: crate::effect::RevealMissDest::BottomRandom,
+                    },
+                    &ctx,
+                ) {
+                    events.append(&mut evs);
+                }
+                true
+            }
+        }
     }
 
     /// CR 614 — the controller of an opponent-of-`p` Notion Thief whose draw
@@ -19977,5 +20010,31 @@ fn blocker_matches_block_filter(
         }
         R::Not(inner) => !blocker_matches_block_filter(blocker, computed, inner),
         _ => false,
+    }
+}
+
+/// CR 121.2a — the "instead of drawing, dig somewhere else" replacements that
+/// can compete for one draw. The affected player picks which applies
+/// (CR 616.1e); `choose_draw_replacement` keeps this order for headless seats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DrawDig {
+    /// Parallel Thoughts — take the top of the pile you exiled.
+    ExilePile,
+    /// Tomorrow, Azami's Familiar — look at the top N and keep one.
+    LookN,
+    /// Archmage Ascension — search your library instead.
+    Tutor,
+    /// Abundance — reveal until a land/nonland of your choice.
+    RevealUntilKind,
+}
+
+impl DrawDig {
+    fn label(self) -> &'static str {
+        match self {
+            DrawDig::ExilePile => "Take the top card of your exiled pile",
+            DrawDig::LookN => "Look at the top cards and keep one",
+            DrawDig::Tutor => "Search your library for a card",
+            DrawDig::RevealUntilKind => "Reveal until a land or nonland card",
+        }
     }
 }
