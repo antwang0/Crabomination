@@ -250,7 +250,9 @@ impl Effect {
             | Effect::PayAnyAmountOfLifeCapped { .. }
             | Effect::PlaySubgame
             | Effect::EnterExilingGraveyardCreaturesForCounters { .. }
-            | Effect::ExileSelfWithCountdown => false,
+            | Effect::ExileSelfWithCountdown
+            | Effect::WaiveShroudForPlayerThisTurn { .. }
+            | Effect::DestroyEachUnlessPaysLife { .. } => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),
             Effect::CoffinExile { what } => sel_has_target(what),
@@ -2938,6 +2940,9 @@ impl Effect {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::TapOrUntap { what } => sel_find(what, slot),
+                Effect::AtEndOfCombat { body } | Effect::AtNextTurnsUpkeep { body } => {
+                    eff_find(body, slot, mode, kicked)
+                }
                 Effect::MayDoElse { body, else_, .. } => body
                     .target_filter_for_slot(slot)
                     .or_else(|| else_.target_filter_for_slot(slot)),

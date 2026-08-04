@@ -1473,6 +1473,8 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Feather => "Feather",
         CounterType::Gold => "Gold",
         CounterType::Trap => "Trap",
+        CounterType::Polyp => "Polyp",
+        CounterType::Ore => "Ore",
         CounterType::Winch => "Winch",
         CounterType::Wind => "Wind",
         CounterType::Hunger => "Hunger",
@@ -1540,6 +1542,8 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Wind => "Cyclone's upkeep tally — pay {G} per counter or it sacrifices itself and deals that much damage to each creature and player.",
         CounterType::Hunger => "Fasting's upkeep tally — the enchantment is destroyed once it has five.",
         CounterType::Fungus => "Sporogenesis tally — this creature mints one Saproling per counter when it dies.",
+        CounterType::Polyp => "Coral Reef's reserve — spend one (plus {U} and a tapped blue creature) to grow a creature.",
+        CounterType::Ore => "Orcish Mine's countdown — one comes off each upkeep and each time the land taps; the last one destroys it.",
         _ => return None,
     })
 }

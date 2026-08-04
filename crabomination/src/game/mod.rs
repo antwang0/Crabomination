@@ -1434,6 +1434,11 @@ pub struct GameState {
     /// The peek persists while the permanent stays face down.
     #[serde(default)]
     pub face_down_revealed_to: Vec<(CardId, usize)>,
+    /// CR 702.18 — `(permanent, seat)` pairs whose shroud is waived for that
+    /// seat's spells and abilities this turn (Autumn Willow). Cleared at
+    /// cleanup.
+    #[serde(default)]
+    pub shroud_waivers: Vec<(CardId, usize)>,
     /// CR 500.8 — steps/phases a player skips for the rest of this turn
     /// (Fatespinner). `(seat, step)`; cleared at cleanup.
     #[serde(default)]
@@ -2010,6 +2015,7 @@ impl Clone for GameState {
             no_search_this_turn: self.no_search_this_turn,
             hands_revealed_to: self.hands_revealed_to.clone(),
             face_down_revealed_to: self.face_down_revealed_to.clone(),
+            shroud_waivers: self.shroud_waivers.clone(),
             skipped_steps_this_turn: self.skipped_steps_this_turn.clone(),
             cant_attack_player_this_turn: self.cant_attack_player_this_turn.clone(),
             graveyard_play_pooled_for: self.graveyard_play_pooled_for,
@@ -2316,6 +2322,7 @@ impl GameState {
             no_search_this_turn: false,
             hands_revealed_to: Vec::new(),
             face_down_revealed_to: Vec::new(),
+            shroud_waivers: Vec::new(),
             skipped_steps_this_turn: Vec::new(),
             cant_attack_player_this_turn: Vec::new(),
             graveyard_play_pooled_for: None,

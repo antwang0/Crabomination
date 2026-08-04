@@ -3,6 +3,7 @@
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+use crabomination::game::effects::EntityRef;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -926,4 +927,289 @@ fn drudge_spell_takes_its_skeletons_with_it() {
     drain_stack(&mut g);
     g.check_state_based_actions();
     assert!(g.battlefield.iter().all(|c| !c.is_token), "Skeletons destroyed with the enchantment");
+}
+
+// ── The closing twelve ──────────────────────────────────────────────────────
+
+/// Autumn Willow's {G} opens her to one player's spells only.
+#[test]
+fn autumn_willow_waives_shroud_for_one_player() {
+    let mut g = main_phase();
+    let willow = g.add_card_to_battlefield(0, catalog::autumn_willow());
+    let bolt = g.add_card_to_hand(1, catalog::shock());
+    mana(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Permanent(willow)),
+            additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "shroud holds before the waiver"
+    );
+    activate(&mut g, 0, willow, Some(Target::Player(1)));
+    cast(&mut g, 1, bolt, Some(Target::Permanent(willow)));
+    assert_eq!(g.battlefield_find(willow).expect("willow").damage, 2);
+}
+
+/// Broken Visage leaves a Spirit wearing the dead attacker's body.
+#[test]
+fn broken_visage_mints_a_spirit_with_the_victims_stats() {
+    let mut g = main_phase();
+    let atk = g.add_card_to_battlefield(1, catalog::sengir_vampire()); // 4/4
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: atk, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    let visage = g.add_card_to_hand(0, catalog::broken_visage());
+    cast(&mut g, 0, visage, Some(Target::Permanent(atk)));
+    assert!(g.battlefield_find(atk).is_none(), "attacker destroyed");
+    let token = g.battlefield.iter().find(|c| c.is_token).expect("Spirit");
+    assert_eq!((token.definition.power, token.definition.toughness), (4, 4));
+}
+
+/// Chain Stasis hands the chain to the creature's controller for {2}{U}.
+#[test]
+fn chain_stasis_chains_off_the_targets_controller() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    // Seat 1 accepts the copy but has no mana, so the chain stops there.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let stasis = g.add_card_to_hand(0, catalog::chain_stasis());
+    cast(&mut g, 0, stasis, Some(Target::Permanent(bear)));
+    assert!(!g.battlefield_find(bear).expect("bear").tapped, "untapped");
+    assert!(g.stack.is_empty(), "unpayable chain cost stops the copy");
+}
+
+/// Coral Reef banks polyps off Islands and spends them on toughness.
+#[test]
+fn coral_reef_trades_islands_for_toughness() {
+    let mut g = main_phase();
+    let reef = g.add_card_to_hand(0, catalog::coral_reef());
+    cast(&mut g, 0, reef, None);
+    assert_eq!(g.battlefield_find(reef).expect("reef").counter_count(CounterType::Polyp), 4);
+    g.add_card_to_battlefield(0, catalog::island());
+    activate_n(&mut g, 0, reef, 0, None);
+    assert_eq!(g.battlefield_find(reef).expect("reef").counter_count(CounterType::Polyp), 6);
+    let helper = g.add_card_to_battlefield(0, catalog::merfolk_of_the_pearl_trident());
+    g.clear_sickness(helper);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    activate_n(&mut g, 0, reef, 1, Some(Target::Permanent(bear)));
+    assert_eq!(g.computed_permanent(bear).expect("bear").toughness, 3);
+    assert_eq!(g.battlefield_find(reef).expect("reef").counter_count(CounterType::Polyp), 5);
+    assert!(g.battlefield_find(helper).expect("helper").tapped, "a blue creature paid");
+}
+
+/// Dwarven Sea Clan only shoots a combatant whose controller has an Island,
+/// and the damage lands at end of combat.
+#[test]
+fn dwarven_sea_clan_snipes_at_end_of_combat() {
+    let mut g = main_phase();
+    let clan = g.add_card_to_battlefield(0, catalog::dwarven_sea_clan());
+    g.clear_sickness(clan);
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: atk, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    g.priority.player_with_priority = 0;
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: clan, ability_index: 0, target: Some(Target::Permanent(atk)),
+            additional_targets: vec![], x_value: None, mode: None,
+        })
+        .is_err(),
+        "no Island across the table"
+    );
+    g.add_card_to_battlefield(1, catalog::island());
+    activate(&mut g, 0, clan, Some(Target::Permanent(atk)));
+    assert_eq!(g.battlefield_find(atk).expect("attacker").damage, 0, "not yet");
+    g.fire_step_triggers(TurnStep::EndCombat);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(atk).is_none(), "2 damage kills the 2/2");
+}
+
+/// Giant Albatross punishes its killer unless they pay 2 life.
+#[test]
+fn giant_albatross_drags_down_its_killer() {
+    let mut g = main_phase();
+    let bird = g.add_card_to_battlefield(0, catalog::giant_albatross());
+    let killer = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Yes to the {1}{U}; seat 1 declines to pay the 2 life.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+    ]));
+    mana(&mut g, 0);
+    let mut events = Vec::new();
+    g.deal_damage_to_from(EntityRef::Permanent(bird), 1, Some(killer), &mut events);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(killer).is_none(), "unpaid killer dies");
+}
+
+/// Giant Oyster freezes a tapped creature and withers it each draw step.
+#[test]
+fn giant_oyster_withers_what_it_holds() {
+    let mut g = main_phase();
+    let oyster = g.add_card_to_battlefield(0, catalog::giant_oyster());
+    g.clear_sickness(oyster);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    activate(&mut g, 0, oyster, Some(Target::Permanent(bear)));
+    g.fire_step_triggers(TurnStep::Draw);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).expect("bear").counter_count(CounterType::MinusOneMinusOne),
+        1
+    );
+    // Untapping the Oyster releases the lock and clears the counters.
+    g.battlefield_find_mut(oyster).unwrap().tapped = false;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentUntapped { card_id: oyster }]);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bear).expect("bear").counter_count(CounterType::MinusOneMinusOne),
+        0
+    );
+}
+
+/// Jinx retypes a land for the turn and cantrips next upkeep.
+#[test]
+fn jinx_retypes_a_land_and_cantrips() {
+    let mut g = main_phase();
+    let mountain = g.add_card_to_battlefield(1, catalog::mountain());
+    let jinx = g.add_card_to_hand(0, catalog::jinx());
+    cast(&mut g, 0, jinx, Some(Target::Permanent(mountain)));
+    let cp = g.computed_permanent(mountain).expect("land");
+    assert!(cp.subtypes.land_types.contains(&crabomination::card::LandType::Plains));
+    let hand = g.players[0].hand.len();
+    g.active_player_idx = 1;
+    g.turn_number += 1;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Marjhan needs an Island to survive and stays tapped without an upkeep sac.
+#[test]
+fn marjhan_drowns_without_islands() {
+    let mut g = main_phase();
+    let marjhan = g.add_card_to_battlefield(0, catalog::marjhan());
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(marjhan).is_none(), "no Islands, no Serpent");
+
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::island());
+    let marjhan = g.add_card_to_battlefield(0, catalog::marjhan());
+    g.battlefield_find_mut(marjhan).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(marjhan).expect("marjhan").tapped, "doesn't untap on its own");
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::Upkeep;
+    activate_n(&mut g, 0, marjhan, 0, None);
+    assert!(!g.battlefield_find(marjhan).expect("marjhan").tapped, "sacrificed a creature to untap");
+}
+
+/// Marjhan's {U}{U} shrinks it and pings a grounded attacker.
+#[test]
+fn marjhan_shoots_a_grounded_attacker() {
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::island());
+    let marjhan = g.add_card_to_battlefield(0, catalog::marjhan());
+    let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: atk, target: AttackTarget::Player(0) }])
+        .expect("attack");
+    activate_n(&mut g, 0, marjhan, 1, Some(Target::Permanent(atk)));
+    assert_eq!(g.battlefield_find(atk).expect("attacker").damage, 1);
+    assert_eq!(g.computed_permanent(marjhan).expect("marjhan").power, 7);
+}
+
+/// Orcish Mine counts down on upkeeps and land taps, then blows up the land.
+#[test]
+fn orcish_mine_counts_down_to_the_land() {
+    let mut g = main_phase();
+    let land = g.add_card_to_battlefield(1, catalog::mountain());
+    let mine = g.add_card_to_hand(0, catalog::orcish_mine());
+    cast(&mut g, 0, mine, Some(Target::Permanent(land)));
+    assert_eq!(g.battlefield_find(mine).expect("mine").counter_count(CounterType::Ore), 3);
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).expect("mine").counter_count(CounterType::Ore), 2);
+    for _ in 0..2 {
+        let Some(c) = g.battlefield_find_mut(land) else { break };
+        c.tapped = true;
+        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped {
+            card_id: land, actor: Some(1), as_attacker: false,
+        }]);
+        drain_stack(&mut g);
+        g.check_state_based_actions();
+        drain_stack(&mut g);
+        if let Some(c) = g.battlefield_find_mut(land) {
+            c.tapped = false;
+        }
+    }
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "the land is mined out");
+    assert_eq!(g.players[1].life, 18);
+}
+
+/// Retribution lets the victim's controller pick which of the two dies.
+#[test]
+fn retribution_lets_the_opponent_pick_the_survivor() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::sengir_vampire());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a])]));
+    let spell = g.add_card_to_hand(0, catalog::retribution());
+    mana(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none(), "the chosen one is sacrificed");
+    assert_eq!(
+        g.battlefield_find(b).expect("survivor").counter_count(CounterType::MinusOneMinusOne),
+        1
+    );
+}
+
+/// Rysorian Badger swaps its combat damage for graveyard exile and life.
+#[test]
+fn rysorian_badger_eats_the_defenders_graveyard() {
+    let mut g = main_phase();
+    let badger = g.add_card_to_battlefield(0, catalog::rysorian_badger());
+    g.clear_sickness(badger);
+    let food = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: badger, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != food), "exiled");
+    assert_eq!(g.players[0].life, 21);
+    assert!(
+        g.computed_permanent(badger)
+            .expect("badger")
+            .keywords
+            .contains(&Keyword::DealsNoCombatDamage)
+    );
 }

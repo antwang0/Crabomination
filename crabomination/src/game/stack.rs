@@ -3466,6 +3466,8 @@ impl GameState {
             crate::effect::Duration::UntilNextTurn,
         ]);
         // CR 702.143b — foretold-this-turn cards become castable next turn.
+        // Autumn Willow's "until end of turn" shroud waiver (CR 514.2).
+        self.shroud_waivers.clear();
         self.foretold_this_turn.clear();
         self.plotted_this_turn.clear();
         self.entered_from_graveyard_this_turn.clear();

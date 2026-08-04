@@ -9917,7 +9917,11 @@ impl GameState {
         // Hexproof/Shroud are honored — e.g. Nowhere to Run removing an
         // opponent's hexproof makes the creature targetable.
         let controller = card.controller;
-        if self.permanent_has_keyword(*cid, &Keyword::Shroud) {
+        // CR 702.18 — Autumn Willow's waiver makes it targetable by one
+        // player's spells and abilities as though it had no shroud.
+        if self.permanent_has_keyword(*cid, &Keyword::Shroud)
+            && !self.shroud_waivers.contains(&(*cid, caster))
+        {
             return Err(GameError::TargetHasShroud(*cid));
         }
         if self.permanent_has_keyword(*cid, &Keyword::Hexproof)

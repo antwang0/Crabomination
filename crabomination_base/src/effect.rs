@@ -2873,7 +2873,7 @@ impl EventSpec {
 // effects are deep behind `Box<Effect>` already via `Seq` / `ForEach`).
 /// The toll a player pays before copying a Chain spell (CR 706 —
 /// [`Effect::MayCopyThisSpell`]).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum ChainCopyCost {
     /// Free — Chain of Acid, Chain of Smog.
     #[default]
@@ -2882,6 +2882,8 @@ pub enum ChainCopyCost {
     SacrificeLand,
     /// "may discard a card" — Chain of Plasma.
     DiscardCard,
+    /// "may pay `cost`" — Chain Stasis.
+    Mana(crate::mana::ManaCost),
 }
 
 /// What happens to tokens minted by [`Effect::CreateTokenAttacking`] when
@@ -6342,6 +6344,20 @@ pub enum Effect {
     /// Asked through the installed decider — the target seat's own UI prompt is
     /// a follow-up (see TODO.md's decision-plumbing audit).
     MayCopyThisSpell { who: PlayerRef, cost: ChainCopyCost },
+    /// CR 702.18 — "until end of turn, this permanent can be the target of
+    /// spells and abilities controlled by `player` as though it didn't have
+    /// shroud" (Autumn Willow). Waives shroud on `ctx.source` for that seat
+    /// only; cleared at cleanup.
+    WaiveShroudForPlayerThisTurn { player: PlayerRef },
+    /// "Destroy each [filter] unless its controller pays `life` life" — one
+    /// pay-or-die decision per permanent, asked of its controller (Giant
+    /// Albatross). `no_regen` denies regeneration (CR 701.15g).
+    DestroyEachUnlessPaysLife {
+        filter: SelectionRequirement,
+        life: u32,
+        #[serde(default)]
+        no_regen: bool,
+    },
     /// Zada, Hedron Grinder — the triggering spell targets only this source, so
     /// copy it once per *other* creature its controller controls that the spell
     /// could legally target, each copy aimed at a different one. No-op when the

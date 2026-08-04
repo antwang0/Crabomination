@@ -93,11 +93,15 @@ impl GameState {
     /// nothing is spent; drives the "can't attack/block unless you pay"
     /// affordance and blocker-legality gates.
     pub(crate) fn could_pay_generic(&self, seat: usize, n: u32) -> bool {
-        if n == 0 {
-            return true;
-        }
-        let mut probe = self.affordance_probe_template();
-        probe.try_pay_with_auto_tap(seat, &crate::mana::cost(&[crate::mana::generic(n)])).is_ok()
+        n == 0 || self.could_pay_cost(seat, &crate::mana::cost(&[crate::mana::generic(n)]))
+    }
+
+    /// The general form of [`could_pay_generic`](Self::could_pay_generic):
+    /// whether `seat` could pay an arbitrary cost right now. Probed on a clone,
+    /// so nothing is spent.
+    pub(crate) fn could_pay_cost(&self, seat: usize, cost: &crate::mana::ManaCost) -> bool {
+        cost.cmc() == 0
+            || self.affordance_probe_template().try_pay_with_auto_tap(seat, cost).is_ok()
     }
 
     pub(crate) fn affordance_probe_template(&self) -> GameState {

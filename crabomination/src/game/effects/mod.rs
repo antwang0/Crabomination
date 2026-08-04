@@ -518,6 +518,63 @@ impl GameState {
         Some(b)
     }
 
+    /// "Destroy each [filter] unless its controller pays `life` life" — the
+    /// life-paying sibling of [`run_return_each_unless_pays`](Self::run_return_each_unless_pays).
+    /// Giant Albatross.
+    fn run_destroy_each_unless_pays_life(
+        &mut self,
+        filter: &SelectionRequirement,
+        life: u32,
+        no_regen: bool,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let source = ctx.source.unwrap_or(CardId(0));
+        let victims: Vec<(CardId, usize)> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                self.evaluate_requirement_static(
+                    filter,
+                    &Target::Permanent(c.id),
+                    c.controller,
+                    Some(source),
+                )
+            })
+            .map(|c| (c.id, c.controller))
+            .collect();
+        let mut cursor = 0;
+        let mut doomed: Vec<CardId> = Vec::new();
+        for (id, seat) in victims {
+            // CR 118.6 — a player can't choose to pay life they don't have.
+            let paid = self.players[seat].life > life as i32
+                && match self.ask_seat_bool(
+                    &mut cursor,
+                    seat,
+                    format!("Pay {life} life to keep this creature?"),
+                    source,
+                    effect,
+                ) {
+                    Some(yes) => yes,
+                    None => return Ok(()),
+                };
+            if paid {
+                let applied = self.adjust_life_applied(seat, -(life as i32));
+                if applied < 0 {
+                    events.push(GameEvent::LifeLost { player: seat, amount: (-applied) as u32 });
+                }
+            } else {
+                doomed.push(id);
+            }
+        }
+        self.clear_answer_log();
+        for id in doomed {
+            self.destroy_permanent(id, no_regen, events);
+        }
+        Ok(())
+    }
+
     /// CR 706.1 — one die roll routed through the decider, clamped to the
     /// die's face range. Shared by `Effect::RollDie` and the CR 706.8 stored-
     /// result effects.
@@ -25246,6 +25303,7 @@ impl GameState {
                         })
                     }
                     ChainCopyCost::DiscardCard => !self.players[seat].hand.is_empty(),
+                    ChainCopyCost::Mana(c) => self.could_pay_cost(seat, c),
                 };
                 if !payable {
                     return Ok(());
@@ -25272,6 +25330,12 @@ impl GameState {
                         amount: crate::effect::Value::ONE,
                         random: false,
                     }),
+                    ChainCopyCost::Mana(c) => {
+                        if self.try_pay_with_auto_tap(seat, c).is_err() {
+                            return Ok(());
+                        }
+                        None
+                    }
                 };
                 if let Some(toll) = toll {
                     self.run_effect(&toll, ctx, events)?;
@@ -27914,6 +27978,19 @@ impl GameState {
 
             Effect::ReturnEachUnlessPays { filter, cost } => {
                 self.run_return_each_unless_pays(filter, cost, ctx, events, effect)
+            }
+
+            Effect::DestroyEachUnlessPaysLife { filter, life, no_regen } => self
+                .run_destroy_each_unless_pays_life(filter, *life, *no_regen, ctx, events, effect),
+
+            Effect::WaiveShroudForPlayerThisTurn { player } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                if let Some(seat) = self.resolve_player(player, ctx)
+                    && !self.shroud_waivers.contains(&(src, seat))
+                {
+                    self.shroud_waivers.push((src, seat));
+                }
+                Ok(())
             }
 
             Effect::CreateTokenReturnSelfWhenItDies { definition } => {

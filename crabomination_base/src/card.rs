@@ -78,7 +78,7 @@ pub enum CreatureType {
     Jackal, Hyena,
     Serpent, Fish, Octopus, Squid, Jellyfish, Starfish, Crab, Turtle, Frog, Crocodile, Homarid,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat, Llama, Shark, Harpy, Porcupine,
-    Sheep, Trilobite, Beaver, Beeble, Sponge,
+    Sheep, Trilobite, Beaver, Beeble, Sponge, Oyster,
     Basilisk, Cockatrice,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk, Egg, Weasel,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally, Kobold, Surrakar,
@@ -669,6 +669,10 @@ pub enum CounterType {
     Gold,
     /// Trap Digger's trap counters — a marker on a land, spent by sacrificing it.
     Trap,
+    /// Coral Reef's polyp counters — spent to grow other creatures.
+    Polyp,
+    /// Orcish Mine's ore counters — the Aura's countdown to destroying its host.
+    Ore,
 }
 
 /// Every zone a card can occupy.
@@ -1856,6 +1860,10 @@ pub enum SelectionRequirement {
     /// five outlaw creature types (Vial Smasher, Rakish Crew, Hellspur Brute).
     IsOutlaw,
     HasLandType(LandType),
+    /// The object's *controller* controls a land of this type ("target
+    /// attacking or blocking creature whose controller controls an Island" —
+    /// Dwarven Sea Clan). A card in a hidden zone falls back to its owner.
+    ControllerControlsLandType(LandType),
     HasArtifactSubtype(ArtifactSubtype),
     HasEnchantmentSubtype(EnchantmentSubtype),
     HasPlaneswalkerType(PlaneswalkerSubtype),

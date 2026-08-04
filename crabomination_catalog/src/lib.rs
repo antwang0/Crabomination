@@ -163,6 +163,7 @@ pub use sets::drk2::*;
 pub use sets::ohop::*;
 pub use sets::hml::*;
 pub use sets::hml2::*;
+pub use sets::hml3::*;
 pub use sets::mbs::*;
 pub use sets::nph::*;
 pub use sets::scg::*;

@@ -2771,6 +2771,15 @@ impl GameState {
             .count() as i32
     }
 
+    /// Whether `seat` controls at least one land of `lt` — the reading behind
+    /// `SelectionRequirement::ControllerControlsLandType` and the Homelands
+    /// Island-gated combat riders.
+    pub(crate) fn seat_controls_land_type(&self, seat: usize, lt: crate::card::LandType) -> bool {
+        self.battlefield
+            .iter()
+            .any(|c| c.controller == seat && c.definition.subtypes.land_types.contains(&lt))
+    }
+
     pub fn evaluate_requirement_static(
         &self,
         req: &SelectionRequirement,
@@ -3157,6 +3166,9 @@ impl GameState {
                         || card.has_keyword(&crate::card::Keyword::Changeling),
                     R::IsOutlaw => card_is_outlaw(card),
                     R::HasLandType(lt) => has_ltype(lt),
+                    R::ControllerControlsLandType(lt) => {
+                        self.seat_controls_land_type(card.controller, *lt)
+                    }
                     R::HasArtifactSubtype(a) => has_atype(a),
                     R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
                     R::HasPlaneswalkerType(pw) => card.definition.subtypes.planeswalker_subtypes.contains(pw),
@@ -3849,6 +3861,9 @@ impl GameState {
                         || self.graveyard_type_grants(card).contains(ct),
             R::IsOutlaw => card_is_outlaw(card),
             R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
+            R::ControllerControlsLandType(lt) => {
+                self.seat_controls_land_type(card.controller, *lt)
+            }
             R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
             R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
             R::HasPlaneswalkerType(pw) => card.definition.subtypes.planeswalker_subtypes.contains(pw),
