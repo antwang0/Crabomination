@@ -1158,3 +1158,12 @@ fn preacher_holds_its_prize_while_it_stays_tapped() {
     g.check_state_based_actions();
     assert_eq!(g.battlefield_find(bear).expect("bear").controller, 1);
 }
+
+#[test]
+fn goblin_caves_is_dormant_while_unattached() {
+    let mut g = main_phase();
+    let sled = g.add_card_to_battlefield(0, catalog::goblin_rock_sled());
+    let caves = g.add_card_to_battlefield(0, catalog::goblin_caves());
+    g.battlefield_find_mut(caves).expect("caves").attached_to = None;
+    assert_eq!(g.computed_permanent(sled).expect("sled").toughness, 1);
+}

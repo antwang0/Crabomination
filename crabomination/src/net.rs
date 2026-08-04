@@ -1585,6 +1585,12 @@ pub struct PermanentView {
     /// declaration is explained before it's made.
     #[serde(default)]
     pub cant_attack_this_turn: bool,
+    /// CR 508.1g — generic mana this creature's controller must pay to declare
+    /// it as an attacker (Oppressive Rays, Brainwash, Myr Prototype's counter
+    /// tax). 0 for the common free attacker; clients show the price before the
+    /// declaration rather than after the rejection.
+    #[serde(default)]
+    pub attack_toll: u32,
     /// True when the permanent has one or more finality counters
     /// (CR 122.1h). Clients can badge with a "→ exile on death" icon
     /// so the player knows the permanent will exile instead of going

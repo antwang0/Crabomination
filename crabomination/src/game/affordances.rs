@@ -376,6 +376,19 @@ impl GameState {
                             && p.id != c.id
                             && self.evaluate_requirement_on_card(f, p, seat)
                     }),
+                    // CR 508.1g — Leviathan needs N sacrificeable matches
+                    // besides itself before the attack is even offered.
+                    Keyword::AttackCostSacrifice(f, n) => {
+                        self.battlefield
+                            .iter()
+                            .filter(|p| {
+                                p.controller == seat
+                                    && p.id != c.id
+                                    && self.evaluate_requirement_on_card(f, p, seat)
+                            })
+                            .count()
+                            >= *n as usize
+                    }
                     // CR 508.1a — Branded Brawlers / Veteran Brawlers can only
                     // swing into a tapped-out defender.
                     Keyword::CantAttackIfDefenderHasUntappedLand => {

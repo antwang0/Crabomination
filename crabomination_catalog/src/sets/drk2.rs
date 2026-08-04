@@ -822,11 +822,16 @@ pub fn goblin_shrine() -> CardDefinition {
     }
 }
 
+/// `EntityMatches` is vacuously true over an empty set, so the existence
+/// check has to be explicit: an unattached Aura is not "on a basic Mountain".
 fn host_is_basic_mountain() -> Predicate {
-    Predicate::EntityMatches {
-        what: host(),
-        filter: R::IsBasicLand.and(R::HasLandType(LandType::Mountain)),
-    }
+    Predicate::All(vec![
+        Predicate::SelectorExists(host()),
+        Predicate::EntityMatches {
+            what: host(),
+            filter: R::IsBasicLand.and(R::HasLandType(LandType::Mountain)),
+        },
+    ])
 }
 
 /// "As long as enchanted land is a basic Mountain, Goblin creatures get …"

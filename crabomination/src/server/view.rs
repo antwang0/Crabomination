@@ -1453,6 +1453,10 @@ fn project_permanent(
                     .is_some_and(|cp| {
                         cp.keywords.contains(&crate::card::Keyword::CantAttackIfAttackedLastTurn)
                     })),
+        attack_toll: state
+            .computed_permanent(card.id)
+            .map(|cp| state.attack_block_keyword_tax(card.id, &cp.keywords, true))
+            .unwrap_or(0),
         has_finality_counters: card.counter_count(crate::card::CounterType::Finality) > 0,
         dies_to_exile: card.definition.dies_to_exile,
         has_shield_counters: card.counter_count(crate::card::CounterType::Shield) > 0,

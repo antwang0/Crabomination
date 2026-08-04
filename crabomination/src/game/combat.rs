@@ -3870,7 +3870,7 @@ impl GameState {
     /// CR 508.1a / 509.1a — the "can't attack or block unless its controller
     /// pays {N}" tax carried by `id`'s own computed keywords. Shared by the
     /// declare-attackers and declare-blockers payment loops.
-    pub(crate) fn attack_block_keyword_tax(
+    pub fn attack_block_keyword_tax(
         &self,
         id: CardId,
         keywords: &[Keyword],

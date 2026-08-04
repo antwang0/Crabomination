@@ -541,6 +541,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.cant_attack_this_turn {
         lines.push(String::from("(benched: can't attack this turn)"));
     }
+    // CR 508.1g — the per-attacker toll, so the price is visible before the
+    // declaration (Brainwash, Oppressive Rays).
+    if p.attack_toll > 0 {
+        lines.push(format!("(toll: {{{}}} to attack with this)", p.attack_toll));
+    }
     // Surface +1/+1 and -1/-1 counter highlights — the most common
     // counter shapes carry a P/T delta that's often more important than
     // the printed body. Push (modern_decks batch 174): added the
@@ -1587,6 +1592,7 @@ mod tests {
             has_stun_counters: false,
             wont_untap: false,
             cant_attack_this_turn: false,
+            attack_toll: 0,
             has_finality_counters: false,
             dies_to_exile: false,
             dealt_damage_this_turn: false,

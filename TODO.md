@@ -8753,23 +8753,27 @@ Planeshift is at zero `set_gaps.py` gaps (86 cards this run); Invasion went
   ("the closest appropriate player to the left makes the choice when nobody in
   range can").
 
-## Noticed this run (modern_decks — The Dark, first wave)
+## The Dark — the last six
 
-- **The Dark is at 55.** The 42 shipped cards all ride existing primitives.
-  What's left clusters into a handful of missing shapes:
-  - *Turn-scoped untap denial* — Barl's Cage, Tangle Kelp and Goblin Rock Sled
-    all want "doesn't untap during its controller's **next** untap step".
-    `StaticEffect::PreventUntap` is permanent-scoped and
-    `CounterType::Stun` leaves a visible counter; neither is the printed one-
-    shot.
-  - *X target creatures* — Word of Binding ("tap X target creatures") has no
-    variable-slot targeting shape; every multi-target spell in the catalog
-    declares a fixed slot count from its effect tree.
-  - *Conditional Aura anthems keyed on the enchanted land* — Goblin Caves /
-    Goblin Shrine ("as long as enchanted land is a basic Mountain, …").
-  - *Storage counters* — City of Shadows' exile-a-creature-for-mana bank.
-  - *Half-damage rounding* — Banshee, Eternal Flame and Dark Sphere all read
-    "half X, rounded up/down".
-  - Big one-offs: Dance of Many, Frankenstein's Monster, Nameless Race,
-    Preacher, Reflecting Mirror, Runesword, Season of the Witch, Sorrow's Path,
-    Worms of the Earth.
+`set_gaps.py drk` is at 6. Each wants one primitive that doesn't exist yet:
+
+- **Dance of Many** — a token copy whose life is tied three ways (the
+  enchantment leaving exiles it, the token leaving sacrifices the
+  enchantment, and an upkeep {U}{U} keeps both). `Effect::CreateTokenCopyOf`
+  covers the mint; the two-way "when the *other* one leaves" link doesn't
+  exist.
+- **Fasting** — "If you would begin your draw step, you may skip that step
+  instead. If you do, you gain 2 life." `StaticEffect::ControllerSkipsDrawStep`
+  is unconditional; this needs an optional draw-step replacement.
+- **Frankenstein's Monster** — "As this enters, exile X creature cards from
+  your graveyard … for each, this enters with a +2/+0, +1/+1, or +0/+2 counter
+  on it." Needs a per-card counter-kind choice at ETB, and the
+  put-into-graveyard-instead fallback when the exile can't be paid.
+- **Nameless Race** — "pay any amount of life" bounded by a board count, with
+  a CDA reading the amount paid. Needs `Effect::PayAnyAmountOfLifeCapped` plus
+  a `DynamicPt` that reads the payment stamped at entry.
+- **Runesword** — a pump whose rider installs three separate turn-scoped
+  replacements on whatever the pumped creature damages.
+- **Sorrow's Path** — "if each of those creatures could block all creatures
+  the other is blocking, swap them." Needs a legality check over the block map
+  plus a re-block that doesn't re-trigger "becomes blocked".

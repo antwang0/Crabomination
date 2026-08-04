@@ -231,6 +231,16 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // "Can't attack or block unless it has an even number of counters on it"
         // (Sab-Sunen) — a live combat gate that flips as counters change.
         CantAttackOrBlockUnlessEvenCounters => "Even?",
+        // Attack tolls the controller has to cover before the swing is legal
+        // (Brainwash's {N}, Leviathan's two Islands) — the player needs to see
+        // the price before declaring, not after the rejection.
+        CantAttackUnlessPay(_) | AttackCostSacrifice(_, _) => "Atk$",
+        // "Doesn't untap if it attacked during your last turn" (Goblin Rock
+        // Sled, Tangle Kelp) — the swing costs a whole turn of availability.
+        DoesntUntapIfAttackedLastTurn => "Rest",
+        // "Can't be the target of spells unless it attacked or blocked this
+        // turn" (Lurker) — reads as conditional shroud to the opponent.
+        CantBeTargetedBySpellsUnlessAttackedOrBlocked => "Shr?",
         // Upkeep obligations & count-down timers change how long a permanent
         // sticks around — a real board read for both players (the remaining
         // count rides the counter coins; these tags flag the mechanic).
