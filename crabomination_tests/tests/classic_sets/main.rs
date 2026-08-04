@@ -27,6 +27,7 @@ mod chk3;
 mod dgm;
 mod drk;
 mod ohop;
+mod hml;
 mod eoe;
 mod fin;
 mod dis;

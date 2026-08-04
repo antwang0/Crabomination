@@ -2556,6 +2556,11 @@ pub struct ActivatedAbility {
     pub mana_cost: crate::mana::ManaCost,
     pub effect: Effect,
     pub once_per_turn: bool,
+    /// CR 602.5f — "Activate no more than N times each turn" (Roterothopter).
+    /// The generalization of [`Self::once_per_turn`]; both share the
+    /// permanent's `once_per_turn_used` tally, so `Some(1)` is equivalent.
+    #[serde(default)]
+    pub max_activations_per_turn: Option<u32>,
     pub sorcery_speed: bool,
     /// True if activating this ability requires sacrificing the source
     /// permanent as part of its cost. The sacrifice is applied **after**

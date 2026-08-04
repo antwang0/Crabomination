@@ -12466,13 +12466,24 @@ impl GameState {
         // payments / illegal targets don't burn the per-turn budget.
         // (Graveyard activations don't track per-card once-per-turn state
         // since the card may move between zones; the gate is no-op.)
-        if !source_in_gy && !source_in_hand && !source_in_exile && !source_in_command && ability.once_per_turn {
+        // CR 602.5f — "activate only once each turn" and its "no more than N
+        // times each turn" generalization share the permanent's tally.
+        let per_turn_cap = ability
+            .max_activations_per_turn
+            .or(ability.once_per_turn.then_some(1));
+        if !source_in_gy
+            && !source_in_hand
+            && !source_in_exile
+            && !source_in_command
+            && let Some(cap) = per_turn_cap
+        {
             let perm = self
                 .battlefield
                 .iter()
                 .find(|c| c.id == card_id)
                 .ok_or(GameError::CardNotOnBattlefield(card_id))?;
-            if perm.once_per_turn_used.contains(&ability_index) {
+            let used = perm.once_per_turn_used.iter().filter(|i| **i == ability_index).count();
+            if used as u32 >= cap {
                 return Err(GameError::AbilityAlreadyUsedThisTurn);
             }
         }
@@ -13810,7 +13821,7 @@ impl GameState {
         // Mark the ability as used for the once-per-turn budget. (After
         // tap/mana cost validation succeeds, before sacrifice or stack
         // queueing — all of which are guaranteed to commit if we get here.)
-        if ability.once_per_turn
+        if (ability.once_per_turn || ability.max_activations_per_turn.is_some())
             && !source_in_gy
             && !source_in_hand
             && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
