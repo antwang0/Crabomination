@@ -240,6 +240,19 @@ pub enum ServerMsg {
 
 // ── Projected view types ─────────────────────────────────────────────────────
 
+/// CR 901 — the viewer's Planechase state, for the planar-die HUD control.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlanarView {
+    /// Cards left face down in the viewer's planar deck.
+    pub deck_size: usize,
+    /// The generic cost of the viewer's next roll this turn (CR 901.9).
+    pub roll_cost: u32,
+    /// Whether the viewer may take the roll special action right now.
+    pub can_roll: bool,
+    /// The face-up plane / phenomenon names, in command-zone order.
+    pub face_up: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClientView {
     pub your_seat: usize,
@@ -315,6 +328,12 @@ pub struct ClientView {
     /// War Cadence): {N} per attacker / per blocker the acting player
     /// declares. `0` when no toll is up. Surfaced so the attack/block UI can
     /// warn before the engine rejects an unpayable declaration.
+    /// CR 901 — the Planechase variant is on: the number of cards left in the
+    /// viewer's planar deck, the {N} the next roll of the planar die would
+    /// cost them, and whether that special action is legal right now. `None`
+    /// outside a Planechase game.
+    #[serde(default)]
+    pub planar: Option<PlanarView>,
     #[serde(default)]
     pub attack_tax_this_turn: u32,
     #[serde(default)]

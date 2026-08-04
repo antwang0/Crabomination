@@ -102,6 +102,7 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Combat participation cap (CR 506.2 / 509.1b — Silent Arbiter) — the
         // same steel as the other combat-restriction chips.
         StatChipKind::CombatCap => (Color::srgba(0.24, 0.26, 0.34, 1.0), theme::TEXT_PRIMARY),
+        StatChipKind::Planar => (Color::srgba(0.30, 0.20, 0.38, 1.0), theme::TEXT_PRIMARY),
         // Revealed library top (CR 401.5 — Courser of Kruphix) — a library
         // parchment green so the public information reads at a glance.
         StatChipKind::TopCard => (Color::srgba(0.16, 0.30, 0.18, 1.0), theme::TEXT_PRIMARY),
@@ -202,6 +203,9 @@ pub(super) enum StatChipKind {
     /// CR 506.2 / 509.1b — "no more than N creatures can attack/block each
     /// combat" (Silent Arbiter).
     CombatCap,
+    /// CR 901 — the Planechase planar die: the face-up plane and what the next
+    /// roll would cost.
+    Planar,
     TopCard,
     RevealedHand,
     Controlled,
@@ -1149,6 +1153,19 @@ pub fn update_player_stats_chips(
             if let Some(label) = cap {
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::CombatCap, label);
             }
+        }
+        // CR 901 — the Planechase state, on the viewer's own row: which plane
+        // is out and what the next planar-die roll would cost them.
+        if p.seat == cv.your_seat
+            && let Some(planar) = &cv.planar
+        {
+            let plane = planar.face_up.first().map(String::as_str).unwrap_or("no plane");
+            let label = if planar.can_roll {
+                format!("🎲 {plane} · roll {{{}}}", planar.roll_cost)
+            } else {
+                format!("🎲 {plane}")
+            };
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Planar, label);
         }
         // CR 508.1 / 509.1d — a turn-scoped symmetric combat toll; surface it
         // once, on the active player's row, so neither seat plans a

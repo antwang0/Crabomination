@@ -313,6 +313,28 @@ pub fn handle_export_keypress(
     }
 }
 
+// ── Planar die ───────────────────────────────────────────────────────────────
+
+/// CR 901.9 — pressing `P` rolls the planar die in a Planechase game. The
+/// action is a special action, so it needs no target UI; the HUD's planar chip
+/// shows the roll's current {N} cost, and the key is inert when the engine
+/// wouldn't accept the roll.
+pub fn handle_planar_die_keypress(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
+    chat: Res<crate::systems::chat::ChatInputState>,
+) {
+    if debug_console.card_input_focused || chat.open || !keyboard.just_pressed(KeyCode::KeyP) {
+        return;
+    }
+    let Some(outbox) = &outbox else { return };
+    if view.0.as_ref().and_then(|cv| cv.planar.as_ref()).is_some_and(|p| p.can_roll) {
+        outbox.submit(GameAction::RollPlanarDie);
+    }
+}
+
 // ── Surrender / Leave ──────────────────────────────────────────────────────────
 
 /// Drive the two match-exit buttons:

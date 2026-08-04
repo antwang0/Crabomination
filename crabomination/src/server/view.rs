@@ -144,6 +144,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         turn_effects: state.turn_effect_notes(),
         block_tax_this_turn: state.block_tax_this_turn,
         combat_chooser: state.combat_chooser,
+        planar: viewer.and_then(|seat| planar_view(state, seat)),
         max_attackers_per_combat: state.combat_participation_cap(false),
         max_blockers_per_combat: state.combat_participation_cap(true),
         day_night: state.day_night.map(|dn| dn == crate::game::types::DayNight::Day),
@@ -462,6 +463,35 @@ fn exile_entry(card: &CardInstance, viewer: Option<usize>, plotted: bool) -> Exi
         face_down: card.face_down,
         plotted,
     }
+}
+
+/// CR 901 — the viewer's Planechase state, or `None` when no seat brought a
+/// planar deck and nothing is face up.
+fn planar_view(state: &GameState, seat: usize) -> Option<crate::net::PlanarView> {
+    let face_up: Vec<String> = state
+        .players
+        .iter()
+        .flat_map(|p| p.command.iter())
+        .filter(|c| c.definition.is_plane() || c.definition.is_phenomenon())
+        .map(|c| c.definition.name.to_string())
+        .collect();
+    let deck_size = state.players[seat].planar_deck.len();
+    if deck_size == 0 && face_up.is_empty() {
+        return None;
+    }
+    let roll_cost = state.players[seat].planar_die_rolls_this_turn;
+    Some(crate::net::PlanarView {
+        deck_size,
+        roll_cost,
+        can_roll: state.active_player_idx == seat
+            && state.player_with_priority() == seat
+            && state.stack.is_empty()
+            && matches!(
+                state.step,
+                crate::TurnStep::PreCombatMain | crate::TurnStep::PostCombatMain
+            ),
+        face_up,
+    })
 }
 
 /// Collect the commander-damage tally dealt to `victim` (CR 903.10a), one

@@ -2498,6 +2498,7 @@ Each a small targeted feature; sweep batch by batch.
    is opened, not closed: `sets::cns` holds 18 of the 24 *conspiracy cards*
    plus 16 regular cards. The will-of-the-council / council's-dilemma voting
    cycle (CR 701.32) and the draft-matters shell are the bulk of what's left.
+   **Homelands** is the other open front at 30 (`sets::hml`).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2543,6 +2544,17 @@ Each a small targeted feature; sweep batch by batch.
 - **CR 807 Grand Melee** — `set_grand_melee_variant` + `shuffle_seating`
   (807.2 defaults, 807.3 random seating). The 807.4 turn markers are open;
   see TODO.md.
+- **Planechase ships** (CR 311 / 312 / 901) — `CardType::{Plane, Phenomenon}`,
+  per-seat planar decks, `GameAction::RollPlanarDie` (the CR 901.9 special
+  action with its per-turn surcharge), `set_starting_plane` / `planeswalk` /
+  `chaos_ensues` / `sweep_finished_phenomena`, and
+  `EventKind::{ChaosEnsues, PlaneswalkedAwayFrom, Encountered}`. Planes'
+  statics, step triggers and event triggers function from the command zone
+  under the planar controller, and counters can land on a face-up plane. The
+  server projects `PlanarView` (deck size, roll cost, legality, face-up
+  names), the client shows a planar HUD chip and rolls on `P`, and the bot
+  takes its one free roll each turn. 15 cards in `sets::ohop`; tests in
+  `classic_sets/ohop`.
 
 - **Conspiracy's regular cards opened** — 16 of ~180: Deathreap Ritual, Brago
   King Eternal, Canal Dredger, Cogwork Spy, the graveyard/hand-sized

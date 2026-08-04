@@ -8798,3 +8798,20 @@ Planeshift is at zero `set_gaps.py` gaps (86 cards this run); Invasion went
   `self.battlefield` directly won't see a conspiracy; the two cast gates and
   the ability-grant walks were converted, the rest were left alone. Convert
   more as conspiracies need them.
+
+## Planechase — shipped, with the corners left open
+
+CR 311 / 312 / 901 ship (`sets::ohop`, 15 cards). Deliberately not modelled:
+
+- **Grand Melee multi-plane** (CR 901.14) — `planeswalk` assumes at most one
+  face-up plane per planar controller.
+- **Single communal planar deck** (CR 901.15) — each seat has its own deck.
+- **Leaving the game** (CR 901.10) — a departing owner's face-up plane isn't
+  swapped out for the new planar controller's.
+- Chaos abilities that want "until a player planeswalks" as a duration
+  (Agyrem, Eloren Wilds) need a `Duration::UntilAPlayerPlaneswalks`, so those
+  planes aren't in the catalog yet.
+- Pools of Becoming's "reveal the top three of your planar deck and trigger
+  each of their chaos abilities" needs a planar-deck peek effect.
+- The bot takes only the turn's one free roll; it never buys a later one, and
+  it doesn't evaluate whether the face-up plane favours it.

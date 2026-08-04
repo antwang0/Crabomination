@@ -917,6 +917,17 @@ impl Bot for RandomBot {
                 {
                     return Some(a);
                 }
+                // CR 901.9 — take the turn's one free planar-die roll before
+                // spending mana. Later rolls cost {N} and compete with real
+                // plays, so the bot stops after the free one. Inert outside a
+                // Planechase game (no planar deck, nothing face up).
+                if state.stack.is_empty()
+                    && state.players[seat].planar_die_rolls_this_turn == 0
+                    && !state.players[seat].planar_deck.is_empty()
+                    && !state.face_up_planes().is_empty()
+                {
+                    return Some(GameAction::RollPlanarDie);
+                }
                 Some(main_phase_action_with(state, seat, self.scored, &self.weights))
             }
             // Opponent's end step with an empty stack — the bot's canonical
