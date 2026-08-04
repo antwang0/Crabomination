@@ -3053,7 +3053,13 @@ impl GameState {
                     let dealt = self.ironscale_replace(blocker_id, dealt, &mut events);
                     // CR 615 — a blocker that prevents all damage to itself
                     // (Wall of Denial) takes none, and grants no lifelink.
-                    let dealt = if self.combat_damage_prevented_to_self(blocker_id) { 0 } else { dealt };
+                    let dealt = if self.combat_damage_prevented_to_self(blocker_id)
+                        || self.damage_from_source_prevented_by_keyword(blocker_id, atk.id)
+                    {
+                        0
+                    } else {
+                        dealt
+                    };
                     lifelink_dealt += dealt;
 
                     // Karona's Zealot — a standing turn-scoped redirect moves
@@ -3198,6 +3204,7 @@ impl GameState {
                         // Transport), takes none from this blocker (no lifelink).
                         let dmg = if self.combat_damage_prevented_to_self(atk.id)
                             || self.combat_damage_from_blockers_prevented(atk.id)
+                            || self.damage_from_source_prevented_by_keyword(atk.id, bid)
                         {
                             0
                         } else {

@@ -8752,3 +8752,24 @@ Planeshift is at zero `set_gaps.py` gaps (86 cards this run); Invasion went
 - **CR 807's rotating Grand Melee ranges are still open**, as is CR 801.5c
   ("the closest appropriate player to the left makes the choice when nobody in
   range can").
+
+## Noticed this run (modern_decks — The Dark, first wave)
+
+- **The Dark is at 55.** The 42 shipped cards all ride existing primitives.
+  What's left clusters into a handful of missing shapes:
+  - *Turn-scoped untap denial* — Barl's Cage, Tangle Kelp and Goblin Rock Sled
+    all want "doesn't untap during its controller's **next** untap step".
+    `StaticEffect::PreventUntap` is permanent-scoped and
+    `CounterType::Stun` leaves a visible counter; neither is the printed one-
+    shot.
+  - *X target creatures* — Word of Binding ("tap X target creatures") has no
+    variable-slot targeting shape; every multi-target spell in the catalog
+    declares a fixed slot count from its effect tree.
+  - *Conditional Aura anthems keyed on the enchanted land* — Goblin Caves /
+    Goblin Shrine ("as long as enchanted land is a basic Mountain, …").
+  - *Storage counters* — City of Shadows' exile-a-creature-for-mana bank.
+  - *Half-damage rounding* — Banshee, Eternal Flame and Dark Sphere all read
+    "half X, rounded up/down".
+  - Big one-offs: Dance of Many, Frankenstein's Monster, Nameless Race,
+    Preacher, Reflecting Mirror, Runesword, Season of the Witch, Sorrow's Path,
+    Worms of the Earth.

@@ -4913,6 +4913,33 @@ impl GameState {
                 || self.combat_damage_sealed_for_your_creatures(tgt))
     }
 
+    /// CR 615 — "prevent all damage that would be dealt to this by [filter]
+    /// sources" (Uncle Istvan, Argothian Treefolk). Source-aware, so it covers
+    /// combat damage too; the noncombat path checks the same keyword inline.
+    pub fn damage_from_source_prevented_by_keyword(
+        &self,
+        tgt: crate::card::CardId,
+        src: crate::card::CardId,
+    ) -> bool {
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        let controller = self.battlefield_find(tgt).map_or(0, |c| c.controller);
+        self.computed_permanent(tgt)
+            .into_iter()
+            .flat_map(|cp| cp.keywords)
+            .any(|k| match k {
+                crate::card::Keyword::PreventDamageFromMatching(f) => self
+                    .evaluate_requirement_static(
+                        &f,
+                        &crate::game::types::Target::Permanent(src),
+                        controller,
+                        Some(src),
+                    ),
+                _ => false,
+            })
+    }
+
     /// CR 615 — true when all combat damage `dealer` would *deal* is prevented
     /// this turn (Azorius Ploy's first clause). Mirror of
     /// `combat_damage_prevented_to_self`.

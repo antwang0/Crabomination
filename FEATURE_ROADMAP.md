@@ -2494,7 +2494,7 @@ Each a small targeted feature; sweep batch by batch.
    Kamigawa block, **Mirrodin Besieged**, **New Phyrexia** (the Scars block
    is closed), **Legends** (273 cards, `sets::leg`–`leg7`) and **Antiquities**
    (64 cards, `sets::atq`) are all at zero. **Arabian Nights** is open at 3
-   (`sets::arn`, 61 cards).
+   (`sets::arn`, 61 cards) and **The Dark** at 55 (`sets::drk`, 42 cards).
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio
@@ -2536,6 +2536,11 @@ Each a small targeted feature; sweep batch by batch.
   `Selector::CreaturesInCombatWith` falls back to the turn's declared blocks
   once the block map is torn down. Still open: Aladdin's Lamp, Eye for an Eye,
   Shahrazad (see TODO.md).
+
+- **The Dark opened** — `set_gaps.py drk` 97 → 55 (`sets::drk`, 42 cards on
+  existing primitives). Correctness: `Keyword::PreventDamageFromMatching` now
+  covers **combat** damage via `damage_from_source_prevented_by_keyword`, not
+  just the noncombat funnel (Uncle Istvan, Argothian Treefolk).
 
 - **Legends complete** — `set_gaps.py leg` 9 → 0 (`sets::leg7`, the set's last
   nine cards). New primitives: `CardDefinition.exile_countdown` (a general
