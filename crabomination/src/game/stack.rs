@@ -1353,7 +1353,63 @@ impl GameState {
 
     // ── Stack resolution ──────────────────────────────────────────────────────
 
+    /// CR 104.4b / 732.4 — how many consecutive triggered-ability resolutions
+    /// may leave the game-state fingerprint untouched before the loop is
+    /// declared mandatory and the game a draw. Set well above any legitimate
+    /// trigger chain (storm counts, cascade webs) so it only fires on a real
+    /// loop.
+    pub const MANDATORY_LOOP_DRAW_REPEATS: u32 = 400;
+
     pub fn resolve_top_of_stack(&mut self) -> Result<Vec<GameEvent>, GameError> {
+        // Only triggered abilities can loop without a player choice: a spell
+        // resolution consumed a cast, and an activation consumed a cost.
+        let was_trigger = matches!(self.stack.last(), Some(StackItem::Trigger { .. }));
+        let mut events = self.resolve_top_of_stack_inner()?;
+        if was_trigger && self.game_over.is_none() {
+            let fp = self.loop_fingerprint();
+            if fp == self.mandatory_loop_watch.0 {
+                self.mandatory_loop_watch.1 += 1;
+                if self.mandatory_loop_watch.1 >= Self::MANDATORY_LOOP_DRAW_REPEATS {
+                    self.game_over = Some(None);
+                    events.push(GameEvent::GameOver { winner: None });
+                }
+            } else {
+                self.mandatory_loop_watch = (fp, 0);
+            }
+        } else {
+            self.mandatory_loop_watch = (0, 0);
+        }
+        Ok(events)
+    }
+
+    /// Cheap game-state digest for the CR 104.4b loop watchdog: everything a
+    /// progressing trigger chain would move (life, zone sizes, counters, the
+    /// stack's shape). Deliberately coarse — a false *negative* just means the
+    /// draw isn't detected, while a false positive would end a live game.
+    fn loop_fingerprint(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.turn_number.hash(&mut h);
+        self.stack.len().hash(&mut h);
+        for p in &self.players {
+            p.life.hash(&mut h);
+            p.hand.len().hash(&mut h);
+            p.library.len().hash(&mut h);
+            p.graveyard.len().hash(&mut h);
+            p.poison_counters.hash(&mut h);
+        }
+        self.exile.len().hash(&mut h);
+        self.battlefield.len().hash(&mut h);
+        for c in &self.battlefield {
+            c.id.hash(&mut h);
+            c.tapped.hash(&mut h);
+            c.damage.hash(&mut h);
+            c.counters.values().sum::<u32>().hash(&mut h);
+        }
+        h.finish()
+    }
+
+    fn resolve_top_of_stack_inner(&mut self) -> Result<Vec<GameEvent>, GameError> {
         let Some(item) = self.stack.pop() else {
             return Ok(vec![]);
         };

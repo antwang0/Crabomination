@@ -354,6 +354,14 @@ pub struct GameState {
     /// `None` while the game is ongoing; `Some(None)` for a draw;
     /// `Some(Some(i))` when player `i` has won.
     pub game_over: Option<Option<usize>>,
+    /// CR 104.4b / 732.4 — mandatory-loop watchdog. Holds the game-state
+    /// fingerprint seen after the last *triggered-ability* resolution and how
+    /// many consecutive trigger resolutions have left it unchanged. A loop of
+    /// mandatory triggers pins the fingerprint; the game is drawn once the
+    /// repeat count crosses `MANDATORY_LOOP_DRAW_REPEATS`. Any resolution that
+    /// changes the fingerprint (or any spell / player action) resets it.
+    #[serde(default)]
+    pub mandatory_loop_watch: (u64, u32),
     /// Priority state — tracks who can act and when the stack resolves.
     pub priority: PriorityState,
     /// Active continuous effects from resolved spells, abilities, and static abilities.
@@ -1792,6 +1800,7 @@ impl Clone for GameState {
             active_player_idx: self.active_player_idx,
             turn_number: self.turn_number,
             game_over: self.game_over,
+            mandatory_loop_watch: self.mandatory_loop_watch,
             priority: self.priority.clone(),
             continuous_effects: self.continuous_effects.clone(),
             next_effect_timestamp: self.next_effect_timestamp,
@@ -2102,6 +2111,7 @@ impl GameState {
             active_player_idx: 0,
             turn_number: 1,
             game_over: None,
+            mandatory_loop_watch: (0, 0),
             priority: PriorityState::new(0),
             continuous_effects: CowBox::default(),
             next_effect_timestamp: 1,

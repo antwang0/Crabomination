@@ -172,3 +172,41 @@ fn cr_115_6_spell_only_target_restriction_lets_abilities_through() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(lurker).expect("lurker").skip_next_untap);
 }
+
+/// CR 104.4b / 732.4 — a loop of mandatory triggered abilities with no way to
+/// stop draws the game. A state-neutral trigger that keeps re-resolving never
+/// moves the fingerprint the watchdog samples, so the watchdog fires.
+#[test]
+fn cr_104_4b_mandatory_trigger_loop_draws_the_game() {
+    use crabomination::effect::Effect;
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..(GameState::MANDATORY_LOOP_DRAW_REPEATS + 2) {
+        if g.game_over.is_some() {
+            break;
+        }
+        g.stack.push(TriggerPush::new(src, 0, Effect::Noop).build());
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert_eq!(g.game_over, Some(None), "mandatory loop is a draw");
+}
+
+/// The watchdog must not fire on a *progressing* trigger chain — one that
+/// changes the game state each time still resolves normally.
+#[test]
+fn cr_104_4b_progressing_trigger_chain_is_not_a_draw() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = main_phase();
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..(GameState::MANDATORY_LOOP_DRAW_REPEATS + 2) {
+        g.stack.push(
+            TriggerPush::new(src, 0, Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ONE,
+            })
+            .build(),
+        );
+        g.resolve_top_of_stack().expect("resolve");
+    }
+    assert!(g.game_over.is_none(), "a chain that gains life each time is progress");
+}
