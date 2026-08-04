@@ -4938,6 +4938,26 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 - ⏳ **Onslaught is at 219 gaps.** The remaining bulk is Morph (engine support
   ships) and the tribal commons; Legions and Scourge follow.
 
+## Noticed this run (Legends closure / ATQ opening)
+
+- **Optional-pay triggers never fire for bot seats.** `AutoDecider` answers
+  `Decision::OptionalTrigger` with `false`, so `Effect::MayPay` bodies (Urza's
+  Miter, Tablet of Epityr, Urza's Chalice) are dead weight in bot games even
+  when the mana is floating. Wants a cheap "pay it if you can afford it and the
+  body is pure upside" policy rather than a blanket decline.
+- **CR 616.1e beyond draws.** The player now chooses among competing *draw*
+  replacements; the ETB, damage and counter-placement families still apply in a
+  fixed order.
+- **Five hand-written `EventSpec { .. }` literals** in `decks::{modern,
+  tarkir, tdm}` spell out every field instead of using
+  `EventSpec::new(..).with_filter(..)`, so each new `EventSpec` field has to be
+  hand-patched into them. Convert them to the builder.
+- **`attackable_players_for` is defender-scoped.** It drops defenders no
+  attacker could legally hit, but attacker-*filtered* prohibitions (a
+  `CreaturesCantAttackController { filter: Some(..) }`) still only surface as a
+  rejected `declare_attackers`. A per-attacker legality preview would let the
+  client grey out individual creatures.
+
 ## Antiquities (ATQ) — remaining 9
 
 `sets::atq` ships 55 of the set's 64 gaps. Each of the rest wants one primitive
