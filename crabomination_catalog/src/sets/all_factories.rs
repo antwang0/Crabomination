@@ -300,6 +300,23 @@ static CNS: &[Factory] = &[
     super::cns::marchesas_infiltrator,
     super::cns::treasonous_ogre,
 ];
+static OHOP: &[Factory] = &[
+    super::ohop::academy_at_tolaria_west,
+    super::ohop::krosa,
+    super::ohop::lethe_lake,
+    super::ohop::panopticon,
+    super::ohop::sanctum_of_serra,
+    super::ohop::the_eon_fog,
+    super::ohop::the_fourth_sphere,
+    super::ohop::the_hippodrome,
+    super::ohop::goldmeadow,
+    super::ohop::shiv,
+    super::ohop::fields_of_summer,
+    super::ohop::naar_isle,
+    super::ohop::undercity_reaches,
+    super::ohop::planewide_disaster,
+    super::ohop::mutual_epiphany,
+];
 static ATQ: &[Factory] = &[
     super::atq::amulet_of_kroog,
     super::atq::armageddon_clock,
@@ -20703,6 +20720,7 @@ static PER_SET: &[(&str, &[Factory])] = &[
     ("sok2", SOK2),
     ("sok3", SOK3),
     ("sos", SOS),
+    ("ohop", OHOP),
     ("stx", STX),
     ("thb", THB),
     ("ths", THS),

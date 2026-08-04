@@ -3324,6 +3324,26 @@ impl GameState {
             .collect()
     }
 
+    /// CR 901.3 — give `seat` a planar deck. Returns the new card ids in deck
+    /// order; `set_starting_plane` turns the top plane face up (CR 901.5).
+    pub fn seat_planar_deck(
+        &mut self,
+        seat: usize,
+        planes: Vec<crate::card::CardDefinition>,
+    ) -> Vec<crate::card::CardId> {
+        planes
+            .into_iter()
+            .map(|def| {
+                let id = crate::card::CardId(self.next_id);
+                self.next_id = self.next_id.saturating_add(1);
+                self.players[seat]
+                    .planar_deck
+                    .push(crate::card::CardInstance::new(id, def, seat));
+                id
+            })
+            .collect()
+    }
+
     /// The face-up scheme cards in `seat`'s command zone (CR 904.4).
     pub fn face_up_schemes(&self, seat: usize) -> Vec<&CardInstance> {
         self.players[seat].command.iter().filter(|c| c.definition.is_scheme()).collect()
@@ -8590,9 +8610,9 @@ impl GameState {
                 })
             })
             .collect();
-        // CR 904.8 / 315.5 — a face-up scheme's or conspiracy's statics
-        // function from the command zone, so they join the anthem walk exactly
-        // like an emblem does.
+        // CR 904.8 / 315.5 / 901.7 — a face-up scheme's, conspiracy's or
+        // plane's statics function from the command zone, so they join the
+        // anthem walk exactly like an emblem does.
         let face_up_schemes: Vec<&CardInstance> = self
             .players
             .iter()
@@ -11928,6 +11948,7 @@ impl GameState {
             // server intercepts `Concede` in `handle_action` and routes it to
             // the *sending* seat via `concede`, bypassing this path entirely.
             GameAction::Concede => Ok(self.concede(self.active_player_idx)),
+            GameAction::RollPlanarDie => self.roll_planar_die(),
         }?;
         let mut events = events;
         // CR 119.3c — life paid as a cost (Phyrexian pips, life costs) is a
@@ -14627,9 +14648,14 @@ impl GameState {
                 }
             }
         }
-        // CR 902.5 — a Vanguard avatar's triggers fire from the command zone.
+        // CR 902.5 / 901.7 — a Vanguard avatar's and a face-up plane's triggers
+        // fire from the command zone. A plane's controller is the planar
+        // controller (CR 901.6), not its owner.
+        let planar_controller = self.planar_controller();
         for player in &self.players {
             for card in player.command.iter().filter(|c| c.command_zone_abilities_active()) {
+                let controller =
+                    if card.definition.is_plane() { planar_controller } else { card.owner };
                 for ta in &card.definition.triggered_abilities {
                     for ev in events {
                         if is_event_hardcoded(ev, &ta.event) {
@@ -14640,7 +14666,7 @@ impl GameState {
                                 actor: None,
                                 source: card.id,
                                 effect: ta.effect.clone(),
-                                controller: card.owner,
+                                controller,
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                                 event_amount: self.event_amount_for(ev),
@@ -18412,6 +18438,44 @@ impl GameState {
     /// library → exile → stack. General-purpose helper for predicates
     /// or effects that need to introspect a card regardless of where
     /// it currently lives.
+    /// Cards whose abilities function from the command zone: face-up planes
+    /// and schemes (CR 901.7 / 904.8).
+    pub(crate) fn command_zone_sources(&self) -> impl Iterator<Item = &CardInstance> {
+        self.players
+            .iter()
+            .flat_map(|p| p.command.iter())
+            .filter(|c| c.definition.is_plane() || c.definition.is_scheme())
+    }
+
+    /// Mutable access to a command-zone card, so a counter can land on a plane
+    /// that tallies them (Naar Isle's flame counters).
+    pub(crate) fn command_card_mut(&mut self, id: CardId) -> Option<&mut CardInstance> {
+        self.players.iter_mut().find_map(|p| p.command.iter_mut().find(|c| c.id == id))
+    }
+
+    /// Read-only twin of `command_card_mut`.
+    pub(crate) fn command_card(&self, id: CardId) -> Option<&CardInstance> {
+        self.players.iter().find_map(|p| p.command.iter().find(|c| c.id == id))
+    }
+
+    /// CR 613 — a card's power as the layers see it, falling back to the raw
+    /// instance for cards outside the battlefield (hand / graveyard filters)
+    /// and mid-gather, where recomputing would recurse (`in_layer_gather`).
+    pub(crate) fn effective_power(&self, card: &CardInstance) -> i32 {
+        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+            return card.power();
+        }
+        self.computed_permanent(card.id).map(|cp| cp.power).unwrap_or_else(|| card.power())
+    }
+
+    /// Toughness twin of [`Self::effective_power`].
+    pub(crate) fn effective_toughness(&self, card: &CardInstance) -> i32 {
+        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+            return card.toughness();
+        }
+        self.computed_permanent(card.id).map(|cp| cp.toughness).unwrap_or_else(|| card.toughness())
+    }
+
     pub fn find_card_anywhere(&self, id: CardId) -> Option<&CardInstance> {
         if let Some(c) = self.battlefield_find(id) {
             return Some(c);

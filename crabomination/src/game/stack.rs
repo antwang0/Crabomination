@@ -763,6 +763,10 @@ impl GameState {
                 .iter()
                 .filter(|c| c.command_zone_abilities_active() || c.definition.is_scheme())
             {
+                // CR 901.6 — a plane's controller is the planar controller,
+                // normally the active player, so its "your" triggers fire on
+                // every turn regardless of who owns the planar deck.
+                let plane = c.definition.is_plane();
                 for t in &c.definition.triggered_abilities {
                     let scoped_to_owner = matches!(
                         t.event.scope,
@@ -770,9 +774,10 @@ impl GameState {
                     );
                     if t.event.kind == kind
                         && (matches!(t.event.scope, EventScope::AnyPlayer)
-                            || (scoped_to_owner && seat == active))
+                            || (scoped_to_owner && (plane || seat == active)))
                     {
-                        candidates.push((c.id, t.effect.clone(), seat, t.event.filter.clone()));
+                        let controller = if plane { active } else { seat };
+                        candidates.push((c.id, t.effect.clone(), controller, t.event.filter.clone()));
                     }
                 }
             }
@@ -1064,6 +1069,205 @@ impl GameState {
             self.drain_trigger_queue(queue);
         }
         Some(id)
+    }
+
+    /// CR 901.9 — the roll-the-planar-die special action. Legal only while the
+    /// active player has priority on an empty stack in their own main phase;
+    /// costs {N} for the Nth roll of the turn. A blank face does nothing, chaos
+    /// fires every face-up plane's chaos trigger, and the Planeswalker symbol
+    /// planeswalks (CR 901.9a–c).
+    pub fn roll_planar_die(&mut self) -> Result<Vec<GameEvent>, GameError> {
+        let seat = self.active_player_idx;
+        if self.priority.player_with_priority != seat {
+            return Err(GameError::NotYourPriority);
+        }
+        if !self.stack.is_empty()
+            || !matches!(self.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
+        {
+            return Err(GameError::WrongStep { actual: self.step });
+        }
+        let surcharge = self.players[seat].planar_die_rolls_this_turn;
+        self.try_pay_with_auto_tap(seat, &crate::mana::cost(&[crate::mana::generic(surcharge)]))?;
+        self.players[seat].planar_die_rolls_this_turn = surcharge.saturating_add(1);
+        // CR 901.9d — the planar die fires "whenever you roll dice" triggers
+        // but has no numeric result, so `last_die_roll` is left alone.
+        let face = match self.decider.decide(&crate::decision::Decision::DieRoll {
+            player: seat,
+            sides: 6,
+        }) {
+            crate::decision::DecisionAnswer::DieRoll(1) => PlanarFace::Planeswalker,
+            crate::decision::DecisionAnswer::DieRoll(2) => PlanarFace::Chaos,
+            _ => PlanarFace::Blank,
+        };
+        // CR 901.9d — no numeric result, so the reported high is 0.
+        let events = vec![GameEvent::DiceRolled { player: seat, count: 1, high: 0 }];
+        match face {
+            PlanarFace::Blank => {}
+            PlanarFace::Chaos => self.chaos_ensues(seat),
+            PlanarFace::Planeswalker => {
+                self.planeswalk(seat);
+            }
+        }
+        self.dispatch_triggers_for_events(&events);
+        Ok(events)
+    }
+
+    /// The face-up plane / phenomenon cards in the command zone (CR 901.4).
+    pub fn face_up_planes(&self) -> Vec<CardId> {
+        self.players
+            .iter()
+            .flat_map(|p| p.command.iter())
+            .filter(|c| c.definition.is_plane() || c.definition.is_phenomenon())
+            .map(|c| c.id)
+            .collect()
+    }
+
+    /// CR 901.6 — the planar controller: normally the active player, but the
+    /// owner of the face-up plane when the active player has no planar deck of
+    /// their own (a two-player game where only one seat brought one).
+    pub fn planar_controller(&self) -> usize {
+        if !self.players[self.active_player_idx].planar_deck.is_empty()
+            || self.players[self.active_player_idx]
+                .command
+                .iter()
+                .any(|c| c.definition.is_plane() || c.definition.is_phenomenon())
+        {
+            return self.active_player_idx;
+        }
+        self.players
+            .iter()
+            .position(|p| {
+                !p.planar_deck.is_empty()
+                    || p.command
+                        .iter()
+                        .any(|c| c.definition.is_plane() || c.definition.is_phenomenon())
+            })
+            .unwrap_or(self.active_player_idx)
+    }
+
+    /// CR 901.5 — turn the top of `seat`'s planar deck face up as the starting
+    /// plane, skipping phenomena to the bottom. No abilities trigger.
+    pub fn set_starting_plane(&mut self, seat: usize) -> Option<CardId> {
+        for _ in 0..self.players[seat].planar_deck.len() {
+            let card = self.players[seat].planar_deck.remove(0);
+            if card.definition.is_plane() {
+                let id = card.id;
+                self.players[seat].command.push(card);
+                return Some(id);
+            }
+            self.players[seat].planar_deck.push(card);
+        }
+        None
+    }
+
+    /// CR 701.31 / 901.11 — `seat` planeswalks: every face-up plane fires its
+    /// "when you planeswalk away from this" triggers and goes to the bottom of
+    /// its owner's planar deck, then the top of `seat`'s planar deck is turned
+    /// face up. A phenomenon turned up this way fires its encounter trigger;
+    /// `sweep_finished_phenomena` planeswalks again once that leaves the stack.
+    pub fn planeswalk(&mut self, seat: usize) -> Option<CardId> {
+        let mut queue: Vec<PendingTriggerPush> = Vec::new();
+        for id in self.face_up_planes() {
+            for owner in 0..self.players.len() {
+                let Some(pos) = self.players[owner].command.iter().position(|c| c.id == id) else {
+                    continue;
+                };
+                let card = self.players[owner].command.remove(pos);
+                queue.extend(self.planar_trigger_pushes(
+                    &card,
+                    EventKind::PlaneswalkedAwayFrom,
+                    seat,
+                ));
+                self.players[owner].planar_deck.push(card);
+                break;
+            }
+        }
+        let turned = (!self.players[seat].planar_deck.is_empty()).then(|| {
+            let card = self.players[seat].planar_deck.remove(0);
+            let id = card.id;
+            queue.extend(self.planar_trigger_pushes(&card, EventKind::Encountered, seat));
+            self.players[seat].command.push(card);
+            id
+        });
+        if !queue.is_empty() {
+            self.drain_trigger_queue(queue);
+        }
+        turned
+    }
+
+    /// CR 901.9b — chaos ensues: every face-up plane's chaos trigger goes on
+    /// the stack, controlled by `roller`.
+    pub fn chaos_ensues(&mut self, roller: usize) {
+        let cards: Vec<CardInstance> = self
+            .players
+            .iter()
+            .flat_map(|p| p.command.iter())
+            .filter(|c| c.definition.is_plane() || c.definition.is_phenomenon())
+            .cloned()
+            .collect();
+        let queue: Vec<PendingTriggerPush> = cards
+            .iter()
+            .flat_map(|c| self.planar_trigger_pushes(c, EventKind::ChaosEnsues, roller))
+            .collect();
+        if !queue.is_empty() {
+            self.drain_trigger_queue(queue);
+        }
+    }
+
+    /// The `kind`-keyed triggered abilities of a plane / phenomenon card,
+    /// packaged for `drain_trigger_queue` under `controller`.
+    fn planar_trigger_pushes(
+        &mut self,
+        card: &CardInstance,
+        kind: EventKind,
+        controller: usize,
+    ) -> Vec<PendingTriggerPush> {
+        let effects: Vec<Effect> = card
+            .definition
+            .triggered_abilities
+            .iter()
+            .filter(|t| t.event.kind == kind)
+            .map(|t| t.effect.clone())
+            .collect();
+        effects
+            .into_iter()
+            .map(|effect| {
+                let mode = self.pick_trigger_mode(&effect, card.id, controller);
+                PendingTriggerPush {
+                    from_mana_ability: false,
+                    actor: None,
+                    source: card.id,
+                    controller,
+                    effect,
+                    subject: None,
+                    event_amount: 0,
+                    mode,
+                    intervening_if: None,
+                }
+            })
+            .collect()
+    }
+
+    /// CR 704.6f — a face-up phenomenon whose encounter trigger has left the
+    /// stack makes its controller planeswalk. Checked where finished schemes
+    /// are swept.
+    pub(crate) fn sweep_finished_phenomena(&mut self) {
+        let phenomena: Vec<CardId> = self
+            .players
+            .iter()
+            .flat_map(|p| p.command.iter())
+            .filter(|c| c.definition.is_phenomenon())
+            .map(|c| c.id)
+            .collect();
+        if phenomena.is_empty()
+            || self.stack.iter().any(|item| {
+                matches!(item, StackItem::Trigger { source, .. } if phenomena.contains(source))
+            })
+        {
+            return;
+        }
+        let seat = self.planar_controller();
+        self.planeswalk(seat);
     }
 
     /// CR 701.33 / 904.10 — abandon a face-up scheme: off the command zone and
@@ -2356,7 +2560,7 @@ impl GameState {
                 false
             };
         // CR 502.4 — Mist of Stagnation: nothing untaps during any untap step.
-        if self.battlefield.iter().any(|c| {
+        if self.battlefield.iter().chain(self.command_zone_sources()).any(|c| {
             c.definition
                 .static_abilities
                 .iter()
@@ -2892,6 +3096,8 @@ impl GameState {
             // Veil of Summer's "this turn" riders clear at the turn boundary
             // for every seat (CR 514.2 cleanup-scope grants).
             pl.next_draw_replacements.clear();
+            // CR 901.9 — the planar-die roll surcharge resets each turn.
+            pl.planar_die_rolls_this_turn = 0;
             pl.spells_uncounterable_this_turn = false;
             pl.creature_spells_uncounterable_this_turn = false;
             pl.hexproof_from_colors_this_turn.clear();
@@ -3486,6 +3692,9 @@ impl GameState {
         // CR 904.10 — a face-up non-ongoing scheme is abandoned once no scheme
         // trigger is left on the stack.
         self.sweep_finished_schemes();
+        // CR 704.6f — a face-up phenomenon whose encounter trigger has left the
+        // stack makes its controller planeswalk.
+        self.sweep_finished_phenomena();
 
         // CR 603.8 — state-triggered flip (Student of Elements: "When this
         // creature has flying, flip it"). Cheap guard so the common board pays

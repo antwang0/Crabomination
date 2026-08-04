@@ -666,6 +666,22 @@ pub enum GameAction {
     /// behalf), and a player may concede at any time regardless of priority.
     /// See `GameState::concede` and the server's `handle_action` intercept.
     Concede,
+    /// CR 901.9 — roll the planar die. A special action: legal only while the
+    /// active player has priority with an empty stack during their own main
+    /// phase, and it costs {N} where N is the number of times they have
+    /// already taken it this turn.
+    RollPlanarDie,
+}
+
+/// CR 901.3a — the three distinct faces of the planar die.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PlanarFace {
+    /// Four of the six faces: nothing happens (CR 901.9a).
+    Blank,
+    /// Chaos ensues (CR 901.9b).
+    Chaos,
+    /// The planeswalking ability triggers (CR 901.9c).
+    Planeswalker,
 }
 
 // ── Delayed triggers ─────────────────────────────────────────────────────────

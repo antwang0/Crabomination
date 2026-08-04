@@ -115,6 +115,17 @@ pub struct Player {
     /// here (CR 904.10). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub scheme_deck: CowBox<Vec<CardInstance>>,
+    /// CR 901.3 — this player's face-down planar deck. Like the scheme deck it
+    /// never empties into another zone: planeswalking moves the top card into
+    /// `command` face up (CR 901.11) and puts the plane left behind on the
+    /// bottom. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub planar_deck: CowBox<Vec<CardInstance>>,
+    /// CR 901.9 — how many times this player has taken the roll-the-planar-die
+    /// special action this turn; the next roll costs that much generic mana.
+    /// Reset at the turn boundary.
+    #[serde(default)]
+    pub planar_die_rolls_this_turn: u32,
     /// CR 406 / 701.45 — the Lessons "sideboard" (cards owned from outside
     /// the game). A Learn ability may reveal a Lesson card here and put it
     /// into hand. Populated by deck construction; empty by default (in
@@ -912,6 +923,8 @@ impl Player {
             may_spend_any_color_this_turn: false,
             ante: CowBox::default(),
             scheme_deck: CowBox::default(),
+            planar_deck: CowBox::default(),
+            planar_die_rolls_this_turn: 0,
             opponent_cast_spell_since_your_turn: false,
             sideboard: CowBox::default(),
             commanders: Vec::new(),

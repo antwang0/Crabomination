@@ -94,6 +94,8 @@ fn main() {
                     CardType::Vanguard => "Vanguard",
                     CardType::Conspiracy => "Conspiracy",
                     CardType::Scheme => "Scheme",
+                    CardType::Plane => "Plane",
+                    CardType::Phenomenon => "Phenomenon",
                 })
                 .collect();
             flagged.push((def.name.to_string(), reason, types.join(" ")));

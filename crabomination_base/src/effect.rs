@@ -2447,6 +2447,16 @@ pub enum EventKind {
     /// CR 904.9 — a scheme was set in motion off the top of the archenemy's
     /// scheme deck ("When you set this scheme in motion, …").
     SetInMotion,
+    /// CR 901.9b — the planar die came up chaos ("Whenever chaos ensues, …").
+    /// Fires on every face-up plane; the roller is the event's player.
+    ChaosEnsues,
+    /// CR 901.11b — the trigger's source plane/phenomenon is the one being
+    /// left ("When you planeswalk away from this plane, …"). Fires on the
+    /// face-up card as it goes back into the planar deck.
+    PlaneswalkedAwayFrom,
+    /// CR 312.5 — "When you encounter this phenomenon": the card was just
+    /// turned face up off the planar deck.
+    Encountered,
     /// The active player's turn just began.
     TurnBegins,
     /// A counter was added to a permanent/player.

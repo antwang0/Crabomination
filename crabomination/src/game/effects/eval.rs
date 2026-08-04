@@ -580,6 +580,8 @@ impl GameState {
                         .or_else(|| self.players.iter().find_map(
                             |p| p.graveyard.iter().find(|c| c.id == cid)))
                         .or_else(|| self.exile.iter().find(|c| c.id == cid))
+                        // CR 901.7 — a face-up plane can carry counters.
+                        .or_else(|| self.command_card(cid))
                         .map(|c| c.counter_count(*kind) as i32)
                 })
                 // CR-spec: "the number of [counter type] on X" returns the
@@ -3088,16 +3090,26 @@ impl GameState {
                     }),
                     R::SharesCardTypeWithExiledBySource => self
                         .shares_card_type_with_exiled_by(source, &card.definition),
-                    R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
+                    // CR 613 — the P/T thresholds read the *computed* view, so
+                    // an anthem or a shrink (The Hippodrome's -5/-0) counts.
+                    R::PowerAtMost(n) => {
+                        card.definition.is_creature() && self.effective_power(card) <= *n
+                    }
                     R::PowerAtMostSourcePower => {
                         card.definition.is_creature()
                             && source
                                 .and_then(|s| self.battlefield_find(s))
                                 .is_some_and(|src| card.power() <= src.power())
                     }
-                    R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
-                    R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
-                    R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+                    R::ToughnessAtMost(n) => {
+                        card.definition.is_creature() && self.effective_toughness(card) <= *n
+                    }
+                    R::PowerAtLeast(n) => {
+                        card.definition.is_creature() && self.effective_power(card) >= *n
+                    }
+                    R::ToughnessAtLeast(n) => {
+                        card.definition.is_creature() && self.effective_toughness(card) >= *n
+                    }
                     R::ToughnessGreaterThanPower => {
                         card.definition.is_creature() && card.toughness() > card.power()
                     }

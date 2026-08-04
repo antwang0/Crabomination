@@ -13387,6 +13387,15 @@ impl GameState {
                                 if *kind == CounterType::Lore {
                                     self.saga_chapters_crossed(cid, before, before + n);
                                 }
+                            } else if let Some(c) = self.command_card_mut(cid) {
+                                // CR 901.7 — a face-up plane tallies its own
+                                // counters from the command zone (Naar Isle).
+                                c.add_counters(*kind, n);
+                                events.push(GameEvent::CounterAdded {
+                                    card_id: cid,
+                                    counter_type: *kind,
+                                    count: n,
+                                });
                             }
                             // Track per-turn "this permanent gained counters"
                             // for Fractal Tender's end-step trigger and any

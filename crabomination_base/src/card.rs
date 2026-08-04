@@ -37,6 +37,13 @@ pub enum CardType {
     /// in the command zone and stays there, its static and triggered
     /// abilities functioning from there while it is face up (CR 315.5).
     Conspiracy,
+    /// CR 311 — a Plane. Never a permanent and never castable: it lives in the
+    /// command zone, in the planar deck or face up as the current plane
+    /// (CR 901.4). Its abilities function from there (CR 901.7).
+    Plane,
+    /// CR 312 — a Phenomenon. Like a Plane, but its "when you encounter this"
+    /// trigger leaving the stack makes its controller planeswalk (CR 704.6f).
+    Phenomenon,
 }
 
 /// Supertypes that modify a card's identity and rules interactions.
@@ -4528,6 +4535,10 @@ impl CardDefinition {
     pub fn is_conspiracy(&self) -> bool { self.card_types.contains(&CardType::Conspiracy) }
     /// CR 314.1 — a scheme card.
     pub fn is_scheme(&self) -> bool { self.card_types.contains(&CardType::Scheme) }
+    /// CR 311.1 — a plane card.
+    pub fn is_plane(&self) -> bool { self.card_types.contains(&CardType::Plane) }
+    /// CR 312.1 — a phenomenon card.
+    pub fn is_phenomenon(&self) -> bool { self.card_types.contains(&CardType::Phenomenon) }
     /// CR 904.11 — an "Ongoing Scheme", exempt from the 904.10 sweep.
     pub fn is_ongoing_scheme(&self) -> bool {
         self.is_scheme() && self.supertypes.contains(&Supertype::Ongoing)
@@ -5931,6 +5942,7 @@ impl CardInstance {
     /// face up (CR 315.5b — a face-down conspiracy has no characteristics).
     pub fn command_zone_abilities_active(&self) -> bool {
         self.definition.is_vanguard()
+            || self.definition.is_plane()
             || (self.definition.is_conspiracy() && !self.face_down)
     }
 
