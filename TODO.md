@@ -3,6 +3,31 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
+## Noticed this run (CR 115.7 / 104.4b pass)
+
+- **`Effect::ChangeSpellTarget` was inert** — it called `repoint_copy_target`,
+  which offers the *original* target first, so a conservative decider always
+  kept it. Now routed through the `retarget_spell` helper that already existed
+  for this (original excluded, hostile/friendly auto-pick). Shunt, Ricochet
+  Trap, Deflection and Misdirection all get a working redirect. ⏳ Remaining:
+  115.7d ("choose new targets") still only repoints slot 0 —
+  `ChooseNewTargetsForSpell` leaves `additional_targets` alone, so a
+  multi-target spell can't be fully re-aimed.
+- **CR 104.4b loop watchdog is coarse.** The fingerprint samples zone sizes and
+  per-permanent tapped/damage/counter totals, not full contents, and only
+  triggered abilities are watched. A loop driven by a *free* activated ability
+  (`{0}:` with no state change) still spins forever. ⏳ Extend the watch to
+  activations whose cost is empty.
+- **Bot has no Tiered/Spree cost preference.** `castable_actions` offers Spree
+  modes but doesn't rank the tiers by board impact — it takes the first
+  affordable one, so a Tiered burn spell may fire its {0} tier with plenty of
+  mana up.
+- **Untargeted "opponent chooses" is a heuristic, not a prompt.** Both
+  `RevealTopOpponentChoosesToHand` and the new
+  `ReturnFromGraveyardOpponentChooses` pick the lowest-mana-value card rather
+  than asking a UI seat. ⏳ Route through the decider when the choosing
+  opponent `wants_ui`.
+
 ## Missing: SOS Special Guests (SPG)
 
 The Secrets of Strixhaven **Special Guests (SPG) sheet is not implemented
