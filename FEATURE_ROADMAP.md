@@ -1658,8 +1658,11 @@ Controlled}` (Geralf, Selvala); `AffectedPermanents::All.owned_by_controller`
   mass-reanimate + delayed exile (`Effect::ReanimateAurasExileEot` — Storm
   Herald); reveal-6 / opponent-exile / free may-play (`Effect::AllureOfTheUnknown`).
   Protection from instants / from everything (`Keyword::ProtectionFrom{Instants,
-  Everything}` — Hexdrinker). Voting / "will of the council"
-  (`Effect::WillOfTheCouncilExile`, untargeted — Council's Judgment, CR 701.31).
+  Everything}` — Hexdrinker). Voting (CR 701.38 — `Effect::Vote` with
+  `VoteTally::{Majority, PerVote}` for will-of-the-council / council's-dilemma
+  ballots, plus `WillOfTheCouncilExile` for Council's Judgment's permanent
+  vote); `Decision::ChooseOption` renders the printed words in the client and
+  `GameEvent::Voted` logs each vote.
 - **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant; vs-bot,
   networked TCP multiplayer, draft + cube, Learn/Lessons sideboard, full-state
   serde snapshots (save/restore + replay foundation).
@@ -2478,7 +2481,8 @@ Each a small targeted feature; sweep batch by batch.
   event batch, footer). Remaining: the viewer.
 - ✅ **Game history / match results persistence** — `CRAB_MATCH_LOG` appends
   one JSON line per finished match (lobby/bot/pair paths;
-  `crabomination_server::history`).
+  `crabomination_server::history`); `CRAB_MATCH_LOG_MAX_BYTES` caps the live
+  file and rotates it to `<path>.1`.
 - ⏳ **Export game to shareable file** (formalize the audit-snapshot workflow).
 - ⏳ **In-game "what happened" log filtering** (by player/zone/type).
 
@@ -2520,9 +2524,11 @@ Each a small targeted feature; sweep batch by batch.
    (64 cards, `sets::atq`), **Arabian Nights** (63 cards, `sets::arn`) and
    **The Dark** (97 cards, `sets::drk`/`drk2`) are all at zero. **Conspiracy** (CNS)
    is opened, not closed: `sets::cns` holds 18 of the 24 *conspiracy cards*
-   plus 16 regular cards. The will-of-the-council / council's-dilemma voting
-   cycle (CR 701.32) and the draft-matters shell are the bulk of what's left.
-   **Homelands** is the other open front at 30 (`sets::hml`).
+   plus 22 regular cards. The voting primitive shipped (CR 701.38); the
+   draft-matters shell is the bulk of what's left. **Homelands** is the other
+   open front, down to 12 (`sets::hml`, `sets::hml2`) — Autumn Willow, Chain
+   Stasis, Coral Reef, Giant Albatross, Giant Oyster, Dwarven Sea Clan, Jinx,
+   Marjhan, Orcish Mine, Retribution, Rysorian Badger, Broken Visage.
 1. **Replacement-effect framework** (Tier-1 #1) — highest-leverage primitive still
    open.
 2. **Card-zoom + stops/auto-yield + combat-math preview** (Tier-7 #1–3) — the trio

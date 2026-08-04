@@ -3,30 +3,33 @@
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
-## Noticed this run (CR 115.7 / 104.4b pass)
+## Noticed this run (CR 701.38 / Homelands pass)
 
-- **`Effect::ChangeSpellTarget` was inert** — it called `repoint_copy_target`,
-  which offers the *original* target first, so a conservative decider always
-  kept it. Now routed through the `retarget_spell` helper that already existed
-  for this (original excluded, hostile/friendly auto-pick). Shunt, Ricochet
-  Trap, Deflection and Misdirection all get a working redirect. ⏳ Remaining:
-  115.7d ("choose new targets") still only repoints slot 0 —
-  `ChooseNewTargetsForSpell` leaves `additional_targets` alone, so a
-  multi-target spell can't be fully re-aimed.
-- **CR 104.4b loop watchdog is coarse.** The fingerprint samples zone sizes and
-  per-permanent tapped/damage/counter totals, not full contents, and only
-  triggered abilities are watched. A loop driven by a *free* activated ability
-  (`{0}:` with no state change) still spins forever. ⏳ Extend the watch to
-  activations whose cost is empty.
-- **Bot has no Tiered/Spree cost preference.** `castable_actions` offers Spree
-  modes but doesn't rank the tiers by board impact — it takes the first
-  affordable one, so a Tiered burn spell may fire its {0} tier with plenty of
-  mana up.
-- **Untargeted "opponent chooses" is a heuristic, not a prompt.** Both
-  `RevealTopOpponentChoosesToHand` and the new
-  `ReturnFromGraveyardOpponentChooses` pick the lowest-mana-value card rather
-  than asking a UI seat. ⏳ Route through the decider when the choosing
-  opponent `wants_ui`.
+- **The bot has no ballot policy.** `Decision::ChooseOption` falls through to
+  `AutoDecider`, which always votes for the first option — so every bot seat
+  votes with the ballot's author. The option *effects* aren't visible at the
+  decision layer; giving the bot a real vote needs either the effects on the
+  decision or a per-card hint. ⏳
+- **Homelands, 12 left.** Autumn Willow (target-player shroud waiver), Chain
+  Stasis (pay-to-copy chain), Coral Reef and Giant Oyster (counter engines with
+  linked untap locks), Marjhan and Dwarven Sea Clan (Island-gated combat
+  riders), Orcish Mine (ore counters on a land Aura), Jinx (target land becomes
+  a chosen basic type), Retribution (two-target "that player sacrifices one"),
+  Rysorian Badger (unblocked → exile-from-defender's-graveyard, assigns no
+  damage), Broken Visage (destroy + token with the victim's P/T), Giant
+  Albatross (dies → punish everything that damaged it). Each needs one
+  primitive; none is blocked on more than that.
+- **`Effect::Vote` ties always go to the later option.** That matches every
+  printed two-word ballot ("…or the vote is tied"), but a three-option ballot
+  or one whose tie-break isn't the last choice would need the tie-winner
+  declared explicitly. ⏳
+- **Tiered / Spree bot ranking is still shallow.** `castable_actions` now
+  offers every tier plus the all-modes Spree combination, but the search picks
+  among them by generic board eval — there's no cost/impact heuristic. ⏳
+- **`FREE_ACTIVATION_REPEAT_CAP` is per (source, ability), not per loop.** A
+  fragmented loop alternating between *two* free abilities still spins; the
+  fingerprint would catch it but the key changes each activation. ⏳
+
 ## Recommender: two builder defects fixed, one lesson recorded
 
 Both were found by asking why Emeritus of Ideation never appeared in a

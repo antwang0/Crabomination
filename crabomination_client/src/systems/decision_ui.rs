@@ -174,6 +174,9 @@ pub enum DecisionKey {
     ChooseModeTrigger(CardId, usize),
     /// `Decision::ChooseAmount` — keyed by source + bound + prompt.
     ChooseAmount(CardId, u32, String),
+    /// `Decision::ChooseOption` (a CR 701.38 ballot) — keyed by source + the
+    /// option list, so a re-ask with different words re-spawns the modal.
+    ChooseOption(CardId, Vec<String>),
     /// `Decision::DivideDamage` (CR 601.2d) — keyed by source + total +
     /// target list.
     DivideDamage(CardId, u32, Vec<Target>),
@@ -250,6 +253,9 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
         }
         DecisionWire::ChooseAmount { source, max, prompt } => {
             Some(DecisionKey::ChooseAmount(*source, *max, prompt.clone()))
+        }
+        DecisionWire::ChooseOption { source, options, .. } => {
+            Some(DecisionKey::ChooseOption(*source, options.clone()))
         }
         DecisionWire::DivideDamage { source, total, targets, .. } => {
             Some(DecisionKey::DivideDamage(*source, *total, targets.clone()))
@@ -581,6 +587,11 @@ pub fn spawn_decision_ui(
             state.amount = 0;
             state.spawned_for = Some(key);
             spawn_choose_amount_modal(&mut commands, &ui_fonts, prompt, *max, state.amount);
+        }
+        DecisionWire::ChooseOption { source, prompt, options } => {
+            state.spawned_for = Some(key);
+            let title = format!("{} — {prompt}", view_card_name(cv, *source, "Ballot"));
+            spawn_option_ballot_modal(&mut commands, &ui_fonts, &title, options);
         }
         DecisionWire::DivideDamage { source, total, targets, noun } => {
             if state.divide.len() != targets.len() {
@@ -3572,6 +3583,45 @@ fn spawn_choose_trigger_mode_modal(
     });
 }
 
+/// CR 701.38 ballot — one button per printed option.
+fn spawn_option_ballot_modal(
+    commands: &mut Commands,
+    ui_fonts: &UiFonts,
+    title: &str,
+    options: &[String],
+) {
+    let panel = spawn_modal_panel(commands, 380.0);
+    let fonts18 = ui_fonts.tf(18.0);
+    let fonts14 = ui_fonts.tf(14.0);
+    let title_owned = title.to_string();
+    let options: Vec<String> = options.to_vec();
+    commands.entity(panel).with_children(|p| {
+        p.spawn((Text::new(title_owned), fonts18.clone(), TextColor(theme::TEXT_PRIMARY)));
+        for (idx, label) in options.into_iter().enumerate() {
+            p.spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(16.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    align_self: AlignSelf::Stretch,
+                    ..default()
+                },
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                HoverTint::new(theme::BUTTON_PRIMARY_BG),
+                TriggerModeButton(idx),
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new(label),
+                    fonts14.clone(),
+                    TextColor(theme::TEXT_PRIMARY),
+                    bevy::picking::Pickable::IGNORE,
+                ));
+            });
+        }
+    });
+}
+
 fn spawn_choose_amount_modal(
     commands: &mut Commands,
     ui_fonts: &UiFonts,
@@ -3844,16 +3894,22 @@ pub fn handle_trigger_mode_buttons(
     buttons: Query<(&Interaction, &TriggerModeButton), Changed<Interaction>>,
 ) {
     let Some(cv) = &view.0 else { return };
-    if !matches!(
-        cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
-        Some(DecisionWire::ChooseMode { .. })
-    ) {
-        return;
-    }
+    // The same button component drives the modal-trigger picker and the
+    // CR 701.38 ballot; they differ only in the answer they submit.
+    let ballot = match cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()) {
+        Some(DecisionWire::ChooseMode { .. }) => false,
+        Some(DecisionWire::ChooseOption { .. }) => true,
+        _ => return,
+    };
     let Some(outbox) = outbox else { return };
     for (interaction, btn) in &buttons {
         if *interaction == Interaction::Pressed {
-            outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Mode(btn.0)));
+            let answer = if ballot {
+                DecisionAnswer::Amount(btn.0 as u32)
+            } else {
+                DecisionAnswer::Mode(btn.0)
+            };
+            outbox.submit(GameAction::SubmitDecision(answer));
             state.spawned_for = None;
             return;
         }

@@ -1,5 +1,6 @@
 //! Optional per-match result persistence: one JSON line appended to the file
 //! named by `CRAB_MATCH_LOG` for every finished match. Unset = disabled.
+//! `CRAB_MATCH_LOG_MAX_BYTES` caps the live file, rotating it to `<path>.1`.
 //! Gives operators a durable match-results record (FEATURE_ROADMAP Tier 14)
 //! beyond the in-memory rolling stats that die with the process.
 
@@ -102,7 +103,35 @@ fn render_line(format_label: &str, duration: Duration, outcome: &MatchOutcome) -
     )
 }
 
+/// Byte ceiling for the live match log, from `CRAB_MATCH_LOG_MAX_BYTES`.
+/// `None` (unset, unparseable, or 0) disables rotation — the historical
+/// unbounded-append behaviour.
+fn max_bytes() -> Option<u64> {
+    static MAX: OnceLock<Option<u64>> = OnceLock::new();
+    *MAX.get_or_init(|| {
+        std::env::var("CRAB_MATCH_LOG_MAX_BYTES").ok()?.parse::<u64>().ok().filter(|n| *n > 0)
+    })
+}
+
+/// Rotate `path` to `path.1` once it would exceed `limit`, so an operator
+/// leaving the log on for months keeps one bounded live file plus one
+/// bounded archive instead of an unbounded one. A previous `.1` is replaced.
+fn rotate_if_needed(path: &Path, incoming: usize, limit: u64) {
+    let Ok(meta) = std::fs::metadata(path) else { return };
+    if meta.len() + incoming as u64 <= limit {
+        return;
+    }
+    let mut archive = path.as_os_str().to_owned();
+    archive.push(".1");
+    if let Err(e) = std::fs::rename(path, PathBuf::from(archive)) {
+        eprintln!("warning: CRAB_MATCH_LOG rotate of {} failed: {e}", path.display());
+    }
+}
+
 fn append(path: &Path, line: &str) {
+    if let Some(limit) = max_bytes() {
+        rotate_if_needed(path, line.len(), limit);
+    }
     let write = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -164,6 +193,24 @@ mod tests {
         assert!(render_line("demo", Duration::ZERO, &draw).contains("\"winner\":\"draw\""));
         let abort = MatchOutcome { winner: None, ..Default::default() };
         assert!(render_line("demo", Duration::ZERO, &abort).contains("\"winner\":\"aborted\""));
+    }
+
+    #[test]
+    fn rotation_moves_the_live_log_aside_once_it_would_overflow() {
+        let dir = std::env::temp_dir().join(format!("crab_rot_{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("matches.jsonl");
+        let _ = std::fs::remove_file(&path);
+        std::fs::write(&path, "x".repeat(40)).unwrap();
+        // Under the limit: nothing moves.
+        rotate_if_needed(&path, 5, 100);
+        assert!(!path.with_extension("jsonl.1").exists(), "no premature rotation");
+        // Over it: the live file becomes the archive and the next append
+        // starts a fresh one.
+        rotate_if_needed(&path, 80, 100);
+        assert!(!path.exists(), "live log rotated away");
+        assert_eq!(std::fs::read_to_string(path.with_extension("jsonl.1")).unwrap().len(), 40);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

@@ -2253,6 +2253,12 @@ pub enum DecisionWire {
         prompt: String,
         max: u32,
     },
+    /// CR 701.38 ballot — pick one named option. Decider answers `Amount(i)`.
+    ChooseOption {
+        source: CardId,
+        prompt: String,
+        options: Vec<String>,
+    },
     /// Choose any number of cards (exile any number from graveyards).
     /// Decider answers `Cards(ids)`.
     ChooseCards {
@@ -2404,6 +2410,11 @@ impl From<&Decision> for DecisionWire {
                 source: *source,
                 prompt: prompt.clone(),
                 max: *max,
+            },
+            Decision::ChooseOption { source, prompt, options } => DecisionWire::ChooseOption {
+                source: *source,
+                prompt: prompt.clone(),
+                options: options.clone(),
             },
             Decision::ChooseCards { source, prompt, candidates, min, max } => {
                 DecisionWire::ChooseCards {

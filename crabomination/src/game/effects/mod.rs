@@ -566,6 +566,44 @@ impl GameState {
         Some(n)
     }
 
+    /// CR 701.38 — ask `seat` to pick one option from a named ballot,
+    /// returning its index. Shares `ask_seat_amount`'s replay-log and suspend
+    /// contract (the answer is an `Amount`), but the seat sees the printed
+    /// words rather than a number.
+    pub(crate) fn ask_seat_option(
+        &mut self,
+        cursor: &mut usize,
+        seat: usize,
+        prompt: String,
+        source: CardId,
+        options: Vec<String>,
+        effect: &Effect,
+    ) -> Option<usize> {
+        use crate::decision::{Decision, DecisionAnswer};
+        let last = options.len().saturating_sub(1);
+        if let Some(DecisionAnswer::Amount(n)) = self.resolution_answer_log.get(*cursor) {
+            let n = (*n as usize).min(last);
+            *cursor += 1;
+            return Some(n);
+        }
+        let decision = Decision::ChooseOption { source, prompt, options };
+        if self.seat_suspends(seat) {
+            self.suspend_signal = Some((
+                decision,
+                PendingEffectState::SeatAmountAnswerPending { player: seat, max: last as u32 },
+                effect.clone(),
+            ));
+            return None;
+        }
+        let n = match self.decider.decide(&decision) {
+            DecisionAnswer::Amount(n) => (n as usize).min(last),
+            _ => 0,
+        };
+        self.resolution_answer_log.push(DecisionAnswer::Amount(n as u32));
+        *cursor += 1;
+        Some(n)
+    }
+
     /// Ask `seat` for a card pick inside a resolving effect, suspending
     /// for a `wants_ui` seat via the `CardsAnswerPending` stash-and-rerun.
     /// Returns `None` when suspended (the originating `effect` is
@@ -10224,18 +10262,16 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 for i in 0..n {
                     let seat = (ctx.controller + i) % n;
-                    let prompt = format!("Vote: {}", ballot.join(" or "));
-                    let Some(pick) = self.ask_seat_amount(
+                    let Some(pick) = self.ask_seat_option(
                         &mut cursor,
                         seat,
-                        prompt,
+                        "Vote".to_string(),
                         source,
-                        options.len() as u32 - 1,
+                        ballot.clone(),
                         effect,
                     ) else {
                         return Ok(());
                     };
-                    let pick = (pick as usize).min(options.len() - 1);
                     votes[pick] += 1;
                     events.push(GameEvent::Voted {
                         player: seat,

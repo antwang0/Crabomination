@@ -320,6 +320,15 @@ pub enum Decision {
         /// Inclusive upper bound (creatures you control, current life, …).
         max: u32,
     },
+    /// CR 701.38 — pick one option from a named ballot. Answered as
+    /// `Amount(i)`, the index into `options`, so it shares
+    /// `ChooseAmount`'s suspend/replay plumbing; the client renders the
+    /// labels as buttons rather than a number stepper.
+    ChooseOption {
+        source: CardId,
+        prompt: String,
+        options: Vec<String>,
+    },
 
     /// "Choose any number of cards" — pick a subset of `candidates` (e.g.
     /// "exile any number of target cards from graveyards", Devious Cover-Up).
@@ -594,6 +603,8 @@ impl Decider for AutoDecider {
             // Conservative default — never pay life / sacrifice unprompted.
             // ScriptedDecider supplies a positive amount.
             Decision::ChooseAmount { .. } => DecisionAnswer::Amount(0),
+            // A ballot has no "safe" abstention — take the first option.
+            Decision::ChooseOption { .. } => DecisionAnswer::Amount(0),
             // Conservative "up to" default — choose nothing unprompted.
             // ScriptedDecider / the bot supply a positive subset.
             // Forced "choose exactly N" (min > 0) auto-picks the first N
