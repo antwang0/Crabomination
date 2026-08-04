@@ -9,7 +9,7 @@ use crate::effect::{
     shortcut::{target_any, target_filtered},
 };
 use crate::game::types::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 
 fn creature(
     name: &'static str,
@@ -1297,4 +1297,35 @@ pub fn jihad() -> CardDefinition {
 /// same.
 pub fn eye_for_an_eye() -> CardDefinition {
     instant("Eye for an Eye", cost(&[w(), w()]), Effect::MirrorNextDamageToYouThisTurn)
+}
+
+/// Aladdin's Lamp — replaces your next draw this turn with a dig X deep.
+pub fn aladdins_lamp() -> CardDefinition {
+    artifact(
+        "Aladdin's Lamp",
+        cost(&[generic(10)]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            tap_cost: true,
+            condition: Some(Predicate::ValueAtLeast(Value::XFromCost, Value::ONE)),
+            effect: Effect::ReplaceYourNextDrawThisTurn {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::LookTopKeepOneRestToGraveyard {
+                        count: Value::XFromCost,
+                        who: None,
+                        exile_rest: false,
+                        rest_bottom_random: true,
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                ])),
+            },
+            ..Default::default()
+        }],
+    )
+}
+
+/// Shahrazad — a nested game; everyone who doesn't win it bleeds half their
+/// life.
+pub fn shahrazad() -> CardDefinition {
+    sorcery("Shahrazad", cost(&[w(), w()]), Effect::PlaySubgame)
 }

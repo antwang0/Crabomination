@@ -374,6 +374,10 @@ pub enum CounterType {
     PlusOnePlusZero,
     /// +0/+1 counter (Living Armor, Necropolis).
     PlusZeroPlusOne,
+    /// +2/+0 counter (Frankenstein's Monster).
+    PlusTwoPlusZero,
+    /// +0/+2 counter (Frankenstein's Monster).
+    PlusZeroPlusTwo,
     /// -0/-2 counter (Spirit Shackle).
     MinusZeroMinusTwo,
     /// Glyph counter (Glyph of Delusion) — the bearer doesn't untap while it
@@ -410,6 +414,9 @@ pub enum CounterType {
     Fuse,
     /// Wind counter — Cyclone's escalating upkeep tally.
     Wind,
+    /// Hunger counter — Fasting's upkeep tally; at five the enchantment is
+    /// destroyed.
+    Hunger,
     /// Mine counter — Mine Layer's land trap; a mined land that taps is
     /// destroyed.
     Mine,
@@ -4090,6 +4097,9 @@ pub enum DynamicPt {
     },
     /// Power = toughness = the controller's life total (Serra Avatar).
     ControllerLife,
+    /// Power = toughness = the number stamped on this permanent as it entered
+    /// (`CardInstance.chosen_number`) — Nameless Race's paid life.
+    ChosenNumberAsEntered,
     /// `inner` during the controller's turn, `base_p`/`base_t` on every other
     /// turn (Angry Mob).
     OnlyDuringYourTurn { inner: Box<DynamicPt>, base_p: i32, base_t: i32 },
@@ -5806,10 +5816,12 @@ impl CardInstance {
         let minus = self.counter_count(CounterType::MinusOneMinusOne) as i32;
         let minus_one_zero = self.counter_count(CounterType::MinusOneMinusZero) as i32;
         let plus_one_zero = self.counter_count(CounterType::PlusOnePlusZero) as i32;
+        let plus_two_zero = self.counter_count(CounterType::PlusTwoPlusZero) as i32;
         self.definition.base_power() + self.power_bonus + self.perm_power_bonus + plus
             - minus
             - minus_one_zero
             + plus_one_zero
+            + 2 * plus_two_zero
     }
 
     pub fn toughness(&self) -> i32 {
@@ -5818,11 +5830,13 @@ impl CardInstance {
         let minus_zero_one = self.counter_count(CounterType::MinusZeroMinusOne) as i32;
         let minus_zero_two = self.counter_count(CounterType::MinusZeroMinusTwo) as i32;
         let plus_zero_one = self.counter_count(CounterType::PlusZeroPlusOne) as i32;
+        let plus_zero_two = self.counter_count(CounterType::PlusZeroPlusTwo) as i32;
         self.definition.base_toughness() + self.toughness_bonus + self.perm_toughness_bonus + plus
             - minus
             - minus_zero_one
             - 2 * minus_zero_two
             + plus_zero_one
+            + 2 * plus_zero_two
     }
 
     pub fn counter_count(&self, ct: CounterType) -> u32 {

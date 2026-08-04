@@ -85,6 +85,7 @@ pub fn dimir_charm() -> CardDefinition {
                 count: Value::Const(3),
                 who: Some(PlayerRef::Target(0)),
                 exile_rest: false,
+                rest_bottom_random: false,
             },
         ]),
         ..Default::default()

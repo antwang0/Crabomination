@@ -435,9 +435,9 @@ fn compute_permanent_pass(
     // *after* a 7b set (CR 613.7c — an animated manland keeps its pumps).
     let base_power = card.definition.base_power();
     let base_toughness = card.definition.base_toughness();
-    // CR 613.7f — +1/+1, -1/-1, and the rarer -0/-1 / -0/-2 / -1/-0 / +1/+0
-    // counters. The latter affect only one of power/toughness, so track
-    // per-stat deltas.
+    // CR 613.7f — +1/+1, -1/-1, and the rarer one-sided counters
+    // (-0/-1, -0/-2, -1/-0, +1/+0, +0/+1, +2/+0, +0/+2), which affect only one
+    // of power/toughness, so track per-stat deltas.
     let (counter_power_delta, counter_toughness_delta) = {
         let plus = card.counter_count(CounterType::PlusOnePlusOne) as i32;
         let minus = card.counter_count(CounterType::MinusOneMinusOne) as i32;
@@ -446,10 +446,12 @@ fn compute_permanent_pass(
         let minus_one_zero = card.counter_count(CounterType::MinusOneMinusZero) as i32;
         let plus_one_zero = card.counter_count(CounterType::PlusOnePlusZero) as i32;
         let plus_zero_one = card.counter_count(CounterType::PlusZeroPlusOne) as i32;
+        let plus_two_zero = card.counter_count(CounterType::PlusTwoPlusZero) as i32;
+        let plus_zero_two = card.counter_count(CounterType::PlusZeroPlusTwo) as i32;
         let base = plus - minus;
         (
-            base - minus_one_zero + plus_one_zero,
-            base - minus_zero_one - 2 * minus_zero_two + plus_zero_one,
+            base - minus_one_zero + plus_one_zero + 2 * plus_two_zero,
+            base - minus_zero_one - 2 * minus_zero_two + plus_zero_one + 2 * plus_zero_two,
         )
     };
 

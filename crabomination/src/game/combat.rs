@@ -3324,11 +3324,18 @@ impl GameState {
         // this turn that would die. Mirrors the non-combat path in
         // `deal_damage_to_from`.
         for &(source, damaged, _) in &creature_damage {
-            if self
-                .battlefield_find(source)
-                .is_some_and(|c| c.definition.damage_exiles_if_dies)
+            if self.damage_exiles_victim_eot.contains(&source)
+                || self
+                    .battlefield_find(source)
+                    .is_some_and(|c| c.definition.damage_exiles_if_dies)
             {
                 self.dies_to_exile_eot.insert(damaged);
+            }
+            // Runesword — its damage also denies regeneration this turn.
+            if self.damage_denies_regen_eot.contains(&source)
+                && let Some(v) = self.battlefield_find_mut(damaged)
+            {
+                v.cant_regenerate_this_turn = true;
             }
         }
         // Stamp the damaging source's controller on each recipient so a

@@ -6182,6 +6182,7 @@ pub fn sage_of_days() -> CardDefinition {
             count: Value::Const(3),
             who: None,
             exile_rest: false,
+            rest_bottom_random: false,
         })],
         ..Default::default()
     }

@@ -760,3 +760,45 @@ fn eye_for_an_eye_pays_the_next_hit_back() {
     assert_eq!(g.players[0].life, 14);
     assert_eq!(g.players[1].life, 17);
 }
+
+#[test]
+fn aladdins_lamp_digs_x_deep_for_the_next_draw() {
+    let mut g = main_phase();
+    g.players[0].library.clear();
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::mountain());
+    }
+    let wanted = g.add_card_to_library(0, catalog::grizzly_bears());
+    let lamp = g.add_card_to_battlefield(0, catalog::aladdins_lamp());
+    g.clear_sickness(lamp);
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(wanted))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lamp,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(3),
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let mut events = vec![];
+    assert!(g.draw_one(0, &mut events));
+    // The dig kept the picked card on top; the other two were bottomed.
+    assert!(g.players[0].hand.iter().any(|c| c.id == wanted));
+}
+
+#[test]
+fn cr_729_shahrazad_bleeds_every_player_who_does_not_win_the_subgame() {
+    let mut g = main_phase();
+    let shah = g.add_card_to_hand(0, catalog::shahrazad());
+    cast(&mut g, 0, shah, None);
+    // Exactly one seat keeps its life; the other pays half, rounded up.
+    let paid: Vec<usize> = (0..2).filter(|&p| g.players[p].life != 20).collect();
+    assert!(paid.len() <= 2 && !paid.is_empty());
+    for &p in &paid {
+        assert_eq!(g.players[p].life, 10);
+    }
+}

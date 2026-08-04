@@ -667,6 +667,9 @@ pub enum Value {
     /// The same count across *every* player's graveyard (Invigorating Falls,
     /// Mortal Combat).
     CardsInAllGraveyardsMatching { filter: SelectionRequirement },
+    /// The same count across every *opponent's* graveyard (Nameless Race's
+    /// "white cards in their graveyards"). Team-aware.
+    CardsInOpponentsGraveyardsMatching { filter: SelectionRequirement },
     /// Number of cards in `who`'s hand matching `filter`. Powers Amplify
     /// (CR 702.38 — "+N/+N counters for each [type] card you reveal in your
     /// hand"; all matching cards are auto-revealed) and other reveal-from-hand
@@ -4026,13 +4029,17 @@ pub enum Effect {
     /// `who: Some(..)` the effect reads another player's library instead and
     /// auto-picks (lowest MV kept on an opponent's — Dimir Charm mode 3).
     /// With `exile_rest` the non-kept cards are exiled instead of milled
-    /// (Devourer of Destiny's opening-hand reveal).
+    /// (Devourer of Destiny's opening-hand reveal), and with
+    /// `rest_bottom_random` they go to the bottom in a random order
+    /// (Aladdin's Lamp).
     LookTopKeepOneRestToGraveyard {
         count: Value,
         #[serde(default)]
         who: Option<PlayerRef>,
         #[serde(default)]
         exile_rest: bool,
+        #[serde(default)]
+        rest_bottom_random: bool,
     },
     /// Remove all counters from the selected permanent; the controller's
     /// next spell this turn costs {1} less per counter removed (Mutated
@@ -7581,6 +7588,42 @@ pub enum Effect {
     /// source permanent's `chosen_number` field (Sanctum Prelate — read by the
     /// chosen-MV noncreature lock). `max` bounds the choice.
     ChooseNumberForSource { max: u32 },
+
+    /// CR 729 — "Players play a Magic subgame, using their libraries as their
+    /// decks. Each player who doesn't win the subgame loses half their life,
+    /// rounded up" (Shahrazad). The nest is bot-piloted and bounded; a stalled
+    /// or drawn subgame has no winner, so everyone pays.
+    PlaySubgame,
+
+    /// CR 509.1 — "If each of those creatures could block all creatures the
+    /// other is blocking, remove both from combat; each then blocks all
+    /// creatures the other was blocking" (Sorrow's Path). A no-op when either
+    /// swap would be illegal.
+    SwapBlockAssignments { a: Selector, b: Selector },
+
+    /// CR 614 — grant Kumano's rider until end of turn: a creature `what`
+    /// damages this turn is exiled instead of dying (Runesword).
+    GrantDamageExilesVictimThisTurn { what: Selector },
+
+    /// CR 701.15g — "if `what` deals damage to a creature this turn, that
+    /// creature can't be regenerated this turn" (Runesword).
+    GrantDamageDeniesRegenerationThisTurn { what: Selector },
+
+    /// CR 603.4 — "When `what` leaves the battlefield this turn, [body]"
+    /// (Runesword's sacrifice rider). Expires at cleanup.
+    WhenTargetLeavesBattlefieldThisTurn { what: Selector, body: Box<Effect> },
+
+    /// CR 614 — "As this enters, exile `count` creature cards from your
+    /// graveyard. If you can't, put this into its owner's graveyard instead.
+    /// For each card exiled this way, this enters with a +2/+0, +1/+1, or
+    /// +0/+2 counter on it" (Frankenstein's Monster). The kind is chosen per
+    /// exiled card.
+    EnterExilingGraveyardCreaturesForCounters { count: Value },
+
+    /// CR 614 — "As this enters, pay any amount of life", capped by `max`
+    /// (Nameless Race). The paid amount is stamped on the source's
+    /// `chosen_number` for `DynamicPt::ChosenNumberAsEntered` to read.
+    PayAnyAmountOfLifeCapped { max: Value },
 
     /// "As [this] enters, choose a permanent matching `filter`." Stores the
     /// chosen permanent's id on the source's `chosen_permanent` field

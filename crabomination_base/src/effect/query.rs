@@ -247,6 +247,9 @@ impl Effect {
             | Effect::ExileTokensCreatedBySourceForCounters { .. }
             | Effect::RemoveCountersToCreateTokens { .. }
             | Effect::OpponentChoosesTargetForDamage { .. }
+            | Effect::PayAnyAmountOfLifeCapped { .. }
+            | Effect::PlaySubgame
+            | Effect::EnterExilingGraveyardCreaturesForCounters { .. }
             | Effect::ExileSelfWithCountdown => false,
             Effect::PayPerCounterOrSacrifice { then, .. } => then.requires_target(),
             Effect::MayPayRepeatedly { body, .. } => body.requires_target(),
@@ -937,6 +940,10 @@ impl Effect {
             | Effect::Regenerate { what }
             | Effect::CantBeRegeneratedThisTurn { what }
             | Effect::ExileIfWouldDieThisTurn { what }
+            | Effect::GrantDamageExilesVictimThisTurn { what }
+            | Effect::GrantDamageDeniesRegenerationThisTurn { what }
+            | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
+            | Effect::SwapBlockAssignments { a: what, .. }
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
@@ -1478,6 +1485,10 @@ impl Effect {
             | Effect::Regenerate { what }
             | Effect::CantBeRegeneratedThisTurn { what }
             | Effect::ExileIfWouldDieThisTurn { what }
+            | Effect::GrantDamageExilesVictimThisTurn { what }
+            | Effect::GrantDamageDeniesRegenerationThisTurn { what }
+            | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
+            | Effect::SwapBlockAssignments { a: what, .. }
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
             | Effect::GrantMiracle { what, .. }
@@ -2997,6 +3008,10 @@ impl Effect {
                 | Effect::DestroyNoRegen { what }
                 | Effect::Unattach { what }
                 | Effect::ExileIfWouldDieThisTurn { what }
+                | Effect::GrantDamageExilesVictimThisTurn { what }
+                | Effect::GrantDamageDeniesRegenerationThisTurn { what }
+                | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
+                | Effect::SwapBlockAssignments { a: what, .. }
                 | Effect::GrantFlashbackThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
                 | Effect::Exile { what }

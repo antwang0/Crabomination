@@ -337,6 +337,8 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::MinusOneMinusZero => "-1/-0",
         CounterType::PlusOnePlusZero => "+1/+0",
         CounterType::PlusZeroPlusOne => "+0/+1",
+        CounterType::PlusTwoPlusZero => "+2/+0",
+        CounterType::PlusZeroPlusTwo => "+0/+2",
         CounterType::MinusZeroMinusTwo => "-0/-2",
         CounterType::Glyph => "Glyph",
         CounterType::Sleep => "Sleep",
@@ -433,6 +435,7 @@ fn counter_token(kind: CounterType) -> &'static str {
         CounterType::Trap => "Trap",
         CounterType::Winch => "Winch",
         CounterType::Wind => "Wind",
+        CounterType::Hunger => "Hunger",
     }
 }
 
@@ -440,9 +443,10 @@ fn counter_token(kind: CounterType) -> &'static str {
 /// fills are deliberately dark for solidity; these are their readable twins).
 fn counter_label_color(kind: CounterType) -> Color {
     match kind {
-        CounterType::PlusOnePlusOne | CounterType::PlusOnePlusZero => {
-            Color::srgb(0.45, 0.95, 0.50)
-        }
+        CounterType::PlusOnePlusOne
+        | CounterType::PlusOnePlusZero
+        | CounterType::PlusTwoPlusZero
+        | CounterType::PlusZeroPlusTwo => Color::srgb(0.45, 0.95, 0.50),
         CounterType::MinusOneMinusOne
         | CounterType::MinusZeroMinusOne
         | CounterType::MinusOneMinusZero

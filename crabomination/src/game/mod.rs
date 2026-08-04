@@ -32,6 +32,8 @@ pub mod effects;
 pub mod layers;
 #[doc(hidden)]
 pub mod stack;
+/// CR 729 — nested subgames (Shahrazad).
+pub mod subgame;
 
 pub mod types;
 
@@ -1563,6 +1565,19 @@ pub struct GameState {
     /// for snapshot back-compat.
     #[serde(default)]
     pub(crate) dies_to_exile_eot: std::collections::HashSet<CardId>,
+    /// CR 614 — creatures granted Kumano's rider until end of turn: a creature
+    /// they damage is exiled instead of dying. The granted twin of
+    /// `CardDefinition.damage_exiles_if_dies`; cleared at cleanup (Runesword).
+    #[serde(default)]
+    pub(crate) damage_exiles_victim_eot: std::collections::HashSet<CardId>,
+    /// CR 701.15g — creatures whose damage this turn denies its victim
+    /// regeneration (Runesword). Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) damage_denies_regen_eot: std::collections::HashSet<CardId>,
+    /// CR 729.5 — how deep this game is nested inside subgames. The main game
+    /// is 0; `play_subgame` refuses to nest past a fixed cap.
+    #[serde(default)]
+    pub(crate) subgame_depth: u32,
     /// CR 702.15 — the seat that should gain life from lifelink on damage dealt
     /// by the instant/sorcery spell currently resolving, if its controller has
     /// "your spells have lifelink" (Radiant Scrollwielder). Set around the
@@ -1996,6 +2011,9 @@ impl Clone for GameState {
             ability_resolutions_this_turn: self.ability_resolutions_this_turn.clone(),
             granted_triggers_eot: self.granted_triggers_eot.clone(),
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
+            damage_exiles_victim_eot: self.damage_exiles_victim_eot.clone(),
+            damage_denies_regen_eot: self.damage_denies_regen_eot.clone(),
+            subgame_depth: self.subgame_depth,
             resolving_spell_lifelink_seat: self.resolving_spell_lifelink_seat,
             resolving_spell_caster: self.resolving_spell_caster,
             resolving_spell_snapshot: self.resolving_spell_snapshot.clone(),
@@ -2297,6 +2315,9 @@ impl GameState {
             ability_resolutions_this_turn: std::collections::HashMap::new(),
             granted_triggers_eot: std::collections::HashMap::new(),
             dies_to_exile_eot: std::collections::HashSet::new(),
+            damage_exiles_victim_eot: std::collections::HashSet::new(),
+            damage_denies_regen_eot: std::collections::HashSet::new(),
+            subgame_depth: 0,
             resolving_spell_lifelink_seat: None,
             resolving_spell_caster: None,
             resolving_spell_snapshot: None,
@@ -2807,6 +2828,50 @@ impl GameState {
         self.deploy_creatures = true;
         self.attack_adjacent_only = true;
         self.refresh_range_matrix();
+    }
+
+    /// CR 807 — set the game up as a Grand Melee: a Free-for-All with a range
+    /// of influence of 1 (807.2a), the attack-left option (807.2b), and both
+    /// attack-multiple-players and deploy-creatures off (807.2c). Seats are
+    /// shuffled (807.3). The 807.4 turn markers — several players taking
+    /// turns at once — are not modelled; see TODO.md.
+    pub fn set_grand_melee_variant(&mut self) {
+        let n = self.players.len();
+        let _ = self.assign_teams((0..n).map(|i| vec![i]).collect());
+        self.range_of_influence = Some(1);
+        self.attack_option = AttackOption::AttackLeft;
+        self.deploy_creatures = false;
+        self.attack_adjacent_only = false;
+        self.shuffle_seating();
+        self.refresh_range_matrix();
+    }
+
+    /// CR 807.3 / 806.3 — seat the players at random. Turn order follows seat
+    /// order, so this is the seating draw rather than a re-ordering of an
+    /// in-progress game; call it before the first turn.
+    pub fn shuffle_seating(&mut self) {
+        use rand::seq::SliceRandom;
+        let mut order: Vec<usize> = (0..self.players.len()).collect();
+        order.shuffle(&mut rand::rng());
+        let mut seated: Vec<crate::player::Player> = Vec::with_capacity(order.len());
+        for (new_seat, &old) in order.iter().enumerate() {
+            let mut p = self.players[old].clone();
+            p.id = crate::player::PlayerId(new_seat);
+            seated.push(p);
+        }
+        // Cards already dealt out follow their owner to the new seat.
+        let remap: Vec<usize> = {
+            let mut r = vec![0; order.len()];
+            for (new_seat, &old) in order.iter().enumerate() {
+                r[old] = new_seat;
+            }
+            r
+        };
+        for c in self.battlefield.iter_mut() {
+            c.controller = remap[c.controller];
+            c.owner = remap[c.owner];
+        }
+        self.players = seated;
     }
 
     /// CR 811 — set the game up as an Alternating Teams game of `teams` teams
@@ -8925,6 +8990,10 @@ impl GameState {
                     let n = self.players[card.controller].life;
                     (n, n)
                 }
+                crate::card::DynamicPt::ChosenNumberAsEntered => {
+                    let n = card.chosen_number.unwrap_or(0) as i32;
+                    (n, n)
+                }
                 crate::card::DynamicPt::BasePlusOpponentsMatching { base_p, base_t, filter } => {
                     let n = self
                         .battlefield
@@ -12508,14 +12577,15 @@ impl GameState {
         // optional replacements below, since the printed effect is mandatory
         // once the charge is bought.
         if !self.players[p].next_draw_replacements.is_empty() {
-            let (src, body) = self.players[p].next_draw_replacements.remove(0);
+            let (src, body, x) = self.players[p].next_draw_replacements.remove(0);
             // The body picks its own target as it applies (Words of War's
             // "deals 2 damage to any target").
             let target = body
                 .requires_target()
                 .then(|| self.auto_target_for_effect_avoiding(&body, p, Some(src)))
                 .flatten();
-            let ctx = crate::game::effects::EffectContext::for_ability(src, p, target);
+            let mut ctx = crate::game::effects::EffectContext::for_ability(src, p, target);
+            ctx.x_value = x;
             if let Ok(mut evs) = self.resolve_effect(&body, &ctx) {
                 events.append(&mut evs);
             }
@@ -19097,6 +19167,7 @@ fn static_effect_to_effects(
             | StaticEffect::ControllerCantPlayLands
             | StaticEffect::NoPlayerCanPlayLands
             | StaticEffect::ControllerSkipsDrawStep
+            | StaticEffect::ControllerMaySkipDrawStepForLife { .. }
             | StaticEffect::UntapOnlyChosenTypeWhileUntapped
             | StaticEffect::MostPermanentsCantPlay
             | StaticEffect::GrantConvokeToSpells { .. }

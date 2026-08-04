@@ -2421,6 +2421,10 @@ pub enum StaticEffect {
     /// "Skip your draw step" (Yawgmoth's Bargain, Necropotence). Consulted at
     /// the draw step's turn-based action.
     ControllerSkipsDrawStep,
+    /// CR 614 — "If you would begin your draw step, you may skip that step
+    /// instead. If you do, you gain N life" (Fasting). Optional twin of
+    /// `ControllerSkipsDrawStep`, asked at the draw step's turn-based action.
+    ControllerMaySkipDrawStepForLife { life: u32 },
     /// "You can't play lands." Aggressive Mining. Gated in `play_land`.
     ControllerCantPlayLands,
     /// Mistform Warchief — "Creature spells you cast that share a creature

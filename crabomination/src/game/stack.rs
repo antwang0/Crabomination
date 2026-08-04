@@ -186,6 +186,46 @@ impl GameState {
         self.advance_step(events)
     }
 
+    /// CR 614 — Fasting: "if you would begin your draw step, you may skip
+    /// that step instead. If you do, you gain N life." Returns true when the
+    /// active player takes the skip; the life rider is paid here.
+    fn offer_optional_draw_step_skip(&mut self, events: &mut Vec<GameEvent>) -> bool {
+        let active = self.active_player_idx;
+        let offers: Vec<(crate::card::CardId, &'static str, u32)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == active)
+            .flat_map(|c| {
+                c.definition.static_abilities.iter().filter_map(move |sa| {
+                    match sa.effect {
+                        crate::effect::StaticEffect::ControllerMaySkipDrawStepForLife { life } => {
+                            Some((c.id, c.definition.name, life))
+                        }
+                        _ => None,
+                    }
+                })
+            })
+            .collect();
+        for (id, name, life) in offers {
+            let yes = matches!(
+                self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                    source: id,
+                    description: format!("Skip your draw step to gain {life} life ({name})?"),
+                }),
+                crate::decision::DecisionAnswer::Bool(true)
+            );
+            if yes {
+                let applied = self.adjust_life_applied(active, life as i32);
+                if applied > 0 {
+                    events
+                        .push(GameEvent::LifeGained { player: active, amount: applied as u32 });
+                }
+                return true;
+            }
+        }
+        false
+    }
+
     /// Compute and enter the step following the current one, running its
     /// turn-based entry actions (untap, draw, combat resolution, step
     /// triggers, …). Split out of `pass_priority` so the cleanup discard
@@ -376,7 +416,12 @@ impl GameState {
                 if charged_skip {
                     self.players[self.active_player_idx].skip_next_draw_step -= 1;
                 }
-                if first_draw_skip || skips_draw_step || charged_skip {
+                // CR 614 — Fasting's optional draw-step replacement. Only
+                // asked when the step would otherwise happen; taking it pays
+                // the printed life rider.
+                let optional_skip = !(first_draw_skip || skips_draw_step || charged_skip)
+                    && self.offer_optional_draw_step_skip(&mut events);
+                if first_draw_skip || skips_draw_step || charged_skip || optional_skip {
                 } else {
                     // CR 805.4b / 805.6a — each player on the active team
                     // draws, in seat order. A singleton team is just the
@@ -3153,12 +3198,15 @@ impl GameState {
         // Close the "if it would die this turn, exile it instead" window
         // (Wilt in the Heat).
         self.dies_to_exile_eot.clear();
+        self.damage_exiles_victim_eot.clear();
+        self.damage_denies_regen_eot.clear();
         // Expire event-keyed "when [card] dies this turn" delayed triggers
         // that never fired (CR 603.4 — the "this turn" window closes).
         self.delayed_triggers.retain(|dt| {
             !matches!(
                 dt.kind,
                 crate::game::types::DelayedKind::WhenCardDies(_)
+                    | crate::game::types::DelayedKind::WhenCardLeavesBattlefieldThisTurn(_)
                     | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
                     | crate::game::types::DelayedKind::CreatureYouControlDiesThisTurn
                     | crate::game::types::DelayedKind::MatchingCreatureDiesThisTurn(_)

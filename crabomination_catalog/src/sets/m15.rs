@@ -2598,6 +2598,7 @@ pub fn jace_the_living_guildpact() -> CardDefinition {
                     count: Value::Const(2),
                     who: None,
                     exile_rest: false,
+                    rest_bottom_random: false,
                 },
                 ..Default::default()
             },

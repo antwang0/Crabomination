@@ -73,6 +73,7 @@ pub fn celestus_sanctifier() -> CardDefinition {
                     count: Value::Const(2),
                     who: Some(PlayerRef::You),
                     exile_rest: false,
+                    rest_bottom_random: false,
                 },
             },
         ],

@@ -1171,15 +1171,14 @@ impl GameState {
     /// permanent's own CDA reads (Ixidron's mass turn-face-down) has already
     /// happened by the time its 0/0 body would be checked.
     pub(crate) fn apply_as_enters_effect(&mut self, card_id: CardId) {
-        let Some((effect, controller)) = self
-            .battlefield_find(card_id)
-            .and_then(|c| {
-                c.definition.as_enters_effect.clone().map(|e| (e, c.controller))
-            })
-        else {
+        let Some((effect, controller, x)) = self.battlefield_find(card_id).and_then(|c| {
+            c.definition.as_enters_effect.clone().map(|e| (e, c.controller, c.cast_x_value))
+        }) else {
             return;
         };
-        let ctx = EffectContext::for_ability(card_id, controller, None);
+        // The replacement reads the cast's own `{X}` (Frankenstein's Monster).
+        let mut ctx = EffectContext::for_ability(card_id, controller, None);
+        ctx.x_value = x;
         let _ = self.resolve_effect(&effect, &ctx);
     }
 
@@ -7088,7 +7087,7 @@ impl GameState {
                 let src = ctx.source.unwrap_or(CardId(0));
                 self.players[ctx.controller]
                     .next_draw_replacements
-                    .push((src, (**body).clone()));
+                    .push((src, (**body).clone(), ctx.x_value));
                 Ok(())
             }
 
@@ -10797,7 +10796,12 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopKeepOneRestToGraveyard { who: Some(who), count, exile_rest: _ } => {
+            Effect::LookTopKeepOneRestToGraveyard {
+                who: Some(who),
+                count,
+                exile_rest: _,
+                rest_bottom_random: _,
+            } => {
                 // Dimir Charm mode 3. Auto-pick: keep the lowest-MV card on
                 // an opponent's library, the highest on your own.
                 let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
@@ -18746,7 +18750,12 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookTopKeepOneRestToGraveyard { count, who: None, exile_rest } => {
+            Effect::LookTopKeepOneRestToGraveyard {
+                count,
+                who: None,
+                exile_rest,
+                rest_bottom_random,
+            } => {
                 use crate::decision::Decision;
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -18766,7 +18775,7 @@ impl GameState {
                 let pending = PendingEffectState::ImpulsePending {
                     player: p,
                     revealed: top_ids,
-                    rest_to_graveyard: !*exile_rest,
+                    rest_to_graveyard: !*exile_rest && !*rest_bottom_random,
                     eligible: None,
                     take: 1,
                     to_battlefield: false,
@@ -18776,7 +18785,7 @@ impl GameState {
                     gain_life_greatest_power_rest: false,
                     optional: false,
                     picked_lands_to_battlefield: false,
-                    rest_bottom_random: false,
+                    rest_bottom_random: *rest_bottom_random,
                     rest_to_exile: *exile_rest,
                 };
                 if self.players[p].wants_ui {
@@ -25434,6 +25443,182 @@ impl GameState {
                         }
                     },
                 };
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.chosen_number = Some(n);
+                }
+                Ok(())
+            }
+
+            Effect::PlaySubgame => {
+                let winner = self.play_subgame();
+                for p in 0..self.players.len() {
+                    if Some(p) == winner || self.players[p].eliminated {
+                        continue;
+                    }
+                    let half = (self.players[p].life.max(0) as u32).div_ceil(2) as i32;
+                    if half == 0 {
+                        continue;
+                    }
+                    let applied = self.adjust_life_applied(p, -half);
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost {
+                            player: p,
+                            amount: (-applied) as u32,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SwapBlockAssignments { a, b } => {
+                // Sorrow's Path. The re-block reuses the existing block map
+                // entries, so no "becomes blocked" trigger fires again
+                // (CR 509.3a already resolved for this combat).
+                let pick = |s: &Selector, g: &mut Self| {
+                    g.resolve_selector(s, ctx).into_iter().find_map(|e| e.as_permanent_id())
+                };
+                let (Some(a), Some(b)) = (pick(a, self), pick(b, self)) else {
+                    return Ok(());
+                };
+                let a_blocks = self.block_map.get(&a).cloned().unwrap_or_default();
+                let b_blocks = self.block_map.get(&b).cloned().unwrap_or_default();
+                let legal = a_blocks.iter().all(|atk| self.blocker_can_block_attacker(b, *atk))
+                    && b_blocks.iter().all(|atk| self.blocker_can_block_attacker(a, *atk));
+                if !legal {
+                    return Ok(());
+                }
+                self.remove_from_combat(a);
+                self.remove_from_combat(b);
+                if !b_blocks.is_empty() {
+                    self.block_map.insert(a, b_blocks);
+                }
+                if !a_blocks.is_empty() {
+                    self.block_map.insert(b, a_blocks);
+                }
+                Ok(())
+            }
+
+            Effect::GrantDamageExilesVictimThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.damage_exiles_victim_eot.insert(cid);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GrantDamageDeniesRegenerationThisTurn { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.damage_denies_regen_eot.insert(cid);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::WhenTargetLeavesBattlefieldThisTurn { what, body } => {
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind:
+                            crate::game::types::DelayedKind::WhenCardLeavesBattlefieldThisTurn(cid),
+                        effect: (**body).clone(),
+                        target: None,
+                        bound_token: None,
+                        bound_subject: None,
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::EnterExilingGraveyardCreaturesForCounters { count } => {
+                // Frankenstein's Monster. Runs on the as-enters hop, so the
+                // "instead of onto the battlefield" fallback is modelled by
+                // routing the permanent to its owner's graveyard right away —
+                // before ETB triggers or the first SBA sweep.
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let fodder: Vec<CardId> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .filter(|c| c.definition.is_creature())
+                    .take(n)
+                    .map(|c| c.id)
+                    .collect();
+                if fodder.len() < n {
+                    let mut moved = self.resolve_effect(
+                        &Effect::Move { what: Selector::This, to: ZoneDest::Graveyard },
+                        ctx,
+                    )?;
+                    events.append(&mut moved);
+                    return Ok(());
+                }
+                const KINDS: [crate::card::CounterType; 3] = [
+                    crate::card::CounterType::PlusTwoPlusZero,
+                    crate::card::CounterType::PlusOnePlusOne,
+                    crate::card::CounterType::PlusZeroPlusTwo,
+                ];
+                for cid in fodder {
+                    if let Some(card) = Self::take_card(&mut self.players[p].graveyard, cid) {
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    }
+                    let pick = match self.decider.decide(&Decision::ChooseMode {
+                        source,
+                        num_modes: KINDS.len(),
+                        mode_texts: vec![
+                            "+2/+0 counter".into(),
+                            "+1/+1 counter".into(),
+                            "+0/+2 counter".into(),
+                        ],
+                    }) {
+                        DecisionAnswer::Mode(i) if i < KINDS.len() => i,
+                        _ => 1,
+                    };
+                    if let Some(c) = self.battlefield_find_mut(source) {
+                        c.add_counters(KINDS[pick], 1);
+                    }
+                    events.push(GameEvent::CounterAdded {
+                        card_id: source,
+                        counter_type: KINDS[pick],
+                        count: 1,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::PayAnyAmountOfLifeCapped { max } => {
+                // Nameless Race — an as-enters payment, so it can't suspend;
+                // the ask goes straight to the installed decider. AutoDecider's
+                // 0 reads as "no opinion" and pays as much as the controller
+                // can survive (matching the printed play pattern).
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(source) = ctx.source else { return Ok(()) };
+                let life = self.players[ctx.controller].life.max(0);
+                let cap = self.evaluate_value(max, ctx).clamp(0, life.saturating_sub(1)) as u32;
+                let n = match self.decider.decide(&Decision::ChooseAmount {
+                    source,
+                    prompt: "Pay any amount of life".to_string(),
+                    max: cap,
+                }) {
+                    DecisionAnswer::Amount(n) if n > 0 => n.min(cap),
+                    _ => cap,
+                };
+                if n > 0 {
+                    let applied = self.adjust_life_applied(ctx.controller, -(n as i32));
+                    if applied < 0 {
+                        events.push(GameEvent::LifeLost {
+                            player: ctx.controller,
+                            amount: (-applied) as u32,
+                        });
+                    }
+                }
                 if let Some(c) = self.battlefield_find_mut(source) {
                     c.chosen_number = Some(n);
                 }

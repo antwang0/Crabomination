@@ -121,6 +121,7 @@ pub fn devourer_of_destiny() -> CardDefinition {
                 count: Value::Const(4),
                 who: None,
                 exile_rest: true,
+                rest_bottom_random: false,
             },
         }),
         triggered_abilities: vec![TriggeredAbility {

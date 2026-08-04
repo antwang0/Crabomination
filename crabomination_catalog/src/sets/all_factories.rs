@@ -262,6 +262,8 @@ static ARN: &[Factory] = &[
     super::arn::nafs_asp,
     super::arn::jihad,
     super::arn::eye_for_an_eye,
+    super::arn::aladdins_lamp,
+    super::arn::shahrazad,
 ];
 static ATQ: &[Factory] = &[
     super::atq::amulet_of_kroog,
@@ -8608,6 +8610,12 @@ static DRK2: &[Factory] = &[
     super::drk2::mana_vortex,
     super::drk2::reflecting_mirror,
     super::drk2::preacher,
+    super::drk2::fasting,
+    super::drk2::nameless_race,
+    super::drk2::dance_of_many,
+    super::drk2::frankensteins_monster,
+    super::drk2::runesword,
+    super::drk2::sorrows_path,
 ];
 static EOE: &[Factory] = &[
     super::eoe::camera_launcher,

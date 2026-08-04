@@ -2087,6 +2087,7 @@ pub fn psychic_surgery() -> CardDefinition {
                     count: Value::Const(2),
                     who: Some(PlayerRef::TriggerEventPlayer),
                     exile_rest: true,
+                    rest_bottom_random: false,
                 }),
             },
         }],

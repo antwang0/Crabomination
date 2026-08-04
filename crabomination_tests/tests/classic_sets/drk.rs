@@ -1167,3 +1167,185 @@ fn goblin_caves_is_dormant_while_unattached() {
     g.battlefield_find_mut(caves).expect("caves").attached_to = None;
     assert_eq!(g.computed_permanent(sled).expect("sled").toughness, 1);
 }
+
+#[test]
+fn fasting_trades_the_draw_step_for_two_life_and_starves_out() {
+    let mut g = main_phase();
+    let fast = g.add_card_to_battlefield(0, catalog::fasting());
+    g.skip_first_draw = false;
+    let before = g.players[0].hand.len();
+    g.step = TurnStep::Upkeep;
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let _ = g.advance_step(Vec::new());
+    assert_eq!(g.players[0].hand.len(), before, "the draw step was skipped");
+    assert_eq!(g.players[0].life, 22);
+    // Five hunger counters destroy it.
+    for _ in 0..5 {
+        g.step = TurnStep::Upkeep;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(fast).is_none());
+}
+
+#[test]
+fn fasting_dies_to_any_draw() {
+    let mut g = main_phase();
+    let fast = g.add_card_to_battlefield(0, catalog::fasting());
+    let mut events = vec![];
+    g.draw_one(0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fast).is_none());
+}
+
+#[test]
+fn nameless_race_is_as_big_as_the_life_it_ate() {
+    let mut g = main_phase();
+    for _ in 0..4 {
+        g.add_card_to_battlefield(1, catalog::savannah_lions()); // white nontoken
+    }
+    let race = g.add_card_to_hand(0, catalog::nameless_race());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Amount(3)]));
+    cast(&mut g, 0, race, None);
+    let p = g.computed_permanent(race).expect("race");
+    assert_eq!((p.power, p.toughness), (3, 3));
+    assert_eq!(g.players[0].life, 17);
+}
+
+#[test]
+fn frankensteins_monster_stitches_counters_from_the_graveyard() {
+    let mut g = main_phase();
+    for _ in 0..2 {
+        g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    }
+    let monster = g.add_card_to_hand(0, catalog::frankensteins_monster());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    // Both exiles buy a +2/+0 counter.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Mode(0),
+        DecisionAnswer::Mode(0),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: monster,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    let p = g.computed_permanent(monster).expect("monster");
+    assert_eq!((p.power, p.toughness), (4, 1));
+    assert!(g.players[0].graveyard.is_empty());
+}
+
+#[test]
+fn frankensteins_monster_never_lands_without_its_parts() {
+    let mut g = main_phase();
+    let monster = g.add_card_to_hand(0, catalog::frankensteins_monster());
+    mana(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: monster,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(1),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(monster).is_none());
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == monster));
+}
+
+#[test]
+fn dance_of_many_and_its_token_leave_together() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dance = g.add_card_to_hand(0, catalog::dance_of_many());
+    cast(&mut g, 0, dance, Some(Target::Permanent(bear)));
+    let token = g.battlefield_find(dance).expect("dance").chosen_permanent.expect("token");
+    // The token dying sacrifices the enchantment.
+    let mut events = vec![];
+    g.destroy_permanent(token, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dance).is_none());
+}
+
+#[test]
+fn runesword_exiles_what_its_attacker_kills_and_follows_it_out() {
+    let mut g = main_phase();
+    let sword = g.add_card_to_battlefield(0, catalog::runesword());
+    g.clear_sickness(sword);
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    activate(&mut g, 0, sword, Some(Target::Permanent(attacker)));
+    g.step = TurnStep::DeclareBlockers;
+    let evs = g.declare_blockers(vec![(blocker, attacker)]).expect("block");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    while g.step != TurnStep::EndCombat {
+        g.advance_step(Vec::new()).expect("advance");
+        drain_stack(&mut g);
+    }
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    // The 4/2 attacker killed the blocker, which was exiled rather than buried.
+    assert!(g.exile.iter().any(|c| c.id == blocker));
+    // Both attacker and sword died: the attacker took lethal back, and the
+    // sword's leaves-the-battlefield rider sacrificed it.
+    assert!(g.battlefield_find(attacker).is_none());
+    assert!(g.battlefield_find(sword).is_none());
+}
+
+#[test]
+fn sorrows_path_swaps_two_blockers_and_burns_its_controller() {
+    let mut g = main_phase();
+    let path = g.add_card_to_battlefield(0, catalog::sorrows_path());
+    g.clear_sickness(path);
+    // 3/3s so the land's own 2-damage tap trigger doesn't wipe the board.
+    let mine = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let a = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let b = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    let x = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let y = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])
+    .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    let evs = g.declare_blockers(vec![(x, a), (y, b)]).expect("block");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: path,
+        ability_index: 0,
+        target: Some(Target::Permanent(x)),
+        additional_targets: vec![Target::Permanent(y)],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.block_map().get(&x), Some(&vec![b]));
+    assert_eq!(g.block_map().get(&y), Some(&vec![a]));
+    // Tapping the land burned its controller and their creatures.
+    assert_eq!(g.players[0].life, 18);
+    assert!(g.battlefield_find(mine).expect("bear").damage >= 2);
+}

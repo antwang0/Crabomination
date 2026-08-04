@@ -1227,3 +1227,188 @@ pub fn preacher() -> CardDefinition {
         )
     }
 }
+
+/// Fasting — starve for life; any draw, or five upkeeps, ends it.
+pub fn fasting() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "You may skip your draw step to gain 2 life.",
+            effect: StaticEffect::ControllerMaySkipDrawStepForLife { life: 2 },
+        }],
+        triggered_abilities: vec![
+            upkeep(Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Hunger,
+                    amount: Value::ONE,
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Hunger,
+                        },
+                        Value::Const(5),
+                    ),
+                    then: Box::new(Effect::Destroy { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+                effect: Effect::Destroy { what: Selector::This },
+            },
+        ],
+        ..enchantment("Fasting", cost(&[w()]))
+    }
+}
+
+/// Nameless Race — enters as big as the life you pay, bounded by the white
+/// your opponents have shown.
+pub fn nameless_race() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Trample],
+        dynamic_pt: Some(crate::card::DynamicPt::ChosenNumberAsEntered),
+        as_enters_effect: Some(Effect::PayAnyAmountOfLifeCapped {
+            max: Value::Sum(vec![
+                Value::CountOf(Box::new(Selector::EachPermanent(
+                    R::HasColor(Color::White)
+                        .and(R::ControlledByOpponent)
+                        .and(R::Not(Box::new(R::IsToken))),
+                ))),
+                Value::CardsInOpponentsGraveyardsMatching {
+                    filter: R::HasColor(Color::White),
+                },
+            ]),
+        }),
+        ..creature("Nameless Race", cost(&[generic(3), b()]), vec![], 0, 0)
+    }
+}
+
+/// Dance of Many — a token copy the enchantment is chained to; either one
+/// leaving takes the other with it.
+pub fn dance_of_many() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        source: target_filtered(R::Creature.and(R::Not(Box::new(R::IsToken)))),
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        extra_keywords: vec![],
+                        override_pt: None,
+                        override_colors: None,
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: false,
+                    },
+                    Effect::RememberPermanentOnSource { what: Selector::LastCreatedToken },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PermanentLeavesBattlefield,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Exile { what: Selector::ChosenPermanentOfSource },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::AnyPlayer)
+                    .with_filter(Predicate::TriggerSourceIsSourcesChosenPermanent),
+                effect: Effect::SacrificeSource,
+            },
+            upkeep(Effect::UnlessPlayerPays {
+                who: PlayerRef::You,
+                cost: WardCost::Mana(cost(&[u(), u()])),
+                then: Box::new(Effect::SacrificeSource),
+                if_paid: None,
+            }),
+        ],
+        ..enchantment("Dance of Many", cost(&[u(), u()]))
+    }
+}
+
+/// Frankenstein's Monster — stitched together from X exiled creature cards,
+/// each buying a +2/+0, +1/+1, or +0/+2 counter.
+pub fn frankensteins_monster() -> CardDefinition {
+    CardDefinition {
+        as_enters_effect: Some(Effect::EnterExilingGraveyardCreaturesForCounters {
+            count: Value::XFromCost,
+        }),
+        ..creature(
+            "Frankenstein's Monster",
+            cost(&[x(), b(), b()]),
+            vec![CreatureType::Zombie],
+            0,
+            1,
+        )
+    }
+}
+
+/// Runesword — a lethal edge: what the pumped attacker damages can't be
+/// regenerated and is exiled, and losing the attacker costs the sword.
+pub fn runesword() -> CardDefinition {
+    artifact(
+        "Runesword",
+        cost(&[generic(6)]),
+        vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(R::Creature.and(R::IsAttacking)),
+                    power: Value::Const(2),
+                    toughness: Value::ZERO,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantDamageDeniesRegenerationThisTurn { what: Selector::Target(0) },
+                Effect::GrantDamageExilesVictimThisTurn { what: Selector::Target(0) },
+                Effect::WhenTargetLeavesBattlefieldThisTurn {
+                    what: Selector::Target(0),
+                    body: Box::new(Effect::SacrificeSource),
+                },
+            ]),
+            ..Default::default()
+        }],
+    )
+}
+
+/// Sorrow's Path — swaps two of an opponent's blockers, and burns you for
+/// tapping.
+pub fn sorrows_path() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::You, amount: Value::Const(2) },
+                Effect::DealDamage {
+                    to: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature },
+                    amount: Value::Const(2),
+                },
+            ]),
+        }],
+        ..land(
+            "Sorrow's Path",
+            vec![ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::SwapBlockAssignments {
+                    a: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.and(R::IsBlocking).and(R::ControlledByOpponent),
+                    },
+                    b: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::Creature
+                            .and(R::IsBlocking)
+                            .and(R::SameControllerAsTargetSlot(0)),
+                    },
+                },
+                ..Default::default()
+            }],
+        )
+    }
+}

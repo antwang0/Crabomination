@@ -94,6 +94,7 @@ pub fn gutless_plunderer() -> CardDefinition {
                 count: Value::Const(3),
                 who: Some(PlayerRef::You),
                 exile_rest: false,
+                rest_bottom_random: false,
             }),
             else_: Box::new(Effect::Noop),
         })],

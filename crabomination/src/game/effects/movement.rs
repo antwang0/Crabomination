@@ -1083,9 +1083,16 @@ impl GameState {
         // instead of dying for the rest of the turn (source-bound CR 614
         // replacement). Registered after the damage lands below.
         let source_exiles_damaged = source
-            .and_then(|s| self.battlefield_find(s))
-            .map(|c| c.definition.damage_exiles_if_dies)
+            .map(|s| {
+                self.damage_exiles_victim_eot.contains(&s)
+                    || self
+                        .battlefield_find(s)
+                        .is_some_and(|c| c.definition.damage_exiles_if_dies)
+            })
             .unwrap_or(false);
+        // Runesword — a creature this source damages can't be regenerated
+        // for the rest of the turn.
+        let source_denies_regen = source.is_some_and(|s| self.damage_denies_regen_eot.contains(&s));
         match ent {
             EntityRef::Player(p) => {
                 // Bloodthirst (CR 702.54) window: any damage to a player
@@ -1380,6 +1387,12 @@ impl GameState {
                     let is_creature = c.definition.is_creature();
                     if source_exiles_damaged && is_creature {
                         self.dies_to_exile_eot.insert(cid);
+                    }
+                    if source_denies_regen
+                        && is_creature
+                        && let Some(v) = self.battlefield_find_mut(cid)
+                    {
+                        v.cant_regenerate_this_turn = true;
                     }
                     }
                     // "Whenever this deals damage to a creature" (Neko-Te,
@@ -2333,7 +2346,9 @@ impl GameState {
         use crate::game::types::DelayedKind;
         let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
         self.delayed_triggers.retain(|dt| {
-            if dt.kind == DelayedKind::WhenCardLeavesBattlefield(id) {
+            if dt.kind == DelayedKind::WhenCardLeavesBattlefield(id)
+                || dt.kind == DelayedKind::WhenCardLeavesBattlefieldThisTurn(id)
+            {
                 fire.push(dt.clone());
                 false
             } else {

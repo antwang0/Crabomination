@@ -695,10 +695,11 @@ pub struct Player {
     pub skip_next_draw_step: u32,
     /// CR 614 — queued one-shot draw replacements: "the next time you would
     /// draw a card this turn, [effect] instead" (the Onslaught Words cycle).
-    /// Each entry is `(source, effect)`; `draw_one` pops the front instead of
-    /// drawing. Cleared at the turn boundary.
+    /// Each entry is `(source, effect, x)`; `draw_one` pops the front instead
+    /// of drawing, replaying the activation's X (Aladdin's Lamp). Cleared at
+    /// the turn boundary.
     #[serde(default)]
-    pub next_draw_replacements: Vec<(crate::card::CardId, crate::effect::Effect)>,
+    pub next_draw_replacements: Vec<(crate::card::CardId, crate::effect::Effect, u32)>,
     /// CR 506 — number of this player's upcoming combat phases to skip
     /// (Stonehorn Dignitary). Consumed when their turn reaches Begin Combat,
     /// jumping straight to the postcombat main. Defaults to 0 for snapshot

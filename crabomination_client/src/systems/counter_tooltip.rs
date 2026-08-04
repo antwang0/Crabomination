@@ -1375,6 +1375,8 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::MinusOneMinusZero => "-1/-0",
         CounterType::PlusOnePlusZero => "+1/+0",
         CounterType::PlusZeroPlusOne => "+0/+1",
+        CounterType::PlusTwoPlusZero => "+2/+0",
+        CounterType::PlusZeroPlusTwo => "+0/+2",
         CounterType::MinusZeroMinusTwo => "-0/-2",
         CounterType::Glyph => "Glyph",
         CounterType::Sleep => "Sleep",
@@ -1471,6 +1473,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Trap => "Trap",
         CounterType::Winch => "Winch",
         CounterType::Wind => "Wind",
+        CounterType::Hunger => "Hunger",
     }
 }
 
@@ -1533,6 +1536,7 @@ fn counter_reminder(kind: CounterType) -> Option<&'static str> {
         CounterType::Gold => "Aurification's gold counters — each creature with one is a Wall with defender.",
         CounterType::Winch => "Mercadian Lift's crank — remove X to deploy a creature with mana value X from hand.",
         CounterType::Wind => "Cyclone's upkeep tally — pay {G} per counter or it sacrifices itself and deals that much damage to each creature and player.",
+        CounterType::Hunger => "Fasting's upkeep tally — the enchantment is destroyed once it has five.",
         CounterType::Fungus => "Sporogenesis tally — this creature mints one Saproling per counter when it dies.",
         _ => return None,
     })
